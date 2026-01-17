@@ -15,7 +15,9 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "test:landingPage-test": "npx cypress run  --spec cypress/e2e/tests/landingPage.cy.js",
+    "test:landingPage-chrome": "npx cypress run  --browser chrome --spec cypress/e2e/tests/landingPage.cy.js",
+    "test:landingPage-ff": "npx cypress run  --browser firefox --spec cypress/e2e/tests/landingPage.cy.js",
+    "test:landingPage-edge": "npx cypress run  --browser edge --spec cypress/e2e/tests/landingPage.cy.js",
     "test": "npx cypress run --record --key 757222a2-1275-4e82-b3f3-bf3bdf69552a"
   },
   "devDependencies": {
