@@ -1,0 +1,42 @@
+name: Test Landing page on Chrome browser 
+
+on:
+  push: 
+    branches:
+      - web-landingPage-test
+
+jobs:
+
+  landingPage-run:
+    name: Test LandingPage on Chrome browser
+    runs-on: ubuntu-22.04 
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+         node-version: 22
+
+
+      - name: Install Dependencies
+        working-directory: web-automation
+        run: npm install
+        env:
+          CYPRESS_RECORD_KEY: 757222a2-1275-4e82-b3f3-bf3bdf69552a
+
+
+      - name: Run landing Page Test
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: web-automation
+          command: npm run test:landingPage-test
+        
+          
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: LandingPage-Test-report
+          path: web-automation/cypress/reports/html
