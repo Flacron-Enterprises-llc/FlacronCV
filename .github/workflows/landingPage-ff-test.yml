@@ -1,4 +1,5 @@
-name: Test Landing page on Firefox browser
+name: Test Landing Page on Firefox Browser
+
 on:
   push:
     branches:
@@ -6,29 +7,35 @@ on:
 
 jobs:
   landingPage-run:
-    name: Test LandingPage on Chrome browser
+    name: Run Landing Page Tests on Firefox
     runs-on: ubuntu-22.04
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run landing Page Test
+      - name: Run Landing Page Test on Firefox
         uses: cypress-io/github-action@v6
         with:
           working-directory: web-automation
-          # This triggers the 'npm run test:landingPage-test' but adds the --record flag
-          command: npm run test:landingPage-test --browser firefox -- --record
+          install: true
+          browser: firefox
+          command: npm run test:landingPage-test
           record: true
         env:
-          # Use GitHub Secrets for the Record Key (Recommended)
-          # Go to Settings > Secrets and variables > Actions > New repository secret
-          # Name: CYPRESS_RECORD_KEY, Value: your_key_here
-          CYPRESS_RECORD_KEY: 757222a2-1275-4e82-b3f3-bf3bdf69552a
-      
+          CYPRESS_RECORD_KEY:  757222a2-1275-4e82-b3f3-bf3bdf69552a
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Report
-        if: always() # Ensures reports upload even if tests fail
+      - name: Upload HTML Report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: LandingPage-Test-report
+          name: landingpage-firefox-report
           path: web-automation/cypress/reports/html
+
+      - name: Upload Videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: landingpage-firefox-videos
+          path: web-automation/cypress/videos
