@@ -23,9 +23,8 @@ jobs:
           # Use GitHub Secrets for the Record Key (Recommended)
           # Go to Settings > Secrets and variables > Actions > New repository secret
           # Name: CYPRESS_RECORD_KEY, Value: your_key_here
-          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
-          # GITHUB_TOKEN is provided by GitHub automatically
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CYPRESS_RECORD_KEY: 757222a2-1275-4e82-b3f3-bf3bdf69552a
+      
 
       - name: Upload Report
         if: always() # Ensures reports upload even if tests fail
