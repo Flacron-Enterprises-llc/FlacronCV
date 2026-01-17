@@ -3,7 +3,8 @@ const fs = require("fs");
 const path = require("path");
 
 module.exports = defineConfig({
-   projectId: "q86se5",
+ //  projectId: "q86se5",
+   projectId: "757222a2-1275-4e82-b3f3-bf3bdf69552a",
 
   reporter: "cypress-mochawesome-reporter",
   video: true,
