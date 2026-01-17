@@ -77,24 +77,24 @@ Your pipeline is located at:
 
 To trigger it:
 
-Push code to GitHub
+1: Push code to GitHub
 
-Go to GitHub → Actions
+2: Go to GitHub → Actions
 
-Select Cypress Workflow
+3: Select Cypress Workflow
 
-Click Run Workflow
+4: Click Run Workflow
 
 This will execute tests automatically on the cloud environment.
 ☁ Re-Run Tests from Cypress Cloud
 
-Login to Cypress Cloud
+1: Login to Cypress Cloud
 
-Open your project
+2: Open your project
 
-Select the failed test run
+3: Select the failed test run
 
-Click Re-Run Job
+4: Click Re-Run Job
 This will execute the same tests again and generate new reports.
 
 📊 View HTML Report (Screenshots + Videos)
