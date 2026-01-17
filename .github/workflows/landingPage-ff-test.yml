@@ -20,7 +20,7 @@ jobs:
           working-directory: web-automation
           install: true
           browser: firefox
-          command: npm run test:landingPage-test
+          command: npm run test:landingPage-ff
           record: true
         env:
           CYPRESS_RECORD_KEY:  757222a2-1275-4e82-b3f3-bf3bdf69552a
