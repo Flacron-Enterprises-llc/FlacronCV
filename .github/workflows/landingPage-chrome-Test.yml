@@ -1,41 +1,34 @@
-name: Test Landing page on Chrome browser 
-
+name: Test Landing page on Chrome browser
 on:
-  push: 
+  push:
     branches:
       - web-landingPage-test
 
 jobs:
-
   landingPage-run:
     name: Test LandingPage on Chrome browser
-    runs-on: ubuntu-22.04 
-
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-         node-version: 22
-
-
-      - name: Install Dependencies
-        working-directory: web-automation
-        run: npm install
-        env:
-          CYPRESS_RECORD_KEY: 757222a2-1275-4e82-b3f3-bf3bdf69552a
-
 
       - name: Run landing Page Test
         uses: cypress-io/github-action@v6
         with:
           working-directory: web-automation
-          command: npm run test:landingPage-test
-        
-          
+          # This triggers the 'npm run test:landingPage-test' but adds the --record flag
+          command: npm run test:landingPage-test -- --record
+          record: true
+        env:
+          # Use GitHub Secrets for the Record Key (Recommended)
+          # Go to Settings > Secrets and variables > Actions > New repository secret
+          # Name: CYPRESS_RECORD_KEY, Value: your_key_here
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          # GITHUB_TOKEN is provided by GitHub automatically
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload Report
+        if: always() # Ensures reports upload even if tests fail
         uses: actions/upload-artifact@v4
         with:
           name: LandingPage-Test-report
