@@ -1,63 +1,76 @@
-# FlacronCV
-AI-powered resume and cover letter builder designed to help job seekers create ATS-optimized CVs, apply faster, and stand out globally.
+Login & Signup Automation – Cypress
 
-📘 FlacronCV – Landing Page Automation (Cypress)
+This branch contains automation tests for Login and Signup functionality of the FlacronCV application:
 
-This project contains an enterprise-level Cypress automation framework for validating the FlacronCV Landing Page UI,Functionality and responsiveness.
+Application URL:
+https://flacroncv.onrender.com/
 
-It ensures that the landing page works correctly across all screen resolutions and that key UI elements are properly aligned and functional.
+The tests are written using Cypress with Page Object Model (POM) to ensure maintainable and reusable test code.
 
 📁 Folder Structure
 FLACRONCV/└── web-automation/
+cypress/
+ ├── e2e/
+ │     ├── login.cy.js
+ │     ├── signup.cy.js
+ │
+ ├── pages/
+ │     ├── loginPage.js
+ │     ├── signupPage.js
+ Test Files Description
+1. login.cy.js
 
-│
-├── cypress/
-│   │
-│   │   
-│   ├── e2e/
-│   │   └── tests/
-│   │        └── landingPage.cy.js
-│   │
-│   ├── fixtures/
-│   │
-│   ├── pages/
-│   │   ├── authPage.js
-│   │   ├── footer.js
-│   │   ├── landingPage.js
-│   │   └── topMenu.js
-│   │
-│   ├── reports/
-│   │
-│   ├── screenshots/
-│   │
-│   ├── support/
-│   │   ├── commands.js
-│   │   ├── e2e.js
-│   │   └── randomSelectDropdownMenu.js
-│   │
-│   └── videos/
-│
-├── node_modules/
-│
+This file validates the Login functionality with different scenarios.
 
+Covered Scenarios:
 
-🧪 What is Tested
+Valid login
 
-The automation covers the critical UI and functional areas of the landing page:
+Invalid login
 
-✔ Responsive layout on mobile, tablet, laptop, desktop
+Empty fields validation
 
-✔ Text, images, and buttons are center-aligned
+Incorrect credentials validation
 
-✔ “Get Started Free” buttons are visible and clickable
+Login window UI validation
 
-✔ Top navigation menu is displayed correctly
+Error message validation
 
-✔ Footer links are present and accessible
+Each test uses a Login Page Object file to manage locators and reusable functions.
 
-✔ Detects layout overlap and horizontal scrolling issues
+2. signup.cy.js
 
-✔ Captures screenshots and videos for every test run
+This file validates the Signup functionality for creating a new account.
+
+Covered Scenarios:
+
+Required fields validation
+
+Valid account creation
+
+Invalid email validation
+
+Password validation
+
+Field error messages validation
+
+Form validation scenarios
+
+Each test uses a Signup Page Object file to manage locators and reusable functions.
+
+Framework Design
+
+This project uses Page Object Model (POM).
+
+Each test file has a corresponding Page Object file
+
+Locators and reusable functions are stored in object files
+
+Test files contain only test logic
+
+Example:
+login.cy.js → loginPage.js  
+signup.cy.js → signupPage.js
 
 ▶ How to Run Tests Locally
 

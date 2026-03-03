@@ -4,6 +4,11 @@ class landingPage {
     return cy.get('a[href="/signup"]')
   }
 
+  getStartFreeButt(){
+
+    cy.contains('Get Started Free').click()
+  }
+
   watchDemoButton() {
     return cy.get('a[href="/demo"]')
   }

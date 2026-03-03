@@ -16,9 +16,12 @@
   "main": "index.js",
   "scripts": {
     "test:landingPage-test": "npx cypress run --browser chrome  --spec cypress/e2e/tests/landingPage.cy.js",
+    "test:signUpPage-test": "npx cypress run --browser chrome  --spec cypress/e2e/tests/SignUp/signUpTestPage.cy.js",
+     "test:loginPage-test": "npx cypress run --browser chrome  --spec cypress/e2e/tests/login.cy.js",
     "test": "npx cypress run --record --key 757222a2-1275-4e82-b3f3-bf3bdf69552a"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.3.0",
     "@simonsmith/cypress-image-snapshot": "^10.0.3",
     "cypress": "^15.9.0",
     "cypress-mochawesome-reporter": "^4.0.2"
