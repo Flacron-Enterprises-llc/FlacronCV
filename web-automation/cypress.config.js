@@ -57,7 +57,7 @@ module.exports = defineConfig({
     
   },
 env: {
-    MAILSLURP_API_KEY: "sk_kAnCNgWofZw8aJ3R_ZZC61FeGJa8CW0g9xC3WCszxRD6UrIWNxyUYOE0Vh15s2eRAJXoOcXqUuS1i8ovI",
+    MAILSLURP_API_KEY: "sk_vgzTYodyinSJErcx_RpCDSfGkRl4CkJjocIudxTqPjvk6R1S5jfzEpFRB0lHdzZnYe99ltNemd1GbYm45",
   },
   
 
