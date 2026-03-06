@@ -98,7 +98,7 @@ class authPage {
        
        cy.wait(300)
 
-        cy.contains('Please enter a valid email address')
+        cy.contains('Firebase: Error (auth/invalid-credential).')
       .should('be.visible')
    
        
@@ -107,7 +107,7 @@ class authPage {
       validateWrongPassword(){
 
         
-         cy.contains('Invalid credentials. Please check your email and password.')
+        cy.contains('Firebase: Error (auth/invalid-credential).')
       .should('be.visible')
        
     }
@@ -115,34 +115,17 @@ class authPage {
           validateWrongEmailAndPw(){
 
         
-         cy.contains('Invalid credentials. Please check your email and password.')
+          cy.contains('Firebase: Error (auth/invalid-credential).')
       .should('be.visible')
        
     }
 
+    validateCreateAccoutnLink(){
 
-/*
-  
+      cy.contains('Create Account').click()
+      cy.url().should('include', 'https://flacroncv-web.onrender.com/en/register')
+    }
 
-  emailField() {
-    return cy.get('input[type="email"]')
-  }
-
-  passwordField() {
-    return cy.get('input[type="password"]')
-  }
-
-  submitButton() {
-    return cy.get('button[type="submit"]')
-  }
-
-  createFreeAccount(email, password) {
-    this.emailField().type(email)
-    this.passwordField().type(password)
-    this.submitButton().click()
-  }
-
-  */
 }
 
 export default authPage

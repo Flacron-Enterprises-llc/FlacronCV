@@ -21,7 +21,7 @@ module.exports = defineConfig({
   },
 
   e2e: {
-    baseUrl: "https://flacroncv.onrender.com",   // ✅ CORRECT PLACE
+    baseUrl: "https://flacroncv-web.onrender.com/en",   // ✅ CORRECT PLACE
     downloadsFolder: "cypress/downloads",       // ✅ CORRECT PLACE
 
     chromeWebSecurity: false,
@@ -48,7 +48,18 @@ module.exports = defineConfig({
       });
 
       return config;
+
+      
+      
     }
-  }
+
+    
+    
+  },
+env: {
+    MAILSLURP_API_KEY: "sk_kAnCNgWofZw8aJ3R_ZZC61FeGJa8CW0g9xC3WCszxRD6UrIWNxyUYOE0Vh15s2eRAJXoOcXqUuS1i8ovI",
+  },
+  
+
 });
 

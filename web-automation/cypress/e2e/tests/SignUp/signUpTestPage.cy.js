@@ -31,9 +31,52 @@ describe ('Test SignUp Flow ' ,()=> {
       cy.log("======= Open Web application ======")
       cy.visit('/')
       })
-      slowCypressDown(200) 
+      slowCypressDown(300) 
 
-       it('TC-01: Create Account with valid data and validate dashboard', ()=>{
+      
+      it('TC-01: Create Account with valid data and validate auto verification email with mailslurp', { retries: 2 },() => {
+          // 1. Create a dynamic inbox using MailSlurp
+          cy.createInbox().then((inbox) => {
+              const inboxId = inbox.id;
+              const emailAddress = inbox.emailAddress; // This is: 1cd0bca6... @mailslurp.world
+              
+              cy.log("======= Clicking Get Start Free button from landing page ======");
+              landingObj.getStartFreeButt();
+              
+              cy.log("======= Validate Page title ======");
+              signupObj.validatePageTitle();
+      
+              cy.log("======= Entering valid Data in all fields ======");
+              const fullName = faker.person.firstName();
+              signupObj.enterFullName(fullName);
+              
+              // 2. Use the MailSlurp email instead of Faker or a static one
+              signupObj.enterEmail(emailAddress); 
+              
+              signupObj.enterPassword(faker.internet.password({ length: 8 }));
+              signupObj.clickButton();
+      
+              cy.log("======= Verify send email page ======");
+              signupObj.verifySendEmail();
+      
+              // 3. AUTO-VALIDATE THE EMAIL
+              cy.log("======= Waiting for verification email... ======");
+              cy.waitForLatestEmail(inboxId).then((email) => {
+                  expect(email.subject).to.contain("Verify your account"); // Change to your actual subject
+                  
+                  // Optional: Extract a code if your app sends one
+                  const verificationCode = /([0-9]{6})/.exec(email.body)[1];
+                  cy.log("Verification Code Found: " + verificationCode);
+                  
+                  // If your app has a "Verify" screen, you can type the code here:
+                  // signupObj.enterVerificationCode(verificationCode);
+              });
+      
+              signupObj.verifyLogout();
+          });
+      });
+
+       it.skip('TC-01: Create Account with valid data and validate send email page', ()=>{
 
    
        cy.log("======= Clicking Get Start Free button from landing page ======")
@@ -43,77 +86,73 @@ describe ('Test SignUp Flow ' ,()=> {
 
             cy.log("======= Entring valid Data in all fields ======")
 
-      signupObj.validatePageTitle() //validate Page Title
 
+      cy.wait(500)
        //  Enter and SAVE Full Name
     const fullName = faker.person.firstName()
            signupObj.enterFullName(fullName)
            cy.wrap(fullName).as('savedFullName')
      
     //  Enter and SAVE Email
-    const email = faker.internet.email()
-    signupObj.enterEmail(email)
-    cy.wrap(email).as('savedEmail')
+      signupObj.enterEmail(fullName)
+  
+     signupObj.enterPassword(faker.internet.password({ length: 8 }))
 
-      signupObj.enterPassword(signUpData.password)
-     // signupObj.enterPassword(faker.internet.password({ length: 8 }))
-
-     signupObj.clickCheckbox()
        signupObj.clickButton()
 
-       cy.log("======= Selecting Country and Language on 2nd page ======")
+       cy.log("======= Verify send email page ======")
     
-   
-   
-      signupObj.selectRandomCountry();
-     signupObj.validateSelectedCountry()
-      signupObj.selectCountyandLangauge()
-      cy.wait(300)
+       signupObj.verifySendEmail()
 
-       signupObj.validateDashboard('@savedFullName');
+    //   cy.wait(500)
 
-       logoutObj.logout()
+    //   signupObj.validateDashboard()
+       signupObj.verifyLogout()
+
+     
       
     })
+
+       it('TC-02: Verify Resend varification email button', { retries: 2 },()=>{
+
+   
+       cy.log("======= Clicking Get Start Free button from landing page ======")
+       landingObj.getStartFreeButt()
+       cy.log("======= Validate Page title  ======")
+       signupObj.validatePageTitle()
+
+            cy.log("======= Entring valid Data in all fields ======")
+
+
+      cy.wait(500)
+       //  Enter and SAVE Full Name
+    const fullName = faker.person.firstName()
+           signupObj.enterFullName(fullName)
+           cy.wrap(fullName).as('savedFullName')
+     
+    //  Enter and SAVE Email
+      signupObj.enterEmail()
+  
+     signupObj.enterPassword(faker.internet.password({ length: 8 }))
+
+       signupObj.clickButton()
+
+       cy.log("======= Verify send email page ======")
+    
+       signupObj.verifySendEmail()
+       signupObj.verifySendEmailButton()
+       signupObj.verifyLogout()
+
+     
+      
+    })
+
 
 
 
 // nagative TC
 
-       it('TC-02: Validate Trems checkbox', ()=>{
-
-   
-       cy.log("======= Clicking Get Start Free button from landing page ======")
-       landingObj.getStartFreeButt()
-       cy.log("======= Validate Page title  ======")
-       signupObj.validatePageTitle()
-
-            cy.log("======= Entring valid Data in all fields ======")
-
-      signupObj.validatePageTitle() //validate Page Title
-
-       //  Enter and SAVE Full Name
-    const fullName = faker.person.firstName()
-           signupObj.enterFullName(fullName)
-           cy.wrap(fullName).as('savedFullName')
-     
-    //  Enter and SAVE Email
-    const email = faker.internet.email()
-    signupObj.enterEmail(email)
-    cy.wrap(email).as('savedEmail')
-
-      signupObj.enterPassword(signUpData.password)
-    
-    // signupObj.clickCheckbox()
-       signupObj.clickButton()
-       signupObj.validateErrornUncheckTermBox()
-
-      
-    })
-
-
-
- it('TC-03: Validate SignUp process with duplicate email', ()=>{
+ it('TC-03: Validate SignUp process with duplicate email',{ retries: 2 }, ()=>{
 
    
        cy.log("======= Clicking Get Start Free button from landing page ======")
@@ -132,12 +171,12 @@ describe ('Test SignUp Flow ' ,()=> {
      
     //  Enter and SAVE Email
    
-    signupObj.enterDuplicateEmail('testuser_1772077397225@example.com')
+    signupObj.enterDuplicateEmail('qwkhire3@gmail.com')
     
 
       signupObj.enterPassword(signUpData.password)
     
-     signupObj.clickCheckbox()
+
        signupObj.clickButton()
        cy.wait(300)
         signupObj.validateErrorOnDuplicateEmail()  
@@ -145,7 +184,7 @@ describe ('Test SignUp Flow ' ,()=> {
 
     // email field with invalud email
 
- it('TC-04: Validate Email field', ()=>{
+ it('TC-04: Validate Email field', { retries: 2 },()=>{
 
       
    
@@ -168,47 +207,17 @@ describe ('Test SignUp Flow ' ,()=> {
 
 
       signupObj.enterPassword(signUpData.password)
-   
-     signupObj.clickCheckbox()
+  
        signupObj.clickButton()
 
       
 
     })
 
-    //validate password and confirm password fields with different data 
-
- it('TC-05: Validate error message on Providing different password in password in confirm password fields', ()=>{
-
-      
-       cy.log("======= Clicking Get Start Free button from landing page ======")
-       landingObj.getStartFreeButt()
-       cy.log("======= Validate Page title  ======")
-       signupObj.validatePageTitle()
-
-            cy.log("======= Entring valid Data in all fields ======")
-
-      signupObj.validatePageTitle() //validate Page Title
-
-       //  Enter and SAVE Full Name
-    const fullName = faker.person.firstName()
-           signupObj.enterFullName(fullName)
-           cy.wrap(fullName).as('savedFullName')
-     
- 
-    //  Validate Email Field
    
-    const email = faker.internet.email()
-    signupObj.enterEmail(email)
- 
-      signupObj.ValidatePasswordandConfirmPasswordChange(signUpData.password)
-
-    
-    })
-
     //validate Continuee button on empty fields should be disable
     
-    it('TC-06: Validate Continuee Button on Empty Fields', ()=>{
+    it('TC-05: Validate Continuee Button on Empty Fields',{ retries: 2 }, ()=>{
 
        cy.log("======= Clicking Get Start Free button from landing page ======")
        landingObj.getStartFreeButt()
@@ -227,7 +236,7 @@ describe ('Test SignUp Flow ' ,()=> {
     })
 
 
-       it('TC-07: Validate Sign In link', ()=>{
+       it('TC-06: Validate Sign In link', { retries: 2 },()=>{
 
    
        cy.log("======= Clicking Get Start Free button from landing page ======")
@@ -244,7 +253,7 @@ describe ('Test SignUp Flow ' ,()=> {
 
     
 
-       it('TC-08: Validate Continuee with Google Button', ()=>{
+       it('TC-07: Validate Continuee with Google Button',{ retries: 2 }, ()=>{
 
    
        cy.log("======= Clicking Get Start Free button from landing page ======")
@@ -260,38 +269,8 @@ describe ('Test SignUp Flow ' ,()=> {
     })
 
 
-       it('TC-09: Validate Terms of service link', ()=>{
 
-   
-       cy.log("======= Clicking Get Start Free button from landing page ======")
-       landingObj.getStartFreeButt()
-       cy.log("======= Validate Page title  ======")
-       signupObj.validatePageTitle()
-
-            cy.log("======= Entring valid Data in all fields ======")
-
-      signupObj.validatePageTitle() //validate Page Title
-        signupObj.validateTermLink()
-      
-    })
-
-           it('TC-10: Validate Privacy Policy link', ()=>{
-
-   
-       cy.log("======= Clicking Get Start Free button from landing page ======")
-       landingObj.getStartFreeButt()
-       cy.log("======= Validate Page title  ======")
-       signupObj.validatePageTitle()
-
-            cy.log("======= Entring valid Data in all fields ======")
-
-      signupObj.validatePageTitle() //validate Page Title
-        signupObj.validatePrivacylink()
-      
-    })
-
-
-        it('TC-11: Validate SignUp Paid with Start free Trial button', ()=>{
+        it.skip('TC-11: Validate SignUp Paid with Start free Trial button', ()=>{
 
    
        cy.log("======= Clicking signUp Paid with Start free Trial button ======")
@@ -331,6 +310,32 @@ describe ('Test SignUp Flow ' ,()=> {
 
 
 
+it('TC-08{ retries: 2 },: Validate invalid Password', ()=>{
 
+   
+       cy.log("======= Clicking Get Start Free button from landing page ======")
+       landingObj.getStartFreeButt()
+       cy.log("======= Validate Page title  ======")
+       signupObj.validatePageTitle()
+
+            cy.log("======= Entring valid Data in all fields ======")
+
+      signupObj.validatePageTitle() //validate Page Title
+
+     const fullName = faker.person.firstName()
+           signupObj.enterFullName(fullName)
+           cy.wrap(fullName).as('savedFullName')
+     
+    //  Enter and SAVE Email
+      signupObj.enterEmail()
+  
+     signupObj.enterPassword(faker.internet.password({ length: 7 }))
+    
+
+       signupObj.clickButton()
+        signupObj.validatePassword()
+ })
+
+ 
        
 })

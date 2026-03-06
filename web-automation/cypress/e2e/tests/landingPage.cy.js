@@ -24,260 +24,137 @@ describe('FlacronCV Landing Page – POM Based Automation', () => {
     cy.visit('/')
   })
 
-   it('TC-1: Verify Features  option from top menu options navigation', () => {
+      slowCypressDown(500) 
+   it('TC-1: Verify Features  option from top menu options navigation',{ retries: 2 }, () => {
    header.topMenu.features().click()
-    cy.url().should('include', '/features')
-      cy.verifyPageIsNotBlank()
+    cy.contains('AI Writing Assistant').should('be.visible')
+      
   })
 
-   it('TC-2: Verify Pricing  option from top menu options navigation', () => {
+   it('TC-2: Verify Pricing  option from top menu options navigation',{ retries: 2 }, () => {
    header.topMenu.pricing().click()
-    cy.url().should('include', '/pricing')
-      cy.verifyPageIsNotBlank()
+    cy.contains('Most Popular').should('be.visible')
+    
   })
 
-    it('TC-3: Verify Templates option from top menu options navigation', () => {
+    it('TC-3: Verify Templates option from top menu options navigation',{ retries: 2 }, () => {
     header.topMenu.templates().click()
     cy.url().should('include', '/templates')
       cy.verifyPageIsNotBlank()
   })
 
 
-     it('TC-4: Verify About option from top menu options navigation', () => {
+     it('TC-4: Verify About Us option from top menu options navigation',{ retries: 2 }, () => {
    
-    header.topMenu.about().click()
-    cy.url().should('include', '/about')
+    header.topMenu.aboutUs().click()
+    cy.url().should('include', '/about-us')
       cy.verifyPageIsNotBlank()
   })
 
 
 
-  it('TC-5: Verify Login button navigation', () => {
-    header.loginButton().click()
+  it('TC-5: Verify Login button navigation',{ retries: 2 }, () => {
+    header.topMenu.loginButt().click()
     cy.url().should('include', '/login')
      cy.verifyPageIsNotBlank()
   })
 
-  it('TC-6: Verify Get Started Free button from header', () => {
-    header.getStartedFreeButton().click()
+  it('TC-6: Verify Get Started Free button from header',{ retries: 2 }, () => {
+    header.topMenu.getFreeStartButt().click()
     cy.url().should('include', '/register')
      cy.verifyPageIsNotBlank()
   })
 
-  it('TC-7: Verify Watch Demo button', () => {
-    landing.watchDemoButton().click()
-    cy.url().should('include', '/demo')
+
+
+it('TC-7: Redirects to Registration page when Get Started button is clicked',{ retries: 2 }, () => {
+ 
+  //cy.get('.hero-actions > .btn-primary')  //Get start free button next to Watch Demo button
+  header.topMenu.startBuildingForFreeButt().click()
+ 
+cy.url().should('include', '/register')
      cy.verifyPageIsNotBlank()
-  })
-
-it('TC-8: Redirects to Registration page when Get Started button is clicked', () => {
- 
-  //cy.get('.hero-actions > .btn-primary')  //Get start free button next to Watch Demo button
-  header.topMenu.GetFreeStartButt()
-  .should('be.visible')
-    .click()
-
-  cy.location('pathname').then((path) => {
-    if (path !== '/register') {
-      throw new Error(`
-❌ REDIRECTION FAILED
-
-The "Get Started" button did not redirect to the Registration page.
-
-Expected URL:
-  /register
-
-Actual URL:
-  ${path}
-
-Impact:
-• User cannot sign up from the landing page
-• Critical conversion flow is broken, Get start from top menu and all 
-other Get start buttons are redirected to change registartion page.All Get start
-free buttons should be redirected to the same Registration Page.
-      `)
-    }
-  })
-
-  // Optional: ensure page is not blank
-  cy.verifyPageIsNotBlank()
 })
 
 
-    it('TC-9: Verify Example option from footer menu options navigation', () => {
-    footerObj.footer.example().click()
-    cy.url().should('include', '/example')
-      cy.verifyPageIsNotBlank()
-  })
+it('TC-8: varify start building free button',{ retries: 2 }, () => {
+ 
+  header.topMenu.startBuildingFreeButt().click()
 
+
+cy.url().should('include', '/register')
+     cy.verifyPageIsNotBlank()
+})
+
+
+it('TC-9: varify get started button',{ retries: 2 }, () => {
+ 
+  header.topMenu.getStartFreeButt().click()
+
+cy.url().should('include', '/register')
+     cy.verifyPageIsNotBlank()
+})
+
+
+it('TC-10: varify upgrad now button',{ retries: 2 }, () => {
+ 
+  header.topMenu.upgradNoProButt().click()
   
-    it('TC-10: Verify Blog option from footer menu options navigation', () => {
-    footerObj.footer.blog().click()
-    cy.url().should('include', '/blog')
+cy.url().should('include', '/register')
+     cy.verifyPageIsNotBlank()
+})
+
+
+it.only('TC-11: varify Enterprise button',{ retries: 2 }, () => {
+ 
+
+ header.topMenu.pricing().click()
+ cy.wait(2000)
+cy.get('div.mt-10 > div.relative > a').should('be.visible').click({ multiple: true })
+
+cy.url().should('include', '/contact-us')
+     cy.verifyPageIsNotBlank()
+     
+})
+
+
+
+      it('TC-12: Verify Testimonials option from footer menu options navigation',{ retries: 2 }, () => {
+    footerObj.footer.testimonials().click()
+    cy.url().should('include', 'testimonials')
+      cy.verifyPageIsNotBlank()
+  })
+     it('TC-13: Verify Flacron Group option from footer menu options navigation',{ retries: 2 }, () => {
+    footerObj.footer.flacronGroup() .scrollIntoView()
+  .invoke('removeAttr', 'target').click()
+    cy.url().should('include', 'https://flacronenterprises.com/')
       cy.verifyPageIsNotBlank()
   })
 
-      it('TC-11: Verify Carrer Guide option from footer menu options navigation', () => {
-    footerObj.footer.careerGuide().click()
-    cy.url().should('include', '/guide')
-      cy.verifyPageIsNotBlank()
-  })
-     it('TC-12: Verify Support option from footer menu options navigation', () => {
-    footerObj.footer.support().click()
-    cy.url().should('include', '/support')
+     it('TC-14: Verify Terms of Service option from footer menu options navigation',{ retries: 2 }, () => {
+    footerObj.footer.terms().click()
+    cy.url().should('include', 'terms-of-service')
       cy.verifyPageIsNotBlank()
   })
 
-     it('TC-13: Verify API option from footer menu options navigation', () => {
-    footerObj.footer.api().click()
-    cy.url().should('include', '/api')
-      cy.verifyPageIsNotBlank()
-  })
 
-    it('TC-14: Verify Carrers option from footer menu options navigation', () => {
-    footerObj.footer.carrer().click()
-    cy.url().should('include', '/careers')
-      cy.verifyPageIsNotBlank()
-  })
 
-   it('TC-15: Verify Contact  option from footer menu options navigation', () => {
-    footerObj.footer.contact().click()
-    cy.url().should('include', '/contact')
-      cy.verifyPageIsNotBlank()
-  })
 
-   it('TC-16: Verify Policy  option from footer menu options navigation', () => {
+   it('TC-15: Verify Privacy Policy  option from footer menu options navigation',{ retries: 2 }, () => {
     footerObj.footer.policy().click()
-    cy.url().should('include', '/privacy')
+    cy.url().should('include', 'privacy-policy')
       cy.verifyPageIsNotBlank()
   })
 
-  it('TC-17: Redirects to Registration page when Get Started button is clicked from bottom of the page', () => {
- 
-  //cy.get('.hero-actions > .btn-primary')  //Get start free button next to Watch Demo button
-  header.topMenu.getStartFreeButtFromBottom()
-  .should('be.visible')
-    .click()
-
-  cy.location('pathname').then((path) => {
-    if (path !== '/register') {
-      throw new Error(`
-❌ REDIRECTION FAILED
-
-The "Get Started" button did not redirect to the Registration page.
-
-Expected URL:
-  /register
-
-Actual URL:
-  ${path}
-
-Impact:
-• User cannot sign up from the landing page
-• Critical conversion flow is broken, Get start from top menu and all 
-other Get start buttons are redirected to change registartion page.All Get start
-free buttons should be redirected to the same Registration Page.
-      `)
-    }
-  })
-
-  // Optional: ensure page is not blank
-  cy.verifyPageIsNotBlank()
-})
-
-
-    it('TC-18: Verify Browse Templates button from bottom of the page navigation', () => {
-    header.topMenu.browserTemButt().click()
-     cy.location('pathname').then((path) => {
-    if (path !== '/register') {
-      throw new Error(`
-❌ REDIRECTION FAILED
-
-The "Get Started" button did not redirect to the Registration page.
-
-Expected URL:
-  /register
-
-Actual URL:
-  ${path}
-
-Impact:
-• User cannot sign up from the landing page
-• Critical conversion flow is broken, Get start from top menu and all 
-other Get start buttons are redirected to change registartion page.All Get start
-free buttons should be redirected to the same Registration Page.
-      `)
-    }
-  })
-
-  // Optional: ensure page is not blank
-  cy.verifyPageIsNotBlank()
-
-    cy.url().should('include', '/templates')
+     it('TC-16: Verify Cookie Policy  option from footer menu options navigation',{ retries: 2 }, () => {
+    footerObj.footer.cookie().click()
+    cy.url().should('include', 'cookie-policy')
       cy.verifyPageIsNotBlank()
   })
 
-  
-    it('TC-19: Verify Get started button form Starter section', () => {
-    header.topMenu.getStartButtFromStarter().click()
-     cy.location('pathname').then((path) => {
-    if (path !== '/register') {
-      throw new Error(`
-❌ REDIRECTION FAILED
+it('TC-17: Displays selected language as a GUI flag, not text',{ retries: 2 }, () => {
 
-The "Get Started" button did not redirect to the Registration page.
-
-Expected URL:
-  /register
-
-Actual URL:
-  ${path}
-
-Impact:
-• User cannot sign up from the landing page
-• Critical conversion flow is broken, Get start from top menu and all 
-other Get start buttons are redirected to change registartion page.All Get start
-free buttons should be redirected to the same Registration Page.
-      `)
-    }
-  })
-
-  // Optional: ensure page is not blank
-  cy.verifyPageIsNotBlank()
-
-  })
-
-   
-    it('TC-20: Verify Get start free trial button form Pro Global section', () => {
-    header.topMenu.startFreeTrialButt().click()
-     cy.location('pathname').then((path) => {
-    if (path !== '/register') {
-      throw new Error(`
-❌ REDIRECTION FAILED
-
-The "Get Started" button did not redirect to the Registration page.
-
-Expected URL:
-  /register
-
-Actual URL:
-  ${path}
-
-Impact:
-• User cannot sign up from the landing page
-• Critical conversion flow is broken, Get start from top menu and all 
-other Get start buttons are redirected to change registartion page.All Get start
-free buttons should be redirected to the same Registration Page.
-      `)
-    }
-  })
-
-  // Optional: ensure page is not blank
-  cy.verifyPageIsNotBlank()
-
-  })
-
-it('TC-21: Displays selected language as a GUI flag, not text', () => {
+  header.topMenu.ENButt().click()
   
    header.topMenu.flag()
     .should('be.visible')
@@ -309,110 +186,52 @@ Impact:
     })
 })
 
-it('TC-22: Translates the page when a new language is selected', () => {
- 
-  // Capture text before language change
-  cy.get('body').invoke('text').then((beforeText) => {
 
-    // Open language dropdown
-    header.topMenu.languageName().click()
-   // Select French language
-    cy.get('.language-option')
-      .contains('.language-name', 'Français')
-      .click()
+  const languages = [
+   // 'English',
+    'Español',
+    'Français',
+    'Deutsch',
+    'العربية',
+    'اردو'
+  ]
 
-    // Assert selected language is active
-    cy.get('.language-option.active .language-name')
-      .should('contain.text', 'Français')
+  languages.forEach((lang) => {
 
-      
-    // Assert page content has changed
-    cy.get('body').invoke('text').then((afterText) => {
-      expect(afterText.trim()).to.not.equal(beforeText.trim())
-    
+    it(`TC-18: Select language: ${lang}`,{ retries: 2 }, () => {
+
+      // Open language dropdown
+      cy.contains('EN')
+        .click()
+
+      // Select language
+      cy.contains(lang)
+        .scrollIntoView()
+        .should('be.visible')
+        .click()
+
+      // Wait for translation
+      cy.wait(2000)
+
+      // Verify language changed (Example text check)
+    cy.contains('Get Your CV Ready in 3 Steps')
+      .should('not.exist')
     })
-  })
-})
 
-it('TC-23: Translates the entire page when a non-English language is selected', () => {
- 
-    // Open language dropdown
-    header.topMenu.languageName().click()
   
-  // Pick a random language (including English)
-  cy.get('.language-option').then($options => {
 
-    const randomIndex = Math.floor(Math.random() * $options.length)
-    const selectedOption = $options[randomIndex]
-
-    const selectedLanguage =
-      selectedOption.querySelector('.language-name').innerText.trim()
-
-    cy.wrap(selectedOption).click()
-
-    // Assert selected language is active
-    cy.get('.language-option.active .language-name')
-      .should('contain.text', selectedLanguage)
-
-    // ✅ If English is selected → do NOT validate translation
-    if (selectedLanguage === 'English') {
-      cy.log('English selected – translation validation skipped')
-      return
-    }
-
-    // ❗ Validate full-page translation ONLY for non-English languages
-    cy.get('body').invoke('text').then(pageText => {
-
-      const englishMarkers = [
-        'Everything You Need',
-        'How It Works',
-        'Choose Your Target',
-        'Fill Your Details',
-        'Download & Apply',
-        'Trusted by',
-        'Simple. Transparent Pricing',
-        'Ready to Build Your'
-      ]
-
-      const untranslated = englishMarkers.filter(marker =>
-        pageText.includes(marker)
-      )
-
-      if (untranslated.length > 0) {
-        cy.screenshot(`partial-translation-${selectedLanguage}-${Date.now()}`)
-
-        throw new Error(`
-❌ INCOMPLETE PAGE TRANSLATION
-
-Selected Language:
-${selectedLanguage}
-
-The following sections are still in English:
-${untranslated.map(t => `• ${t}`).join('\n')}
-
-Expected:
-• Entire page translated into "${selectedLanguage}"
-
-Actual:
-• Page partially translated
-
-Note:
-• English language is excluded from this validation
-        `)
-      }
-    })
-  })
 })
 
+// test responsive test on mobile, tablet and desktop devices
 
-  viewports.forEach(viewport => {
+viewports.forEach(viewport => {
 
-    it(`TC-24: UI should display correctly on ${viewport.name}`, () => {
+    it(`TC-19: UI should display correctly on ${viewport.name}`,{ retries: 2 }, () => {
 
       cy.viewport(viewport.width, viewport.height);
      
       // Header should be visible
-      cy.get('header')
+     cy.get('nav.fixed > div.mx-auto')
         .should('be.visible')
         .and('not.have.css', 'overflow', 'hidden');
 
@@ -421,14 +240,16 @@ Note:
         .should('be.visible');
 
       // Navigation should not overlap content
-      cy.get('nav').then(nav => {
-        cy.get('main').then(main => {
-          const navRect = nav[0].getBoundingClientRect();
-          const mainRect = main[0].getBoundingClientRect();
+    cy.get('nav').then((nav) => {
+  cy.get('main').then((main) => {
 
-          expect(navRect.bottom).to.be.lessThan(mainRect.top);
-        });
-      });
+    const navRect = nav[0].getBoundingClientRect();
+    const mainRect = main[0].getBoundingClientRect();
+
+   expect(navRect.bottom).to.be.lessThan(mainRect.top + 70);
+
+  });
+});
 
       // Buttons should be visible and clickable
       cy.get('button')

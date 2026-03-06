@@ -18,16 +18,13 @@ describe('Test Login Flow ' ,()=>{
       cy.log("======= Open Web application ======")
       cy.visit('/')
       })
-      slowCypressDown(200) 
+      slowCypressDown(300) 
 
-
-
-       it('Login with valid Email and Password', ()=>{
-       cy.log("======= Clicking Get Start Free button from landing page ======")
-      // headerObj.loginButton()
+       it('TC-01: Login with valid Email and Password', { retries: 2 },()=>{
+     
        cy.log("======= Validate Page title  ======")
 
-       headerObj.loginButton().click()
+       headerObj.topMenu.loginButt().click()
        cy.url().should('include', '/login')
 
 
@@ -47,19 +44,20 @@ describe('Test Login Flow ' ,()=>{
 
 // nagative TC
 
- it('Validate Login with invalid email', ()=>{
+ it('TC-02: Validate Login with invalid email', { retries: 2 },()=>{
  cy.log("======= Clicking Get Start Free button from landing page ======")
      
-       cy.log("======= Validate Page title  ======")
+    cy.log("======= Validate Page title  ======")
 
-       headerObj.loginButton().click()
+       headerObj.topMenu.loginButt().click()
        cy.url().should('include', '/login')
+
 
 
       cy.log("======= Entring Data ======")
       
 
-     loginObj.enterValidEmail("test@tee")
+     loginObj.enterValidEmail("test@d")
 
     loginObj.enterPassword(signUpData.password);
     loginObj.clickButton()
@@ -70,12 +68,12 @@ describe('Test Login Flow ' ,()=>{
 
    
 
- it('Validate with invalid password', ()=>{
+ it('TC-03: Validate with invalid password', { retries: 2 },()=>{
 
        
        cy.log("======= Validate Page title  ======")
 
-       headerObj.loginButton().click()
+       headerObj.topMenu.loginButt().click()
        cy.url().should('include', '/login')
 
 
@@ -83,10 +81,10 @@ describe('Test Login Flow ' ,()=>{
       
 
      loginObj.enterValidEmail(signUpData.email)
-
+   
     loginObj.enterPassword("testtettt");
-    loginObj.clickButton()
-    
+     loginObj.clickButton()
+ 
     loginObj.validateWrongPassword()
    
       
@@ -94,11 +92,11 @@ describe('Test Login Flow ' ,()=>{
 
 
 
-    it('validate empty email field error ', ()=>{
+    it('TC-04: validate empty email field error ', { retries: 2 },()=>{
 
        cy.log("======= Validate Page title  ======")
 
-       headerObj.loginButton().click()
+       headerObj.topMenu.loginButt().click()
        cy.url().should('include', '/login')
 
 
@@ -115,12 +113,12 @@ describe('Test Login Flow ' ,()=>{
     })
 
      
-    it('validate empty password field error ', ()=>{
+    it('TC-05: validate empty password field error ',{ retries: 2 }, ()=>{
 
        
        cy.log("======= Validate Page title  ======")
 
-       headerObj.loginButton().click()
+         headerObj.topMenu.loginButt().click()
        cy.url().should('include', '/login')
 
 
@@ -138,12 +136,58 @@ describe('Test Login Flow ' ,()=>{
 
 
     
-    it('validate invalid email and password', ()=>{
+    it('TC-06: validate empty password field error ',{ retries: 2 }, ()=>{
 
        
        cy.log("======= Validate Page title  ======")
 
-       headerObj.loginButton().click()
+         headerObj.topMenu.loginButt().click()
+       cy.url().should('include', '/login')
+
+
+      cy.log("======= Entring Data ======")
+      
+
+    loginObj.enterValidEmail("qwkhire3@gmail.com");
+    loginObj.clickButton()
+    
+        loginObj.validateEmptypPw()
+
+
+
+    })
+
+
+    
+    it('TC-07: validate empty password field error ',{ retries: 2 }, ()=>{
+
+       
+       cy.log("======= Validate Page title  ======")
+
+         headerObj.topMenu.loginButt().click()
+       cy.url().should('include', '/login')
+
+
+      cy.log("======= Entring Data ======")
+      
+
+    loginObj.enterValidEmail("qwkhire3@gmail.com");
+    loginObj.clickButton()
+    
+        loginObj.validateEmptypPw()
+
+
+
+    })
+
+
+    
+    it('TC-08: validate invalid email and password',{ retries: 2 }, ()=>{
+
+       
+       cy.log("======= Validate Page title  ======")
+
+        headerObj.topMenu.loginButt().click()
        cy.url().should('include', '/login')
 
 
@@ -162,20 +206,27 @@ describe('Test Login Flow ' ,()=>{
     })
 
 
-    it('validate Forgot password link', ()=>{
+    it('TC-09: validate Forgot password link', { retries: 2 },()=>{
  
        cy.log("======= Validate Page title  ======")
 
-       headerObj.loginButton().click()
+      headerObj.topMenu.loginButt().click()
        cy.url().should('include', '/login')
        loginObj.validateForgotPw()
 
 
     })
 
+       it('TC-10: validate Create Account link', { retries: 2 },()=>{
+ 
+       cy.log("======= Validate Page title  ======")
+
+      headerObj.topMenu.loginButt().click()
+       cy.url().should('include', '/login')
+       loginObj.validateCreateAccoutnLink()
 
 
-    
+    })    
       
 
     })

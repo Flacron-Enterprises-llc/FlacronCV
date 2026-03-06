@@ -17,6 +17,9 @@
 import './commands'
 import 'cypress-mochawesome-reporter/register';
 import './randumSelectDropdownMenu'
+import 'cypress-mailslurp';
+// or require('cypress-mailslurp');
+
 //import './comboDropdown'
 //import './smartNext'
 //require('cypress-xpath');

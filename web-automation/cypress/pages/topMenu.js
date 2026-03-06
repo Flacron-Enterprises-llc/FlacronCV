@@ -1,37 +1,37 @@
 class topMenu{
 
   topMenu = {
-    features: () => cy.get('.header-desktop-nav > [href="/features"]'),
-    
-    pricing: () => cy.get('.header-desktop-nav > [href="/pricing"]'),
-    templates: () => cy.get('.header-desktop-nav > [href="/templates"]'),
-    about: () => cy.get('.header-desktop-nav > [href="/about"]'),
-    flag:() => cy.get('.language-switcher-trigger > .language-flag'),
-    languageName: () => cy.get('.language-switcher-trigger > .language-name'),
-    GetFreeStartButt: () => cy.get('.hero-actions > .btn-primary'),
-    getStartFreeButtFromBottom: () => cy.get('[style="text-align: center; max-width: 800px; margin: 0px auto;"] > div > .btn-primary'),
-    browserTemButt: () => cy.get('[style="text-align: center; max-width: 800px; margin: 0px auto;"] > div > .btn-secondary'),
-    getStartButtFromStarter: () => cy.get('[style="position: relative; display: flex; flex-direction: column; gap: 2rem; transition: transform 0.3s;"] > .btn'),
-    startFreeTrialButt: () => cy.get('[style="position: relative; display: flex; flex-direction: column; gap: 2rem; transition: transform 0.3s; transform: scale(1.05); border: 2px solid var(--primary-600);"] > .btn')
-    
+    features: () => cy.contains('Features'),
+    pricing: () => cy.contains('Pricing'),
+    templates: () => cy.contains('Templates'),
+    aboutUs: () => cy.contains('About Us'),
+    contactUs: () => cy.contains('Contact Us'),
+    ENButt:() => cy.get('.gap-3 > .relative > .flex'),
+    flag: () => cy.contains('🇬🇧'),
+    languageName: () => cy.contains('English'),
+    getFreeStartButt: () => cy.contains('Get Started Free'),
+    startBuildingForFreeButt: () => cy.contains('Start Building for Free'),
+    startBuildingFreeButt: ()=> cy.contains('Start Building Free'),
+    loginButt: ()=> cy.contains('Log In'),
+    getStartFreeButt: ()=> cy.contains('Get Started'),
+    upgradNoProButt: ()=> cy.contains('Upgrade Now'),
+    enterpriseButt: ()=> cy.get('.mt-10 > :nth-child(3) > a > .inline-flex'),
+    yearly: ()=> cy.contains('Yearly'),
+    monthly: ()=> cy.contains('Monthly')
   
       } 
 
-  loginButton() {
-    return cy.get('[href="/login"]')
-  }
-
-  getStartedFreeButton() {
-    return cy.get('.header-actions > .btn')
-  }
+ 
+ 
 
   languageDropdown() {
-    return cy.get('.language-switcher-trigger')
+    return cy.get(this.topMenu.ENButt)
   }
 
   languageOptions() {
-    return cy.get('.language-option')
+    return cy.get(this.topMenu.languageName)
   }
+
 
   selectRandomLanguage() {
     this.languageDropdown().click()
@@ -42,6 +42,9 @@ class topMenu{
         cy.wrap(options[randomIndex]).click()
       })
   }
+
+
+
 }
 
 export default topMenu;
