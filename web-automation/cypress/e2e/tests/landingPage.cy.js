@@ -105,12 +105,12 @@ cy.url().should('include', '/register')
 })
 
 
-it.only('TC-11: varify Enterprise button',{ retries: 2 }, () => {
+it('TC-11: varify Enterprise button',{ retries: 2 }, () => {
  
 
  header.topMenu.pricing().click()
  cy.wait(2000)
-cy.get('div.mt-10 > div.relative > a').should('be.visible').click({ multiple: true })
+cy.contains('Contact Sales').should('be.visible').click()
 
 cy.url().should('include', '/contact-us')
      cy.verifyPageIsNotBlank()
@@ -151,41 +151,37 @@ cy.url().should('include', '/contact-us')
     cy.url().should('include', 'cookie-policy')
       cy.verifyPageIsNotBlank()
   })
-
-it('TC-17: Displays selected language as a GUI flag, not text',{ retries: 2 }, () => {
-
+it('TC-17: Displays selected language as a GUI flag, not text', { retries: 2 }, () => {
   header.topMenu.ENButt().click()
   
-   header.topMenu.flag()
+  // Target the specific span that should hold the flag
+  header.topMenu.flag()
     .should('be.visible')
-    .then(($flag) => {
+    .then(($flagContainer) => {
+      // Based on your 'code.png', we check the first span
+      const flagSpan = $flagContainer.find('span').first()
+      const text = flagSpan.text().trim()
 
-      const text = $flag.text().trim()
-      const hasImage =
-        $flag.find('img').length > 0 ||
-        $flag.find('svg').length > 0 ||
-        $flag.css('background-image') !== 'none'
+      // 1. Check for Graphic Assets
+      const hasImage = flagSpan.find('img, svg').length > 0 || 
+                       flagSpan.css('background-image').includes('url')
 
-      if (!hasImage) {
+      // 2. Check for Emoji (Some browsers render GB as a flag emoji automatically)
+      const isEmoji = /[\uD83C][\uDDE6-\uDDFF]/.test(text)
+
+      // FAIL LOGIC: If it's just plain 2-letter text (like GB in your screenshot)
+      const isPlainLetters = /^[A-Z]{2}$/.test(text)
+
+      if (isPlainLetters && !hasImage && !isEmoji) {
         throw new Error(`
-❌ LANGUAGE FLAG UI ERROR
-
-The selected language flag is not displayed as a graphical flag icon.
-
-Expected:
-• A visible flag image (icon / SVG / background image)
-
-Actual:
-• Text displayed instead: "${text}"
-
-Impact:
-• Flag is missing,only code displayed
-
+❌ UI BUG DETECTED: Flag is missing.
+Expected: A graphical flag icon.
+Actual: The code is rendering a plain text span: "<span>${text}</span>".
+Impact: Users see text codes (GB, ES, FR) instead of visual flags.
         `)
       }
     })
 })
-
 
   const languages = [
    // 'English',
