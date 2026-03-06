@@ -1,34 +1,43 @@
-name: Test Landing page on Chrome browser
+name: Landing Page Multi-Browser Tests
+
 on:
   push:
     branches:
       - web-landingPage-test
 
 jobs:
-  landingPage-run:
-    name: Test LandingPage on Chrome browser
-    runs-on: ubuntu-22.04
+  landing-page-cross-browser:
+    runs-on: ubuntu-24.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chrome, edge, firefox]
+
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Run landing Page Test
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Dependencies
+        working-directory: web-automation
+        run: npm install
+
+      - name: Run Cypress Tests
         uses: cypress-io/github-action@v6
         with:
           working-directory: web-automation
-          # This triggers the 'npm run test:landingPage-test' but adds the --record flag
-          command: npm run test:landingPage-chrome -- --record
-          record: true
-        env:
-          # Use GitHub Secrets for the Record Key (Recommended)
-          # Go to Settings > Secrets and variables > Actions > New repository secret
-          # Name: CYPRESS_RECORD_KEY, Value: your_key_here
-          CYPRESS_RECORD_KEY: 757222a2-1275-4e82-b3f3-bf3bdf69552a
-      
+          browser: ${{ matrix.browser }}
+          headed: true
+          command: npm run test:landingPage-test
 
-      - name: Upload Report
-        if: always() # Ensures reports upload even if tests fail
+      - name: Upload Mochawesome Reports
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: LandingPage-Test-report
+          name: landing page multi-browser-${{ matrix.browser }}-report
           path: web-automation/cypress/reports/html
