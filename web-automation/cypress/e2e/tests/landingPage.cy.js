@@ -105,19 +105,17 @@ cy.url().should('include', '/register')
 })
 
 
-it.only('TC-11: varify Enterprise button',{ retries: 2 }, () => {
+it('TC-11: varify Enterprise button',{ retries: 2 }, () => {
  
 
  header.topMenu.pricing().click()
  cy.wait(2000)
-cy.get('div.mt-10 > div.relative > a').should('be.visible').click({ multiple: true })
+cy.contains('Contact Sales').should('be.visible').click()
 
 cy.url().should('include', '/contact-us')
      cy.verifyPageIsNotBlank()
      
 })
-
-
 
       it('TC-12: Verify Testimonials option from footer menu options navigation',{ retries: 2 }, () => {
     footerObj.footer.testimonials().click()
