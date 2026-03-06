@@ -24,29 +24,16 @@ import signUpData from '../../../fixtures/signUpData.json' //import data file
  
 
 describe ('Test SignUp Flow ' ,()=> {
+beforeEach(() => {
+    cy.clearCookies();
+    cy.clearLocalStorage();
+    cy.visit('/');
+});
 
-      beforeEach(() => {
-
-        
-  cy.clearCookies();
-  cy.clearLocalStorage();
-  cy.window().then((win) => {
-    win.sessionStorage.clear();
-   
-  });
-
-  
-      cy.log("======= Testing SignUp ======")
-      cy.log("======= Open Web application ======")
-      cy.visit('/')
-
-
-
-      })
-      slowCypressDown(300) 
+slowCypressDown(300) 
 
       
-      it('TC-01: Create Account with valid data and validate auto verification email with mailslurp', { retries: 2 },() => {
+      it('TC-01: Create Account with valid data and validate auto verification email with mailslurp', { retries: 1 },() => {
           // 1. Create a dynamic inbox using MailSlurp
           cy.createInbox().then((inbox) => {
               const inboxId = inbox.id;
@@ -125,7 +112,7 @@ describe ('Test SignUp Flow ' ,()=> {
       
     })
 
-       it('TC-02: Verify Resend varification email button', { retries: 2 },()=>{
+       it('TC-02: Verify Resend varification email button', { retries: 1 },()=>{
 
    
        cy.log("======= Clicking Get Start Free button from landing page ======")
@@ -168,7 +155,7 @@ describe ('Test SignUp Flow ' ,()=> {
 
 // nagative TC
 
- it('TC-03: Validate SignUp process with duplicate email',{ retries: 2 }, ()=>{
+ it('TC-03: Validate SignUp process with duplicate email',{ retries: 1 }, ()=>{
 
    
        cy.log("======= Clicking Get Start Free button from landing page ======")
@@ -201,7 +188,7 @@ describe ('Test SignUp Flow ' ,()=> {
 
     // email field with invalud email
 
- it('TC-04: Validate Email field', { retries: 2 },()=>{
+ it('TC-04: Validate Email field', { retries: 1 },()=>{
 
       
    
