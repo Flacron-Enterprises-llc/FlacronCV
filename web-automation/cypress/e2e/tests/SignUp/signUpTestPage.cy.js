@@ -26,10 +26,22 @@ import signUpData from '../../../fixtures/signUpData.json' //import data file
 describe ('Test SignUp Flow ' ,()=> {
 
       beforeEach(() => {
+
+        
+  cy.clearCookies();
+  cy.clearLocalStorage();
+  cy.window().then((win) => {
+    win.sessionStorage.clear();
+   
+  });
+
   
       cy.log("======= Testing SignUp ======")
       cy.log("======= Open Web application ======")
       cy.visit('/')
+
+
+
       })
       slowCypressDown(300) 
 
@@ -131,8 +143,12 @@ describe ('Test SignUp Flow ' ,()=> {
            cy.wrap(fullName).as('savedFullName')
      
     //  Enter and SAVE Email
-      signupObj.enterEmail()
+      const email = faker.internet.email()
+   signupObj.enterEmail(email)
   
+    cy.wrap(email).as('savedEmail')
+
+      
      signupObj.enterPassword(faker.internet.password({ length: 8 }))
 
        signupObj.clickButton()
@@ -180,6 +196,7 @@ describe ('Test SignUp Flow ' ,()=> {
        signupObj.clickButton()
        cy.wait(300)
         signupObj.validateErrorOnDuplicateEmail()  
+       
     })
 
     // email field with invalud email
@@ -211,6 +228,7 @@ describe ('Test SignUp Flow ' ,()=> {
        signupObj.clickButton()
 
       
+      
 
     })
 
@@ -233,6 +251,7 @@ describe ('Test SignUp Flow ' ,()=> {
        signupObj.clickButton()
 
       signupObj.validateCreateAccountButtonOnEmptyFields()
+    
     })
 
 
@@ -249,6 +268,7 @@ describe ('Test SignUp Flow ' ,()=> {
       signupObj.validatePageTitle() //validate Page Title
         signupObj.validateSigninLink()
       
+       
     })
 
     
@@ -265,6 +285,7 @@ describe ('Test SignUp Flow ' ,()=> {
 
       signupObj.validatePageTitle() //validate Page Title
         signupObj.validateWithGoogleButt()
+  
       
     })
 
@@ -310,7 +331,7 @@ describe ('Test SignUp Flow ' ,()=> {
 
 
 
-it('TC-08{ retries: 2 },: Validate invalid Password', ()=>{
+it('TC-08: Validate invalid Password', { retries: 2 },()=>{
 
    
        cy.log("======= Clicking Get Start Free button from landing page ======")
@@ -327,13 +348,18 @@ it('TC-08{ retries: 2 },: Validate invalid Password', ()=>{
            cy.wrap(fullName).as('savedFullName')
      
     //  Enter and SAVE Email
-      signupObj.enterEmail()
+      const email = faker.internet.email()
+    signupObj.enterEmail(email)
+    cy.wrap(email).as('savedEmail')
+
+
   
      signupObj.enterPassword(faker.internet.password({ length: 7 }))
     
 
        signupObj.clickButton()
         signupObj.validatePassword()
+     
  })
 
  
