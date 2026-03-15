@@ -168,8 +168,10 @@ export async function exportToPDF(cv: CV, sections: CVSection[]): Promise<void> 
  * Export CV as DOCX using docx library (client-side)
  */
 export async function exportToDocx(cv: CV, sections: CVSection[]): Promise<void> {
-  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
-  const { saveAs } = await import('file-saver');
+  const docxModule = await import('docx');
+  // Handle both named-export and default-wrapped shapes from transpilePackages
+  const resolved = (docxModule.Document ? docxModule : (docxModule as any).default ?? docxModule) as typeof docxModule;
+  const { Document, Packer, Paragraph, TextRun, AlignmentType } = resolved;
 
   const children: any[] = [];
 
@@ -329,5 +331,13 @@ export async function exportToDocx(cv: CV, sections: CVSection[]): Promise<void>
   });
 
   const buffer = await Packer.toBlob(doc);
-  saveAs(buffer, `${cv.title || 'CV'}.docx`);
+  // Use native browser download — avoids file-saver CJS/ESM interop issues
+  const url = URL.createObjectURL(buffer);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${cv.title || 'CV'}.docx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
