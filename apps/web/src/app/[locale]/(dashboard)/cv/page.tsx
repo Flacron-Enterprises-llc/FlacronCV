@@ -123,7 +123,7 @@ export default function CVListPage(): React.JSX.Element | null {
       <UpgradeModal
         isOpen={showUpgrade}
         onClose={() => setShowUpgrade(false)}
-        reason="cv_limit"
+        reason="cvs"
       />
 
       {/* Delete confirmation modal */}
