@@ -17,7 +17,7 @@ export default function CVBuilderPage(): React.JSX.Element | null {
   const cvId = params.id as string;
   const queryClient = useQueryClient();
   const { reset, setCV, setSections, cv, sections, isDirty, setIsSaving, setLastSavedAt } = useCVStore();
-  const saveTimerRef = useRef<NodeJS.Timeout>();
+  const saveTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Reset store and invalidate queries when switching CVs
   useEffect(() => {

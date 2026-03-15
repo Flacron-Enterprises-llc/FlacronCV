@@ -63,7 +63,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     reset,
   } = useCoverLetterStore();
 
-  const saveTimerRef = useRef<NodeJS.Timeout>();
+  const saveTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Load cover letter data
   const { isLoading } = useQuery({
