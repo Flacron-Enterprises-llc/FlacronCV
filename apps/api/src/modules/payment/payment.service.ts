@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { UsersService } from '../users/users.service';
@@ -57,7 +57,7 @@ export class PaymentService {
   async createPortalSession(userId: string, returnUrl: string) {
     const user = await this.usersService.findByIdOrThrow(userId);
     if (!user.subscription.stripeCustomerId) {
-      throw new Error('No Stripe customer found');
+      throw new BadRequestException('No active subscription found. Please subscribe to a plan first.');
     }
 
     const session = await this.stripe.billingPortal.sessions.create({

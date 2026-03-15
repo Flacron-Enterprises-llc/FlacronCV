@@ -113,9 +113,21 @@ export async function exportToPDF(cv: CV, sections: CVSection[]): Promise<void> 
 
   try {
     const h2cModule = await import('html2canvas');
-    const html2canvas = h2cModule.default ?? (h2cModule as any).html2canvas;
+    const html2canvas = (
+      typeof h2cModule.default === 'function'
+        ? h2cModule.default
+        : typeof (h2cModule as any).html2canvas === 'function'
+          ? (h2cModule as any).html2canvas
+          : (h2cModule as any)
+    ) as typeof import('html2canvas').default;
     const jsPDFModule = await import('jspdf');
-    const jsPDF = jsPDFModule.jsPDF ?? (jsPDFModule as any).default;
+    const jsPDF = (
+      typeof jsPDFModule.jsPDF === 'function'
+        ? jsPDFModule.jsPDF
+        : typeof (jsPDFModule as any).default === 'function'
+          ? (jsPDFModule as any).default
+          : (jsPDFModule as any)
+    ) as typeof import('jspdf').jsPDF;
 
     const canvas = await html2canvas(iframeDoc.body, {
       scale: 2, // Higher DPI for better quality
