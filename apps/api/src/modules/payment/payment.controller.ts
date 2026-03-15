@@ -24,6 +24,14 @@ export class PaymentController {
     );
   }
 
+  @Post('verify-session')
+  async verifySession(
+    @CurrentUser() user: FirebaseUser,
+    @Body() body: { sessionId: string },
+  ) {
+    return this.paymentService.verifySession(user.uid, body.sessionId);
+  }
+
   @Post('create-portal-session')
   async createPortal(
     @CurrentUser() user: FirebaseUser,

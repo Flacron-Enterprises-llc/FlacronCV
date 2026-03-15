@@ -54,6 +54,70 @@ export class PaymentService {
     return { sessionId: session.id, url: session.url };
   }
 
+  async verifySession(userId: string, sessionId: string) {
+    const session = await this.stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['subscription'],
+    });
+
+    // Security: ensure this session belongs to this user
+    if (session.metadata?.firebaseUid !== userId) {
+      throw new BadRequestException('Session does not belong to this user');
+    }
+
+    if (session.payment_status !== 'paid') {
+      throw new BadRequestException('Payment not completed');
+    }
+
+    const subscription = session.subscription as Stripe.Subscription;
+    if (!subscription) {
+      throw new BadRequestException('No subscription found in session');
+    }
+
+    const plan = this.determinePlan(subscription.items.data[0].price.id);
+    const limits = PLAN_CONFIGS[plan].limits;
+    const now = new Date();
+
+    const db = this.firebaseAdmin.firestore;
+    const batch = db.batch();
+
+    batch.update(db.collection('users').doc(userId), {
+      'subscription.plan': plan,
+      'subscription.status': SubscriptionStatus.ACTIVE,
+      'subscription.stripeSubscriptionId': subscription.id,
+      'subscription.stripeCustomerId': session.customer as string,
+      'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
+      'subscription.cancelAtPeriodEnd': false,
+      'usage.aiCreditsLimit': limits.aiCredits,
+      updatedAt: now,
+    });
+
+    batch.set(db.collection('subscriptions').doc(subscription.id), {
+      id: subscription.id,
+      userId,
+      stripeCustomerId: session.customer as string,
+      plan,
+      priceId: subscription.items.data[0].price.id,
+      interval: subscription.items.data[0].price.recurring?.interval || 'month',
+      amount: subscription.items.data[0].price.unit_amount || 0,
+      currency: subscription.currency,
+      status: SubscriptionStatus.ACTIVE,
+      currentPeriodStart: new Date(subscription.current_period_start * 1000),
+      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      cancelAt: null,
+      canceledAt: null,
+      trialStart: null,
+      trialEnd: null,
+      cancelAtPeriodEnd: false,
+      createdAt: now,
+      updatedAt: now,
+    }, { merge: true });
+
+    await batch.commit();
+    this.logger.log(`Session verified and plan applied for user ${userId}: ${plan}`);
+
+    return { plan, status: SubscriptionStatus.ACTIVE };
+  }
+
   async createPortalSession(userId: string, returnUrl: string) {
     const user = await this.usersService.findByIdOrThrow(userId);
     if (!user.subscription.stripeCustomerId) {

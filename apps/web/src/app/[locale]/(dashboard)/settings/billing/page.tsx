@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams, usePathname } from 'next/navigation';
 import { useAuth } from '@/providers/AuthProvider';
@@ -26,7 +26,6 @@ import {
   X,
   ExternalLink,
   Receipt,
-  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -37,45 +36,21 @@ export default function BillingPage(): React.JSX.Element | null {
   const pathname = usePathname();
   const locale = pathname.split('/')[1] || 'en';
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'yearly'>('monthly');
-  const [syncingPlan, setSyncingPlan] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Keep a ref to the latest user so the polling interval doesn't read a stale closure
-  const userRef = useRef(user);
-  useEffect(() => { userRef.current = user; }, [user]);
 
-  // After Stripe redirects back with ?success=true, poll until the target plan is active
+  // After Stripe redirects back with ?success=true&session_id=..., verify immediately
   useEffect(() => {
     if (searchParams.get('success') !== 'true') return;
-    const expectedPlan = searchParams.get('plan') as SubscriptionPlan | null;
-    const planAtRedirect = user?.subscription?.plan ?? SubscriptionPlan.FREE;
+    const sessionId = searchParams.get('session_id');
+    if (!sessionId) return;
 
-    // Already on the expected plan before we even start polling
-    if (expectedPlan && planAtRedirect === expectedPlan) {
-      setSyncSuccess(true);
-      return;
-    }
-
-    setSyncingPlan(true);
-    let attempts = 0;
-    const MAX_ATTEMPTS = 20; // 40 seconds
-
-    pollRef.current = setInterval(async () => {
-      attempts++;
-      await refreshUser();
-      const latestPlan = userRef.current?.subscription?.plan ?? SubscriptionPlan.FREE;
-      const planChanged = expectedPlan
-        ? latestPlan === expectedPlan
-        : latestPlan !== planAtRedirect;
-
-      if (planChanged || attempts >= MAX_ATTEMPTS) {
-        clearInterval(pollRef.current!);
-        setSyncingPlan(false);
-        if (planChanged) setSyncSuccess(true);
-      }
-    }, 2000);
-
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    api.post('/payments/verify-session', { sessionId })
+      .then(() => refreshUser())
+      .then(() => setSyncSuccess(true))
+      .catch(() => {
+        // Verification failed — fall back to a single refresh after 3s
+        setTimeout(() => refreshUser().then(() => setSyncSuccess(true)), 3000);
+      });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -100,7 +75,7 @@ export default function BillingPage(): React.JSX.Element | null {
 
       return api.post<{ url: string }>('/payments/create-checkout-session', {
         priceId,
-        successUrl: `${window.location.origin}/${locale}/settings/billing?success=true&plan=${plan}`,
+        successUrl: `${window.location.origin}/${locale}/settings/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${window.location.origin}/${locale}/settings/billing?canceled=true`,
       });
     },
@@ -252,17 +227,7 @@ export default function BillingPage(): React.JSX.Element | null {
 
   return (
     <div className="space-y-8">
-      {/* Post-checkout sync banner */}
-      {syncingPlan && (
-        <div className="flex items-center gap-3 rounded-xl border border-brand-200 bg-brand-50 px-5 py-4 dark:border-brand-800 dark:bg-brand-900/20">
-          <Loader2 className="h-5 w-5 animate-spin text-brand-600 dark:text-brand-400" />
-          <div>
-            <p className="font-semibold text-brand-800 dark:text-brand-300">Setting up your subscription…</p>
-            <p className="text-sm text-brand-600 dark:text-brand-400">This usually takes a few seconds. Your new plan and credits will appear shortly.</p>
-          </div>
-        </div>
-      )}
-      {syncSuccess && !syncingPlan && (
+      {syncSuccess && (
         <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 dark:border-emerald-800 dark:bg-emerald-900/20">
           <Check className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           <div>
