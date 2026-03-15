@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -37,7 +38,7 @@ interface ListResponse {
   pages: number;
 }
 
-export default function CRMRevenuePage() {
+export default function CRMRevenuePage(): React.JSX.Element {
   const queryClient = useQueryClient();
 
   const [page, setPage] = useState(1);

@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -32,7 +33,7 @@ import {
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
-export default function CustomerProfilePage() {
+export default function CustomerProfilePage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
 

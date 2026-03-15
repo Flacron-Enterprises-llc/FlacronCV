@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
@@ -46,7 +48,7 @@ const actionColors: Record<string, 'success' | 'warning' | 'danger' | 'info' | '
   export: 'warning',
 };
 
-export default function AdminAuditLogsPage() {
+export default function AdminAuditLogsPage(): React.JSX.Element {
   const t = useTranslations('admin');
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);

@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -45,7 +46,7 @@ const STAGE_OPTIONS = [
   { value: CRMLeadStage.CLOSED_LOST, label: 'Lost' },
 ];
 
-export default function CRMLeadsPage() {
+export default function CRMLeadsPage(): React.JSX.Element {
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');

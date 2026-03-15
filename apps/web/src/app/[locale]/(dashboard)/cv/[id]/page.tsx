@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useEffect, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -11,7 +12,7 @@ import LivePreview from '@/components/cv-builder/LivePreview';
 import EditorToolbar from '@/components/cv-builder/toolbar/EditorToolbar';
 import { Loader2 } from 'lucide-react';
 
-export default function CVBuilderPage() {
+export default function CVBuilderPage(): React.JSX.Element {
   const params = useParams();
   const cvId = params.id as string;
   const queryClient = useQueryClient();

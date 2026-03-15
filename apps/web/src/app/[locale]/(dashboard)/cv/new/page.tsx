@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState, useEffect, ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -314,7 +315,7 @@ const tierLabelMap: Record<SubscriptionPlan, string> = {
   [SubscriptionPlan.ENTERPRISE]: 'Enterprise',
 };
 
-export default function NewCVPage() {
+export default function NewCVPage(): React.JSX.Element {
   const t = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();

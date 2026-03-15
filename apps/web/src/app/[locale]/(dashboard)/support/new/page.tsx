@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -34,7 +35,7 @@ const priorityOptions: { value: TicketPriority; label: string }[] = [
   { value: TicketPriority.URGENT, label: 'Urgent' },
 ];
 
-export default function NewSupportTicketPage() {
+export default function NewSupportTicketPage(): React.JSX.Element {
   const t = useTranslations('support');
   const router = useRouter();
   const { user } = useAuth();

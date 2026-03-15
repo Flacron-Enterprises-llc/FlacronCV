@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -24,7 +25,7 @@ import {
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 
-export default function CRMDashboardPage() {
+export default function CRMDashboardPage(): React.JSX.Element {
   const { data: overview, isLoading: loadingOverview } = useQuery<CRMAnalyticsOverview>({
     queryKey: ['crm', 'analytics', 'overview'],
     queryFn: () => api.get('/crm/analytics/overview'),

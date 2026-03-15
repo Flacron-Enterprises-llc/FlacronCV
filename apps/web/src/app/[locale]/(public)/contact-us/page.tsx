@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -8,7 +9,7 @@ import Input from '@/components/ui/Input';
 import Card from '@/components/ui/Card';
 import { Mail, Clock, CheckCircle, Send } from 'lucide-react';
 
-export default function ContactUsPage() {
+export default function ContactUsPage(): React.JSX.Element {
   const t = useTranslations('contact');
 
   const [form, setForm] = useState({

@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useTranslations } from 'next-intl';
 import { Link, useRouter } from '@/i18n/routing';
@@ -58,7 +59,7 @@ const categoryLabelMap: Record<TicketCategory, string> = {
   [TicketCategory.ACCOUNT]: 'Account',
 };
 
-export default function SupportPage() {
+export default function SupportPage(): React.JSX.Element {
   const t = useTranslations('support');
   const router = useRouter();
   const { user } = useAuth();

@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState, useMemo, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
@@ -324,7 +325,7 @@ function SkeletonCard() {
 }
 
 /* ─── Main page ─── */
-export default function PublicTemplatesPage() {
+export default function PublicTemplatesPage(): React.JSX.Element {
   const t = useTranslations();
   const router = useRouter();
   const { user } = useAuth();

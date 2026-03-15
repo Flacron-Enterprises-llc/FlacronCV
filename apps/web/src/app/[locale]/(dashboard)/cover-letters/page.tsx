@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -22,7 +23,7 @@ import { CoverLetter } from '@flacroncv/shared-types';
 import { formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 
-export default function CoverLettersPage() {
+export default function CoverLettersPage(): React.JSX.Element {
   const t = useTranslations();
   const queryClient = useQueryClient();
   const [deleteId, setDeleteId] = useState<string | null>(null);

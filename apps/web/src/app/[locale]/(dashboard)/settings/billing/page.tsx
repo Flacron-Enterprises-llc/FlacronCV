@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
@@ -29,7 +30,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function BillingPage() {
+export default function BillingPage(): React.JSX.Element {
   const t = useTranslations('billing');
   const { user, refreshUser } = useAuth();
   const searchParams = useSearchParams();

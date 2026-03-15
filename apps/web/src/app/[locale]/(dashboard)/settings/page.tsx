@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
@@ -15,7 +16,7 @@ import Modal from '@/components/ui/Modal';
 import { Camera, Save, Trash2, Lock, Globe, Palette, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function SettingsPage() {
+export default function SettingsPage(): React.JSX.Element {
   const t = useTranslations('settings');
   const { user, resetPassword } = useAuth();
   const { setTheme } = useTheme();

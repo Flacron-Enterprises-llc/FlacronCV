@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -9,7 +10,7 @@ import Input from '@/components/ui/Input';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
 
-export default function ForgotPasswordPage() {
+export default function ForgotPasswordPage(): React.JSX.Element {
   const t = useTranslations('auth');
   const { resetPassword } = useAuth();
   const [email, setEmail] = useState('');

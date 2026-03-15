@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -49,7 +51,7 @@ interface UsersResponse {
   totalPages: number;
 }
 
-export default function AdminUsersPage() {
+export default function AdminUsersPage(): React.JSX.Element {
   const t = useTranslations('admin');
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);

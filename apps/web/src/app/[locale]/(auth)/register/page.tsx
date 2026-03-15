@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
@@ -28,7 +29,7 @@ function getPostLoginRedirect(): string {
   return '/dashboard';
 }
 
-export default function RegisterPage() {
+export default function RegisterPage(): React.JSX.Element {
   const t = useTranslations('auth');
   const { register, loginWithGoogle, user, loading } = useAuth();
   const router = useRouter();

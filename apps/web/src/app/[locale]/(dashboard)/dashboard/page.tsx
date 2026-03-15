@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/providers/AuthProvider';
@@ -8,7 +9,7 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { FileText, Mail, Sparkles, Download, Plus, ArrowRight } from 'lucide-react';
 
-export default function DashboardPage() {
+export default function DashboardPage(): React.JSX.Element {
   const t = useTranslations('dashboard');
   const { user } = useAuth();
 

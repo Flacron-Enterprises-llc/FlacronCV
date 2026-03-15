@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -31,7 +33,7 @@ interface Template {
   updatedAt: string;
 }
 
-export default function AdminTemplatesPage() {
+export default function AdminTemplatesPage(): React.JSX.Element {
   const t = useTranslations('admin');
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);

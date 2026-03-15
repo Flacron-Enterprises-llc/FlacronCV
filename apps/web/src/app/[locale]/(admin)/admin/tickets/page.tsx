@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
@@ -54,7 +56,7 @@ const statusVariant: Record<string, 'info' | 'warning' | 'success' | 'default'> 
   closed: 'default',
 };
 
-export default function AdminTicketsPage() {
+export default function AdminTicketsPage(): React.JSX.Element {
   const t = useTranslations('admin');
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState('all');

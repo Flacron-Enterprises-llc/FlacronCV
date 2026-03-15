@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -48,7 +49,7 @@ const SORT_OPTIONS = [
   { value: 'lastActivity', label: 'Last Activity' },
 ];
 
-export default function CRMCustomersPage() {
+export default function CRMCustomersPage(): React.JSX.Element {
   const router = useRouter();
   const queryClient = useQueryClient();
 

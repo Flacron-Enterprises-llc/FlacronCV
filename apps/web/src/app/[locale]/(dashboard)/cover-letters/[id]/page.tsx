@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -40,7 +41,7 @@ import StarterKit from '@tiptap/starter-kit';
 import UnderlineExtension from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 
-export default function CoverLetterEditorPage() {
+export default function CoverLetterEditorPage(): React.JSX.Element {
   const t = useTranslations();
   const { user } = useAuth();
   const params = useParams();

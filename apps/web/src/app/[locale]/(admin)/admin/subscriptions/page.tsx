@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -40,7 +42,7 @@ interface SubscriptionsResponse {
   };
 }
 
-export default function AdminSubscriptionsPage() {
+export default function AdminSubscriptionsPage(): React.JSX.Element {
   const t = useTranslations('admin');
 
   const { data, isLoading, error } = useQuery<SubscriptionsResponse>({

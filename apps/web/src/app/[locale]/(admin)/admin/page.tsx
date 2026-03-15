@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import { useQuery } from '@tanstack/react-query';
@@ -32,7 +34,7 @@ interface AdminStats {
   }>;
 }
 
-export default function AdminDashboardPage() {
+export default function AdminDashboardPage(): React.JSX.Element {
   const t = useTranslations('admin');
 
   const {
