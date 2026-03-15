@@ -8,6 +8,10 @@ import {
   CreateCVData,
   UpdateCVData,
   CVStatus,
+  CVLayout,
+  SectionStyle,
+  BorderRadiusStyle,
+  CVStyling,
   FontSize,
   Spacing,
   PLAN_CONFIGS,
@@ -24,7 +28,7 @@ export class CVService {
     private usersService: UsersService,
   ) {}
 
-  private getTemplateStyling(templateId: string): { primaryColor: string; fontFamily: string; headingFontFamily?: string; fontSize: FontSize; spacing: Spacing; showPhoto: boolean; layout: string; sectionStyle: string; borderRadius: string } {
+  private getTemplateStyling(templateId: string): Omit<CVStyling, 'secondaryColor'> {
     const styles: Record<string, any> = {
       // Classic   → "Modern Minimal" single-column
       classic:      { primaryColor: '#1e3a5f', fontFamily: 'Merriweather',   headingFontFamily: 'Merriweather',     fontSize: FontSize.MEDIUM, spacing: Spacing.NORMAL,  showPhoto: false, layout: 'classic',  sectionStyle: 'underline',   borderRadius: 'small'  },
