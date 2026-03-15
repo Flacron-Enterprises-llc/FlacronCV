@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useCVStore } from '@/store/cv-store';
 import { useAuth } from '@/providers/AuthProvider';
+import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import Button from '@/components/ui/Button';
 import UpgradeModal from '@/components/shared/UpgradeModal';
-import { X, Sparkles, RefreshCw } from 'lucide-react';
+import { X, Sparkles, RefreshCw, PlusCircle, Replace } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface AISummaryModalProps {
@@ -18,7 +19,7 @@ interface AISummaryModalProps {
 
 export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalProps) {
   const t = useTranslations('cv_builder');
-  const { updatePersonalInfo } = useCVStore();
+  const { cv, updatePersonalInfo } = useCVStore();
   const { user } = useAuth();
 
   const [profession, setProfession] = useState('');
@@ -66,12 +67,27 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
     }
   };
 
-  const handleUse = () => {
+  const existingSummary = cv?.personalInfo.summary || '';
+
+  const handleReplace = () => {
     updatePersonalInfo('summary', generatedSummary);
+    toast.success('Summary replaced');
+    resetAndClose();
+  };
+
+  const handleAppend = () => {
+    const merged = existingSummary
+      ? `${existingSummary}\n\n${generatedSummary}`
+      : generatedSummary;
+    updatePersonalInfo('summary', merged);
     toast.success('Summary added to your CV');
+    resetAndClose();
+  };
+
+  const resetAndClose = () => {
     onClose();
-    // Reset state
     setGeneratedSummary('');
+    setIsEditing(false);
     setProfession('');
     setKeySkills('');
     setCareerGoal('');
@@ -81,6 +97,9 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
     onClose();
     setGeneratedSummary('');
     setIsEditing(false);
+    setProfession('');
+    setKeySkills('');
+    setCareerGoal('');
   };
 
   return (
@@ -230,16 +249,30 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
                 variant="ghost"
                 size="sm"
                 icon={<RefreshCw className="h-4 w-4" />}
-                onClick={() => {
-                  setGeneratedSummary('');
-                  setIsEditing(false);
-                }}
+                onClick={() => { setGeneratedSummary(''); setIsEditing(false); }}
               >
                 {t('regenerate')}
               </Button>
-              <Button variant="primary" size="sm" onClick={handleUse}>
-                {t('use_this')}
-              </Button>
+              <div className="flex gap-2">
+                {existingSummary && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={<PlusCircle className="h-4 w-4" />}
+                    onClick={handleAppend}
+                  >
+                    Add to CV
+                  </Button>
+                )}
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={<Replace className="h-4 w-4" />}
+                  onClick={handleReplace}
+                >
+                  {existingSummary ? 'Replace' : 'Add to CV'}
+                </Button>
+              </div>
             </>
           )}
         </div>

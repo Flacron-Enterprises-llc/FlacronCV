@@ -20,288 +20,80 @@ import {
   Template,
   TemplateCategory,
   SubscriptionPlan,
+  type CVLayout,
 } from '@flacroncv/shared-types';
 
-/* ─── Distinct visual mockups per template slug ─── */
+/* ─── Layout + personality mapping per template slug ─── */
 
-function MockupModern() {
-  return (
-    <div className="flex h-full w-full gap-1 p-2">
-      <div className="w-1/3 space-y-1.5 rounded bg-brand-100 p-1.5 dark:bg-brand-900/40">
-        <div className="h-4 w-4 rounded-full bg-brand-300 dark:bg-brand-700" />
-        <div className="h-1 w-full rounded bg-brand-200 dark:bg-brand-800" />
-        <div className="h-1 w-3/4 rounded bg-brand-200 dark:bg-brand-800" />
-        <div className="mt-2 h-1 w-full rounded bg-brand-200 dark:bg-brand-800" />
-        <div className="h-1 w-2/3 rounded bg-brand-200 dark:bg-brand-800" />
-      </div>
-      <div className="flex-1 space-y-1.5 p-1">
-        <div className="h-2 w-3/4 rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-5/6 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="mt-2 h-1.5 w-1/2 rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-function MockupClassic() {
-  return (
-    <div className="flex h-full w-full flex-col items-center space-y-1.5 p-3">
-      <div className="h-2.5 w-2/3 rounded bg-stone-400 dark:bg-stone-500" />
-      <div className="h-1 w-1/2 rounded bg-stone-300 dark:bg-stone-600" />
-      <div className="h-px w-full bg-stone-300 dark:bg-stone-600" />
-      <div className="w-full space-y-1">
-        <div className="h-1.5 w-1/3 rounded bg-stone-400 dark:bg-stone-500" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-      <div className="h-px w-full bg-stone-300 dark:bg-stone-600" />
-      <div className="w-full space-y-1">
-        <div className="h-1.5 w-1/4 rounded bg-stone-400 dark:bg-stone-500" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-5/6 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-function MockupMinimal() {
-  return (
-    <div className="flex h-full w-full flex-col space-y-3 p-4">
-      <div className="h-2 w-1/3 rounded bg-stone-300 dark:bg-stone-600" />
-      <div className="h-1 w-1/4 rounded bg-stone-200 dark:bg-stone-700" />
-      <div className="mt-4 space-y-2">
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-      <div className="mt-4 space-y-2">
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-1/2 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-function MockupProfessional() {
-  return (
-    <div className="flex h-full w-full flex-col p-2">
-      <div className="mb-2 rounded bg-brand-500 p-1.5 dark:bg-brand-600">
-        <div className="h-2 w-1/2 rounded bg-white/80" />
-        <div className="mt-0.5 h-1 w-1/3 rounded bg-white/50" />
-      </div>
-      <div className="flex flex-1 gap-1.5">
-        <div className="flex-1 space-y-1">
-          <div className="h-1.5 w-2/3 rounded bg-stone-300 dark:bg-stone-600" />
-          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
-        </div>
-        <div className="flex-1 space-y-1">
-          <div className="h-1.5 w-2/3 rounded bg-stone-300 dark:bg-stone-600" />
-          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-1 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MockupCreative() {
-  return (
-    <div className="relative flex h-full w-full p-2">
-      <div className="absolute end-0 top-0 h-1/2 w-1/3 rounded-bl-2xl bg-brand-400/30 dark:bg-brand-600/30" />
-      <div className="z-10 flex-1 space-y-1.5 p-1.5">
-        <div className="h-3 w-3/4 rounded bg-brand-400 dark:bg-brand-600" />
-        <div className="h-1 w-1/2 rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="mt-3 h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-2/3 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="mt-2 flex gap-1">
-          <div className="h-2 w-8 rounded-full bg-brand-200 dark:bg-brand-800" />
-          <div className="h-2 w-6 rounded-full bg-brand-200 dark:bg-brand-800" />
-          <div className="h-2 w-10 rounded-full bg-brand-200 dark:bg-brand-800" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MockupExecutive() {
-  return (
-    <div className="flex h-full w-full flex-col p-2">
-      <div className="mb-2 rounded bg-stone-800 p-2 dark:bg-stone-200">
-        <div className="h-2.5 w-2/3 rounded bg-white/90 dark:bg-stone-800" />
-        <div className="mt-1 h-1 w-1/3 rounded bg-white/50 dark:bg-stone-600" />
-      </div>
-      <div className="space-y-1.5 p-1">
-        <div className="flex items-center gap-1.5">
-          <div className="h-1.5 w-1/4 rounded bg-brand-500" />
-          <div className="h-px flex-1 bg-stone-300 dark:bg-stone-600" />
-        </div>
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-5/6 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="flex items-center gap-1.5 pt-1">
-          <div className="h-1.5 w-1/4 rounded bg-brand-500" />
-          <div className="h-px flex-1 bg-stone-300 dark:bg-stone-600" />
-        </div>
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-function MockupCompact() {
-  return (
-    <div className="flex h-full w-full flex-col space-y-0.5 p-1.5">
-      <div className="flex items-center gap-1">
-        <div className="h-2 w-1/3 rounded bg-stone-400 dark:bg-stone-500" />
-        <div className="h-1 w-1/4 rounded bg-stone-300 dark:bg-stone-600" />
-      </div>
-      <div className="h-px w-full bg-stone-300 dark:bg-stone-600" />
-      <div className="flex gap-1">
-        <div className="flex-1 space-y-0.5">
-          <div className="h-1 w-2/3 rounded bg-stone-300 dark:bg-stone-600" />
-          <div className="h-0.5 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-0.5 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-0.5 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
-        </div>
-        <div className="flex-1 space-y-0.5">
-          <div className="h-1 w-2/3 rounded bg-stone-300 dark:bg-stone-600" />
-          <div className="h-0.5 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-0.5 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-0.5 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
-        </div>
-      </div>
-      <div className="flex gap-1">
-        <div className="flex-1 space-y-0.5">
-          <div className="h-1 w-1/2 rounded bg-stone-300 dark:bg-stone-600" />
-          <div className="h-0.5 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-0.5 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        </div>
-        <div className="flex-1 space-y-0.5">
-          <div className="h-1 w-1/2 rounded bg-stone-300 dark:bg-stone-600" />
-          <div className="h-0.5 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-0.5 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MockupTwoColumn() {
-  return (
-    <div className="flex h-full w-full gap-1 p-2">
-      <div className="w-2/5 space-y-1.5 rounded bg-stone-100 p-1.5 dark:bg-stone-800">
-        <div className="h-3 w-3 rounded-full bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-full rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-2/3 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="mt-1.5 h-1.5 w-1/2 rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="mt-1.5 h-1.5 w-1/2 rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="flex gap-0.5">
-          <div className="h-1.5 w-6 rounded-full bg-brand-200 dark:bg-brand-800" />
-          <div className="h-1.5 w-5 rounded-full bg-brand-200 dark:bg-brand-800" />
-        </div>
-      </div>
-      <div className="flex-1 space-y-1.5 p-1">
-        <div className="h-2 w-2/3 rounded bg-stone-400 dark:bg-stone-500" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="mt-1.5 h-1.5 w-1/3 rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-function MockupAcademic() {
-  return (
-    <div className="flex h-full w-full flex-col space-y-1.5 p-3">
-      <div className="h-2 w-1/2 rounded bg-stone-400 dark:bg-stone-500" />
-      <div className="h-1 w-1/3 rounded bg-stone-300 dark:bg-stone-600" />
-      <div className="h-px w-full bg-stone-200 dark:bg-stone-700" />
-      <div className="space-y-0.5">
-        <div className="h-1.5 w-1/4 rounded bg-stone-400 dark:bg-stone-500" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-5/6 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-      <div className="h-px w-full bg-stone-200 dark:bg-stone-700" />
-      <div className="space-y-0.5">
-        <div className="h-1.5 w-1/3 rounded bg-stone-400 dark:bg-stone-500" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-      <div className="h-px w-full bg-stone-200 dark:bg-stone-700" />
-      <div className="space-y-0.5">
-        <div className="h-1.5 w-1/4 rounded bg-stone-400 dark:bg-stone-500" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-function MockupBold() {
-  return (
-    <div className="flex h-full w-full flex-col p-2">
-      <div className="mb-1.5 rounded-lg bg-brand-500 p-2.5 dark:bg-brand-600">
-        <div className="h-3 w-3/4 rounded bg-white/90" />
-        <div className="mt-1 h-1.5 w-1/2 rounded bg-white/60" />
-      </div>
-      <div className="flex gap-2 p-1">
-        <div className="h-4 w-1 rounded-full bg-brand-400 dark:bg-brand-600" />
-        <div className="flex-1 space-y-1">
-          <div className="h-1.5 w-1/2 rounded bg-stone-400 dark:bg-stone-500" />
-          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-1 w-5/6 rounded bg-stone-200 dark:bg-stone-700" />
-        </div>
-      </div>
-      <div className="flex gap-2 p-1">
-        <div className="h-4 w-1 rounded-full bg-brand-400 dark:bg-brand-600" />
-        <div className="flex-1 space-y-1">
-          <div className="h-1.5 w-1/3 rounded bg-stone-400 dark:bg-stone-500" />
-          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MockupFallback() {
-  return (
-    <div className="flex h-full w-full items-center justify-center p-3">
-      <div className="w-14 space-y-1">
-        <div className="h-1.5 w-full rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-1/2 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-const mockupMap: Record<string, () => ReactNode> = {
-  modern: () => <MockupModern />,
-  classic: () => <MockupClassic />,
-  minimal: () => <MockupMinimal />,
-  professional: () => <MockupProfessional />,
-  creative: () => <MockupCreative />,
-  executive: () => <MockupExecutive />,
-  compact: () => <MockupCompact />,
-  'two-column': () => <MockupTwoColumn />,
-  academic: () => <MockupAcademic />,
-  bold: () => <MockupBold />,
+// Maps template slug → { layout, primaryColor, personality label }
+const templateMeta: Record<string, { layout: CVLayout; color: string; personality: string }> = {
+  classic:      { layout: 'classic',  color: '#1e3a5f', personality: 'Modern Minimal'         },
+  modern:       { layout: 'sidebar',  color: '#2563eb', personality: 'Corporate Professional'  },
+  minimal:      { layout: 'classic',  color: '#374151', personality: 'Clean & Simple'          },
+  professional: { layout: 'top-bar',  color: '#0f766e', personality: 'Creative Bold'           },
+  creative:     { layout: 'top-bar',  color: '#7c3aed', personality: 'Creative Bold'           },
+  executive:    { layout: 'compact',  color: '#0c0c0c', personality: 'Executive Dense'         },
+  compact:      { layout: 'compact',  color: '#1d4ed8', personality: 'Executive Dense'         },
+  'two-column': { layout: 'sidebar',  color: '#059669', personality: 'Corporate Professional'  },
+  academic:     { layout: 'classic',  color: '#6b21a8', personality: 'Clean & Simple'          },
+  bold:         { layout: 'top-bar',  color: '#dc2626', personality: 'Creative Bold'           },
 };
+
+function LayoutPreview({ layout, color }: { layout: CVLayout; color: string }) {
+  if (layout === 'sidebar') return (
+    <div className="flex h-full w-full overflow-hidden">
+      <div className="w-[32%] p-1.5 flex flex-col gap-1" style={{ background: color }}>
+        <div className="h-4 w-4 rounded-full mx-auto" style={{ background: 'rgba(255,255,255,0.35)' }} />
+        {[80,60,90,70,55].map((w,i) => <div key={i} className="h-1 rounded" style={{ width:`${w}%`, background:'rgba(255,255,255,0.3)' }} />)}
+      </div>
+      <div className="flex-1 p-1.5 bg-white flex flex-col gap-1">
+        {[70,90,60,80,50,75,65].map((w,i) => <div key={i} className="h-1.5 rounded bg-stone-200" style={{ width:`${w}%` }} />)}
+      </div>
+    </div>
+  );
+
+  if (layout === 'top-bar') return (
+    <div className="flex h-full w-full flex-col overflow-hidden">
+      <div className="px-2 py-2 flex items-center gap-1.5" style={{ background: color }}>
+        <div className="h-5 w-5 rounded flex-shrink-0" style={{ background:'rgba(255,255,255,0.3)' }} />
+        <div className="flex-1 flex flex-col gap-0.5">
+          <div className="h-2 w-2/3 rounded" style={{ background:'rgba(255,255,255,0.85)' }} />
+          <div className="h-1 w-1/2 rounded" style={{ background:'rgba(255,255,255,0.5)' }} />
+        </div>
+      </div>
+      <div className="flex-1 bg-white p-1.5 flex flex-col gap-1">
+        {[80,60,90,55,75].map((w,i) => <div key={i} className="h-1.5 rounded bg-stone-200" style={{ width:`${w}%` }} />)}
+      </div>
+    </div>
+  );
+
+  if (layout === 'compact') return (
+    <div className="flex h-full w-full flex-col bg-white p-1.5 gap-1 overflow-hidden">
+      <div className="flex items-center gap-1.5 pb-1" style={{ borderBottom:`2px solid ${color}` }}>
+        <div className="h-2.5 w-1/3 rounded" style={{ background: color }} />
+        <div className="h-1.5 w-1/4 rounded bg-stone-300" />
+      </div>
+      <div className="flex gap-1.5 flex-1">
+        <div className="flex-[3] flex flex-col gap-0.5">
+          {[90,70,80,60,75].map((w,i) => <div key={i} className="h-1.5 rounded bg-stone-200" style={{ width:`${w}%` }} />)}
+        </div>
+        <div className="flex-[2] flex flex-col gap-0.5">
+          {[85,65,75,50,80].map((w,i) => <div key={i} className="h-1.5 rounded bg-stone-100" style={{ width:`${w}%` }} />)}
+        </div>
+      </div>
+    </div>
+  );
+
+  // classic (default)
+  return (
+    <div className="flex h-full w-full flex-col bg-white items-center p-2 gap-1 overflow-hidden">
+      <div className="h-2.5 w-1/2 rounded" style={{ background: color }} />
+      <div className="h-1 w-1/3 rounded bg-stone-300" />
+      <div className="w-full mt-1" style={{ borderTop:`2px solid ${color}` }} />
+      {[90,70,80,55,75,60].map((w,i) => <div key={i} className="h-1.5 rounded bg-stone-200" style={{ width:`${w}%` }} />)}
+    </div>
+  );
+}
 
 const tierVariantMap: Record<SubscriptionPlan, 'success' | 'brand' | 'warning'> = {
   [SubscriptionPlan.FREE]: 'success',
@@ -429,7 +221,7 @@ export default function NewCVPage(): React.JSX.Element | null {
                 const isSelected =
                   selectedTemplate === tmpl.slug || selectedTemplate === tmpl.id;
                 const isLocked = !canUseTemplate(tmpl);
-                const Mockup = mockupMap[tmpl.slug] || (() => <MockupFallback />);
+                const meta = templateMeta[tmpl.slug] || { layout: 'classic' as CVLayout, color: '#374151', personality: 'Clean & Simple' };
 
                 return (
                   <button
@@ -445,9 +237,9 @@ export default function NewCVPage(): React.JSX.Element | null {
                           : 'border-stone-200 hover:border-stone-300 dark:border-stone-700 dark:hover:border-stone-600',
                     )}
                   >
-                    {/* Mockup preview */}
+                    {/* Layout preview */}
                     <div className="relative mb-2 h-28 overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-stone-200/50 dark:bg-stone-900 dark:ring-stone-700/50">
-                      <Mockup />
+                      <LayoutPreview layout={meta.layout} color={meta.color} />
                       {isLocked && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[1px]">
                           <Lock className="h-5 w-5 text-white drop-shadow" />
@@ -455,16 +247,19 @@ export default function NewCVPage(): React.JSX.Element | null {
                       )}
                     </div>
 
-                    {/* Name + tier */}
+                    {/* Name + tier + personality */}
                     <p className="font-medium text-stone-900 dark:text-white">
                       {tmpl.name}
                     </p>
-                    <div className="mt-1">
+                    <div className="mt-1 flex items-center gap-1.5">
                       <Badge variant={tierVariantMap[tmpl.tier]} className="text-[10px]">
                         {tierLabelMap[tmpl.tier]}
                       </Badge>
                     </div>
-                    <p className="mt-1 line-clamp-2 text-[11px] leading-tight text-stone-500 dark:text-stone-400">
+                    <p className="mt-1 text-[10px] font-medium text-brand-600 dark:text-brand-400">
+                      {meta.personality}
+                    </p>
+                    <p className="mt-0.5 line-clamp-2 text-[11px] leading-tight text-stone-500 dark:text-stone-400">
                       {tmpl.description}
                     </p>
                   </button>

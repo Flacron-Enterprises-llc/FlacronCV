@@ -24,18 +24,28 @@ export class CVService {
     private usersService: UsersService,
   ) {}
 
-  private getTemplateStyling(templateId: string): { primaryColor: string; fontFamily: string; headingFontFamily?: string; fontSize: FontSize; spacing: Spacing; showPhoto: boolean } {
+  private getTemplateStyling(templateId: string): { primaryColor: string; fontFamily: string; headingFontFamily?: string; fontSize: FontSize; spacing: Spacing; showPhoto: boolean; layout: string; sectionStyle: string; borderRadius: string } {
     const styles: Record<string, any> = {
-      modern:       { primaryColor: '#2563eb', fontFamily: 'Inter',            headingFontFamily: 'Inter',              fontSize: FontSize.MEDIUM, spacing: Spacing.NORMAL,  showPhoto: false },
-      classic:      { primaryColor: '#1e3a5f', fontFamily: 'Merriweather',     headingFontFamily: 'Merriweather',       fontSize: FontSize.MEDIUM, spacing: Spacing.NORMAL,  showPhoto: false },
-      minimal:      { primaryColor: '#374151', fontFamily: 'Inter',            headingFontFamily: 'Inter',              fontSize: FontSize.SMALL,  spacing: Spacing.COMPACT, showPhoto: false },
-      professional: { primaryColor: '#0f766e', fontFamily: 'Roboto',           headingFontFamily: 'Montserrat',         fontSize: FontSize.MEDIUM, spacing: Spacing.NORMAL,  showPhoto: false },
-      creative:     { primaryColor: '#7c3aed', fontFamily: 'Open Sans',        headingFontFamily: 'Playfair Display',   fontSize: FontSize.MEDIUM, spacing: Spacing.RELAXED, showPhoto: true  },
-      executive:    { primaryColor: '#0c0c0c', fontFamily: 'Roboto',           headingFontFamily: 'Montserrat',         fontSize: FontSize.LARGE,  spacing: Spacing.RELAXED, showPhoto: false },
-      compact:      { primaryColor: '#1d4ed8', fontFamily: 'Inter',            headingFontFamily: 'Inter',              fontSize: FontSize.SMALL,  spacing: Spacing.COMPACT, showPhoto: false },
-      'two-column': { primaryColor: '#059669', fontFamily: 'Lora',             headingFontFamily: 'Montserrat',         fontSize: FontSize.MEDIUM, spacing: Spacing.NORMAL,  showPhoto: true  },
-      academic:     { primaryColor: '#6b21a8', fontFamily: 'Merriweather',     headingFontFamily: 'Merriweather',       fontSize: FontSize.MEDIUM, spacing: Spacing.NORMAL,  showPhoto: false },
-      bold:         { primaryColor: '#dc2626', fontFamily: 'Montserrat',       headingFontFamily: 'Montserrat',         fontSize: FontSize.LARGE,  spacing: Spacing.RELAXED, showPhoto: true  },
+      // Classic   → "Modern Minimal" single-column
+      classic:      { primaryColor: '#1e3a5f', fontFamily: 'Merriweather',   headingFontFamily: 'Merriweather',     fontSize: FontSize.MEDIUM, spacing: Spacing.NORMAL,  showPhoto: false, layout: 'classic',  sectionStyle: 'underline',   borderRadius: 'small'  },
+      // Modern    → "Corporate Professional" sidebar
+      modern:       { primaryColor: '#2563eb', fontFamily: 'Inter',          headingFontFamily: 'Inter',            fontSize: FontSize.MEDIUM, spacing: Spacing.NORMAL,  showPhoto: false, layout: 'sidebar',  sectionStyle: 'underline',   borderRadius: 'small'  },
+      // Minimal   → sleek classic with minimal headings
+      minimal:      { primaryColor: '#374151', fontFamily: 'Inter',          headingFontFamily: 'Inter',            fontSize: FontSize.SMALL,  spacing: Spacing.COMPACT, showPhoto: false, layout: 'classic',  sectionStyle: 'minimal',     borderRadius: 'none'   },
+      // Professional → Creative/Bold top-bar, teal tones
+      professional: { primaryColor: '#0f766e', fontFamily: 'Roboto',         headingFontFamily: 'Montserrat',       fontSize: FontSize.MEDIUM, spacing: Spacing.NORMAL,  showPhoto: false, layout: 'top-bar',  sectionStyle: 'left-border', borderRadius: 'small'  },
+      // Creative  → Top-bar with photo, bold violet, rounded cards
+      creative:     { primaryColor: '#7c3aed', fontFamily: 'Open Sans',      headingFontFamily: 'Playfair Display', fontSize: FontSize.MEDIUM, spacing: Spacing.RELAXED, showPhoto: true,  layout: 'top-bar',  sectionStyle: 'card',        borderRadius: 'large'  },
+      // Executive → Compact executive dense, dark tone
+      executive:    { primaryColor: '#0c0c0c', fontFamily: 'Roboto',         headingFontFamily: 'Montserrat',       fontSize: FontSize.LARGE,  spacing: Spacing.RELAXED, showPhoto: false, layout: 'compact',  sectionStyle: 'underline',   borderRadius: 'none'   },
+      // Compact   → Compact layout, tight spacing
+      compact:      { primaryColor: '#1d4ed8', fontFamily: 'Inter',          headingFontFamily: 'Inter',            fontSize: FontSize.SMALL,  spacing: Spacing.COMPACT, showPhoto: false, layout: 'compact',  sectionStyle: 'underline',   borderRadius: 'small'  },
+      // Two-column → Sidebar layout with emerald palette and photo
+      'two-column': { primaryColor: '#059669', fontFamily: 'Lora',           headingFontFamily: 'Montserrat',       fontSize: FontSize.MEDIUM, spacing: Spacing.NORMAL,  showPhoto: true,  layout: 'sidebar',  sectionStyle: 'underline',   borderRadius: 'medium' },
+      // Academic  → Classic, minimal style, academic purple
+      academic:     { primaryColor: '#6b21a8', fontFamily: 'Merriweather',   headingFontFamily: 'Merriweather',     fontSize: FontSize.MEDIUM, spacing: Spacing.NORMAL,  showPhoto: false, layout: 'classic',  sectionStyle: 'minimal',     borderRadius: 'none'   },
+      // Bold      → Top-bar with photo, red, left-border sections
+      bold:         { primaryColor: '#dc2626', fontFamily: 'Montserrat',     headingFontFamily: 'Montserrat',       fontSize: FontSize.LARGE,  spacing: Spacing.RELAXED, showPhoto: true,  layout: 'top-bar',  sectionStyle: 'left-border', borderRadius: 'medium' },
     };
     return styles[templateId] || styles['modern'];
   }
