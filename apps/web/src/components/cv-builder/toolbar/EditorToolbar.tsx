@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import { useState } from 'react';
 import FontPanel from './FontPanel';
+import TemplatePanel from './TemplatePanel';
 import AISummaryModal from '../AISummaryModal';
 
 interface EditorToolbarProps {
@@ -84,7 +85,11 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
 
         <FontPanel />
 
-        <div className="mx-2 h-6 w-px bg-stone-200 dark:bg-stone-700" />
+        <div className="mx-1 h-6 w-px bg-stone-200 dark:bg-stone-700" />
+
+        <TemplatePanel />
+
+        <div className="mx-1 h-6 w-px bg-stone-200 dark:bg-stone-700" />
 
         <Button variant="ghost" size="sm" icon={<Sparkles className="h-4 w-4" />} onClick={() => setAiModalOpen(true)}>
           {t('ai_assist')}

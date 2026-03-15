@@ -17,13 +17,21 @@ export interface PersonalInfo {
   summary: string;
 }
 
+export type CVLayout = 'classic' | 'sidebar' | 'top-bar' | 'compact';
+export type SectionStyle = 'underline' | 'card' | 'left-border' | 'minimal';
+export type BorderRadiusStyle = 'none' | 'small' | 'medium' | 'large';
+
 export interface CVStyling {
   primaryColor: string;
+  secondaryColor?: string;
   fontFamily: string;
   headingFontFamily?: string;
   fontSize: FontSize;
   spacing: Spacing;
   showPhoto: boolean;
+  layout: CVLayout;
+  sectionStyle: SectionStyle;
+  borderRadius: BorderRadiusStyle;
 }
 
 export interface CV {
