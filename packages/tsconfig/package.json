@@ -6,8 +6,5 @@
     "base.json",
     "nextjs.json",
     "nestjs.json"
-  ],
-  "dependencies": {
-    "@dataconnect/generated": "file:src/dataconnect-generated"
-  }
+  ]
 }

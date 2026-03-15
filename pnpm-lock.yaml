@@ -415,20 +415,12 @@ importers:
         version: 4.0.18(@types/node@20.19.33)(jsdom@28.1.0)
 
   packages/shared-types:
-    dependencies:
-      '@dataconnect/generated':
-        specifier: file:src/dataconnect-generated
-        version: file:packages/shared-types/src/dataconnect-generated(firebase@10.14.1)
     devDependencies:
       typescript:
         specifier: ^5.3.0
         version: 5.9.3
 
-  packages/tsconfig:
-    dependencies:
-      '@dataconnect/generated':
-        specifier: file:src/dataconnect-generated
-        version: file:packages/tsconfig/src/dataconnect-generated(firebase@10.14.1)
+  packages/tsconfig: {}
 
 packages:
 
@@ -16240,27 +16232,5 @@ packages:
       firebase: ^11.3.0 || ^12.0.0
     dependencies:
       '@tanstack-query-firebase/react': 2.1.1(@tanstack/react-query@5.90.20)(firebase@10.14.1)
-      firebase: 10.14.1(@react-native-async-storage/async-storage@2.1.2)
-    dev: false
-
-  file:packages/shared-types/src/dataconnect-generated(firebase@10.14.1):
-    resolution: {directory: packages/shared-types/src/dataconnect-generated, type: directory}
-    id: file:packages/shared-types/src/dataconnect-generated
-    name: '@dataconnect/generated'
-    engines: {node: ' >=18.0'}
-    peerDependencies:
-      firebase: ^10.14.0 || ^11.3.0 || ^12.0.0
-    dependencies:
-      firebase: 10.14.1(@react-native-async-storage/async-storage@2.1.2)
-    dev: false
-
-  file:packages/tsconfig/src/dataconnect-generated(firebase@10.14.1):
-    resolution: {directory: packages/tsconfig/src/dataconnect-generated, type: directory}
-    id: file:packages/tsconfig/src/dataconnect-generated
-    name: '@dataconnect/generated'
-    engines: {node: ' >=18.0'}
-    peerDependencies:
-      firebase: ^10.14.0 || ^11.3.0 || ^12.0.0
-    dependencies:
       firebase: 10.14.1(@react-native-async-storage/async-storage@2.1.2)
     dev: false
