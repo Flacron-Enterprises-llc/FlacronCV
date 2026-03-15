@@ -44,28 +44,34 @@ export default function BillingPage(): React.JSX.Element | null {
   const userRef = useRef(user);
   useEffect(() => { userRef.current = user; }, [user]);
 
-  // After Stripe redirects back with ?success=true, poll until plan updates
+  // After Stripe redirects back with ?success=true, poll until the target plan is active
   useEffect(() => {
     if (searchParams.get('success') !== 'true') return;
-    const planAtRedirect = user?.subscription?.plan ?? 'free';
-    if (planAtRedirect !== 'free') {
-      // Already updated before we even mounted
+    const expectedPlan = searchParams.get('plan') as SubscriptionPlan | null;
+    const planAtRedirect = user?.subscription?.plan ?? SubscriptionPlan.FREE;
+
+    // Already on the expected plan before we even start polling
+    if (expectedPlan && planAtRedirect === expectedPlan) {
       setSyncSuccess(true);
       return;
     }
 
     setSyncingPlan(true);
     let attempts = 0;
-    const MAX_ATTEMPTS = 15; // 30 seconds
+    const MAX_ATTEMPTS = 20; // 40 seconds
 
     pollRef.current = setInterval(async () => {
       attempts++;
       await refreshUser();
-      const latestPlan = userRef.current?.subscription?.plan ?? 'free';
-      if (latestPlan !== 'free' || attempts >= MAX_ATTEMPTS) {
+      const latestPlan = userRef.current?.subscription?.plan ?? SubscriptionPlan.FREE;
+      const planChanged = expectedPlan
+        ? latestPlan === expectedPlan
+        : latestPlan !== planAtRedirect;
+
+      if (planChanged || attempts >= MAX_ATTEMPTS) {
         clearInterval(pollRef.current!);
         setSyncingPlan(false);
-        if (latestPlan !== 'free') setSyncSuccess(true);
+        if (planChanged) setSyncSuccess(true);
       }
     }, 2000);
 
@@ -94,7 +100,7 @@ export default function BillingPage(): React.JSX.Element | null {
 
       return api.post<{ url: string }>('/payments/create-checkout-session', {
         priceId,
-        successUrl: `${window.location.origin}/${locale}/settings/billing?success=true`,
+        successUrl: `${window.location.origin}/${locale}/settings/billing?success=true&plan=${plan}`,
         cancelUrl: `${window.location.origin}/${locale}/settings/billing?canceled=true`,
       });
     },

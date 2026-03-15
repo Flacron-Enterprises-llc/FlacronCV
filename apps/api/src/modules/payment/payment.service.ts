@@ -221,13 +221,28 @@ export class PaymentService {
   }
 
   private determinePlan(priceId: string): SubscriptionPlan {
+    // Primary: match against PLAN_CONFIGS (same IDs used by the frontend checkout)
+    for (const [plan, config] of Object.entries(PLAN_CONFIGS) as [SubscriptionPlan, typeof PLAN_CONFIGS[SubscriptionPlan]][]) {
+      if (
+        config.stripePriceIdMonthly && priceId === config.stripePriceIdMonthly ||
+        config.stripePriceIdYearly && priceId === config.stripePriceIdYearly
+      ) {
+        return plan;
+      }
+    }
+
+    // Fallback: env var overrides (in case price IDs differ per environment)
     const prices = this.configService.get('stripe.prices');
-    if (priceId === prices.proMonthly || priceId === prices.proYearly) {
-      return SubscriptionPlan.PRO;
+    if (prices) {
+      if (priceId === prices.proMonthly || priceId === prices.proYearly) {
+        return SubscriptionPlan.PRO;
+      }
+      if (priceId === prices.enterpriseMonthly || priceId === prices.enterpriseYearly) {
+        return SubscriptionPlan.ENTERPRISE;
+      }
     }
-    if (priceId === prices.enterpriseMonthly || priceId === prices.enterpriseYearly) {
-      return SubscriptionPlan.ENTERPRISE;
-    }
+
+    this.logger.warn(`Unknown price ID: ${priceId} — defaulting to FREE`);
     return SubscriptionPlan.FREE;
   }
 
