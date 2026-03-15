@@ -33,7 +33,7 @@ import {
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
-export default function CustomerProfilePage(): React.JSX.Element {
+export default function CustomerProfilePage(): React.JSX.Element | null {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
 

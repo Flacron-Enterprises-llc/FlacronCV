@@ -25,7 +25,7 @@ import {
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 
-export default function CRMDashboardPage(): React.JSX.Element {
+export default function CRMDashboardPage(): React.JSX.Element | null {
   const { data: overview, isLoading: loadingOverview } = useQuery<CRMAnalyticsOverview>({
     queryKey: ['crm', 'analytics', 'overview'],
     queryFn: () => api.get('/crm/analytics/overview'),

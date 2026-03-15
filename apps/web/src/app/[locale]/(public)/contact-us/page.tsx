@@ -9,7 +9,7 @@ import Input from '@/components/ui/Input';
 import Card from '@/components/ui/Card';
 import { Mail, Clock, CheckCircle, Send } from 'lucide-react';
 
-export default function ContactUsPage(): React.JSX.Element {
+export default function ContactUsPage(): React.JSX.Element | null {
   const t = useTranslations('contact');
 
   const [form, setForm] = useState({

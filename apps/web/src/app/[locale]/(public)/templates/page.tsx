@@ -325,7 +325,7 @@ function SkeletonCard() {
 }
 
 /* ─── Main page ─── */
-export default function PublicTemplatesPage(): React.JSX.Element {
+export default function PublicTemplatesPage(): React.JSX.Element | null {
   const t = useTranslations();
   const router = useRouter();
   const { user } = useAuth();

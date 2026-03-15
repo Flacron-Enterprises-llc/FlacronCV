@@ -33,7 +33,7 @@ interface Template {
   updatedAt: string;
 }
 
-export default function AdminTemplatesPage(): React.JSX.Element {
+export default function AdminTemplatesPage(): React.JSX.Element | null {
   const t = useTranslations('admin');
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);

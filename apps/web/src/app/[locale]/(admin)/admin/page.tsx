@@ -34,7 +34,7 @@ interface AdminStats {
   }>;
 }
 
-export default function AdminDashboardPage(): React.JSX.Element {
+export default function AdminDashboardPage(): React.JSX.Element | null {
   const t = useTranslations('admin');
 
   const {

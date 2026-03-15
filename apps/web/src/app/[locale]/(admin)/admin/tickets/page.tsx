@@ -56,7 +56,7 @@ const statusVariant: Record<string, 'info' | 'warning' | 'success' | 'default'> 
   closed: 'default',
 };
 
-export default function AdminTicketsPage(): React.JSX.Element {
+export default function AdminTicketsPage(): React.JSX.Element | null {
   const t = useTranslations('admin');
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState('all');

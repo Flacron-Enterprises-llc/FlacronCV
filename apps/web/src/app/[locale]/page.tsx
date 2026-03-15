@@ -115,7 +115,7 @@ const faqSchema = {
   ],
 };
 
-export default function LandingPage(): React.JSX.Element {
+export default function LandingPage(): React.JSX.Element | null {
   return (
     <main className="min-h-screen">
       <script

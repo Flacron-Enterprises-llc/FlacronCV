@@ -23,7 +23,7 @@ import { CoverLetter } from '@flacroncv/shared-types';
 import { formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 
-export default function CoverLettersPage(): React.JSX.Element {
+export default function CoverLettersPage(): React.JSX.Element | null {
   const t = useTranslations();
   const queryClient = useQueryClient();
   const [deleteId, setDeleteId] = useState<string | null>(null);

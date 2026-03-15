@@ -10,7 +10,7 @@ import Input from '@/components/ui/Input';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
 
-export default function ForgotPasswordPage(): React.JSX.Element {
+export default function ForgotPasswordPage(): React.JSX.Element | null {
   const t = useTranslations('auth');
   const { resetPassword } = useAuth();
   const [email, setEmail] = useState('');

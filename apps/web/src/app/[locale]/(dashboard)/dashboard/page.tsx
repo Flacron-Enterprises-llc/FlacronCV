@@ -9,7 +9,7 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { FileText, Mail, Sparkles, Download, Plus, ArrowRight } from 'lucide-react';
 
-export default function DashboardPage(): React.JSX.Element {
+export default function DashboardPage(): React.JSX.Element | null {
   const t = useTranslations('dashboard');
   const { user } = useAuth();
 

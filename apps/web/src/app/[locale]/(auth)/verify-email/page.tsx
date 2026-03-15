@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { Mail, RefreshCw, LogOut } from 'lucide-react';
 import Button from '@/components/ui/Button';
 
-export default function VerifyEmailPage(): React.JSX.Element {
+export default function VerifyEmailPage(): React.JSX.Element | null {
   const { firebaseUser, emailVerified, logout, resendVerification, refreshEmailVerified } = useAuth();
   const router = useRouter();
   const [resending, setResending] = useState(false);

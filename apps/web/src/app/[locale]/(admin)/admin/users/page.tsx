@@ -51,7 +51,7 @@ interface UsersResponse {
   totalPages: number;
 }
 
-export default function AdminUsersPage(): React.JSX.Element {
+export default function AdminUsersPage(): React.JSX.Element | null {
   const t = useTranslations('admin');
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);

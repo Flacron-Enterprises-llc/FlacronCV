@@ -49,7 +49,7 @@ const SORT_OPTIONS = [
   { value: 'lastActivity', label: 'Last Activity' },
 ];
 
-export default function CRMCustomersPage(): React.JSX.Element {
+export default function CRMCustomersPage(): React.JSX.Element | null {
   const router = useRouter();
   const queryClient = useQueryClient();
 

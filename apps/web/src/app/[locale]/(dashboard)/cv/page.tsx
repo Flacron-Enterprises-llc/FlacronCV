@@ -17,7 +17,7 @@ import { useRouter } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import UpgradeModal from '@/components/shared/UpgradeModal';
 
-export default function CVListPage(): React.JSX.Element {
+export default function CVListPage(): React.JSX.Element | null {
   const t = useTranslations();
   const queryClient = useQueryClient();
   const { user } = useAuth();

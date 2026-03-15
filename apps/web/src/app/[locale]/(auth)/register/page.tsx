@@ -29,7 +29,7 @@ function getPostLoginRedirect(): string {
   return '/dashboard';
 }
 
-export default function RegisterPage(): React.JSX.Element {
+export default function RegisterPage(): React.JSX.Element | null {
   const t = useTranslations('auth');
   const { register, loginWithGoogle, user, loading } = useAuth();
   const router = useRouter();

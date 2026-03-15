@@ -48,7 +48,7 @@ const actionColors: Record<string, 'success' | 'warning' | 'danger' | 'info' | '
   export: 'warning',
 };
 
-export default function AdminAuditLogsPage(): React.JSX.Element {
+export default function AdminAuditLogsPage(): React.JSX.Element | null {
   const t = useTranslations('admin');
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);

@@ -46,7 +46,7 @@ const STAGE_OPTIONS = [
   { value: CRMLeadStage.CLOSED_LOST, label: 'Lost' },
 ];
 
-export default function CRMLeadsPage(): React.JSX.Element {
+export default function CRMLeadsPage(): React.JSX.Element | null {
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');

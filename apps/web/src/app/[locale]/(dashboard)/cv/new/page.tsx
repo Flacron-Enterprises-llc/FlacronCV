@@ -315,7 +315,7 @@ const tierLabelMap: Record<SubscriptionPlan, string> = {
   [SubscriptionPlan.ENTERPRISE]: 'Enterprise',
 };
 
-export default function NewCVPage(): React.JSX.Element {
+export default function NewCVPage(): React.JSX.Element | null {
   const t = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();

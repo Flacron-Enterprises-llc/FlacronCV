@@ -59,7 +59,7 @@ const categoryLabelMap: Record<TicketCategory, string> = {
   [TicketCategory.ACCOUNT]: 'Account',
 };
 
-export default function SupportPage(): React.JSX.Element {
+export default function SupportPage(): React.JSX.Element | null {
   const t = useTranslations('support');
   const router = useRouter();
   const { user } = useAuth();

@@ -16,7 +16,7 @@ import Modal from '@/components/ui/Modal';
 import { Camera, Save, Trash2, Lock, Globe, Palette, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function SettingsPage(): React.JSX.Element {
+export default function SettingsPage(): React.JSX.Element | null {
   const t = useTranslations('settings');
   const { user, resetPassword } = useAuth();
   const { setTheme } = useTheme();

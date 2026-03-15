@@ -35,7 +35,7 @@ const priorityOptions: { value: TicketPriority; label: string }[] = [
   { value: TicketPriority.URGENT, label: 'Urgent' },
 ];
 
-export default function NewSupportTicketPage(): React.JSX.Element {
+export default function NewSupportTicketPage(): React.JSX.Element | null {
   const t = useTranslations('support');
   const router = useRouter();
   const { user } = useAuth();

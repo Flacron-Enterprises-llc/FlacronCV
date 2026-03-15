@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function BillingPage(): React.JSX.Element {
+export default function BillingPage(): React.JSX.Element | null {
   const t = useTranslations('billing');
   const { user, refreshUser } = useAuth();
   const searchParams = useSearchParams();

@@ -41,7 +41,7 @@ import StarterKit from '@tiptap/starter-kit';
 import UnderlineExtension from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 
-export default function CoverLetterEditorPage(): React.JSX.Element {
+export default function CoverLetterEditorPage(): React.JSX.Element | null {
   const t = useTranslations();
   const { user } = useAuth();
   const params = useParams();

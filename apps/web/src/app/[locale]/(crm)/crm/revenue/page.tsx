@@ -38,7 +38,7 @@ interface ListResponse {
   pages: number;
 }
 
-export default function CRMRevenuePage(): React.JSX.Element {
+export default function CRMRevenuePage(): React.JSX.Element | null {
   const queryClient = useQueryClient();
 
   const [page, setPage] = useState(1);

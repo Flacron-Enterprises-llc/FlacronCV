@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { CoverLetter, CV } from '@flacroncv/shared-types';
 import { Sparkles, FileText, ChevronDown } from 'lucide-react';
 
-export default function NewCoverLetterPage(): React.JSX.Element {
+export default function NewCoverLetterPage(): React.JSX.Element | null {
   const t = useTranslations();
   const router = useRouter();
   const { user } = useAuth();

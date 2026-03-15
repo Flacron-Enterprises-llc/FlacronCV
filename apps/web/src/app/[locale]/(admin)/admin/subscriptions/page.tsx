@@ -42,7 +42,7 @@ interface SubscriptionsResponse {
   };
 }
 
-export default function AdminSubscriptionsPage(): React.JSX.Element {
+export default function AdminSubscriptionsPage(): React.JSX.Element | null {
   const t = useTranslations('admin');
 
   const { data, isLoading, error } = useQuery<SubscriptionsResponse>({
