@@ -11,10 +11,11 @@ import { api } from '@/lib/api';
 import { useCoverLetterStore } from '@/store/cover-letter-store';
 import { CoverLetter, UpdateCoverLetterData } from '@flacroncv/shared-types';
 import Button from '@/components/ui/Button';
-import Badge from '@/components/ui/Badge';
 import UpgradeModal from '@/components/shared/UpgradeModal';
+import CoverLetterPreview, { COVER_LETTER_TEMPLATES } from '@/components/cover-letter/CoverLetterPreview';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import {
   ArrowLeft,
   Save,
@@ -35,6 +36,7 @@ import {
   AlignRight,
   Undo2,
   Redo2,
+  LayoutTemplate,
 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -46,7 +48,8 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
   const { user } = useAuth();
   const params = useParams();
   const coverLetterId = params.id as string;
-  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen]     = useState(false);
+  const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const {
@@ -185,35 +188,74 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     },
   });
 
-  // Export handlers
+  // Export handlers — client-side to avoid server 500 errors
   const handleExport = async (format: 'pdf' | 'docx') => {
     setExportMenuOpen(false);
+    if (!coverLetter) return;
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/cover-letters/${coverLetterId}/export/${format}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${await getToken()}`,
-          },
-        },
-      );
-
-      if (!response.ok) throw new Error('Export failed');
-
-      const data = await response.json();
-
-      // Download the file from the returned URL
-      const fileResponse = await fetch(data.downloadUrl);
-      const blob = await fileResponse.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${coverLetter?.title || 'cover-letter'}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      if (format === 'pdf') {
+        const previewEl = document.getElementById('cl-preview-content');
+        if (!previewEl) throw new Error('Preview not found');
+        const clone = previewEl.cloneNode(true) as HTMLElement;
+        clone.style.cssText = 'position:fixed;top:0;left:-9999px;width:794px;overflow:visible;border-radius:0;box-shadow:none;max-width:none;background:#fff';
+        document.body.appendChild(clone);
+        await new Promise((r) => setTimeout(r, 150));
+        try {
+          const h2cMod = await import('html2canvas');
+          const html2canvas = typeof h2cMod.default === 'function' ? h2cMod.default : (h2cMod as any);
+          const jsMod = await import('jspdf');
+          const jsPDF = typeof jsMod.jsPDF === 'function' ? jsMod.jsPDF : typeof (jsMod as any).default === 'function' ? (jsMod as any).default : (jsMod as any);
+          const canvas = await html2canvas(clone, { scale: 2, useCORS: true, allowTaint: true, logging: false, width: 794, windowWidth: 794 });
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const pw = pdf.internal.pageSize.getWidth();
+          const ph = pdf.internal.pageSize.getHeight();
+          const ih = (canvas.height * pw) / canvas.width;
+          let pos = 0, rem = ih;
+          while (rem > 2) {
+            if (pos > 0) pdf.addPage();
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, -pos, pw, ih);
+            pos += ph; rem -= ph;
+          }
+          pdf.save(`${coverLetter.title || 'cover-letter'}.pdf`);
+        } finally {
+          document.body.removeChild(clone);
+        }
+      } else {
+        const docxMod = await import('docx');
+        const d = (docxMod.Document ? docxMod : (docxMod as any).default ?? docxMod) as typeof docxMod;
+        const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle } = d;
+        const color = (coverLetter.styling.primaryColor || '#2563eb').replace('#', '');
+        const font  = coverLetter.styling.fontFamily || 'Calibri';
+        const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        const children: any[] = [
+          new Paragraph({ children: [new TextRun({ text: today, size: 20, color: '888888', font })], spacing: { after: 200 } }),
+        ];
+        if (coverLetter.recipientName || coverLetter.companyName) {
+          if (coverLetter.recipientName) children.push(new Paragraph({ children: [new TextRun({ text: coverLetter.recipientName, bold: true, size: 22, font })] }));
+          if (coverLetter.companyName) children.push(new Paragraph({ children: [new TextRun({ text: coverLetter.companyName, size: 22, font })] }));
+          children.push(new Paragraph({ children: [], spacing: { after: 160 } }));
+        }
+        if (coverLetter.jobTitle) {
+          children.push(new Paragraph({
+            children: [new TextRun({ text: `RE: ${coverLetter.jobTitle}`, bold: true, size: 24, color, font })],
+            border: { bottom: { color, size: 4, style: BorderStyle.SINGLE } },
+            spacing: { after: 200 },
+          }));
+        }
+        children.push(new Paragraph({ children: [new TextRun({ text: `Dear ${coverLetter.recipientName || 'Hiring Manager'},`, size: 22, font })], spacing: { after: 160 } }));
+        // Strip HTML tags for docx body
+        const bodyText = coverLetter.content.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+        if (bodyText) children.push(new Paragraph({ children: [new TextRun({ text: bodyText, size: 22, font })], spacing: { after: 320 } }));
+        children.push(
+          new Paragraph({ children: [new TextRun({ text: 'Sincerely,', size: 22, font, color: '555555' })], spacing: { after: 640 } }),
+          new Paragraph({ children: [new TextRun({ text: user?.profile?.firstName ? `${user.profile.firstName} ${user.profile.lastName || ''}`.trim() : '', bold: true, size: 24, font })] }),
+        );
+        const doc = new Document({ sections: [{ properties: { page: { margin: { top: 720, bottom: 720, left: 900, right: 900 } } }, children }] });
+        const blob = await Packer.toBlob(doc);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `${coverLetter.title || 'cover-letter'}.docx`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      }
       toast.success(t('coverLetters.exported', { format: format.toUpperCase() }));
     } catch {
       toast.error(t('coverLetters.export_failed'));
@@ -298,12 +340,86 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
             {t('coverLetters.ai_improve')}
           </Button>
 
+          {/* Template picker */}
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setTemplateMenuOpen(!templateMenuOpen); setExportMenuOpen(false); }}
+              icon={<LayoutTemplate className="h-4 w-4" />}
+            >
+              Template
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+            {templateMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setTemplateMenuOpen(false)} />
+                <div className="absolute end-0 z-20 mt-1 w-72 rounded-xl border border-stone-200 bg-white p-3 shadow-xl dark:border-stone-700 dark:bg-stone-800">
+                  <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-stone-400">Choose Template</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {COVER_LETTER_TEMPLATES.map((tmpl) => {
+                      const isActive = (coverLetter.templateId || 'modern') === tmpl.id;
+                      return (
+                        <button
+                          key={tmpl.id}
+                          type="button"
+                          onClick={() => {
+                            updateField('templateId', tmpl.id);
+                            if (!coverLetter.styling.primaryColor || coverLetter.styling.primaryColor === '#2563eb') {
+                              updateStyling('primaryColor', tmpl.defaultColor);
+                            }
+                            setTemplateMenuOpen(false);
+                          }}
+                          className={cn(
+                            'rounded-lg border-2 p-2.5 text-start transition-all',
+                            isActive
+                              ? 'border-brand-500 bg-brand-50 dark:border-brand-400 dark:bg-brand-950'
+                              : 'border-stone-200 hover:border-stone-300 dark:border-stone-700 dark:hover:border-stone-600',
+                          )}
+                        >
+                          {/* Mini thumbnail */}
+                          <div className="mb-1.5 h-10 overflow-hidden rounded" style={{ background: '#f8f8f8' }}>
+                            <CLThumbnail templateId={tmpl.id} color={tmpl.defaultColor} />
+                          </div>
+                          <div className="text-xs font-semibold text-stone-800 dark:text-stone-200">{tmpl.name}</div>
+                          <div className="text-[10px] text-stone-400">{tmpl.description}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* Color picker */}
+                  <div className="mt-3 border-t border-stone-100 pt-3 dark:border-stone-700">
+                    <p className="mb-1.5 text-xs font-medium text-stone-500">Accent color</p>
+                    <div className="flex items-center gap-2">
+                      {['#2563eb','#0f766e','#7c3aed','#dc2626','#1e3a5f','#374151','#c2410c','#0c4a6e'].map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => updateStyling('primaryColor', c)}
+                          className={cn('h-5 w-5 rounded-full border-2 transition-transform hover:scale-110', coverLetter.styling.primaryColor === c ? 'border-stone-900 dark:border-white scale-110' : 'border-transparent')}
+                          style={{ background: c }}
+                        />
+                      ))}
+                      <input
+                        type="color"
+                        value={coverLetter.styling.primaryColor || '#2563eb'}
+                        onChange={(e) => updateStyling('primaryColor', e.target.value)}
+                        className="h-5 w-5 cursor-pointer rounded-full border-0 bg-transparent p-0"
+                        title="Custom color"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
           {/* Export dropdown */}
           <div className="relative">
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => setExportMenuOpen(!exportMenuOpen)}
+              onClick={() => { setExportMenuOpen(!exportMenuOpen); setTemplateMenuOpen(false); }}
               icon={<FileDown className="h-4 w-4" />}
             >
               {t('coverLetters.export')}
@@ -466,8 +582,12 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
 
         {/* Preview panel */}
         <div className="hidden w-1/2 overflow-y-auto bg-stone-100 p-6 dark:bg-stone-800 lg:block">
-          <div className="mx-auto max-w-[21cm] rounded-lg bg-white p-10 shadow-md dark:bg-stone-900">
-            <LetterPreview coverLetter={coverLetter} />
+          <div className="mx-auto max-w-[794px] rounded-lg shadow-md overflow-hidden">
+            <CoverLetterPreview
+              coverLetter={coverLetter}
+              senderName={user?.profile?.firstName ? `${user.profile.firstName} ${user.profile.lastName || ''}`.trim() : undefined}
+              senderEmail={user?.email || undefined}
+            />
           </div>
         </div>
       </div>
@@ -482,13 +602,83 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
   );
 }
 
-// Helper to get auth token for export
-async function getToken(): Promise<string> {
-  const { auth } = await import('@/lib/firebase');
-  if (!auth) return '';
-  const user = auth.currentUser;
-  if (!user) return '';
-  return user.getIdToken();
+/** Mini pixel-art thumbnail for the template picker */
+function CLThumbnail({ templateId, color }: { templateId: string; color: string }) {
+  const c = color;
+  if (templateId === 'classic') return (
+    <svg viewBox="0 0 120 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="120" height="48" fill="#fff"/>
+      <rect x="8" y="6" width="60" height="3" rx="1" fill="#333"/>
+      <rect x="8" y="11" width="40" height="2" rx="1" fill="#aaa"/>
+      <rect x="8" y="16" width="104" height="1" fill={c}/>
+      <rect x="8" y="20" width="80" height="2" rx="1" fill="#ddd"/>
+      <rect x="8" y="24" width="104" height="2" rx="1" fill="#ddd"/>
+      <rect x="8" y="28" width="90" height="2" rx="1" fill="#ddd"/>
+      <rect x="8" y="32" width="70" height="2" rx="1" fill="#ddd"/>
+    </svg>
+  );
+  if (templateId === 'modern') return (
+    <svg viewBox="0 0 120 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="120" height="48" fill="#fff"/>
+      <rect width="120" height="14" fill={c}/>
+      <rect x="8" y="3" width="50" height="4" rx="1" fill="white" opacity="0.9"/>
+      <rect x="8" y="9" width="30" height="2" rx="1" fill="white" opacity="0.6"/>
+      <rect x="8" y="18" width="80" height="2" rx="1" fill="#ddd"/>
+      <rect x="8" y="22" width="104" height="2" rx="1" fill="#ddd"/>
+      <rect x="8" y="26" width="90" height="2" rx="1" fill="#ddd"/>
+      <rect x="8" y="30" width="70" height="2" rx="1" fill="#ddd"/>
+      <rect x="8" y="36" width="40" height="2" rx="1" fill={c} opacity="0.6"/>
+    </svg>
+  );
+  if (templateId === 'minimalist') return (
+    <svg viewBox="0 0 120 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="120" height="48" fill="#fff"/>
+      <rect x="8" y="6" width="35" height="2" rx="1" fill={c}/>
+      <rect x="8" y="14" width="104" height="2" rx="1" fill="#e5e5e5"/>
+      <rect x="8" y="19" width="80" height="2" rx="1" fill="#e5e5e5"/>
+      <rect x="8" y="24" width="104" height="2" rx="1" fill="#e5e5e5"/>
+      <rect x="8" y="29" width="60" height="2" rx="1" fill="#e5e5e5"/>
+      <rect x="8" y="36" width="30" height="2" rx="1" fill="#aaa"/>
+    </svg>
+  );
+  if (templateId === 'creative') return (
+    <svg viewBox="0 0 120 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="120" height="48" fill="#fff"/>
+      <rect width="5" height="48" fill={c}/>
+      <rect x="12" y="6" width="50" height="4" rx="1" fill={c}/>
+      <rect x="12" y="12" width="30" height="2" rx="1" fill="#aaa"/>
+      <rect x="12" y="18" width="100" height="2" rx="1" fill="#ddd"/>
+      <rect x="12" y="23" width="90" height="2" rx="1" fill="#ddd"/>
+      <rect x="12" y="28" width="100" height="2" rx="1" fill="#ddd"/>
+      <rect x="12" y="33" width="55" height="2" rx="1" fill="#ddd"/>
+    </svg>
+  );
+  if (templateId === 'corporate') return (
+    <svg viewBox="0 0 120 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="120" height="48" fill="#fff"/>
+      <rect width="120" height="4" fill={c}/>
+      <rect x="8" y="8" width="55" height="3" rx="1" fill={c}/>
+      <rect x="8" y="13" width="35" height="2" rx="1" fill="#aaa"/>
+      <rect x="8" y="17" width="104" height="1" fill="#ddd"/>
+      <rect x="8" y="21" width="80" height="2" rx="1" fill="#ddd"/>
+      <rect x="8" y="25" width="104" height="2" rx="1" fill="#ddd"/>
+      <rect x="8" y="29" width="90" height="2" rx="1" fill="#ddd"/>
+      <rect x="8" y="36" width="40" height="2" rx="1" fill="#aaa"/>
+    </svg>
+  );
+  // executive
+  return (
+    <svg viewBox="0 0 120 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="120" height="48" fill="#fff"/>
+      <rect x="50" y="6" width="62" height="3" rx="1" fill="#333"/>
+      <rect x="70" y="11" width="42" height="2" rx="1" fill="#aaa"/>
+      <rect x="8" y="16" width="104" height="3" rx="1" fill={c}/>
+      <rect x="8" y="22" width="80" height="2" rx="1" fill="#ddd"/>
+      <rect x="8" y="26" width="104" height="2" rx="1" fill="#ddd"/>
+      <rect x="8" y="30" width="70" height="2" rx="1" fill="#ddd"/>
+      <rect x="8" y="38" width="40" height="2" rx="1" fill="#aaa"/>
+    </svg>
+  );
 }
 
 function ToolbarButton({
@@ -521,50 +711,3 @@ function ToolbarButton({
   );
 }
 
-function LetterPreview({ coverLetter }: { coverLetter: CoverLetter }) {
-  const t = useTranslations();
-
-  return (
-    <div
-      className="space-y-6 text-sm text-stone-800 dark:text-stone-200"
-      style={{
-        fontFamily: coverLetter.styling?.fontFamily || 'Georgia, serif',
-        fontSize: coverLetter.styling?.fontSize || '14px',
-      }}
-    >
-      {/* Date */}
-      <p className="text-stone-500">{formatDate(new Date())}</p>
-
-      {/* Recipient info */}
-      {(coverLetter.recipientName || coverLetter.companyName) && (
-        <div className="space-y-0.5">
-          {coverLetter.recipientName && (
-            <p className="font-medium">{coverLetter.recipientName}</p>
-          )}
-          {coverLetter.recipientTitle && <p>{coverLetter.recipientTitle}</p>}
-          {coverLetter.companyName && <p>{coverLetter.companyName}</p>}
-          {coverLetter.companyAddress && (
-            <p className="text-stone-500">{coverLetter.companyAddress}</p>
-          )}
-        </div>
-      )}
-
-      {/* Subject / Job title */}
-      {coverLetter.jobTitle && (
-        <p className="font-semibold">
-          {t('coverLetters.re')}: {coverLetter.jobTitle}
-        </p>
-      )}
-
-      {/* Body content */}
-      {coverLetter.content ? (
-        <div
-          className="prose prose-sm dark:prose-invert max-w-none leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: coverLetter.content }}
-        />
-      ) : (
-        <p className="italic text-stone-400">{t('coverLetters.preview_empty')}</p>
-      )}
-    </div>
-  );
-}
