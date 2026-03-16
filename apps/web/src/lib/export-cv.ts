@@ -90,13 +90,29 @@ export async function exportToDocx(cv: CV, sections: CVSection[]): Promise<void>
   const {
     Document, Packer, Paragraph, TextRun, AlignmentType,
     Table, TableRow, TableCell, WidthType, BorderStyle,
-    ShadingType,
+    ShadingType, ImageRun,
   } = resolved;
 
   const color     = (cv.styling.primaryColor || '#2563eb').replace('#', '');
   const layout    = (cv.styling as any).layout as string || 'classic';
   const bodyFont  = cv.styling.fontFamily || 'Calibri';
   const headFont  = (cv.styling as any).headingFontFamily || bodyFont;
+
+  // Resolve photo: only base64 data URLs (uploaded photos) are safe to embed directly
+  const photoDataUrl = cv.styling.showPhoto && cv.personalInfo.photoURL?.startsWith('data:')
+    ? cv.personalInfo.photoURL
+    : null;
+
+  // Convert data URL → Uint8Array for docx ImageRun
+  const photoBuffer: Uint8Array | null = photoDataUrl
+    ? (() => {
+        const base64 = photoDataUrl.split(',')[1];
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return bytes;
+      })()
+    : null;
 
   const visibleSections = sections
     .filter((s) => s.isVisible)
@@ -146,13 +162,32 @@ export async function exportToDocx(cv: CV, sections: CVSection[]): Promise<void>
   };
 
   // ── header block (shared across all layouts) ──
-  const headerParas: Paragraph[] = [
+  const headerParas: Paragraph[] = [];
+
+  // Photo avatar (centered, if available)
+  if (photoBuffer) {
+    headerParas.push(
+      new Paragraph({
+        children: [
+          new ImageRun({
+            data: photoBuffer,
+            transformation: { width: 80, height: 80 },
+            type: 'jpg',
+          } as any),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 80 },
+      }),
+    );
+  }
+
+  headerParas.push(
     new Paragraph({
-      children: [new TextRun({ text: `${cv.personalInfo.firstName} ${cv.personalInfo.lastName}`, bold: true, size: 44, color, font: headFont })],
+      children: [new TextRun({ text: `${cv.personalInfo.firstName} ${cv.personalInfo.lastName}`.trim() || 'Your Name', bold: true, size: 44, color, font: headFont })],
       alignment: AlignmentType.CENTER,
       spacing: { after: 80 },
     }),
-  ];
+  );
   if (cv.personalInfo.headline) {
     headerParas.push(new Paragraph({
       children: [new TextRun({ text: cv.personalInfo.headline, italics: true, size: 24, color: '555555', font: headFont })],

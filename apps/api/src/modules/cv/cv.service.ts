@@ -150,8 +150,8 @@ export class CVService {
       isPublic: false,
       publicSlug: null,
       personalInfo: {
-        firstName: user.profile.firstName || '',
-        lastName: user.profile.lastName || '',
+        firstName: '',
+        lastName: '',
         email: user.email,
         phone: '',
         address: '',

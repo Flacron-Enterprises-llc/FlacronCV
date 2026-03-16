@@ -29,14 +29,47 @@ import {
   ChevronDown,
   ChevronRight,
   Plus,
+  User,
+  X,
+  Camera,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { CVSection, CVSectionType, CVSectionItem, SkillLevel } from '@flacroncv/shared-types';
 import { cn } from '@/lib/utils';
 
 export default function CVEditor() {
   const t = useTranslations('cv_builder');
-  const { cv, sections, updatePersonalInfo, reorderSections, pushHistory } = useCVStore();
+  const { cv, sections, updatePersonalInfo, updateStyling, reorderSections, pushHistory } = useCVStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const dataUrl = evt.target?.result as string;
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 400;
+        const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round(img.width  * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const resized = canvas.toDataURL('image/jpeg', 0.88);
+        updatePersonalInfo('photoURL', resized);
+        updateStyling('showPhoto', true);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const removePhoto = () => {
+    updatePersonalInfo('photoURL', '');
+    updateStyling('showPhoto', false);
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -65,16 +98,73 @@ export default function CVEditor() {
       {/* Personal Info Section */}
       <Card>
         <h3 className="mb-4 font-semibold text-stone-900 dark:text-white">{t('personal_info')}</h3>
+
+        {/* Photo upload */}
+        <div className="mb-4 flex items-center gap-4">
+          <div className="relative flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="group relative h-20 w-20 overflow-hidden rounded-full border-2 border-dashed border-stone-300 bg-stone-100 transition-colors hover:border-brand-400 hover:bg-stone-200 dark:border-stone-600 dark:bg-stone-700 dark:hover:border-brand-500"
+            >
+              {cv.personalInfo.photoURL ? (
+                <>
+                  <img src={cv.personalInfo.photoURL} alt="Profile" className="h-full w-full object-cover" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Camera className="h-6 w-6 text-white" />
+                  </div>
+                </>
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center gap-1">
+                  <User className="h-7 w-7 text-stone-400" />
+                  <Camera className="h-3.5 w-3.5 text-stone-400" />
+                </div>
+              )}
+            </button>
+            {cv.personalInfo.photoURL && (
+              <button
+                type="button"
+                onClick={removePhoto}
+                className="absolute -right-1 -top-1 rounded-full bg-red-500 p-0.5 text-white shadow hover:bg-red-600"
+                title="Remove photo"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+            >
+              {cv.personalInfo.photoURL ? 'Change photo' : 'Upload photo'}
+            </button>
+            <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
+              JPG or PNG · Used as your CV avatar
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handlePhotoChange}
+            />
+          </div>
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
             label="First Name"
             value={cv.personalInfo.firstName}
             onChange={(e) => updatePersonalInfo('firstName', e.target.value)}
+            placeholder="Your first name"
           />
           <Input
             label="Last Name"
             value={cv.personalInfo.lastName}
             onChange={(e) => updatePersonalInfo('lastName', e.target.value)}
+            placeholder="Your last name"
           />
           <Input
             label="Email"
