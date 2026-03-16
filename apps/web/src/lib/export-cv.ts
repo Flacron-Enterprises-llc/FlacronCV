@@ -1,73 +1,146 @@
 import type { CV, CVSection } from '@flacroncv/shared-types';
 
-// ─── PDF Export ──────────────────────────────────────────────────────────────
+// ─── Shared helpers ───────────────────────────────────────────────────────────
+
+/** Clone a preview element off-screen at A4 width, ready for html2canvas */
+function cloneForCapture(el: HTMLElement): HTMLElement {
+  const clone = el.cloneNode(true) as HTMLElement;
+  clone.style.cssText = [
+    'position:fixed',
+    'top:0',
+    'left:-9999px',
+    'width:794px',
+    'overflow:visible',
+    'border-radius:0',
+    'box-shadow:none',
+    'max-width:none',
+    'background:#fff',
+  ].join(';');
+  document.body.appendChild(clone);
+  return clone;
+}
+
+async function getHtml2Canvas() {
+  const m = await import('html2canvas');
+  return (typeof m.default === 'function' ? m.default
+    : typeof (m as any).html2canvas === 'function' ? (m as any).html2canvas
+    : m) as typeof import('html2canvas').default;
+}
+
+async function getJsPDF() {
+  const m = await import('jspdf');
+  return (typeof m.jsPDF === 'function' ? m.jsPDF
+    : typeof (m as any).default === 'function' ? (m as any).default
+    : m) as typeof import('jspdf').jsPDF;
+}
+
 /**
- * Captures the live editor preview (id="cv-preview-content") directly with
- * html2canvas so the exported PDF is pixel-for-pixel identical to what the
- * user sees in the editor — including layout, colors, fonts, and photos.
+ * Capture an element to canvas and return both the canvas and a Uint8Array of
+ * the PNG bytes (for embedding in DOCX).
+ */
+async function captureToCanvas(el: HTMLElement) {
+  const html2canvas = await getHtml2Canvas();
+  const canvas = await html2canvas(el, {
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    logging: false,
+    width: 794,
+    windowWidth: 794,
+  });
+  return canvas;
+}
+
+async function canvasToUint8Array(canvas: HTMLCanvasElement): Promise<Uint8Array> {
+  return new Promise<Uint8Array>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) { reject(new Error('Canvas toBlob failed')); return; }
+      blob.arrayBuffer().then((buf) => resolve(new Uint8Array(buf))).catch(reject);
+    }, 'image/png');
+  });
+}
+
+/**
+ * Render canvas to DOCX with the image filling an A4 page (no margins).
+ * This guarantees the DOCX looks identical to the PDF and editor preview.
+ */
+async function exportAsImageDocx(canvas: HTMLCanvasElement, filename: string): Promise<void> {
+  const docxModule = await import('docx');
+  const d = (docxModule.Document ? docxModule : (docxModule as any).default ?? docxModule) as typeof docxModule;
+  const { Document, Packer, Paragraph, ImageRun } = d;
+
+  const imgBytes = await canvasToUint8Array(canvas);
+
+  // A4 in twips (1 inch = 1440 twips): 210mm × 297mm
+  const A4_W = 11906;
+  const A4_H = 16838;
+
+  // Image dimensions in pixels to fill the A4 content area (no margins → 794 × proportional)
+  const imgW = 794;
+  const imgH = Math.round((canvas.height / canvas.width) * imgW);
+
+  const doc = new Document({
+    sections: [{
+      properties: {
+        page: {
+          size: { width: A4_W, height: A4_H },
+          margin: { top: 0, bottom: 0, left: 0, right: 0 },
+        },
+      },
+      children: [
+        new Paragraph({
+          children: [
+            new ImageRun({
+              data: imgBytes,
+              transformation: { width: imgW, height: imgH },
+              type: 'png',
+            } as any),
+          ],
+          spacing: { before: 0, after: 0 },
+        }),
+      ],
+    }],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ─── PDF Export ───────────────────────────────────────────────────────────────
+/**
+ * Captures the live editor preview (id="cv-preview-content") with html2canvas
+ * so the exported PDF is pixel-for-pixel identical to the editor.
  */
 export async function exportToPDF(cv: CV, _sections: CVSection[]): Promise<void> {
   const sourceEl = document.getElementById('cv-preview-content');
   if (!sourceEl) throw new Error('CV preview not found — please keep the editor open while exporting.');
 
-  // Clone the element so we can resize/strip decorations without touching the UI
-  const clone = sourceEl.cloneNode(true) as HTMLElement;
-  clone.style.cssText = [
-    'position:fixed',
-    'top:0',
-    'left:-9999px',
-    'width:794px',          // A4 at 96 dpi
-    'overflow:visible',
-    'border-radius:0',
-    'box-shadow:none',
-    'max-width:none',
-  ].join(';');
-  document.body.appendChild(clone);
-
-  // Let the browser do a layout pass with the new width
+  const clone = cloneForCapture(sourceEl);
   await new Promise((r) => setTimeout(r, 150));
 
   try {
-    const h2cModule = await import('html2canvas');
-    const html2canvas = (
-      typeof h2cModule.default === 'function'
-        ? h2cModule.default
-        : typeof (h2cModule as any).html2canvas === 'function'
-          ? (h2cModule as any).html2canvas
-          : (h2cModule as any)
-    ) as typeof import('html2canvas').default;
-
-    const jsPDFModule = await import('jspdf');
-    const jsPDF = (
-      typeof jsPDFModule.jsPDF === 'function'
-        ? jsPDFModule.jsPDF
-        : typeof (jsPDFModule as any).default === 'function'
-          ? (jsPDFModule as any).default
-          : (jsPDFModule as any)
-    ) as typeof import('jspdf').jsPDF;
-
-    const canvas = await html2canvas(clone, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      logging: false,
-      width: 794,
-      windowWidth: 794,
-    });
+    const jsPDF = await getJsPDF();
+    const canvas = await captureToCanvas(clone);
 
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth  = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
-    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+    const pdfW = pdf.internal.pageSize.getWidth();
+    const pdfH = pdf.internal.pageSize.getHeight();
+    const imgH = (canvas.height * pdfW) / canvas.width;
 
-    let position = 0;
-    let remaining = imgHeight;
-    while (remaining > 2) {
-      if (position > 0) pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, -position, pdfWidth, imgHeight);
-      position  += pdfHeight;
-      remaining -= pdfHeight;
+    let pos = 0, rem = imgH;
+    while (rem > 2) {
+      if (pos > 0) pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, -pos, pdfW, imgH);
+      pos += pdfH;
+      rem -= pdfH;
     }
 
     pdf.save(`${cv.title || 'CV'}.pdf`);
@@ -78,226 +151,74 @@ export async function exportToPDF(cv: CV, _sections: CVSection[]): Promise<void>
 
 // ─── DOCX Export ─────────────────────────────────────────────────────────────
 /**
- * Generates a DOCX that mirrors the template styling (color, fonts, layout).
- * Sidebar layout → 2-column table. All other layouts → styled single column.
+ * Captures the live editor preview and embeds it as a full-page image in DOCX.
+ * Identical appearance to the PDF and the editor — all layouts, colors, and
+ * photos are preserved exactly.
  */
-export async function exportToDocx(cv: CV, sections: CVSection[]): Promise<void> {
-  const docxModule = await import('docx');
-  const resolved = (
-    docxModule.Document ? docxModule : (docxModule as any).default ?? docxModule
-  ) as typeof docxModule;
+export async function exportToDocx(cv: CV, _sections: CVSection[]): Promise<void> {
+  const sourceEl = document.getElementById('cv-preview-content');
+  if (!sourceEl) throw new Error('CV preview not found — please keep the editor open while exporting.');
 
-  const {
-    Document, Packer, Paragraph, TextRun, AlignmentType,
-    Table, TableRow, TableCell, WidthType, BorderStyle,
-    ShadingType, ImageRun,
-  } = resolved;
+  const clone = cloneForCapture(sourceEl);
+  await new Promise((r) => setTimeout(r, 150));
 
-  const color     = (cv.styling.primaryColor || '#2563eb').replace('#', '');
-  const layout    = (cv.styling as any).layout as string || 'classic';
-  const bodyFont  = cv.styling.fontFamily || 'Calibri';
-  const headFont  = (cv.styling as any).headingFontFamily || bodyFont;
-
-  // Resolve photo: only base64 data URLs (uploaded photos) are safe to embed directly
-  const photoDataUrl = cv.styling.showPhoto && cv.personalInfo.photoURL?.startsWith('data:')
-    ? cv.personalInfo.photoURL
-    : null;
-
-  // Convert data URL → Uint8Array for docx ImageRun
-  const photoBuffer: Uint8Array | null = photoDataUrl
-    ? (() => {
-        const base64 = photoDataUrl.split(',')[1];
-        const binary = atob(base64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        return bytes;
-      })()
-    : null;
-
-  const visibleSections = sections
-    .filter((s) => s.isVisible)
-    .sort((a, b) => cv.sectionOrder.indexOf(a.id) - cv.sectionOrder.indexOf(b.id));
-
-  // ── helpers ──
-  const makeSectionHeading = (title: string) =>
-    new Paragraph({
-      children: [new TextRun({ text: title.toUpperCase(), bold: true, size: 24, color, font: headFont })],
-      spacing: { before: 240, after: 80 },
-      border: { bottom: { color, size: 6, style: BorderStyle.SINGLE } },
-    });
-
-  const makeItem = (item: any): any[] => {
-    const paras: any[] = [];
-    if (item.company || item.position) {
-      paras.push(
-        new Paragraph({
-          children: [
-            new TextRun({ text: item.position || '', bold: true, size: 22, font: bodyFont }),
-            new TextRun({ text: `   ${item.startDate || ''} – ${item.endDate || 'Present'}`, size: 20, color: '888888', font: bodyFont }),
-          ],
-          spacing: { before: 120 },
-        }),
-        new Paragraph({ children: [new TextRun({ text: `${item.company || ''}${item.location ? ' | ' + item.location : ''}`, size: 20, color: '555555', font: bodyFont })] }),
-      );
-      if (item.description) paras.push(new Paragraph({ children: [new TextRun({ text: item.description, size: 20, font: bodyFont })], spacing: { after: 80 } }));
-    } else if (item.institution) {
-      paras.push(
-        new Paragraph({
-          children: [
-            new TextRun({ text: `${item.degree || ''}${item.field ? ' in ' + item.field : ''}`, bold: true, size: 22, font: bodyFont }),
-            new TextRun({ text: `   ${item.startDate || ''}`, size: 20, color: '888888', font: bodyFont }),
-          ],
-          spacing: { before: 120 },
-        }),
-        new Paragraph({ children: [new TextRun({ text: item.institution, size: 20, color: '555555', font: bodyFont })] }),
-      );
-      if (item.description) paras.push(new Paragraph({ children: [new TextRun({ text: item.description, size: 20, font: bodyFont })], spacing: { after: 80 } }));
-    } else if (item.name) {
-      paras.push(new Paragraph({
-        children: [new TextRun({ text: `${item.name}${item.level ? ' (' + item.level + ')' : ''}`, size: 20, font: bodyFont })],
-        bullet: { level: 0 },
-      }));
-    }
-    return paras;
-  };
-
-  // ── header block (shared across all layouts) ──
-  const headerParas: any[] = [];
-
-  // Photo avatar (centered, if available)
-  if (photoBuffer) {
-    headerParas.push(
-      new Paragraph({
-        children: [
-          new ImageRun({
-            data: photoBuffer,
-            transformation: { width: 80, height: 80 },
-            type: 'jpg',
-          } as any),
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 80 },
-      }),
-    );
+  try {
+    const canvas = await captureToCanvas(clone);
+    await exportAsImageDocx(canvas, `${cv.title || 'CV'}.docx`);
+  } finally {
+    document.body.removeChild(clone);
   }
-
-  headerParas.push(
-    new Paragraph({
-      children: [new TextRun({ text: `${cv.personalInfo.firstName} ${cv.personalInfo.lastName}`.trim() || 'Your Name', bold: true, size: 44, color, font: headFont })],
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 80 },
-    }),
-  );
-  if (cv.personalInfo.headline) {
-    headerParas.push(new Paragraph({
-      children: [new TextRun({ text: cv.personalInfo.headline, italics: true, size: 24, color: '555555', font: headFont })],
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 80 },
-    }));
-  }
-  const contactLine = [
-    cv.personalInfo.email,
-    cv.personalInfo.phone,
-    [cv.personalInfo.city, cv.personalInfo.country].filter(Boolean).join(', '),
-  ].filter(Boolean).join(' | ');
-  if (contactLine) {
-    headerParas.push(new Paragraph({
-      children: [new TextRun({ text: contactLine, size: 20, color: '666666', font: bodyFont })],
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 80 },
-    }));
-  }
-  const links = [cv.personalInfo.linkedin, cv.personalInfo.website].filter(Boolean).join(' | ');
-  if (links) {
-    headerParas.push(new Paragraph({
-      children: [new TextRun({ text: links, size: 18, color: '888888', font: bodyFont })],
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 200 },
-    }));
-  }
-
-  // ── summary ──
-  const summaryParas: any[] = [];
-  if (cv.personalInfo.summary) {
-    summaryParas.push(
-      makeSectionHeading('Professional Summary'),
-      new Paragraph({ children: [new TextRun({ text: cv.personalInfo.summary, size: 22, font: bodyFont })], spacing: { after: 200 } }),
-    );
-  }
-
-  // ── SIDEBAR LAYOUT: 2-column table ──────────────────────────────────────────
-  if (layout === 'sidebar') {
-    const sidebarTypes = new Set(['skills', 'languages', 'certifications', 'awards']);
-    const sidebarSections = visibleSections.filter((s) => sidebarTypes.has(s.type));
-    const mainSections    = visibleSections.filter((s) => !sidebarTypes.has(s.type));
-
-    const sidebarChildren: any[] = [];
-    for (const sec of sidebarSections) {
-      sidebarChildren.push(makeSectionHeading(sec.title));
-      for (const item of sec.items) sidebarChildren.push(...makeItem(item));
-    }
-
-    const mainChildren: any[] = [...summaryParas];
-    for (const sec of mainSections) {
-      mainChildren.push(makeSectionHeading(sec.title));
-      for (const item of sec.items) mainChildren.push(...makeItem(item));
-    }
-
-    const bodyChildren: any[] = [
-      ...headerParas,
-      new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        borders: {
-          top:              { style: BorderStyle.NONE, size: 0 },
-          bottom:           { style: BorderStyle.NONE, size: 0 },
-          left:             { style: BorderStyle.NONE, size: 0 },
-          right:            { style: BorderStyle.NONE, size: 0 },
-          insideHorizontal: { style: BorderStyle.NONE, size: 0 },
-          insideVertical:   { style: BorderStyle.NONE, size: 0 },
-        },
-        rows: [
-          new TableRow({
-            children: [
-              new TableCell({
-                width: { size: 30, type: WidthType.PERCENTAGE },
-                shading: { type: ShadingType.SOLID, color: 'auto', fill: color },
-                children: sidebarChildren.length ? sidebarChildren : [new Paragraph({ children: [] })],
-                margins: { top: 120, bottom: 120, left: 120, right: 200 },
-              }),
-              new TableCell({
-                width: { size: 70, type: WidthType.PERCENTAGE },
-                children: mainChildren.length ? mainChildren : [new Paragraph({ children: [] })],
-                margins: { top: 120, bottom: 120, left: 200, right: 120 },
-              }),
-            ],
-          }),
-        ],
-      }),
-    ];
-
-    const doc = new Document({ sections: [{ properties: { page: { margin: { top: 480, bottom: 480, left: 480, right: 480 } } }, children: bodyChildren }] });
-    return downloadDocx(doc, Packer, cv.title);
-  }
-
-  // ── ALL OTHER LAYOUTS: single-column ────────────────────────────────────────
-  const bodyChildren: any[] = [...headerParas, ...summaryParas];
-  for (const sec of visibleSections) {
-    bodyChildren.push(makeSectionHeading(sec.title));
-    for (const item of sec.items) bodyChildren.push(...makeItem(item));
-  }
-
-  const doc = new Document({ sections: [{ properties: { page: { margin: { top: 720, bottom: 720, left: 720, right: 720 } } }, children: bodyChildren }] });
-  return downloadDocx(doc, Packer, cv.title);
 }
 
-async function downloadDocx(doc: any, Packer: any, title?: string) {
-  const buffer = await Packer.toBlob(doc);
-  const url = URL.createObjectURL(buffer);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${title || 'CV'}.docx`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+// ─── Cover Letter exports (called from the editor page) ──────────────────────
+/**
+ * Export cover letter preview (id="cl-preview-content") to PDF.
+ */
+export async function exportCoverLetterToPDF(title: string): Promise<void> {
+  const sourceEl = document.getElementById('cl-preview-content');
+  if (!sourceEl) throw new Error('Cover letter preview not found.');
+
+  const clone = cloneForCapture(sourceEl);
+  await new Promise((r) => setTimeout(r, 150));
+
+  try {
+    const jsPDF = await getJsPDF();
+    const canvas = await captureToCanvas(clone);
+
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfW = pdf.internal.pageSize.getWidth();
+    const pdfH = pdf.internal.pageSize.getHeight();
+    const imgH = (canvas.height * pdfW) / canvas.width;
+
+    let pos = 0, rem = imgH;
+    while (rem > 2) {
+      if (pos > 0) pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, -pos, pdfW, imgH);
+      pos += pdfH;
+      rem -= pdfH;
+    }
+
+    pdf.save(`${title || 'cover-letter'}.pdf`);
+  } finally {
+    document.body.removeChild(clone);
+  }
+}
+
+/**
+ * Export cover letter preview (id="cl-preview-content") to DOCX as image.
+ */
+export async function exportCoverLetterToDocx(title: string): Promise<void> {
+  const sourceEl = document.getElementById('cl-preview-content');
+  if (!sourceEl) throw new Error('Cover letter preview not found.');
+
+  const clone = cloneForCapture(sourceEl);
+  await new Promise((r) => setTimeout(r, 150));
+
+  try {
+    const canvas = await captureToCanvas(clone);
+    await exportAsImageDocx(canvas, `${title || 'cover-letter'}.docx`);
+  } finally {
+    document.body.removeChild(clone);
+  }
 }

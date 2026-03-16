@@ -13,6 +13,7 @@ import { CoverLetter, UpdateCoverLetterData } from '@flacroncv/shared-types';
 import Button from '@/components/ui/Button';
 import UpgradeModal from '@/components/shared/UpgradeModal';
 import CoverLetterPreview, { COVER_LETTER_TEMPLATES } from '@/components/cover-letter/CoverLetterPreview';
+import { exportCoverLetterToPDF, exportCoverLetterToDocx } from '@/lib/export-cv';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -188,73 +189,15 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     },
   });
 
-  // Export handlers — client-side to avoid server 500 errors
+  // Export handlers — capture the live preview as an image (PDF and DOCX identical)
   const handleExport = async (format: 'pdf' | 'docx') => {
     setExportMenuOpen(false);
     if (!coverLetter) return;
     try {
       if (format === 'pdf') {
-        const previewEl = document.getElementById('cl-preview-content');
-        if (!previewEl) throw new Error('Preview not found');
-        const clone = previewEl.cloneNode(true) as HTMLElement;
-        clone.style.cssText = 'position:fixed;top:0;left:-9999px;width:794px;overflow:visible;border-radius:0;box-shadow:none;max-width:none;background:#fff';
-        document.body.appendChild(clone);
-        await new Promise((r) => setTimeout(r, 150));
-        try {
-          const h2cMod = await import('html2canvas');
-          const html2canvas = typeof h2cMod.default === 'function' ? h2cMod.default : (h2cMod as any);
-          const jsMod = await import('jspdf');
-          const jsPDF = typeof jsMod.jsPDF === 'function' ? jsMod.jsPDF : typeof (jsMod as any).default === 'function' ? (jsMod as any).default : (jsMod as any);
-          const canvas = await html2canvas(clone, { scale: 2, useCORS: true, allowTaint: true, logging: false, width: 794, windowWidth: 794 });
-          const pdf = new jsPDF('p', 'mm', 'a4');
-          const pw = pdf.internal.pageSize.getWidth();
-          const ph = pdf.internal.pageSize.getHeight();
-          const ih = (canvas.height * pw) / canvas.width;
-          let pos = 0, rem = ih;
-          while (rem > 2) {
-            if (pos > 0) pdf.addPage();
-            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, -pos, pw, ih);
-            pos += ph; rem -= ph;
-          }
-          pdf.save(`${coverLetter.title || 'cover-letter'}.pdf`);
-        } finally {
-          document.body.removeChild(clone);
-        }
+        await exportCoverLetterToPDF(coverLetter.title);
       } else {
-        const docxMod = await import('docx');
-        const d = (docxMod.Document ? docxMod : (docxMod as any).default ?? docxMod) as typeof docxMod;
-        const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle } = d;
-        const color = (coverLetter.styling.primaryColor || '#2563eb').replace('#', '');
-        const font  = coverLetter.styling.fontFamily || 'Calibri';
-        const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-        const children: any[] = [
-          new Paragraph({ children: [new TextRun({ text: today, size: 20, color: '888888', font })], spacing: { after: 200 } }),
-        ];
-        if (coverLetter.recipientName || coverLetter.companyName) {
-          if (coverLetter.recipientName) children.push(new Paragraph({ children: [new TextRun({ text: coverLetter.recipientName, bold: true, size: 22, font })] }));
-          if (coverLetter.companyName) children.push(new Paragraph({ children: [new TextRun({ text: coverLetter.companyName, size: 22, font })] }));
-          children.push(new Paragraph({ children: [], spacing: { after: 160 } }));
-        }
-        if (coverLetter.jobTitle) {
-          children.push(new Paragraph({
-            children: [new TextRun({ text: `RE: ${coverLetter.jobTitle}`, bold: true, size: 24, color, font })],
-            border: { bottom: { color, size: 4, style: BorderStyle.SINGLE } },
-            spacing: { after: 200 },
-          }));
-        }
-        children.push(new Paragraph({ children: [new TextRun({ text: `Dear ${coverLetter.recipientName || 'Hiring Manager'},`, size: 22, font })], spacing: { after: 160 } }));
-        // Strip HTML tags for docx body
-        const bodyText = coverLetter.content.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
-        if (bodyText) children.push(new Paragraph({ children: [new TextRun({ text: bodyText, size: 22, font })], spacing: { after: 320 } }));
-        children.push(
-          new Paragraph({ children: [new TextRun({ text: 'Sincerely,', size: 22, font, color: '555555' })], spacing: { after: 640 } }),
-          new Paragraph({ children: [new TextRun({ text: user?.profile?.firstName ? `${user.profile.firstName} ${user.profile.lastName || ''}`.trim() : '', bold: true, size: 24, font })] }),
-        );
-        const doc = new Document({ sections: [{ properties: { page: { margin: { top: 720, bottom: 720, left: 900, right: 900 } } }, children }] });
-        const blob = await Packer.toBlob(doc);
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = `${coverLetter.title || 'cover-letter'}.docx`;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        await exportCoverLetterToDocx(coverLetter.title);
       }
       toast.success(t('coverLetters.exported', { format: format.toUpperCase() }));
     } catch {
