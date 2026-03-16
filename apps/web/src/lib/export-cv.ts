@@ -126,8 +126,8 @@ export async function exportToDocx(cv: CV, sections: CVSection[]): Promise<void>
       border: { bottom: { color, size: 6, style: BorderStyle.SINGLE } },
     });
 
-  const makeItem = (item: any): Paragraph[] => {
-    const paras: Paragraph[] = [];
+  const makeItem = (item: any): any[] => {
+    const paras: any[] = [];
     if (item.company || item.position) {
       paras.push(
         new Paragraph({
@@ -162,7 +162,7 @@ export async function exportToDocx(cv: CV, sections: CVSection[]): Promise<void>
   };
 
   // ── header block (shared across all layouts) ──
-  const headerParas: Paragraph[] = [];
+  const headerParas: any[] = [];
 
   // Photo avatar (centered, if available)
   if (photoBuffer) {
@@ -217,7 +217,7 @@ export async function exportToDocx(cv: CV, sections: CVSection[]): Promise<void>
   }
 
   // ── summary ──
-  const summaryParas: Paragraph[] = [];
+  const summaryParas: any[] = [];
   if (cv.personalInfo.summary) {
     summaryParas.push(
       makeSectionHeading('Professional Summary'),
@@ -280,7 +280,7 @@ export async function exportToDocx(cv: CV, sections: CVSection[]): Promise<void>
   }
 
   // ── ALL OTHER LAYOUTS: single-column ────────────────────────────────────────
-  const bodyChildren: Paragraph[] = [...headerParas, ...summaryParas];
+  const bodyChildren: any[] = [...headerParas, ...summaryParas];
   for (const sec of visibleSections) {
     bodyChildren.push(makeSectionHeading(sec.title));
     for (const item of sec.items) bodyChildren.push(...makeItem(item));
