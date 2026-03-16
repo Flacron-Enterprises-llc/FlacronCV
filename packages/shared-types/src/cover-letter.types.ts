@@ -4,6 +4,8 @@ export interface CoverLetterStyling {
   fontFamily: string;
   fontSize: string;
   primaryColor: string;
+  senderName?: string;
+  senderEmail?: string;
 }
 
 export interface CoverLetter {

@@ -517,6 +517,24 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
             </div>
           )}
 
+          {/* Sender fields */}
+          <div className="flex gap-2 border-b border-stone-200 bg-stone-50 px-3 py-2 dark:border-stone-700 dark:bg-stone-800">
+            <input
+              type="text"
+              value={coverLetter.styling.senderName || ''}
+              onChange={(e) => updateStyling('senderName', e.target.value)}
+              placeholder="Your name"
+              className="flex-1 rounded border border-stone-200 bg-white px-2 py-1 text-sm text-stone-800 outline-none focus:border-brand-400 dark:border-stone-600 dark:bg-stone-700 dark:text-white"
+            />
+            <input
+              type="email"
+              value={coverLetter.styling.senderEmail || ''}
+              onChange={(e) => updateStyling('senderEmail', e.target.value)}
+              placeholder="Your email (optional)"
+              className="flex-1 rounded border border-stone-200 bg-white px-2 py-1 text-sm text-stone-800 outline-none focus:border-brand-400 dark:border-stone-600 dark:bg-stone-700 dark:text-white"
+            />
+          </div>
+
           {/* Editor content */}
           <div className="flex-1 overflow-y-auto bg-white dark:bg-stone-900">
             <EditorContent editor={editor} />
@@ -528,8 +546,8 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
           <div className="mx-auto max-w-[794px] rounded-lg shadow-md overflow-hidden">
             <CoverLetterPreview
               coverLetter={coverLetter}
-              senderName={user?.profile?.firstName ? `${user.profile.firstName} ${user.profile.lastName || ''}`.trim() : undefined}
-              senderEmail={user?.email || undefined}
+              senderName={coverLetter.styling.senderName || undefined}
+              senderEmail={coverLetter.styling.senderEmail || undefined}
             />
           </div>
         </div>
