@@ -231,13 +231,13 @@ export async function exportToDocx(cv: CV, sections: CVSection[]): Promise<void>
     const sidebarSections = visibleSections.filter((s) => sidebarTypes.has(s.type));
     const mainSections    = visibleSections.filter((s) => !sidebarTypes.has(s.type));
 
-    const sidebarChildren: (Paragraph)[] = [];
+    const sidebarChildren: any[] = [];
     for (const sec of sidebarSections) {
       sidebarChildren.push(makeSectionHeading(sec.title));
       for (const item of sec.items) sidebarChildren.push(...makeItem(item));
     }
 
-    const mainChildren: (Paragraph)[] = [...summaryParas];
+    const mainChildren: any[] = [...summaryParas];
     for (const sec of mainSections) {
       mainChildren.push(makeSectionHeading(sec.title));
       for (const item of sec.items) mainChildren.push(...makeItem(item));
