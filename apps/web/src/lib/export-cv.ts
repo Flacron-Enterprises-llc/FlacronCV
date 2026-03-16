@@ -248,19 +248,19 @@ export async function exportToDocx(cv: CV, sections: CVSection[]): Promise<void>
       new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
         borders: {
-          top: { style: BorderStyle.NONE, size: 0 },
-          bottom: { style: BorderStyle.NONE, size: 0 },
-          left: { style: BorderStyle.NONE, size: 0 },
-          right: { style: BorderStyle.NONE, size: 0 },
-          insideH: { style: BorderStyle.NONE, size: 0 },
-          insideV: { style: BorderStyle.NONE, size: 0 },
+          top:              { style: BorderStyle.NONE, size: 0 },
+          bottom:           { style: BorderStyle.NONE, size: 0 },
+          left:             { style: BorderStyle.NONE, size: 0 },
+          right:            { style: BorderStyle.NONE, size: 0 },
+          insideHorizontal: { style: BorderStyle.NONE, size: 0 },
+          insideVertical:   { style: BorderStyle.NONE, size: 0 },
         },
         rows: [
           new TableRow({
             children: [
               new TableCell({
                 width: { size: 30, type: WidthType.PERCENTAGE },
-                shading: { type: ShadingType.SOLID, color: color + '15', fill: color + '15' },
+                shading: { type: ShadingType.SOLID, color: 'auto', fill: color },
                 children: sidebarChildren.length ? sidebarChildren : [new Paragraph({ children: [] })],
                 margins: { top: 120, bottom: 120, left: 120, right: 200 },
               }),
