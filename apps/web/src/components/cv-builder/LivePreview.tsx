@@ -26,7 +26,7 @@ export default function LivePreview() {
 
   return (
     <div className="mx-auto max-w-[595px]">
-      <div className="rounded-lg shadow-lg overflow-hidden" style={{ background: '#fff' }}>
+      <div id="cv-preview-content" className="rounded-lg shadow-lg overflow-hidden" style={{ background: '#fff' }}>
         {layout === 'sidebar'  && <SidebarLayout  {...props} />}
         {layout === 'top-bar'  && <TopBarLayout   {...props} />}
         {layout === 'compact'  && <CompactLayout  {...props} />}
