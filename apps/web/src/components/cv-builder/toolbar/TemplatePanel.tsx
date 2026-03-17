@@ -2,10 +2,21 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useCVStore } from '@/store/cv-store';
-import { LayoutTemplate, X, ChevronDown } from 'lucide-react';
+import { useAuth } from '@/providers/AuthProvider';
+import { LayoutTemplate, X, ChevronDown, Lock } from 'lucide-react';
+import { useRouter } from '@/i18n/routing';
 import type { CVLayout, SectionStyle, BorderRadiusStyle } from '@flacroncv/shared-types';
+import { SubscriptionPlan } from '@flacroncv/shared-types';
 
 // ─── Layout cards ─────────────────────────────────────────────────────────────
+
+// Layouts gated by plan
+const LAYOUT_PLAN: Record<CVLayout, SubscriptionPlan> = {
+  'classic':  SubscriptionPlan.FREE,
+  'sidebar':  SubscriptionPlan.FREE,
+  'top-bar':  SubscriptionPlan.PRO,
+  'compact':  SubscriptionPlan.PRO,
+};
 
 interface LayoutOption {
   key: CVLayout;
@@ -131,6 +142,13 @@ export default function TemplatePanel() {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const { cv, updateStyling } = useCVStore();
+  const { user } = useAuth();
+  const router = useRouter();
+
+  const userPlan = (user?.subscription?.plan || SubscriptionPlan.FREE) as SubscriptionPlan;
+  const planOrder = [SubscriptionPlan.FREE, SubscriptionPlan.PRO, SubscriptionPlan.ENTERPRISE];
+  const canUseLayout = (layout: CVLayout) =>
+    planOrder.indexOf(userPlan) >= planOrder.indexOf(LAYOUT_PLAN[layout]);
 
   const currentLayout    = ((cv?.styling as any)?.layout     || 'classic')   as CVLayout;
   const currentColor     = cv?.styling.primaryColor || '#2563eb';
@@ -182,21 +200,40 @@ export default function TemplatePanel() {
               <div>
                 <p className="mb-2 text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">Layout</p>
                 <div className="grid grid-cols-4 gap-2">
-                  {LAYOUTS.map(opt => (
-                    <button
-                      key={opt.key}
-                      onClick={() => updateStyling('layout' as any, opt.key)}
-                      title={`${opt.label} — ${opt.personality}`}
-                      className={`flex flex-col items-center gap-1.5 rounded-lg p-1.5 transition-all ${
-                        currentLayout === opt.key
-                          ? 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-900/20'
-                          : 'hover:bg-stone-50 dark:hover:bg-stone-800'
-                      }`}
-                    >
-                      {opt.preview}
-                      <span className="text-[9px] font-medium text-stone-600 dark:text-stone-400">{opt.label}</span>
-                    </button>
-                  ))}
+                  {LAYOUTS.map(opt => {
+                    const locked = !canUseLayout(opt.key);
+                    return (
+                      <button
+                        key={opt.key}
+                        onClick={() => {
+                          if (locked) {
+                            setOpen(false);
+                            router.push('/settings/billing');
+                            return;
+                          }
+                          updateStyling('layout' as any, opt.key);
+                        }}
+                        title={locked ? `${opt.label} — Requires ${LAYOUT_PLAN[opt.key]} plan` : `${opt.label} — ${opt.personality}`}
+                        className={`relative flex flex-col items-center gap-1.5 rounded-lg p-1.5 transition-all ${
+                          currentLayout === opt.key
+                            ? 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-900/20'
+                            : locked
+                              ? 'opacity-60 hover:bg-stone-50 dark:hover:bg-stone-800'
+                              : 'hover:bg-stone-50 dark:hover:bg-stone-800'
+                        }`}
+                      >
+                        {opt.preview}
+                        <span className="text-[9px] font-medium text-stone-600 dark:text-stone-400">{opt.label}</span>
+                        {locked && (
+                          <div className="absolute inset-0 flex items-center justify-center rounded-lg">
+                            <div className="rounded-full bg-stone-900/70 p-1">
+                              <Lock className="h-3 w-3 text-white" />
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
                 {/* Personality label */}
                 <p className="mt-1.5 text-center text-[10px] text-stone-400 italic">

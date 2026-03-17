@@ -5,11 +5,11 @@ import { useEffect, useCallback, useRef, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/routing';
+import { Link, useRouter } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import { api } from '@/lib/api';
 import { useCoverLetterStore } from '@/store/cover-letter-store';
-import { CoverLetter, UpdateCoverLetterData } from '@flacroncv/shared-types';
+import { CoverLetter, UpdateCoverLetterData, SubscriptionPlan } from '@flacroncv/shared-types';
 import Button from '@/components/ui/Button';
 import UpgradeModal from '@/components/shared/UpgradeModal';
 import CoverLetterPreview, { COVER_LETTER_TEMPLATES } from '@/components/cover-letter/CoverLetterPreview';
@@ -38,6 +38,7 @@ import {
   Undo2,
   Redo2,
   LayoutTemplate,
+  Lock,
 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -46,6 +47,7 @@ import TextAlign from '@tiptap/extension-text-align';
 
 export default function CoverLetterEditorPage(): React.JSX.Element | null {
   const t = useTranslations();
+  const router = useRouter();
   const { user } = useAuth();
   const params = useParams();
   const coverLetterId = params.id as string;
@@ -197,7 +199,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
       if (format === 'pdf') {
         await exportCoverLetterToPDF(coverLetter.title);
       } else {
-        await exportCoverLetterToDocx(coverLetter.title);
+        await exportCoverLetterToDocx(coverLetter);
       }
       toast.success(t('coverLetters.exported', { format: format.toUpperCase() }));
     } catch {
@@ -302,22 +304,30 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
                   <div className="grid grid-cols-2 gap-2">
                     {COVER_LETTER_TEMPLATES.map((tmpl) => {
                       const isActive = (coverLetter.templateId || 'modern') === tmpl.id;
+                      const userPlan = user?.subscription?.plan || SubscriptionPlan.FREE;
+                      const planOrder = [SubscriptionPlan.FREE, SubscriptionPlan.PRO, SubscriptionPlan.ENTERPRISE];
+                      const locked = planOrder.indexOf(userPlan as SubscriptionPlan) < planOrder.indexOf(tmpl.tier);
                       return (
                         <button
                           key={tmpl.id}
                           type="button"
                           onClick={() => {
-                            updateField('templateId', tmpl.id);
-                            if (!coverLetter.styling.primaryColor || coverLetter.styling.primaryColor === '#2563eb') {
-                              updateStyling('primaryColor', tmpl.defaultColor);
+                            if (locked) {
+                              setTemplateMenuOpen(false);
+                              router.push('/settings/billing');
+                              return;
                             }
+                            updateField('templateId', tmpl.id);
+                            updateStyling('primaryColor', tmpl.defaultColor);
                             setTemplateMenuOpen(false);
                           }}
                           className={cn(
-                            'rounded-lg border-2 p-2.5 text-start transition-all',
+                            'relative rounded-lg border-2 p-2.5 text-start transition-all',
                             isActive
                               ? 'border-brand-500 bg-brand-50 dark:border-brand-400 dark:bg-brand-950'
-                              : 'border-stone-200 hover:border-stone-300 dark:border-stone-700 dark:hover:border-stone-600',
+                              : locked
+                                ? 'border-stone-200 opacity-60 dark:border-stone-700'
+                                : 'border-stone-200 hover:border-stone-300 dark:border-stone-700 dark:hover:border-stone-600',
                           )}
                         >
                           {/* Mini thumbnail */}
@@ -326,6 +336,11 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
                           </div>
                           <div className="text-xs font-semibold text-stone-800 dark:text-stone-200">{tmpl.name}</div>
                           <div className="text-[10px] text-stone-400">{tmpl.description}</div>
+                          {locked && (
+                            <div className="absolute right-1.5 top-1.5 rounded-full bg-stone-700/80 p-0.5">
+                              <Lock className="h-2.5 w-2.5 text-white" />
+                            </div>
+                          )}
                         </button>
                       );
                     })}

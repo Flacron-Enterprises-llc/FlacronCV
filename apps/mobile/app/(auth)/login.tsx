@@ -1,12 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as Google from 'expo-auth-session/providers/google';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
+import { GoogleSignInButton, isGoogleSignInAvailable } from '../../src/components/auth/GoogleSignInButton';
 import { Button } from '../../src/components/ui/Button';
 import { Input } from '../../src/components/ui/Input';
 import { useAuthStore } from '../../src/store/auth-store';
@@ -43,18 +42,6 @@ export default function LoginScreen() {
     defaultValues: { email: '', password: '' },
   });
 
-  // Google Auth Session
-  const [, googleResponse, promptGoogleAsync] = Google.useIdTokenAuthRequest({
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || undefined,
-  });
-
-  useEffect(() => {
-    if (googleResponse?.type === 'success') {
-      const { id_token } = googleResponse.params;
-      loginWithGoogle(id_token).catch(() => {});
-    }
-  }, [googleResponse]);
-
   const onSubmit = async (data: FormData) => {
     clearError();
     try {
@@ -62,17 +49,6 @@ export default function LoginScreen() {
     } catch {
       // Error already set in store
     }
-  };
-
-  const onGooglePress = () => {
-    if (!process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID) {
-      Alert.alert(
-        'Google Sign-In',
-        'Google Sign-In requires a Web Client ID. Add EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID to your .env file (get it from Firebase Console → Authentication → Sign-in method → Google).',
-      );
-      return;
-    }
-    promptGoogleAsync();
   };
 
   return (
@@ -171,48 +147,20 @@ export default function LoginScreen() {
                 Sign In
               </Button>
 
-              {/* Divider */}
-              <View className="flex-row items-center my-5">
-                <View className="flex-1 h-px bg-stone-200" />
-                <Text className="mx-3 text-stone-400 text-sm font-medium">or continue with</Text>
-                <View className="flex-1 h-px bg-stone-200" />
-              </View>
-
-              {/* Google Sign-In */}
-              <TouchableOpacity
-                onPress={onGooglePress}
-                activeOpacity={0.85}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 1.5,
-                  borderColor: '#e7e5e4',
-                  borderRadius: 14,
-                  paddingVertical: 14,
-                  gap: 10,
-                  backgroundColor: '#fff',
-                }}
-              >
-                {/* Google "G" logo */}
-                <View
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 11,
-                    backgroundColor: '#fff',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#4285F4' }}>G</Text>
-                </View>
-                <Text
-                  style={{ color: '#1c1917', fontSize: 15, fontWeight: '600' }}
-                >
-                  Continue with Google
-                </Text>
-              </TouchableOpacity>
+              {/* Google Sign-In — only rendered when the platform client ID is configured */}
+              {isGoogleSignInAvailable() && (
+                <>
+                  <View className="flex-row items-center my-5">
+                    <View className="flex-1 h-px bg-stone-200" />
+                    <Text className="mx-3 text-stone-400 text-sm font-medium">or continue with</Text>
+                    <View className="flex-1 h-px bg-stone-200" />
+                  </View>
+                  <GoogleSignInButton
+                    label="Continue with Google"
+                    onToken={(token) => loginWithGoogle(token).catch(() => {})}
+                  />
+                </>
+              )}
             </View>
 
             {/* Register Link */}

@@ -7,7 +7,7 @@ import {
   signOut,
   updateProfile,
   User as FirebaseUser,
-} from 'firebase/auth';
+} from '@firebase/auth';
 import { create } from 'zustand';
 import { getFirebaseAuth } from '../lib/firebase';
 import { api } from '../lib/api';
@@ -126,7 +126,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     try {
-      await signOut(firebaseAuth);
+      await signOut(getFirebaseAuth());
       await secureStore.clearAll();
       set({ firebaseUser: null, user: null, emailVerified: false });
     } catch {

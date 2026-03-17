@@ -74,6 +74,11 @@ export default function DashboardLayout() {
           ),
         }}
       />
+      {/* Support is accessible from within the app but not a top-level tab */}
+      <Tabs.Screen
+        name="support"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }

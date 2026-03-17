@@ -1,11 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getApp, getApps, initializeApp, FirebaseApp } from 'firebase/app';
-import {
-  Auth,
-  getAuth,
-  getReactNativePersistence,
-  initializeAuth,
-} from 'firebase/auth';
+import { getApp, getApps, initializeApp, FirebaseApp } from '@firebase/app';
+import { Auth, getAuth, initializeAuth } from '@firebase/auth';
+// getReactNativePersistence exists in the RN build at runtime but not in the main TS typings.
+// Using require() so Metro resolves it from the react-native condition at bundle time.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { getReactNativePersistence } = require('@firebase/auth') as {
+  getReactNativePersistence: (storage: typeof AsyncStorage) => import('@firebase/auth').Persistence;
+};
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,

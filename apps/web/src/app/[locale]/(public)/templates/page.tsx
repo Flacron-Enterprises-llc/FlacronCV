@@ -294,7 +294,137 @@ function MockupFallback() {
   );
 }
 
+/* ─── Cover Letter Mockup components ─── */
+
+function MockupCLClassic() {
+  return (
+    <div className="flex h-full w-full flex-col p-3 font-serif">
+      <div className="mb-2 space-y-0.5 text-center">
+        <div className="h-2 w-1/2 rounded bg-stone-500 dark:bg-stone-400 mx-auto" />
+        <div className="h-1 w-1/3 rounded bg-stone-300 dark:bg-stone-600 mx-auto" />
+      </div>
+      <div className="h-px w-full bg-stone-400 dark:bg-stone-600 mb-2" />
+      <div className="space-y-1">
+        <div className="h-1 w-1/4 rounded bg-stone-300 dark:bg-stone-600" />
+        <div className="h-1 w-1/3 rounded bg-stone-300 dark:bg-stone-600" />
+      </div>
+      <div className="mt-2 space-y-1">
+        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
+        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
+        <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
+        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
+        <div className="h-1 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
+      </div>
+    </div>
+  );
+}
+
+function MockupCLModern() {
+  return (
+    <div className="flex h-full w-full flex-col">
+      <div className="rounded-t bg-blue-500 p-2 dark:bg-blue-700">
+        <div className="h-2.5 w-2/5 rounded bg-white/90" />
+        <div className="mt-0.5 h-1 w-1/4 rounded bg-white/60" />
+      </div>
+      <div className="flex-1 space-y-1 p-2 pt-1.5">
+        <div className="h-1 w-1/3 rounded bg-stone-300 dark:bg-stone-600" />
+        <div className="mt-1 h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
+        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
+        <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
+        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
+        <div className="h-1 w-3/5 rounded bg-stone-200 dark:bg-stone-700" />
+      </div>
+    </div>
+  );
+}
+
+function MockupCLMinimalist() {
+  return (
+    <div className="flex h-full w-full flex-col space-y-2 p-4">
+      <div className="h-1.5 w-1/3 rounded bg-stone-500 dark:bg-stone-400 uppercase tracking-wider" />
+      <div className="h-0.5 w-full rounded bg-stone-200 dark:bg-stone-700" />
+      <div className="space-y-1 pt-1">
+        <div className="h-1 w-1/4 rounded bg-stone-300 dark:bg-stone-600" />
+        <div className="h-1 w-1/3 rounded bg-stone-300 dark:bg-stone-600" />
+      </div>
+      <div className="space-y-1 pt-1">
+        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
+        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
+        <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
+      </div>
+    </div>
+  );
+}
+
+function MockupCLCreative() {
+  return (
+    <div className="relative flex h-full w-full">
+      <div className="absolute left-0 top-0 h-full w-1.5 rounded-l bg-violet-500 dark:bg-violet-600" />
+      <div className="ml-2.5 flex flex-1 flex-col p-2">
+        <div className="mb-1.5 space-y-0.5">
+          <div className="h-2 w-2/5 rounded bg-violet-500 dark:bg-violet-600" />
+          <div className="h-1 w-1/4 rounded bg-stone-300 dark:bg-stone-600" />
+        </div>
+        <div className="mb-1.5 rounded bg-violet-50 px-1.5 py-1 dark:bg-violet-900/30">
+          <div className="h-1 w-3/5 rounded bg-violet-300 dark:bg-violet-700" />
+        </div>
+        <div className="space-y-1">
+          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
+          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
+          <div className="h-1 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MockupCLCorporate() {
+  return (
+    <div className="flex h-full w-full flex-col">
+      <div className="h-1.5 w-full rounded-t bg-teal-600 dark:bg-teal-700" />
+      <div className="flex-1 p-2">
+        <div className="mb-1.5 flex items-end justify-between">
+          <div className="space-y-0.5">
+            <div className="h-2 w-24 rounded bg-stone-500 dark:bg-stone-400" />
+            <div className="h-1 w-16 rounded bg-stone-300 dark:bg-stone-600" />
+          </div>
+          <div className="h-1 w-12 rounded bg-stone-300 dark:bg-stone-600" />
+        </div>
+        <div className="h-px w-full bg-teal-200 dark:bg-teal-900 mb-1.5" />
+        <div className="space-y-1">
+          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
+          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
+          <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
+          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MockupCLExecutive() {
+  return (
+    <div className="flex h-full w-full flex-col p-2.5">
+      <div className="mb-2 space-y-0.5 text-right">
+        <div className="h-2 w-1/2 rounded bg-stone-800 dark:bg-stone-200 ml-auto" />
+        <div className="h-1 w-1/3 rounded bg-stone-400 dark:bg-stone-500 ml-auto" />
+      </div>
+      <div className="h-0.5 w-full rounded bg-gradient-to-r from-stone-800 to-stone-400 dark:from-stone-200 dark:to-stone-600 mb-2" />
+      <div className="space-y-0.5 mb-1.5">
+        <div className="h-1 w-1/4 rounded bg-stone-300 dark:bg-stone-600" />
+        <div className="h-1 w-1/3 rounded bg-stone-300 dark:bg-stone-600" />
+      </div>
+      <div className="space-y-1">
+        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
+        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
+        <div className="h-1 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
+      </div>
+    </div>
+  );
+}
+
 const mockupMap: Record<string, () => ReactNode> = {
+  // CV templates
   modern: () => <MockupModern />,
   classic: () => <MockupClassic />,
   minimal: () => <MockupMinimal />,
@@ -305,6 +435,13 @@ const mockupMap: Record<string, () => ReactNode> = {
   'two-column': () => <MockupTwoColumn />,
   academic: () => <MockupAcademic />,
   bold: () => <MockupBold />,
+  // Cover Letter templates
+  'cl-classic': () => <MockupCLClassic />,
+  'cl-modern': () => <MockupCLModern />,
+  'cl-minimalist': () => <MockupCLMinimalist />,
+  'cl-creative': () => <MockupCLCreative />,
+  'cl-corporate': () => <MockupCLCorporate />,
+  'cl-executive': () => <MockupCLExecutive />,
 };
 
 /* ─── Skeleton card ─── */
