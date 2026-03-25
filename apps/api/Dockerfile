@@ -4,50 +4,54 @@ RUN apk add --no-cache chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-RUN corepack enable && corepack prepare pnpm@9 --activate
+RUN npm install -g pnpm@8.15.0
 
 WORKDIR /app
 
-# Install dependencies
+# ── deps: install without mobile (avoids Expo/RN bloat + file: dep resolution error)
 FROM base AS deps
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY .npmrc pnpm-workspace.yaml package.json ./
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY packages/tsconfig/package.json ./packages/tsconfig/
 COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
 
-RUN pnpm install --frozen-lockfile
+# No --frozen-lockfile: lockfile was generated with mobile; omitting it causes mismatch
+RUN pnpm install
 
-# Build
+# ── builder: compile shared-types then api
 FROM base AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/shared-types/node_modules ./packages/shared-types/node_modules
-COPY --from=deps /app/packages/tsconfig/node_modules ./packages/tsconfig/node_modules
-COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
 
-RUN cd apps/api && pnpm build
+RUN node_modules/.bin/tsc -p packages/shared-types/tsconfig.json
+RUN cd apps/api && /app/node_modules/.bin/nest build
 
-# Production
-FROM base AS runner
-WORKDIR /app
+# ── runner: production image (chromium for puppeteer PDF export)
+FROM node:20-alpine AS runner
 
+RUN apk add --no-cache chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 ENV NODE_ENV=production
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nestjs
+WORKDIR /app
+
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nestjs
 
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
+COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/package.json
 
 USER nestjs
 
-EXPOSE 4000
+EXPOSE 10000
 
 CMD ["node", "apps/api/dist/main.js"]

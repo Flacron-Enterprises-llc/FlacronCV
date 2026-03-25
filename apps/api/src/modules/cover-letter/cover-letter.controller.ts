@@ -48,6 +48,11 @@ export class CoverLetterController {
     return this.coverLetterService.update(id, user.uid, data);
   }
 
+  @Post(':id/duplicate')
+  async duplicate(@CurrentUser() user: FirebaseUser, @Param('id') id: string) {
+    return this.coverLetterService.duplicate(id, user.uid);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(@CurrentUser() user: FirebaseUser, @Param('id') id: string) {

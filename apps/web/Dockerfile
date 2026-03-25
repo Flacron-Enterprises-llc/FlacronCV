@@ -1,53 +1,52 @@
 FROM node:20-alpine AS base
 
-RUN corepack enable && corepack prepare pnpm@9 --activate
+RUN npm install -g pnpm@8.15.0
 
 WORKDIR /app
 
-# Install dependencies
+# ── deps: install without mobile (avoids Expo/RN bloat + file: dep resolution error)
 FROM base AS deps
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY .npmrc pnpm-workspace.yaml package.json ./
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY packages/tsconfig/package.json ./packages/tsconfig/
+COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 
-RUN pnpm install --frozen-lockfile
+# No --frozen-lockfile: lockfile was generated with mobile; omitting it causes mismatch
+RUN pnpm install
 
-# Build
+# ── builder: compile shared-types then web
 FROM base AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/shared-types/node_modules ./packages/shared-types/node_modules
-COPY --from=deps /app/packages/tsconfig/node_modules ./packages/tsconfig/node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 
 COPY packages/ ./packages/
 COPY apps/web/ ./apps/web/
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN cd apps/web && pnpm build
+RUN node_modules/.bin/tsc -p packages/shared-types/tsconfig.json
+RUN cd apps/web && /app/node_modules/.bin/next build
 
-# Production
-FROM base AS runner
+# ── runner: standalone Next.js (only traced production deps, no node_modules bloat)
+FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME="0.0.0.0"
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
+# standalone output already contains its own minimal node_modules
 COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 
 USER nextjs
 
-EXPOSE 3000
-
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+EXPOSE 10000
 
 CMD ["node", "apps/web/server.js"]

@@ -35,6 +35,10 @@ async function request<T>(
     throw new Error(error.message || `HTTP ${response.status}`);
   }
 
+  if (response.status === 204 || response.headers.get('content-length') === '0') {
+    return null as T;
+  }
+
   const data = await response.json();
   return data.data !== undefined ? data.data : data;
 }

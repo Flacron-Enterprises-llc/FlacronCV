@@ -34,7 +34,7 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
 
   const handleGenerate = async () => {
     if (!user) return;
-    if (!canUseAI(user.subscription.plan, user.usage.aiCreditsUsed)) {
+    if (!canUseAI(user.subscription?.plan, user.usage?.aiCreditsUsed)) {
       Alert.alert('AI Credits Exhausted', 'Upgrade your plan to get more AI credits.');
       return;
     }
@@ -107,7 +107,7 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
 
         {user && (
           <Text className="text-xs text-stone-400 text-center mt-2">
-            {user.usage.aiCreditsLimit - user.usage.aiCreditsUsed} AI credits remaining
+            {(user.usage?.aiCreditsLimit ?? 0) - (user.usage?.aiCreditsUsed ?? 0)} AI credits remaining
           </Text>
         )}
 

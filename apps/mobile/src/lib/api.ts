@@ -9,6 +9,17 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Handle 204 No Content (empty body) without throwing a JSON parse error
+  transformResponse: [
+    (data: string) => {
+      if (!data || data.trim() === '') return null;
+      try {
+        return JSON.parse(data);
+      } catch {
+        return data;
+      }
+    },
+  ],
 });
 
 // Track if we're currently refreshing to prevent loops

@@ -35,10 +35,21 @@ export default function CVsScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => deleteCV.mutate(cv.id),
+          onPress: () =>
+            deleteCV.mutate(cv.id, {
+              onSuccess: () => Alert.alert('Deleted', `"${cv.title}" has been deleted.`),
+              onError: () => Alert.alert('Error', 'Failed to delete CV. Please try again.'),
+            }),
         },
       ],
     );
+  };
+
+  const handleDuplicate = (cv: CV) => {
+    duplicateCV.mutate(cv.id, {
+      onSuccess: () => Alert.alert('Duplicated', `"${cv.title} (Copy)" has been created.`),
+      onError: () => Alert.alert('Error', 'Failed to duplicate CV. Please try again.'),
+    });
   };
 
   const renderCV = ({ item }: { item: CV }) => (
@@ -74,16 +85,26 @@ export default function CVsScreen() {
 
         <View className="flex-row gap-1 ml-2">
           <TouchableOpacity
-            onPress={() => duplicateCV.mutate(item.id)}
+            onPress={() => handleDuplicate(item)}
+            disabled={duplicateCV.isPending}
             className="p-2 rounded-xl bg-stone-50"
           >
-            <Ionicons name="copy-outline" size={16} color="#78716c" />
+            <Ionicons
+              name={duplicateCV.isPending ? 'time-outline' : 'copy-outline'}
+              size={16}
+              color="#78716c"
+            />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => handleDelete(item)}
+            disabled={deleteCV.isPending}
             className="p-2 rounded-xl bg-stone-50"
           >
-            <Ionicons name="trash-outline" size={16} color="#ef4444" />
+            <Ionicons
+              name={deleteCV.isPending ? 'time-outline' : 'trash-outline'}
+              size={16}
+              color="#ef4444"
+            />
           </TouchableOpacity>
         </View>
       </View>

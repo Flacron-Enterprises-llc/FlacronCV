@@ -4,7 +4,7 @@ import React from 'react';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/routing';
+import { Link, useRouter } from '@/i18n/routing';
 import { api } from '@/lib/api';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -13,8 +13,8 @@ import Modal from '@/components/ui/Modal';
 import {
   Plus,
   Mail,
-  MoreVertical,
   Trash2,
+  Copy,
   Building2,
   Briefcase,
   Loader2,
@@ -42,6 +42,17 @@ export default function CoverLettersPage(): React.JSX.Element | null {
     },
     onError: (error: Error) => {
       toast.error(error.message);
+    },
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/cover-letters/${id}/duplicate`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cover-letters'] });
+      toast.success('Cover letter duplicated');
+    },
+    onError: () => {
+      toast.error('Failed to duplicate cover letter. Please try again.');
     },
   });
 
@@ -82,6 +93,8 @@ export default function CoverLettersPage(): React.JSX.Element | null {
               key={cl.id}
               coverLetter={cl}
               onDelete={() => setDeleteId(cl.id)}
+              onDuplicate={() => duplicateMutation.mutate(cl.id)}
+              duplicating={duplicateMutation.isPending}
             />
           ))}
         </div>
@@ -117,16 +130,24 @@ export default function CoverLettersPage(): React.JSX.Element | null {
 function CoverLetterCard({
   coverLetter,
   onDelete,
+  onDuplicate,
+  duplicating,
 }: {
   coverLetter: CoverLetter;
   onDelete: () => void;
+  onDuplicate: () => void;
+  duplicating?: boolean;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const router = useRouter();
 
   return (
-    <Card hover padding="none" className="overflow-hidden">
-      {/* Preview area */}
-      <div className="flex h-40 items-center justify-center bg-gradient-to-br from-brand-50 to-brand-100 dark:from-stone-800 dark:to-stone-900">
+    <Card hover padding="none" className="group overflow-hidden">
+      {/* Clickable preview area */}
+      <button
+        className="relative flex h-40 w-full items-center justify-center bg-gradient-to-br from-brand-50 to-brand-100 dark:from-stone-800 dark:to-stone-900"
+        onClick={() => router.push(`/cover-letters/${coverLetter.id}`)}
+        aria-label={`Open ${coverLetter.title}`}
+      >
         <div className="w-24 rounded border border-stone-200 bg-white p-2 shadow-sm dark:border-stone-600 dark:bg-stone-700">
           <div className="mb-1 h-1 w-10 rounded bg-stone-300 dark:bg-stone-500" />
           <div className="mb-2 h-px w-full bg-brand-400" />
@@ -139,63 +160,61 @@ function CoverLetterCard({
           </div>
           <div className="mt-2 h-1 w-8 rounded bg-stone-300 dark:bg-stone-500" />
         </div>
-      </div>
+        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all group-hover:bg-black/20">
+          <span className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-stone-800 opacity-0 shadow transition-opacity group-hover:opacity-100">
+            Open Editor
+          </span>
+        </div>
+      </button>
 
       {/* Info */}
       <div className="p-4">
-        <div className="flex items-start justify-between">
-          <div className="min-w-0 flex-1">
-            <Link href={`/cover-letters/${coverLetter.id}`}>
-              <h3 className="truncate font-semibold text-stone-900 hover:text-brand-600 dark:text-white">
-                {coverLetter.title}
-              </h3>
-            </Link>
-            {coverLetter.companyName && (
-              <p className="mt-1 flex items-center gap-1 text-xs text-stone-500">
-                <Building2 className="h-3 w-3" />
-                {coverLetter.companyName}
-              </p>
-            )}
-            {coverLetter.jobTitle && (
-              <p className="mt-0.5 flex items-center gap-1 text-xs text-stone-500">
-                <Briefcase className="h-3 w-3" />
-                {coverLetter.jobTitle}
-              </p>
-            )}
-            <p className="mt-1 text-xs text-stone-400">
-              Updated {formatDate(coverLetter.updatedAt)}
+        <div className="mb-2 min-w-0">
+          <h3 className="truncate font-semibold text-stone-900 dark:text-white">{coverLetter.title}</h3>
+          {coverLetter.companyName && (
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-stone-500">
+              <Building2 className="h-3 w-3" />
+              {coverLetter.companyName}
             </p>
-          </div>
-          <div className="relative ms-2">
-            <button
-              className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700"
-              onClick={() => setMenuOpen(!menuOpen)}
-            >
-              <MoreVertical className="h-4 w-4" />
-            </button>
-            {menuOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                <div className="absolute end-0 z-20 mt-1 w-36 rounded-lg border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-800">
-                  <button
-                    className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                    onClick={() => {
-                      onDelete();
-                      setMenuOpen(false);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" /> Delete
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          )}
+          {coverLetter.jobTitle && (
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-stone-500">
+              <Briefcase className="h-3 w-3" />
+              {coverLetter.jobTitle}
+            </p>
+          )}
+          <p className="mt-0.5 text-xs text-stone-400">Updated {formatDate(coverLetter.updatedAt)}</p>
         </div>
-        <div className="mt-3 flex items-center gap-2">
+
+        <div className="mb-3 flex items-center gap-2">
           <Badge variant={coverLetter.status === 'final' ? 'success' : 'default'}>
             {coverLetter.status}
           </Badge>
           {coverLetter.aiGenerated && <Badge variant="brand">AI</Badge>}
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-2">
+          <button
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-stone-200 py-1.5 text-sm font-medium text-stone-700 hover:border-brand-400 hover:text-brand-600 dark:border-stone-700 dark:text-stone-300 dark:hover:border-brand-500 dark:hover:text-brand-400"
+            onClick={() => router.push(`/cover-letters/${coverLetter.id}`)}
+          >
+            Edit
+          </button>
+          <button
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-stone-200 py-1.5 text-sm font-medium text-stone-700 hover:border-stone-300 dark:border-stone-700 dark:text-stone-300"
+            onClick={onDuplicate}
+            disabled={duplicating}
+          >
+            <Copy className="h-3.5 w-3.5" /> Duplicate
+          </button>
+          <button
+            className="flex items-center justify-center rounded-lg border border-stone-200 p-1.5 text-stone-400 hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:border-stone-700 dark:hover:border-red-700 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+            onClick={onDelete}
+            aria-label="Delete cover letter"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </Card>

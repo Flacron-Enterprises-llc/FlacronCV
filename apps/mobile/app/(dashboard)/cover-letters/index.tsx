@@ -21,7 +21,15 @@ export default function CoverLettersScreen() {
   const handleDelete = (cl: CoverLetter) => {
     Alert.alert('Delete Cover Letter', `Delete "${cl.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteCL.mutate(cl.id) },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () =>
+          deleteCL.mutate(cl.id, {
+            onSuccess: () => Alert.alert('Deleted', `"${cl.title}" has been deleted.`),
+            onError: () => Alert.alert('Error', 'Failed to delete cover letter. Please try again.'),
+          }),
+      },
     ]);
   };
 
@@ -51,8 +59,16 @@ export default function CoverLettersScreen() {
             </View>
           </View>
         </View>
-        <TouchableOpacity onPress={() => handleDelete(item)} className="p-2 rounded-xl bg-stone-50 ml-2">
-          <Ionicons name="trash-outline" size={16} color="#ef4444" />
+        <TouchableOpacity
+          onPress={() => handleDelete(item)}
+          disabled={deleteCL.isPending}
+          className="p-2 rounded-xl bg-stone-50 ml-2"
+        >
+          <Ionicons
+            name={deleteCL.isPending ? 'time-outline' : 'trash-outline'}
+            size={16}
+            color="#ef4444"
+          />
         </TouchableOpacity>
       </View>
       {item.aiGenerated && (

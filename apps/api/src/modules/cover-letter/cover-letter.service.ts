@@ -112,6 +112,34 @@ export class CoverLetterService {
     return this.findByIdOrThrow(id, userId);
   }
 
+  async duplicate(id: string, userId: string): Promise<CoverLetter> {
+    const user = await this.usersService.findByIdOrThrow(userId);
+    const limits = PLAN_CONFIGS[user.subscription.plan].limits;
+    if (limits.coverLetters !== 'unlimited' && user.usage.coverLettersCreated >= limits.coverLetters) {
+      throw new ForbiddenException('Cover letter limit reached. Please upgrade.');
+    }
+
+    const original = await this.findByIdOrThrow(id, userId);
+    const newId = uuidv4();
+    const now = new Date();
+
+    const newCL: CoverLetter = {
+      ...original,
+      id: newId,
+      title: `${original.title} (Copy)`,
+      status: CoverLetterStatus.DRAFT,
+      aiGenerated: false,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    };
+
+    await this.firebaseAdmin.firestore.collection(this.collection).doc(newId).set(newCL);
+    await this.usersService.incrementUsage(userId, 'coverLettersCreated');
+
+    return newCL;
+  }
+
   async delete(id: string, userId: string): Promise<void> {
     await this.findByIdOrThrow(id, userId);
     await this.firebaseAdmin.firestore.collection(this.collection).doc(id).update({
