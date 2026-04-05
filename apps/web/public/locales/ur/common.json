@@ -240,7 +240,24 @@
     "executive": "ایگزیکٹو",
     "skills_placeholder": "مثلاً: JavaScript، پروجیکٹ مینجمنٹ، مواصلات",
     "goal_placeholder": "مثلاً: ایک ٹیک کمپنی میں سینئر ڈویلپر کا کردار تلاش کررہا ہوں",
-    "profession_placeholder": "مثلاً: سافٹ ویئر انجینئر"
+    "profession_placeholder": "مثلاً: سافٹ ویئر انجینئر",
+    "profession_required": "براہ کرم اپنا پیشہ درج کریں",
+    "generated_summary": "تیار کردہ خلاصہ",
+    "add_to_cv": "CV میں شامل کریں",
+    "replace": "خلاصہ بدلیں",
+    "no_credits": "AI کریڈٹ ختم ہو گئے",
+    "credits_left": "{count} کریڈٹ باقی",
+    "upgrade_to_generate": "بنانے کے لیے اپگریڈ کریں",
+    "generated_locally": "مقامی طور پر تیار (AI دستیاب نہیں)",
+    "summary_replaced": "خلاصہ بدل دیا گیا",
+    "summary_added": "خلاصہ آپ کی CV میں شامل کر دیا گیا",
+    "template_professional_summary": "پیشہ ورانہ خلاصہ",
+    "template_profile": "پروفائل",
+    "template_contact": "رابطہ",
+    "template_about_me": "میرے بارے میں",
+    "template_summary": "خلاصہ",
+    "export_success": "CV بطور {format} برآمد کی گئی",
+    "unsaved": "محفوظ نہیں"
   },
   "cover_letter": {
     "title": "کور لیٹر بلڈر",
@@ -373,7 +390,15 @@
       "emailNotificationsDescription": "ای میل کے ذریعے اپ ڈیٹس اور تجاویز حاصل کریں",
       "save": "ترجیحات محفوظ کریں",
       "saveSuccess": "ترجیحات کامیابی سے محفوظ ہوگئیں",
-      "saveError": "ترجیحات محفوظ کرنے میں ناکامی"
+      "saveError": "ترجیحات محفوظ کرنے میں ناکامی",
+      "languages": {
+        "en": "English",
+        "es": "Español",
+        "fr": "Français",
+        "de": "Deutsch",
+        "ar": "العربية",
+        "ur": "اردو"
+      }
     },
     "account": {
       "title": "اکاؤنٹ",
@@ -391,7 +416,15 @@
       "cancel": "منسوخ کریں",
       "confirmDelete": "میرا اکاؤنٹ حذف کریں",
       "deleteSuccess": "اکاؤنٹ کامیابی سے حذف ہوگیا",
-      "deleteError": "اکاؤنٹ حذف کرنے میں ناکامی"
+      "deleteError": "اکاؤنٹ حذف کرنے میں ناکامی",
+      "changePasswordTitle": "پاسورڈ تبدیل کریں",
+      "checkYourEmail": "اپنی ای میل چیک کریں",
+      "passwordResetSentTo": "ہم نے {email} پر ری سیٹ لنک بھیجا ہے",
+      "done": "ہو گیا",
+      "passwordResetDesc": "ہم آپ کو پاسورڈ ری سیٹ کرنے کے لیے ایک لنک کے ساتھ ای میل بھیجیں گے۔",
+      "sendResetLink": "ری سیٹ لنک بھیجیں",
+      "passwordResetEmailSent": "پاسورڈ ری سیٹ ای میل بھیج دی گئی! اپنا ان باکس چیک کریں۔",
+      "passwordResetFailed": "ری سیٹ ای میل بھیجنے میں ناکامی"
     }
   },
   "billing": {
@@ -750,7 +783,12 @@
   "not_found": {
     "title": "Page Not Found",
     "desc": "Sorry, the page you're looking for doesn't exist or has been moved.",
-    "btn_home": "Go Home",
-    "btn_back": "Go Back"
+    "btn_home": "ہوم پیج پر جائیں",
+    "btn_back": "واپس جائیں"
+  },
+  "error_boundary": {
+    "title": "کچھ غلط ہو گیا",
+    "message": "ایک غیر متوقع خرابی آئی۔ براہ کرم صفحہ تازہ کریں یا بعد میں دوبارہ کوشش کریں۔",
+    "retry": "دوبارہ کوشش کریں"
   }
 }

@@ -240,7 +240,24 @@
     "executive": "Führungskraft",
     "skills_placeholder": "z.B. JavaScript, Projektmanagement, Kommunikation",
     "goal_placeholder": "z.B. Anstreben einer Senior-Entwicklerstelle bei einem Technologieunternehmen",
-    "profession_placeholder": "z.B. Software-Ingenieur"
+    "profession_placeholder": "z.B. Software-Ingenieur",
+    "profession_required": "Bitte gib deinen Beruf ein",
+    "generated_summary": "Generierte Zusammenfassung",
+    "add_to_cv": "Zum CV hinzufügen",
+    "replace": "Zusammenfassung ersetzen",
+    "no_credits": "Keine KI-Credits mehr vorhanden",
+    "credits_left": "{count} Credits übrig",
+    "upgrade_to_generate": "Upgraden zum Generieren",
+    "generated_locally": "Lokal generiert (KI nicht verfügbar)",
+    "summary_replaced": "Zusammenfassung ersetzt",
+    "summary_added": "Zusammenfassung zu deinem CV hinzugefügt",
+    "template_professional_summary": "Professionelle Zusammenfassung",
+    "template_profile": "Profil",
+    "template_contact": "Kontakt",
+    "template_about_me": "Über Mich",
+    "template_summary": "Zusammenfassung",
+    "export_success": "CV als {format} exportiert",
+    "unsaved": "Nicht gespeichert"
   },
   "cover_letter": {
     "title": "Anschreiben-Builder",
@@ -373,7 +390,15 @@
       "emailNotificationsDescription": "Erhalte Updates und Tipps per E-Mail",
       "save": "Einstellungen speichern",
       "saveSuccess": "Einstellungen erfolgreich gespeichert",
-      "saveError": "Einstellungen konnten nicht gespeichert werden"
+      "saveError": "Einstellungen konnten nicht gespeichert werden",
+      "languages": {
+        "en": "English",
+        "es": "Español",
+        "fr": "Français",
+        "de": "Deutsch",
+        "ar": "العربية",
+        "ur": "اردو"
+      }
     },
     "account": {
       "title": "Konto",
@@ -391,7 +416,15 @@
       "cancel": "Abbrechen",
       "confirmDelete": "Mein Konto löschen",
       "deleteSuccess": "Konto erfolgreich gelöscht",
-      "deleteError": "Konto konnte nicht gelöscht werden"
+      "deleteError": "Konto konnte nicht gelöscht werden",
+      "changePasswordTitle": "Passwort ändern",
+      "checkYourEmail": "Überprüfe deine E-Mail",
+      "passwordResetSentTo": "Wir haben einen Reset-Link an {email} gesendet",
+      "done": "Fertig",
+      "passwordResetDesc": "Wir senden dir eine E-Mail mit einem Link zum Zurücksetzen deines Passworts.",
+      "sendResetLink": "Reset-Link senden",
+      "passwordResetEmailSent": "Passwort-Reset-E-Mail gesendet! Überprüfe deinen Posteingang.",
+      "passwordResetFailed": "Fehler beim Senden der Reset-E-Mail"
     }
   },
   "billing": {
@@ -750,7 +783,12 @@
   "not_found": {
     "title": "Page Not Found",
     "desc": "Sorry, the page you're looking for doesn't exist or has been moved.",
-    "btn_home": "Go Home",
-    "btn_back": "Go Back"
+    "btn_home": "Zur Startseite",
+    "btn_back": "Zurück"
+  },
+  "error_boundary": {
+    "title": "Etwas ist schiefgelaufen",
+    "message": "Ein unerwarteter Fehler ist aufgetreten. Bitte aktualisiere die Seite oder versuche es später erneut.",
+    "retry": "Erneut versuchen"
   }
 }

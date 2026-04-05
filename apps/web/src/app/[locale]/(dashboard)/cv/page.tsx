@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button';
 import { Plus, FileText, Trash2, Copy, Pencil, Sparkles, AlertTriangle } from 'lucide-react';
 import Skeleton from '@/components/ui/Skeleton';
 import { CV, PLAN_CONFIGS } from '@flacroncv/shared-types';
+import CVThumbnail from '@/components/cv-builder/CVThumbnail';
 import { formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useState } from 'react';
@@ -178,19 +179,20 @@ function CVCard({
     <Card padding="none" className="group overflow-hidden transition-shadow hover:shadow-md">
       {/* Clickable preview area */}
       <button
-        className="relative flex h-40 w-full items-center justify-center bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-900"
+        className="relative h-40 w-full overflow-hidden bg-stone-50 dark:bg-stone-800"
         onClick={() => router.push(`/cv/${cv.id}`)}
         aria-label={`Open ${cv.title}`}
       >
-        {/* Mini CV mockup */}
-        <div className="w-24 rounded border border-stone-200 bg-white p-2 shadow-sm dark:border-stone-600 dark:bg-stone-700">
-          <div className="mb-1 h-2 w-14 rounded bg-stone-800 dark:bg-stone-200" />
-          <div className="mb-1 h-1 w-10 rounded bg-stone-300" />
-          <div className="mb-2 h-px w-full bg-brand-400" />
-          <div className="space-y-0.5">
-            <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-500" />
-            <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-500" />
-            <div className="h-1 w-3/5 rounded bg-stone-200 dark:bg-stone-500" />
+        {/* Scaled-down CV thumbnail — uses the CV's actual layout and color */}
+        <div
+          className="absolute inset-0 flex items-center justify-center"
+          aria-hidden="true"
+        >
+          <div
+            className="overflow-hidden rounded border border-stone-200 shadow-md dark:border-stone-700"
+            style={{ width: 108, height: 140 }}
+          >
+            <CVThumbnail cv={cv} />
           </div>
         </div>
         {/* Hover overlay */}

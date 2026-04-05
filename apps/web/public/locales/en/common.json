@@ -240,7 +240,24 @@
     "executive": "Executive",
     "skills_placeholder": "e.g. JavaScript, Project Management, Communication",
     "goal_placeholder": "e.g. Seeking a senior developer role at a tech company",
-    "profession_placeholder": "e.g. Software Engineer"
+    "profession_placeholder": "e.g. Software Engineer",
+    "profession_required": "Please enter your profession",
+    "generated_summary": "Generated Summary",
+    "add_to_cv": "Add to CV",
+    "replace": "Replace Summary",
+    "no_credits": "No AI credits remaining",
+    "credits_left": "{count} credits left",
+    "upgrade_to_generate": "Upgrade to Generate",
+    "generated_locally": "Generated locally (AI unavailable)",
+    "summary_replaced": "Summary replaced",
+    "summary_added": "Summary added to your CV",
+    "template_professional_summary": "Professional Summary",
+    "template_profile": "Profile",
+    "template_contact": "Contact",
+    "template_about_me": "About Me",
+    "template_summary": "Summary",
+    "export_success": "CV exported as {format}",
+    "unsaved": "Unsaved"
   },
   "cover_letter": {
     "title": "Cover Letter Builder",
@@ -373,7 +390,15 @@
       "emailNotificationsDescription": "Receive updates and tips via email",
       "save": "Save Preferences",
       "saveSuccess": "Preferences saved successfully",
-      "saveError": "Failed to save preferences"
+      "saveError": "Failed to save preferences",
+      "languages": {
+        "en": "English",
+        "es": "Español",
+        "fr": "Français",
+        "de": "Deutsch",
+        "ar": "العربية",
+        "ur": "اردو"
+      }
     },
     "account": {
       "title": "Account",
@@ -391,7 +416,15 @@
       "cancel": "Cancel",
       "confirmDelete": "Delete My Account",
       "deleteSuccess": "Account deleted successfully",
-      "deleteError": "Failed to delete account"
+      "deleteError": "Failed to delete account",
+      "changePasswordTitle": "Change Password",
+      "checkYourEmail": "Check your email",
+      "passwordResetSentTo": "We sent a password reset link to {email}",
+      "done": "Done",
+      "passwordResetDesc": "We'll send you an email with a link to reset your password. Click the link in the email to create a new password.",
+      "sendResetLink": "Send Reset Link",
+      "passwordResetEmailSent": "Password reset email sent! Check your inbox.",
+      "passwordResetFailed": "Failed to send reset email"
     }
   },
   "billing": {
@@ -752,5 +785,10 @@
     "desc": "Sorry, the page you're looking for doesn't exist or has been moved.",
     "btn_home": "Go Home",
     "btn_back": "Go Back"
+  },
+  "error_boundary": {
+    "title": "Something went wrong",
+    "message": "An unexpected error occurred. Please refresh the page or try again later.",
+    "retry": "Try again"
   }
 }

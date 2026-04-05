@@ -5,6 +5,8 @@ import { CV, CVSection, PersonalInfo, CVStyling, UpdateCVData } from '@flacroncv
 interface CVState {
   cv: CV | null;
   sections: CVSection[];
+  /** IDs of sections that exist in the database (fetched or already POSTed). */
+  persistedSectionIds: string[];
   isDirty: boolean;
   isSaving: boolean;
   lastSavedAt: Date | null;
@@ -24,6 +26,8 @@ interface CVState {
   setIsSaving: (saving: boolean) => void;
   setLastSavedAt: (date: Date) => void;
   markClean: () => void;
+  /** Called after a successful save to record which IDs now exist in the DB. */
+  markSectionsPersisted: (ids: string[]) => void;
   undo: () => void;
   redo: () => void;
   canUndo: () => boolean;
@@ -35,6 +39,7 @@ export const useCVStore = create<CVState>()(
   immer((set, get) => ({
     cv: null,
     sections: [],
+    persistedSectionIds: [],
     isDirty: false,
     isSaving: false,
     lastSavedAt: null,
@@ -44,6 +49,7 @@ export const useCVStore = create<CVState>()(
     reset: () => set((state) => {
       state.cv = null;
       state.sections = [];
+      state.persistedSectionIds = [];
       state.isDirty = false;
       state.isSaving = false;
       state.lastSavedAt = null;
@@ -58,6 +64,8 @@ export const useCVStore = create<CVState>()(
 
     setSections: (sections) => set((state) => {
       state.sections = sections;
+      // All sections that arrive from the server are considered persisted
+      state.persistedSectionIds = sections.map((s) => s.id);
     }),
 
     updatePersonalInfo: (field, value) => set((state) => {
@@ -117,6 +125,18 @@ export const useCVStore = create<CVState>()(
 
     markClean: () => set((state) => {
       state.isDirty = false;
+    }),
+
+    markSectionsPersisted: (ids) => set((state) => {
+      for (const id of ids) {
+        if (!state.persistedSectionIds.includes(id)) {
+          state.persistedSectionIds.push(id);
+        }
+      }
+      // Remove any IDs that are no longer in sections (they were deleted)
+      state.persistedSectionIds = state.persistedSectionIds.filter(
+        (id) => state.sections.some((s) => s.id === id),
+      );
     }),
 
     pushHistory: () => set((state) => {

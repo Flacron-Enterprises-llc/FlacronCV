@@ -5,6 +5,7 @@ import { useTheme } from '@/providers/ThemeProvider';
 import { Menu, Sun, Moon, LogOut, User as UserIcon } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from '@/i18n/routing';
+import { useTranslations } from 'next-intl';
 import LanguageSwitcher from '@/components/shared/LanguageSwitcher';
 
 interface TopBarProps {
@@ -15,6 +16,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
   const { user, logout } = useAuth();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const router = useRouter();
+  const t = useTranslations();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -98,13 +100,13 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
                 onClick={() => { router.push('/settings'); setDropdownOpen(false); }}
                 className="flex w-full items-center gap-2 px-4 py-2 text-sm text-stone-600 hover:bg-stone-50 dark:text-stone-400 dark:hover:bg-stone-700"
               >
-                <UserIcon className="h-4 w-4" /> Profile
+                <UserIcon className="h-4 w-4" /> {t('settings.nav.profile')}
               </button>
               <button
                 onClick={handleLogout}
                 className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
               >
-                <LogOut className="h-4 w-4" /> Log Out
+                <LogOut className="h-4 w-4" /> {t('nav.logout')}
               </button>
             </div>
           )}

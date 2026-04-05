@@ -240,7 +240,24 @@
     "executive": "Cadre dirigeant",
     "skills_placeholder": "ex. JavaScript, Gestion de projet, Communication",
     "goal_placeholder": "ex. Recherche d'un poste de développeur senior dans une entreprise tech",
-    "profession_placeholder": "ex. Ingénieur logiciel"
+    "profession_placeholder": "ex. Ingénieur logiciel",
+    "profession_required": "Veuillez entrer votre profession",
+    "generated_summary": "Résumé Généré",
+    "add_to_cv": "Ajouter au CV",
+    "replace": "Remplacer le Résumé",
+    "no_credits": "Aucun crédit IA restant",
+    "credits_left": "{count} crédits restants",
+    "upgrade_to_generate": "Mettre à niveau pour Générer",
+    "generated_locally": "Généré localement (IA indisponible)",
+    "summary_replaced": "Résumé remplacé",
+    "summary_added": "Résumé ajouté à votre CV",
+    "template_professional_summary": "Résumé Professionnel",
+    "template_profile": "Profil",
+    "template_contact": "Contact",
+    "template_about_me": "À Propos",
+    "template_summary": "Résumé",
+    "export_success": "CV exporté en {format}",
+    "unsaved": "Non enregistré"
   },
   "cover_letter": {
     "title": "Créateur de lettre de motivation",
@@ -373,7 +390,15 @@
       "emailNotificationsDescription": "Recevez des mises à jour et des conseils par email",
       "save": "Enregistrer les préférences",
       "saveSuccess": "Préférences enregistrées avec succès",
-      "saveError": "Échec de l'enregistrement des préférences"
+      "saveError": "Échec de l'enregistrement des préférences",
+      "languages": {
+        "en": "English",
+        "es": "Español",
+        "fr": "Français",
+        "de": "Deutsch",
+        "ar": "العربية",
+        "ur": "اردو"
+      }
     },
     "account": {
       "title": "Compte",
@@ -391,7 +416,15 @@
       "cancel": "Annuler",
       "confirmDelete": "Supprimer mon compte",
       "deleteSuccess": "Compte supprimé avec succès",
-      "deleteError": "Échec de la suppression du compte"
+      "deleteError": "Échec de la suppression du compte",
+      "changePasswordTitle": "Changer le mot de passe",
+      "checkYourEmail": "Vérifiez votre email",
+      "passwordResetSentTo": "Nous avons envoyé un lien de réinitialisation à {email}",
+      "done": "Terminé",
+      "passwordResetDesc": "Nous vous enverrons un email avec un lien pour réinitialiser votre mot de passe.",
+      "sendResetLink": "Envoyer le lien",
+      "passwordResetEmailSent": "Email de réinitialisation envoyé ! Vérifiez votre boîte de réception.",
+      "passwordResetFailed": "Échec de l'envoi de l'email de réinitialisation"
     }
   },
   "billing": {
@@ -750,7 +783,12 @@
   "not_found": {
     "title": "Page Not Found",
     "desc": "Sorry, the page you're looking for doesn't exist or has been moved.",
-    "btn_home": "Go Home",
-    "btn_back": "Go Back"
+    "btn_home": "Retour à l'accueil",
+    "btn_back": "Retour"
+  },
+  "error_boundary": {
+    "title": "Une erreur s'est produite",
+    "message": "Une erreur inattendue est survenue. Veuillez actualiser la page ou réessayer plus tard.",
+    "retry": "Réessayer"
   }
 }

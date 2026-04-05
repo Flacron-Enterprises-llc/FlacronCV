@@ -136,19 +136,19 @@ export default function SettingsPage(): React.JSX.Element | null {
     try {
       await resetPassword(user.email);
       setPasswordResetSent(true);
-      toast.success('Password reset email sent! Check your inbox.');
+      toast.success(t('account.passwordResetEmailSent'));
     } catch (error) {
-      toast.error('Failed to send reset email');
+      toast.error(t('account.passwordResetFailed'));
     }
   };
 
   const languageOptions = [
-    { value: Locale.EN, label: 'English' },
-    { value: Locale.ES, label: 'Espanol' },
-    { value: Locale.FR, label: 'Francais' },
-    { value: Locale.DE, label: 'Deutsch' },
-    { value: Locale.AR, label: 'العربية' },
-    { value: Locale.UR, label: 'اردو' },
+    { value: Locale.EN, label: t('preferences.languages.en') },
+    { value: Locale.ES, label: t('preferences.languages.es') },
+    { value: Locale.FR, label: t('preferences.languages.fr') },
+    { value: Locale.DE, label: t('preferences.languages.de') },
+    { value: Locale.AR, label: t('preferences.languages.ar') },
+    { value: Locale.UR, label: t('preferences.languages.ur') },
   ];
 
   const themeOptions = [
@@ -485,7 +485,7 @@ export default function SettingsPage(): React.JSX.Element | null {
           setShowPasswordModal(false);
           setPasswordResetSent(false);
         }}
-        title="Change Password"
+        title={t('account.changePasswordTitle')}
         size="sm"
       >
         <div className="space-y-4">
@@ -496,9 +496,9 @@ export default function SettingsPage(): React.JSX.Element | null {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-stone-900 dark:text-white">Check your email</h3>
+              <h3 className="text-lg font-semibold text-stone-900 dark:text-white">{t('account.checkYourEmail')}</h3>
               <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
-                We sent a password reset link to <strong>{user?.email}</strong>
+                {t('account.passwordResetSentTo', { email: user?.email })}
               </p>
               <Button
                 variant="primary"
@@ -508,26 +508,26 @@ export default function SettingsPage(): React.JSX.Element | null {
                   setPasswordResetSent(false);
                 }}
               >
-                Done
+                {t('account.done')}
               </Button>
             </div>
           ) : (
             <>
               <p className="text-sm text-stone-600 dark:text-stone-400">
-                We'll send you an email with a link to reset your password. Click the link in the email to create a new password.
+                {t('account.passwordResetDesc')}
               </p>
               <div className="flex justify-end gap-3">
                 <Button
                   variant="secondary"
                   onClick={() => setShowPasswordModal(false)}
                 >
-                  Cancel
+                  {t('account.cancel')}
                 </Button>
                 <Button
                   variant="primary"
                   onClick={handleSendPasswordReset}
                 >
-                  Send Reset Link
+                  {t('account.sendResetLink')}
                 </Button>
               </div>
             </>

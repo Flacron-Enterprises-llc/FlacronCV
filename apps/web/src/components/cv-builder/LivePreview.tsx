@@ -19,7 +19,12 @@ export default function LivePreview() {
     .sort((a, b) => {
       const oa = cv.sectionOrder.indexOf(a.id);
       const ob = cv.sectionOrder.indexOf(b.id);
-      return oa - ob;
+      // indexOf returns -1 for IDs not yet in sectionOrder (e.g. just added and
+      // not yet synced). Treat those as Infinity so they sort to the end, not
+      // the beginning — keeps the preview order consistent with the saved CV.
+      const normA = oa === -1 ? Infinity : oa;
+      const normB = ob === -1 ? Infinity : ob;
+      return normA - normB;
     });
 
   const props = { cv, sections: visibleSections };

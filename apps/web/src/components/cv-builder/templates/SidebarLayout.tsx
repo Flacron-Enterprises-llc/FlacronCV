@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import type { LayoutProps } from './shared';
 import {
   getTokens, darken, buildContactLine, buildLinksLine,
@@ -14,6 +15,7 @@ import {
 } from './shared';
 
 export default function SidebarLayout({ cv, sections }: LayoutProps) {
+  const t = useTranslations('cv_builder');
   const { primary, bodyFont, headingFont, fs, sp, br, sectionStyle } = getTokens(cv);
   const showPhoto = cv.styling.showPhoto && cv.personalInfo.photoURL;
   const { sidebar: sidebarSections, main: mainSections } = splitSections(sections);
@@ -94,7 +96,7 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
 
         {/* Contact */}
         <div>
-          <SidebarSectionHeading title="Contact" headingFont={headingFont} fs={fs} />
+          <SidebarSectionHeading title={t('template_contact')} headingFont={headingFont} fs={fs} />
           {[
             cv.personalInfo.email,
             cv.personalInfo.phone,
@@ -138,7 +140,7 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
         {/* Summary */}
         {cv.personalInfo.summary && (
           <div>
-            <SectionHeading title="Profile" primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
+            <SectionHeading title={t('template_profile')} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
             <p style={{ fontSize: `${fs.name}px`, lineHeight: 1.75, color: '#333' }}>
               {cv.personalInfo.summary}
             </p>

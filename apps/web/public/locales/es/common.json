@@ -240,7 +240,24 @@
     "executive": "Ejecutivo",
     "skills_placeholder": "ej. JavaScript, Gestión de proyectos, Comunicación",
     "goal_placeholder": "ej. Busco un puesto de desarrollador senior en una empresa tecnológica",
-    "profession_placeholder": "ej. Ingeniero de software"
+    "profession_placeholder": "ej. Ingeniero de software",
+    "profession_required": "Por favor ingresa tu profesión",
+    "generated_summary": "Resumen Generado",
+    "add_to_cv": "Añadir al CV",
+    "replace": "Reemplazar Resumen",
+    "no_credits": "Sin créditos de IA restantes",
+    "credits_left": "{count} créditos restantes",
+    "upgrade_to_generate": "Actualiza para Generar",
+    "generated_locally": "Generado localmente (IA no disponible)",
+    "summary_replaced": "Resumen reemplazado",
+    "summary_added": "Resumen añadido a tu CV",
+    "template_professional_summary": "Resumen Profesional",
+    "template_profile": "Perfil",
+    "template_contact": "Contacto",
+    "template_about_me": "Sobre Mí",
+    "template_summary": "Resumen",
+    "export_success": "CV exportado como {format}",
+    "unsaved": "Sin guardar"
   },
   "cover_letter": {
     "title": "Creador de carta de presentación",
@@ -373,7 +390,15 @@
       "emailNotificationsDescription": "Recibe actualizaciones y consejos por email",
       "save": "Guardar preferencias",
       "saveSuccess": "Preferencias guardadas con éxito",
-      "saveError": "Error al guardar las preferencias"
+      "saveError": "Error al guardar las preferencias",
+      "languages": {
+        "en": "English",
+        "es": "Español",
+        "fr": "Français",
+        "de": "Deutsch",
+        "ar": "العربية",
+        "ur": "اردو"
+      }
     },
     "account": {
       "title": "Cuenta",
@@ -391,7 +416,15 @@
       "cancel": "Cancelar",
       "confirmDelete": "Eliminar mi cuenta",
       "deleteSuccess": "Cuenta eliminada con éxito",
-      "deleteError": "Error al eliminar la cuenta"
+      "deleteError": "Error al eliminar la cuenta",
+      "changePasswordTitle": "Cambiar Contraseña",
+      "checkYourEmail": "Revisa tu correo",
+      "passwordResetSentTo": "Enviamos un enlace de restablecimiento a {email}",
+      "done": "Listo",
+      "passwordResetDesc": "Te enviaremos un correo con un enlace para restablecer tu contraseña.",
+      "sendResetLink": "Enviar Enlace",
+      "passwordResetEmailSent": "¡Correo de restablecimiento enviado! Revisa tu bandeja.",
+      "passwordResetFailed": "Error al enviar el correo de restablecimiento"
     }
   },
   "billing": {
@@ -750,7 +783,12 @@
   "not_found": {
     "title": "Page Not Found",
     "desc": "Sorry, the page you're looking for doesn't exist or has been moved.",
-    "btn_home": "Go Home",
-    "btn_back": "Go Back"
+    "btn_home": "Ir al inicio",
+    "btn_back": "Volver"
+  },
+  "error_boundary": {
+    "title": "Algo salió mal",
+    "message": "Ocurrió un error inesperado. Por favor, actualiza la página o inténtalo más tarde.",
+    "retry": "Intentar de nuevo"
   }
 }

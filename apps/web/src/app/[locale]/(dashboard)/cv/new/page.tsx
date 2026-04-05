@@ -22,6 +22,7 @@ import {
   SubscriptionPlan,
   type CVLayout,
 } from '@flacroncv/shared-types';
+import CVThumbnail from '@/components/cv-builder/CVThumbnail';
 
 /* ─── Layout + personality mapping per template slug ─── */
 
@@ -39,61 +40,7 @@ const templateMeta: Record<string, { layout: CVLayout; color: string; personalit
   bold:         { layout: 'top-bar',  color: '#dc2626', personality: 'Creative Bold'           },
 };
 
-function LayoutPreview({ layout, color }: { layout: CVLayout; color: string }) {
-  if (layout === 'sidebar') return (
-    <div className="flex h-full w-full overflow-hidden">
-      <div className="w-[32%] p-1.5 flex flex-col gap-1" style={{ background: color }}>
-        <div className="h-4 w-4 rounded-full mx-auto" style={{ background: 'rgba(255,255,255,0.35)' }} />
-        {[80,60,90,70,55].map((w,i) => <div key={i} className="h-1 rounded" style={{ width:`${w}%`, background:'rgba(255,255,255,0.3)' }} />)}
-      </div>
-      <div className="flex-1 p-1.5 bg-white flex flex-col gap-1">
-        {[70,90,60,80,50,75,65].map((w,i) => <div key={i} className="h-1.5 rounded bg-stone-200" style={{ width:`${w}%` }} />)}
-      </div>
-    </div>
-  );
-
-  if (layout === 'top-bar') return (
-    <div className="flex h-full w-full flex-col overflow-hidden">
-      <div className="px-2 py-2 flex items-center gap-1.5" style={{ background: color }}>
-        <div className="h-5 w-5 rounded flex-shrink-0" style={{ background:'rgba(255,255,255,0.3)' }} />
-        <div className="flex-1 flex flex-col gap-0.5">
-          <div className="h-2 w-2/3 rounded" style={{ background:'rgba(255,255,255,0.85)' }} />
-          <div className="h-1 w-1/2 rounded" style={{ background:'rgba(255,255,255,0.5)' }} />
-        </div>
-      </div>
-      <div className="flex-1 bg-white p-1.5 flex flex-col gap-1">
-        {[80,60,90,55,75].map((w,i) => <div key={i} className="h-1.5 rounded bg-stone-200" style={{ width:`${w}%` }} />)}
-      </div>
-    </div>
-  );
-
-  if (layout === 'compact') return (
-    <div className="flex h-full w-full flex-col bg-white p-1.5 gap-1 overflow-hidden">
-      <div className="flex items-center gap-1.5 pb-1" style={{ borderBottom:`2px solid ${color}` }}>
-        <div className="h-2.5 w-1/3 rounded" style={{ background: color }} />
-        <div className="h-1.5 w-1/4 rounded bg-stone-300" />
-      </div>
-      <div className="flex gap-1.5 flex-1">
-        <div className="flex-[3] flex flex-col gap-0.5">
-          {[90,70,80,60,75].map((w,i) => <div key={i} className="h-1.5 rounded bg-stone-200" style={{ width:`${w}%` }} />)}
-        </div>
-        <div className="flex-[2] flex flex-col gap-0.5">
-          {[85,65,75,50,80].map((w,i) => <div key={i} className="h-1.5 rounded bg-stone-100" style={{ width:`${w}%` }} />)}
-        </div>
-      </div>
-    </div>
-  );
-
-  // classic (default)
-  return (
-    <div className="flex h-full w-full flex-col bg-white items-center p-2 gap-1 overflow-hidden">
-      <div className="h-2.5 w-1/2 rounded" style={{ background: color }} />
-      <div className="h-1 w-1/3 rounded bg-stone-300" />
-      <div className="w-full mt-1" style={{ borderTop:`2px solid ${color}` }} />
-      {[90,70,80,55,75,60].map((w,i) => <div key={i} className="h-1.5 rounded bg-stone-200" style={{ width:`${w}%` }} />)}
-    </div>
-  );
-}
+// LayoutPreview is now handled by the shared CVThumbnail component.
 
 const tierVariantMap: Record<SubscriptionPlan, 'success' | 'brand' | 'warning'> = {
   [SubscriptionPlan.FREE]: 'success',
@@ -106,6 +53,8 @@ const tierLabelMap: Record<SubscriptionPlan, string> = {
   [SubscriptionPlan.PRO]: 'Pro',
   [SubscriptionPlan.ENTERPRISE]: 'Enterprise',
 };
+
+const DRAFT_KEY = 'cv_new_draft';
 
 export default function NewCVPage(): React.JSX.Element | null {
   const t = useTranslations();
@@ -126,7 +75,28 @@ export default function NewCVPage(): React.JSX.Element | null {
     (t) => t.category === TemplateCategory.CV,
   );
 
-  // Pre-select from ?template= query param or first template
+  // Restore draft title from sessionStorage on first mount
+  useEffect(() => {
+    const saved = sessionStorage.getItem(DRAFT_KEY);
+    if (saved) {
+      try {
+        const { title: savedTitle } = JSON.parse(saved) as { title: string };
+        if (savedTitle) setTitle(savedTitle);
+      } catch {
+        sessionStorage.removeItem(DRAFT_KEY);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist title to sessionStorage so browser Back → Forward restores it
+  useEffect(() => {
+    if (title) {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ title }));
+    }
+  }, [title]);
+
+  // Initialise template from URL param or first available template
   useEffect(() => {
     if (!cvTemplates?.length) return;
     if (selectedTemplate) return;
@@ -139,6 +109,16 @@ export default function NewCVPage(): React.JSX.Element | null {
     }
   }, [cvTemplates, searchParams, selectedTemplate]);
 
+  const clearDraft = () => sessionStorage.removeItem(DRAFT_KEY);
+
+  // Sync selected template into the URL so the browser history entry captures
+  // the user's choice — Back → Forward will restore the correct selection.
+  const syncTemplateToUrl = (slug: string) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set('template', slug);
+    window.history.replaceState(null, '', `?${params.toString()}`);
+  };
+
   const userPlan = user?.subscription?.plan || SubscriptionPlan.FREE;
 
   const canUseTemplate = (template: Template): boolean => {
@@ -150,6 +130,7 @@ export default function NewCVPage(): React.JSX.Element | null {
     mutationFn: (data: { title: string; templateId: string }) =>
       api.post<CV>('/cvs', data),
     onSuccess: (cv) => {
+      clearDraft();
       toast.success('CV created!');
       router.push(`/cv/${cv.id}`);
     },
@@ -180,6 +161,19 @@ export default function NewCVPage(): React.JSX.Element | null {
       return;
     }
     setSelectedTemplate(template.slug);
+    syncTemplateToUrl(template.slug);
+  };
+
+  // Back: prefer browser history so the user lands where they came from;
+  // fall back to /dashboard when there is no prior history entry (direct URL,
+  // bookmark, or opened in a new tab).
+  const handleCancel = () => {
+    clearDraft();
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/dashboard');
+    }
   };
 
   return (
@@ -197,6 +191,7 @@ export default function NewCVPage(): React.JSX.Element | null {
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Software Engineer CV 2025"
             required
+            data-testid="cv-title-input"
           />
         </Card>
 
@@ -239,7 +234,7 @@ export default function NewCVPage(): React.JSX.Element | null {
                   >
                     {/* Layout preview */}
                     <div className="relative mb-2 h-28 overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-stone-200/50 dark:bg-stone-900 dark:ring-stone-700/50">
-                      <LayoutPreview layout={meta.layout} color={meta.color} />
+                      <CVThumbnail layout={meta.layout} color={meta.color} />
                       {isLocked && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[1px]">
                           <Lock className="h-5 w-5 text-white drop-shadow" />
@@ -270,10 +265,10 @@ export default function NewCVPage(): React.JSX.Element | null {
         </Card>
 
         <div className="flex justify-end gap-3">
-          <Button variant="secondary" type="button" onClick={() => router.back()}>
+          <Button variant="secondary" type="button" onClick={handleCancel} data-testid="cancel-btn">
             Cancel
           </Button>
-          <Button type="submit" loading={createMutation.isPending}>
+          <Button type="submit" loading={createMutation.isPending} data-testid="create-cv-btn">
             Create CV
           </Button>
         </div>

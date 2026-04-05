@@ -33,6 +33,9 @@ export default function LanguageSwitcher() {
   }, []);
 
   const handleSwitch = (newLocale: string) => {
+    // Persist immediately so the preference survives hard refreshes before the
+    // settings API call has a chance to write it to the database.
+    try { localStorage.setItem('flacroncv_locale', newLocale); } catch {}
     router.replace(pathname, { locale: newLocale as any });
     setOpen(false);
   };

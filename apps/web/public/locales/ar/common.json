@@ -240,7 +240,24 @@
     "executive": "تنفيذي",
     "skills_placeholder": "مثل: JavaScript، إدارة المشاريع، التواصل",
     "goal_placeholder": "مثل: أسعى للحصول على دور مطور متقدم في شركة تقنية",
-    "profession_placeholder": "مثل: مهندس برمجيات"
+    "profession_placeholder": "مثل: مهندس برمجيات",
+    "profession_required": "يرجى إدخال مهنتك",
+    "generated_summary": "الملخص المُولَّد",
+    "add_to_cv": "إضافة إلى السيرة الذاتية",
+    "replace": "استبدال الملخص",
+    "no_credits": "لا توجد رصيد ذكاء اصطناعي متبقية",
+    "credits_left": "{count} رصيد متبقٍ",
+    "upgrade_to_generate": "قم بالترقية للتوليد",
+    "generated_locally": "تم التوليد محلياً (الذكاء الاصطناعي غير متاح)",
+    "summary_replaced": "تم استبدال الملخص",
+    "summary_added": "تم إضافة الملخص إلى سيرتك الذاتية",
+    "template_professional_summary": "الملخص المهني",
+    "template_profile": "الملف الشخصي",
+    "template_contact": "التواصل",
+    "template_about_me": "نبذة عني",
+    "template_summary": "الملخص",
+    "export_success": "تم تصدير السيرة الذاتية بصيغة {format}",
+    "unsaved": "غير محفوظ"
   },
   "cover_letter": {
     "title": "منشئ خطاب التقديم",
@@ -373,7 +390,15 @@
       "emailNotificationsDescription": "استقبل التحديثات والنصائح عبر البريد الإلكتروني",
       "save": "حفظ التفضيلات",
       "saveSuccess": "تم حفظ التفضيلات بنجاح",
-      "saveError": "فشل حفظ التفضيلات"
+      "saveError": "فشل حفظ التفضيلات",
+      "languages": {
+        "en": "English",
+        "es": "Español",
+        "fr": "Français",
+        "de": "Deutsch",
+        "ar": "العربية",
+        "ur": "اردو"
+      }
     },
     "account": {
       "title": "الحساب",
@@ -391,7 +416,15 @@
       "cancel": "إلغاء",
       "confirmDelete": "حذف حسابي",
       "deleteSuccess": "تم حذف الحساب بنجاح",
-      "deleteError": "فشل حذف الحساب"
+      "deleteError": "فشل حذف الحساب",
+      "changePasswordTitle": "تغيير كلمة المرور",
+      "checkYourEmail": "تحقق من بريدك الإلكتروني",
+      "passwordResetSentTo": "أرسلنا رابط إعادة التعيين إلى {email}",
+      "done": "تم",
+      "passwordResetDesc": "سنرسل لك بريداً إلكترونياً برابط لإعادة تعيين كلمة المرور.",
+      "sendResetLink": "إرسال الرابط",
+      "passwordResetEmailSent": "تم إرسال بريد إعادة التعيين! تحقق من صندوق الوارد.",
+      "passwordResetFailed": "فشل إرسال بريد إعادة التعيين"
     }
   },
   "billing": {
@@ -750,7 +783,12 @@
   "not_found": {
     "title": "Page Not Found",
     "desc": "Sorry, the page you're looking for doesn't exist or has been moved.",
-    "btn_home": "Go Home",
-    "btn_back": "Go Back"
+    "btn_home": "الصفحة الرئيسية",
+    "btn_back": "رجوع"
+  },
+  "error_boundary": {
+    "title": "حدث خطأ ما",
+    "message": "حدث خطأ غير متوقع. يرجى تحديث الصفحة أو المحاولة مرة أخرى لاحقاً.",
+    "retry": "حاول مرة أخرى"
   }
 }

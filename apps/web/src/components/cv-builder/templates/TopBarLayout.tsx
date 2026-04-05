@@ -6,10 +6,12 @@
  */
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import type { LayoutProps } from './shared';
 import { getTokens, hexToRgba, darken, buildContactLine, buildLinksLine, SectionHeading, ItemRenderer, SkillBadge } from './shared';
 
 export default function TopBarLayout({ cv, sections }: LayoutProps) {
+  const t = useTranslations('cv_builder');
   const { primary, bodyFont, headingFont, fs, sp, br, sectionStyle } = getTokens(cv);
   const showPhoto = cv.styling.showPhoto && cv.personalInfo.photoURL;
   const headerBg = primary;
@@ -98,7 +100,7 @@ export default function TopBarLayout({ cv, sections }: LayoutProps) {
         {/* Summary */}
         {cv.personalInfo.summary && (
           <div style={{ marginBottom: `${sp.section}px` }}>
-            <SectionHeading title="About Me" primary={primary} headingFont={headingFont} fs={fs} sectionStyle="left-border" br={br} />
+            <SectionHeading title={t('template_about_me')} primary={primary} headingFont={headingFont} fs={fs} sectionStyle="left-border" br={br} />
             <p style={{ fontSize: `${fs.name}px`, lineHeight: 1.8, color: '#333' }}>
               {cv.personalInfo.summary}
             </p>

@@ -22,7 +22,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           id={id}
           className={cn(
-            'input-field',
+            'input-field h-10',
             error && 'border-red-500 focus:border-red-500 focus:ring-red-500',
             className,
           )}

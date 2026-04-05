@@ -3,8 +3,10 @@
 import { useCVStore } from '@/store/cv-store';
 import { useTranslations } from 'next-intl';
 import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import { toast } from 'sonner';
 import {
   DndContext,
   closestCenter,
@@ -37,14 +39,40 @@ import { useState, useRef } from 'react';
 import { CVSection, CVSectionType, CVSectionItem, SkillLevel } from '@flacroncv/shared-types';
 import { cn } from '@/lib/utils';
 
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
 export default function CVEditor() {
   const t = useTranslations('cv_builder');
   const { cv, sections, updatePersonalInfo, updateStyling, reorderSections, pushHistory } = useCVStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
+
+    // Validate MIME type (primary check — not spoofable via rename)
+    if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(file.type)) {
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'unknown';
+      const msg = `".${ext}" files are not supported. Please upload a JPG, PNG, or WebP image.`;
+      setPhotoError(msg);
+      toast.error(msg);
+      return;
+    }
+
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      const msg = `File is too large (${sizeMB} MB). Maximum allowed size is 5 MB.`;
+      setPhotoError(msg);
+      toast.error(msg);
+      return;
+    }
+
+    setPhotoError(null);
+
     const reader = new FileReader();
     reader.onload = (evt) => {
       const dataUrl = evt.target?.result as string;
@@ -63,7 +91,6 @@ export default function CVEditor() {
       img.src = dataUrl;
     };
     reader.readAsDataURL(file);
-    e.target.value = '';
   };
 
   const removePhoto = () => {
@@ -137,18 +164,29 @@ export default function CVEditor() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+              data-testid="photo-upload-btn"
             >
               {cv.personalInfo.photoURL ? 'Change photo' : 'Upload photo'}
             </button>
             <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
-              JPG or PNG · Used as your CV avatar
+              JPG, PNG or WebP · Max 5 MB · Used as your CV avatar
             </p>
+            {photoError && (
+              <p
+                role="alert"
+                data-testid="photo-upload-error"
+                className="mt-1 text-xs font-medium text-red-600 dark:text-red-400"
+              >
+                {photoError}
+              </p>
+            )}
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
               className="hidden"
               onChange={handlePhotoChange}
+              data-testid="photo-upload-input"
             />
           </div>
         </div>
@@ -355,9 +393,14 @@ function SectionContent({ section }: { section: CVSection }) {
           )}
           {section.type === 'skills' && (
             <div className="grid gap-2 sm:grid-cols-2">
-              <Input label="Skill" value={item.name || ''} onChange={(e) => updateItem(index, { name: e.target.value })} />
-              <select
-                className="input-field"
+              <Input
+                label="Skill"
+                value={item.name || ''}
+                onChange={(e) => updateItem(index, { name: e.target.value })}
+                placeholder="e.g. React, Figma"
+              />
+              <Select
+                label="Level"
                 value={item.level || 'intermediate'}
                 onChange={(e) => updateItem(index, { level: e.target.value })}
               >
@@ -365,7 +408,7 @@ function SectionContent({ section }: { section: CVSection }) {
                 <option value="intermediate">Intermediate</option>
                 <option value="advanced">Advanced</option>
                 <option value="expert">Expert</option>
-              </select>
+              </Select>
             </div>
           )}
           {!['experience', 'education', 'skills'].includes(section.type) && (

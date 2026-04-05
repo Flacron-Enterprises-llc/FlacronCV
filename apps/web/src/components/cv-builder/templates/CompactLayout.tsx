@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import type { LayoutProps } from './shared';
 import { getTokens, hexToRgba, buildContactLine, buildLinksLine, SectionHeading, ItemRenderer, SkillBadge } from './shared';
 import { CVSectionType } from '@flacroncv/shared-types';
@@ -21,6 +22,7 @@ const RIGHT_TYPES = new Set<string>([
 ]);
 
 export default function CompactLayout({ cv, sections }: LayoutProps) {
+  const t = useTranslations('cv_builder');
   const { primary, bodyFont, headingFont, fs, sp, br, sectionStyle } = getTokens(cv);
   const showPhoto = cv.styling.showPhoto && cv.personalInfo.photoURL;
 
@@ -90,7 +92,7 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
       {/* ── Summary (full-width) ── */}
       {cv.personalInfo.summary && (
         <div style={{ marginBottom: `${tightSp.section}px` }}>
-          <SectionHeading title="Summary" primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
+          <SectionHeading title={t('template_summary')} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
           <p style={{ fontSize: `${fs.body}px`, lineHeight: 1.65, color: '#333' }}>
             {cv.personalInfo.summary}
           </p>
