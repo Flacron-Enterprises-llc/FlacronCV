@@ -7,6 +7,7 @@ import { LayoutTemplate, X, ChevronDown, Lock } from 'lucide-react';
 import { useRouter } from '@/i18n/routing';
 import type { CVLayout, SectionStyle, BorderRadiusStyle } from '@flacroncv/shared-types';
 import { SubscriptionPlan } from '@flacroncv/shared-types';
+import CVThumbnail from '@/components/cv-builder/CVThumbnail';
 
 // ─── Layout cards ─────────────────────────────────────────────────────────────
 
@@ -22,89 +23,13 @@ interface LayoutOption {
   key: CVLayout;
   label: string;
   personality: string;
-  preview: React.ReactNode;
-}
-
-function LayoutThumbnail({ type }: { type: CVLayout }) {
-  const base = 'rounded-sm overflow-hidden';
-  const accent = '#6366f1';
-
-  if (type === 'classic') return (
-    <div className={base} style={{ width: 72, height: 92, background: '#fff', border: '1px solid #e5e7eb', padding: 5, display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <div style={{ height: 10, background: accent, borderRadius: 2, width: '60%', margin: '0 auto' }} />
-      <div style={{ height: 2, background: '#e5e7eb', borderRadius: 1, margin: '1px 0' }} />
-      {[70, 90, 80, 60].map((w, i) => (
-        <div key={i} style={{ height: 3, background: i === 0 ? '#d1d5db' : '#f3f4f6', borderRadius: 1, width: `${w}%` }} />
-      ))}
-      <div style={{ height: 1, background: accent, marginTop: 2 }} />
-      {[100, 85, 75].map((w, i) => (
-        <div key={i} style={{ height: 3, background: '#f3f4f6', borderRadius: 1, width: `${w}%` }} />
-      ))}
-    </div>
-  );
-
-  if (type === 'sidebar') return (
-    <div className={base} style={{ width: 72, height: 92, display: 'flex', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-      <div style={{ width: '32%', background: accent, padding: '5px 3px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.4)', margin: '0 auto 3px' }} />
-        {[80, 60, 90, 70, 55].map((w, i) => (
-          <div key={i} style={{ height: 2, background: 'rgba(255,255,255,0.4)', borderRadius: 1, width: `${w}%` }} />
-        ))}
-      </div>
-      <div style={{ flex: 1, background: '#fff', padding: '5px 4px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-        {[80, 60, 90, 70, 55, 85, 65].map((w, i) => (
-          <div key={i} style={{ height: 3, background: i % 3 === 0 ? '#d1d5db' : '#f3f4f6', borderRadius: 1, width: `${w}%` }} />
-        ))}
-      </div>
-    </div>
-  );
-
-  if (type === 'top-bar') return (
-    <div className={base} style={{ width: 72, height: 92, background: '#fff', border: '1px solid #e5e7eb', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ background: accent, padding: '6px 5px', display: 'flex', gap: 4, alignItems: 'center' }}>
-        <div style={{ width: 16, height: 16, borderRadius: 3, background: 'rgba(255,255,255,0.35)', flexShrink: 0 }} />
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <div style={{ height: 4, background: 'rgba(255,255,255,0.85)', borderRadius: 1, width: '75%' }} />
-          <div style={{ height: 2, background: 'rgba(255,255,255,0.5)', borderRadius: 1, width: '55%' }} />
-        </div>
-      </div>
-      <div style={{ flex: 1, padding: '4px 5px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {[85, 70, 90, 65, 80, 55].map((w, i) => (
-          <div key={i} style={{ height: 3, background: i === 0 || i === 3 ? '#d1d5db' : '#f3f4f6', borderRadius: 1, width: `${w}%` }} />
-        ))}
-      </div>
-    </div>
-  );
-
-  // compact
-  return (
-    <div className={base} style={{ width: 72, height: 92, background: '#fff', border: '1px solid #e5e7eb', padding: 5, display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-        <div style={{ height: 5, background: accent, borderRadius: 1, width: '55%' }} />
-        <div style={{ height: 4, background: '#e5e7eb', borderRadius: 1, width: '30%' }} />
-      </div>
-      <div style={{ height: 1, background: accent, width: '100%' }} />
-      <div style={{ display: 'flex', gap: 4, flex: 1 }}>
-        <div style={{ flex: '0 0 58%', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {[90, 75, 85, 60, 80].map((w, i) => (
-            <div key={i} style={{ height: 3, background: i === 0 ? '#d1d5db' : '#f3f4f6', borderRadius: 1, width: `${w}%` }} />
-          ))}
-        </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {[85, 70, 60, 80, 55].map((w, i) => (
-            <div key={i} style={{ height: 3, background: i === 0 ? '#d1d5db' : '#f3f4f6', borderRadius: 1, width: `${w}%` }} />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 const LAYOUTS: LayoutOption[] = [
-  { key: 'classic',  label: 'Classic',    personality: 'Modern Minimal',          preview: <LayoutThumbnail type="classic" /> },
-  { key: 'sidebar',  label: 'Sidebar',    personality: 'Corporate Professional',   preview: <LayoutThumbnail type="sidebar" /> },
-  { key: 'top-bar',  label: 'Top Bar',    personality: 'Creative / Bold',          preview: <LayoutThumbnail type="top-bar" /> },
-  { key: 'compact',  label: 'Compact',    personality: 'Executive Dense',          preview: <LayoutThumbnail type="compact" /> },
+  { key: 'classic',  label: 'Classic',  personality: 'Modern Minimal'        },
+  { key: 'sidebar',  label: 'Sidebar',  personality: 'Corporate Professional' },
+  { key: 'top-bar',  label: 'Top Bar',  personality: 'Creative / Bold'        },
+  { key: 'compact',  label: 'Compact',  personality: 'Executive Dense'        },
 ];
 
 const COLORS = [
@@ -184,7 +109,7 @@ export default function TemplatePanel() {
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
           <div
-            className="absolute end-0 z-30 mt-2 w-72 rounded-xl border border-stone-200 bg-white shadow-xl dark:border-stone-700 dark:bg-stone-900"
+            className="absolute end-0 z-30 mt-2 w-72 rounded-xl border border-stone-200 bg-white shadow-xl dark:border-stone-700 dark:bg-stone-900 max-h-[calc(100vh-120px)] overflow-y-auto"
             style={{ top: '100%' }}
           >
             {/* Header */}
@@ -222,7 +147,14 @@ export default function TemplatePanel() {
                               : 'hover:bg-stone-50 dark:hover:bg-stone-800'
                         }`}
                       >
-                        {opt.preview}
+                        {/* Use the CV's actual primary color so the user sees
+                            how each layout looks with their chosen accent. */}
+                        <div
+                          className="overflow-hidden rounded-sm border border-stone-200 dark:border-stone-700"
+                          style={{ width: 72, height: 92 }}
+                        >
+                          <CVThumbnail layout={opt.key} color={currentColor} />
+                        </div>
                         <span className="text-[9px] font-medium text-stone-600 dark:text-stone-400">{opt.label}</span>
                         {locked && (
                           <div className="absolute inset-0 flex items-center justify-center rounded-lg">

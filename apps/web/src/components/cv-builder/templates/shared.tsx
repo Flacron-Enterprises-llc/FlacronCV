@@ -229,14 +229,15 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
 
 // ─── Skill badge ─────────────────────────────────────────────────────────────
 
-// Shared badge base — inline-flex keeps all badges identical height regardless of
-// text content. Margins are intentionally absent; parent containers use gap only.
+// Shared badge base — inline-block is used instead of inline-flex because
+// html2canvas (used for PDF capture) does not reliably render inline-flex spans.
+// Vertical centering is achieved via verticalAlign + symmetric padding.
+// Margins are intentionally absent; parent containers use gap only.
 const BADGE_BASE: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
+  display: 'inline-block',
+  verticalAlign: 'middle',
   lineHeight: 1,
   whiteSpace: 'nowrap',
-  flexShrink: 0,
 };
 
 export function SkillBadge({ name, primary, fs, br, variant = 'default' }: {
