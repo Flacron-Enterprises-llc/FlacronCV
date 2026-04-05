@@ -117,12 +117,14 @@ export class AIService {
     skills: string,
     targetRole: string,
     userId?: string,
+    language: string = 'English',
   ): Promise<AIProviderResponse> {
     const prompt = `Write a compelling professional summary for a CV/resume.
 
 Target Role: ${targetRole}
 Key Experience: ${experience}
 Key Skills: ${skills}
+Output Language: ${language}
 
 Requirements:
 - 3-4 sentences maximum
@@ -130,8 +132,9 @@ Requirements:
 - Highlight key achievements and expertise
 - Make it ATS-friendly
 - Professional tone
+- Write the entire summary in ${language}
 
-Return ONLY the summary text, no labels or headers.`;
+Return ONLY the summary text in ${language}, no labels or headers.`;
 
     return this.generate(prompt, { maxTokens: 300, temperature: 0.7 }, userId);
   }
@@ -140,11 +143,14 @@ Return ONLY the summary text, no labels or headers.`;
     sectionType: string,
     content: string,
     userId?: string,
+    language: string = 'English',
   ): Promise<AIProviderResponse> {
     const prompt = `Improve the following ${sectionType} section from a CV/resume.
 
 Current content:
 ${content}
+
+Output Language: ${language}
 
 Requirements:
 - Use strong action verbs
@@ -152,8 +158,9 @@ Requirements:
 - Make it more impactful and professional
 - Keep the same structure but enhance the language
 - Make it ATS-friendly
+- Write the improved content in ${language}
 
-Return ONLY the improved content, maintaining the same format.`;
+Return ONLY the improved content in ${language}, maintaining the same format.`;
 
     return this.generate(prompt, { maxTokens: 800, temperature: 0.6 }, userId);
   }
@@ -184,6 +191,7 @@ Format: Return as a JSON array of strings, e.g. ["Skill 1", "Skill 2", ...]`;
     candidateProfile: string,
     tone: string,
     userId?: string,
+    language: string = 'English',
   ): Promise<AIProviderResponse> {
     const prompt = `Write a compelling, professional cover letter that demonstrates a strong fit for this position.
 
@@ -195,6 +203,7 @@ Candidate Profile:
 ${candidateProfile}
 
 Tone: ${tone}
+Output Language: ${language}
 
 Requirements:
 - Write in FIRST PERSON (I, my, me) - this is from the candidate's perspective
@@ -206,7 +215,8 @@ Requirements:
 - Avoid generic statements - be specific and concrete using information from the candidate profile
 - NO placeholder text like [Name], [Date], [Company], etc. - use actual values provided
 - Compelling closing that invites further discussion
-- Return ONLY the cover letter body text (no date, address headers, or signature)
+- Write the ENTIRE cover letter in ${language}
+- Return ONLY the cover letter body text in ${language} (no date, address headers, or signature)
 
 The cover letter should tell a cohesive story about why this candidate is an excellent fit for this specific role.`;
 
@@ -233,9 +243,12 @@ Return ONLY the translated text.`;
     jobTitle: string,
     companyName?: string,
     userId?: string,
+    language: string = 'English',
   ): Promise<AIProviderResponse> {
     const companyContext = companyName ? `for ${companyName}` : '';
     const prompt = `Generate a realistic and comprehensive job description for the position of "${jobTitle}" ${companyContext}.
+
+Output Language: ${language}
 
 Requirements:
 - Write a complete job description with the following sections:
@@ -247,8 +260,8 @@ Requirements:
 - Make it professional and realistic for this specific role
 - Include industry-standard requirements and responsibilities for this position
 - Be specific and detailed, not generic
-- Write in a professional job posting style
-- Return ONLY the job description text without any headers like "Job Description:" or metadata
+- Write in a professional job posting style in ${language}
+- Return ONLY the job description text in ${language} without any headers like "Job Description:" or metadata
 
 The output should be ready to paste into a job description field.`;
 
