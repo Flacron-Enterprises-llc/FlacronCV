@@ -338,16 +338,29 @@ export class CVService {
     return snapshot.docs.map((doc: any) => doc.data() as CVSection);
   }
 
-  async addSection(cvId: string, data: { type: string; title: string; order: number }): Promise<CVSection> {
-    const id = uuidv4();
+  async addSection(
+    cvId: string,
+    data: {
+      id?: string;
+      type: string;
+      title: string;
+      order: number;
+      isVisible?: boolean;
+      items?: any[];
+    },
+  ): Promise<CVSection> {
+    // Accept a client-provided ID so the client's sectionOrder stays consistent.
+    // The client manages sectionOrder exclusively via PUT /cvs/:id; we don't
+    // touch it here to prevent race conditions with concurrent auto-saves.
+    const id = data.id || uuidv4();
     const now = new Date();
     const section: CVSection = {
       id,
       type: data.type as any,
       title: data.title,
-      isVisible: true,
+      isVisible: data.isVisible ?? true,
       order: data.order,
-      items: [],
+      items: data.items ?? [],
       createdAt: now,
       updatedAt: now,
     };
@@ -358,18 +371,6 @@ export class CVService {
       .collection('sections')
       .doc(id)
       .set(section);
-
-    // Update section order
-    const cv = await this.findById(cvId);
-    if (cv) {
-      await this.firebaseAdmin.firestore
-        .collection(this.collection)
-        .doc(cvId)
-        .update({
-          sectionOrder: [...cv.sectionOrder, id],
-          updatedAt: new Date(),
-        });
-    }
 
     return section;
   }

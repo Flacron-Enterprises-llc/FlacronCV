@@ -74,7 +74,14 @@ export class CVController {
   async addSection(
     @CurrentUser() user: FirebaseUser,
     @Param('id') id: string,
-    @Body() data: { type: string; title: string; order: number },
+    @Body() data: {
+      id?: string;
+      type: string;
+      title: string;
+      order: number;
+      isVisible?: boolean;
+      items?: any[];
+    },
   ) {
     await this.cvService.findByIdOrThrow(id, user.uid);
     return this.cvService.addSection(id, data);

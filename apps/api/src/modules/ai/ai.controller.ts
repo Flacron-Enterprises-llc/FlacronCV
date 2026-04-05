@@ -22,9 +22,9 @@ export class AIController {
   @Post('improve')
   async improve(
     @CurrentUser() user: FirebaseUser,
-    @Body() body: { sectionType: string; content: string },
+    @Body() body: { sectionType: string; content: string; language?: string },
   ) {
-    return this.aiService.improveSection(body.sectionType, body.content, user.uid);
+    return this.aiService.improveSection(body.sectionType, body.content, user.uid, body.language);
   }
 
   @Post('translate')
@@ -38,9 +38,9 @@ export class AIController {
   @Post('cv-summary')
   async generateCVSummary(
     @CurrentUser() user: FirebaseUser,
-    @Body() body: { experience: string; skills: string; targetRole: string },
+    @Body() body: { experience: string; skills: string; targetRole: string; language?: string },
   ) {
-    return this.aiService.generateCVSummary(body.experience, body.skills, body.targetRole, user.uid);
+    return this.aiService.generateCVSummary(body.experience, body.skills, body.targetRole, user.uid, body.language);
   }
 
   @Post('suggest-skills')
@@ -54,9 +54,9 @@ export class AIController {
   @Post('generate-job-description')
   async generateJobDescription(
     @CurrentUser() user: FirebaseUser,
-    @Body() body: { jobTitle: string; companyName?: string },
+    @Body() body: { jobTitle: string; companyName?: string; language?: string },
   ) {
-    return this.aiService.generateJobDescription(body.jobTitle, body.companyName, user.uid);
+    return this.aiService.generateJobDescription(body.jobTitle, body.companyName, user.uid, body.language);
   }
 
   @Post('cover-letter')
@@ -69,6 +69,7 @@ export class AIController {
       companyName: string;
       candidateSummary: string;
       tone: string;
+      language?: string;
     },
   ) {
     return this.aiService.generateCoverLetter(
@@ -78,6 +79,7 @@ export class AIController {
       body.candidateSummary,
       body.tone,
       user.uid,
+      body.language,
     );
   }
 

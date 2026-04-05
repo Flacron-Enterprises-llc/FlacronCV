@@ -229,6 +229,16 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
 
 // ─── Skill badge ─────────────────────────────────────────────────────────────
 
+// Shared badge base — inline-flex keeps all badges identical height regardless of
+// text content. Margins are intentionally absent; parent containers use gap only.
+const BADGE_BASE: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  lineHeight: 1,
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
+};
+
 export function SkillBadge({ name, primary, fs, br, variant = 'default' }: {
   name: string; primary: string;
   fs: ReturnType<typeof getTokens>['fs'];
@@ -238,14 +248,12 @@ export function SkillBadge({ name, primary, fs, br, variant = 'default' }: {
   if (variant === 'sidebar') {
     return (
       <span style={{
-        display: 'inline-block',
+        ...BADGE_BASE,
         background: 'rgba(255,255,255,0.2)',
         color: '#fff',
-        padding: '3px 8px',
+        padding: '4px 9px',
         borderRadius: br,
         fontSize: `${fs.body}px`,
-        marginRight: '4px',
-        marginBottom: '4px',
         border: '1px solid rgba(255,255,255,0.3)',
       }}>{name}</span>
     );
@@ -253,30 +261,27 @@ export function SkillBadge({ name, primary, fs, br, variant = 'default' }: {
   if (variant === 'pill') {
     return (
       <span style={{
-        display: 'inline-block',
+        ...BADGE_BASE,
         background: hexToRgba(primary, 0.1),
         color: primary,
         border: `1px solid ${hexToRgba(primary, 0.3)}`,
-        padding: '3px 10px',
+        padding: '4px 11px',
         borderRadius: '999px',
         fontSize: `${fs.body}px`,
         fontWeight: 500,
-        marginRight: '4px',
-        marginBottom: '4px',
       }}>{name}</span>
     );
   }
+  // default
   return (
     <span style={{
-      display: 'inline-block',
+      ...BADGE_BASE,
       background: hexToRgba(primary, 0.1),
       color: primary,
-      padding: '3px 10px',
+      padding: '4px 10px',
       borderRadius: br,
       fontSize: `${fs.body}px`,
       fontWeight: 500,
-      marginRight: '4px',
-      marginBottom: '4px',
     }}>{name}</span>
   );
 }
