@@ -13,6 +13,9 @@ export class OpenAIProvider implements IAIProvider {
     const apiKey = this.configService.get<string>('openai.apiKey');
     if (apiKey) {
       this.client = new OpenAI({ apiKey });
+      this.logger.log(`OpenAI client initialised (key: ${apiKey.slice(0, 8)}...${apiKey.slice(-4)})`);
+    } else {
+      this.logger.error('OPENAI_API_KEY is not set — OpenAI provider disabled');
     }
   }
 
@@ -21,7 +24,7 @@ export class OpenAIProvider implements IAIProvider {
   }
 
   async generateText(prompt: string, options: AIProviderOptions): Promise<AIProviderResponse> {
-    if (!this.client) throw new Error('OpenAI client not initialized');
+    if (!this.client) throw new Error('OpenAI client not initialised — check OPENAI_API_KEY');
 
     const start = Date.now();
 
@@ -30,8 +33,7 @@ export class OpenAIProvider implements IAIProvider {
       messages: [
         {
           role: 'system',
-          content:
-            'You are a professional CV and cover letter writing assistant. Provide clear, concise, and impactful content.',
+          content: 'You are a professional CV and cover letter writing assistant. Provide clear, concise, and impactful content.',
         },
         { role: 'user', content: prompt },
       ],

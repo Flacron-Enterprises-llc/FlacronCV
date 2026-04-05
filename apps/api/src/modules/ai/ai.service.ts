@@ -1,7 +1,5 @@
 import { Injectable, ServiceUnavailableException, Logger } from '@nestjs/common';
-import { AnthropicProvider } from './providers/anthropic.provider';
 import { OpenAIProvider } from './providers/openai.provider';
-import { WatsonXProvider } from './providers/watsonx.provider';
 import { IAIProvider, AIProviderOptions, AIProviderResponse } from './providers/ai-provider.interface';
 import { UsersService } from '../users/users.service';
 
@@ -21,14 +19,20 @@ export class AIService {
   private readonly RESET_TIMEOUT = 60000; // 60 seconds
 
   constructor(
-    private anthropicProvider: AnthropicProvider,
     private openaiProvider: OpenAIProvider,
-    private watsonxProvider: WatsonXProvider,
     private usersService: UsersService,
   ) {
-    this.providers = [this.anthropicProvider, this.openaiProvider, this.watsonxProvider];
+    this.providers = [this.openaiProvider];
     this.providers.forEach((p) => {
       this.circuitBreakers.set(p.name, { failures: 0, lastFailure: 0, isOpen: false });
+    });
+    // Log provider availability at startup
+    this.openaiProvider.isAvailable().then((ok) => {
+      if (ok) {
+        this.logger.log('OpenAI provider ready');
+      } else {
+        this.logger.error('OpenAI provider NOT available — OPENAI_API_KEY is missing or empty');
+      }
     });
   }
 

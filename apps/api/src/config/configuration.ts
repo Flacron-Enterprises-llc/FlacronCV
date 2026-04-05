@@ -10,18 +10,8 @@ export default () => ({
     storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
   },
 
-  anthropic: {
-    apiKey: process.env.ANTHROPIC_API_KEY,
-  },
-
   openai: {
     apiKey: process.env.OPENAI_API_KEY,
-  },
-
-  watsonx: {
-    apiKey: process.env.WATSONX_API_KEY,
-    url: process.env.WATSONX_URL,
-    projectId: process.env.WATSONX_PROJECT_ID,
   },
 
   stripe: {
