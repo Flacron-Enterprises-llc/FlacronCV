@@ -21,7 +21,7 @@ export default function ClassicLayout({ cv, sections }: LayoutProps) {
       color: '#1a1a1a',
       background: '#fff',
       padding: `${sp.pad}px`,
-      minHeight: '842px',
+      minHeight: '1122px',
     }}>
       {/* ── Header ── */}
       <div style={{ textAlign: 'center', marginBottom: `${sp.section}px` }}>

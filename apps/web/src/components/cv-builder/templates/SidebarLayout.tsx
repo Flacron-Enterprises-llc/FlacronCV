@@ -29,7 +29,10 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
       fontFamily: bodyFont,
       color: '#1a1a1a',
       background: '#fff',
-      minHeight: '842px',
+      // 1122px = A4 height at 96dpi (794px wide capture). Using this as minHeight
+      // ensures the sidebar color fills the full page even when content is short.
+      // The flex default align-items:stretch then extends the sidebar to match.
+      minHeight: '1122px',
       display: 'flex',
     }}>
       {/* ── Left Sidebar ── */}

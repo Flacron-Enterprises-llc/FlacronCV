@@ -37,7 +37,7 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
       fontFamily: bodyFont,
       color: '#1a1a1a',
       background: '#fff',
-      minHeight: '842px',
+      minHeight: '1122px',
       padding: `${sp.pad * 0.75}px ${sp.pad}px`,
     }}>
       {/* ── Compact header: photo + name + contact inline ── */}

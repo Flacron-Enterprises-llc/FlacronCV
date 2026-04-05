@@ -23,7 +23,7 @@ export default function TopBarLayout({ cv, sections }: LayoutProps) {
       fontFamily: bodyFont,
       color: '#1a1a1a',
       background: '#f8f9fa',
-      minHeight: '842px',
+      minHeight: '1122px',
     }}>
       {/* ── Hero Header Band ── */}
       <div style={{
