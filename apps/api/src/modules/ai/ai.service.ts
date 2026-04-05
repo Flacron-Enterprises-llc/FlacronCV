@@ -86,6 +86,8 @@ export class AIService {
       model: options.model,
     };
 
+    let lastError = '';
+
     for (const provider of this.providers) {
       if (this.isCircuitOpen(provider.name)) {
         this.logger.debug(`Skipping ${provider.name} (circuit open)`);
@@ -94,7 +96,8 @@ export class AIService {
 
       const available = await provider.isAvailable();
       if (!available) {
-        this.logger.debug(`Skipping ${provider.name} (not available)`);
+        lastError = `${provider.name}: API key not configured`;
+        this.logger.warn(`Skipping ${provider.name} — API key not configured (check OPENAI_API_KEY env var)`);
         continue;
       }
 
@@ -102,6 +105,7 @@ export class AIService {
         const result = await provider.generateText(prompt, fullOptions);
 
         if (!result.content?.trim()) {
+          lastError = `${provider.name}: returned empty content`;
           this.logger.warn(`${provider.name} returned empty content — treating as failure`);
           this.recordFailure(provider.name);
           continue;
@@ -117,12 +121,13 @@ export class AIService {
         this.logger.log(`Generated via ${provider.name} in ${result.latencyMs}ms (${result.content.length} chars)`);
         return result;
       } catch (error) {
+        lastError = `${provider.name}: ${(error as Error).message}`;
         this.recordFailure(provider.name);
-        this.logger.warn(`${provider.name} failed: ${(error as Error).message}`);
+        this.logger.error(`${provider.name} failed: ${(error as Error).message}`);
       }
     }
 
-    throw new ServiceUnavailableException('All AI providers are currently unavailable');
+    throw new ServiceUnavailableException(`AI generation failed — ${lastError || 'no providers available'}`);
   }
 
   async generateCVSummary(
