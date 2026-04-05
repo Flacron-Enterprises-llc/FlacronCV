@@ -1,6 +1,6 @@
 import type { CV, CVSection, CVSectionType } from '@flacroncv/shared-types';
 import type { CoverLetter } from '@flacroncv/shared-types';
-import { getTokens } from '@/components/cv-builder/templates/shared';
+import { getTokens, formatCVDate } from '@/components/cv-builder/templates/shared';
 import { renderLayout, SIDEBAR_LEFT_TYPES, type LayoutDescriptor } from '@/lib/render-layout';
 
 // ─── Shared helpers (for PDF — image-based, pixel-perfect) ───────────────────
@@ -309,7 +309,7 @@ function buildCVSectionParagraphs(
         ].filter(Boolean),
         spacing: { line: LS.normal, before: itemBefore, after: itemAfter },
       }));
-      const dates = [it.startDate, it.isCurrent ? 'Present' : it.endDate].filter(Boolean).join(' – ');
+      const dates = [formatCVDate(it.startDate), it.isCurrent ? 'Present' : (formatCVDate(it.endDate) || 'Present')].filter(Boolean).join(' – ');
       if (dates) paras.push(para(d, {
         children: [new d.TextRun({ text: dates, size: pxToHalfPt(fs.meta), italics: true, color: metaColor })],
         spacing: { line: LS.tight, after: itemAfter },
@@ -327,7 +327,7 @@ function buildCVSectionParagraphs(
         ].filter(Boolean),
         spacing: { line: LS.normal, before: itemBefore, after: itemAfter },
       }));
-      const dates = [it.startDate, it.endDate].filter(Boolean).join(' – ');
+      const dates = [formatCVDate(it.startDate), formatCVDate(it.endDate)].filter(Boolean).join(' – ');
       if (dates) paras.push(para(d, {
         children: [new d.TextRun({ text: dates, size: pxToHalfPt(fs.meta), italics: true, color: metaColor })],
         spacing: { line: LS.tight, after: itemAfter },
@@ -345,7 +345,7 @@ function buildCVSectionParagraphs(
         ].filter(Boolean),
         spacing: { line: LS.normal, before: itemBefore, after: itemAfter },
       }));
-      const dates = [it.startDate, it.endDate].filter(Boolean).join(' – ');
+      const dates = [formatCVDate(it.startDate), formatCVDate(it.endDate)].filter(Boolean).join(' – ');
       if (dates) paras.push(para(d, {
         children: [new d.TextRun({ text: dates, size: pxToHalfPt(fs.meta), italics: true, color: metaColor })],
         spacing: { line: LS.tight, after: itemAfter },
@@ -360,7 +360,7 @@ function buildCVSectionParagraphs(
         children: [
           new d.TextRun({ text: it.name || '', bold: true, size: pxToHalfPt(fs.headline), color: textColor }),
           it.issuer ? new d.TextRun({ text: `  •  ${it.issuer}`, size: pxToHalfPt(fs.name), color: dimColor   }) : null,
-          it.date   ? new d.TextRun({ text: `  |  ${it.date}`,   size: pxToHalfPt(fs.meta), color: metaColor  }) : null,
+          it.date   ? new d.TextRun({ text: `  |  ${formatCVDate(it.date)}`,   size: pxToHalfPt(fs.meta), color: metaColor  }) : null,
         ].filter(Boolean),
         spacing: { line: LS.normal, before: pxToTwips(sp.item), after: itemAfter },
       }));
@@ -383,7 +383,7 @@ function buildCVSectionParagraphs(
         children: [
           new d.TextRun({ text: it.title || it.name || '', bold: true, size: pxToHalfPt(fs.headline), color: textColor }),
           it.subtitle ? new d.TextRun({ text: `  •  ${it.subtitle}`, size: pxToHalfPt(fs.name), color: dimColor  }) : null,
-          it.date     ? new d.TextRun({ text: `  |  ${it.date}`,     size: pxToHalfPt(fs.meta), color: metaColor }) : null,
+          it.date     ? new d.TextRun({ text: `  |  ${formatCVDate(it.date)}`,     size: pxToHalfPt(fs.meta), color: metaColor }) : null,
         ].filter(Boolean),
         spacing: { line: LS.normal, before: pxToTwips(sp.item), after: itemAfter },
       }));

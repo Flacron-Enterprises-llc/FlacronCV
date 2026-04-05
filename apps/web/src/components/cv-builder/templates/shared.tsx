@@ -163,6 +163,8 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
   const metaColor = isSidebar ? 'rgba(255,255,255,0.5)' : '#999';
 
   if (item.position || item.company) {
+    const start = formatCVDate(item.startDate);
+    const end   = item.isCurrent ? 'Present' : formatCVDate(item.endDate) || 'Present';
     return (
       <div style={cardWrapper}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '4px' }}>
@@ -170,7 +172,7 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
             {item.position}
           </span>
           <span style={{ fontSize: `${fs.meta}px`, color: metaColor, whiteSpace: 'nowrap', flexShrink: 0 }}>
-            {item.startDate}{item.endDate ? ` – ${item.endDate}` : ' – Present'}
+            {start}{start ? ` – ${end}` : end}
           </span>
         </div>
         <p style={{ fontSize: `${fs.name}px`, color: subtitleColor, margin: '2px 0' }}>
@@ -186,6 +188,9 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
   }
 
   if (item.institution) {
+    const start = formatCVDate(item.startDate);
+    const end   = formatCVDate(item.endDate);
+    const dateRange = [start, end].filter(Boolean).join(' – ');
     return (
       <div style={cardWrapper}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '4px' }}>
@@ -193,7 +198,7 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
             {item.degree}{item.field ? ` in ${item.field}` : ''}
           </span>
           <span style={{ fontSize: `${fs.meta}px`, color: metaColor, whiteSpace: 'nowrap', flexShrink: 0 }}>
-            {item.startDate}
+            {dateRange}
           </span>
         </div>
         <p style={{ fontSize: `${fs.name}px`, color: subtitleColor, margin: '2px 0' }}>
@@ -211,7 +216,7 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
   // Generic (project, certification, language, custom, award…)
   const label = item.name || item.title || '';
   const detail = item.description || item.issuer || item.proficiency || '';
-  const date = item.date || item.startDate || '';
+  const date = formatCVDate(item.date || item.startDate);
   return (
     <div style={cardWrapper}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '4px' }}>
@@ -285,6 +290,29 @@ export function SkillBadge({ name, primary, fs, br, variant = 'default' }: {
       fontWeight: 500,
     }}>{name}</span>
   );
+}
+
+// ─── Date formatter ──────────────────────────────────────────────────────────
+// Converts stored date strings to human-readable format.
+//   "2021-01"  → "Jan 2021"
+//   "2020-12"  → "Dec 2020"
+//   "2024"     → "2024"
+//   "Present"  → "Present"
+//   ""         → ""
+
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+export function formatCVDate(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  const s = dateStr.trim();
+  if (!s) return '';
+  if (s.toLowerCase() === 'present') return 'Present';
+  const ym = s.match(/^(\d{4})-(\d{2})$/);
+  if (ym) {
+    const m = parseInt(ym[2], 10);
+    if (m >= 1 && m <= 12) return `${MONTH_NAMES[m - 1]} ${ym[1]}`;
+  }
+  return s; // year-only "2024" or freeform text passed through as-is
 }
 
 // ─── Contact line builder ─────────────────────────────────────────────────────
