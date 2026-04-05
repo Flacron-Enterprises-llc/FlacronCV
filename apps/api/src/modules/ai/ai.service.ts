@@ -94,6 +94,13 @@ export class AIService {
 
       try {
         const result = await provider.generateText(prompt, fullOptions);
+
+        if (!result.content?.trim()) {
+          this.logger.warn(`${provider.name} returned empty content — treating as failure`);
+          this.recordFailure(provider.name);
+          continue;
+        }
+
         this.recordSuccess(provider.name);
 
         // Track usage
@@ -101,7 +108,7 @@ export class AIService {
           await this.usersService.incrementUsage(userId, 'aiCreditsUsed');
         }
 
-        this.logger.log(`Generated via ${provider.name} in ${result.latencyMs}ms`);
+        this.logger.log(`Generated via ${provider.name} in ${result.latencyMs}ms (${result.content.length} chars)`);
         return result;
       } catch (error) {
         this.recordFailure(provider.name);

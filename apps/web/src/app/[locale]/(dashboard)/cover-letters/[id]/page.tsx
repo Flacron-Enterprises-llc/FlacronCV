@@ -49,7 +49,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const params = useParams();
   const coverLetterId = params.id as string;
   const [exportMenuOpen, setExportMenuOpen]     = useState(false);
@@ -197,6 +197,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
         editor.commands.setContent(data.content);
       }
       toast.success(t('coverLetters.ai_improved'));
+      refreshUser();
     },
     onError: (error: Error) => {
       toast.error(error.message);

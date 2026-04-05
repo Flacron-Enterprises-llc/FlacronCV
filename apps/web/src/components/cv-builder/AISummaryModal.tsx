@@ -28,7 +28,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const { cv, updatePersonalInfo } = useCVStore();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
 
   const [profession, setProfession] = useState('');
   const [experienceLevel, setExperienceLevel] = useState('mid_level');
@@ -65,6 +65,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
         language,
       });
       setGeneratedSummary(result.content);
+      refreshUser();
     } catch (error) {
       // Fallback: generate a local summary if API fails
       const skills = keySkills.split(',').map((s) => s.trim()).filter(Boolean);

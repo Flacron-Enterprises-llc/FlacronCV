@@ -3,7 +3,7 @@ import React from 'react';
 
 import { useState } from 'react';
 import { useRouter } from '@/i18n/routing';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/providers/AuthProvider';
 import { api } from '@/lib/api';
@@ -15,10 +15,16 @@ import { toast } from 'sonner';
 import { CoverLetter, CV } from '@flacroncv/shared-types';
 import { Sparkles, FileText, ChevronDown } from 'lucide-react';
 
+const LOCALE_LANGUAGE_NAMES: Record<string, string> = {
+  en: 'English', es: 'Spanish', fr: 'French',
+  de: 'German',  ar: 'Arabic',  ur: 'Urdu',
+};
+
 export default function NewCoverLetterPage(): React.JSX.Element | null {
   const t = useTranslations();
+  const locale = useLocale();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
 
   const [title, setTitle] = useState('');
   const [recipientName, setRecipientName] = useState('');
@@ -46,7 +52,8 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
       linkedCVId?: string;
       generateWithAI?: boolean;
     }) => api.post<CoverLetter>('/cover-letters', data),
-    onSuccess: (coverLetter) => {
+    onSuccess: (coverLetter, variables) => {
+      if (variables.generateWithAI) refreshUser();
       toast.success(t('coverLetters.created'));
       router.push(`/cover-letters/${coverLetter.id}`);
     },
@@ -57,10 +64,14 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
 
   const generateJobDescMutation = useMutation({
     mutationFn: (data: { jobTitle: string; companyName?: string }) =>
-      api.post<{ content: string }>('/ai/generate-job-description', data),
+      api.post<{ content: string }>('/ai/generate-job-description', {
+        ...data,
+        language: LOCALE_LANGUAGE_NAMES[locale] || 'English',
+      }),
     onSuccess: (data) => {
       setJobDescription(data.content);
       toast.success(t('coverLetters.job_description_generated'));
+      refreshUser();
     },
     onError: (error: Error) => {
       toast.error(error.message);
