@@ -4,7 +4,7 @@ import React from 'react';
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Link, useRouter } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import { api } from '@/lib/api';
@@ -47,6 +47,7 @@ import TextAlign from '@tiptap/extension-text-align';
 
 export default function CoverLetterEditorPage(): React.JSX.Element | null {
   const t = useTranslations();
+  const locale = useLocale();
   const router = useRouter();
   const { user } = useAuth();
   const params = useParams();
@@ -175,10 +176,21 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     aiMutation.mutate();
   };
 
+  const LOCALE_LANGUAGE_NAMES: Record<string, string> = {
+    en: 'English', es: 'Spanish', fr: 'French',
+    de: 'German',  ar: 'Arabic',  ur: 'Urdu',
+  };
+
   // AI improve mutation
   const aiMutation = useMutation({
     mutationFn: () =>
-      api.post<CoverLetter>(`/cover-letters/${coverLetterId}/ai/generate`),
+      api.post<CoverLetter>(`/cover-letters/${coverLetterId}/ai/generate`, {
+        jobTitle: coverLetter?.jobTitle || '',
+        jobDescription: coverLetter?.jobDescription || '',
+        companyName: coverLetter?.companyName || '',
+        tone: 'professional',
+        language: LOCALE_LANGUAGE_NAMES[locale] || 'English',
+      }),
     onSuccess: (data) => {
       setCoverLetter(data);
       if (editor && !editor.isDestroyed) {

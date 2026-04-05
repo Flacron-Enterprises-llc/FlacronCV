@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useCVStore } from '@/store/cv-store';
 import { useAuth } from '@/providers/AuthProvider';
 import { cn } from '@/lib/utils';
@@ -17,8 +17,16 @@ interface AISummaryModalProps {
   onClose: () => void;
 }
 
+// Maps next-intl locale codes to human-readable language names for AI prompts
+const LOCALE_LANGUAGE_NAMES: Record<string, string> = {
+  en: 'English', es: 'Spanish', fr: 'French',
+  de: 'German',  ar: 'Arabic',  ur: 'Urdu',
+};
+
 export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalProps) {
   const t = useTranslations('cv_builder');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   const { cv, updatePersonalInfo } = useCVStore();
   const { user } = useAuth();
 
@@ -43,25 +51,27 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
       return;
     }
     if (!profession.trim()) {
-      toast.error('Please enter your profession');
+      toast.error(t('profession_required'));
       return;
     }
 
     setIsGenerating(true);
+    const language = LOCALE_LANGUAGE_NAMES[locale] || 'English';
     try {
-      const result = await api.post<{ text: string; provider: string }>(`/ai/cv-summary`, {
+      const result = await api.post<{ content: string; provider: string }>(`/ai/cv-summary`, {
         experience: `${experienceLevel.replace('_', ' ')} ${profession}`,
         skills: keySkills,
         targetRole: careerGoal || profession,
+        language,
       });
-      setGeneratedSummary(result.text);
+      setGeneratedSummary(result.content);
     } catch (error) {
       // Fallback: generate a local summary if API fails
       const skills = keySkills.split(',').map((s) => s.trim()).filter(Boolean);
       const levelText = experienceLevel.replace('_', ' ');
       const fallback = `${levelText.charAt(0).toUpperCase() + levelText.slice(1)} ${profession} with expertise in ${skills.length > 0 ? skills.join(', ') : 'various technologies'}. ${careerGoal ? careerGoal + '.' : 'Passionate about delivering high-quality results and continuous professional growth.'}`;
       setGeneratedSummary(fallback);
-      toast.info('Generated locally (API unavailable)');
+      toast.info(t('generated_locally'));
     } finally {
       setIsGenerating(false);
     }
@@ -71,7 +81,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
 
   const handleReplace = () => {
     updatePersonalInfo('summary', generatedSummary);
-    toast.success('Summary replaced');
+    toast.success(t('summary_replaced'));
     resetAndClose();
   };
 
@@ -80,7 +90,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
       ? `${existingSummary}\n\n${generatedSummary}`
       : generatedSummary;
     updatePersonalInfo('summary', merged);
-    toast.success('Summary added to your CV');
+    toast.success(t('summary_added'));
     resetAndClose();
   };
 
@@ -193,7 +203,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
             /* Generated Summary Result */
             <div className="space-y-3">
               <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-                Generated Summary
+                {t('generated_summary')}
               </label>
               {isEditing ? (
                 <textarea
@@ -221,16 +231,16 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
             <>
               {outOfCredits && (
                 <span className="me-auto text-xs text-red-500">
-                  No AI credits remaining
+                  {t('no_credits')}
                 </span>
               )}
               {!outOfCredits && (
                 <span className="me-auto text-xs text-stone-400">
-                  {creditsLimit - creditsUsed} credits left
+                  {t('credits_left', { count: creditsLimit - creditsUsed })}
                 </span>
               )}
               <Button variant="ghost" size="sm" onClick={handleClose}>
-                Cancel
+                {tCommon('cancel')}
               </Button>
               <Button
                 variant="primary"
@@ -240,7 +250,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
                 onClick={handleGenerate}
                 disabled={outOfCredits}
               >
-                {isGenerating ? t('generating') : outOfCredits ? 'Upgrade to Generate' : t('generate_with_ai')}
+                {isGenerating ? t('generating') : outOfCredits ? t('upgrade_to_generate') : t('generate_with_ai')}
               </Button>
             </>
           ) : (
@@ -261,7 +271,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
                     icon={<PlusCircle className="h-4 w-4" />}
                     onClick={handleAppend}
                   >
-                    Add to CV
+                    {t('add_to_cv')}
                   </Button>
                 )}
                 <Button
@@ -270,7 +280,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
                   icon={<Replace className="h-4 w-4" />}
                   onClick={handleReplace}
                 >
-                  {existingSummary ? 'Replace' : 'Add to CV'}
+                  {existingSummary ? t('replace') : t('add_to_cv')}
                 </Button>
               </div>
             </>

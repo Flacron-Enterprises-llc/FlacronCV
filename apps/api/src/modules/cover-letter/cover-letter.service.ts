@@ -155,6 +155,12 @@ export class CoverLetterService {
   ): Promise<CoverLetter> {
     const cl = await this.findByIdOrThrow(id, userId);
 
+    // Fall back to stored cover letter values when not provided in request
+    const jobTitle = data.jobTitle || cl.jobTitle;
+    const jobDescription = data.jobDescription || cl.jobDescription;
+    const companyName = data.companyName || cl.companyName;
+    const tone = data.tone || 'professional';
+
     let candidateProfile = '';
     if (data.linkedCVId) {
       try {
@@ -231,19 +237,20 @@ export class CoverLetterService {
     }
 
     const result = await this.aiService.generateCoverLetter(
-      data.jobTitle,
-      data.jobDescription,
-      data.companyName,
+      jobTitle,
+      jobDescription,
+      companyName,
       candidateProfile,
-      data.tone,
+      tone,
       userId,
+      data.language,
     );
 
     await this.firebaseAdmin.firestore.collection(this.collection).doc(id).update({
       content: result.content,
-      jobTitle: data.jobTitle,
-      jobDescription: data.jobDescription,
-      companyName: data.companyName,
+      jobTitle,
+      jobDescription,
+      companyName,
       aiGenerated: true,
       aiProvider: result.provider,
       updatedAt: new Date(),
