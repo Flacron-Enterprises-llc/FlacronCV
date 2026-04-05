@@ -1,4 +1,5 @@
 import { Injectable, ServiceUnavailableException, Logger } from '@nestjs/common';
+import { AnthropicProvider } from './providers/anthropic.provider';
 import { OpenAIProvider } from './providers/openai.provider';
 import { WatsonXProvider } from './providers/watsonx.provider';
 import { IAIProvider, AIProviderOptions, AIProviderResponse } from './providers/ai-provider.interface';
@@ -20,11 +21,12 @@ export class AIService {
   private readonly RESET_TIMEOUT = 60000; // 60 seconds
 
   constructor(
+    private anthropicProvider: AnthropicProvider,
     private openaiProvider: OpenAIProvider,
     private watsonxProvider: WatsonXProvider,
     private usersService: UsersService,
   ) {
-    this.providers = [this.openaiProvider, this.watsonxProvider];
+    this.providers = [this.anthropicProvider, this.openaiProvider, this.watsonxProvider];
     this.providers.forEach((p) => {
       this.circuitBreakers.set(p.name, { failures: 0, lastFailure: 0, isOpen: false });
     });

@@ -31,7 +31,15 @@ export class WatsonXProvider implements IAIProvider {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: `grant_type=urn:ibm:params:oauth:grant-type:apikey&apikey=${this.apiKey}`,
     });
-    const tokenData = (await tokenResponse.json()) as { access_token: string };
+
+    if (!tokenResponse.ok) {
+      throw new Error(`WatsonX IAM auth failed: HTTP ${tokenResponse.status}`);
+    }
+
+    const tokenData = await tokenResponse.json() as { access_token?: string; errorMessage?: string };
+    if (!tokenData.access_token) {
+      throw new Error(`WatsonX IAM auth failed: ${tokenData.errorMessage || 'no access_token returned'}`);
+    }
 
     // Generate text
     const response = await fetch(`${this.url}/ml/v1/text/generation?version=2024-05-31`, {
@@ -52,7 +60,12 @@ export class WatsonXProvider implements IAIProvider {
       }),
     });
 
-    const data = (await response.json()) as {
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({})) as { errors?: Array<{ message: string }> };
+      throw new Error(`WatsonX generation failed: HTTP ${response.status} - ${err?.errors?.[0]?.message || response.statusText}`);
+    }
+
+    const data = await response.json() as {
       results: Array<{ generated_text: string; generated_token_count: number }>;
       model_id: string;
     };
