@@ -1,16 +1,14 @@
 'use client';
 
 import { useCVStore } from '@/store/cv-store';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import { exportToPDF, exportToDocx } from '@/lib/export-cv';
+import { exportToPDF, exportToDocx, type DocxLabels } from '@/lib/export-cv';
 import {
   Undo2,
   Redo2,
   Download,
-  Sparkles,
-  Save,
   Check,
   Loader2,
   FileText,
@@ -20,7 +18,6 @@ import { toast } from 'sonner';
 import { useState } from 'react';
 import FontPanel from './FontPanel';
 import TemplatePanel from './TemplatePanel';
-import AISummaryModal from '../AISummaryModal';
 
 interface EditorToolbarProps {
   cvId: string;
@@ -28,21 +25,30 @@ interface EditorToolbarProps {
 
 export default function EditorToolbar({ cvId }: EditorToolbarProps) {
   const t = useTranslations('cv_builder');
+  const locale = useLocale();
   const { cv, sections, isDirty, isSaving, lastSavedAt, undo, redo, canUndo, canRedo } = useCVStore();
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   const handleExport = async (format: 'pdf' | 'docx') => {
     if (!cv) return;
     setExporting(true);
     try {
       if (format === 'pdf') {
-        await exportToPDF(cv, sections);
+        await exportToPDF(cv, sections, locale);
       } else {
-        await exportToDocx(cv, sections);
+        // Labels come directly from next-intl — same strings as the editor,
+        // correct language with no static fallback table.
+        const labels: DocxLabels = {
+          professionalSummary: t('template_professional_summary'),
+          profile:             t('template_profile'),
+          contact:             t('template_contact'),
+          aboutMe:             t('template_about_me'),
+          summary:             t('template_summary'),
+        };
+        await exportToDocx(cv, sections, locale, labels);
       }
-      toast.success(`CV exported as ${format.toUpperCase()}`);
+      toast.success(t('export_success', { format: format.toUpperCase() }));
     } catch (error) {
       console.error('Export error:', error);
       toast.error(`Export failed: ${(error as Error).message}`);
@@ -64,7 +70,7 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
             {t('saving')}
           </Badge>
         ) : isDirty ? (
-          <Badge variant="warning">Unsaved</Badge>
+          <Badge variant="warning">{t('unsaved')}</Badge>
         ) : lastSavedAt ? (
           <Badge variant="success">
             <Check className="me-1 h-3 w-3" />
@@ -88,12 +94,6 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
         <div className="mx-1 h-6 w-px bg-stone-200 dark:bg-stone-700" />
 
         <TemplatePanel />
-
-        <div className="mx-1 h-6 w-px bg-stone-200 dark:bg-stone-700" />
-
-        <Button variant="ghost" size="sm" icon={<Sparkles className="h-4 w-4" />} onClick={() => setAiModalOpen(true)}>
-          {t('ai_assist')}
-        </Button>
 
         <div className="relative">
           <Button
@@ -129,11 +129,6 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
         </div>
       </div>
 
-      <AISummaryModal
-        cvId={cvId}
-        open={aiModalOpen}
-        onClose={() => setAiModalOpen(false)}
-      />
     </div>
   );
 }

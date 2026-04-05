@@ -75,7 +75,13 @@
   }
 
   .input-field {
-    @apply block w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 transition-colors focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-stone-600 dark:bg-stone-900 dark:text-stone-100 dark:placeholder-stone-500;
+    @apply block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm leading-5 text-stone-900 placeholder-stone-400 transition-colors focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-stone-600 dark:bg-stone-900 dark:text-stone-100 dark:placeholder-stone-500;
+  }
+
+  /* Ensure native <select> chrome is stripped when using the input-field token,
+     preventing browser-specific height variance across Chrome / Firefox / Safari. */
+  select.input-field {
+    @apply appearance-none;
   }
 
   .card {
@@ -106,13 +112,36 @@
   background: rgb(87 83 78);
 }
 
-/* Print styles for CV preview */
+/* ── Print styles — CV preview isolation ────────────────────────────────────
+   These rules ensure the html2canvas capture (and any real browser print)
+   matches the editor exactly: no UI chrome, no margin collapsing, no font
+   substitution artifacts.                                                   */
 @media print {
+  /* Hide all application UI */
+  body > *:not(#__next) { display: none !important; }
+  .no-print             { display: none !important; }
+
   body {
     background: white !important;
-    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
-  .no-print {
-    display: none !important;
+
+  /* Force the CV preview to fill the page with no wrapper decoration */
+  #cv-preview-content {
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    /* Prevent margin collapsing across section boundaries */
+    padding-top: 1px;
+  }
+
+  /* Prevent page breaks inside individual CV items */
+  #cv-preview-content [style*="marginBottom"] {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 }
