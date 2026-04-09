@@ -52,7 +52,7 @@ addEdu: 'body > div:nth-child(1) > div:nth-child(2) > main:nth-child(2) > div:nt
     startEnd: 'body > div:nth-child(1) > div:nth-child(2) > main:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > input:nth-child(2)',
    projectTitle: 'body > div:nth-child(1) > div:nth-child(2) > main:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(5) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(2)',
 proDesc: 'textarea[placeholder="Description..."]',
-addsection1: ':nth-child(7) > .inline-flex',
+addsection1: 'button[class="inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-stone-900 disabled:opacity-50 disabled:cursor-not-allowed border border-stone-300 bg-white text-stone-700 hover:bg-stone-50 focus:ring-brand-500 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700 px-4 py-2.5 text-sm w-full"]',
 
     linkinwin: 'p:has-text("linkedin.com/in/johndoe")',
     deleteEducationSection: ':nth-child(2) > main:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > button:nth-child(4) > svg:nth-child(1) > path:nth-child(2)',
@@ -251,9 +251,20 @@ storeProfessionalSummary() {
      
   }
 
+  clickAddExpOnEditPage(){
+    cy.get(':nth-child(2) > .border-t > .space-y-3 > .inline-flex').click()
+  }
+
   addExpPosition(value){
 
     cy.get(this.weblocators.expPosition).clear().type(value)
+     .should('have.value', value)
+     cy.wrap(value).as('position');
+  }
+
+  addExpPositionOnEditpage(value){
+
+    cy.get(':nth-child(4) > .space-y-2 > .grid > :nth-child(1) > .input-field').clear().type(value)
      .should('have.value', value)
      cy.wrap(value).as('position');
   }
@@ -266,7 +277,32 @@ storeProfessionalSummary() {
      cy.wrap(value).as('company');
   }
 
+  enterCompanyInEditPage(value){
+
+    cy.get(':nth-child(4) > .space-y-2 > .grid > :nth-child(2) > .input-field').clear().type(value)
+     .should('have.value', value)
+     cy.wrap(value).as('company');
+  }
+
+  sdateOnedit(value){
+
+    cy.get('body > div:nth-child(1) > div:nth-child(2) > main:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > input:nth-child(2)').clear().type(value)
+     .should('have.value', value)
+     cy.wrap(value).as('sdate');
+
+  }
+
+
+  edateOnEdit(value){
+
+    cy.get('body > div:nth-child(1) > div:nth-child(2) > main:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > div:nth-child(1) > div:nth-child(4) > input:nth-child(2)').clear().type(value)
+     .should('have.value', value)
+     cy.wrap(value).as('sdate');
+
+
+  }
     selectSDate(value){
+      
 
     cy.get(this.weblocators.expSDate).clear().type(value)
      .should('have.value', value)
@@ -280,6 +316,21 @@ storeProfessionalSummary() {
      cy.wrap(value).as('edate');
   }
 
+
+  endDateOnEdit(value){
+
+    cy.get(':nth-child(3) > .border-t > .space-y-3 > :nth-child(1) > .grid > :nth-child(2) > .block').clear().type(value)
+     .should('have.value', value)
+     cy.wrap(value).as('edate');
+  }
+
+  descriptionOnEditPage(value){
+
+     cy.get(this.weblocators.expBox).eq(3).clear().type(value)
+  //  cy.get('textarea[placeholder="Describe your responsibilities and achievements..."]').eq(0)
+     .should('have.value', value)
+     cy.wrap(value).as('jobdescription');
+  }
   
     enterJobDescription(value){
 
@@ -297,12 +348,32 @@ storeProfessionalSummary() {
     cy.get(this.weblocators.addEdu).click()
   }
 
+  clickAddEduforEditPage(){
+
+    cy.get(':nth-child(3) > .border-t > .space-y-3 > .inline-flex').click()
+
+  }
+
   enterDeg(value){
 
     cy.get(this.weblocators.deg).clear().type(value)
     .should('have.value', value)
      cy.wrap(value).as('deg');
 
+  }
+
+  enterDegOnEditPage(value){
+
+    cy.get(':nth-child(3) > .border-t > .space-y-3 > :nth-child(3) > .grid > :nth-child(1) > .input-field').clear().type(value)
+    .should('have.value', value)
+     cy.wrap(value).as('deg');
+  }
+
+  FieldOfStudyOnEditPage(value){
+
+    cy.get(':nth-child(3) > .grid > :nth-child(2) > .input-field').clear().type(value)
+    .should('have.value', value)
+     cy.wrap(value).as('FOS');
   }
 
    enterFieldOFStudy(value){
@@ -313,11 +384,29 @@ storeProfessionalSummary() {
 
   }
 
+  institutionOnEditPage(value){
+
+    cy.get('body > div:nth-child(1) > div:nth-child(2) > main:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > input:nth-child(2)').clear().type(value)
+    .should('have.value', value)
+     cy.wrap(value).as('institution');
+
+
+
+  }
+
      enterInstitution(value){
 
     cy.get(this.weblocators.institution).clear().type(value)
     .should('have.value', value)
      cy.wrap(value).as('institution');
+
+  }
+
+  sedateOnEditPage(value){
+
+    cy.get('body > div:nth-child(1) > div:nth-child(2) > main:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(4) > input:nth-child(2)').clear().type(value)
+    .should('have.value', value)
+     cy.wrap(value).as('startEnd');
 
   }
 
@@ -336,12 +425,28 @@ storeProfessionalSummary() {
 
   }
 
+
+  enterSkillOnEditPage(value){
+
+    cy.get(':nth-child(12) > .grid > :nth-child(1) > .input-field').clear().type(value)
+    .should('have.value', value)
+     cy.wrap(value).as('skillName');
+
+    
+  }
    enterSkillName(value){
 
     cy.get(this.weblocators.skillName).clear().type(value)
     .should('have.value', value)
      cy.wrap(value).as('skillName');
 
+       }
+
+       skillOnEditPage(value){
+
+        cy.get(':nth-child(12) > .grid > :nth-child(1) > .input-field').clear().type(value)
+    .should('have.value', value)
+     cy.wrap(value).as('skillName');
        }
 
     selectSkillLevel(){
@@ -373,12 +478,26 @@ clickAddItemProjectButt(){
   cy.get('body > div:nth-child(1) > div:nth-child(2) > main:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(5) > div:nth-child(2) > div:nth-child(1) > button:nth-child(1)').click()
 }
 
+clickAddItemProjectforEditPage(){
+
+  cy.get(':nth-child(10) > .border-t > .space-y-3 > .inline-flex').click()
+}
+
+
+titleOnEditPage(value){
+
+  cy.get(':nth-child(6) > .border-t > .space-y-3 > .border > .space-y-2 > .space-y-1\.5 > .input-field').clear().type(value)
+ .should('have.value', value)
+     cy.wrap(value).as('proTitle');
+}
 enterProjectTitle(value){
 
   cy.get(this.weblocators.projectTitle).clear().type(value)
  .should('have.value', value)
      cy.wrap(value).as('proTitle');
 }
+
+
 
 enterDescription(value){
 
@@ -401,11 +520,11 @@ enterCertificationTitle(){
   
 }
 addRefSection(){
-  cy.get(':nth-child(10) > .inline-flex').click() //clcik Add section button
- cy.get('.absolute > .grid > :nth-child(7)').click() //select language
+  cy.get(':nth-child(10) > .inline-flex').click() //click Add section button
+ cy.get('.absolute > .grid > :nth-child(7)').click() //click add item
   cy.get(':nth-child(8) > .border-t > .space-y-3 > .inline-flex').click() //click add item
   cy.get('body > div:nth-child(1) > div:nth-child(2) > main:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(8) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(2)').clear().type('IT dep')
-  cy.get('body > div:nth-child(1) > div:nth-child(2) > main:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(8) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(2)').clear().type('Referance from last office')
+//  cy.get('#DndDescribedBy-2').clear().type('Referance from last office')
   
   }
 
@@ -690,6 +809,21 @@ validateTitleAIWin(){
         );
       });
     });
+  }
+
+  addingCertificate(){
+
+     cy.get(':nth-child(8) > .inline-flex').click()
+    
+      cy.log("======= Adding Referance section ======")
+
+    cy.get('.absolute > .grid > :nth-child(5)').click()
+    cy.get(':nth-child(6) > .border-t > .space-y-3 > .inline-flex').click()
+    cy.get('body > div:nth-child(1) > div:nth-child(2) > main:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(6) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(2)').clear().type('AI')
+    cy.get('body > div:nth-child(1) > div:nth-child(2) > main:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(6) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > textarea:nth-child(2)').clear().type('This is AI related certificate')
+    
+
+   
   }
 
   /**

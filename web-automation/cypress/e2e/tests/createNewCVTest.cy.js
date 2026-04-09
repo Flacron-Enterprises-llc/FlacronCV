@@ -23,8 +23,6 @@ const headerObj = new headerPage()
 const templateObj = new createNewCVPage()
 const logoutObj = new logout()
 
-
-
 describe('FlacronCV - MyCVs: Free Template Selection - ', () => {
 
       beforeEach(() => {

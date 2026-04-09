@@ -10,16 +10,11 @@ import authPage from '../../pages/loginPage'
 import {faker} from '@faker-js/faker'  //faker for fack data for testing
 import logout from '../../pages/logout'
 
-
-
 // import all data json file from fixtures folder
 
 import headerPage from '../../pages/topMenu'
 import signUpData from '../../fixtures/signUpData.json'
 import skillsPage from '../../pages/skillsPage';
-
-
-
 const loginObj = new authPage()
 const headerObj = new headerPage()
 const templateObj = new createNewCVPage()
@@ -198,229 +193,244 @@ it('TC-4: Upload and verify invalid image/file',{ retries: 1 }, ()=>{
 
 it('TC-5 : Add Personal Information, experiance,education and all other sections', { retries: 2 },()=>{
 
-
-  cy.log("======= Entring Data in Personal Information ======")
-
-  skillsPage.uploadValidImageJpg()
-  skillsPage.fillFirstName(faker.person.firstName())
-  cy.get('@typedFirstName').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    });
-
-  skillsPage.fillLastName(faker.person.lastName())
-  cy.get('@typedLastName').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    });
-
-
-  skillsPage.fillPhone(faker.phone.number())
-  cy.get('@typedPH').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    });
-
-  skillsPage.fillCity(faker.location.city())
-  cy.get('@typedCity').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    });
-
-  skillsPage.fillCountry(faker.location.country())
-    cy.get('@typedCountry').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    })
-
-
-  skillsPage.checkHeadline(faker.person.jobTitle())
-  cy.get('@typedHL').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    })
-
-// Now call the alias
-skillsPage.storeProfessionalSummary()
-    cy.get('@capturedSummary').then((savedText) => {
-        cy.get(skillsPage.weblocators.previewWin).should('contain.text', savedText);
-    });
-
-  skillsPage.fillLinkedin('https://www.linkedin.com/in/asad-ibrahim-mastoi/')
-  cy.get('@typedLinkedIn').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    })
-
-  skillsPage.fillWebsite(faker.internet.url())
-  cy.get('@typedWebsite').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    })
-  cy.wait(200)
-  //add Experiance
-
   
-  cy.log("======= Ading Experiance ======")
-    skillsPage.clickAndAddExp()
-
-    skillsPage.addExpPosition(faker.person.jobTitle())
-
-     cy.get('@position').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    })
-
-    skillsPage.enterExpCompany(faker.company.buzzVerb())
-      cy.get('@company').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    })
-
-
-    skillsPage.selectSDate('2006-06')
-     cy.get('@sdate').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    })
-
-    skillsPage.selectEDate('2008-20')
-    cy.get('@edate').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    })
-
-    
-    skillsPage.enterJobDescription(faker.lorem.paragraph())
-    cy.get('@jobdescription').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    })
-
+    cy.log("======= Entring Data in Personal Information ======")
+  
+    skillsPage.uploadValidImageJpg()
+    skillsPage.fillFirstName(faker.person.firstName())
+    cy.get('@typedFirstName').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      });
+  
+    skillsPage.fillLastName(faker.person.lastName())
+    cy.get('@typedLastName').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      });
+  
+  
+    skillsPage.fillPhone(faker.phone.number())
+    cy.get('@typedPH').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      });
+  
+    skillsPage.fillCity(faker.location.city())
+    cy.get('@typedCity').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      });
+  
+    skillsPage.fillCountry(faker.location.country())
+      cy.get('@typedCountry').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      })
+  
+  
+    skillsPage.checkHeadline(faker.person.jobTitle())
+    cy.get('@typedHL').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      })
+  
+  // Now call the alias
+  skillsPage.storeProfessionalSummary()
+      cy.get('@capturedSummary').then((savedText) => {
+          cy.get(skillsPage.weblocators.previewWin).should('contain.text', savedText);
+      });
+  
+    skillsPage.fillLinkedin('https://www.linkedin.com/in/asad-ibrahim-mastoi/')
+    cy.get('@typedLinkedIn').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      })
+  
+    skillsPage.fillWebsite(faker.internet.url())
+    cy.get('@typedWebsite').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      })
     cy.wait(200)
-
-    cy.log("======= Adding Education ======")
-
-    skillsPage.clickAddEduButton()
-    skillsPage.enterDeg('BS')
-
-    skillsPage.enterFieldOFStudy('Science')
-    
-
-    skillsPage.enterInstitution('NICE')
-
-    //validate degree
-     cy.get('@deg').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    })
-
-
-    ///validate degree
-     cy.get('@FOS').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    })
-
-
-     cy.get('@institution').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    })
-
-    skillsPage.enterStartEnd('2001-2005')
-     cy.get('@startEnd').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    })
-
-
-
-     cy.log("======= Adding Skill ======")
-     skillsPage.addSkill()
+    //add Experiance
   
-     skillsPage.enterSkillName('AI')
-      cy.get('@skillName').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    })
-
     
-     skillsPage.selectSkillLevel()
-   
-
-     cy.log("======= clicking Adding 1st Section button ======")
-
-    skillsPage.clickAddSecBut()
-
-  cy.log("======= Selecting project section ======")
-
-  skillsPage.selectProjectSection()
+    cy.log("======= Adding Experiance ======")
+      skillsPage.clickAndAddExp()
   
-        
-  cy.log("======= clicking add item button in project ======")
-   skillsPage.clickAddItemProjectButt()
-
-
-     skillsPage.enterProjectTitle('AI')
-
-      cy.get('@proTitle').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    })
-
-     skillsPage.enterDescription('This is AI related priject')
-      cy.get('@proDesc').then((expectedValue) => {
-        cy.get(skillsPage.weblocators.previewWin)
-          .should('be.visible')
-          .and('contain.text', expectedValue);
-    })
-
-
-
-   cy.wait(200)
-
-     cy.log("======= Adding certificate section ======")
-    cy.get(':nth-child(8) > .inline-flex').click()
-    
-      cy.log("======= Adding Referance section ======")
-
-    cy.get('.absolute > .grid > :nth-child(5)').click()
-    cy.get(':nth-child(6) > .border-t > .space-y-3 > .inline-flex').click()
-    cy.get('body > div:nth-child(1) > div:nth-child(2) > main:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(6) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(2)').clear().type('AI')
-    cy.get('body > div:nth-child(1) > div:nth-child(2) > main:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(6) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > textarea:nth-child(2)').clear().type('This is AI related certificate')
-    
-
-       skillsPage.addLanguageSection()
-
-        cy.log("======= Adding Ref section ======")
-        
-        skillsPage.addRefSection()
-
-cy.log("======= Adding Custom section ======")
+      skillsPage.addExpPosition(faker.person.jobTitle())
+  
+       cy.get('@position').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      })
+  
+      skillsPage.enterExpCompany(faker.company.buzzVerb())
+        cy.get('@company').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      })
+  
+  
+      skillsPage.selectSDate('2006-06')
+      
+       cy.get('@sdate').then((expectedValue) => {
  
- skillsPage.addCustomSection()
+        const input = expectedValue;
 
+const date = new Date(input + "-01"); // add day to make valid date
 
+const formatted = date.toLocaleString('en-US', {
+  month: 'short',
+  year: 'numeric'
+});
+
+cy.log(formatted); // Jun 2006
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', formatted);
+      })
+  
+      skillsPage.selectEDate('2008-08')
+
+      cy.get('@edate').then((expectedValue2) => {
+  
+        const input = expectedValue2
+
+        const date = new Date(input + "-01"); // add day to make valid date
+
+        const formatted = date.toLocaleString('en-US', {
+         month: 'short',
+         year: 'numeric'
+        });
+
+        cy.log(formatted); // Jun 2006
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', formatted);
+   
+      })
+  
+      
+      skillsPage.enterJobDescription(faker.lorem.paragraph())
+      cy.get('@jobdescription').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      })
+  
+      cy.wait(200)
+  
+      cy.log("======= Adding Education ======")
+  
+      skillsPage.clickAddEduButton()
+      skillsPage.enterDeg('BS')
+  
+      skillsPage.enterFieldOFStudy('Science')
+      
+  
+      skillsPage.enterInstitution('NICE')
+  
+      //validate degree
+       cy.get('@deg').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      })
+  
+  
+      ///validate degree
+       cy.get('@FOS').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      })
+  
+  
+       cy.get('@institution').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      })
+  
+      skillsPage.enterStartEnd('2001-2005')
+       cy.get('@startEnd').then((expectedValue) => {
+
+        
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+            
+      })
+  
+       cy.log("======= Adding Skill ======")
+       skillsPage.addSkill()
+    
+       skillsPage.enterSkillName('AI')
+        cy.get('@skillName').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      })
+  
+   
+       cy.log("======= clicking Adding 1st Section button ======")
+  
+      skillsPage.clickAddSecBut()
+  
+    cy.log("======= Selecting project section ======")
+  
+    skillsPage.selectProjectSection()
+    
+          
+    cy.log("======= clicking add item button in project ======")
+     skillsPage.clickAddItemProjectButt()
+  
+  
+       skillsPage.enterProjectTitle('AI')
+  
+        cy.get('@proTitle').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      })
+  
+       skillsPage.enterDescription('This is AI related priject')
+        cy.get('@proDesc').then((expectedValue) => {
+          cy.get(skillsPage.weblocators.previewWin)
+            .should('be.visible')
+            .and('contain.text', expectedValue);
+      })
+  
+  
+  
+     cy.wait(200)
+  
+       cy.log("======= Adding certificate section ======")
+       
+       skillsPage.addingCertificate()
+  
+         skillsPage.addLanguageSection()
+  
+          cy.log("======= Adding Ref section ======")
+          
+          skillsPage.addRefSection()
+  
+  cy.log("======= Adding Custom section ======")
+   
+   skillsPage.addCustomSection()
+  
   // validate all data on preview window
 
    logoutObj.logoutMain()
