@@ -3,7 +3,7 @@ name: Create New CoverLetter Page Multi-Browser Tests
 on:
   push:
     branches:
-      - web-createNewCoverLetter-test
+      - web-coverLetter-test
 
 jobs:
   createNewCoverLetter-page-cross-browser:
