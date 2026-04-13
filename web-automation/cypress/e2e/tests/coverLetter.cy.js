@@ -130,11 +130,12 @@ describe('FlacronCV - Create Cover Letter Automation', () => {
           logoutObj.logoutMain()
     });
 
- it('TC: 04: Enter Title and company name and job title and Validate AI genarted button',{ retries: 2 }, () => {
+ it('TC: 04: Enter Title and company name and job title and Validate AI genarted button error for job title',{ retries: 2 }, () => {
              
+              
         clObj.enterTitle(faker.person.jobTitle())
         clObj.enterCompanyName(faker.company.buzzNoun())
-        clObj.enterJobTitle(faker.person.jobTitle())
+
         clObj.clickGenerateWithAI()
         clObj.erroAIgeneratedButt()
         cy.wait(300)
