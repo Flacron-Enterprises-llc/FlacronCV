@@ -33,7 +33,7 @@ Executed Test Cases:
 1. **TC-01:** Validate AI Generate, Create Blank, and Cancel buttons in empty state (mandatory field validation)
 2. **TC-02:** Validate behavior when only Title is entered (Create Blank & Cancel validation)
 3. **TC-03:** Validate AI Generate button behavior with only Title entered
-4. **TC-04:** Validate AI Generate functionality with Title, Company Name, and Job Title *(Observed issue during execution)*
+4. **TC-04:** Validate AI Generate functionality with Title, Company Name, and leaving Job Title 
 5. **TC-05:** Validate AI-generated Job Description with all fields populated
 6. **TC-06:** Validate AI Generate when Job Description is empty but other fields are filled
 7. **TC-07:** Validate Create Blank functionality with only Title provided
@@ -56,7 +56,7 @@ To view the report:
 1. Unzip the folder
 2. Open the `.html` file in any browser
 
-This report provides detailed insights including:
+This report provides detailed insights, including:
 
 * Step-by-step execution logs
 * Pass/Fail status
