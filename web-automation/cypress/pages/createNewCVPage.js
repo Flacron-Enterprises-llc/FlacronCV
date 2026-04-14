@@ -8,7 +8,8 @@ class createNewCVPage {
 
      confirmationMsg: 'section > ol > li',
      messageBox: 'section > ol > li',
-     cvTitle: '[placeholder="e.g. Software Engineer CV 2025"]'
+     cvTitle: '[placeholder="e.g. Software Engineer CV 2025"]',
+     alret: 'ol[dir="ltr"] li div div',
 
   }
 
@@ -25,6 +26,10 @@ class createNewCVPage {
   
   }
 
+  alertMsg(){
+
+    cy.get(this.webselector.alret).should('have.text','Title is required')
+  }
 
   enterCVTitle(title){
 

@@ -23,11 +23,50 @@ class myCV {
   
     deleteBut: 'confirmDeleteBtn: "button"',
     msg: 'ol[dir="ltr"] li div div',
-    
+     // cvTitles : '.rounded-lg h3, .rounded-lg div:contains("Updated")', // adjust if needed
+     cvTitles: () => cy.get('h3'),
+       
 
 
     }
 
+
+   getAllCVTitles() {
+  const titles = [];
+
+  cy.get(this.weblocators.cardContainer).each(($card) => {
+    cy.wrap($card)
+      .find('div')
+      .eq(1) // adjust index if needed
+      .invoke('text')
+      .then((text) => {
+        titles.push(text.trim());
+      });
+  }).then(() => {
+    cy.wrap(titles).as('cvTitlesList');
+  });
+}
+
+getCVTitlesArray() {
+        let titles = [];
+        return cy.get('h3').each(($el) => {
+            titles.push($el.text().trim());
+        }).then(() => titles);
+    }
+
+/*
+    
+     getAllCVTitles() {
+   
+   cy.get(this.weblocators.cardContainer)
+  .then($els => {
+    const titles = [...$els].map(el => el.innerText.trim());
+    cy.wrap(titles).as('cvTitlesList');
+  });
+  }
+
+  */
+  
 
     NavigateMyCvPage(){
 

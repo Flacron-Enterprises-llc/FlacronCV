@@ -1,7 +1,6 @@
 
 import SkillsPage from '../../pages/skillsPage';
 import createNewCVPage from '../../pages/createNewCVPage';
-//import { buildPdfFileName } from '../../support/pdfHelper'; //for geting project name
 import { slowCypressDown } from 'cypress-slow-down'
 import authPage from '../../pages/loginPage'
 import {faker} from '@faker-js/faker'  //faker for fack data for testing
@@ -107,6 +106,7 @@ cy.task("clearDownloadsFolder");
   })
   
         slowCypressDown(800) 
+
 
   it('TC-1 : create cv ,validate PDF and validate created cv on MY CV page',{ retries: 2 },()=>{
   
@@ -317,6 +317,7 @@ cy.log(formatted); // Jun 2006
   
        skillsPage.enterProjectTitle('AI')
   
+       
         cy.get('@proTitle').then((expectedValue) => {
           cy.get(skillsPage.weblocators.previewWin)
             .should('be.visible')
@@ -351,7 +352,7 @@ cy.log(formatted); // Jun 2006
    //vaidate create cv on MY CV page
  
    mycvObj.NavigateMyCvPage()
-   mycvObj.validatePageTitle()
+   mycvObj.validatePageTitle() //validate cv is created and displayed on cv page
 
 
 cy.get('@title').then((projectName) => {

@@ -25,7 +25,7 @@ const logoutObj = new logout()
 describe('FlacronCV - Validating Selecting CV template,creating new CV and validate it', () => {
 
     beforeEach(() => {
-cy.task("clearDownloadsFolder");
+    cy.task("clearDownloadsFolder");
     
       cy.clearCookies();
       cy.clearLocalStorage();
@@ -105,44 +105,6 @@ cy.task("clearDownloadsFolder");
     templateObj.validateConfirmationMsg();
     cy.wait(300);
 });
-      /*
-        cy.log("======= Testing SignUp ======")
-        cy.log("======= Open Web application ======")
-          
-       
-             loginObj.enterValidEmail(signUpData.email)
-        
-             cy.wait(300)
-            loginObj.enterPassword(signUpData.password);
-            cy.wait(300)
-            loginObj.clickButton()
-            loginObj.validateDashboard()
-        
-              templateObj.visit()
-     cy.wait(500)
-             const title = faker.person.jobTitle()
-                templateObj.enterCVTitle(title)
-              cy.wrap(title).as('title')
-     
-             templateObj.selectRandomFreeTemplate();
-     cy.wait(500)
-             // Verify the selection (usually the border color changes)
-             // From your HTML: border-brand-500 or similar highlight classes
-             cy.log('======= Template Selected Successfully =======');
-     
-             // Proceed to create
-             templateObj.clickCreateCV();
-     
-             cy.wait(500)
-     
-             // Final assertion: Check if we moved to the editor page
-           //  cy.url().should('include', '/editor');
-             templateObj.validateConfirmationMsg()
-     
-             cy.wait(300)
-
-             */
-     
         })
   
         slowCypressDown(800) 
@@ -198,6 +160,7 @@ it('TC-5 : Add Personal Information, experiance,education and all other sections
   
     skillsPage.uploadValidImageJpg()
     skillsPage.fillFirstName(faker.person.firstName())
+    
     cy.get('@typedFirstName').then((expectedValue) => {
           cy.get(skillsPage.weblocators.previewWin)
             .should('be.visible')

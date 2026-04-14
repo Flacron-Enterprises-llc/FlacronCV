@@ -20,6 +20,8 @@
     "test:loginPage-test": "npx cypress run --browser chrome  --spec cypress/e2e/tests/login.cy.js",
     "test:createNewCV-test": "npx cypress run --browser chrome  --spec cypress/e2e/tests/skillsPageTest.cy.js",
     "test:myCVPage-test": "npx cypress run --browser chrome  --spec cypress/e2e/tests/myCV.cy.js",
+    "test:NewCoverLetter-test": "npx cypress run --browser chrome  --spec cypress/e2e/tests/coverLetter.cy.js",
+    "test:editCoverLetter-test": "npx cypress run --browser chrome  --spec cypress/e2e/tests/editCoverLetter.cy.js",
     "test": "npx cypress run --record --key 757222a2-1275-4e82-b3f3-bf3bdf69552a"
   },
   "devDependencies": {
