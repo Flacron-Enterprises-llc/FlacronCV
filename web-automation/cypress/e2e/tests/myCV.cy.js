@@ -1341,7 +1341,7 @@ cy.get('@title').then((projectName) => {
         mycvObj.clickDuplicateAndEdit(projectName);
     });
 
-    mycvObj.validateDataonEditPage()         
+    mycvObj.EditPageforDuplicate()         
 
 
     cy.wait(300)

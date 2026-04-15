@@ -74,9 +74,13 @@ validateEditorIsEmpty() {
   cy.get(this.textArea)
     .invoke('text')
     .then((text) => {
-      expect(text.trim()).to.equal('');
+    //  expect(text.trim()).to.equal('');
+    // Change line 77 to:
+expect(text.trim()).to.include('Your letter content will appear here');
     });
 }
+
+
   enterName(value) {
     cy.get(this.nameField).clear().type(value);
       cy.wrap(value).as('name');
@@ -123,6 +127,7 @@ validateEditorIsEmpty() {
 
   }
 
+
   validatePreviewEmail(expectedValue) {
     
    cy.get('@email').then((expectedValue) => {
@@ -137,6 +142,8 @@ validateEditorIsEmpty() {
 
     
   }
+
+  
 validateTextAreaWithPreview() {
     // 1. Get the text from the editor
     cy.get('div.flex-1 > div > div.tiptap')

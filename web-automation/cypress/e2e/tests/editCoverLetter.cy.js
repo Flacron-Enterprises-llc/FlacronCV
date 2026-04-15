@@ -670,6 +670,34 @@ it('TC: 09: Enter Title and company name and job title and Validate create blank
 
 logoutObj.logoutMain()
         });
+
+
+it.skip('Verify Bullet List functionality', () => {
+
+
+       clObj.enterTitle(faker.person.jobTitle())
+    clObj.enterCompanyName(faker.company.buzzNoun())
+    clObj.enterJobTitle(faker.person.jobTitle())
+    clObj.clickCreateBlank()
+
+    cy.wait(200)
+    clObj.confirmationMsgForGenerateCL()
+       
+    cy.wait(300)
+
+
+  cy.get('.ProseMirror')
+    .click()
+    .type('Item 1');
+
+  // Click Bullet button
+  cy.get('button[title="Bullet List"]').click();
+
+  // Validate list created
+  cy.get('.ProseMirror ul li')
+    .should('contain.text', 'Item 1');
+
+});
  
 
 
