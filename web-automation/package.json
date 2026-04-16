@@ -22,7 +22,9 @@
     "test:myCVPage-test": "npx cypress run --browser chrome  --spec cypress/e2e/tests/myCV.cy.js",
     "test:NewCoverLetter-test": "npx cypress run --browser chrome  --spec cypress/e2e/tests/coverLetter.cy.js",
     "test:editCoverLetter-test": "npx cypress run --browser chrome  --spec cypress/e2e/tests/editCoverLetter.cy.js",
-     "test:myCoverLetter-test": "npx cypress run --browser chrome  --spec cypress/e2e/tests/myCoverLetterTestPage.cy.js",
+    "test:myCoverLetter-test": "npx cypress run --browser chrome  --spec cypress/e2e/tests/myCoverLetterTestPage.cy.js",
+    "test:templatesPage-test": "npx cypress run --browser chrome  --spec cypress/e2e/tests/templates.cy.js",
+     "test:settingPage-test": "npx cypress run --browser chrome  --spec cypress/e2e/tests/settings.cy.js",    
     "test": "npx cypress run --record --key 757222a2-1275-4e82-b3f3-bf3bdf69552a"
   },
   "devDependencies": {

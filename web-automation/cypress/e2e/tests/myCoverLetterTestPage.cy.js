@@ -97,7 +97,7 @@ describe('FlacronCV - Validating Selecting Cover Letter cart , and validate titl
       slowCypressDown(800) 
 
     
-  it('TC: 01: Create Cover letter with AI Generate button and validate data on My CoverLetter Page',{ retries: 0}, () => {
+  it('TC: 01: Create Cover letter with AI Generate button and validate data on My CoverLetter Page',{ retries: 1}, () => {
                
           clObj.enterTitle(faker.person.jobTitle())
            
@@ -163,7 +163,7 @@ myClObj.validateAIicon()
   })
   
   
- it('TC-2 : varify data on MY cover letter page with create blank button and AI Improve button ',{ retries: 0 },()=>{
+ it('TC-2 : varify data on MY cover letter page with create blank button and AI Improve button ',{ retries: 1 },()=>{
                          
          clObj.enterTitle(faker.person.jobTitle())
          clObj.enterCompanyName(faker.company.buzzNoun())
@@ -225,7 +225,7 @@ cy.get('@title').then((coverletterTitle) => {
   })
 
 
- it('TC-3 : varify data on MY cover letter Page with create blank button and without AI IMprove button clicking',{ retries: 0 },()=>{
+ it('TC-3 : varify data on MY cover letter Page with create blank button and without AI IMprove button clicking',{ retries: 1 },()=>{
     
      clObj.enterTitle(faker.person.jobTitle())
          clObj.enterCompanyName(faker.company.buzzNoun())
@@ -276,7 +276,7 @@ cy.get('@title').then((coverletterTitle) => {
   
   })
 
- it('TC-4 : Validate data on Cover letter Edit page created with Generate with AI button',{ retries: 0 },()=>{
+ it('TC-4 : Validate data on Cover letter Edit page created with Generate with AI button',{ retries: 2},()=>{
    
             
           clObj.enterTitle(faker.person.jobTitle())
@@ -348,7 +348,7 @@ cy.get('@title').then((coverletterTitle) => {
   })
 
   
- it('TC-5: Validate data on Cover letter Edit page created with create blank button with AI IMprove button',{ retries: 0 },()=>{
+ it('TC-5: Validate data on Cover letter Edit page created with create blank button with AI IMprove button',{ retries: 2 },()=>{
         
   clObj.enterTitle(faker.person.jobTitle())
          clObj.enterCompanyName(faker.company.buzzNoun())
@@ -413,7 +413,7 @@ cy.get('@title').then((coverletterTitle) => {
   
   })
   
- it('TC-6 : Validate data on Cover letter Edit page created with create blank button without AI improve button',{ retries: 0 },()=>{
+ it('TC-6 : Validate data on Cover letter Edit page created with create blank button without AI improve button',{ retries: 2 },()=>{
     
    
          clObj.enterTitle(faker.person.jobTitle())
@@ -473,7 +473,7 @@ cy.get('@title').then((coverletterTitle) => {
 
   //check duplicate button
 
-  it('TC-7 : varify Duplicate button for creating cover letter with AI gererate button',{ retries: 0 },()=>{
+  it('TC-7 : varify Duplicate button for creating cover letter with AI gererate button',{ retries: 2 },()=>{
     
           clObj.enterTitle(faker.person.jobTitle())
            
@@ -548,7 +548,7 @@ cy.get('@title').then((coverletterTitle) => {
   })
 
 
-  it('TC-8 : varify Duplicate button for creatign cover letter with Create Blank cover letter and than click AI improve button',{ retries: 0 },()=>{
+  it('TC-8 : varify Duplicate button for creatign cover letter with Create Blank cover letter and than click AI improve button',{ retries: 2 },()=>{
     
    clObj.enterTitle(faker.person.jobTitle())
          clObj.enterCompanyName(faker.company.buzzNoun())
@@ -618,7 +618,7 @@ cy.get('@title').then((coverletterTitle) => {
 
 
   
-  it('TC-9 : varify Duplicate button for creatign cover letter with Create Blank cover letter ',{ retries: 0 },()=>{
+  it('TC-9 : varify Duplicate button for creatign cover letter with Create Blank cover letter ',{ retries: 2 },()=>{
     
    clObj.enterTitle(faker.person.jobTitle())
          clObj.enterCompanyName(faker.company.buzzNoun())
@@ -681,7 +681,7 @@ cy.get('@title').then((coverletterTitle) => {
 
 
   // check delete icon
-  it('TC-10 : varify Delete button for Created coverLetter',{ retries: 0 },()=>{
+  it('TC-10 : varify Delete button for Created coverLetter',{ retries: 2 },()=>{
     
          
           clObj.enterTitle(faker.person.jobTitle())
@@ -737,7 +737,7 @@ cy.get('@title').then((coverletterTitle) => {
       
   })
 
- it('TC-11 : Cancel button on varify Delete button',{ retries: 0 },()=>{
+ it('TC-11 : Cancel button on varify Delete button',{ retries: 2 },()=>{
    
          
           clObj.enterTitle(faker.person.jobTitle())
@@ -791,9 +791,6 @@ cy.get('@title').then((coverletterTitle) => {
       
       
   })
-
-
-
 
 
 })

@@ -132,7 +132,6 @@ it('TC-2: Upload and verify valid PNG image', { retries: 2 },()=>{
    logoutObj.logoutMain()
   
 
-
 })
 
 it('TC-3: Upload and verify valid JPG image',{ retries: 2 }, ()=>{
