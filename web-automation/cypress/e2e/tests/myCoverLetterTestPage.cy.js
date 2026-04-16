@@ -793,4 +793,11 @@ cy.get('@title').then((coverletterTitle) => {
   })
 
 
+<<<<<<< HEAD
 })
+=======
+
+
+
+})
+>>>>>>> 7c8ae7d2cea845c959c882d280cb928c938cf464
