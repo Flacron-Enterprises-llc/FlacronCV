@@ -1,4 +1,6 @@
 
+
+
 import SkillsPage from '../../pages/skillsPage';
 import templatesPage from '../../pages/templatesPage';
 import createNewCVPage from '../../pages/createNewCVPage';
@@ -34,26 +36,77 @@ const myClObj = new myCoverLetterPage()
 describe('FlacronCV - Validating Selecting CV template,creating new CV and validate it', () => {
 
      beforeEach(() => {
-      
-          cy.log("======= Testing SignUp ======")
-          cy.log("======= Open Web application ======")
-          cy.visit('/')
-    
-          
-           headerObj.topMenu.loginButt().click()
-          
-               loginObj.enterValidEmail(signUpData.email)
-          
-               cy.wait(300)
-              loginObj.enterPassword(signUpData.password);
-              cy.wait(300)
-              loginObj.clickButton()
-              loginObj.validateDashboard()
-             cvPage.visitPage();
-        
-    
-          })
-    
+             cy.task("clearDownloadsFolder");
+                 
+                   cy.clearCookies();
+                   cy.clearLocalStorage();
+                   cy.window().then((win) => {
+                     win.sessionStorage.clear();
+                    
+                   });
+                       
+             
+                    cy.log("======= Testing SignUp ======")
+                     cy.log("======= Open Web application ======")
+                     cy.visit('/')
+                     cy.visit('/login')
+              
+                   cy.wait(300)
+             
+                  cy.url().then((currentUrl) => {
+             
+                   cy.log('url is' + currentUrl)
+                 
+                 // SCENARIO 1: On Dashboard - Logout and Re-login
+                 if (currentUrl.includes('/dashboard')) {
+                     cy.log('👉 Scenario: Already on Dashboard - Resetting via Logout');
+                    cy.wait(300)
+                     logoutObj.logoutMain();
+                      cy.wait(300)
+                     cy.reload(); 
+                      cy.wait(300)
+                     
+                     cy.visit('/login');
+                     loginObj.enterValidEmail(signUpData.email);
+                     cy.wait(300);
+                     loginObj.enterPassword(signUpData.password);
+                     cy.wait(300);
+                     loginObj.clickButton();
+                 } 
+             
+                 // SCENARIO 2: On Login Page - Direct Login
+                 else if(currentUrl.includes('/login')) {
+                     cy.log('👉 Scenario: Already on Login Page');
+                      cy.wait(300);
+                     loginObj.enterValidEmail(signUpData.email);
+                     cy.wait(300);
+                     loginObj.enterPassword(signUpData.password);
+                     cy.wait(300);
+                     loginObj.clickButton();
+                 } 
+             
+                 // SCENARIO 3: Landing Page or any other URL
+                 else{
+                     cy.log('👉 Scenario: On Landing Page - Navigating to Login');
+                     cy.visit('/login');
+                     
+                     loginObj.enterValidEmail(signUpData.email);
+                     cy.wait(300);
+                     loginObj.enterPassword(signUpData.password);
+                     cy.wait(300);
+                     loginObj.clickButton();
+                 }
+             
+                 // --- REMAINING TASK EXECUTION ---
+                 loginObj.validateDashboard();
+                 
+                 clObj.visitNewCoverLetterPage()
+                 cy.wait(500);
+             });
+               cvPage.visitPage();
+         });
+
+         
           slowCypressDown(500) 
     
 
