@@ -6,7 +6,7 @@ on:
       - web-settingPage-test
 
 jobs:
-  settingr-page-cross-browser:
+  setting-page-cross-browser:
     runs-on: ubuntu-24.04
 
     strategy:
