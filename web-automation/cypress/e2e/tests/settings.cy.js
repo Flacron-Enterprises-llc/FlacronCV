@@ -102,36 +102,7 @@ describe('FlacronCV - Validating setting page', () => {
       
     
 
-
-it('TC-1: Upload and verify valid PNG profile image', { retries: 0 },()=>{
-
-
-  settingObj.uploadValidImagePng()
-
-   logoutObj.logoutMain()
-  
-
-})
-
-it('TC-3: Upload and verify valid JPG image',{ retries: 2 }, ()=>{
-
-  settingObj.uploadValidImageJpg()
-
-   logoutObj.logoutMain()
-
-
-})
-
-it('TC-4: Upload and verify invalid image/file',{ retries: 1 }, ()=>{
-
-  settingObj.uploadInvaidImageFile()
-
-   logoutObj.logoutMain()
-
-})
-
-
-it('TC-5: Enter data in profile form and save it and validate',{ retries: 0 }, ()=>{
+it('TC-1: Enter data in profile form and save it and validate',{ retries: 2 }, ()=>{
 
     const regEmail = signUpData.email 
            
@@ -167,6 +138,34 @@ it('TC-5: Enter data in profile form and save it and validate',{ retries: 0 }, (
   settingObj.validateLocation()
   settingObj.validateLinkedIn()
   settingObj.validateGithub()
+
+   logoutObj.logoutMain()
+
+})
+
+
+it('TC-2: Upload and verify valid PNG profile image', { retries: 1 },()=>{
+
+
+  settingObj.uploadValidImagePng()
+
+   logoutObj.logoutMain()
+  
+
+})
+
+it('TC-3: Upload and verify valid JPG image',{ retries: 1 }, ()=>{
+
+  settingObj.uploadValidImageJpg()
+
+   logoutObj.logoutMain()
+
+
+})
+
+it('TC-4: Upload and verify invalid image/file',{ retries: 1 }, ()=>{
+
+  settingObj.uploadInvaidImageFile()
 
    logoutObj.logoutMain()
 
