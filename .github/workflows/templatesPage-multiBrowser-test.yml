@@ -1,4 +1,4 @@
-name: Setting Page Multi-Browser Tests
+name: Template Page Multi-Browser Tests
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - web-templatesPage-test
 
 jobs:
-  setting-page-cross-browser:
+  template-page-cross-browser:
     runs-on: ubuntu-24.04
 
     strategy:
@@ -39,5 +39,5 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: setting page multi-browser-${{ matrix.browser }}-report
+          name: template page multi-browser-${{ matrix.browser }}-report
           path: web-automation/cypress/reports/html
