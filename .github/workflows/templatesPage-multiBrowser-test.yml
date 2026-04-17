@@ -1,5 +1,5 @@
 name: Template Page Multi-Browser Tests
-
+ 
 on:
   push:
     branches:
