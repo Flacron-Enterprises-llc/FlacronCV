@@ -131,7 +131,7 @@ it('TC-4: Upload and verify invalid image/file',{ retries: 1 }, ()=>{
 })
 
 
-it.only('TC-5: Enter data in profile form and save it and validate',{ retries: 0 }, ()=>{
+it('TC-5: Enter data in profile form and save it and validate',{ retries: 0 }, ()=>{
 
     const regEmail = signUpData.email 
            
