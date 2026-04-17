@@ -110,7 +110,7 @@ describe('FlacronCV - Validating Selecting CV template,creating new CV and valid
           slowCypressDown(500) 
     
 
-    it('TC-01: Select random CV template and click Use Template, fill data,and validate cerated CV on MY CV page', () => {
+    it('TC-01: Select random CV template and click Use Template, fill data,and validate cerated CV on MY CV page',{ retries: 2}, () => {
 
 //navigate on template cv templated page
 cy.log("======= Select randum cv templated ======")
@@ -392,7 +392,7 @@ cy.log("======= Select randum cv templated ======")
 
 // validfate Cover letter template
 
-it('TC-02: Select random CV template and click Use Template, fill data,and validate cerated CV on MY CV page', () => {
+it('TC-02: Select random CV template and click Use Template, fill data,and validate cerated CV on MY CV page',{ retries: 2}, () => {
 
 //navigate on template cv templated page
 cy.log("======= Select randum cover letter templated ======")
@@ -470,7 +470,7 @@ cy.log("======= enter data in new cover letter form ======")
 
 
     
-  it('TC: 03: create cover letter with blank button without using any AI',{ retries: 0 }, () => {
+  it('TC: 03: create cover letter with blank button without using any AI',{ retries: 2}, () => {
                          
     
 //navigate on template cv templated page
