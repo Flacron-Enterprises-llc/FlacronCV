@@ -1,6 +1,4 @@
 
-
-
 import SkillsPage from '../../pages/skillsPage';
 import templatesPage from '../../pages/templatesPage';
 import createNewCVPage from '../../pages/createNewCVPage';
@@ -419,7 +417,7 @@ cy.log("======= enter data in new cover letter form ======")
 
 
     
-  it.only('TC: 03: create cover letter with blank button without using any AI',{ retries: 0 }, () => {
+  it('TC: 03: create cover letter with blank button without using any AI',{ retries: 0 }, () => {
                          
     
 //navigate on template cv templated page
