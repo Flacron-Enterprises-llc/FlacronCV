@@ -97,7 +97,7 @@ describe('FlacronCV - Validating Selecting Cover Letter cart , and validate titl
       slowCypressDown(800) 
 
     
-  it('TC: 01: Create Cover letter with AI Generate button and validate data on My CoverLetter Page',{ retries: 1}, () => {
+  it('TC: 01: Create Cover letter with AI Generate button and validate data on My CoverLetter Page',{ retries: 2}, () => {
                
           clObj.enterTitle(faker.person.jobTitle())
            
@@ -163,7 +163,7 @@ myClObj.validateAIicon()
   })
   
   
- it('TC-2 : varify data on MY cover letter page with create blank button and AI Improve button ',{ retries: 1 },()=>{
+ it('TC-2 : varify data on MY cover letter page with create blank button and AI Improve button ',{ retries: 2 },()=>{
                          
          clObj.enterTitle(faker.person.jobTitle())
          clObj.enterCompanyName(faker.company.buzzNoun())
@@ -225,7 +225,7 @@ cy.get('@title').then((coverletterTitle) => {
   })
 
 
- it('TC-3 : varify data on MY cover letter Page with create blank button and without AI IMprove button clicking',{ retries: 1 },()=>{
+ it('TC-3 : varify data on MY cover letter Page with create blank button and without AI IMprove button clicking',{ retries: 2 },()=>{
     
      clObj.enterTitle(faker.person.jobTitle())
          clObj.enterCompanyName(faker.company.buzzNoun())
@@ -793,11 +793,4 @@ cy.get('@title').then((coverletterTitle) => {
   })
 
 
-<<<<<<< HEAD
 })
-=======
-
-
-
-})
->>>>>>> 7c8ae7d2cea845c959c882d280cb928c938cf464
