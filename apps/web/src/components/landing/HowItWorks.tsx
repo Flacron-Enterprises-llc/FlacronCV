@@ -5,6 +5,7 @@ import { Link } from '@/i18n/routing';
 import { UserCircle2, LayoutTemplate, Download, ArrowRight } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { useInView } from '@/hooks/useInView';
+import { useAuth } from '@/providers/AuthProvider';
 
 const steps = [
   {
@@ -38,7 +39,9 @@ const steps = [
 
 export default function HowItWorks() {
   const t = useTranslations('how_it_works');
+  const { user } = useAuth();
   const { ref: sectionRef, isInView } = useInView({ threshold: 0.05 });
+  const ctaHref = user ? '/dashboard' : '/register';
 
   return (
     <section id="how-it-works" className="py-20 sm:py-28 bg-stone-50 dark:bg-stone-900/50">
@@ -99,7 +102,7 @@ export default function HowItWorks() {
 
         {/* CTA */}
         <div className="mt-12 text-center">
-          <Link href="/register">
+          <Link href={ctaHref}>
             <Button variant="gradient" size="lg" icon={<ArrowRight className="h-5 w-5" />}>
               {t('cta')}
             </Button>

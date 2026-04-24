@@ -13,10 +13,11 @@ import CVThumbnail from '@/components/cv-builder/CVThumbnail';
 
 // Layouts gated by plan
 const LAYOUT_PLAN: Record<CVLayout, SubscriptionPlan> = {
-  'classic':  SubscriptionPlan.FREE,
-  'sidebar':  SubscriptionPlan.FREE,
-  'top-bar':  SubscriptionPlan.PRO,
-  'compact':  SubscriptionPlan.PRO,
+  'classic':    SubscriptionPlan.FREE,
+  'sidebar':    SubscriptionPlan.FREE,
+  'top-bar':    SubscriptionPlan.PRO,
+  'compact':    SubscriptionPlan.PRO,
+  'slate-gold': SubscriptionPlan.PRO,
 };
 
 interface LayoutOption {
@@ -26,10 +27,11 @@ interface LayoutOption {
 }
 
 const LAYOUTS: LayoutOption[] = [
-  { key: 'classic',  label: 'Classic',  personality: 'Modern Minimal'        },
-  { key: 'sidebar',  label: 'Sidebar',  personality: 'Corporate Professional' },
-  { key: 'top-bar',  label: 'Top Bar',  personality: 'Creative / Bold'        },
-  { key: 'compact',  label: 'Compact',  personality: 'Executive Dense'        },
+  { key: 'classic',    label: 'Classic',    personality: 'Modern Minimal'        },
+  { key: 'sidebar',    label: 'Sidebar',    personality: 'Corporate Professional' },
+  { key: 'top-bar',    label: 'Top Bar',    personality: 'Creative / Bold'        },
+  { key: 'compact',    label: 'Compact',    personality: 'Executive Dense'        },
+  { key: 'slate-gold', label: 'Slate Gold', personality: 'High-Impact Minimalist' },
 ];
 
 const COLORS = [

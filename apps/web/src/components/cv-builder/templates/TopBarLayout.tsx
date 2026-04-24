@@ -101,7 +101,7 @@ export default function TopBarLayout({ cv, sections }: LayoutProps) {
         {cv.personalInfo.summary && (
           <div style={{ marginBottom: `${sp.section}px` }}>
             <SectionHeading title={t('template_about_me')} primary={primary} headingFont={headingFont} fs={fs} sectionStyle="left-border" br={br} />
-            <p style={{ fontSize: `${fs.name}px`, lineHeight: 1.8, color: '#333' }}>
+            <p style={{ fontSize: `${fs.name}px`, lineHeight: 1.8, color: '#333', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
               {cv.personalInfo.summary}
             </p>
           </div>
@@ -118,12 +118,13 @@ export default function TopBarLayout({ cv, sections }: LayoutProps) {
                 border: `1px solid ${hexToRgba(primary, 0.15)}`,
                 borderRadius: br,
                 padding: '10px 12px',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '5px',
+                lineHeight: 'normal',
+                marginBottom: '-5px',
               }}>
                 {section.items.map((item: any, i) => (
-                  <SkillBadge key={i} name={item.name} primary={primary} fs={fs} br={br} variant="pill" />
+                  <span key={i} style={{ display: 'inline-block', marginRight: '5px', marginBottom: '5px' }}>
+                    <SkillBadge name={item.name} primary={primary} fs={fs} br={br} variant="pill" />
+                  </span>
                 ))}
               </div>
             ) : (

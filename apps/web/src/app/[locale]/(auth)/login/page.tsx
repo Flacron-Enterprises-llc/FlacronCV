@@ -1,9 +1,10 @@
 'use client';
 import React from 'react';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link, useRouter } from '@/i18n/routing';
+import { useSearchParams } from 'next/navigation';
 import { useAuth, GOOGLE_ERROR_KEY } from '@/providers/AuthProvider';
 import { auth } from '@/lib/firebase';
 import Button from '@/components/ui/Button';
@@ -12,7 +13,7 @@ import { toast } from 'sonner';
 
 const PENDING_TEMPLATE_KEY = 'flacroncv_pending_template';
 
-function getPostLoginRedirect(): string {
+function getPostLoginRedirect(callbackUrl?: string | null): string {
   try {
     const raw = localStorage.getItem(PENDING_TEMPLATE_KEY);
     if (raw) {
@@ -26,13 +27,19 @@ function getPostLoginRedirect(): string {
   } catch {
     // ignore
   }
+  // Allow relative-path deep links; block external open-redirect attempts.
+  if (callbackUrl && callbackUrl.startsWith('/') && !callbackUrl.startsWith('//')) {
+    return callbackUrl;
+  }
   return '/dashboard';
 }
 
-export default function LoginPage(): React.JSX.Element | null {
+function LoginForm(): React.JSX.Element {
   const t = useTranslations('auth');
   const { login, loginWithGoogle, user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [formLoading, setFormLoading] = useState(false);
@@ -47,21 +54,24 @@ export default function LoginPage(): React.JSX.Element | null {
     }
   }, []);
 
-  // Redirect after returning from Google sign-in redirect
+  // Redirect once auth state settles (covers Google popup and page-reload cases)
   useEffect(() => {
     if (!loading && user && !redirectHandled.current) {
       redirectHandled.current = true;
-      router.push(getPostLoginRedirect());
+      router.push(getPostLoginRedirect(callbackUrl));
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, callbackUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormLoading(true);
     try {
       await login(email, password);
+      // login() sets loading=true; the useEffect above will redirect once
+      // onAuthStateChanged resolves and sets user. Setting the ref here
+      // prevents a double-redirect if the effect fires before navigation.
       redirectHandled.current = true;
-      router.push(getPostLoginRedirect());
+      router.push(getPostLoginRedirect(callbackUrl));
     } catch (error) {
       toast.error((error as Error).message || 'Login failed');
     } finally {
@@ -72,11 +82,10 @@ export default function LoginPage(): React.JSX.Element | null {
   const handleGoogle = async () => {
     try {
       await loginWithGoogle();
-      // loginWithGoogle returns without throwing when popup is dismissed (no-op)
-      // Only redirect if Firebase actually signed us in
+      // Only redirect if Firebase actually signed us in (popup not dismissed)
       if (auth?.currentUser) {
         redirectHandled.current = true;
-        router.push(getPostLoginRedirect());
+        router.push(getPostLoginRedirect(callbackUrl));
       }
     } catch (error) {
       toast.error((error as Error).message || 'Google sign-in failed');
@@ -150,5 +159,13 @@ export default function LoginPage(): React.JSX.Element | null {
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function LoginPage(): React.JSX.Element {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

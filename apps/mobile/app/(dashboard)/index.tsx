@@ -39,8 +39,8 @@ export default function DashboardScreen() {
     [SubscriptionPlan.ENTERPRISE]: { label: 'Enterprise', color: '#7c3aed', bg: '#f3e8ff' },
   };
 
-  const plan = user?.subscription.plan ?? SubscriptionPlan.FREE;
-  const badge = planBadge[plan];
+  const plan = user?.subscription?.plan ?? SubscriptionPlan.FREE;
+  const badge = planBadge[plan] ?? planBadge[SubscriptionPlan.FREE];
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50">

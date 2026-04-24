@@ -192,3 +192,144 @@ export interface CRMTransactionListParams {
   startDate?: string;
   endDate?: string;
 }
+
+// ─── Platform Users ───────────────────────────────────────────────────────────
+
+export interface PlatformUserItem {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL: string | null;
+  role: string;
+  subscriptionPlan: string;
+  subscriptionStatus: string;
+  cvsCreated: number;
+  coverLettersCreated: number;
+  aiCreditsUsed: number;
+  aiCreditsLimit: number;
+  exportsThisMonth: number;
+  isActive: boolean;
+  createdAt: Date;
+  lastLoginAt: Date;
+  location: string;
+}
+
+export interface PlatformUserListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  role?: string;
+  plan?: string;
+  isActive?: boolean;
+  sortBy?: 'createdAt' | 'lastLoginAt' | 'displayName' | 'cvsCreated';
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface UpdateCRMUserRoleDto {
+  role: string;
+}
+
+export interface UpdateCRMUserPlanDto {
+  plan: string;
+  status?: string;
+}
+
+// ─── Platform Analytics ───────────────────────────────────────────────────────
+
+export interface PlatformAnalyticsOverview {
+  totalUsers: number;
+  activeUsers: number;
+  newUsersThisMonth: number;
+  usersByPlan: { free: number; pro: number; enterprise: number };
+  totalCVs: number;
+  totalCoverLetters: number;
+  cvsThisMonth: number;
+  coverLettersThisMonth: number;
+  avgCVsPerUser: number;
+  avgCoverLettersPerUser: number;
+  thisMonthVsLastMonth: { users: number; cvs: number; coverLetters: number };
+}
+
+export interface PlatformUserGrowthDataPoint {
+  month: string;
+  users: number;
+  activeUsers: number;
+}
+
+export interface PlatformUsageDataPoint {
+  month: string;
+  cvs: number;
+  coverLetters: number;
+}
+
+export interface PlatformTopTemplate {
+  templateId: string;
+  name: string;
+  usageCount: number;
+  category: string;
+}
+
+// ─── Audit Log ────────────────────────────────────────────────────────────────
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: Date;
+  actorId: string;
+  actorEmail: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  targetName: string;
+  details: Record<string, unknown>;
+}
+
+export interface AuditLogListParams {
+  page?: number;
+  limit?: number;
+  action?: string;
+  actorId?: string;
+  targetType?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+// ─── App Settings ─────────────────────────────────────────────────────────────
+
+export interface AppSettingsPlanLimits {
+  cvsLimit: number;
+  coverLettersLimit: number;
+  aiCreditsLimit: number;
+  exportsLimit: number;
+}
+
+export interface AppSettings {
+  planLimits: {
+    free: AppSettingsPlanLimits;
+    pro: AppSettingsPlanLimits;
+    enterprise: AppSettingsPlanLimits;
+  };
+  featureFlags: {
+    aiEnabled: boolean;
+    templatesEnabled: boolean;
+    exportsEnabled: boolean;
+    coverLettersEnabled: boolean;
+  };
+  maintenanceMode: {
+    enabled: boolean;
+    message: string;
+  };
+  announcement: {
+    enabled: boolean;
+    message: string;
+    type: 'info' | 'warning' | 'success' | 'danger';
+  };
+  updatedAt: Date | null;
+  updatedBy: string | null;
+}
+
+export interface UpdateAppSettingsDto {
+  planLimits?: Partial<AppSettings['planLimits']>;
+  featureFlags?: Partial<AppSettings['featureFlags']>;
+  maintenanceMode?: Partial<AppSettings['maintenanceMode']>;
+  announcement?: Partial<AppSettings['announcement']>;
+}

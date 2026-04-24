@@ -9,11 +9,24 @@ import Badge from '@/components/ui/Badge';
 import { PLAN_CONFIGS, SubscriptionPlan } from '@flacroncv/shared-types';
 import { cn } from '@/lib/utils';
 import { useInView } from '@/hooks/useInView';
+import { useAuth } from '@/providers/AuthProvider';
 
 export default function Pricing() {
   const t = useTranslations();
+  const { user } = useAuth();
   const [yearly, setYearly] = useState(false);
   const { ref: sectionRef, isInView } = useInView({ threshold: 0.1 });
+
+  // Resolve the CTA destination based on auth state so logged-in users never
+  // bounce through /register on their way to the app.
+  //   Free  — authenticated → /dashboard (they already have an account)
+  //   Pro   — authenticated → /settings/billing (direct upgrade path)
+  //   Ent.  — always /contact-us regardless of auth
+  const planCtaHref = (key: SubscriptionPlan): string => {
+    if (key === SubscriptionPlan.ENTERPRISE) return '/contact-us';
+    if (!user) return '/register';
+    return key === SubscriptionPlan.PRO ? '/settings/billing' : '/dashboard';
+  };
 
   const plans = [
     {
@@ -21,21 +34,18 @@ export default function Pricing() {
       featured: false,
       bestFor: t('pricing.best_for_free'),
       cta: t('pricing.get_started'),
-      ctaHref: '/register',
     },
     {
       key: SubscriptionPlan.PRO,
       featured: true,
       bestFor: t('pricing.best_for_pro'),
       cta: t('pricing.upgrade'),
-      ctaHref: '/register',
     },
     {
       key: SubscriptionPlan.ENTERPRISE,
       featured: false,
       bestFor: t('pricing.best_for_enterprise'),
       cta: t('pricing.contact_sales'),
-      ctaHref: '/contact-us',
     },
   ];
 
@@ -109,7 +119,7 @@ export default function Pricing() {
         </div>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-3">
-          {plans.map(({ key, featured, bestFor, cta, ctaHref }) => {
+          {plans.map(({ key, featured, bestFor, cta }) => {
             const config = PLAN_CONFIGS[key];
             const monthlyPrice = config.priceMonthly;
             const perMonth = yearly ? config.priceYearly / 12 : monthlyPrice;
@@ -200,9 +210,9 @@ export default function Pricing() {
                   ))}
                 </ul>
 
-                <Link href={ctaHref}>
+                <Link href={planCtaHref(key)}>
                   <Button
-                    variant={featured ? 'primary' : key === SubscriptionPlan.ENTERPRISE ? 'outline' : 'outline'}
+                    variant={featured ? 'primary' : 'outline'}
                     className="w-full"
                     size="lg"
                   >

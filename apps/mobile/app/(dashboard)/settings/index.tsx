@@ -16,7 +16,7 @@ export default function SettingsScreen() {
   const uploadPhoto = useUploadProfilePhoto();
 
   const currentUser = user ?? authUser;
-  const plan = currentUser?.subscription.plan ?? SubscriptionPlan.FREE;
+  const plan = currentUser?.subscription?.plan ?? SubscriptionPlan.FREE;
   const planConfig = PLAN_CONFIGS[plan];
 
   const handleLogout = () => {
@@ -85,13 +85,13 @@ export default function SettingsScreen() {
           <Text className="font-bold text-stone-800 mb-3">Monthly Usage</Text>
           <UsageBar
             label="AI Credits"
-            used={currentUser?.usage.aiCreditsUsed ?? 0}
-            limit={currentUser?.usage.aiCreditsLimit ?? 5}
+            used={currentUser?.usage?.aiCreditsUsed ?? 0}
+            limit={currentUser?.usage?.aiCreditsLimit ?? 5}
             color="#8b5cf6"
           />
           <UsageBar
             label="Exports"
-            used={currentUser?.usage.exportsThisMonth ?? 0}
+            used={currentUser?.usage?.exportsThisMonth ?? 0}
             limit={typeof planConfig.limits.exports === 'number' ? planConfig.limits.exports : 999}
             color="#f97316"
             unlimited={planConfig.limits.exports === 'unlimited'}

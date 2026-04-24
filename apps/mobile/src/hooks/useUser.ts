@@ -6,11 +6,11 @@ import { useAuthStore } from '../store/auth-store';
 import { User } from '../types/user.types';
 
 export function useCurrentUser() {
-  const { firebaseUser } = useAuthStore();
+  const { firebaseUser, isInitialized } = useAuthStore();
   return useQuery({
     queryKey: ['user', firebaseUser?.uid],
-    queryFn: () => api.get<User>(`/users/${firebaseUser!.uid}`),
-    enabled: !!firebaseUser?.uid,
+    queryFn: () => api.get<User>('/users/me'),
+    enabled: isInitialized && !!firebaseUser?.uid,
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -19,7 +19,7 @@ export function useUpdateProfile() {
   const qc = useQueryClient();
   const { firebaseUser } = useAuthStore();
   return useMutation({
-    mutationFn: (data: Partial<User>) => api.patch<User>(`/users/${firebaseUser!.uid}`, data),
+    mutationFn: (data: Partial<User>) => api.patch<User>('/users/me', data),
     onSuccess: (updated) => {
       qc.setQueryData(['user', firebaseUser?.uid], updated);
     },

@@ -93,7 +93,7 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
       {cv.personalInfo.summary && (
         <div style={{ marginBottom: `${tightSp.section}px` }}>
           <SectionHeading title={t('template_summary')} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
-          <p style={{ fontSize: `${fs.body}px`, lineHeight: 1.65, color: '#333' }}>
+          <p style={{ fontSize: `${fs.body}px`, lineHeight: 1.65, color: '#333', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
             {cv.personalInfo.summary}
           </p>
         </div>
@@ -103,7 +103,7 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
       <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
 
         {/* Left — Experience + Projects + other primary sections */}
-        <div style={{ flex: '0 0 60%' }}>
+        <div style={{ flex: '0 0 60%', minWidth: 0 }}>
           {leftSections.map(section => (
             <div key={section.id} style={{ marginBottom: `${tightSp.section}px` }}>
               <SectionHeading title={section.title} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
@@ -115,14 +115,16 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
         </div>
 
         {/* Right — Education, Skills, Languages, Certs */}
-        <div style={{ flex: '0 0 calc(40% - 20px)' }}>
+        <div style={{ flex: '0 0 calc(40% - 20px)', minWidth: 0 }}>
           {rightSections.map(section => (
             <div key={section.id} style={{ marginBottom: `${tightSp.section}px` }}>
               <SectionHeading title={section.title} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
               {section.type === 'skills' ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                <div style={{ lineHeight: 'normal', marginBottom: '-3px' }}>
                   {section.items.map((item: any, i) => (
-                    <SkillBadge key={i} name={item.name} primary={primary} fs={fs} br={br} variant="default" />
+                    <span key={i} style={{ display: 'inline-block', marginRight: '3px', marginBottom: '3px' }}>
+                      <SkillBadge name={item.name} primary={primary} fs={fs} br={br} variant="default" />
+                    </span>
                   ))}
                 </div>
               ) : (

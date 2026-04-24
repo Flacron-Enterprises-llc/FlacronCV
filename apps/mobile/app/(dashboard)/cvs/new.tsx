@@ -25,7 +25,7 @@ export default function NewCVScreen() {
   const [step, setStep] = useState<'template' | 'title'>('template');
   const [cvTitle, setCvTitle] = useState('My Professional CV');
 
-  const plan = user?.subscription.plan ?? SubscriptionPlan.FREE;
+  const plan = user?.subscription?.plan ?? SubscriptionPlan.FREE;
 
   const handleSelectTemplate = (template: Template) => {
     if (!canAccessTemplate(plan, template.tier)) {
@@ -45,7 +45,7 @@ export default function NewCVScreen() {
   const handleCreate = async () => {
     if (!user) return;
 
-    if (!canCreateCV(plan, user.usage.cvsCreated)) {
+    if (!canCreateCV(plan, user?.usage?.cvsCreated)) {
       Alert.alert(
         'CV Limit Reached',
         `Your ${plan} plan allows up to ${plan === SubscriptionPlan.FREE ? 5 : 10} CVs. Upgrade to create more.`,

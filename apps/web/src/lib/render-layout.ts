@@ -39,7 +39,7 @@ export const COMPACT_RIGHT_TYPES = new Set([
 
 // ── Descriptor types ──────────────────────────────────────────────────────────
 
-export type LayoutType = 'classic' | 'sidebar' | 'top-bar' | 'compact';
+export type LayoutType = 'classic' | 'sidebar' | 'top-bar' | 'compact' | 'slate-gold';
 
 /** One column's worth of layout data */
 export interface ColumnDescriptor {
@@ -157,6 +157,44 @@ export function renderLayout(
             widthPct:  40,
             isSidebar: false,
             pad: { top: tSection, bottom: tSection, left: 20, right: 0 },
+          },
+        ],
+      };
+    }
+
+    // ── Slate-Gold — 30 / 70, dark slate sidebar ──────────────────────────────
+    // Same column split as Sidebar but sidebar background is fixed slate (#1a2332).
+    // Summary lives in the right (main) column, not above.
+    case 'slate-gold': {
+      const left  = sections.filter(s => SIDEBAR_LEFT_TYPES.has(s.type));
+      const right = sections.filter(s => !SIDEBAR_LEFT_TYPES.has(s.type));
+      return {
+        layoutType: 'slate-gold',
+        summaryAboveColumns: false,
+        columnGap: 0,
+        columns: [
+          {
+            sections:   left,
+            widthPct:   30,
+            background: '#1a2332',
+            isSidebar:  true,
+            pad: {
+              top:    sp.headerPad,
+              bottom: sp.headerPad,
+              left:   Math.round(sp.pad * 0.55),
+              right:  Math.round(sp.pad * 0.55),
+            },
+          },
+          {
+            sections:  right,
+            widthPct:  70,
+            isSidebar: false,
+            pad: {
+              top:    sp.headerPad,
+              bottom: sp.headerPad,
+              left:   Math.round(sp.pad * 0.85),
+              right:  Math.round(sp.pad * 0.85),
+            },
           },
         ],
       };

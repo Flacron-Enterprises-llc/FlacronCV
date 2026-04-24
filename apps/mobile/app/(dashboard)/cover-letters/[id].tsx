@@ -41,8 +41,8 @@ export default function CoverLetterEditorScreen() {
 
   const handleAIGenerate = async () => {
     if (!coverLetter) return;
-    const plan = user?.subscription.plan ?? SubscriptionPlan.FREE;
-    if (!canUseAI(plan, user?.usage.aiCreditsUsed ?? 0)) {
+    const plan = user?.subscription?.plan ?? SubscriptionPlan.FREE;
+    if (!canUseAI(plan, user?.usage?.aiCreditsUsed ?? 0)) {
       Alert.alert('AI Credits Exhausted', 'Upgrade to get more AI credits.');
       return;
     }

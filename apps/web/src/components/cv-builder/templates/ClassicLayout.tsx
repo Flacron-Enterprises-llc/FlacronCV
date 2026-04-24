@@ -73,7 +73,7 @@ export default function ClassicLayout({ cv, sections }: LayoutProps) {
       {cv.personalInfo.summary && (
         <div style={{ marginBottom: `${sp.section}px` }}>
           <SectionHeading title={t('template_professional_summary')} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
-          <p style={{ fontSize: `${fs.name}px`, lineHeight: 1.75, color: '#333' }}>
+          <p style={{ fontSize: `${fs.name}px`, lineHeight: 1.75, color: '#333', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
             {cv.personalInfo.summary}
           </p>
         </div>
@@ -85,9 +85,14 @@ export default function ClassicLayout({ cv, sections }: LayoutProps) {
           <SectionHeading title={section.title} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
 
           {section.type === 'skills' ? (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+            // inline-block + margin instead of flex+gap: html2canvas does not
+            // reliably compute CSS `gap` on flex containers, causing badges to
+            // render touching each other (no spacing) in the exported PDF.
+            <div style={{ lineHeight: 'normal', marginBottom: '-4px' }}>
               {section.items.map((item: any, i) => (
-                <SkillBadge key={i} name={item.name} primary={primary} fs={fs} br={br} variant="pill" />
+                <span key={i} style={{ display: 'inline-block', marginRight: '4px', marginBottom: '4px' }}>
+                  <SkillBadge name={item.name} primary={primary} fs={fs} br={br} variant="pill" />
+                </span>
               ))}
             </div>
           ) : (

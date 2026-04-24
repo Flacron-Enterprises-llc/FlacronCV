@@ -38,6 +38,7 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
       {/* ── Left Sidebar ── */}
       <div style={{
         width: sidebarWidth,
+        minWidth: 0,
         background: sidebarBg,
         padding: `${sp.headerPad}px ${sp.pad * 0.6}px`,
         flexShrink: 0,
@@ -118,9 +119,11 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
           <div key={section.id}>
             <SidebarSectionHeading title={section.title} headingFont={headingFont} fs={fs} />
             {section.type === 'skills' ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+              <div style={{ lineHeight: 'normal', marginBottom: '-3px' }}>
                 {section.items.map((item: any, i) => (
-                  <SkillBadge key={i} name={item.name} primary={primary} fs={fs} br={br} variant="sidebar" />
+                  <span key={i} style={{ display: 'inline-block', marginRight: '3px', marginBottom: '3px' }}>
+                    <SkillBadge name={item.name} primary={primary} fs={fs} br={br} variant="sidebar" />
+                  </span>
                 ))}
               </div>
             ) : (
@@ -135,6 +138,7 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
       {/* ── Main Content ── */}
       <div style={{
         width: mainWidth,
+        minWidth: 0,
         padding: `${sp.headerPad}px ${sp.pad * 0.75}px`,
         display: 'flex',
         flexDirection: 'column',
@@ -144,7 +148,7 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
         {cv.personalInfo.summary && (
           <div>
             <SectionHeading title={t('template_profile')} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
-            <p style={{ fontSize: `${fs.name}px`, lineHeight: 1.75, color: '#333' }}>
+            <p style={{ fontSize: `${fs.name}px`, lineHeight: 1.75, color: '#333', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
               {cv.personalInfo.summary}
             </p>
           </div>

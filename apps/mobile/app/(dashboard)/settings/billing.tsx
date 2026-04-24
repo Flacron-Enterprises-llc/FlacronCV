@@ -18,9 +18,9 @@ export default function BillingScreen() {
   const createCheckout = useCreateCheckoutSession();
   const createPortal = useCreatePortalSession();
 
-  const plan = user?.subscription.plan ?? SubscriptionPlan.FREE;
-  const status = user?.subscription.status ?? SubscriptionStatus.ACTIVE;
-  const periodEnd = user?.subscription.currentPeriodEnd;
+  const plan = user?.subscription?.plan ?? SubscriptionPlan.FREE;
+  const status = user?.subscription?.status ?? SubscriptionStatus.ACTIVE;
+  const periodEnd = user?.subscription?.currentPeriodEnd;
 
   const handleSubscribe = async (targetPlan: SubscriptionPlan) => {
     if (targetPlan === SubscriptionPlan.FREE) return;

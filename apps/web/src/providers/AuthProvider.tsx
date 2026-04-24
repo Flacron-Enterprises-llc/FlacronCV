@@ -89,7 +89,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     if (!auth) throw new Error('Firebase not configured');
-    const result = await signInWithEmailAndPassword(auth, email, password);
+    // Set loading=true immediately so the dashboard guard sees a loading state
+    // and doesn't redirect back to /login before onAuthStateChanged fires.
+    setLoading(true);
+    let result;
+    try {
+      result = await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      setLoading(false);
+      throw error;
+    }
 
     // If a Google/GitHub credential was stored (account-exists-with-different-credential),
     // link it now so the user can sign in with both methods going forward.
@@ -108,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionStorage.removeItem(PENDING_CRED_KEY);
       }
     }
+    // onAuthStateChanged will call setLoading(false) after syncing user state.
   };
 
   const register = async (email: string, password: string, name: string) => {
@@ -118,9 +128,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithGoogle = async () => {
     if (!auth) throw new Error('Firebase not configured');
+    setLoading(true);
     try {
       await signInWithPopup(auth, googleProvider);
+      // onAuthStateChanged will call setLoading(false) after syncing user state.
     } catch (error: any) {
+      setLoading(false);
       if (error.code === 'auth/account-exists-with-different-credential') {
         const pendingCred = GoogleAuthProvider.credentialFromError(error);
         const email: string = error.customData?.email ?? '';

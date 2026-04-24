@@ -3,10 +3,11 @@
 import React from 'react';
 import { useCVStore } from '@/store/cv-store';
 import type { CVSection } from '@flacroncv/shared-types';
-import ClassicLayout from './templates/ClassicLayout';
-import SidebarLayout from './templates/SidebarLayout';
-import TopBarLayout  from './templates/TopBarLayout';
-import CompactLayout from './templates/CompactLayout';
+import ClassicLayout   from './templates/ClassicLayout';
+import SidebarLayout   from './templates/SidebarLayout';
+import TopBarLayout    from './templates/TopBarLayout';
+import CompactLayout   from './templates/CompactLayout';
+import SlateGoldLayout from './templates/SlateGoldLayout';
 
 export default function LivePreview() {
   const { cv, sections } = useCVStore();
@@ -32,10 +33,11 @@ export default function LivePreview() {
   return (
     <div className="mx-auto max-w-[595px]">
       <div id="cv-preview-content" className="rounded-lg shadow-lg overflow-hidden" style={{ background: '#fff' }}>
-        {layout === 'sidebar'  && <SidebarLayout  {...props} />}
-        {layout === 'top-bar'  && <TopBarLayout   {...props} />}
-        {layout === 'compact'  && <CompactLayout  {...props} />}
-        {(layout === 'classic' || !['sidebar','top-bar','compact'].includes(layout)) && (
+        {layout === 'sidebar'    && <SidebarLayout   {...props} />}
+        {layout === 'top-bar'    && <TopBarLayout    {...props} />}
+        {layout === 'compact'    && <CompactLayout   {...props} />}
+        {layout === 'slate-gold' && <SlateGoldLayout {...props} />}
+        {(layout === 'classic' || !['sidebar','top-bar','compact','slate-gold'].includes(layout)) && (
           <ClassicLayout {...props} />
         )}
       </div>

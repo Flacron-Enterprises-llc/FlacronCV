@@ -18,7 +18,7 @@ export default function TemplatesScreen() {
   const { user } = useAuthStore();
   const { data: templates, isLoading } = useTemplates(TemplateCategory.CV);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
-  const plan = user?.subscription.plan ?? SubscriptionPlan.FREE;
+  const plan = user?.subscription?.plan ?? SubscriptionPlan.FREE;
 
   const filtered = templates?.filter((t) => {
     if (activeFilter === 'free') return t.tier === SubscriptionPlan.FREE;

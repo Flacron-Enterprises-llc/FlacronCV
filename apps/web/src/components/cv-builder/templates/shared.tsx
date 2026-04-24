@@ -179,7 +179,7 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
           {item.company}{item.location ? ` · ${item.location}` : ''}
         </p>
         {item.description && (
-          <p style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '4px', lineHeight: 1.65 }}>
+          <p style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '4px', lineHeight: 1.65, wordBreak: 'break-word', overflowWrap: 'break-word' }}>
             {item.description}
           </p>
         )}
@@ -205,7 +205,7 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
           {item.institution}
         </p>
         {item.description && (
-          <p style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '4px', lineHeight: 1.6 }}>
+          <p style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '4px', lineHeight: 1.6, wordBreak: 'break-word', overflowWrap: 'break-word' }}>
             {item.description}
           </p>
         )}
@@ -226,7 +226,7 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
         {date && <span style={{ fontSize: `${fs.meta}px`, color: metaColor, whiteSpace: 'nowrap' }}>{date}</span>}
       </div>
       {detail && (
-        <p style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '2px', lineHeight: 1.55 }}>{detail}</p>
+        <p style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '2px', lineHeight: 1.55, wordBreak: 'break-word', overflowWrap: 'break-word' }}>{detail}</p>
       )}
     </div>
   );
@@ -234,10 +234,15 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
 
 // ─── Skill badge ─────────────────────────────────────────────────────────────
 
-// Shared badge base — inline-block is used instead of inline-flex because
-// html2canvas (used for PDF capture) does not reliably render inline-flex spans.
+// Shared badge base — html2canvas rendering constraints:
+//   • display:inline-block instead of inline-flex — html2canvas does not
+//     reliably render inline-flex spans.
+//   • No margin on the badge itself — spacing is handled by the wrapper <span>
+//     (marginRight/marginBottom) in each template's skills container.
+//     Templates use inline-block + margin wrappers instead of flex+gap because
+//     html2canvas's JS layout engine does not fully support CSS `gap` on flex
+//     containers, causing badges to render without spacing in the PDF.
 // Vertical centering is achieved via verticalAlign + symmetric padding.
-// Margins are intentionally absent; parent containers use gap only.
 const BADGE_BASE: React.CSSProperties = {
   display: 'inline-block',
   verticalAlign: 'middle',

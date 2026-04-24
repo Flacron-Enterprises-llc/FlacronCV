@@ -8,17 +8,27 @@ import { renderLayout, SIDEBAR_LEFT_TYPES, type LayoutDescriptor } from '@/lib/r
 /** Clone a preview element off-screen at A4 width, ready for html2canvas */
 function cloneForCapture(el: HTMLElement): HTMLElement {
   const clone = el.cloneNode(true) as HTMLElement;
-  clone.style.cssText = [
-    'position:fixed',
-    'top:0',
-    'left:-9999px',
-    'width:794px',
-    'overflow:visible',
-    'border-radius:0',
-    'box-shadow:none',
-    'max-width:none',
-    'background:#fff',
-  ].join(';');
+  // Use individual property setters — NOT cssText — so that existing inline
+  // styles (padding, fontFamily, display, minHeight…) are preserved on the
+  // root element. Replacing cssText would wipe `padding` (breaking available-
+  // width for skills badges) and `display:flex` (collapsing SidebarLayout).
+  //
+  // position:absolute (not fixed) so html2canvas renders the element in the
+  // normal document layer — fixed elements are clipped to windowHeight
+  // internally, which silently truncates tall CVs.
+  //
+  // box-sizing:border-box makes width:794px the outer width (including padding),
+  // matching the preview container which constrains the element from outside.
+  clone.style.position   = 'absolute';
+  clone.style.top        = '0';
+  clone.style.left       = '-9999px';
+  clone.style.width      = '794px';
+  clone.style.boxSizing  = 'border-box';
+  clone.style.overflow   = 'visible';
+  clone.style.borderRadius = '0';
+  clone.style.boxShadow  = 'none';
+  clone.style.maxWidth   = 'none';
+  clone.style.background = '#fff';
   document.body.appendChild(clone);
   return clone;
 }
@@ -45,13 +55,19 @@ async function captureToCanvas(el: HTMLElement) {
     await document.fonts.ready;
   }
   const html2canvas = await getHtml2Canvas();
+  // Read the full rendered height AFTER layout has settled. Passing it
+  // explicitly prevents html2canvas from under-estimating canvas height for
+  // very tall content (long description, many sections).
+  const elHeight = el.scrollHeight || el.offsetHeight;
   const canvas = await html2canvas(el, {
     scale: 2,
     useCORS: true,
     allowTaint: true,
     logging: false,
     width: 794,
+    height: elHeight,
     windowWidth: 794,
+    windowHeight: elHeight,
   });
   return canvas;
 }
@@ -63,7 +79,8 @@ export async function exportToPDF(cv: CV, _sections: CVSection[], locale: string
   if (!sourceEl) throw new Error('CV preview not found — please keep the editor open while exporting.');
 
   const clone = cloneForCapture(sourceEl);
-  await new Promise((r) => setTimeout(r, 150));
+  // Give the browser extra time to fully lay out the clone before capture.
+  await new Promise((r) => setTimeout(r, 300));
 
   try {
     const jsPDF = await getJsPDF();
@@ -803,7 +820,8 @@ export async function exportCoverLetterToPDF(title: string): Promise<void> {
   if (!sourceEl) throw new Error('Cover letter preview not found.');
 
   const clone = cloneForCapture(sourceEl);
-  await new Promise((r) => setTimeout(r, 150));
+  // Give the browser extra time to fully lay out the clone before capture.
+  await new Promise((r) => setTimeout(r, 300));
 
   try {
     const jsPDF = await getJsPDF();

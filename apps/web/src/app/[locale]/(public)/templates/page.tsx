@@ -447,13 +447,15 @@ const mockupMap: Record<string, () => ReactNode> = {
 /* ─── Skeleton card ─── */
 function SkeletonCard() {
   return (
-    <Card padding="none" className="animate-pulse overflow-hidden">
-      <div className="h-48 bg-stone-200 dark:bg-stone-700" />
-      <div className="space-y-3 p-4">
-        <div className="h-5 w-2/3 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="flex gap-2">
-          <div className="h-5 w-14 rounded-full bg-stone-200 dark:bg-stone-700" />
-          <div className="h-5 w-14 rounded-full bg-stone-200 dark:bg-stone-700" />
+    <Card padding="none" className="flex flex-col animate-pulse overflow-hidden">
+      <div className="h-48 bg-stone-200 dark:bg-stone-700 shrink-0" />
+      <div className="flex flex-1 flex-col justify-between p-4">
+        <div className="space-y-3">
+          <div className="h-5 w-2/3 rounded bg-stone-200 dark:bg-stone-700" />
+          <div className="flex gap-2">
+            <div className="h-5 w-14 rounded-full bg-stone-200 dark:bg-stone-700" />
+            <div className="h-5 w-14 rounded-full bg-stone-200 dark:bg-stone-700" />
+          </div>
         </div>
         <div className="h-9 w-full rounded-lg bg-stone-200 dark:bg-stone-700" />
       </div>
@@ -618,10 +620,13 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
                   key={template.id}
                   padding="none"
                   hover
-                  className="group overflow-hidden"
+                  // flex flex-col: lets the content area grow to fill the
+                  // grid-stretched card height so justify-between can pin
+                  // the action button to the same baseline across every card.
+                  className="group flex flex-col overflow-hidden"
                 >
-                  {/* Thumbnail */}
-                  <div className="relative">
+                  {/* Thumbnail — fixed height, never shrinks */}
+                  <div className="relative shrink-0">
                     <div className="relative h-52 overflow-hidden bg-white dark:bg-stone-950">
                       <Mockup />
 
@@ -647,8 +652,10 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
                     </div>
                   </div>
 
-                  {/* Card content */}
-                  <div className="flex flex-col justify-between gap-3 p-4" style={{ minHeight: '120px' }}>
+                  {/* Card content — flex-1 fills the remaining card height so
+                      justify-between always pins the button to the card bottom,
+                      regardless of how many lines the title/description wraps to. */}
+                  <div className="flex flex-1 flex-col justify-between gap-3 p-4">
                     <div className="space-y-2">
                       <div>
                         <h3 className="font-semibold text-stone-900 dark:text-white">
@@ -667,7 +674,7 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
                       </div>
                     </div>
 
-                    {/* Action button */}
+                    {/* Action button — always at the card bottom */}
                     {!user ? (
                       <Button
                         className="w-full"

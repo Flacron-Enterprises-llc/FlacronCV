@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import type { CV } from '@flacroncv/shared-types';
+import type { CV, CVLayout } from '@flacroncv/shared-types';
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -28,7 +28,7 @@ interface CVThumbnailCVProps {
 interface CVThumbnailRawProps {
   cv?: never;
   /** Layout key when no CV is available (e.g. template picker). */
-  layout: 'classic' | 'sidebar' | 'top-bar' | 'compact';
+  layout: CVLayout;
   /** Accent / primary color. */
   color: string;
   /** Optional display name shown in the header area. */
@@ -238,6 +238,86 @@ function ClassicThumb({ color, initials, hasName }: RendererProps) {
   );
 }
 
+// ─── Slate-Gold thumbnail ─────────────────────────────────────────────────────
+
+function SlateGoldThumb({ color, initials, hasName }: RendererProps) {
+  const SLATE = '#1a2332';
+  const gold  = color; // user's primaryColor is the gold accent
+
+  return (
+    <div style={{ display: 'flex', height: '100%', width: '100%', overflow: 'hidden' }}>
+      {/* Slate sidebar */}
+      <div style={{
+        width: '30%',
+        background: SLATE,
+        padding: '6px 4px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 3,
+        borderTop: `3px solid ${gold}`,
+      }}>
+        {/* Monogram circle */}
+        <div style={{
+          width: 18, height: 18, borderRadius: '50%',
+          border: `1.5px solid ${gold}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 4, fontWeight: 800, color: gold,
+          flexShrink: 0, marginBottom: 2,
+        }}>
+          {initials}
+        </div>
+        {hasName && <Bar width="80%" bg={`rgba(201,168,76,0.55)`} height={2} />}
+        {/* Contact stubs */}
+        {[70, 90, 65, 80].map((w, i) => (
+          <Bar key={i} width={`${w}%`} bg="rgba(255,255,255,0.20)" height={1.5} />
+        ))}
+        {/* Skill chips */}
+        <div style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: 1.5, marginTop: 2 }}>
+          {[40, 55, 35].map((w, i) => (
+            <div key={i} style={{
+              height: 4, width: `${w}%`, borderRadius: 1,
+              background: `rgba(201,168,76,0.25)`,
+              border: `0.5px solid rgba(201,168,76,0.40)`,
+            }} />
+          ))}
+        </div>
+      </div>
+
+      {/* White main */}
+      <div style={{
+        flex: 1,
+        background: '#fff',
+        padding: '7px 5px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 3,
+      }}>
+        {/* Gold bar + section title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 1 }}>
+          <div style={{ width: 5, height: 2, background: gold, borderRadius: 1 }} />
+          <Bar width="35%" bg="#1a2332" height={2.5} style={{ opacity: 0.8 }} />
+        </div>
+        <Bar width="90%" bg="#e5e7eb" height={2} />
+        <Bar width="80%" bg="#e5e7eb" height={2} />
+        {/* Timeline entry */}
+        <div style={{ display: 'flex', gap: 3, marginTop: 2 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 5 }}>
+            <div style={{ width: 4, height: 4, borderRadius: '50%', background: gold, flexShrink: 0 }} />
+            <div style={{ flex: 1, width: 0.5, background: `rgba(201,168,76,0.30)`, marginTop: 1 }} />
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Bar width="60%" bg="#1a2332" height={2.5} style={{ opacity: 0.7 }} />
+            <Bar width="40%" bg={gold} height={1.5} style={{ opacity: 0.7 }} />
+            <Bar width="90%" bg="#e5e7eb" height={1.5} />
+            <Bar width="75%" bg="#e5e7eb" height={1.5} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function CVThumbnail(props: CVThumbnailProps) {
@@ -257,8 +337,9 @@ export default function CVThumbnail(props: CVThumbnailProps) {
 
   const rendererProps: RendererProps = { color, initials, hasName };
 
-  if (layout === 'sidebar')  return <SidebarThumb  {...rendererProps} />;
-  if (layout === 'top-bar')  return <TopBarThumb   {...rendererProps} />;
-  if (layout === 'compact')  return <CompactThumb  {...rendererProps} />;
+  if (layout === 'sidebar')    return <SidebarThumb   {...rendererProps} />;
+  if (layout === 'top-bar')    return <TopBarThumb    {...rendererProps} />;
+  if (layout === 'compact')    return <CompactThumb   {...rendererProps} />;
+  if (layout === 'slate-gold') return <SlateGoldThumb {...rendererProps} />;
   return <ClassicThumb {...rendererProps} />;
 }

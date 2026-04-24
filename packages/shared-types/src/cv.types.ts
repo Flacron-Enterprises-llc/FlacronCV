@@ -17,7 +17,7 @@ export interface PersonalInfo {
   summary: string;
 }
 
-export type CVLayout = 'classic' | 'sidebar' | 'top-bar' | 'compact';
+export type CVLayout = 'classic' | 'sidebar' | 'top-bar' | 'compact' | 'slate-gold';
 export type SectionStyle = 'underline' | 'card' | 'left-border' | 'minimal';
 export type BorderRadiusStyle = 'none' | 'small' | 'medium' | 'large';
 

@@ -21,6 +21,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { useInView } from '@/hooks/useInView';
+import { useAuth } from '@/providers/AuthProvider';
 
 /* ─── Micro-components for the mockup ─── */
 
@@ -249,8 +250,11 @@ function FloatingCard({
 /* ─── Main Hero ─── */
 export default function Hero() {
   const t = useTranslations();
+  const { user } = useAuth();
   const { ref: contentRef, isInView: contentInView } = useInView({ threshold: 0.1 });
   const { ref: mockupRef, isInView: mockupInView } = useInView({ threshold: 0.05 });
+  // Authenticated users skip the register page entirely and land in the app.
+  const primaryHref = user ? '/dashboard' : '/register';
 
   return (
     <section className="relative overflow-hidden pt-16">
@@ -289,7 +293,7 @@ export default function Hero() {
 
           {/* CTAs */}
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Link href="/register">
+            <Link href={primaryHref}>
               <Button variant="gradient" size="lg">
                 {t('hero.cta_primary')}
               </Button>

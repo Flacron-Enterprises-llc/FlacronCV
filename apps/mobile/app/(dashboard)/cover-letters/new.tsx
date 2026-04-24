@@ -45,8 +45,8 @@ export default function NewCoverLetterScreen() {
   });
 
   const onSubmit = async (data: FormData) => {
-    const plan = user?.subscription.plan ?? SubscriptionPlan.FREE;
-    const clCount = user?.usage.coverLettersCreated ?? 0;
+    const plan = user?.subscription?.plan ?? SubscriptionPlan.FREE;
+    const clCount = user?.usage?.coverLettersCreated ?? 0;
 
     if (!canCreateCoverLetter(plan, clCount)) {
       Alert.alert(

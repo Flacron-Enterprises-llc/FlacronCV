@@ -29,8 +29,8 @@ export default function CVEditorScreen() {
   }, [cv, sections]);
 
   const handleExport = async (format: 'pdf' | 'docx') => {
-    const plan = user?.subscription.plan ?? SubscriptionPlan.FREE;
-    const exports = user?.usage.exportsThisMonth ?? 0;
+    const plan = user?.subscription?.plan ?? SubscriptionPlan.FREE;
+    const exports = user?.usage?.exportsThisMonth ?? 0;
 
     if (!canExport(plan, exports)) {
       Alert.alert(
