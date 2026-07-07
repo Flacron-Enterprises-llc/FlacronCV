@@ -120,9 +120,9 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
             <div key={section.id} style={{ marginBottom: `${tightSp.section}px` }}>
               <SectionHeading title={section.title} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
               {section.type === 'skills' ? (
-                <div style={{ lineHeight: 'normal', marginBottom: '-3px' }}>
+                <div style={{ lineHeight: 0 }}>
                   {section.items.map((item: any, i) => (
-                    <span key={i} style={{ display: 'inline-block', marginRight: '3px', marginBottom: '3px' }}>
+                    <span key={i} style={{ display: 'inline-block', verticalAlign: 'top', marginRight: '4px', marginBottom: '4px' }}>
                       <SkillBadge name={item.name} primary={primary} fs={fs} br={br} variant="default" />
                     </span>
                   ))}

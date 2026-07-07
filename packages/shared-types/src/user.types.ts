@@ -64,6 +64,7 @@ export interface CreateUserData {
 
 export interface UpdateUserData {
   displayName?: string;
+  photoURL?: string | null;
   profile?: Partial<UserProfile>;
   preferences?: Partial<UserPreferences>;
 }

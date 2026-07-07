@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import { useRouter } from '@/i18n/routing';
 import CRMSidebar from '@/components/crm/CRMSidebar';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import { Loader2 } from 'lucide-react';
 
 export default function CRMLayout({ children }: { children: React.ReactNode }) {
@@ -32,7 +33,9 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen bg-stone-50 dark:bg-black">
       <CRMSidebar />
       <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
       </main>
     </div>
   );

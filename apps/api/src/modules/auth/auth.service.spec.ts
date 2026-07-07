@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { UsersService } from '../users/users.service';
@@ -35,12 +36,17 @@ describe('AuthService', () => {
       sendEmailVerificationEmail: jest.fn().mockResolvedValue(undefined),
     };
 
+    const mockConfigService = {
+      get: jest.fn().mockReturnValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: FirebaseAdminService, useValue: mockFirebaseAdmin },
         { provide: UsersService, useValue: mockUsersService },
         { provide: MailService, useValue: mockMailService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
@@ -149,6 +155,7 @@ describe('AuthService', () => {
 
       expect(mockFirebaseAdmin.auth.generateEmailVerificationLink).toHaveBeenCalledWith(
         'verify@example.com',
+        expect.any(Object),
       );
       expect(mockMailService.sendEmailVerificationEmail).toHaveBeenCalledWith(
         'verify@example.com',

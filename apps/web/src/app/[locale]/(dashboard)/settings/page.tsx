@@ -80,8 +80,9 @@ export default function SettingsPage(): React.JSX.Element | null {
   // Profile mutation
   const profileMutation = useMutation({
     mutationFn: (data: Partial<UserProfile>) => api.put<User>('/users/me', { profile: data }),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(t('profile.saveSuccess'));
+      await refreshUser();
       queryClient.invalidateQueries({ queryKey: ['user'] });
     },
     onError: (error: Error) => {
@@ -168,8 +169,9 @@ export default function SettingsPage(): React.JSX.Element | null {
       // Persist to backend
       await api.put('/users/me', { photoURL: downloadURL });
 
-      // Refresh global auth context
+      // Refresh global auth context so user.photoURL reflects the new URL
       await refreshUser();
+      setPreviewUrl(null);
 
       toast.success('Profile picture updated.');
     } catch (err: any) {

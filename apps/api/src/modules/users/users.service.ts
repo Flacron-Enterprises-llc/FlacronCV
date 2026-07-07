@@ -87,10 +87,19 @@ export class UsersService {
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
 
     if (data.displayName) updateData.displayName = data.displayName;
+    if (data.photoURL !== undefined) updateData.photoURL = data.photoURL;
     if (data.profile) {
       Object.entries(data.profile).forEach(([key, value]) => {
         updateData[`profile.${key}`] = value;
       });
+
+      // Keep top-level displayName in sync when name parts change
+      if (data.profile.firstName !== undefined || data.profile.lastName !== undefined) {
+        const current = await this.findByIdOrThrow(uid);
+        const firstName = data.profile.firstName ?? current.profile?.firstName ?? '';
+        const lastName = data.profile.lastName ?? current.profile?.lastName ?? '';
+        updateData.displayName = `${firstName} ${lastName}`.trim();
+      }
     }
     if (data.preferences) {
       Object.entries(data.preferences).forEach(([key, value]) => {

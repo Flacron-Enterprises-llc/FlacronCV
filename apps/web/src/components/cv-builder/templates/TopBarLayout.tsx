@@ -59,8 +59,7 @@ export default function TopBarLayout({ cv, sections }: LayoutProps) {
             lineHeight: 1.1,
             letterSpacing: '-0.8px',
           }}>
-            {cv.personalInfo.firstName}{' '}
-            <span style={{ fontWeight: 300 }}>{cv.personalInfo.lastName}</span>
+            {cv.personalInfo.firstName}{' '}{cv.personalInfo.lastName}
           </h1>
 
           {cv.personalInfo.headline && (
@@ -118,11 +117,10 @@ export default function TopBarLayout({ cv, sections }: LayoutProps) {
                 border: `1px solid ${hexToRgba(primary, 0.15)}`,
                 borderRadius: br,
                 padding: '10px 12px',
-                lineHeight: 'normal',
-                marginBottom: '-5px',
+                lineHeight: 0,
               }}>
                 {section.items.map((item: any, i) => (
-                  <span key={i} style={{ display: 'inline-block', marginRight: '5px', marginBottom: '5px' }}>
+                  <span key={i} style={{ display: 'inline-block', verticalAlign: 'top', marginRight: '6px', marginBottom: '6px' }}>
                     <SkillBadge name={item.name} primary={primary} fs={fs} br={br} variant="pill" />
                   </span>
                 ))}
