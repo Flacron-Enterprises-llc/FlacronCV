@@ -1,3 +1,5 @@
+import { vi } from 'vitest';
+
 export const getFirestore = vi.fn(() => ({}));
 export const collection = vi.fn();
 export const doc = vi.fn();

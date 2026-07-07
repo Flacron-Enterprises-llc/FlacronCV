@@ -6,7 +6,6 @@ import { api } from '@/lib/api';
 import { CRMSubscriptionRecord } from '@flacroncv/shared-types';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import CRMStatusBadge from '@/components/crm/CRMStatusBadge';
 import {
   CreditCard,
   Search,
@@ -32,6 +31,15 @@ const PLAN_COLORS: Record<string, string> = {
   free: 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300',
   pro: 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300',
   enterprise: 'bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  active: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+  trialing: 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+  past_due: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+  incomplete: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+  canceled: 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
+  unpaid: 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
 };
 
 const STATUS_OPTIONS = ['', 'active', 'canceled', 'past_due', 'trialing', 'incomplete', 'unpaid'];
@@ -197,7 +205,15 @@ export default function CRMSubscriptionsPage(): React.JSX.Element {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <CRMStatusBadge status={sub.status as any} />
+                        <span
+                          className={cn(
+                            'rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize',
+                            STATUS_COLORS[sub.status] ??
+                              'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400',
+                          )}
+                        >
+                          {sub.status.replace(/_/g, ' ')}
+                        </span>
                       </td>
                       <td className="px-4 py-3 font-medium text-stone-900 dark:text-white">
                         {formatAmount(sub.amount, sub.currency)}
