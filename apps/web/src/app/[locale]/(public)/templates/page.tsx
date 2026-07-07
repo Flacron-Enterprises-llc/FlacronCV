@@ -1,7 +1,5 @@
 'use client';
-import React from 'react';
-
-import { useState, useMemo, ReactNode } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
@@ -12,6 +10,13 @@ import { toast } from 'sonner';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
+import TemplatePreviewModal from '@/components/cv-builder/TemplatePreviewModal';
+import ClassicLayout   from '@/components/cv-builder/templates/ClassicLayout';
+import SidebarLayout   from '@/components/cv-builder/templates/SidebarLayout';
+import TopBarLayout    from '@/components/cv-builder/templates/TopBarLayout';
+import CompactLayout   from '@/components/cv-builder/templates/CompactLayout';
+import SlateGoldLayout from '@/components/cv-builder/templates/SlateGoldLayout';
+import { buildSampleCV, SAMPLE_SECTIONS } from '@/lib/previewSampleCV';
 import {
   Lock,
   Star,
@@ -20,11 +25,13 @@ import {
   LayoutTemplate,
   ArrowRight,
   CheckCircle,
+  Eye,
 } from 'lucide-react';
 import {
   Template,
   TemplateCategory,
   SubscriptionPlan,
+  type CVLayout,
 } from '@flacroncv/shared-types';
 import { Link } from '@/i18n/routing';
 
@@ -52,403 +59,83 @@ const categoryLabelMap: Record<TemplateCategory, string> = {
   [TemplateCategory.COVER_LETTER]: 'Cover Letter',
 };
 
-/* ─── Mockup components (reused from cv/new/page) ─── */
+/* ─── Slug → layout/color mapping ─── */
 
-function MockupModern() {
-  return (
-    <div className="flex h-full w-full gap-1 p-2">
-      <div className="w-1/3 space-y-1.5 rounded bg-brand-100 p-1.5 dark:bg-brand-900/40">
-        <div className="h-4 w-4 rounded-full bg-brand-300 dark:bg-brand-700" />
-        <div className="h-1 w-full rounded bg-brand-200 dark:bg-brand-800" />
-        <div className="h-1 w-3/4 rounded bg-brand-200 dark:bg-brand-800" />
-        <div className="mt-2 h-1 w-full rounded bg-brand-200 dark:bg-brand-800" />
-        <div className="h-1 w-2/3 rounded bg-brand-200 dark:bg-brand-800" />
-      </div>
-      <div className="flex-1 space-y-1.5 p-1">
-        <div className="h-2 w-3/4 rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-5/6 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="mt-2 h-1.5 w-1/2 rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-function MockupClassic() {
-  return (
-    <div className="flex h-full w-full flex-col items-center space-y-1.5 p-3">
-      <div className="h-2.5 w-2/3 rounded bg-stone-400 dark:bg-stone-500" />
-      <div className="h-1 w-1/2 rounded bg-stone-300 dark:bg-stone-600" />
-      <div className="h-px w-full bg-stone-300 dark:bg-stone-600" />
-      <div className="w-full space-y-1">
-        <div className="h-1.5 w-1/3 rounded bg-stone-400 dark:bg-stone-500" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-      <div className="h-px w-full bg-stone-300 dark:bg-stone-600" />
-      <div className="w-full space-y-1">
-        <div className="h-1.5 w-1/4 rounded bg-stone-400 dark:bg-stone-500" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-5/6 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-function MockupMinimal() {
-  return (
-    <div className="flex h-full w-full flex-col space-y-3 p-4">
-      <div className="h-2 w-1/3 rounded bg-stone-300 dark:bg-stone-600" />
-      <div className="h-1 w-1/4 rounded bg-stone-200 dark:bg-stone-700" />
-      <div className="mt-4 space-y-2">
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-      <div className="mt-4 space-y-2">
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-1/2 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-function MockupProfessional() {
-  return (
-    <div className="flex h-full w-full flex-col p-2">
-      <div className="mb-2 rounded bg-brand-500 p-1.5 dark:bg-brand-600">
-        <div className="h-2 w-1/2 rounded bg-white/80" />
-        <div className="mt-0.5 h-1 w-1/3 rounded bg-white/50" />
-      </div>
-      <div className="flex flex-1 gap-1.5">
-        <div className="flex-1 space-y-1">
-          <div className="h-1.5 w-2/3 rounded bg-stone-300 dark:bg-stone-600" />
-          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
-        </div>
-        <div className="flex-1 space-y-1">
-          <div className="h-1.5 w-2/3 rounded bg-stone-300 dark:bg-stone-600" />
-          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-1 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MockupCreative() {
-  return (
-    <div className="relative flex h-full w-full p-2">
-      <div className="absolute end-0 top-0 h-1/2 w-1/3 rounded-bl-2xl bg-brand-400/30 dark:bg-brand-600/30" />
-      <div className="z-10 flex-1 space-y-1.5 p-1.5">
-        <div className="h-3 w-3/4 rounded bg-brand-400 dark:bg-brand-600" />
-        <div className="h-1 w-1/2 rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="mt-3 h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-2/3 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="mt-2 flex gap-1">
-          <div className="h-2 w-8 rounded-full bg-brand-200 dark:bg-brand-800" />
-          <div className="h-2 w-6 rounded-full bg-brand-200 dark:bg-brand-800" />
-          <div className="h-2 w-10 rounded-full bg-brand-200 dark:bg-brand-800" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MockupExecutive() {
-  return (
-    <div className="flex h-full w-full flex-col p-2">
-      <div className="mb-2 rounded bg-stone-800 p-2 dark:bg-stone-200">
-        <div className="h-2.5 w-2/3 rounded bg-white/90 dark:bg-stone-800" />
-        <div className="mt-1 h-1 w-1/3 rounded bg-white/50 dark:bg-stone-600" />
-      </div>
-      <div className="space-y-1.5 p-1">
-        <div className="flex items-center gap-1.5">
-          <div className="h-1.5 w-1/4 rounded bg-brand-500" />
-          <div className="h-px flex-1 bg-stone-300 dark:bg-stone-600" />
-        </div>
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-5/6 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="flex items-center gap-1.5 pt-1">
-          <div className="h-1.5 w-1/4 rounded bg-brand-500" />
-          <div className="h-px flex-1 bg-stone-300 dark:bg-stone-600" />
-        </div>
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-function MockupCompact() {
-  return (
-    <div className="flex h-full w-full flex-col space-y-0.5 p-1.5">
-      <div className="flex items-center gap-1">
-        <div className="h-2 w-1/3 rounded bg-stone-400 dark:bg-stone-500" />
-        <div className="h-1 w-1/4 rounded bg-stone-300 dark:bg-stone-600" />
-      </div>
-      <div className="h-px w-full bg-stone-300 dark:bg-stone-600" />
-      <div className="flex gap-1">
-        <div className="flex-1 space-y-0.5">
-          <div className="h-1 w-2/3 rounded bg-stone-300 dark:bg-stone-600" />
-          <div className="h-0.5 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-0.5 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-0.5 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
-        </div>
-        <div className="flex-1 space-y-0.5">
-          <div className="h-1 w-2/3 rounded bg-stone-300 dark:bg-stone-600" />
-          <div className="h-0.5 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-0.5 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-0.5 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MockupTwoColumn() {
-  return (
-    <div className="flex h-full w-full gap-1 p-2">
-      <div className="w-2/5 space-y-1.5 rounded bg-stone-100 p-1.5 dark:bg-stone-800">
-        <div className="h-3 w-3 rounded-full bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-full rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-2/3 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="mt-1.5 h-1.5 w-1/2 rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="flex gap-0.5">
-          <div className="h-1.5 w-6 rounded-full bg-brand-200 dark:bg-brand-800" />
-          <div className="h-1.5 w-5 rounded-full bg-brand-200 dark:bg-brand-800" />
-        </div>
-      </div>
-      <div className="flex-1 space-y-1.5 p-1">
-        <div className="h-2 w-2/3 rounded bg-stone-400 dark:bg-stone-500" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="mt-1.5 h-1.5 w-1/3 rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-function MockupAcademic() {
-  return (
-    <div className="flex h-full w-full flex-col space-y-1.5 p-3">
-      <div className="h-2 w-1/2 rounded bg-stone-400 dark:bg-stone-500" />
-      <div className="h-1 w-1/3 rounded bg-stone-300 dark:bg-stone-600" />
-      <div className="h-px w-full bg-stone-200 dark:bg-stone-700" />
-      <div className="space-y-0.5">
-        <div className="h-1.5 w-1/4 rounded bg-stone-400 dark:bg-stone-500" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-5/6 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-      <div className="h-px w-full bg-stone-200 dark:bg-stone-700" />
-      <div className="space-y-0.5">
-        <div className="h-1.5 w-1/3 rounded bg-stone-400 dark:bg-stone-500" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-function MockupBold() {
-  return (
-    <div className="flex h-full w-full flex-col p-2">
-      <div className="mb-1.5 rounded-lg bg-brand-500 p-2.5 dark:bg-brand-600">
-        <div className="h-3 w-3/4 rounded bg-white/90" />
-        <div className="mt-1 h-1.5 w-1/2 rounded bg-white/60" />
-      </div>
-      <div className="flex gap-2 p-1">
-        <div className="h-4 w-1 rounded-full bg-brand-400 dark:bg-brand-600" />
-        <div className="flex-1 space-y-1">
-          <div className="h-1.5 w-1/2 rounded bg-stone-400 dark:bg-stone-500" />
-          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-1 w-5/6 rounded bg-stone-200 dark:bg-stone-700" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MockupFallback() {
-  return (
-    <div className="flex h-full w-full items-center justify-center p-3">
-      <div className="w-14 space-y-1">
-        <div className="h-1.5 w-full rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-1/2 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-/* ─── Cover Letter Mockup components ─── */
-
-function MockupCLClassic() {
-  return (
-    <div className="flex h-full w-full flex-col p-3 font-serif">
-      <div className="mb-2 space-y-0.5 text-center">
-        <div className="h-2 w-1/2 rounded bg-stone-500 dark:bg-stone-400 mx-auto" />
-        <div className="h-1 w-1/3 rounded bg-stone-300 dark:bg-stone-600 mx-auto" />
-      </div>
-      <div className="h-px w-full bg-stone-400 dark:bg-stone-600 mb-2" />
-      <div className="space-y-1">
-        <div className="h-1 w-1/4 rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-1/3 rounded bg-stone-300 dark:bg-stone-600" />
-      </div>
-      <div className="mt-2 space-y-1">
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-function MockupCLModern() {
-  return (
-    <div className="flex h-full w-full flex-col">
-      <div className="rounded-t bg-blue-500 p-2 dark:bg-blue-700">
-        <div className="h-2.5 w-2/5 rounded bg-white/90" />
-        <div className="mt-0.5 h-1 w-1/4 rounded bg-white/60" />
-      </div>
-      <div className="flex-1 space-y-1 p-2 pt-1.5">
-        <div className="h-1 w-1/3 rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="mt-1 h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-3/5 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-function MockupCLMinimalist() {
-  return (
-    <div className="flex h-full w-full flex-col space-y-2 p-4">
-      <div className="h-1.5 w-1/3 rounded bg-stone-500 dark:bg-stone-400 uppercase tracking-wider" />
-      <div className="h-0.5 w-full rounded bg-stone-200 dark:bg-stone-700" />
-      <div className="space-y-1 pt-1">
-        <div className="h-1 w-1/4 rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-1/3 rounded bg-stone-300 dark:bg-stone-600" />
-      </div>
-      <div className="space-y-1 pt-1">
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-function MockupCLCreative() {
-  return (
-    <div className="relative flex h-full w-full">
-      <div className="absolute left-0 top-0 h-full w-1.5 rounded-l bg-violet-500 dark:bg-violet-600" />
-      <div className="ml-2.5 flex flex-1 flex-col p-2">
-        <div className="mb-1.5 space-y-0.5">
-          <div className="h-2 w-2/5 rounded bg-violet-500 dark:bg-violet-600" />
-          <div className="h-1 w-1/4 rounded bg-stone-300 dark:bg-stone-600" />
-        </div>
-        <div className="mb-1.5 rounded bg-violet-50 px-1.5 py-1 dark:bg-violet-900/30">
-          <div className="h-1 w-3/5 rounded bg-violet-300 dark:bg-violet-700" />
-        </div>
-        <div className="space-y-1">
-          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-1 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MockupCLCorporate() {
-  return (
-    <div className="flex h-full w-full flex-col">
-      <div className="h-1.5 w-full rounded-t bg-teal-600 dark:bg-teal-700" />
-      <div className="flex-1 p-2">
-        <div className="mb-1.5 flex items-end justify-between">
-          <div className="space-y-0.5">
-            <div className="h-2 w-24 rounded bg-stone-500 dark:bg-stone-400" />
-            <div className="h-1 w-16 rounded bg-stone-300 dark:bg-stone-600" />
-          </div>
-          <div className="h-1 w-12 rounded bg-stone-300 dark:bg-stone-600" />
-        </div>
-        <div className="h-px w-full bg-teal-200 dark:bg-teal-900 mb-1.5" />
-        <div className="space-y-1">
-          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-700" />
-          <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MockupCLExecutive() {
-  return (
-    <div className="flex h-full w-full flex-col p-2.5">
-      <div className="mb-2 space-y-0.5 text-right">
-        <div className="h-2 w-1/2 rounded bg-stone-800 dark:bg-stone-200 ml-auto" />
-        <div className="h-1 w-1/3 rounded bg-stone-400 dark:bg-stone-500 ml-auto" />
-      </div>
-      <div className="h-0.5 w-full rounded bg-gradient-to-r from-stone-800 to-stone-400 dark:from-stone-200 dark:to-stone-600 mb-2" />
-      <div className="space-y-0.5 mb-1.5">
-        <div className="h-1 w-1/4 rounded bg-stone-300 dark:bg-stone-600" />
-        <div className="h-1 w-1/3 rounded bg-stone-300 dark:bg-stone-600" />
-      </div>
-      <div className="space-y-1">
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="h-1 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
-      </div>
-    </div>
-  );
-}
-
-const mockupMap: Record<string, () => ReactNode> = {
-  // CV templates
-  modern: () => <MockupModern />,
-  classic: () => <MockupClassic />,
-  minimal: () => <MockupMinimal />,
-  professional: () => <MockupProfessional />,
-  creative: () => <MockupCreative />,
-  executive: () => <MockupExecutive />,
-  compact: () => <MockupCompact />,
-  'two-column': () => <MockupTwoColumn />,
-  academic: () => <MockupAcademic />,
-  bold: () => <MockupBold />,
-  // Cover Letter templates
-  'cl-classic': () => <MockupCLClassic />,
-  'cl-modern': () => <MockupCLModern />,
-  'cl-minimalist': () => <MockupCLMinimalist />,
-  'cl-creative': () => <MockupCLCreative />,
-  'cl-corporate': () => <MockupCLCorporate />,
-  'cl-executive': () => <MockupCLExecutive />,
+const templateMeta: Record<string, { layout: CVLayout; color: string }> = {
+  classic:       { layout: 'classic',    color: '#1e3a5f' },
+  modern:        { layout: 'sidebar',    color: '#2563eb' },
+  minimal:       { layout: 'classic',    color: '#374151' },
+  professional:  { layout: 'top-bar',   color: '#0f766e' },
+  creative:      { layout: 'top-bar',   color: '#7c3aed' },
+  executive:     { layout: 'compact',   color: '#0c0c0c' },
+  compact:       { layout: 'compact',   color: '#1d4ed8' },
+  'two-column':  { layout: 'sidebar',    color: '#059669' },
+  academic:      { layout: 'classic',    color: '#6b21a8' },
+  bold:          { layout: 'top-bar',   color: '#dc2626' },
+  'slate-gold':  { layout: 'slate-gold', color: '#C9A84C' },
 };
 
+/* ─── Real template thumbnail ─── */
+
+function CVTemplateThumbnail({ slug }: { slug: string }) {
+  const meta = templateMeta[slug];
+  if (!meta) return null;
+
+  const cv       = buildSampleCV(meta.layout, meta.color);
+  const sections = SAMPLE_SECTIONS;
+
+  let LayoutComponent: React.ComponentType<{ cv: typeof cv; sections: typeof sections }>;
+  switch (meta.layout) {
+    case 'sidebar':    LayoutComponent = SidebarLayout;   break;
+    case 'top-bar':    LayoutComponent = TopBarLayout;    break;
+    case 'compact':    LayoutComponent = CompactLayout;   break;
+    case 'slate-gold': LayoutComponent = SlateGoldLayout; break;
+    default:           LayoutComponent = ClassicLayout;   break;
+  }
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: '50%',
+        width: '794px',
+        transformOrigin: 'top center',
+        transform: 'translateX(-50%) scale(var(--thumb-scale, 0.33))',
+        pointerEvents: 'none',
+        userSelect: 'none',
+      }}
+      // Responsive scale: matches grid breakpoints (xl=4col, lg=3col, sm=2col, 1col)
+      className="[--thumb-scale:0.44] sm:[--thumb-scale:0.60] lg:[--thumb-scale:0.45] xl:[--thumb-scale:0.34]"
+    >
+      <LayoutComponent cv={cv} sections={sections} />
+    </div>
+  );
+}
+
+/* ─── Cover-letter placeholder thumbnail ─── */
+
+function CLPlaceholderThumbnail({ color }: { color: string }) {
+  return (
+    <div className="flex h-full w-full flex-col gap-2 bg-white p-5">
+      <div className="h-3 w-1/2 rounded" style={{ background: color }} />
+      <div className="h-1.5 w-1/3 rounded bg-stone-200" />
+      <div className="mt-3 h-px w-full bg-stone-200" />
+      <div className="mt-1 space-y-1.5">
+        {[100, 95, 100, 80, 100, 70].map((w, i) => (
+          <div key={i} className="rounded bg-stone-100" style={{ height: 6, width: `${w}%` }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Skeleton card ─── */
+
 function SkeletonCard() {
   return (
     <Card padding="none" className="flex flex-col animate-pulse overflow-hidden">
-      <div className="h-48 bg-stone-200 dark:bg-stone-700 shrink-0" />
+      <div className="h-52 bg-stone-200 dark:bg-stone-700 shrink-0" />
       <div className="flex flex-1 flex-col justify-between p-4">
         <div className="space-y-3">
           <div className="h-5 w-2/3 rounded bg-stone-200 dark:bg-stone-700" />
@@ -464,13 +151,15 @@ function SkeletonCard() {
 }
 
 /* ─── Main page ─── */
+
 export default function PublicTemplatesPage(): React.JSX.Element | null {
   const t = useTranslations();
   const router = useRouter();
   const { user } = useAuth();
 
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
-  const [tierFilter, setTierFilter] = useState<TierFilter>('all');
+  const [tierFilter, setTierFilter]         = useState<TierFilter>('all');
+  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
 
   const { data: templates, isLoading, isError } = useQuery({
     queryKey: ['public-templates'],
@@ -497,7 +186,6 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
 
   const handleUseTemplate = (template: Template) => {
     if (!user) {
-      // Save pending template to localStorage, then redirect to login
       try {
         localStorage.setItem(
           PENDING_TEMPLATE_KEY,
@@ -536,6 +224,14 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
     { value: SubscriptionPlan.PRO, label: t('templates.pro') },
     { value: SubscriptionPlan.ENTERPRISE, label: t('templates.enterprise') },
   ];
+
+  // Derive modal props from previewTemplate
+  const previewMeta     = previewTemplate ? templateMeta[previewTemplate.slug] : null;
+  const previewLayout   = previewMeta?.layout ?? 'classic';
+  const previewColor    = previewMeta?.color ?? '#2563eb';
+  const previewIsPro    = previewTemplate ? previewTemplate.tier !== SubscriptionPlan.FREE : false;
+  const previewTierLabel = previewTemplate ? tierLabelMap[previewTemplate.tier] : 'Pro';
+  const previewAccess   = previewTemplate ? canUseTemplate(previewTemplate) : false;
 
   return (
     <>
@@ -612,23 +308,27 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
         ) : filteredTemplates.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredTemplates.map((template) => {
-              const isLocked = user ? !canUseTemplate(template) : false;
-              const Mockup = mockupMap[template.slug] ?? (() => <MockupFallback />);
+              const isLocked  = user ? !canUseTemplate(template) : false;
+              const isCVTemplate = template.category === TemplateCategory.CV;
+              const accentColor  = templateMeta[template.slug]?.color ?? '#2563eb';
 
               return (
                 <Card
                   key={template.id}
                   padding="none"
                   hover
-                  // flex flex-col: lets the content area grow to fill the
-                  // grid-stretched card height so justify-between can pin
-                  // the action button to the same baseline across every card.
                   className="group flex flex-col overflow-hidden"
                 >
-                  {/* Thumbnail — fixed height, never shrinks */}
+                  {/* Thumbnail */}
                   <div className="relative shrink-0">
                     <div className="relative h-52 overflow-hidden bg-white dark:bg-stone-950">
-                      <Mockup />
+
+                      {/* Real template render (CV) or simple placeholder (Cover Letter) */}
+                      {isCVTemplate ? (
+                        <CVTemplateThumbnail slug={template.slug} />
+                      ) : (
+                        <CLPlaceholderThumbnail color={accentColor} />
+                      )}
 
                       {/* Lock overlay */}
                       {isLocked && (
@@ -649,12 +349,21 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
                           </div>
                         </div>
                       )}
+
+                      {/* Hover preview hint */}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all group-hover:bg-black/25">
+                        <button
+                          onClick={() => setPreviewTemplate(template)}
+                          className="flex translate-y-2 items-center gap-1.5 rounded-full bg-white/95 px-4 py-1.5 text-xs font-semibold text-stone-800 opacity-0 shadow-md transition-all hover:bg-white group-hover:translate-y-0 group-hover:opacity-100"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          {t('public_templates.preview')}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Card content — flex-1 fills the remaining card height so
-                      justify-between always pins the button to the card bottom,
-                      regardless of how many lines the title/description wraps to. */}
+                  {/* Card content */}
                   <div className="flex flex-1 flex-col justify-between gap-3 p-4">
                     <div className="space-y-2">
                       <div>
@@ -674,38 +383,49 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
                       </div>
                     </div>
 
-                    {/* Action button — always at the card bottom */}
-                    {!user ? (
+                    {/* Action buttons */}
+                    <div className="flex flex-col gap-2">
                       <Button
                         className="w-full"
-                        variant="primary"
+                        variant="ghost"
                         size="sm"
-                        icon={<LogIn className="h-4 w-4" />}
-                        onClick={() => handleUseTemplate(template)}
+                        icon={<Eye className="h-4 w-4" />}
+                        onClick={() => setPreviewTemplate(template)}
                       >
-                        {t('public_templates.login_to_use')}
+                        {t('public_templates.preview')}
                       </Button>
-                    ) : isLocked ? (
-                      <Button
-                        className="w-full"
-                        variant="secondary"
-                        size="sm"
-                        icon={<Lock className="h-4 w-4" />}
-                        onClick={() => handleUseTemplate(template)}
-                      >
-                        {t('public_templates.buy_template')}
-                      </Button>
-                    ) : (
-                      <Button
-                        className="w-full"
-                        variant="primary"
-                        size="sm"
-                        icon={<Sparkles className="h-4 w-4" />}
-                        onClick={() => handleUseTemplate(template)}
-                      >
-                        {t('public_templates.use_template')}
-                      </Button>
-                    )}
+                      {!user ? (
+                        <Button
+                          className="w-full"
+                          variant="primary"
+                          size="sm"
+                          icon={<LogIn className="h-4 w-4" />}
+                          onClick={() => handleUseTemplate(template)}
+                        >
+                          {t('public_templates.login_to_use')}
+                        </Button>
+                      ) : isLocked ? (
+                        <Button
+                          className="w-full"
+                          variant="secondary"
+                          size="sm"
+                          icon={<Lock className="h-4 w-4" />}
+                          onClick={() => handleUseTemplate(template)}
+                        >
+                          {t('public_templates.buy_template')}
+                        </Button>
+                      ) : (
+                        <Button
+                          className="w-full"
+                          variant="primary"
+                          size="sm"
+                          icon={<Sparkles className="h-4 w-4" />}
+                          onClick={() => handleUseTemplate(template)}
+                        >
+                          {t('public_templates.use_template')}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </Card>
               );
@@ -779,6 +499,24 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
           </div>
         </div>
       </section>
+
+      {/* Full-screen preview modal — uses real template renderer */}
+      {previewTemplate && (
+        <TemplatePreviewModal
+          isOpen={true}
+          onClose={() => setPreviewTemplate(null)}
+          templateName={previewTemplate.name}
+          layout={previewLayout}
+          accentColor={previewColor}
+          isPro={previewIsPro}
+          tierLabel={previewTierLabel}
+          userCanAccess={previewAccess}
+          onSelect={() => {
+            setPreviewTemplate(null);
+            handleUseTemplate(previewTemplate);
+          }}
+        />
+      )}
     </>
   );
 }

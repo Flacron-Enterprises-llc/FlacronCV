@@ -77,6 +77,7 @@ export function SectionHeading({ title, primary, headingFont, fs, sectionStyle, 
     fontWeight: 700,
     letterSpacing: '0.6px',
     textTransform: 'uppercase',
+    marginTop: 0,
     marginBottom: '8px',
     fontSize: `${fs.sectionTitle}px`,
   };
@@ -242,10 +243,11 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
 //     Templates use inline-block + margin wrappers instead of flex+gap because
 //     html2canvas's JS layout engine does not fully support CSS `gap` on flex
 //     containers, causing badges to render without spacing in the PDF.
-// Vertical centering is achieved via verticalAlign + symmetric padding.
+// verticalAlign:'top' avoids strut-alignment issues in html2canvas where
+// 'middle' causes badges to shift when the parent has a non-zero line-box height.
 const BADGE_BASE: React.CSSProperties = {
   display: 'inline-block',
-  verticalAlign: 'middle',
+  verticalAlign: 'top',
   lineHeight: 1,
   whiteSpace: 'nowrap',
 };

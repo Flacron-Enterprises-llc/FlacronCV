@@ -103,6 +103,8 @@ export class CRMUsersService {
       role,
       updatedAt: new Date(),
     });
+    // Sync to Firebase Auth custom claims so the JWT reflects the new role immediately
+    await this.firebase.auth.setCustomUserClaims(uid, { role });
     await this.audit.log({
       actorId,
       actorEmail,
@@ -147,6 +149,8 @@ export class CRMUsersService {
       deletedAt: new Date(),
       updatedAt: new Date(),
     });
+    // Revoke all active sessions so suspended users can't use existing JWTs
+    await this.firebase.auth.revokeRefreshTokens(uid);
     await this.audit.log({
       actorId,
       actorEmail,

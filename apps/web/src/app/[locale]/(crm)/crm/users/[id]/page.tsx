@@ -6,6 +6,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { User } from '@flacroncv/shared-types';
 import { Link } from '@/i18n/routing';
+import { toast } from 'sonner';
+import { PLAN_CONFIGS } from '@flacroncv/shared-types';
 import {
   ArrowLeft,
   Mail,
@@ -47,19 +49,20 @@ const ROLE_ICONS: Record<string, React.ElementType> = {
 };
 
 function UsageMeter({ label, used, limit }: { label: string; used: number; limit: number }) {
-  const pct = limit <= 0 ? 100 : Math.min(100, Math.round((used / limit) * 100));
-  const color = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-brand-500';
+  const isUnlimited = limit === -1;
+  const pct = isUnlimited ? Math.min(20, used) : Math.min(100, Math.round((used / limit) * 100));
+  const color = isUnlimited ? 'bg-emerald-500' : pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-brand-500';
 
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-xs">
         <span className="text-stone-600 dark:text-stone-400">{label}</span>
         <span className="font-medium text-stone-800 dark:text-stone-200">
-          {used} {limit > 0 ? `/ ${limit}` : '/ ∞'}
+          {used} {isUnlimited ? '/ ∞' : limit > 0 ? `/ ${limit}` : '/ 0'}
         </span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
-        <div className={cn('h-full rounded-full transition-all', color)} style={{ width: `${pct}%` }} />
+        <div className={cn('h-full rounded-full transition-all', color)} style={{ width: isUnlimited ? '15%' : `${pct}%` }} />
       </div>
     </div>
   );
@@ -81,33 +84,49 @@ export default function CRMUserDetailPage(): React.JSX.Element {
 
   const suspendMutation = useMutation({
     mutationFn: () => api.put(`/crm/users/${uid}/suspend`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['crm', 'users', uid] }),
+    onSuccess: () => {
+      toast.success('User suspended');
+      qc.invalidateQueries({ queryKey: ['crm', 'users', uid] });
+    },
+    onError: () => toast.error('Failed to suspend user'),
   });
 
   const reactivateMutation = useMutation({
     mutationFn: () => api.put(`/crm/users/${uid}/reactivate`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['crm', 'users', uid] }),
+    onSuccess: () => {
+      toast.success('User reactivated');
+      qc.invalidateQueries({ queryKey: ['crm', 'users', uid] });
+    },
+    onError: () => toast.error('Failed to reactivate user'),
   });
 
   const resetUsageMutation = useMutation({
     mutationFn: () => api.delete(`/crm/users/${uid}/usage`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['crm', 'users', uid] }),
+    onSuccess: () => {
+      toast.success('Usage reset');
+      qc.invalidateQueries({ queryKey: ['crm', 'users', uid] });
+    },
+    onError: () => toast.error('Failed to reset usage'),
   });
 
   const changeRoleMutation = useMutation({
     mutationFn: (role: string) => api.put(`/crm/users/${uid}/role`, { role }),
     onSuccess: () => {
+      toast.success('Role updated');
       qc.invalidateQueries({ queryKey: ['crm', 'users', uid] });
       setRoleEdit(false);
     },
+    onError: () => toast.error('Failed to update role'),
   });
 
   const changePlanMutation = useMutation({
     mutationFn: (plan: string) => api.put(`/crm/users/${uid}/plan`, { plan }),
     onSuccess: () => {
+      toast.success('Plan updated');
       qc.invalidateQueries({ queryKey: ['crm', 'users', uid] });
       setPlanEdit(false);
     },
+    onError: () => toast.error('Failed to update plan'),
   });
 
   if (isLoading) {
@@ -134,6 +153,12 @@ export default function CRMUserDetailPage(): React.JSX.Element {
       </div>
     );
   }
+
+  const plan = (user.subscription?.plan ?? 'free') as keyof typeof PLAN_CONFIGS;
+  const planLimits = PLAN_CONFIGS[plan]?.limits ?? PLAN_CONFIGS.free.limits;
+  const cvLimit = planLimits.cvs === 'unlimited' ? -1 : planLimits.cvs;
+  const clLimit = planLimits.coverLetters === 'unlimited' ? -1 : planLimits.coverLetters;
+  const exportLimit = planLimits.exports === 'unlimited' ? -1 : planLimits.exports;
 
   const initials = (user.displayName || user.email).split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
   const RoleIcon = ROLE_ICONS[user.role] ?? UserIcon;
@@ -397,12 +422,12 @@ export default function CRMUserDetailPage(): React.JSX.Element {
             <UsageMeter
               label="CVs Created"
               used={user.usage?.cvsCreated ?? 0}
-              limit={user.usage?.cvsCreated ?? 0}
+              limit={cvLimit}
             />
             <UsageMeter
               label="Cover Letters"
               used={user.usage?.coverLettersCreated ?? 0}
-              limit={user.usage?.coverLettersCreated ?? 0}
+              limit={clLimit}
             />
             <UsageMeter
               label="AI Credits"
@@ -412,7 +437,7 @@ export default function CRMUserDetailPage(): React.JSX.Element {
             <UsageMeter
               label="Exports (This Month)"
               used={user.usage?.exportsThisMonth ?? 0}
-              limit={25}
+              limit={exportLimit}
             />
           </div>
         </Card>

@@ -15,6 +15,8 @@ import { CRMPlatformController } from './crm-platform.controller';
 import { CRMPlatformService } from './crm-platform.service';
 import { CRMSettingsController } from './crm-settings.controller';
 import { CRMSettingsService } from './crm-settings.service';
+import { CRMSubscriptionsController } from './crm-subscriptions.controller';
+import { CRMSubscriptionsService } from './crm-subscriptions.service';
 
 @Module({
   controllers: [
@@ -26,6 +28,7 @@ import { CRMSettingsService } from './crm-settings.service';
     CRMUsersController,
     CRMPlatformController,
     CRMSettingsController,
+    CRMSubscriptionsController,
   ],
   providers: [
     CRMCustomersService,
@@ -36,6 +39,7 @@ import { CRMSettingsService } from './crm-settings.service';
     CRMUsersService,
     CRMPlatformService,
     CRMSettingsService,
+    CRMSubscriptionsService,
   ],
   exports: [CRMCustomersService, CRMTransactionsService, CRMAuditService],
 })

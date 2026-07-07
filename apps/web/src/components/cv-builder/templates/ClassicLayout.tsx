@@ -85,12 +85,12 @@ export default function ClassicLayout({ cv, sections }: LayoutProps) {
           <SectionHeading title={section.title} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
 
           {section.type === 'skills' ? (
-            // inline-block + margin instead of flex+gap: html2canvas does not
-            // reliably compute CSS `gap` on flex containers, causing badges to
-            // render touching each other (no spacing) in the exported PDF.
-            <div style={{ lineHeight: 'normal', marginBottom: '-4px' }}>
+            // lineHeight:0 eliminates the anonymous strut that html2canvas inflates
+            // into visible whitespace when badges use verticalAlign. Wrapper spans
+            // set verticalAlign:'top' so each row height is driven by badge height only.
+            <div style={{ lineHeight: 0 }}>
               {section.items.map((item: any, i) => (
-                <span key={i} style={{ display: 'inline-block', marginRight: '4px', marginBottom: '4px' }}>
+                <span key={i} style={{ display: 'inline-block', verticalAlign: 'top', marginRight: '6px', marginBottom: '6px' }}>
                   <SkillBadge name={item.name} primary={primary} fs={fs} br={br} variant="pill" />
                 </span>
               ))}

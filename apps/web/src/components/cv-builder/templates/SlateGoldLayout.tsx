@@ -350,12 +350,12 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
             <SideHeading title={section.title} gold={gold} headingFont={headingFont} fs={fs} />
 
             {section.type === 'skills' ? (
-              <div style={{ lineHeight: 'normal', marginBottom: '-4px' }}>
+              <div style={{ lineHeight: 0 }}>
                 {section.items.map((item: any, i: number) => (
-                  <span key={i} style={{ display: 'inline-block', marginRight: '4px', marginBottom: '4px' }}>
+                  <span key={i} style={{ display: 'inline-block', verticalAlign: 'top', marginRight: '4px', marginBottom: '4px' }}>
                     <span style={{
                       display: 'inline-block',
-                      verticalAlign: 'middle',
+                      verticalAlign: 'top',
                       lineHeight: 1,
                       whiteSpace: 'nowrap',
                       background: hexToRgba(gold, 0.18),
@@ -416,9 +416,9 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
 
               {section.type === 'skills' ? (
                 /* Skills in the main column: pill row */
-                <div style={{ lineHeight: 'normal', marginBottom: '-4px' }}>
+                <div style={{ lineHeight: 0 }}>
                   {section.items.map((item: any, i: number) => (
-                    <span key={i} style={{ display: 'inline-block', marginRight: '4px', marginBottom: '4px' }}>
+                    <span key={i} style={{ display: 'inline-block', verticalAlign: 'top', marginRight: '4px', marginBottom: '4px' }}>
                       <SkillBadge name={item.name} primary={gold} fs={fs} br={br} variant="pill" />
                     </span>
                   ))}

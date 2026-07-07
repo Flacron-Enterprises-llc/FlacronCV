@@ -13,6 +13,7 @@ import {
   Shield,
   Settings,
   UserCog,
+  CreditCard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -32,6 +33,7 @@ const businessNavItems: NavItem[] = [
 
 const platformNavItems: NavItem[] = [
   { href: '/crm/users', icon: UserCog, label: 'Platform Users' },
+  { href: '/crm/subscriptions', icon: CreditCard, label: 'Subscriptions' },
   { href: '/crm/platform', icon: Monitor, label: 'Analytics' },
   { href: '/crm/audit', icon: Shield, label: 'Audit Log' },
 ];

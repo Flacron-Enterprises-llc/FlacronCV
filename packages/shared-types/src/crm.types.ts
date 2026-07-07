@@ -293,6 +293,39 @@ export interface AuditLogListParams {
   endDate?: string;
 }
 
+// ─── Subscriptions (CRM view) ─────────────────────────────────────────────────
+
+export interface CRMSubscriptionRecord {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userDisplayName: string;
+  stripeCustomerId: string;
+  plan: string;
+  priceId: string;
+  interval: string;
+  amount: number;
+  currency: string;
+  status: string;
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+  cancelAt: Date | null;
+  canceledAt: Date | null;
+  cancelAtPeriodEnd: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CRMSubscriptionListParams {
+  page?: number;
+  limit?: number;
+  plan?: string;
+  status?: string;
+  userId?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
 // ─── App Settings ─────────────────────────────────────────────────────────────
 
 export interface AppSettingsPlanLimits {

@@ -16,7 +16,8 @@ import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, FirebaseUser } from '../../common/decorators/current-user.decorator';
-import { UpdateCRMUserRoleDto, UpdateCRMUserPlanDto } from '@flacroncv/shared-types';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { UpdateUserPlanDto } from './dto/update-user-plan.dto';
 
 @ApiTags('crm-users')
 @Controller('crm/users')
@@ -92,7 +93,7 @@ export class CRMUsersController {
   @Put(':id/role')
   updateRole(
     @Param('id') id: string,
-    @Body() dto: UpdateCRMUserRoleDto,
+    @Body() dto: UpdateUserRoleDto,
     @CurrentUser() actor: FirebaseUser,
   ) {
     return this.usersService.updateUserRole(id, dto.role, actor.uid, actor.email);
@@ -101,7 +102,7 @@ export class CRMUsersController {
   @Put(':id/plan')
   updatePlan(
     @Param('id') id: string,
-    @Body() dto: UpdateCRMUserPlanDto,
+    @Body() dto: UpdateUserPlanDto,
     @CurrentUser() actor: FirebaseUser,
   ) {
     return this.usersService.updateUserPlan(id, dto.plan, dto.status ?? 'active', actor.uid, actor.email);
