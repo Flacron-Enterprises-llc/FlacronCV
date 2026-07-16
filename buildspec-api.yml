@@ -10,22 +10,25 @@ env:
 phases:
   pre_build:
     commands:
-      - echo Logging into Amazon ECR...
-      - ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com
-      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-12)
-      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+      - echo "Logging in to Amazon ECR..."
+      - ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
+      - IMAGE_TAG="$(echo "${CODEBUILD_RESOLVED_SOURCE_VERSION}" | cut -c 1-12)"
+      - test -n "${IMAGE_TAG}" || IMAGE_TAG="manual-$(date +%Y%m%d%H%M%S)"
+      - aws ecr get-login-password --region "${AWS_DEFAULT_REGION}" | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
 
   build:
     commands:
-      - echo Building Docker image...
-      - docker build -f apps/api/Dockerfile -t $ECR_REPOSITORY:$IMAGE_TAG .
-      - docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      - echo "Building FlacronCV API image..."
+      - docker build --platform linux/amd64 --file apps/api/Dockerfile --tag "${ECR_REPOSITORY}:${IMAGE_TAG}" .
+      - docker tag "${ECR_REPOSITORY}:${IMAGE_TAG}" "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
 
   post_build:
     commands:
-      - echo Pushing image...
-      - docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-      - printf '[{"name":"flacroncv-api","imageUri":"%s"}]' "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" > imagedefinitions.json
+      - echo "Pushing image to Amazon ECR..."
+      - docker push "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+      - printf '[{"name":"flacroncv-api","imageUri":"%s"}]' "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}" > imagedefinitions.json
+      - echo "Image pushed successfully:"
+      - echo "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
 
 artifacts:
   files:
