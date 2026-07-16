@@ -9,7 +9,7 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="${PNPM_HOME}:${PATH}"
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true"
 
-RUN npm install --global pnpm@11.13.0
+RUN npm install --global pnpm@8.15.0
 
 WORKDIR /app
 
