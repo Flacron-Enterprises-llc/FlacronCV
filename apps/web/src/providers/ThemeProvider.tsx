@@ -12,36 +12,58 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const STORAGE_KEY = 'theme';
+
+function readStoredTheme(): Theme {
+  if (typeof window === 'undefined') return 'light';
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
+  } catch {
+    // localStorage unavailable (private mode / disabled) — fall through
+  }
+  return 'light';
+}
+
+function resolveTheme(theme: Theme): 'light' | 'dark' {
+  if (theme === 'system') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return theme;
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setThemeState] = useState<Theme>(readStoredTheme);
+  // Starts as 'light' on both server and client so hydration markup matches;
+  // the effect below corrects it immediately after mount. The visible page is
+  // themed before hydration by the inline script in the locale layout.
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
 
-  useEffect(() => {
-    const saved = localStorage.getItem('theme') as Theme | null;
-    if (saved) {
-      setTheme(saved);
-    } else {
-      // Default to light theme if nothing saved
-      setTheme('light');
-      localStorage.setItem('theme', 'light');
+  // Persist only on explicit user/app changes — never write on mount, or a
+  // stale initial value can clobber the stored theme before it is read
+  // (this happens under React StrictMode's double-mount).
+  const setTheme = (next: Theme) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // Persisting is best-effort; the in-memory theme still applies.
     }
-  }, []);
+    setThemeState(next);
+  };
 
   useEffect(() => {
-    const root = window.document.documentElement;
+    const apply = () => {
+      const resolved = resolveTheme(theme);
+      setResolvedTheme(resolved);
+      document.documentElement.classList.toggle('dark', resolved === 'dark');
+      document.documentElement.style.colorScheme = resolved;
+    };
+    apply();
 
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
-      setResolvedTheme(systemTheme);
-      root.classList.toggle('dark', systemTheme === 'dark');
-    } else {
-      setResolvedTheme(theme);
-      root.classList.toggle('dark', theme === 'dark');
-    }
-
-    localStorage.setItem('theme', theme);
+    if (theme !== 'system') return;
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
   }, [theme]);
 
   return (

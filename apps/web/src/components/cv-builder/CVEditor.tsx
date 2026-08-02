@@ -13,12 +13,14 @@ import {
   DragEndEvent,
   PointerSensor,
   TouchSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
 import {
   SortableContext,
   verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
   useSortable,
   arrayMove,
 } from '@dnd-kit/sortable';
@@ -34,19 +36,24 @@ import {
   User,
   X,
   Camera,
+  Sparkles,
 } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { CVSection, CVSectionType, CVSectionItem, SkillLevel } from '@flacroncv/shared-types';
 import { cn } from '@/lib/utils';
+import AISummaryModal from './AISummaryModal';
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
 export default function CVEditor() {
   const t = useTranslations('cv_builder');
   const { cv, sections, updatePersonalInfo, updateStyling, reorderSections, pushHistory } = useCVStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [showAISummary, setShowAISummary] = useState(false);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,7 +63,7 @@ export default function CVEditor() {
     // Validate MIME type (primary check — not spoofable via rename)
     if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(file.type)) {
       const ext = file.name.split('.').pop()?.toLowerCase() ?? 'unknown';
-      const msg = `".${ext}" files are not supported. Please upload a JPG, PNG, or WebP image.`;
+      const msg = t('photo_invalid', { ext });
       setPhotoError(msg);
       toast.error(msg);
       return;
@@ -65,7 +72,7 @@ export default function CVEditor() {
     // Validate file size
     if (file.size > MAX_FILE_SIZE_BYTES) {
       const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-      const msg = `File is too large (${sizeMB} MB). Maximum allowed size is 5 MB.`;
+      const msg = t('photo_too_large', { size: sizeMB });
       setPhotoError(msg);
       toast.error(msg);
       return;
@@ -101,6 +108,8 @@ export default function CVEditor() {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+    // Keyboard reordering: focus a drag handle, press Space, arrow up/down, Space.
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -114,11 +123,22 @@ export default function CVEditor() {
       oldIndex,
       newIndex,
     );
-    pushHistory();
+    // Snapshot AFTER the mutation, not before.
+    //
+    // The store's contract (cv-store.ts `undo()` + `canUndo: historyIndex > 0`,
+    // and the convention its own tests encode) is that `history[i]` holds the
+    // state *resulting from* edit i. Pushing first stored the pre-edit state
+    // instead, which produced two visible bugs: the very first edit could never
+    // be undone (`historyIndex` was still 0, so `canUndo` was false), and every
+    // later undo rolled back two edits at once. Ordering the call after the
+    // mutation fixes both without touching the store.
     reorderSections(newOrder);
+    pushHistory();
   };
 
   if (!cv) return null;
+
+  const emailInvalid = cv.personalInfo.email.length > 0 && !isValidEmail(cv.personalInfo.email);
 
   return (
     <div className="space-y-4">
@@ -132,11 +152,12 @@ export default function CVEditor() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
+              aria-label={cv.personalInfo.photoURL ? t('photo_change') : t('photo_upload')}
               className="group relative h-20 w-20 overflow-hidden rounded-full border-2 border-dashed border-stone-300 bg-stone-100 transition-colors hover:border-brand-400 hover:bg-stone-200 dark:border-stone-600 dark:bg-stone-700 dark:hover:border-brand-500"
             >
               {cv.personalInfo.photoURL ? (
                 <>
-                  <img src={cv.personalInfo.photoURL} alt="Profile" className="h-full w-full object-cover" />
+                  <img src={cv.personalInfo.photoURL} alt="" className="h-full w-full object-cover" />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                     <Camera className="h-6 w-6 text-white" />
                   </div>
@@ -152,8 +173,9 @@ export default function CVEditor() {
               <button
                 type="button"
                 onClick={removePhoto}
-                className="absolute -right-1 -top-1 rounded-full bg-red-500 p-0.5 text-white shadow hover:bg-red-600"
-                title="Remove photo"
+                className="absolute -end-1 -top-1 rounded-full bg-red-500 p-0.5 text-white shadow hover:bg-red-600"
+                aria-label={t('photo_remove')}
+                title={t('photo_remove')}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -166,10 +188,10 @@ export default function CVEditor() {
               className="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
               data-testid="photo-upload-btn"
             >
-              {cv.personalInfo.photoURL ? 'Change photo' : 'Upload photo'}
+              {cv.personalInfo.photoURL ? t('photo_change') : t('photo_upload')}
             </button>
             <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
-              JPG, PNG or WebP · Max 5 MB · Used as your CV avatar
+              {t('photo_hint')}
             </p>
             {photoError && (
               <p
@@ -193,68 +215,87 @@ export default function CVEditor() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
-            label="First Name"
+            label={t('field_first_name')}
             value={cv.personalInfo.firstName}
             onChange={(e) => updatePersonalInfo('firstName', e.target.value)}
-            placeholder="Your first name"
+            placeholder={t('ph_first_name')}
           />
           <Input
-            label="Last Name"
+            label={t('field_last_name')}
             value={cv.personalInfo.lastName}
             onChange={(e) => updatePersonalInfo('lastName', e.target.value)}
-            placeholder="Your last name"
+            placeholder={t('ph_last_name')}
           />
           <Input
-            label="Email"
+            id="cv-email"
+            label={t('field_email')}
             type="email"
             value={cv.personalInfo.email}
             onChange={(e) => updatePersonalInfo('email', e.target.value)}
+            error={emailInvalid ? t('invalid_email') : undefined}
           />
           <Input
-            label="Phone"
+            label={t('field_phone')}
             value={cv.personalInfo.phone}
             onChange={(e) => updatePersonalInfo('phone', e.target.value)}
           />
           <Input
-            label="City"
+            label={t('field_city')}
             value={cv.personalInfo.city}
             onChange={(e) => updatePersonalInfo('city', e.target.value)}
           />
           <Input
-            label="Country"
+            label={t('field_country')}
             value={cv.personalInfo.country}
             onChange={(e) => updatePersonalInfo('country', e.target.value)}
           />
           <div className="sm:col-span-2">
             <Input
-              label="Professional Headline"
+              label={t('field_headline')}
               value={cv.personalInfo.headline}
               onChange={(e) => updatePersonalInfo('headline', e.target.value)}
-              placeholder="e.g. Senior Software Engineer"
+              placeholder={t('ph_headline')}
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium text-stone-700 dark:text-stone-300">
-              Professional Summary
-            </label>
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <label htmlFor="cv-summary" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                {t('field_summary')}
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowAISummary(true)}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-brand-400 dark:hover:bg-brand-900/20"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {t('generate_with_ai')}
+              </button>
+            </div>
             <textarea
+              id="cv-summary"
               className="input-field min-h-[100px] resize-y"
               value={cv.personalInfo.summary}
               onChange={(e) => updatePersonalInfo('summary', e.target.value)}
-              placeholder="A brief overview of your professional background..."
+              placeholder={t('ph_summary')}
             />
           </div>
-          <Input
-            label="LinkedIn"
-            value={cv.personalInfo.linkedin}
-            onChange={(e) => updatePersonalInfo('linkedin', e.target.value)}
-            placeholder="linkedin.com/in/yourname"
+
+          <AISummaryModal
+            cvId={cv.id}
+            open={showAISummary}
+            onClose={() => setShowAISummary(false)}
           />
           <Input
-            label="Website"
+            label={t('field_linkedin')}
+            value={cv.personalInfo.linkedin}
+            onChange={(e) => updatePersonalInfo('linkedin', e.target.value)}
+            placeholder={t('ph_linkedin')}
+          />
+          <Input
+            label={t('field_website')}
             value={cv.personalInfo.website}
             onChange={(e) => updatePersonalInfo('website', e.target.value)}
-            placeholder="yoursite.com"
+            placeholder={t('ph_website')}
           />
         </div>
       </Card>
@@ -301,36 +342,44 @@ function SortableSection({ section }: { section: CVSection }) {
         <button
           {...attributes}
           {...listeners}
+          aria-label={t('reorder_section', { title: section.title })}
           className="cursor-grab touch-none rounded p-1 text-stone-400 hover:bg-stone-100 active:cursor-grabbing dark:hover:bg-stone-700"
         >
           <GripVertical className="h-4 w-4" />
         </button>
 
-        <button onClick={() => setExpanded(!expanded)} className="flex-1 text-start">
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex-1 text-start"
+          aria-expanded={expanded}
+          aria-label={expanded ? t('collapse_section') : t('expand_section')}
+        >
           <div className="flex items-center gap-2">
             {expanded ? (
-              <ChevronDown className="h-4 w-4 text-stone-400" />
+              <ChevronDown className="h-4 w-4 text-stone-400" aria-hidden="true" />
             ) : (
-              <ChevronRight className="h-4 w-4 text-stone-400" />
+              <ChevronRight className="h-4 w-4 text-stone-400 rtl:rotate-180" aria-hidden="true" />
             )}
             <span className="text-sm font-semibold text-stone-900 dark:text-white">
               {section.title}
             </span>
-            <span className="text-xs text-stone-400">({section.items.length} items)</span>
+            <span className="text-xs text-stone-400">{t('items_count', { count: section.items.length })}</span>
           </div>
         </button>
 
         <button
           onClick={() => updateSection(section.id, { isVisible: !section.isVisible })}
           className="rounded p-1 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700"
-          title={section.isVisible ? 'Hide' : 'Show'}
+          aria-label={section.isVisible ? t('toggle_hide') : t('toggle_show')}
+          title={section.isVisible ? t('toggle_hide') : t('toggle_show')}
         >
           {section.isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
         </button>
 
         <button
-          onClick={() => { pushHistory(); removeSection(section.id); }}
+          onClick={() => { removeSection(section.id); pushHistory(); }}
           className="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+          aria-label={t('remove_section')}
           title={t('remove_section')}
         >
           <Trash2 className="h-4 w-4" />
@@ -348,12 +397,13 @@ function SortableSection({ section }: { section: CVSection }) {
 }
 
 function SectionContent({ section }: { section: CVSection }) {
+  const t = useTranslations('cv_builder');
   const { updateSection, pushHistory } = useCVStore();
 
   const addItem = () => {
-    pushHistory();
     const newItem = createDefaultItem(section.type);
     updateSection(section.id, { items: [...section.items, newItem] });
+    pushHistory();
   };
 
   const updateItem = (index: number, data: Record<string, unknown>) => {
@@ -363,70 +413,75 @@ function SectionContent({ section }: { section: CVSection }) {
   };
 
   const removeItem = (index: number) => {
-    pushHistory();
     const newItems = section.items.filter((_, i) => i !== index);
     updateSection(section.id, { items: newItems });
+    pushHistory();
   };
 
   return (
     <div className="space-y-3">
+      {section.items.length === 0 && (
+        <p className="rounded-lg border border-dashed border-stone-200 py-4 text-center text-xs text-stone-400 dark:border-stone-700 dark:text-stone-500">
+          {t('empty_section')}
+        </p>
+      )}
       {section.items.map((item: any, index: number) => (
         <div key={item.id || index} className="rounded-lg border border-stone-100 p-3 dark:border-stone-700">
           {section.type === 'experience' && (
             <div className="space-y-2">
               <div className="grid gap-2 sm:grid-cols-2">
-                <Input label="Position" value={item.position || ''} onChange={(e) => updateItem(index, { position: e.target.value })} />
-                <Input label="Company" value={item.company || ''} onChange={(e) => updateItem(index, { company: e.target.value })} />
-                <Input label="Start Date" value={item.startDate || ''} onChange={(e) => updateItem(index, { startDate: e.target.value })} placeholder="2023-01" />
-                <Input label="End Date" value={item.endDate || ''} onChange={(e) => updateItem(index, { endDate: e.target.value })} placeholder="Present" />
+                <Input label={t('field_position')} value={item.position || ''} onChange={(e) => updateItem(index, { position: e.target.value })} />
+                <Input label={t('field_company')} value={item.company || ''} onChange={(e) => updateItem(index, { company: e.target.value })} />
+                <Input label={t('field_start_date')} value={item.startDate || ''} onChange={(e) => updateItem(index, { startDate: e.target.value })} placeholder={t('ph_start_date')} />
+                <Input label={t('field_end_date')} value={item.endDate || ''} onChange={(e) => updateItem(index, { endDate: e.target.value })} placeholder={t('ph_present')} />
               </div>
-              <textarea className="input-field min-h-[60px]" value={item.description || ''} onChange={(e) => updateItem(index, { description: e.target.value })} placeholder="Describe your responsibilities and achievements..." />
+              <textarea className="input-field min-h-[60px]" value={item.description || ''} onChange={(e) => updateItem(index, { description: e.target.value })} placeholder={t('ph_experience_desc')} />
             </div>
           )}
           {section.type === 'education' && (
             <div className="grid gap-2 sm:grid-cols-2">
-              <Input label="Degree" value={item.degree || ''} onChange={(e) => updateItem(index, { degree: e.target.value })} />
-              <Input label="Field of Study" value={item.field || ''} onChange={(e) => updateItem(index, { field: e.target.value })} />
-              <Input label="Institution" value={item.institution || ''} onChange={(e) => updateItem(index, { institution: e.target.value })} />
-              <Input label="Start - End" value={item.startDate || ''} onChange={(e) => updateItem(index, { startDate: e.target.value })} placeholder="2019 - 2023" />
+              <Input label={t('field_degree')} value={item.degree || ''} onChange={(e) => updateItem(index, { degree: e.target.value })} />
+              <Input label={t('field_field_of_study')} value={item.field || ''} onChange={(e) => updateItem(index, { field: e.target.value })} />
+              <Input label={t('field_institution')} value={item.institution || ''} onChange={(e) => updateItem(index, { institution: e.target.value })} />
+              <Input label={t('field_years')} value={item.startDate || ''} onChange={(e) => updateItem(index, { startDate: e.target.value })} placeholder={t('ph_years')} />
             </div>
           )}
           {section.type === 'skills' && (
             <div className="grid gap-2 sm:grid-cols-2">
               <Input
-                label="Skill"
+                label={t('field_skill')}
                 value={item.name || ''}
                 onChange={(e) => updateItem(index, { name: e.target.value })}
-                placeholder="e.g. React, Figma"
+                placeholder={t('ph_skill')}
               />
               <Select
-                label="Level"
+                label={t('field_level')}
                 value={item.level || 'intermediate'}
                 onChange={(e) => updateItem(index, { level: e.target.value })}
               >
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-                <option value="expert">Expert</option>
+                <option value="beginner">{t('level_beginner')}</option>
+                <option value="intermediate">{t('level_intermediate')}</option>
+                <option value="advanced">{t('level_advanced')}</option>
+                <option value="expert">{t('level_expert')}</option>
               </Select>
             </div>
           )}
           {!['experience', 'education', 'skills'].includes(section.type) && (
             <div className="space-y-2">
-              <Input label="Title" value={item.name || item.title || ''} onChange={(e) => updateItem(index, { name: e.target.value, title: e.target.value })} />
-              <textarea className="input-field min-h-[40px]" value={item.description || ''} onChange={(e) => updateItem(index, { description: e.target.value })} placeholder="Description..." />
+              <Input label={t('field_title')} value={item.name || item.title || ''} onChange={(e) => updateItem(index, { name: e.target.value, title: e.target.value })} />
+              <textarea className="input-field min-h-[40px]" value={item.description || ''} onChange={(e) => updateItem(index, { description: e.target.value })} placeholder={t('ph_generic_desc')} />
             </div>
           )}
           <button
             onClick={() => removeItem(index)}
             className="mt-2 text-xs text-red-500 hover:text-red-700"
           >
-            Remove
+            {t('item_remove')}
           </button>
         </div>
       ))}
       <Button variant="ghost" size="sm" icon={<Plus className="h-3 w-3" />} onClick={addItem}>
-        Add Item
+        {t('add_item')}
       </Button>
     </div>
   );
@@ -449,7 +504,6 @@ function AddSectionButton() {
   ];
 
   const handleAdd = (type: CVSectionType, label: string) => {
-    pushHistory();
     addSection({
       id: crypto.randomUUID(),
       type,
@@ -460,6 +514,7 @@ function AddSectionButton() {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+    pushHistory();
     setOpen(false);
   };
 

@@ -1,10 +1,15 @@
 import { getTranslations } from 'next-intl/server';
 import { Metadata } from 'next';
+import { pageMetadata } from '@/lib/seo';
 import { FileText } from 'lucide-react';
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  params: { locale },
+}: {
+  params: { locale: string };
+}): Promise<Metadata> {
   const t = await getTranslations('terms');
-  return { title: `${t('title')} — FlacronCV` };
+  return pageMetadata({ locale, path: '/terms-of-service', title: t('title'), description: t('intro') });
 }
 
 export default async function TermsOfServicePage() {
@@ -40,7 +45,7 @@ export default async function TermsOfServicePage() {
 
         <Section title={t('s3_title')}>
           <p>{t('s3_intro')}</p>
-          <ul className="mt-2 space-y-1 pl-5">
+          <ul className="mt-2 space-y-1 ps-5">
             {[t('s3_1'), t('s3_2'), t('s3_3'), t('s3_4'), t('s3_5')].map((item, i) => (
               <li key={i} className="list-disc text-sm">
                 {item}

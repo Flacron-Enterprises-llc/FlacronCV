@@ -74,24 +74,24 @@ export default function AdminDashboardPage(): React.JSX.Element | null {
       label: t('active_subscriptions'),
       value: stats?.activeSubscriptions ?? 0,
       icon: CreditCard,
-      color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400',
+      color: 'text-stone-600 bg-stone-100 dark:bg-stone-800 dark:text-stone-300',
     },
     {
       label: t('revenue'),
       value: `$${(stats?.revenue ?? 0).toLocaleString()}`,
       icon: DollarSign,
-      color: 'text-violet-600 bg-violet-50 dark:bg-violet-950 dark:text-violet-400',
+      color: 'text-stone-600 bg-stone-100 dark:bg-stone-800 dark:text-stone-300',
     },
     {
       label: t('open_tickets'),
       value: stats?.openTickets ?? 0,
       icon: MessageSquare,
-      color: 'text-amber-600 bg-amber-50 dark:bg-amber-950 dark:text-amber-400',
+      color: 'text-stone-600 bg-stone-100 dark:bg-stone-800 dark:text-stone-300',
     },
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
@@ -155,7 +155,7 @@ export default function AdminDashboardPage(): React.JSX.Element | null {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-stone-100 dark:border-stone-700">
+                  <tr className="border-b border-stone-200 dark:border-stone-700">
                     <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
                       {t('name')}
                     </th>
@@ -217,10 +217,10 @@ export default function AdminDashboardPage(): React.JSX.Element | null {
             <div className="space-y-3">
               <Link href="/admin/users" className="block">
                 <div className="flex items-center gap-3 rounded-lg border border-stone-200 p-3 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-800/50">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950 dark:text-brand-400">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950 dark:text-brand-400">
                     <Users className="h-5 w-5" />
                   </div>
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-stone-900 dark:text-white">
                       {t('manage_users')}
                     </p>
@@ -228,16 +228,16 @@ export default function AdminDashboardPage(): React.JSX.Element | null {
                       {t('manage_users_description')}
                     </p>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-stone-400" />
+                  <ArrowRight className="h-4 w-4 shrink-0 text-stone-400" />
                 </div>
               </Link>
 
               <Link href="/admin/tickets" className="block">
                 <div className="flex items-center gap-3 rounded-lg border border-stone-200 p-3 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-800/50">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400">
                     <MessageSquare className="h-5 w-5" />
                   </div>
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-stone-900 dark:text-white">
                       {t('view_tickets')}
                     </p>
@@ -245,7 +245,7 @@ export default function AdminDashboardPage(): React.JSX.Element | null {
                       {t('view_tickets_description')}
                     </p>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-stone-400" />
+                  <ArrowRight className="h-4 w-4 shrink-0 text-stone-400" />
                 </div>
               </Link>
             </div>

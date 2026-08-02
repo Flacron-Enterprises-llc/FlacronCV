@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { UsersService } from '../users/users.service';
+import { AIService } from '../ai/ai.service';
 import {
   CV,
   CVSection,
@@ -8,13 +9,15 @@ import {
   CreateCVData,
   UpdateCVData,
   CVStatus,
-  CVLayout,
-  SectionStyle,
-  BorderRadiusStyle,
   CVStyling,
   FontSize,
   Spacing,
   PLAN_CONFIGS,
+  SubscriptionPlan,
+  resolveEffectivePlan,
+  planMeetsTier,
+  canUseCvLayout,
+  CV_TEMPLATE_TIER,
 } from '@flacroncv/shared-types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -26,6 +29,7 @@ export class CVService {
   constructor(
     private firebaseAdmin: FirebaseAdminService,
     private usersService: UsersService,
+    private aiService: AIService,
   ) {}
 
   private getTemplateStyling(templateId: string): Omit<CVStyling, 'secondaryColor'> {
@@ -54,8 +58,7 @@ export class CVService {
     return styles[templateId] || styles['modern'];
   }
 
-  private getSampleContent(user: any): { summary: string; experience: any[]; education: any[]; skills: any[] } {
-    const firstName = user.profile.firstName || 'John';
+  private getSampleContent(_user: any): { summary: string; experience: any[]; education: any[]; skills: any[] } {
     return {
       summary: `Results-driven professional with a strong background in delivering impactful solutions. Passionate about innovation, collaboration, and continuous improvement. Seeking opportunities to leverage expertise and contribute to organizational success.`,
       experience: [
@@ -106,26 +109,39 @@ export class CVService {
 
   private async checkTemplateAccess(templateId: string, userId: string): Promise<void> {
     if (!templateId || templateId === 'modern') return; // 'modern' is always free
-    const templateDoc = await this.firebaseAdmin.firestore
-      .collection('templates')
-      .doc(templateId)
-      .get();
-    if (!templateDoc.exists) return; // if template not found, allow (don't block creation)
-    const template = templateDoc.data() as { tier: string };
-    if (template.tier === 'free') return;
 
+    // Prefer the authoritative built-in tier map so gating is enforced even when
+    // the Firestore catalog hasn't been seeded (closes the previous fail-open).
+    // Unknown ids (e.g. an admin-created custom template) fall back to the catalog
+    // doc; a truly-unknown id with no doc is allowed.
+    let requiredTier = CV_TEMPLATE_TIER[templateId];
+    if (requiredTier === undefined) {
+      const templateDoc = await this.firebaseAdmin.firestore
+        .collection('templates')
+        .doc(templateId)
+        .get();
+      if (!templateDoc.exists) return;
+      requiredTier =
+        ((templateDoc.data() as { tier?: string }).tier as SubscriptionPlan) ||
+        SubscriptionPlan.FREE;
+    }
+    if (requiredTier === SubscriptionPlan.FREE) return;
+
+    // Tier-ORDER check (free < pro < enterprise): a PRO user must NOT be able to
+    // use an ENTERPRISE template. (The previous binary `free_only` check let any
+    // paid plan use every non-free template.)
     const user = await this.usersService.findByIdOrThrow(userId);
-    const limits = PLAN_CONFIGS[user.subscription.plan].limits;
-    if (limits.templates === 'free_only') {
+    const plan = resolveEffectivePlan(user.subscription);
+    if (!planMeetsTier(plan, requiredTier)) {
       throw new ForbiddenException(
-        `Template "${templateId}" requires a Pro or higher plan. Please upgrade.`,
+        `Template "${templateId}" requires a ${requiredTier} plan. Please upgrade.`,
       );
     }
   }
 
   async create(userId: string, data: CreateCVData): Promise<CV> {
     const user = await this.usersService.findByIdOrThrow(userId);
-    const limits = PLAN_CONFIGS[user.subscription.plan].limits;
+    const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
 
     if (limits.cvs !== 'unlimited' && user.usage.cvsCreated >= limits.cvs) {
       throw new ForbiddenException('CV limit reached for your plan. Please upgrade.');
@@ -219,38 +235,248 @@ export class CVService {
     return this.findByIdOrThrow(id, userId);
   }
 
+  // ─── Import from an existing resume (AI-parsed) ─────────────────────────────
+
+  private asStr(v: unknown): string {
+    return typeof v === 'string' ? v : '';
+  }
+
+  /**
+   * Parse resume text into a normalized structure via the AI provider. AI-call
+   * failures (out of credits, provider down) propagate; only unparseable model
+   * output is swallowed — in that case the raw text is kept as the summary so the
+   * user never loses their paste.
+   */
+  private async parseResumeSafe(resumeText: string, userId: string) {
+    const res = await this.aiService.parseResume(resumeText, userId);
+    try {
+      const cleaned = res.content.replace(/```json/gi, '').replace(/```/g, '').trim();
+      // Slice to the outermost {...} so a model preamble/trailing note doesn't
+      // break JSON.parse (the paid credit is already spent by this point).
+      const first = cleaned.indexOf('{');
+      const last = cleaned.lastIndexOf('}');
+      const json = first !== -1 && last > first ? cleaned.slice(first, last + 1) : cleaned;
+      const obj = JSON.parse(json);
+      return {
+        firstName: this.asStr(obj.firstName),
+        lastName: this.asStr(obj.lastName),
+        headline: this.asStr(obj.headline),
+        email: this.asStr(obj.email),
+        phone: this.asStr(obj.phone),
+        city: this.asStr(obj.city),
+        country: this.asStr(obj.country),
+        summary: this.asStr(obj.summary),
+        experience: (Array.isArray(obj.experience) ? obj.experience : []).slice(0, 20) as Record<string, unknown>[],
+        education: (Array.isArray(obj.education) ? obj.education : []).slice(0, 20) as Record<string, unknown>[],
+        skills: (Array.isArray(obj.skills) ? obj.skills : [])
+          .map((s: unknown) => this.asStr(s))
+          .filter(Boolean)
+          .slice(0, 50) as string[],
+      };
+    } catch {
+      // Unparseable model output → keep the raw text as the summary (nothing lost).
+      return {
+        firstName: '', lastName: '', headline: '', email: '', phone: '', city: '', country: '',
+        summary: resumeText.slice(0, 2000),
+        experience: [] as Record<string, unknown>[],
+        education: [] as Record<string, unknown>[],
+        skills: [] as string[],
+      };
+    }
+  }
+
+  async importFromResume(userId: string, data: { title?: string; resumeText: string }): Promise<CV> {
+    const user = await this.usersService.findByIdOrThrow(userId);
+    const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
+    if (limits.cvs !== 'unlimited' && user.usage.cvsCreated >= limits.cvs) {
+      throw new ForbiddenException('CV limit reached for your plan. Please upgrade.');
+    }
+
+    // Parse first — if the AI call itself fails (credits/provider), no CV is created.
+    const parsed = await this.parseResumeSafe(data.resumeText, userId);
+
+    const id = uuidv4();
+    const now = new Date();
+    const fullName = [parsed.firstName, parsed.lastName].filter(Boolean).join(' ').trim();
+    const title = (data.title && data.title.trim()) || (fullName ? `${fullName} — CV` : 'Imported CV');
+    const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${id.slice(0, 8)}`;
+    const templateId = 'modern';
+    const styling = this.getTemplateStyling(templateId);
+
+    const cv: CV = {
+      id,
+      userId,
+      title,
+      slug,
+      templateId,
+      status: CVStatus.DRAFT,
+      isPublic: false,
+      publicSlug: null,
+      personalInfo: {
+        firstName: parsed.firstName,
+        lastName: parsed.lastName,
+        email: parsed.email || user.email,
+        phone: parsed.phone,
+        address: '',
+        city: parsed.city,
+        country: parsed.country,
+        postalCode: '',
+        website: user.profile.website || '',
+        linkedin: user.profile.linkedin || '',
+        github: user.profile.github || '',
+        photoURL: user.photoURL,
+        headline: parsed.headline,
+        summary: parsed.summary,
+      },
+      sectionOrder: [],
+      styling,
+      version: 1,
+      lastAutoSavedAt: now,
+      aiGenerated: true,
+      aiProvider: null,
+      viewCount: 0,
+      downloadCount: 0,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    };
+
+    await this.firebaseAdmin.firestore.collection(this.collection).doc(id).set(cv);
+    await this.usersService.incrementUsage(userId, 'cvsCreated');
+
+    const sectionConfigs = [
+      {
+        type: 'experience',
+        title: 'Experience',
+        items: parsed.experience.map((e) => ({
+          id: uuidv4(),
+          position: this.asStr(e.position),
+          company: this.asStr(e.company),
+          location: this.asStr(e.location),
+          startDate: this.asStr(e.startDate),
+          endDate: this.asStr(e.endDate),
+          description: this.asStr(e.description),
+        })),
+      },
+      {
+        type: 'education',
+        title: 'Education',
+        items: parsed.education.map((e) => ({
+          id: uuidv4(),
+          institution: this.asStr(e.institution),
+          degree: this.asStr(e.degree),
+          field: this.asStr(e.field),
+          startDate: this.asStr(e.startDate),
+          endDate: this.asStr(e.endDate),
+          description: this.asStr(e.description),
+        })),
+      },
+      {
+        type: 'skills',
+        title: 'Skills',
+        items: parsed.skills.map((name) => ({ id: uuidv4(), name })),
+      },
+    ];
+
+    for (let i = 0; i < sectionConfigs.length; i++) {
+      const sectionId = uuidv4();
+      const section: CVSection = {
+        id: sectionId,
+        type: sectionConfigs[i].type as any,
+        title: sectionConfigs[i].title,
+        isVisible: true,
+        order: i,
+        items: sectionConfigs[i].items as any,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await this.firebaseAdmin.firestore
+        .collection(this.collection)
+        .doc(id)
+        .collection('sections')
+        .doc(sectionId)
+        .set(section);
+      cv.sectionOrder.push(sectionId);
+    }
+
+    await this.firebaseAdmin.firestore.collection(this.collection).doc(id).update({
+      sectionOrder: cv.sectionOrder,
+    });
+
+    return this.findByIdOrThrow(id, userId);
+  }
+
   async findById(id: string): Promise<CV | null> {
     const doc = await this.firebaseAdmin.firestore.collection(this.collection).doc(id).get();
     if (!doc.exists) return null;
     return doc.data() as CV;
   }
 
+  /**
+   * Fetch a CV the caller is allowed to touch.
+   *
+   * A soft-deleted CV is gone as far as every caller is concerned. It used to
+   * stay fully readable, editable, exportable and duplicable by id — the list
+   * query filtered `deletedAt` but this did not, so anyone holding the id (their
+   * own browser history, a stale tab) could keep working on a document they had
+   * deleted. It also made DELETE non-idempotent: calling it twice ran the
+   * quota refund twice, which would have let a user mint unlimited allowance.
+   */
   async findByIdOrThrow(id: string, userId?: string): Promise<CV> {
     const cv = await this.findById(id);
     if (!cv) throw new NotFoundException('CV not found');
+    if (cv.deletedAt) throw new NotFoundException('CV not found');
     if (userId && cv.userId !== userId) throw new ForbiddenException('Access denied');
     return cv;
   }
 
   async listByUser(userId: string, page = 1, limit = 10) {
+    // Clamp both. `limit` came straight from the query string, so an unbounded
+    // value was a free full-collection scan; `page` below 1 produced a negative
+    // offset. The ceiling is generous enough that no real account is truncated.
+    const safeLimit = Math.min(Math.max(Math.trunc(limit) || 10, 1), 100);
+    const safePage = Math.max(Math.trunc(page) || 1, 1);
+
     const query = this.firebaseAdmin.firestore
       .collection(this.collection)
       .where('userId', '==', userId)
       .where('deletedAt', '==', null)
       .orderBy('updatedAt', 'desc')
-      .limit(limit)
-      .offset((page - 1) * limit);
+      // Fetch one extra row purely to answer "is there another page?" without a
+      // second count query. It is never returned to the caller.
+      .limit(safeLimit + 1)
+      .offset((safePage - 1) * safeLimit);
 
     const snapshot = await query.get();
-    const items = snapshot.docs.map((doc: any) => doc.data() as CV);
+    const rows = snapshot.docs.map((doc: any) => doc.data() as CV);
+    const hasMore = rows.length > safeLimit;
 
-    return { items, page, limit };
+    return { items: rows.slice(0, safeLimit), page: safePage, limit: safeLimit, hasMore };
   }
 
   async update(id: string, userId: string, data: UpdateCVData): Promise<CV> {
-    await this.findByIdOrThrow(id, userId);
+    const current = await this.findByIdOrThrow(id, userId);
     if (data.templateId) {
       await this.checkTemplateAccess(data.templateId, userId);
+    }
+
+    // `styling.layout` is the real render/export lever, so it must be tier-gated
+    // server-side too (not just in the Design panel). Block NEWLY selecting a
+    // layout above the user's plan; re-sending the already-stored layout (which
+    // every autosave does) is allowed, so a downgraded user keeps their document
+    // — it simply renders as a free layout (see effectiveCvLayout at render time).
+    if (data.styling && (data.styling as { layout?: string }).layout !== undefined) {
+      const incoming = (data.styling as { layout?: string }).layout as string;
+      const stored = (current.styling as { layout?: string })?.layout || 'classic';
+      if (incoming !== stored) {
+        const user = await this.usersService.findByIdOrThrow(userId);
+        const plan = resolveEffectivePlan(user.subscription);
+        if (!canUseCvLayout(incoming, plan)) {
+          throw new ForbiddenException(
+            `Layout "${incoming}" requires a Pro or higher plan. Please upgrade.`,
+          );
+        }
+      }
     }
 
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
@@ -281,13 +507,25 @@ export class CVService {
     await this.findByIdOrThrow(id, userId);
     await this.firebaseAdmin.firestore.collection(this.collection).doc(id).update({
       deletedAt: new Date(),
+      // Revoke any public share on delete so a deleted CV can't stay reachable by
+      // its public slug (defense in depth alongside the deletedAt filter in
+      // findByPublicSlug).
+      isPublic: false,
+      publicSlug: null,
       updatedAt: new Date(),
     });
+
+    // Give the slot back. `cvsCreated` is checked against the plan's `cvs` limit
+    // on every create, so without this it behaved as a LIFETIME cap rather than
+    // a concurrent one: a FREE user who made and deleted their allowance could
+    // never create another CV again, with an "upgrade" prompt as the only exit
+    // and no way to tell that deleting had not helped.
+    await this.usersService.incrementUsage(userId, 'cvsCreated', -1);
   }
 
   async duplicate(id: string, userId: string): Promise<CV> {
     const user = await this.usersService.findByIdOrThrow(userId);
-    const limits = PLAN_CONFIGS[user.subscription.plan].limits;
+    const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
     if (limits.cvs !== 'unlimited' && user.usage.cvsCreated >= limits.cvs) {
       throw new ForbiddenException('CV limit reached for your plan. Please upgrade.');
     }
@@ -310,11 +548,12 @@ export class CVService {
       updatedAt: now,
     };
 
-    await this.firebaseAdmin.firestore.collection(this.collection).doc(newId).set(newCV);
-    await this.usersService.incrementUsage(userId, 'cvsCreated');
-
+    // Remap section IDs so the copy's sectionOrder points at the NEW sections,
+    // not the original's (which belong to a different document).
+    const idMap = new Map<string, string>();
     for (const section of sections) {
       const newSectionId = uuidv4();
+      idMap.set(section.id, newSectionId);
       await this.firebaseAdmin.firestore
         .collection(this.collection)
         .doc(newId)
@@ -322,6 +561,12 @@ export class CVService {
         .doc(newSectionId)
         .set({ ...section, id: newSectionId });
     }
+    newCV.sectionOrder = original.sectionOrder
+      .map((oldId) => idMap.get(oldId))
+      .filter((id): id is string => Boolean(id));
+
+    await this.firebaseAdmin.firestore.collection(this.collection).doc(newId).set(newCV);
+    await this.usersService.incrementUsage(userId, 'cvsCreated');
 
     return newCV;
   }
@@ -497,6 +742,8 @@ export class CVService {
       .collection(this.collection)
       .where('publicSlug', '==', slug)
       .where('isPublic', '==', true)
+      // Never serve a soft-deleted CV publicly, even if its share flags linger.
+      .where('deletedAt', '==', null)
       .limit(1)
       .get();
 

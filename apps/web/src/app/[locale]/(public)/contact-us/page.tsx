@@ -4,10 +4,11 @@ import React from 'react';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Card from '@/components/ui/Card';
-import { Mail, Clock, CheckCircle, Send } from 'lucide-react';
+import { Mail, Clock, CheckCircle, Send, Lightbulb } from 'lucide-react';
 
 export default function ContactUsPage(): React.JSX.Element | null {
   const t = useTranslations('contact');
@@ -32,12 +33,17 @@ export default function ContactUsPage(): React.JSX.Element | null {
     e.preventDefault();
     setLoading(true);
     try {
-      // Simulate sending (replace with real API call when backend endpoint exists)
-      await new Promise((res) => setTimeout(res, 1200));
+      await api.post('/contact', {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        subject: form.subject.trim(),
+        category: form.category,
+        message: form.message.trim(),
+      });
       setSent(true);
       toast.success(t('success_title'));
-    } catch {
-      toast.error(t('error'));
+    } catch (err) {
+      toast.error((err as Error)?.message || t('error'));
     } finally {
       setLoading(false);
     }
@@ -93,8 +99,9 @@ export default function ContactUsPage(): React.JSX.Element | null {
             </div>
 
             <div className="rounded-xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-900 dark:bg-brand-950/50">
-              <p className="text-sm font-medium text-brand-700 dark:text-brand-300">
-                💡 {t('tip')}
+              <p className="flex items-start gap-2 text-sm font-medium text-brand-700 dark:text-brand-300">
+                <Lightbulb aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+                {t('tip')}
               </p>
             </div>
           </div>
@@ -148,10 +155,14 @@ export default function ContactUsPage(): React.JSX.Element | null {
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-stone-700 dark:text-stone-300">
+                    <label
+                      htmlFor="category"
+                      className="mb-1.5 block text-sm font-medium text-stone-700 dark:text-stone-300"
+                    >
                       {t('category_label')}
                     </label>
                     <select
+                      id="category"
                       name="category"
                       value={form.category}
                       onChange={handleChange}
@@ -176,10 +187,14 @@ export default function ContactUsPage(): React.JSX.Element | null {
                   />
 
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-stone-700 dark:text-stone-300">
+                    <label
+                      htmlFor="message"
+                      className="mb-1.5 block text-sm font-medium text-stone-700 dark:text-stone-300"
+                    >
                       {t('message')}
                     </label>
                     <textarea
+                      id="message"
                       name="message"
                       value={form.message}
                       onChange={handleChange}

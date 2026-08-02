@@ -45,9 +45,55 @@ interface SubscriptionsResponse {
 export default function AdminSubscriptionsPage(): React.JSX.Element | null {
   const t = useTranslations('admin');
 
+  // Served by the working CRM subscriptions endpoint (list) + the admin revenue
+  // analytics endpoint (plan/active stats); the CRM record stores amount in cents.
   const { data, isLoading, error } = useQuery<SubscriptionsResponse>({
     queryKey: ['admin', 'subscriptions'],
-    queryFn: () => api.get('/admin/subscriptions'),
+    queryFn: async () => {
+      const [list, revenue] = await Promise.all([
+        api.get<{
+          items: Array<{
+            id: string;
+            userId: string;
+            userDisplayName: string;
+            userEmail: string;
+            plan: string;
+            status: string;
+            amount: number;
+            currency: string;
+            interval: string;
+            currentPeriodStart: string;
+            currentPeriodEnd: string;
+            createdAt: string;
+          }>;
+        }>('/crm/subscriptions?limit=100'),
+        api.get<{ activeSubscriptions: number; planBreakdown: Record<string, number> }>(
+          '/admin/analytics/revenue',
+        ),
+      ]);
+      return {
+        subscriptions: list.items.map((s) => ({
+          id: s.id,
+          userId: s.userId,
+          userName: s.userDisplayName,
+          userEmail: s.userEmail,
+          plan: s.plan,
+          status: s.status,
+          amount: s.amount / 100,
+          currency: s.currency,
+          interval: s.interval,
+          currentPeriodStart: s.currentPeriodStart,
+          currentPeriodEnd: s.currentPeriodEnd,
+          createdAt: s.createdAt,
+        })),
+        stats: {
+          free: revenue.planBreakdown?.free ?? 0,
+          pro: revenue.planBreakdown?.pro ?? 0,
+          enterprise: revenue.planBreakdown?.enterprise ?? 0,
+          totalActive: revenue.activeSubscriptions ?? 0,
+        },
+      };
+    },
   });
 
   if (isLoading) {
@@ -84,13 +130,13 @@ export default function AdminSubscriptionsPage(): React.JSX.Element | null {
       label: t('enterprise_plan'),
       value: data?.stats?.enterprise ?? 0,
       icon: Building,
-      color: 'text-violet-600 bg-violet-50 dark:bg-violet-950 dark:text-violet-400',
+      color: 'text-stone-600 bg-stone-100 dark:bg-stone-800 dark:text-stone-300',
     },
     {
       label: t('total_active'),
       value: data?.stats?.totalActive ?? 0,
       icon: CreditCard,
-      color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400',
+      color: 'text-stone-600 bg-stone-100 dark:bg-stone-800 dark:text-stone-300',
     },
   ];
 
@@ -144,7 +190,7 @@ export default function AdminSubscriptionsPage(): React.JSX.Element | null {
 
       {/* Subscriptions Table */}
       <Card padding="none">
-        <div className="border-b border-stone-200 px-6 py-4 dark:border-stone-700">
+        <div className="border-b border-stone-200 px-4 py-4 sm:px-6 dark:border-stone-700">
           <h2 className="text-lg font-semibold text-stone-900 dark:text-white">
             {t('all_subscriptions')}
           </h2>
@@ -152,20 +198,24 @@ export default function AdminSubscriptionsPage(): React.JSX.Element | null {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
+              {/* Plan folds into the User cell below sm and Amount/Period below
+                  lg, so the essential columns (who the subscriber is and whether
+                  the subscription is live) always fit without the table
+                  overflowing its container. */}
               <tr className="border-b border-stone-200 dark:border-stone-700">
-                <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                <th className="px-4 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 sm:px-6 dark:text-stone-400">
                   {t('user')}
                 </th>
-                <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                <th className="hidden px-4 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 sm:table-cell sm:px-6 dark:text-stone-400">
                   {t('plan')}
                 </th>
-                <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                <th className="px-4 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 sm:px-6 dark:text-stone-400">
                   {t('status')}
                 </th>
-                <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                <th className="hidden px-4 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 lg:table-cell sm:px-6 dark:text-stone-400">
                   {t('amount')}
                 </th>
-                <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                <th className="hidden px-4 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 lg:table-cell sm:px-6 dark:text-stone-400">
                   {t('period')}
                 </th>
               </tr>
@@ -176,7 +226,7 @@ export default function AdminSubscriptionsPage(): React.JSX.Element | null {
                   key={sub.id}
                   className="hover:bg-stone-50 dark:hover:bg-stone-800/50"
                 >
-                  <td className="whitespace-nowrap px-6 py-4">
+                  <td className="px-4 py-4 sm:px-6">
                     <div>
                       <p className="text-sm font-medium text-stone-900 dark:text-white">
                         {sub.userName}
@@ -184,9 +234,21 @@ export default function AdminSubscriptionsPage(): React.JSX.Element | null {
                       <p className="text-xs text-stone-500 dark:text-stone-400">
                         {sub.userEmail}
                       </p>
+                      {/* Columns hidden at this width, kept legible here. */}
+                      <p className="text-xs text-stone-500 sm:hidden dark:text-stone-400">
+                        {sub.plan.toUpperCase()}
+                      </p>
+                      <p className="text-xs text-stone-500 lg:hidden dark:text-stone-400">
+                        {sub.amount > 0
+                          ? `$${sub.amount.toFixed(2)}/${sub.interval}`
+                          : t('free')}
+                        {sub.currentPeriodStart && sub.currentPeriodEnd
+                          ? ` · ${formatDate(sub.currentPeriodStart)} - ${formatDate(sub.currentPeriodEnd)}`
+                          : ''}
+                      </p>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4">
+                  <td className="hidden whitespace-nowrap px-4 py-4 sm:table-cell sm:px-6">
                     <Badge
                       variant={
                         sub.plan === 'enterprise'
@@ -199,15 +261,15 @@ export default function AdminSubscriptionsPage(): React.JSX.Element | null {
                       {sub.plan.toUpperCase()}
                     </Badge>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4">
+                  <td className="whitespace-nowrap px-4 py-4 sm:px-6">
                     <Badge variant={statusVariant(sub.status)}>{sub.status}</Badge>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-stone-900 dark:text-white">
+                  <td className="hidden whitespace-nowrap px-4 py-4 text-sm text-stone-900 lg:table-cell sm:px-6 dark:text-white">
                     {sub.amount > 0
                       ? `$${sub.amount.toFixed(2)}/${sub.interval}`
                       : t('free')}
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-stone-600 dark:text-stone-400">
+                  <td className="hidden whitespace-nowrap px-4 py-4 text-sm text-stone-600 lg:table-cell sm:px-6 dark:text-stone-400">
                     {sub.currentPeriodStart && sub.currentPeriodEnd
                       ? `${formatDate(sub.currentPeriodStart)} - ${formatDate(sub.currentPeriodEnd)}`
                       : '-'}

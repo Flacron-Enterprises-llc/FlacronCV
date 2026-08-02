@@ -39,4 +39,9 @@ export class PaymentController {
   ) {
     return this.paymentService.createPortalSession(user.uid, body.returnUrl);
   }
+
+  @Get('invoices')
+  async getInvoices(@CurrentUser() user: FirebaseUser) {
+    return this.paymentService.getInvoices(user.uid);
+  }
 }

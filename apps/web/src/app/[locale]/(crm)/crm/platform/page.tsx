@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import {
@@ -40,6 +41,8 @@ const BRAND_DARK = '#c2410c';
 const VIOLET = '#8b5cf6';
 
 export default function CRMPlatformPage(): React.JSX.Element {
+  const t = useTranslations('crm');
+
   const { data: overview, isLoading: loadingOverview } = useQuery<PlatformAnalyticsOverview>({
     queryKey: ['crm', 'platform', 'overview'],
     queryFn: () => api.get('/crm/platform/overview'),
@@ -66,52 +69,52 @@ export default function CRMPlatformPage(): React.JSX.Element {
 
   const topStats = [
     {
-      label: 'Total Users',
+      label: t('platform_stat_total_users'),
       value: overview?.totalUsers ?? 0,
       icon: Users,
       color: 'text-brand-600 bg-brand-50 dark:bg-brand-950 dark:text-brand-400',
       change: overview?.thisMonthVsLastMonth.users,
     },
     {
-      label: 'Active Users',
+      label: t('platform_stat_active_users'),
       value: overview?.activeUsers ?? 0,
       icon: TrendingUp,
-      color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400',
+      color: 'text-stone-600 bg-stone-100 dark:bg-stone-800 dark:text-stone-300',
     },
     {
-      label: 'New This Month',
+      label: t('platform_stat_new_this_month'),
       value: overview?.newUsersThisMonth ?? 0,
       icon: UserPlus,
-      color: 'text-violet-600 bg-violet-50 dark:bg-violet-950 dark:text-violet-400',
+      color: 'text-stone-600 bg-stone-100 dark:bg-stone-800 dark:text-stone-300',
     },
     {
-      label: 'Total CVs',
+      label: t('platform_stat_total_cvs'),
       value: overview?.totalCVs ?? 0,
       icon: FileText,
-      color: 'text-blue-600 bg-blue-50 dark:bg-blue-950 dark:text-blue-400',
+      color: 'text-stone-600 bg-stone-100 dark:bg-stone-800 dark:text-stone-300',
       change: overview?.thisMonthVsLastMonth.cvs,
     },
     {
-      label: 'CVs This Month',
+      label: t('platform_stat_cvs_this_month'),
       value: overview?.cvsThisMonth ?? 0,
       icon: FileText,
       color: 'text-brand-600 bg-brand-50 dark:bg-brand-950 dark:text-brand-400',
     },
     {
-      label: 'Total Cover Letters',
+      label: t('platform_stat_total_cover_letters'),
       value: overview?.totalCoverLetters ?? 0,
       icon: Briefcase,
-      color: 'text-amber-600 bg-amber-50 dark:bg-amber-950 dark:text-amber-400',
+      color: 'text-stone-600 bg-stone-100 dark:bg-stone-800 dark:text-stone-300',
       change: overview?.thisMonthVsLastMonth.coverLetters,
     },
     {
-      label: 'Avg CVs / User',
+      label: t('platform_stat_avg_cvs_per_user'),
       value: overview?.avgCVsPerUser ?? 0,
       icon: Bot,
       color: 'text-stone-600 bg-stone-100 dark:bg-stone-800 dark:text-stone-400',
     },
     {
-      label: 'Avg Cover Letters / User',
+      label: t('platform_stat_avg_cover_letters_per_user'),
       value: overview?.avgCoverLettersPerUser ?? 0,
       icon: BarChart3,
       color: 'text-stone-600 bg-stone-100 dark:bg-stone-800 dark:text-stone-400',
@@ -119,20 +122,21 @@ export default function CRMPlatformPage(): React.JSX.Element {
   ];
 
   const planBreakdown = [
-    { label: 'Free', count: overview?.usersByPlan.free ?? 0, color: 'bg-stone-400 dark:bg-stone-500', textColor: 'text-stone-600 dark:text-stone-400', icon: Users },
-    { label: 'Pro', count: overview?.usersByPlan.pro ?? 0, color: 'bg-brand-500', textColor: 'text-brand-600 dark:text-brand-400', icon: Shield },
-    { label: 'Enterprise', count: overview?.usersByPlan.enterprise ?? 0, color: 'bg-violet-500', textColor: 'text-violet-600 dark:text-violet-400', icon: Crown },
+    { label: t('plan_free'), count: overview?.usersByPlan.free ?? 0, color: 'bg-stone-400 dark:bg-stone-500', textColor: 'text-stone-600 dark:text-stone-400', icon: Users },
+    { label: t('plan_pro'), count: overview?.usersByPlan.pro ?? 0, color: 'bg-brand-500', textColor: 'text-brand-600 dark:text-brand-400', icon: Shield },
+    { label: t('plan_career_accelerator'), count: overview?.usersByPlan.career_accelerator ?? 0, color: 'bg-fuchsia-500', textColor: 'text-fuchsia-600 dark:text-fuchsia-400', icon: Briefcase },
+    { label: t('plan_enterprise'), count: overview?.usersByPlan.enterprise ?? 0, color: 'bg-violet-500', textColor: 'text-violet-600 dark:text-violet-400', icon: Crown },
   ];
 
   const totalPlanUsers = planBreakdown.reduce((s, p) => s + p.count, 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-stone-900 dark:text-white">Platform Analytics</h1>
+        <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{t('platform_title')}</h1>
         <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-          Real-time metrics across all registered users, CVs, and feature usage.
+          {t('platform_subtitle')}
         </p>
       </div>
 
@@ -153,7 +157,7 @@ export default function CRMPlatformPage(): React.JSX.Element {
 
       {/* Plan breakdown */}
       <Card>
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Users by Plan</h2>
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">{t('platform_users_by_plan_heading')}</h2>
         {loadingOverview ? (
           <div className="h-6 w-full animate-pulse rounded bg-stone-200 dark:bg-stone-700" />
         ) : (
@@ -187,7 +191,7 @@ export default function CRMPlatformPage(): React.JSX.Element {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* User Growth */}
         <Card>
-          <h2 className="mb-5 text-sm font-semibold text-stone-700 dark:text-stone-300">User Growth (12 months)</h2>
+          <h2 className="mb-5 text-sm font-semibold text-stone-700 dark:text-stone-300">{t('platform_user_growth_heading')}</h2>
           {loadingGrowth ? (
             <div className="h-52 animate-pulse rounded bg-stone-100 dark:bg-stone-800" />
           ) : (
@@ -204,9 +208,9 @@ export default function CRMPlatformPage(): React.JSX.Element {
                 <YAxis tick={{ fontSize: 11, fill: '#a8a29e' }} />
                 <Tooltip
                   contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e7e5e4', background: '#fff' }}
-                  formatter={(v: number) => [v, 'New Users']}
+                  formatter={(v: number) => [v, t('platform_chart_new_users')]}
                 />
-                <Area type="monotone" dataKey="users" stroke={BRAND} strokeWidth={2} fill="url(#ugFill)" name="New Users" />
+                <Area type="monotone" dataKey="users" stroke={BRAND} strokeWidth={2} fill="url(#ugFill)" name={t('platform_chart_new_users')} />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -214,7 +218,7 @@ export default function CRMPlatformPage(): React.JSX.Element {
 
         {/* CV / Cover Letter Usage */}
         <Card>
-          <h2 className="mb-5 text-sm font-semibold text-stone-700 dark:text-stone-300">Content Created (12 months)</h2>
+          <h2 className="mb-5 text-sm font-semibold text-stone-700 dark:text-stone-300">{t('platform_content_created_heading')}</h2>
           {loadingUsage ? (
             <div className="h-52 animate-pulse rounded bg-stone-100 dark:bg-stone-800" />
           ) : (
@@ -227,8 +231,8 @@ export default function CRMPlatformPage(): React.JSX.Element {
                   contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e7e5e4', background: '#fff' }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="cvs" fill={BRAND} name="CVs" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="coverLetters" fill={VIOLET} name="Cover Letters" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="cvs" fill={BRAND} name={t('platform_chart_cvs')} radius={[3, 3, 0, 0]} />
+                <Bar dataKey="coverLetters" fill={VIOLET} name={t('platform_chart_cover_letters')} radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -238,7 +242,7 @@ export default function CRMPlatformPage(): React.JSX.Element {
       {/* Top Templates */}
       <Card>
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-          Top Templates by Usage
+          {t('platform_top_templates_heading')}
         </h2>
         {loadingTemplates ? (
           <div className="space-y-2">
@@ -247,19 +251,19 @@ export default function CRMPlatformPage(): React.JSX.Element {
             ))}
           </div>
         ) : (topTemplates ?? []).length === 0 ? (
-          <p className="text-sm text-stone-400">No template usage data yet.</p>
+          <p className="text-sm text-stone-400">{t('platform_no_template_usage')}</p>
         ) : (
           <div className="divide-y divide-stone-100 dark:divide-stone-800">
-            {(topTemplates ?? []).map((t, idx) => {
+            {(topTemplates ?? []).map((tpl, idx) => {
               const maxCount = topTemplates?.[0]?.usageCount ?? 1;
-              const pct = Math.round((t.usageCount / maxCount) * 100);
+              const pct = Math.round((tpl.usageCount / maxCount) * 100);
               return (
-                <div key={t.templateId} className="flex items-center gap-4 py-2.5">
-                  <span className="w-5 flex-shrink-0 text-right text-sm font-bold text-stone-400">#{idx + 1}</span>
+                <div key={tpl.templateId} className="flex items-center gap-4 py-2.5">
+                  <span className="w-5 flex-shrink-0 text-end text-sm font-bold text-stone-400">#{idx + 1}</span>
                   <div className="flex-1">
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-sm font-medium capitalize text-stone-800 dark:text-stone-200">{t.name}</span>
-                      <span className="text-xs font-semibold text-stone-600 dark:text-stone-400">{t.usageCount.toLocaleString()} uses</span>
+                      <span className="text-sm font-medium capitalize text-stone-800 dark:text-stone-200">{tpl.name}</span>
+                      <span className="text-xs font-semibold text-stone-600 dark:text-stone-400">{t('platform_template_uses', { count: tpl.usageCount.toLocaleString() })}</span>
                     </div>
                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
                       <div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} />

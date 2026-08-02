@@ -1,9 +1,11 @@
 'use client';
 import React from 'react';
 
-import { useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { useId, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useModalA11y } from '@/hooks/useModalA11y';
 import {
   CRMLead,
   CRMLeadStage,
@@ -25,8 +27,9 @@ import {
   Edit3,
   Save,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { safeFormat } from '@/lib/format-date';
 import { toast } from 'sonner';
+import { downloadCsv } from '@/lib/download-csv';
 
 interface ListResponse {
   items: CRMLead[];
@@ -37,16 +40,17 @@ interface ListResponse {
 }
 
 const STAGE_OPTIONS = [
-  { value: '', label: 'All Stages' },
-  { value: CRMLeadStage.NEW, label: 'New' },
-  { value: CRMLeadStage.CONTACTED, label: 'Contacted' },
-  { value: CRMLeadStage.QUALIFIED, label: 'Qualified' },
-  { value: CRMLeadStage.PROPOSAL, label: 'Proposal' },
-  { value: CRMLeadStage.CLOSED_WON, label: 'Won' },
-  { value: CRMLeadStage.CLOSED_LOST, label: 'Lost' },
+  { value: '', labelKey: 'leads_all_stages' },
+  { value: CRMLeadStage.NEW, labelKey: 'stage_new' },
+  { value: CRMLeadStage.CONTACTED, labelKey: 'stage_contacted' },
+  { value: CRMLeadStage.QUALIFIED, labelKey: 'stage_qualified' },
+  { value: CRMLeadStage.PROPOSAL, labelKey: 'stage_proposal' },
+  { value: CRMLeadStage.CLOSED_WON, labelKey: 'stage_won' },
+  { value: CRMLeadStage.CLOSED_LOST, labelKey: 'stage_lost' },
 ];
 
 export default function CRMLeadsPage(): React.JSX.Element | null {
+  const t = useTranslations('crm');
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');
@@ -64,12 +68,15 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
     notes: '',
   });
 
+  const addModalTitleId = useId();
+  const addModalRef = useModalA11y<HTMLDivElement>(showAddModal, () => setShowAddModal(false));
+
   const queryKey = ['crm', 'leads', { search, stage, page }];
 
   const { data, isLoading } = useQuery<ListResponse>({
     queryKey,
     queryFn: () =>
-      api.get(`/crm/leads?page=${page}&search=${search}&stage=${stage}`),
+      api.get(`/crm/leads?page=${page}&search=${encodeURIComponent(search)}&stage=${stage}`),
     staleTime: 30_000,
   });
 
@@ -84,7 +91,7 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
       invalidate();
       setShowAddModal(false);
       setNewLead({ name: '', email: '', phone: '', company: '', source: CRMCustomerSource.MANUAL, stage: CRMLeadStage.NEW, notes: '' });
-      toast.success('Lead added');
+      toast.success(t('leads_toast_added'));
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -92,7 +99,7 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
   const updateMutation = useMutation({
     mutationFn: ({ id, ...dto }: Partial<CRMLead> & { id: string }) =>
       api.put(`/crm/leads/${id}`, dto),
-    onSuccess: () => { invalidate(); setEditingLead(null); toast.success('Lead updated'); },
+    onSuccess: () => { invalidate(); setEditingLead(null); toast.success(t('leads_toast_updated')); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -101,19 +108,21 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
     onSuccess: () => {
       invalidate();
       queryClient.invalidateQueries({ queryKey: ['crm', 'customers'] });
-      toast.success('Lead converted to customer!');
+      toast.success(t('leads_toast_converted'));
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (leadId: string) => api.delete(`/crm/leads/${leadId}`),
-    onSuccess: () => { invalidate(); toast.success('Lead deleted'); },
+    onSuccess: () => { invalidate(); toast.success(t('leads_toast_deleted')); },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const handleExport = () => {
-    window.open(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/crm/leads/export/csv`, '_blank');
+    downloadCsv('/crm/leads/export/csv', 'leads.csv').catch((e) =>
+      toast.error(e instanceof Error ? e.message : 'Export failed'),
+    );
   };
 
   // Stage column counts
@@ -130,17 +139,17 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-stone-900 dark:text-white">Lead Pipeline</h1>
+          <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{t('leads_title')}</h1>
           <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-            {data?.total ?? 0} total leads
+            {t('leads_total_count', { count: data?.total ?? 0 })}
           </p>
         </div>
         <div className="flex gap-3">
           <Button variant="secondary" icon={<Download className="h-4 w-4" />} onClick={handleExport}>
-            Export CSV
+            {t('export_csv')}
           </Button>
           <Button icon={<Plus className="h-4 w-4" />} onClick={() => setShowAddModal(true)}>
-            Add Lead
+            {t('leads_add_lead')}
           </Button>
         </div>
       </div>
@@ -157,7 +166,7 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
                 : 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-400 dark:hover:bg-stone-700'
             }`}
           >
-            {s.label}
+            {t(s.labelKey)}
             <span className={`rounded-full px-1.5 py-0.5 text-xs ${stage === s.value ? 'bg-brand-700 text-white' : 'bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-400'}`}>
               {stageCounts[s.value] ?? 0}
             </span>
@@ -169,22 +178,23 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
       <Card padding="sm">
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-48">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+            <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
             <input
               type="text"
-              placeholder="Search by name, email, or company..."
+              placeholder={t('leads_search_placeholder')}
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="w-full rounded-lg border border-stone-200 bg-white py-2 pl-9 pr-4 text-sm text-stone-900 placeholder-stone-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-stone-700 dark:bg-stone-800 dark:text-white dark:placeholder-stone-500"
+              className="w-full rounded-lg border border-stone-200 bg-white py-2 ps-9 pe-4 text-sm text-stone-900 placeholder-stone-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-stone-700 dark:bg-stone-800 dark:text-white dark:placeholder-stone-500"
             />
           </div>
           <select
             value={stage}
+            aria-label={t('filter_by_stage')}
             onChange={(e) => { setStage(e.target.value as CRMLeadStage | ''); setPage(1); }}
             className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-white"
           >
             {STAGE_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>{t(o.labelKey)}</option>
             ))}
           </select>
         </div>
@@ -195,14 +205,14 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-stone-200 dark:border-stone-700 text-left text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-                <th className="px-4 py-3">Lead</th>
-                <th className="px-4 py-3">Company</th>
-                <th className="px-4 py-3">Source</th>
-                <th className="px-4 py-3">Stage</th>
-                <th className="px-4 py-3">Assigned To</th>
-                <th className="px-4 py-3">Created</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+              <tr className="border-b border-stone-200 dark:border-stone-700 text-start text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+                <th className="px-4 py-3">{t('leads_col_lead')}</th>
+                <th className="px-4 py-3">{t('company')}</th>
+                <th className="px-4 py-3">{t('source')}</th>
+                <th className="px-4 py-3">{t('stage')}</th>
+                <th className="px-4 py-3">{t('assigned_to')}</th>
+                <th className="px-4 py-3">{t('created')}</th>
+                <th className="px-4 py-3 text-end">{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -219,7 +229,7 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
                 : data?.items.map((lead) => (
                     <tr
                       key={lead.id}
-                      className="border-b border-stone-100 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/50"
+                      className="group border-b border-stone-100 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/50"
                     >
                       <td className="px-4 py-3">
                         <div>
@@ -239,6 +249,7 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
                           <div className="flex items-center gap-2">
                             <select
                               value={editingLead.stage}
+                              aria-label={t('stage')}
                               onChange={(e) => setEditingLead({ ...editingLead, stage: e.target.value as CRMLeadStage })}
                               className="rounded border border-stone-300 px-2 py-1 text-xs dark:border-stone-600 dark:bg-stone-800 dark:text-white"
                             >
@@ -247,13 +258,19 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
                               ))}
                             </select>
                             <button
+                              type="button"
                               onClick={() => updateMutation.mutate({ id: lead.id, stage: editingLead.stage })}
+                              aria-label={t('leads_save_stage')}
+                              title={t('leads_save_stage')}
                               className="text-brand-600 hover:text-brand-700"
                             >
                               <Save className="h-3.5 w-3.5" />
                             </button>
                             <button
+                              type="button"
                               onClick={() => setEditingLead(null)}
+                              aria-label={t('leads_cancel_stage_edit')}
+                              title={t('leads_cancel_stage_edit')}
                               className="text-stone-400 hover:text-stone-600"
                             >
                               <X className="h-3.5 w-3.5" />
@@ -263,8 +280,11 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
                           <div className="flex items-center gap-2">
                             <CRMStatusBadge value={lead.stage} type="lead" />
                             <button
+                              type="button"
                               onClick={() => setEditingLead(lead)}
-                              className="text-stone-400 hover:text-stone-600 opacity-0 group-hover:opacity-100"
+                              aria-label={t('leads_edit_stage')}
+                              title={t('leads_edit_stage')}
+                              className="text-stone-400 hover:text-stone-600 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 group-focus-within:opacity-100"
                             >
                               <Edit3 className="h-3 w-3" />
                             </button>
@@ -275,7 +295,7 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
                         {lead.assignedToName ?? '—'}
                       </td>
                       <td className="px-4 py-3 text-stone-500 dark:text-stone-400">
-                        {format(new Date(lead.createdAt), 'MMM d, yyyy')}
+                        {safeFormat(lead.createdAt, 'MMM d, yyyy')}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
@@ -285,18 +305,18 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
                             icon={<UserCheck className="h-3.5 w-3.5" />}
                             loading={convertMutation.isPending}
                             onClick={() => {
-                              if (confirm(`Convert "${lead.name}" to a customer?`)) {
+                              if (confirm(t('leads_convert_confirm', { name: lead.name }))) {
                                 convertMutation.mutate(lead.id);
                               }
                             }}
                           >
-                            Convert
+                            {t('leads_convert')}
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => {
-                              if (confirm('Delete this lead?')) deleteMutation.mutate(lead.id);
+                              if (confirm(t('leads_delete_confirm'))) deleteMutation.mutate(lead.id);
                             }}
                           >
                             <Trash2 className="h-3.5 w-3.5 text-red-500" />
@@ -311,8 +331,8 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
           {!isLoading && !data?.items.length && (
             <div className="flex flex-col items-center justify-center py-16 text-stone-500 dark:text-stone-400">
               <Target className="mb-3 h-10 w-10 opacity-30" />
-              <p className="font-medium">No leads found</p>
-              <p className="text-sm">Add a lead or adjust your filters.</p>
+              <p className="font-medium">{t('leads_empty_title')}</p>
+              <p className="text-sm">{t('leads_empty_subtitle')}</p>
             </div>
           )}
         </div>
@@ -320,11 +340,11 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
         {(data?.pages ?? 0) > 1 && (
           <div className="flex items-center justify-between border-t border-stone-200 px-4 py-3 dark:border-stone-700">
             <p className="text-sm text-stone-500 dark:text-stone-400">
-              Page {data?.page} of {data?.pages}
+              {t('pagination_page_of', { current: data?.page ?? 0, total: data?.pages ?? 0 })}
             </p>
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" icon={<ChevronLeft className="h-4 w-4" />} disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Prev</Button>
-              <Button variant="secondary" size="sm" disabled={page >= (data?.pages ?? 1)} onClick={() => setPage((p) => p + 1)}>Next <ChevronRight className="h-4 w-4" /></Button>
+              <Button variant="secondary" size="sm" icon={<ChevronLeft className="h-4 w-4" />} disabled={page === 1} onClick={() => setPage((p) => p - 1)}>{t('prev')}</Button>
+              <Button variant="secondary" size="sm" disabled={page >= (data?.pages ?? 1)} onClick={() => setPage((p) => p + 1)}>{t('next')} <ChevronRight className="h-4 w-4" /></Button>
             </div>
           </div>
         )}
@@ -332,24 +352,38 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
 
       {/* Add Lead Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div
+          ref={addModalRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={addModalTitleId}
+          tabIndex={-1}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 outline-none"
+        >
           <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-stone-900 dark:text-white">Add Lead</h2>
-              <button onClick={() => setShowAddModal(false)} className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800">
+              <h2 id={addModalTitleId} className="text-lg font-semibold text-stone-900 dark:text-white">{t('leads_add_lead')}</h2>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                aria-label={t('close')}
+                title={t('close')}
+                className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(newLead); }} className="space-y-4">
               {[
-                { field: 'name', label: 'Full Name *', type: 'text', required: true },
-                { field: 'email', label: 'Email *', type: 'email', required: true },
-                { field: 'phone', label: 'Phone', type: 'tel', required: false },
-                { field: 'company', label: 'Company', type: 'text', required: false },
-              ].map(({ field, label, type, required }) => (
+                { field: 'name', labelKey: 'leads_form_name', type: 'text', required: true },
+                { field: 'email', labelKey: 'leads_form_email', type: 'email', required: true },
+                { field: 'phone', labelKey: 'phone', type: 'tel', required: false },
+                { field: 'company', labelKey: 'company', type: 'text', required: false },
+              ].map(({ field, labelKey, type, required }) => (
                 <div key={field}>
-                  <label className="mb-1 block text-sm font-medium text-stone-700 dark:text-stone-300">{label}</label>
+                  <label htmlFor={`lead-${field}`} className="mb-1 block text-sm font-medium text-stone-700 dark:text-stone-300">{t(labelKey)}</label>
                   <input
+                    id={`lead-${field}`}
                     type={type}
                     required={required}
                     value={(newLead as any)[field]}
@@ -360,8 +394,9 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
               ))}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-stone-700 dark:text-stone-300">Stage</label>
+                  <label htmlFor="lead-stage" className="mb-1 block text-sm font-medium text-stone-700 dark:text-stone-300">{t('stage')}</label>
                   <select
+                    id="lead-stage"
                     value={newLead.stage}
                     onChange={(e) => setNewLead((p) => ({ ...p, stage: e.target.value as CRMLeadStage }))}
                     className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-white"
@@ -372,8 +407,9 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-stone-700 dark:text-stone-300">Source</label>
+                  <label htmlFor="lead-source" className="mb-1 block text-sm font-medium text-stone-700 dark:text-stone-300">{t('source')}</label>
                   <select
+                    id="lead-source"
                     value={newLead.source}
                     onChange={(e) => setNewLead((p) => ({ ...p, source: e.target.value as CRMCustomerSource }))}
                     className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-white"
@@ -385,8 +421,9 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
                 </div>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-stone-700 dark:text-stone-300">Notes</label>
+                <label htmlFor="lead-notes" className="mb-1 block text-sm font-medium text-stone-700 dark:text-stone-300">{t('notes')}</label>
                 <textarea
+                  id="lead-notes"
                   rows={2}
                   value={newLead.notes}
                   onChange={(e) => setNewLead((p) => ({ ...p, notes: e.target.value }))}
@@ -394,8 +431,8 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
                 />
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <Button type="button" variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
-                <Button type="submit" loading={createMutation.isPending}>Add Lead</Button>
+                <Button type="button" variant="secondary" onClick={() => setShowAddModal(false)}>{t('cancel')}</Button>
+                <Button type="submit" loading={createMutation.isPending}>{t('leads_add_lead')}</Button>
               </div>
             </form>
           </Card>

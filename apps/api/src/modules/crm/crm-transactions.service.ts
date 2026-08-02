@@ -131,7 +131,6 @@ export class CRMTransactionsService {
     for (const t of transactions) {
       const d = new Date(t.date);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
 
       if (!byMonth.has(key)) {
         byMonth.set(key, { revenue: 0, transactions: 0 });

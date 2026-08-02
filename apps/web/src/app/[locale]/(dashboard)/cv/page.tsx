@@ -5,15 +5,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import { api } from '@/lib/api';
+import { useModalA11y } from '@/hooks/useModalA11y';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { Plus, FileText, Trash2, Copy, Pencil, Sparkles, AlertTriangle } from 'lucide-react';
 import Skeleton from '@/components/ui/Skeleton';
-import { CV, PLAN_CONFIGS } from '@flacroncv/shared-types';
+import { CV, PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
 import CVThumbnail from '@/components/cv-builder/CVThumbnail';
 import { formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useRouter } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import UpgradeModal from '@/components/shared/UpgradeModal';
@@ -23,27 +24,33 @@ export default function CVListPage(): React.JSX.Element | null {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
 
-  const planLimits = PLAN_CONFIGS[user?.subscription?.plan ?? 'free'].limits;
+  const deleteDialogTitleId = useId();
+  const deleteDialogRef = useModalA11y<HTMLDivElement>(confirmDeleteId !== null, () =>
+    setConfirmDeleteId(null),
+  );
+
+  const planLimits = PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)].limits;
   const cvLimit = planLimits.cvs;
   const cvsCreated = user?.usage?.cvsCreated ?? 0;
   const atLimit = cvLimit !== 'unlimited' && cvsCreated >= cvLimit;
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['cvs'],
-    queryFn: () => api.get<{ items: CV[] }>('/cvs'),
+    queryFn: () => api.get<{ items: CV[] }>('/cvs?limit=100'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/cvs/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cvs'] });
-      toast.success('CV deleted');
+      toast.success(t('cv.deleted'));
       setConfirmDeleteId(null);
     },
     onError: () => {
-      toast.error('Failed to delete CV. Please try again.');
+      toast.error(t('cv.delete_failed'));
       setConfirmDeleteId(null);
     },
   });
@@ -52,10 +59,12 @@ export default function CVListPage(): React.JSX.Element | null {
     mutationFn: (id: string) => api.post(`/cvs/${id}/duplicate`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cvs'] });
-      toast.success('CV duplicated');
+      toast.success(t('cv.duplicated'));
+      setDuplicatingId(null);
     },
     onError: () => {
-      toast.error('Failed to duplicate CV. Please try again.');
+      toast.error(t('cv.duplicate_failed'));
+      setDuplicatingId(null);
     },
   });
 
@@ -76,7 +85,12 @@ export default function CVListPage(): React.JSX.Element | null {
         )}
       </div>
 
-      {isLoading ? (
+      {isError ? (
+        <Card className="flex flex-col items-center gap-3 py-16 text-center">
+          <AlertTriangle className="h-8 w-8 text-red-500" />
+          <p className="text-sm text-stone-500 dark:text-stone-400">{t('dashboard.load_error')}</p>
+        </Card>
+      ) : isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <Card key={i} padding="none" className="overflow-hidden">
@@ -114,8 +128,8 @@ export default function CVListPage(): React.JSX.Element | null {
               key={cv.id}
               cv={cv}
               onDelete={() => setConfirmDeleteId(cv.id)}
-              onDuplicate={() => duplicateMutation.mutate(cv.id)}
-              duplicating={duplicateMutation.isPending}
+              onDuplicate={() => { setDuplicatingId(cv.id); duplicateMutation.mutate(cv.id); }}
+              duplicating={duplicatingId === cv.id && duplicateMutation.isPending}
             />
           ))}
         </div>
@@ -130,13 +144,20 @@ export default function CVListPage(): React.JSX.Element | null {
       {/* Delete confirmation modal */}
       {confirmDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-xl border border-stone-200 bg-white p-6 shadow-xl dark:border-stone-700 dark:bg-stone-900">
+          <div
+            ref={deleteDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={deleteDialogTitleId}
+            tabIndex={-1}
+            className="w-full max-w-sm rounded-xl border border-stone-200 bg-white p-6 shadow-xl outline-none dark:border-stone-700 dark:bg-stone-900"
+          >
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
               <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
             </div>
-            <h3 className="text-lg font-semibold text-stone-900 dark:text-white">Delete CV?</h3>
+            <h3 id={deleteDialogTitleId} className="text-lg font-semibold text-stone-900 dark:text-white">{t('cv.delete_confirm_title')}</h3>
             <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
-              This action cannot be undone. The CV will be permanently deleted.
+              {t('cv.delete_confirm_message')}
             </p>
             <div className="mt-6 flex gap-3">
               <Button
@@ -145,14 +166,14 @@ export default function CVListPage(): React.JSX.Element | null {
                 onClick={() => setConfirmDeleteId(null)}
                 disabled={deleteMutation.isPending}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 className="flex-1 !bg-red-600 hover:!bg-red-700"
                 loading={deleteMutation.isPending}
                 onClick={() => deleteMutation.mutate(confirmDeleteId)}
               >
-                Delete
+                {t('common.delete')}
               </Button>
             </div>
           </div>
@@ -174,6 +195,7 @@ function CVCard({
   duplicating?: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations('cv');
 
   return (
     <Card padding="none" className="group overflow-hidden transition-shadow hover:shadow-md">
@@ -181,7 +203,7 @@ function CVCard({
       <button
         className="relative h-40 w-full overflow-hidden bg-stone-50 dark:bg-stone-800"
         onClick={() => router.push(`/cv/${cv.id}`)}
-        aria-label={`Open ${cv.title}`}
+        aria-label={t('card_open', { title: cv.title })}
       >
         {/* Scaled-down CV thumbnail — uses the CV's actual layout and color */}
         <div
@@ -198,7 +220,7 @@ function CVCard({
         {/* Hover overlay */}
         <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all group-hover:bg-black/20">
           <span className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-stone-800 opacity-0 shadow transition-opacity group-hover:opacity-100">
-            <Pencil className="h-3.5 w-3.5" /> Open Editor
+            <Pencil className="h-3.5 w-3.5" /> {t('card_open_editor')}
           </span>
         </div>
       </button>
@@ -208,7 +230,7 @@ function CVCard({
         <div className="mb-3">
           <h3 className="truncate font-semibold text-stone-900 dark:text-white">{cv.title}</h3>
           <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
-            Updated {formatDate(cv.updatedAt)}
+            {t('card_updated', { date: formatDate(cv.updatedAt) })}
           </p>
         </div>
 
@@ -218,19 +240,20 @@ function CVCard({
             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-stone-200 py-1.5 text-sm font-medium text-stone-700 hover:border-brand-400 hover:text-brand-600 dark:border-stone-700 dark:text-stone-300 dark:hover:border-brand-500 dark:hover:text-brand-400"
             onClick={() => router.push(`/cv/${cv.id}`)}
           >
-            <Pencil className="h-3.5 w-3.5" /> Edit
+            <Pencil className="h-3.5 w-3.5" /> {t('card_edit')}
           </button>
           <button
             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-stone-200 py-1.5 text-sm font-medium text-stone-700 hover:border-stone-300 dark:border-stone-700 dark:text-stone-300"
             onClick={onDuplicate}
             disabled={duplicating}
           >
-            <Copy className="h-3.5 w-3.5" /> Duplicate
+            <Copy className="h-3.5 w-3.5" /> {t('card_duplicate')}
           </button>
           <button
             className="flex items-center justify-center rounded-lg border border-stone-200 p-1.5 text-stone-400 hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:border-stone-700 dark:hover:border-red-700 dark:hover:bg-red-900/20 dark:hover:text-red-400"
             onClick={onDelete}
-            aria-label="Delete CV"
+            aria-label={t('card_delete')}
+            title={t('card_delete')}
           >
             <Trash2 className="h-4 w-4" />
           </button>

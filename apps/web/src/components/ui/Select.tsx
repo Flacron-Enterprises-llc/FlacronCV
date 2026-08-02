@@ -27,7 +27,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={id}
             className={cn(
-              'input-field h-10 appearance-none pr-8',
+              'input-field h-10 appearance-none pe-8',
               error && 'border-red-500 focus:border-red-500 focus:ring-red-500',
               className,
             )}
@@ -36,7 +36,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             {children}
           </select>
           <ChevronDown
-            className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400 dark:text-stone-500"
+            className="pointer-events-none absolute end-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400 dark:text-stone-500"
             aria-hidden="true"
           />
         </div>

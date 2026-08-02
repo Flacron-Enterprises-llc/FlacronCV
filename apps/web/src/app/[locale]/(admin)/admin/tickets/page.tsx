@@ -23,7 +23,7 @@ import {
 interface Ticket {
   id: string;
   userId: string;
-  userName: string;
+  userDisplayName: string;
   userEmail: string;
   subject: string;
   category: string;
@@ -34,10 +34,10 @@ interface Ticket {
 }
 
 interface TicketsResponse {
-  tickets: Ticket[];
+  items: Ticket[];
   total: number;
   page: number;
-  totalPages: number;
+  limit: number;
 }
 
 const statusFilters = ['all', 'open', 'in_progress', 'resolved', 'closed'];
@@ -58,6 +58,7 @@ const statusVariant: Record<string, 'info' | 'warning' | 'success' | 'default'> 
 
 export default function AdminTicketsPage(): React.JSX.Element | null {
   const t = useTranslations('admin');
+  const ts = useTranslations('support');
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
@@ -69,6 +70,8 @@ export default function AdminTicketsPage(): React.JSX.Element | null {
         `/admin/tickets?page=${page}&limit=20${statusFilter !== 'all' ? `&status=${statusFilter}` : ''}`,
       ),
   });
+
+  const totalPages = data && data.limit ? Math.ceil(data.total / data.limit) : 1;
 
   if (isLoading) {
     return (
@@ -91,10 +94,10 @@ export default function AdminTicketsPage(): React.JSX.Element | null {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
-          Support Tickets
+          {t('tickets')}
         </h1>
         <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
-          Manage customer support tickets
+          {t('tickets_subtitle')}
         </p>
       </div>
 
@@ -109,6 +112,7 @@ export default function AdminTicketsPage(): React.JSX.Element | null {
                 setStatusFilter(status);
                 setPage(1);
               }}
+              aria-pressed={statusFilter === status}
               className={cn(
                 'rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors',
                 statusFilter === status
@@ -116,7 +120,7 @@ export default function AdminTicketsPage(): React.JSX.Element | null {
                   : 'text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-white',
               )}
             >
-              {status === 'all' ? 'All' : status.replace('_', ' ')}
+              {status === 'all' ? t('filter_all') : ts(`statusLabels.${status}`)}
             </button>
           ))}
         </div>
@@ -127,75 +131,101 @@ export default function AdminTicketsPage(): React.JSX.Element | null {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
+              {/* Responsive columns. The table previously rendered all six at
+                  px-6 and simply overflowed, so on a laptop the right-hand
+                  columns were cut off. Subject and Status are always visible —
+                  they are what an agent triages on — and the rest reappear as
+                  the viewport allows. Anything hidden is repeated inside the
+                  Subject cell (below), so no information is ever lost. */}
               <tr className="border-b border-stone-200 dark:border-stone-700">
-                <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                  Subject
+                <th className="px-4 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 sm:px-6 dark:text-stone-400">
+                  {t('th_subject')}
                 </th>
-                <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                  User
+                <th className="hidden px-4 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 md:table-cell sm:px-6 dark:text-stone-400">
+                  {t('th_user')}
                 </th>
-                <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                  Category
+                <th className="hidden px-4 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 xl:table-cell sm:px-6 dark:text-stone-400">
+                  {t('th_category')}
                 </th>
-                <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                  Priority
+                <th className="hidden px-4 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 lg:table-cell sm:px-6 dark:text-stone-400">
+                  {t('th_priority')}
                 </th>
-                <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                  Status
+                <th className="px-4 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 sm:px-6 dark:text-stone-400">
+                  {t('status')}
                 </th>
-                <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                  Created
+                <th className="hidden px-4 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 sm:table-cell sm:px-6 dark:text-stone-400">
+                  {t('created')}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100 dark:divide-stone-700">
-              {data?.tickets?.map((ticket) => (
+              {data?.items?.map((ticket) => (
                 <tr
                   key={ticket.id}
-                  onClick={() => router.push(`/support/${ticket.id}` as any)}
-                  className="cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/50"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${t('open_ticket')}: ${ticket.subject}`}
+                  onClick={() => router.push(`/admin/tickets/${ticket.id}` as any)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      router.push(`/admin/tickets/${ticket.id}` as any);
+                    }
+                  }}
+                  className="cursor-pointer hover:bg-stone-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 dark:hover:bg-stone-800/50"
                 >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4 shrink-0 text-stone-400" />
-                      <span className="text-sm font-medium text-stone-900 dark:text-white">
-                        {ticket.subject}
-                      </span>
+                  <td className="px-4 py-4 sm:px-6">
+                    <div className="flex items-start gap-2">
+                      <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-stone-400" />
+                      <div className="min-w-0">
+                        <span className="text-sm font-medium text-stone-900 dark:text-white">
+                          {ticket.subject}
+                        </span>
+                        {/* Fallback for the columns hidden at this width, so a
+                            narrow screen still shows who raised it and when. */}
+                        <p className="text-xs text-stone-500 md:hidden">
+                          {ticket.userDisplayName} · {formatDate(ticket.createdAt)}
+                        </p>
+                        <p className="text-xs text-stone-500 lg:hidden">
+                          {ts(`priorityLabels.${ticket.priority}`)} ·{' '}
+                          {ts(`categoryLabels.${ticket.category}`)}
+                        </p>
+                      </div>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4">
+                  <td className="hidden whitespace-nowrap px-4 py-4 md:table-cell sm:px-6">
                     <div>
                       <p className="text-sm text-stone-900 dark:text-white">
-                        {ticket.userName}
+                        {ticket.userDisplayName}
                       </p>
                       <p className="text-xs text-stone-500">{ticket.userEmail}</p>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4">
-                    <Badge variant="default">{ticket.category}</Badge>
+                  <td className="hidden whitespace-nowrap px-4 py-4 xl:table-cell sm:px-6">
+                    <Badge variant="default">{ts(`categoryLabels.${ticket.category}`)}</Badge>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4">
+                  <td className="hidden whitespace-nowrap px-4 py-4 lg:table-cell sm:px-6">
                     <Badge variant={priorityVariant[ticket.priority] || 'default'}>
-                      {ticket.priority}
+                      {ts(`priorityLabels.${ticket.priority}`)}
                     </Badge>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4">
+                  <td className="px-4 py-4 sm:px-6">
                     <Badge variant={statusVariant[ticket.status] || 'default'}>
-                      {ticket.status.replace('_', ' ')}
+                      {ts(`statusLabels.${ticket.status}`)}
                     </Badge>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-stone-500">
+                  <td className="hidden whitespace-nowrap px-4 py-4 text-sm text-stone-500 sm:table-cell sm:px-6">
                     {formatDate(ticket.createdAt)}
                   </td>
                 </tr>
               ))}
-              {(!data?.tickets || data.tickets.length === 0) && (
+              {(!data?.items || data.items.length === 0) && (
                 <tr>
                   <td
                     colSpan={6}
                     className="px-6 py-8 text-center text-sm text-stone-500 dark:text-stone-400"
                   >
-                    No tickets found
+                    {t('no_tickets')}
                   </td>
                 </tr>
               )}
@@ -204,10 +234,10 @@ export default function AdminTicketsPage(): React.JSX.Element | null {
         </div>
 
         {/* Pagination */}
-        {data && data.totalPages > 1 && (
+        {data && totalPages > 1 && (
           <div className="flex items-center justify-between border-t border-stone-200 px-6 py-3 dark:border-stone-700">
             <p className="text-sm text-stone-600 dark:text-stone-400">
-              Page {data.page} of {data.totalPages}
+              {t('page_of', { page: data.page, total: totalPages })}
             </p>
             <div className="flex gap-2">
               <Button
@@ -217,15 +247,15 @@ export default function AdminTicketsPage(): React.JSX.Element | null {
                 disabled={page <= 1}
                 icon={<ChevronLeft className="h-4 w-4" />}
               >
-                Previous
+                {t('previous')}
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => setPage((p) => p + 1)}
-                disabled={page >= data.totalPages}
+                disabled={page >= totalPages}
               >
-                Next
+                {t('next')}
                 <ChevronRight className="ms-1 h-4 w-4" />
               </Button>
             </div>

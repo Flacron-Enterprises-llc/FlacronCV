@@ -2,7 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/routing';
-import Image from 'next/image';
+import Logo from '@/components/ui/Logo';
+import NewsletterSignup from '@/components/shared/NewsletterSignup';
 
 export default function Footer() {
   const t = useTranslations();
@@ -14,7 +15,8 @@ export default function Footer() {
   ) => {
     if (pathname === '/') {
       e.preventDefault();
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
     }
   };
 
@@ -23,11 +25,15 @@ export default function Footer() {
   return (
     <footer className="border-t border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-900">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        {/* Newsletter opt-in (Epic C2) */}
+        <div className="mb-10 border-b border-stone-200 pb-10 dark:border-stone-800">
+          <NewsletterSignup />
+        </div>
         <div className="grid gap-8 md:grid-cols-4">
           {/* Brand */}
           <div className="md:col-span-1">
             <Link href="/" className="flex items-center">
-              <Image src="/logo.png" alt="FlacronCV" width={120} height={120} className="h-10 w-auto dark:invert dark:hue-rotate-180" />
+              <Logo className="h-8" />
             </Link>
             <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">
               {t('footer.description')}
@@ -36,9 +42,9 @@ export default function Footer() {
 
           {/* Product */}
           <div>
-            <h4 className="text-sm font-semibold text-stone-900 dark:text-white">
+            <h3 className="text-sm font-semibold text-stone-900 dark:text-white">
               {t('footer.product')}
-            </h4>
+            </h3>
             <ul className="mt-3 space-y-2">
               <li>
                 <a
@@ -63,19 +69,14 @@ export default function Footer() {
                   {t('nav.templates')}
                 </Link>
               </li>
-              <li>
-                <Link href="/testimonials" className={linkClass}>
-                  {t('footer.testimonials')}
-                </Link>
-              </li>
             </ul>
           </div>
 
           {/* Company */}
           <div>
-            <h4 className="text-sm font-semibold text-stone-900 dark:text-white">
+            <h3 className="text-sm font-semibold text-stone-900 dark:text-white">
               {t('footer.company')}
-            </h4>
+            </h3>
             <ul className="mt-3 space-y-2">
               <li>
                 <Link href="/about-us" className={linkClass}>
@@ -102,9 +103,9 @@ export default function Footer() {
 
           {/* Legal */}
           <div>
-            <h4 className="text-sm font-semibold text-stone-900 dark:text-white">
+            <h3 className="text-sm font-semibold text-stone-900 dark:text-white">
               {t('footer.legal')}
-            </h4>
+            </h3>
             <ul className="mt-3 space-y-2">
               <li>
                 <Link href="/privacy-policy" className={linkClass}>

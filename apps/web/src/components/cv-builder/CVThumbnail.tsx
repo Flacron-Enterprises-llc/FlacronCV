@@ -14,6 +14,7 @@
 
 import React from 'react';
 import type { CV, CVLayout } from '@flacroncv/shared-types';
+import { ensureDarkSurface, readableOn, hexToRgba } from '@/lib/design-tokens';
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -67,19 +68,23 @@ function Bar({
 // ─── Layout renderers ─────────────────────────────────────────────────────────
 
 interface RendererProps {
+  /** Panel colour for white-on-colour surfaces — matches the layout's own. */
+  panel: string;
+  /** Accent for marks drawn on white — matches the layout's own. */
+  ink: string;
   color: string;
   initials: string;
   hasName: boolean;
 }
 
-function SidebarThumb({ color, initials, hasName }: RendererProps) {
+function SidebarThumb({ panel, ink, initials, hasName }: RendererProps) {
   return (
     <div style={{ display: 'flex', height: '100%', width: '100%', overflow: 'hidden' }}>
       {/* Sidebar */}
       <div
         style={{
           width: '32%',
-          background: color,
+          background: panel,
           padding: '6px 4px',
           display: 'flex',
           flexDirection: 'column',
@@ -117,7 +122,7 @@ function SidebarThumb({ color, initials, hasName }: RendererProps) {
         }}
       >
         {/* Section heading stub */}
-        <Bar width="55%" bg={`${color}55`} height={3} />
+        <Bar width="55%" bg={hexToRgba(ink, 0.45)} height={3} />
         {[80, 65, 90, 50, 75, 60, 85].map((w, i) => (
           <Bar key={i} width={`${w}%`} bg={i % 3 === 0 ? '#d1d5db' : '#f3f4f6'} height={3} />
         ))}
@@ -126,13 +131,13 @@ function SidebarThumb({ color, initials, hasName }: RendererProps) {
   );
 }
 
-function TopBarThumb({ color, initials, hasName }: RendererProps) {
+function TopBarThumb({ panel, ink, initials, hasName }: RendererProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', overflow: 'hidden' }}>
       {/* Top bar header */}
       <div
         style={{
-          background: color, padding: '7px 6px',
+          background: panel, padding: '7px 6px',
           display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
         }}
       >
@@ -160,7 +165,7 @@ function TopBarThumb({ color, initials, hasName }: RendererProps) {
           display: 'flex', flexDirection: 'column', gap: 3,
         }}
       >
-        <Bar width="50%" bg={`${color}55`} height={3} />
+        <Bar width="50%" bg={hexToRgba(ink, 0.45)} height={3} />
         {[85, 70, 90, 60, 80, 55].map((w, i) => (
           <Bar key={i} width={`${w}%`} bg={i === 0 || i === 3 ? '#d1d5db' : '#f3f4f6'} height={3} />
         ))}
@@ -169,7 +174,7 @@ function TopBarThumb({ color, initials, hasName }: RendererProps) {
   );
 }
 
-function CompactThumb({ color, initials, hasName }: RendererProps) {
+function CompactThumb({ panel, ink, initials, hasName }: RendererProps) {
   return (
     <div
       style={{
@@ -178,19 +183,19 @@ function CompactThumb({ color, initials, hasName }: RendererProps) {
       }}
     >
       {/* Header row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 4, borderBottom: `2px solid ${color}` }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 4, borderBottom: `2px solid ${ink}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <div
             style={{
               width: 14, height: 14, borderRadius: 2,
-              background: color, flexShrink: 0,
+              background: panel, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 4, fontWeight: 700, color: '#fff',
             }}
           >
             {initials}
           </div>
-          <Bar width={hasName ? 40 : 36} bg={color} height={4} />
+          <Bar width={hasName ? 40 : 36} bg={ink} height={4} />
         </div>
         <Bar width={28} bg="#e5e7eb" height={3} />
       </div>
@@ -198,13 +203,13 @@ function CompactThumb({ color, initials, hasName }: RendererProps) {
       {/* Two-column content */}
       <div style={{ display: 'flex', gap: 5, flex: 1 }}>
         <div style={{ flex: '0 0 58%', display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-          <Bar width="75%" bg={`${color}55`} height={3} />
+          <Bar width="75%" bg={hexToRgba(ink, 0.45)} height={3} />
           {[90, 75, 85, 60, 80].map((w, i) => (
             <Bar key={i} width={`${w}%`} bg="#f3f4f6" height={3} />
           ))}
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-          <Bar width="70%" bg={`${color}55`} height={3} />
+          <Bar width="70%" bg={hexToRgba(ink, 0.45)} height={3} />
           {[85, 70, 60, 80, 55].map((w, i) => (
             <Bar key={i} width={`${w}%`} bg="#f3f4f6" height={3} />
           ))}
@@ -214,7 +219,7 @@ function CompactThumb({ color, initials, hasName }: RendererProps) {
   );
 }
 
-function ClassicThumb({ color, initials, hasName }: RendererProps) {
+function ClassicThumb({ ink, hasName }: RendererProps) {
   return (
     <div
       style={{
@@ -223,13 +228,15 @@ function ClassicThumb({ color, initials, hasName }: RendererProps) {
       }}
     >
       {/* Name */}
-      <Bar width={hasName ? '55%' : '50%'} bg={color} height={5} />
+      <Bar width={hasName ? '55%' : '50%'} bg={ink} height={5} />
       {/* Headline */}
       <Bar width="38%" bg="#d1d5db" height={2.5} />
-      {/* Divider */}
-      <div style={{ height: 2, width: '100%', background: `linear-gradient(90deg, ${color}, transparent)`, marginBottom: 2, borderRadius: 1 }} />
+      {/* Divider — a short centred rule, mirroring the layout it previews.
+          It used to be a full-width accent-to-transparent gradient, which the
+          real Classic layout no longer draws. */}
+      <Bar width={18} bg={ink} height={2} style={{ marginBottom: 2 }} />
       {/* Section heading */}
-      <Bar width="45%" bg={`${color}55`} height={3} />
+      <Bar width="45%" bg={hexToRgba(ink, 0.45)} height={3} />
       {/* Content bars */}
       {[90, 75, 85, 60, 80, 65].map((w, i) => (
         <Bar key={i} width={`${w}%`} bg="#f3f4f6" height={3} />
@@ -240,9 +247,15 @@ function ClassicThumb({ color, initials, hasName }: RendererProps) {
 
 // ─── Slate-Gold thumbnail ─────────────────────────────────────────────────────
 
-function SlateGoldThumb({ color, initials, hasName }: RendererProps) {
+function SlateGoldThumb({ color, ink, initials, hasName }: RendererProps) {
   const SLATE = '#1a2332';
-  const gold  = color; // user's primaryColor is the gold accent
+  // Two accents, one per surface — the same split the layout makes. `gold` was
+  // the raw primaryColor, which vanished on the slate panel for any dark
+  // choice; the sidebar marks below were separately hard-coded to the literal
+  // #C9A84C the template was first drawn with, so the thumbnail showed a gold
+  // that appeared nowhere in the CV it was advertising.
+  const goldSide = readableOn(color, SLATE, 4.5);
+  const gold     = ink;
 
   return (
     <div style={{ display: 'flex', height: '100%', width: '100%', overflow: 'hidden' }}>
@@ -255,30 +268,29 @@ function SlateGoldThumb({ color, initials, hasName }: RendererProps) {
         flexDirection: 'column',
         alignItems: 'center',
         gap: 3,
-        borderTop: `3px solid ${gold}`,
+        borderTop: `3px solid ${goldSide}`,
       }}>
         {/* Monogram circle */}
         <div style={{
           width: 18, height: 18, borderRadius: '50%',
-          border: `1.5px solid ${gold}`,
+          border: `1.5px solid ${goldSide}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 4, fontWeight: 800, color: gold,
+          fontSize: 4, fontWeight: 800, color: goldSide,
           flexShrink: 0, marginBottom: 2,
         }}>
           {initials}
         </div>
-        {hasName && <Bar width="80%" bg={`rgba(201,168,76,0.55)`} height={2} />}
+        {hasName && <Bar width="80%" bg="rgba(255,255,255,0.85)" height={2} />}
         {/* Contact stubs */}
         {[70, 90, 65, 80].map((w, i) => (
           <Bar key={i} width={`${w}%`} bg="rgba(255,255,255,0.20)" height={1.5} />
         ))}
-        {/* Skill chips */}
+        {/* Skill chips — outline, no fill, matching the layout's tags */}
         <div style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: 1.5, marginTop: 2 }}>
           {[40, 55, 35].map((w, i) => (
             <div key={i} style={{
               height: 4, width: `${w}%`, borderRadius: 1,
-              background: `rgba(201,168,76,0.25)`,
-              border: `0.5px solid rgba(201,168,76,0.40)`,
+              border: `0.5px solid ${hexToRgba(goldSide, 0.45)}`,
             }} />
           ))}
         </div>
@@ -304,7 +316,7 @@ function SlateGoldThumb({ color, initials, hasName }: RendererProps) {
         <div style={{ display: 'flex', gap: 3, marginTop: 2 }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 5 }}>
             <div style={{ width: 4, height: 4, borderRadius: '50%', background: gold, flexShrink: 0 }} />
-            <div style={{ flex: 1, width: 0.5, background: `rgba(201,168,76,0.30)`, marginTop: 1 }} />
+            <div style={{ flex: 1, width: 0.5, background: hexToRgba(gold, 0.30), marginTop: 1 }} />
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             <Bar width="60%" bg="#1a2332" height={2.5} style={{ opacity: 0.7 }} />
@@ -335,7 +347,15 @@ export default function CVThumbnail(props: CVThumbnailProps) {
       ? parts[0].slice(0, 2).toUpperCase()
       : '';
 
-  const rendererProps: RendererProps = { color, initials, hasName };
+  // Derived exactly as the layouts derive them, so the picker previews the CV
+  // you will actually get rather than the one the raw swatch implies.
+  const rendererProps: RendererProps = {
+    color,
+    panel: ensureDarkSurface(color),
+    ink:   readableOn(color, '#ffffff', 4.0),
+    initials,
+    hasName,
+  };
 
   if (layout === 'sidebar')    return <SidebarThumb   {...rendererProps} />;
   if (layout === 'top-bar')    return <TopBarThumb    {...rendererProps} />;
