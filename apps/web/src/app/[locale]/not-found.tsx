@@ -1,22 +1,19 @@
 import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/routing';
 import Button from '@/components/ui/Button';
-import { FileText, Home } from 'lucide-react';
+import { Home } from 'lucide-react';
+import Logo from '@/components/ui/Logo';
 
 export default async function NotFound() {
   const t = await getTranslations('not_found');
+  const tNav = await getTranslations();
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-white px-4 dark:bg-black">
       <div className="text-center">
         {/* Logo */}
-        <Link href="/" className="mb-8 inline-flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white">
-            <FileText className="h-5 w-5" />
-          </div>
-          <span className="text-xl font-bold text-stone-900 dark:text-white">
-            Flacron<span className="text-brand-600">CV</span>
-          </span>
+        <Link href="/" className="mb-8 inline-flex items-center">
+          <Logo className="h-9" />
         </Link>
 
         {/* 404 graphic */}
@@ -41,7 +38,7 @@ export default async function NotFound() {
           </Link>
           <Link href="/templates">
             <Button variant="secondary" size="lg">
-              Browse Templates
+              {t('browse_templates')}
             </Button>
           </Link>
         </div>
@@ -49,13 +46,13 @@ export default async function NotFound() {
         {/* Helpful links */}
         <div className="mt-12">
           <p className="text-sm font-medium text-stone-500 dark:text-stone-400">
-            Looking for something?
+            {t('looking_for')}
           </p>
           <div className="mt-3 flex flex-wrap justify-center gap-x-6 gap-y-2">
-            <Link href="/templates" className="text-sm text-brand-600 hover:text-brand-700 hover:underline dark:text-brand-400">Templates</Link>
-            <Link href="/about-us" className="text-sm text-brand-600 hover:text-brand-700 hover:underline dark:text-brand-400">About Us</Link>
-            <Link href="/contact-us" className="text-sm text-brand-600 hover:text-brand-700 hover:underline dark:text-brand-400">Contact Us</Link>
-            <Link href="/login" className="text-sm text-brand-600 hover:text-brand-700 hover:underline dark:text-brand-400">Sign In</Link>
+            <Link href="/templates" className="text-sm text-brand-600 hover:text-brand-700 hover:underline dark:text-brand-400">{tNav('nav.templates')}</Link>
+            <Link href="/about-us" className="text-sm text-brand-600 hover:text-brand-700 hover:underline dark:text-brand-400">{tNav('footer.about')}</Link>
+            <Link href="/contact-us" className="text-sm text-brand-600 hover:text-brand-700 hover:underline dark:text-brand-400">{tNav('footer.contact')}</Link>
+            <Link href="/login" className="text-sm text-brand-600 hover:text-brand-700 hover:underline dark:text-brand-400">{tNav('nav.login')}</Link>
           </div>
         </div>
       </div>

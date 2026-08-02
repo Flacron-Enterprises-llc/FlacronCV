@@ -20,6 +20,17 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "incremental": true,
+    // Keep the incremental cache INSIDE dist/ so the two can never diverge.
+    //
+    // With the default location (./tsconfig.tsbuildinfo) the cache outlives a
+    // deleted dist/, and tsc then believes everything is already emitted:
+    // `nest build` exits 0 having written NOTHING, and `node dist/main` fails
+    // with "Cannot find module". That is silent and it bites exactly when
+    // someone deletes dist/ to force a clean rebuild — or when a Docker/CI
+    // layer restores the cache without the output. `deleteOutDir:false` in
+    // nest-cli.json fixed the other direction (Nest deleting dist); this fixes
+    // the rest. Deleting dist/ now necessarily deletes the cache with it.
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "noEmit": false,
     "skipLibCheck": true
   },

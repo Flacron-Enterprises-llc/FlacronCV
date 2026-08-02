@@ -2,45 +2,55 @@
 import React from 'react';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/providers/AuthProvider';
 import { useRouter } from '@/i18n/routing';
 import { toast } from 'sonner';
-import { Mail, RefreshCw, LogOut } from 'lucide-react';
+import { Mail, RefreshCw, LogOut, Loader2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import { getPostLoginRedirect } from '@/lib/post-auth-redirect';
 
 export default function VerifyEmailPage(): React.JSX.Element | null {
-  const { firebaseUser, emailVerified, logout, resendVerification, refreshEmailVerified } = useAuth();
+  const t = useTranslations('auth');
+  const { firebaseUser, emailVerified, loading, logout, resendVerification, refreshEmailVerified } = useAuth();
   const router = useRouter();
   const [resending, setResending] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
-  const checkVerification = useCallback(async () => {
-    if (!firebaseUser) return;
-    await refreshEmailVerified();
+  const checkVerification = useCallback(async (): Promise<boolean> => {
+    if (!firebaseUser) return false;
+    return refreshEmailVerified();
   }, [firebaseUser, refreshEmailVerified]);
 
   useEffect(() => {
+    // Wait for the auth state to settle before deciding where to send the
+    // user — redirecting while it initializes caused a redirect loop
+    // (/verify-email → /login → /dashboard → /verify-email) on refresh.
+    if (loading) return;
     if (!firebaseUser) {
       router.push('/login');
       return;
     }
     if (emailVerified) {
-      router.push('/dashboard');
+      router.push(getPostLoginRedirect());
       return;
     }
 
     // Poll every 4 seconds for verification
-    const interval = setInterval(checkVerification, 4000);
+    const interval = setInterval(() => {
+      void checkVerification().catch(() => {});
+    }, 4000);
     return () => clearInterval(interval);
-  }, [firebaseUser, emailVerified, router, checkVerification]);
+  }, [loading, firebaseUser, emailVerified, router, checkVerification]);
 
   const handleResend = async () => {
     setResending(true);
     try {
       await resendVerification();
-      toast.success('Verification email sent! Check your inbox.');
+      toast.success(t('verify_resent'));
     } catch {
-      toast.error('Failed to send verification email. Please try again.');
+      toast.error(t('verify_resend_failed'));
     } finally {
       setResending(false);
     }
@@ -48,14 +58,39 @@ export default function VerifyEmailPage(): React.JSX.Element | null {
 
   const handleCheckNow = async () => {
     setChecking(true);
-    await checkVerification();
-    setChecking(false);
+    try {
+      const verified = await checkVerification();
+      // On success the effect above redirects, so only the "not yet" case needs
+      // surfacing — otherwise the button appears to do nothing. The 4s poll
+      // deliberately does NOT toast; only this explicit click does.
+      if (!verified) toast.error(t('verify_not_yet'));
+    } catch {
+      // A failed reload (offline / revoked token) is NOT the same as "unverified".
+      toast.error(t('verify_check_failed'));
+    } finally {
+      setChecking(false);
+    }
   };
 
   const handleLogout = async () => {
-    await logout();
-    router.push('/login');
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+      router.push('/login');
+    } catch {
+      toast.error(t('verify_signout_failed'));
+      setLoggingOut(false);
+    }
   };
+
+  if (loading || !firebaseUser) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="text-center">
@@ -65,18 +100,18 @@ export default function VerifyEmailPage(): React.JSX.Element | null {
       </div>
 
       <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
-        Check your inbox
+        {t('verify_title')}
       </h1>
 
       <p className="mt-3 text-sm text-stone-600 dark:text-stone-400">
-        We sent a verification link to
+        {t('verify_sent_to')}
       </p>
-      <p className="mt-1 font-semibold text-stone-900 dark:text-white">
+      <p className="mt-1 break-all font-semibold text-stone-900 dark:text-white">
         {firebaseUser?.email}
       </p>
 
       <p className="mt-4 text-sm text-stone-500 dark:text-stone-500">
-        Click the link in the email to verify your account. This page will redirect you automatically once verified.
+        {t('verify_desc')}
       </p>
 
       <div className="mt-8 space-y-3">
@@ -86,8 +121,8 @@ export default function VerifyEmailPage(): React.JSX.Element | null {
           className="w-full"
           size="lg"
         >
-          <RefreshCw className="mr-2 h-4 w-4" />
-          I've verified my email
+          <RefreshCw className="me-2 h-4 w-4" />
+          {t('verify_check_btn')}
         </Button>
 
         <Button
@@ -97,16 +132,17 @@ export default function VerifyEmailPage(): React.JSX.Element | null {
           className="w-full"
           size="lg"
         >
-          Resend verification email
+          {t('verify_resend_btn')}
         </Button>
       </div>
 
       <button
         onClick={handleLogout}
-        className="mt-6 flex w-full items-center justify-center gap-2 text-sm text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200"
+        disabled={loggingOut}
+        className="mt-6 flex w-full items-center justify-center gap-2 text-sm text-stone-500 hover:text-stone-700 disabled:opacity-50 dark:text-stone-400 dark:hover:text-stone-200"
       >
         <LogOut className="h-4 w-4" />
-        Sign out and use a different account
+        {t('verify_signout')}
       </button>
     </div>
   );

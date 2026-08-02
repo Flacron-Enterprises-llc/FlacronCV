@@ -11,8 +11,11 @@ import {
   CoverLetterStatus,
   CVSectionType,
   PLAN_CONFIGS,
+  resolveEffectivePlan,
+  canUseCoverLetterTemplate,
 } from '@flacroncv/shared-types';
 import { v4 as uuidv4 } from 'uuid';
+import { toLetterHtml } from './letter-html';
 
 @Injectable()
 export class CoverLetterService {
@@ -28,10 +31,21 @@ export class CoverLetterService {
 
   async create(userId: string, data: CreateCoverLetterData): Promise<CoverLetter> {
     const user = await this.usersService.findByIdOrThrow(userId);
-    const limits = PLAN_CONFIGS[user.subscription.plan].limits;
+    const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
 
     if (limits.coverLetters !== 'unlimited' && user.usage.coverLettersCreated >= limits.coverLetters) {
       throw new ForbiddenException('Cover letter limit reached. Please upgrade.');
+    }
+
+    // Cover-letter templates are tier-gated too (minimalist/creative = PRO,
+    // corporate/executive = ENTERPRISE). Enforce server-side, not just in the UI.
+    if (
+      data.templateId &&
+      !canUseCoverLetterTemplate(data.templateId, resolveEffectivePlan(user.subscription))
+    ) {
+      throw new ForbiddenException(
+        `Template "${data.templateId}" requires a higher plan. Please upgrade.`,
+      );
     }
 
     const id = uuidv4();
@@ -48,7 +62,9 @@ export class CoverLetterService {
       jobTitle: data.jobTitle || '',
       jobDescription: data.jobDescription || '',
       content: '',
-      templateId: data.templateId || 'standard',
+      // 'modern' matches a real picker entry so the editor highlights it;
+      // 'standard' was an alias not present in the template list.
+      templateId: data.templateId || 'modern',
       styling: { fontFamily: 'Inter', fontSize: '16px', primaryColor: '#2563eb' },
       aiGenerated: false,
       aiProvider: null,
@@ -70,40 +86,145 @@ export class CoverLetterService {
         companyName: data.companyName,
         tone: data.tone || 'professional',
         linkedCVId: data.linkedCVId,
+        // Forward the caller's language so AI-on-create matches the UI locale.
+        language: data.language,
       };
 
-      return this.generateWithAI(id, userId, generateData);
+      try {
+        return await this.generateWithAI(id, userId, generateData);
+      } catch (error) {
+        // "Create + generate" is one user action, so it must be atomic from the
+        // user's point of view. Previously a failed/timed-out generation left the
+        // empty document behind AND kept the consumed cover-letter quota, so the
+        // list filled up with blank entries and every retry burned another slot.
+        // Roll both back, then rethrow so the caller still sees the real error.
+        // (The AI *credit* is refunded inside AIService.generate's finally block.)
+        //
+        // BUT only when the generation itself failed. If the model succeeded and
+        // the failure came afterwards (the content write or the re-read), the
+        // letter exists, the user's AI credit has genuinely been spent, and
+        // deleting the document would destroy paid-for work that is sitting
+        // right there. Keep it and return it instead.
+        const salvaged = await this.findGeneratedOrNull(id);
+        if (salvaged) {
+          this.logger.error(
+            `Cover letter ${id} generated but the create flow failed afterwards; ` +
+              `keeping the generated content. Cause: ${(error as Error).message}`,
+          );
+          return salvaged;
+        }
+        await this.rollbackFailedCreate(id, userId);
+        throw error;
+      }
     }
 
     return coverLetter;
   }
 
+  /**
+   * Return the cover letter only if it exists AND already carries generated
+   * content — i.e. the model call succeeded and the credit was really spent.
+   * Never throws; a lookup failure just means "nothing to salvage".
+   */
+  private async findGeneratedOrNull(id: string): Promise<CoverLetter | null> {
+    try {
+      const doc = await this.firebaseAdmin.firestore.collection(this.collection).doc(id).get();
+      if (!doc.exists) return null;
+      const cl = doc.data() as CoverLetter;
+      return cl.content?.trim() ? cl : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Undo the document + quota side effects of a create whose AI generation
+   * failed. Best-effort and never throws: the caller is already unwinding with
+   * the original error, which is the one worth surfacing.
+   */
+  private async rollbackFailedCreate(id: string, userId: string): Promise<void> {
+    try {
+      await this.firebaseAdmin.firestore.collection(this.collection).doc(id).delete();
+    } catch (err) {
+      this.logger.error(
+        `Failed to roll back cover letter ${id} after a failed AI generation: ${(err as Error).message}`,
+      );
+    }
+    try {
+      await this.usersService.incrementUsage(userId, 'coverLettersCreated', -1);
+    } catch (err) {
+      this.logger.error(
+        `Failed to refund cover-letter quota for ${userId} after a failed AI generation: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /** See the note on CVService.findByIdOrThrow — same two defects, same fix. */
   async findByIdOrThrow(id: string, userId?: string): Promise<CoverLetter> {
     const doc = await this.firebaseAdmin.firestore.collection(this.collection).doc(id).get();
     if (!doc.exists) throw new NotFoundException('Cover letter not found');
     const cl = doc.data() as CoverLetter;
+    if (cl.deletedAt) throw new NotFoundException('Cover letter not found');
     if (userId && cl.userId !== userId) throw new ForbiddenException('Access denied');
     return cl;
   }
 
+  /** See the note on CVService.listByUser — same clamping and hasMore probe. */
   async listByUser(userId: string, page = 1, limit = 10) {
+    const safeLimit = Math.min(Math.max(Math.trunc(limit) || 10, 1), 100);
+    const safePage = Math.max(Math.trunc(page) || 1, 1);
+
     const snapshot = await this.firebaseAdmin.firestore
       .collection(this.collection)
       .where('userId', '==', userId)
       .where('deletedAt', '==', null)
       .orderBy('updatedAt', 'desc')
-      .limit(limit)
-      .offset((page - 1) * limit)
+      .limit(safeLimit + 1)
+      .offset((safePage - 1) * safeLimit)
       .get();
 
-    return { items: snapshot.docs.map((doc: any) => doc.data() as CoverLetter), page, limit };
+    const rows = snapshot.docs.map((doc: any) => doc.data() as CoverLetter);
+    const hasMore = rows.length > safeLimit;
+
+    return { items: rows.slice(0, safeLimit), page: safePage, limit: safeLimit, hasMore };
   }
 
   async update(id: string, userId: string, data: UpdateCoverLetterData): Promise<CoverLetter> {
-    await this.findByIdOrThrow(id, userId);
-    const updateData: Record<string, unknown> = { updatedAt: new Date(), ...data };
+    const current = await this.findByIdOrThrow(id, userId);
+
+    // Block newly selecting a template above the user's plan. Re-sending the
+    // stored templateId (autosave) is allowed → no data loss on downgrade; the
+    // preview/export falls back gracefully (effectiveCoverLetterTemplate).
+    if (data.templateId !== undefined && data.templateId !== current.templateId) {
+      const user = await this.usersService.findByIdOrThrow(userId);
+      if (!canUseCoverLetterTemplate(data.templateId, resolveEffectivePlan(user.subscription))) {
+        throw new ForbiddenException(
+          `Template "${data.templateId}" requires a higher plan. Please upgrade.`,
+        );
+      }
+    }
+
+    // Whitelist updatable fields (mirrors JobsService.UPDATABLE_FIELDS) so a raw
+    // body cannot mass-assign immutable/ownership fields (userId, id, deletedAt,
+    // createdAt, aiGenerated…). The controller binds an interface, not a DTO, so
+    // the global ValidationPipe whitelist does not strip unknown keys here.
+    const UPDATABLE_FIELDS: readonly (keyof UpdateCoverLetterData)[] = [
+      'title',
+      'recipientName',
+      'recipientTitle',
+      'companyName',
+      'companyAddress',
+      'jobTitle',
+      'jobDescription',
+      'content',
+      'templateId',
+      'status',
+    ];
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    for (const key of UPDATABLE_FIELDS) {
+      if (data[key] !== undefined) updateData[key] = data[key];
+    }
     if (data.styling) {
-      delete updateData.styling;
       Object.entries(data.styling).forEach(([key, value]) => {
         updateData[`styling.${key}`] = value;
       });
@@ -114,7 +235,7 @@ export class CoverLetterService {
 
   async duplicate(id: string, userId: string): Promise<CoverLetter> {
     const user = await this.usersService.findByIdOrThrow(userId);
-    const limits = PLAN_CONFIGS[user.subscription.plan].limits;
+    const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
     if (limits.coverLetters !== 'unlimited' && user.usage.coverLettersCreated >= limits.coverLetters) {
       throw new ForbiddenException('Cover letter limit reached. Please upgrade.');
     }
@@ -146,6 +267,11 @@ export class CoverLetterService {
       deletedAt: new Date(),
       updatedAt: new Date(),
     });
+
+    // Return the slot — see the matching note in CVService.delete. This one bit
+    // hardest: the FREE plan allows a single cover letter, so deleting it left
+    // the user permanently unable to write another.
+    await this.usersService.incrementUsage(userId, 'coverLettersCreated', -1);
   }
 
   async generateWithAI(
@@ -247,7 +373,11 @@ export class CoverLetterService {
     );
 
     await this.firebaseAdmin.firestore.collection(this.collection).doc(id).update({
-      content: result.content,
+      // The model returns prose with blank lines between paragraphs, and the
+      // templates render `content` as HTML — where newlines mean nothing. Stored
+      // raw, a well-written four-paragraph letter reached the reader as one
+      // solid block. Normalise to real paragraphs at the boundary.
+      content: toLetterHtml(result.content),
       jobTitle,
       jobDescription,
       companyName,

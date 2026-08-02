@@ -1,23 +1,28 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { toDate } from './format-date';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(date: Date | string | null | undefined | { seconds: number; nanoseconds?: number } | { toDate: () => Date }): string {
-  if (!date) return '';
-  let d: Date;
-  if (date instanceof Date) {
-    d = date;
-  } else if (typeof date === 'object' && 'toDate' in date && typeof (date as any).toDate === 'function') {
-    d = (date as any).toDate();
-  } else if (typeof date === 'object' && 'seconds' in date) {
-    d = new Date((date as any).seconds * 1000);
-  } else {
-    d = new Date(date as string);
-  }
-  if (isNaN(d.getTime())) return '';
+/**
+ * Format a date-ish value as "Jul 29, 2026".
+ *
+ * Parsing is delegated to `toDate` (format-date.ts) because firebase-admin
+ * serialises a Firestore Timestamp as `{_seconds,_nanoseconds}` — the
+ * underscore-prefixed shape. The previous local implementation only understood
+ * `{seconds}`, so every Firestore-backed timestamp fell through to
+ * `new Date(object)` → Invalid Date → an EMPTY string. That is what rendered
+ * bare "Updated" labels (with no date) on the cover-letter cards, the admin
+ * template cards, and the ticket/CV/job lists.
+ *
+ * Returns an em dash rather than '' for a missing/unparseable value so a label
+ * like "Updated {date}" can never render as a dangling word again.
+ */
+export function formatDate(date: unknown): string {
+  const d = toDate(date);
+  if (!d) return '—';
   return d.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',

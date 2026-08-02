@@ -40,6 +40,8 @@ export interface CreateCoverLetterData {
   jobDescription?: string;
   generateWithAI?: boolean;
   tone?: 'professional' | 'friendly' | 'enthusiastic' | 'formal';
+  /** Human-readable language name (e.g. "French") for AI-on-create generation. */
+  language?: string;
 }
 
 export interface UpdateCoverLetterData {

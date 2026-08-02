@@ -17,6 +17,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { X, Lock, ArrowRight, Crown, Zap, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useRouter } from '@/i18n/routing';
 import type { CVLayout } from '@flacroncv/shared-types';
@@ -28,6 +29,7 @@ import TopBarLayout    from './templates/TopBarLayout';
 import CompactLayout   from './templates/CompactLayout';
 import SlateGoldLayout from './templates/SlateGoldLayout';
 import { buildSampleCV, SAMPLE_SECTIONS } from '@/lib/previewSampleCV';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 /* ─── Props ──────────────────────────────────────────────────────────────────── */
 
@@ -75,7 +77,10 @@ export default function TemplatePreviewModal({
   onSelect,
 }: TemplatePreviewModalProps) {
   const router     = useRouter();
+  const t          = useTranslations('template_picker');
+  const tCommon    = useTranslations('common');
   const previewRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useModalA11y<HTMLDivElement>(isOpen, onClose);
 
   // ── Block DevTools shortcuts while modal is open ──────────────────────────
   useEffect(() => {
@@ -118,13 +123,15 @@ export default function TemplatePreviewModal({
 
   const showUpgradeWall = isPro && !userCanAccess;
   const TierIcon = tierLabel === 'Enterprise' ? Crown : tierLabel === 'Pro' ? Zap : Sparkles;
+  // Display the tier via the shared common namespace; logic keeps the canonical label.
+  const tierName = tCommon(tierLabel.toLowerCase());
 
   const PRO_PERKS = [
-    'Unlimited PDF & DOCX exports',
-    `Access to all ${tierLabel} templates`,
-    'AI-powered writing assistant',
-    'Custom branding & accent colors',
-    'Priority customer support',
+    t('benefit_exports'),
+    t('benefit_templates', { tier: tierName }),
+    t('benefit_ai'),
+    t('perk_branding'),
+    t('benefit_support'),
   ];
 
   return (
@@ -132,7 +139,7 @@ export default function TemplatePreviewModal({
       className="fixed inset-0 z-[100] flex items-stretch overflow-hidden"
       role="dialog"
       aria-modal="true"
-      aria-label={`Preview: ${templateName}`}
+      aria-label={t('preview_aria', { name: templateName })}
     >
       {/* ── Backdrop ── */}
       <div
@@ -141,12 +148,16 @@ export default function TemplatePreviewModal({
       />
 
       {/* ── Modal shell ── */}
-      <div className="relative z-10 mx-auto flex w-full max-w-7xl overflow-hidden rounded-none sm:my-6 sm:rounded-2xl shadow-2xl">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="relative z-10 mx-auto flex w-full max-w-7xl flex-col overflow-hidden rounded-none shadow-2xl outline-none sm:my-6 sm:rounded-2xl lg:flex-row"
+      >
 
         {/* ═══ LEFT — Template preview ═══════════════════════════════════════ */}
         <div
           ref={previewRef}
-          className="relative flex-1 overflow-hidden bg-stone-100 dark:bg-stone-900"
+          className="relative min-h-[45vh] flex-1 overflow-hidden bg-stone-100 lg:min-h-0 dark:bg-stone-900"
           // Disable right-click on the whole preview pane
           onContextMenu={(e) => e.preventDefault()}
         >
@@ -183,29 +194,29 @@ export default function TemplatePreviewModal({
           )}
 
           {/* Template name tag — bottom-left corner */}
-          <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 backdrop-blur-sm">
+          <div className="absolute bottom-4 start-4 z-20 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 backdrop-blur-sm">
             <span className="text-xs font-semibold text-white">{templateName}</span>
             <Badge
               variant={isPro ? 'brand' : 'success'}
               size="sm"
               className="text-[10px]"
             >
-              {isPro ? tierLabel : 'Free'}
+              {isPro ? tierName : tCommon('free')}
             </Badge>
           </div>
         </div>
 
         {/* ═══ RIGHT — Info panel ═════════════════════════════════════════════ */}
-        <div className="flex w-72 shrink-0 flex-col bg-white dark:bg-stone-800 lg:w-80">
+        <div className="flex w-full shrink-0 flex-col bg-white dark:bg-stone-800 lg:w-80">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4 dark:border-stone-700">
             <span className="text-sm font-semibold text-stone-700 dark:text-stone-300">
-              Template Preview
+              {t('preview_title')}
             </span>
             <button
               onClick={onClose}
               className="rounded-lg p-1.5 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-stone-700 dark:hover:text-white"
-              aria-label="Close preview"
+              aria-label={tCommon('close')}
             >
               <X className="h-5 w-5" />
             </button>
@@ -222,14 +233,14 @@ export default function TemplatePreviewModal({
                 {isPro && (
                   <Badge variant="brand" size="sm">
                     <TierIcon className="me-1 h-3 w-3" />
-                    {tierLabel}
+                    {tierName}
                   </Badge>
                 )}
               </div>
               <p className="text-sm text-stone-500 dark:text-stone-400">
                 {showUpgradeWall
-                  ? `This is a ${tierLabel} template. Upgrade your plan to use it with your own data.`
-                  : 'This preview uses sample data. Select this template to start building your own CV.'}
+                  ? t('locked_desc', { tier: tierName })
+                  : t('unlocked_desc')}
               </p>
             </div>
 
@@ -238,7 +249,7 @@ export default function TemplatePreviewModal({
               <div className="rounded-xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-900/60">
                 <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                   <TierIcon className="h-3.5 w-3.5 text-brand-500" />
-                  {tierLabel} Plan Includes
+                  {t('plan_includes', { tier: tierName })}
                 </p>
                 <ul className="space-y-2">
                   {PRO_PERKS.map((perk) => (
@@ -258,7 +269,7 @@ export default function TemplatePreviewModal({
                 style={{ background: accentColor }}
               />
               <div>
-                <p className="text-xs font-medium text-stone-700 dark:text-stone-300">Accent color</p>
+                <p className="text-xs font-medium text-stone-700 dark:text-stone-300">{t('accent_color')}</p>
                 <p className="font-mono text-xs text-stone-400 dark:text-stone-500 uppercase">
                   {accentColor}
                 </p>
@@ -268,7 +279,7 @@ export default function TemplatePreviewModal({
             {/* Interaction note */}
             <p className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2.5 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
               <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              This preview is read-only and protected. All content is sample data.
+              {t('readonly_note')}
             </p>
           </div>
 
@@ -285,14 +296,14 @@ export default function TemplatePreviewModal({
                     router.push('/settings/billing');
                   }}
                 >
-                  Upgrade to {tierLabel}
+                  {t('upgrade_to', { tier: tierName })}
                 </Button>
                 <Button
                   variant="ghost"
                   className="w-full text-stone-500"
                   onClick={onClose}
                 >
-                  Maybe Later
+                  {t('maybe_later')}
                 </Button>
               </div>
             ) : (
@@ -305,14 +316,14 @@ export default function TemplatePreviewModal({
                     onSelect();
                   }}
                 >
-                  {isPro ? 'Select Template' : 'Use for Free'}
+                  {isPro ? t('select_template') : t('use_free')}
                 </Button>
                 <Button
                   variant="ghost"
                   className="w-full text-stone-500"
                   onClick={onClose}
                 >
-                  Back to Gallery
+                  {t('back_to_gallery')}
                 </Button>
               </div>
             )}

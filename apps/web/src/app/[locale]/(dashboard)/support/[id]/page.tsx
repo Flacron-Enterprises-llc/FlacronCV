@@ -23,7 +23,6 @@ import {
   TicketMessage,
   TicketPriority,
   TicketStatus,
-  TicketCategory,
 } from '@flacroncv/shared-types';
 
 const priorityVariantMap: Record<TicketPriority, 'success' | 'warning' | 'danger'> = {
@@ -31,13 +30,6 @@ const priorityVariantMap: Record<TicketPriority, 'success' | 'warning' | 'danger
   [TicketPriority.MEDIUM]: 'warning',
   [TicketPriority.HIGH]: 'danger',
   [TicketPriority.URGENT]: 'danger',
-};
-
-const priorityLabelMap: Record<TicketPriority, string> = {
-  [TicketPriority.LOW]: 'Low',
-  [TicketPriority.MEDIUM]: 'Medium',
-  [TicketPriority.HIGH]: 'High',
-  [TicketPriority.URGENT]: 'Urgent',
 };
 
 const statusVariantMap: Record<
@@ -49,22 +41,6 @@ const statusVariantMap: Record<
   [TicketStatus.WAITING_ON_CUSTOMER]: 'brand',
   [TicketStatus.RESOLVED]: 'success',
   [TicketStatus.CLOSED]: 'default',
-};
-
-const statusLabelMap: Record<TicketStatus, string> = {
-  [TicketStatus.OPEN]: 'Open',
-  [TicketStatus.IN_PROGRESS]: 'In Progress',
-  [TicketStatus.WAITING_ON_CUSTOMER]: 'Waiting',
-  [TicketStatus.RESOLVED]: 'Resolved',
-  [TicketStatus.CLOSED]: 'Closed',
-};
-
-const categoryLabelMap: Record<TicketCategory, string> = {
-  [TicketCategory.GENERAL]: 'General',
-  [TicketCategory.BUG]: 'Bug',
-  [TicketCategory.FEATURE_REQUEST]: 'Feature Request',
-  [TicketCategory.BILLING]: 'Billing',
-  [TicketCategory.ACCOUNT]: 'Account',
 };
 
 interface TicketDetailPageProps {
@@ -79,17 +55,18 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
 
   const [replyContent, setReplyContent] = useState('');
 
-  const { data: ticket, isLoading: ticketLoading } = useQuery({
+  // GET /support/tickets/:id returns the ticket AND its messages in one payload;
+  // there is no separate /messages GET route. Consume the combined shape.
+  const { data, isLoading: ticketLoading } = useQuery({
     queryKey: ['support-ticket', params.id],
-    queryFn: () => api.get<SupportTicket>(`/support/tickets/${params.id}`),
+    queryFn: () =>
+      api.get<{ ticket: SupportTicket; messages: TicketMessage[] }>(
+        `/support/tickets/${params.id}`,
+      ),
     enabled: !!user,
   });
-
-  const { data: messages, isLoading: messagesLoading } = useQuery({
-    queryKey: ['support-ticket-messages', params.id],
-    queryFn: () => api.get<TicketMessage[]>(`/support/tickets/${params.id}/messages`),
-    enabled: !!user,
-  });
+  const ticket = data?.ticket;
+  const messages = data?.messages;
 
   const replyMutation = useMutation({
     mutationFn: (content: string) =>
@@ -98,7 +75,7 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
       setReplyContent('');
       toast.success(t('replySent'));
       queryClient.invalidateQueries({
-        queryKey: ['support-ticket-messages', params.id],
+        queryKey: ['support-ticket', params.id],
       });
     },
     onError: (error: Error) => {
@@ -108,9 +85,7 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
 
   const closeMutation = useMutation({
     mutationFn: () =>
-      api.patch<SupportTicket>(`/support/tickets/${params.id}`, {
-        status: TicketStatus.CLOSED,
-      }),
+      api.patch<SupportTicket>(`/support/tickets/${params.id}/close`),
     onSuccess: () => {
       toast.success(t('ticketClosed'));
       queryClient.invalidateQueries({
@@ -137,9 +112,9 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
       .slice(0, 2);
   };
 
-  if (ticketLoading || messagesLoading) {
+  if (ticketLoading) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-3xl space-y-6">
         <div className="h-8 w-32 animate-pulse rounded bg-stone-200 dark:bg-stone-700" />
         <Card className="animate-pulse">
           <div className="h-6 w-3/4 rounded bg-stone-200 dark:bg-stone-700" />
@@ -166,7 +141,7 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
 
   if (!ticket) {
     return (
-      <div className="mx-auto max-w-3xl p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-3xl">
         <Card className="flex flex-col items-center justify-center py-16 text-center">
           <h3 className="text-lg font-semibold text-stone-900 dark:text-white">
             {t('ticketNotFound')}
@@ -182,7 +157,7 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
   const isClosed = ticket.status === TicketStatus.CLOSED;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-3xl space-y-6">
       {/* Back button */}
       <Link href="/support">
         <Button variant="ghost" size="sm" icon={<ArrowLeft className="h-4 w-4" />}>
@@ -194,11 +169,11 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
       <Card>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-3">
-            <h1 className="text-xl font-bold text-stone-900 dark:text-white">
+            <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
               {ticket.subject}
             </h1>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="default">{categoryLabelMap[ticket.category]}</Badge>
+              <Badge variant="default">{t(`categoryLabels.${ticket.category}`)}</Badge>
               <Badge
                 variant={
                   ticket.priority === TicketPriority.URGENT
@@ -206,10 +181,10 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
                     : priorityVariantMap[ticket.priority]
                 }
               >
-                {priorityLabelMap[ticket.priority]}
+                {t(`priorityLabels.${ticket.priority}`)}
               </Badge>
               <Badge variant={statusVariantMap[ticket.status]}>
-                {statusLabelMap[ticket.status]}
+                {t(`statusLabels.${ticket.status}`)}
               </Badge>
             </div>
             <p className="text-xs text-stone-500 dark:text-stone-400">

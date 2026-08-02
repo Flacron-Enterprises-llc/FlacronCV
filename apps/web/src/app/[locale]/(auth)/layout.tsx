@@ -1,47 +1,55 @@
-import { FileText } from 'lucide-react';
 import { Link } from '@/i18n/routing';
+import { getTranslations } from 'next-intl/server';
+import Logo from '@/components/ui/Logo';
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  const t = await getTranslations('auth');
   return (
     <div className="flex min-h-screen">
-      {/* Left: Brand panel */}
-      <div className="hidden w-1/2 bg-gradient-to-br from-brand-600 via-brand-700 to-violet-700 lg:flex lg:flex-col lg:justify-between p-12">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 text-white">
-            <FileText className="h-6 w-6" />
-          </div>
-          <span className="text-2xl font-bold text-white">FlacronCV</span>
-        </Link>
-        <div>
-          <h2 className="text-3xl font-bold text-white">
-            Build your future<br />with AI-powered CVs
+      {/* Left: Brand panel — refined near-black with a subtle brand glow (no loud gradient). */}
+      <div className="relative hidden w-1/2 overflow-hidden bg-stone-950 p-12 lg:flex lg:flex-col lg:justify-center">
+        <div className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-brand-600/20 blur-[100px]" />
+        <div className="pointer-events-none absolute -bottom-24 -right-16 h-96 w-96 rounded-full bg-brand-500/10 blur-[100px]" />
+
+        {/* Logo grouped directly above the message (not pinned to the top), so
+            the panel reads as one centred block instead of a large void between
+            a small top-left logo and the headline. */}
+        <div className="relative z-10">
+          <Link href="/" className="mb-10 inline-flex items-center">
+            <Logo variant="on-dark" className="h-24" priority />
+          </Link>
+          <h2 className="text-3xl font-semibold tracking-tight text-white">
+            {t('panel_title')}
           </h2>
-          <p className="mt-4 text-lg text-brand-200">
-            Join thousands of professionals who land their dream jobs with FlacronCV.
+          <p className="mt-4 max-w-md text-lg leading-relaxed text-stone-400">
+            {t('panel_subtitle')}
           </p>
         </div>
-        <p className="text-sm text-brand-300">
+
+        {/* Pinned to the bottom so it anchors the panel without forcing a gap. */}
+        <p className="absolute inset-x-12 bottom-12 z-10 text-sm text-stone-500">
           &copy; {new Date().getFullYear()} FlacronCV. All rights reserved.
         </p>
       </div>
 
-      {/* Right: Auth form */}
-      <div className="flex w-full items-center justify-center px-4 py-12 lg:w-1/2">
-        <div className="w-full max-w-md">
+      {/* Right: Auth form.
+          `lg:h-screen` + `overflow-y-auto` makes this column its own scroll
+          container, and `m-auto` on the inner block centres it when there's
+          room but — unlike `items-center` — keeps the top reachable when the
+          form is taller than the viewport (previously the top was clipped and
+          unscrollable). Below lg the column has no fixed height and the page
+          scrolls naturally. */}
+      <main id="main-content" className="flex w-full flex-col overflow-y-auto px-4 py-12 lg:h-screen lg:w-1/2">
+        <div className="m-auto w-full max-w-md">
           {/* Mobile logo */}
           <div className="mb-8 flex justify-center lg:hidden">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white">
-                <FileText className="h-5 w-5" />
-              </div>
-              <span className="text-xl font-bold text-stone-900 dark:text-white">
-                Flacron<span className="text-brand-600">CV</span>
-              </span>
+            <Link href="/" className="flex items-center">
+              <Logo className="h-9" priority />
             </Link>
           </div>
           {children}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -2,12 +2,14 @@
 import React from 'react';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/providers/AuthProvider';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { track } from '@/lib/analytics';
 import { ArrowLeft, Lock, Zap, Crown } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -17,6 +19,7 @@ import {
   Template,
   TemplateCategory,
   SubscriptionPlan,
+  resolveEffectivePlan,
   type CVLayout,
 } from '@flacroncv/shared-types';
 import { CV_NEW_DRAFT_KEY as DRAFT_KEY } from '../constants';
@@ -64,6 +67,8 @@ function SkeletonCard() {
 /* ─── Main page ──────────────────────────────────────────────────────────────── */
 
 export default function PickTemplatePage(): React.JSX.Element | null {
+  const t = useTranslations('template_picker');
+  const tc = useTranslations('common');
   const router = useRouter();
   const { user } = useAuth();
   const [tierFilter, setTierFilter] = useState<TierFilter>('all');
@@ -87,7 +92,7 @@ export default function PickTemplatePage(): React.JSX.Element | null {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const { data: templates, isLoading } = useQuery({
+  const { data: templates, isLoading, isError: templatesError } = useQuery({
     queryKey: ['templates'],
     queryFn: () => api.get<Template[]>('/templates'),
     enabled: !!user,
@@ -95,8 +100,7 @@ export default function PickTemplatePage(): React.JSX.Element | null {
 
   const cvTemplates = templates?.filter((t) => t.category === TemplateCategory.CV) ?? [];
 
-  const userPlan: SubscriptionPlan =
-    (user?.subscription?.plan as SubscriptionPlan) ?? SubscriptionPlan.FREE;
+  const userPlan: SubscriptionPlan = resolveEffectivePlan(user?.subscription);
 
   const canUseTemplate = (tmpl: Template): boolean =>
     PLAN_ORDER.indexOf(userPlan) >= PLAN_ORDER.indexOf(tmpl.tier as SubscriptionPlan);
@@ -114,12 +118,13 @@ export default function PickTemplatePage(): React.JSX.Element | null {
       api.post<CV>('/cvs', data),
     onSuccess: (cv) => {
       sessionStorage.removeItem(DRAFT_KEY);
-      toast.success('CV created! Opening editor…');
+      toast.success(t('created_toast'));
+      track('cv_created', { source: 'template' });
       router.push(`/cv/${cv.id}`);
     },
     onError: (error: Error) => {
       setCreatingId(null);
-      toast.error(error.message || 'Failed to create CV. Please try again.');
+      toast.error(error.message || t('create_error'));
     },
   });
 
@@ -132,11 +137,11 @@ export default function PickTemplatePage(): React.JSX.Element | null {
   if (!cvTitle) return null;
 
   const tierFilterOptions: { value: TierFilter; label: string }[] = [
-    { value: 'all', label: 'All Templates' },
+    { value: 'all', label: t('filter_all') },
     ...availableTiers.map((tier) => ({
       value: tier as TierFilter,
-      label: tier === SubscriptionPlan.FREE ? 'Free' :
-             tier === SubscriptionPlan.PRO  ? 'Pro'  : 'Enterprise',
+      label: tier === SubscriptionPlan.FREE ? tc('free') :
+             tier === SubscriptionPlan.PRO  ? tc('pro')  : tc('enterprise'),
     })),
   ];
 
@@ -146,24 +151,29 @@ export default function PickTemplatePage(): React.JSX.Element | null {
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 opacity-50">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">1</span>
-          <span className="text-sm font-medium text-stone-500 dark:text-stone-400">CV Details</span>
+          <span className="text-sm font-medium text-stone-500 dark:text-stone-400">{t('step_details')}</span>
         </div>
         <div className="h-px flex-1 bg-brand-300 dark:bg-brand-700" />
         <div className="flex items-center gap-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">2</span>
-          <span className="text-sm font-semibold text-stone-900 dark:text-white">Choose Template</span>
+          <span className="text-sm font-semibold text-stone-900 dark:text-white">{t('step_choose')}</span>
         </div>
       </div>
+
+      {templatesError && (
+        <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          {t('load_error')}
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
-            Choose a Template
+            {t('title')}
           </h1>
           <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-            Creating:{' '}
-            <span className="font-semibold text-stone-700 dark:text-stone-300">{cvTitle}</span>
+            {t('creating', { title: cvTitle })}
           </p>
         </div>
         <Button
@@ -172,7 +182,7 @@ export default function PickTemplatePage(): React.JSX.Element | null {
           icon={<ArrowLeft className="h-4 w-4" />}
           onClick={() => router.push('/cv/new')}
         >
-          Back
+          {tc('back')}
         </Button>
       </div>
 
@@ -182,8 +192,7 @@ export default function PickTemplatePage(): React.JSX.Element | null {
           <div className="flex items-center gap-3">
             <Lock className="h-5 w-5 shrink-0 text-amber-500" />
             <p className="text-sm text-amber-800 dark:text-amber-300">
-              <span className="font-semibold">Free plan:</span> Free templates are available
-              now. Upgrade to unlock Pro &amp; Enterprise templates.
+              <span className="font-semibold">{t('free_plan')}</span> {t('free_banner')}
             </p>
           </div>
           <Button
@@ -192,7 +201,7 @@ export default function PickTemplatePage(): React.JSX.Element | null {
             className="shrink-0 border-amber-400 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300"
             onClick={() => router.push('/settings/billing')}
           >
-            Upgrade
+            {tc('upgrade')}
           </Button>
         </div>
       )}
@@ -202,8 +211,7 @@ export default function PickTemplatePage(): React.JSX.Element | null {
           <div className="flex items-center gap-3">
             <Zap className="h-5 w-5 shrink-0 text-brand-500" />
             <p className="text-sm text-brand-800 dark:text-brand-300">
-              <span className="font-semibold">Pro plan:</span> Free &amp; Pro templates are
-              available. Upgrade to Enterprise for the full collection.
+              <span className="font-semibold">{t('pro_plan')}</span> {t('pro_banner')}
             </p>
           </div>
           <Button
@@ -213,7 +221,7 @@ export default function PickTemplatePage(): React.JSX.Element | null {
             onClick={() => router.push('/settings/billing')}
           >
             <Crown className="me-1.5 h-3.5 w-3.5" />
-            Go Enterprise
+            {t('go_enterprise')}
           </Button>
         </div>
       )}
@@ -243,9 +251,9 @@ export default function PickTemplatePage(): React.JSX.Element | null {
         </div>
       ) : filteredTemplates.length === 0 ? (
         <Card className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-stone-500 dark:text-stone-400">No templates match this filter.</p>
+          <p className="text-stone-500 dark:text-stone-400">{t('no_match')}</p>
           <Button variant="secondary" size="sm" className="mt-4" onClick={() => setTierFilter('all')}>
-            Show all templates
+            {t('show_all')}
           </Button>
         </Card>
       ) : (

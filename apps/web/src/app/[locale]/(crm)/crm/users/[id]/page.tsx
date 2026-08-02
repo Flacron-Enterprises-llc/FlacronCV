@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -29,10 +30,12 @@ import {
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { formatDate, formatDateTime } from '@/lib/format-date';
 
 const PLAN_COLORS: Record<string, string> = {
   free: 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300',
   pro: 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300',
+  career_accelerator: 'bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-950 dark:text-fuchsia-300',
   enterprise: 'bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
 };
 
@@ -69,6 +72,7 @@ function UsageMeter({ label, used, limit }: { label: string; used: number; limit
 }
 
 export default function CRMUserDetailPage(): React.JSX.Element {
+  const t = useTranslations('crm');
   const params = useParams();
   const uid = params.id as string;
   const qc = useQueryClient();
@@ -85,48 +89,71 @@ export default function CRMUserDetailPage(): React.JSX.Element {
   const suspendMutation = useMutation({
     mutationFn: () => api.put(`/crm/users/${uid}/suspend`),
     onSuccess: () => {
-      toast.success('User suspended');
+      toast.success(t('user_detail_toast_suspended'));
       qc.invalidateQueries({ queryKey: ['crm', 'users', uid] });
     },
-    onError: () => toast.error('Failed to suspend user'),
+    onError: () => toast.error(t('user_detail_toast_suspend_failed')),
   });
 
   const reactivateMutation = useMutation({
     mutationFn: () => api.put(`/crm/users/${uid}/reactivate`),
     onSuccess: () => {
-      toast.success('User reactivated');
+      toast.success(t('user_detail_toast_reactivated'));
       qc.invalidateQueries({ queryKey: ['crm', 'users', uid] });
     },
-    onError: () => toast.error('Failed to reactivate user'),
+    onError: () => toast.error(t('user_detail_toast_reactivate_failed')),
   });
 
   const resetUsageMutation = useMutation({
     mutationFn: () => api.delete(`/crm/users/${uid}/usage`),
     onSuccess: () => {
-      toast.success('Usage reset');
+      toast.success(t('user_detail_toast_usage_reset'));
       qc.invalidateQueries({ queryKey: ['crm', 'users', uid] });
     },
-    onError: () => toast.error('Failed to reset usage'),
+    onError: () => toast.error(t('user_detail_toast_reset_usage_failed')),
   });
 
+  // Optimistic role/plan changes: the selected button highlights immediately
+  // instead of staying on the stale server value until the refetch; rolled back
+  // on failure.
   const changeRoleMutation = useMutation({
     mutationFn: (role: string) => api.put(`/crm/users/${uid}/role`, { role }),
+    onMutate: async (role) => {
+      await qc.cancelQueries({ queryKey: ['crm', 'users', uid] });
+      const prev = qc.getQueryData<User>(['crm', 'users', uid]);
+      qc.setQueryData<User>(['crm', 'users', uid], (old) => (old ? ({ ...old, role } as User) : old));
+      return { prev };
+    },
     onSuccess: () => {
-      toast.success('Role updated');
-      qc.invalidateQueries({ queryKey: ['crm', 'users', uid] });
+      toast.success(t('user_detail_toast_role_updated'));
       setRoleEdit(false);
     },
-    onError: () => toast.error('Failed to update role'),
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['crm', 'users', uid], ctx.prev);
+      toast.error(t('user_detail_toast_role_update_failed'));
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['crm', 'users', uid] }),
   });
 
   const changePlanMutation = useMutation({
     mutationFn: (plan: string) => api.put(`/crm/users/${uid}/plan`, { plan }),
+    onMutate: async (plan) => {
+      await qc.cancelQueries({ queryKey: ['crm', 'users', uid] });
+      const prev = qc.getQueryData<User>(['crm', 'users', uid]);
+      qc.setQueryData<User>(['crm', 'users', uid], (old) =>
+        old ? ({ ...old, subscription: { ...old.subscription, plan } } as User) : old,
+      );
+      return { prev };
+    },
     onSuccess: () => {
-      toast.success('Plan updated');
-      qc.invalidateQueries({ queryKey: ['crm', 'users', uid] });
+      toast.success(t('user_detail_toast_plan_updated'));
       setPlanEdit(false);
     },
-    onError: () => toast.error('Failed to update plan'),
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['crm', 'users', uid], ctx.prev);
+      toast.error(t('user_detail_toast_plan_update_failed'));
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['crm', 'users', uid] }),
   });
 
   if (isLoading) {
@@ -146,9 +173,9 @@ export default function CRMUserDetailPage(): React.JSX.Element {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-stone-400">
         <UserIcon className="mb-3 h-12 w-12" />
-        <p className="font-medium">User not found</p>
+        <p className="font-medium">{t('user_detail_not_found')}</p>
         <Link href="/crm/users">
-          <Button variant="ghost" className="mt-4">Back to Users</Button>
+          <Button variant="ghost" className="mt-4">{t('back_to_users')}</Button>
         </Link>
       </div>
     );
@@ -165,28 +192,28 @@ export default function CRMUserDetailPage(): React.JSX.Element {
 
   const stats = [
     {
-      label: 'CVs Created',
+      label: t('cvs_created'),
       value: user.usage?.cvsCreated ?? 0,
       icon: FileText,
       color: 'text-brand-600 bg-brand-50 dark:bg-brand-950 dark:text-brand-400',
     },
     {
-      label: 'Cover Letters',
+      label: t('cover_letters'),
       value: user.usage?.coverLettersCreated ?? 0,
       icon: Briefcase,
-      color: 'text-violet-600 bg-violet-50 dark:bg-violet-950 dark:text-violet-400',
+      color: 'text-stone-600 bg-stone-100 dark:bg-stone-800 dark:text-stone-300',
     },
     {
-      label: 'AI Credits Used',
+      label: t('user_detail_stat_ai_credits_used'),
       value: user.usage?.aiCreditsUsed ?? 0,
       icon: Bot,
-      color: 'text-amber-600 bg-amber-50 dark:bg-amber-950 dark:text-amber-400',
+      color: 'text-stone-600 bg-stone-100 dark:bg-stone-800 dark:text-stone-300',
     },
     {
-      label: 'Exports This Month',
+      label: t('user_detail_stat_exports_this_month'),
       value: user.usage?.exportsThisMonth ?? 0,
       icon: Download,
-      color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400',
+      color: 'text-stone-600 bg-stone-100 dark:bg-stone-800 dark:text-stone-300',
     },
   ];
 
@@ -196,7 +223,7 @@ export default function CRMUserDetailPage(): React.JSX.Element {
       <Link href="/crm/users">
         <button className="flex items-center gap-2 text-sm text-stone-500 transition-colors hover:text-stone-900 dark:hover:text-white">
           <ArrowLeft className="h-4 w-4" />
-          Back to Users
+          {t('back_to_users')}
         </button>
       </Link>
 
@@ -208,8 +235,8 @@ export default function CRMUserDetailPage(): React.JSX.Element {
               {initials}
             </div>
             <div>
-              <h1 className="text-xl font-bold text-stone-900 dark:text-white">
-                {user.displayName || '(No name)'}
+              <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
+                {user.displayName || t('user_detail_no_name')}
               </h1>
               <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-stone-500 dark:text-stone-400">
                 <span className="flex items-center gap-1">
@@ -222,16 +249,16 @@ export default function CRMUserDetailPage(): React.JSX.Element {
                 )}
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3.5 w-3.5" />
-                  Joined {new Date(user.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {t('user_detail_joined', { date: formatDate(user.createdAt) })}
                 </span>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 <span className={cn('flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize', ROLE_COLORS[user.role] ?? ROLE_COLORS.user)}>
                   <RoleIcon className="h-3 w-3" />
-                  {user.role.replace('_', ' ')}
+                  {['user', 'admin', 'super_admin'].includes(user.role) ? t(`role_${user.role}`) : user.role.replace('_', ' ')}
                 </span>
                 <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize', PLAN_COLORS[user.subscription?.plan ?? 'free'] ?? PLAN_COLORS.free)}>
-                  {user.subscription?.plan ?? 'free'} plan
+                  {t('user_detail_plan_badge', { plan: ['free', 'pro', 'career_accelerator', 'enterprise'].includes(user.subscription?.plan ?? 'free') ? t(`plan_${user.subscription?.plan ?? 'free'}`) : (user.subscription?.plan ?? 'free') })}
                 </span>
                 <span className={cn(
                   'rounded-full px-2.5 py-0.5 text-xs font-semibold',
@@ -239,7 +266,7 @@ export default function CRMUserDetailPage(): React.JSX.Element {
                     ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
                     : 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-400',
                 )}>
-                  {user.isActive ? 'Active' : 'Suspended'}
+                  {user.isActive ? t('status_active') : t('status_suspended')}
                 </span>
               </div>
             </div>
@@ -254,10 +281,10 @@ export default function CRMUserDetailPage(): React.JSX.Element {
                 icon={<Ban className="h-4 w-4" />}
                 loading={suspendMutation.isPending}
                 onClick={() => {
-                  if (confirm(`Suspend account for ${user.email}?`)) suspendMutation.mutate();
+                  if (confirm(t('user_detail_confirm_suspend', { email: user.email }))) suspendMutation.mutate();
                 }}
               >
-                Suspend
+                {t('suspend')}
               </Button>
             ) : (
               <Button
@@ -267,7 +294,7 @@ export default function CRMUserDetailPage(): React.JSX.Element {
                 loading={reactivateMutation.isPending}
                 onClick={() => reactivateMutation.mutate()}
               >
-                Reactivate
+                {t('reactivate')}
               </Button>
             )}
             <Button
@@ -276,10 +303,10 @@ export default function CRMUserDetailPage(): React.JSX.Element {
               icon={<RefreshCw className="h-4 w-4" />}
               loading={resetUsageMutation.isPending}
               onClick={() => {
-                if (confirm('Reset AI credits and exports counter?')) resetUsageMutation.mutate();
+                if (confirm(t('user_detail_confirm_reset_usage'))) resetUsageMutation.mutate();
               }}
             >
-              Reset Usage
+              {t('user_detail_reset_usage')}
             </Button>
           </div>
         </div>
@@ -307,14 +334,14 @@ export default function CRMUserDetailPage(): React.JSX.Element {
         <div className="space-y-6">
           {/* Subscription */}
           <Card>
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Subscription</h2>
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">{t('subscription')}</h2>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-stone-600 dark:text-stone-400">Plan</span>
+                <span className="text-sm text-stone-600 dark:text-stone-400">{t('plan')}</span>
                 <div className="flex items-center gap-2">
                   {planEdit ? (
                     <div className="flex gap-1">
-                      {['free', 'pro', 'enterprise'].map((p) => (
+                      {['free', 'pro', 'career_accelerator', 'enterprise'].map((p) => (
                         <button
                           key={p}
                           onClick={() => changePlanMutation.mutate(p)}
@@ -326,23 +353,23 @@ export default function CRMUserDetailPage(): React.JSX.Element {
                               : 'bg-stone-100 text-stone-700 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300',
                           )}
                         >
-                          {p}
+                          {t(`plan_${p}`)}
                         </button>
                       ))}
-                      <button onClick={() => setPlanEdit(false)} className="ml-1 text-xs text-stone-400 hover:text-stone-600">✕</button>
+                      <button onClick={() => setPlanEdit(false)} className="ms-1 text-xs text-stone-400 hover:text-stone-600">✕</button>
                     </div>
                   ) : (
                     <button
                       onClick={() => setPlanEdit(true)}
                       className={cn('flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize transition-opacity hover:opacity-70', PLAN_COLORS[user.subscription?.plan ?? 'free'])}
                     >
-                      {user.subscription?.plan ?? 'free'}
+                      {['free', 'pro', 'career_accelerator', 'enterprise'].includes(user.subscription?.plan ?? 'free') ? t(`plan_${user.subscription?.plan ?? 'free'}`) : (user.subscription?.plan ?? 'free')}
                     </button>
                   )}
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-stone-600 dark:text-stone-400">Status</span>
+                <span className="text-sm text-stone-600 dark:text-stone-400">{t('status')}</span>
                 <span className={cn('rounded-full px-2 py-0.5 text-xs font-semibold capitalize', {
                   'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400': user.subscription?.status === 'active',
                   'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-400': user.subscription?.status === 'trialing',
@@ -354,19 +381,24 @@ export default function CRMUserDetailPage(): React.JSX.Element {
               </div>
               {user.subscription?.currentPeriodEnd && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-stone-600 dark:text-stone-400">Period End</span>
+                  <span className="text-sm text-stone-600 dark:text-stone-400">{t('user_detail_period_end')}</span>
                   <span className="text-sm font-medium text-stone-800 dark:text-stone-200">
-                    {new Date(user.subscription.currentPeriodEnd).toLocaleDateString()}
+                    {formatDate(user.subscription.currentPeriodEnd)}
                   </span>
                 </div>
               )}
               {user.subscription?.stripeCustomerId && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-stone-600 dark:text-stone-400">Stripe ID</span>
-                  <span className="flex items-center gap-1 font-mono text-xs text-stone-500">
+                  <span className="text-sm text-stone-600 dark:text-stone-400">{t('user_detail_stripe_id')}</span>
+                  <a
+                    href={`https://dashboard.stripe.com/customers/${user.subscription.stripeCustomerId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 font-mono text-xs text-stone-500 hover:text-brand-600 dark:hover:text-brand-400"
+                  >
                     {user.subscription.stripeCustomerId.slice(0, 14)}…
                     <ExternalLink className="h-3 w-3" />
-                  </span>
+                  </a>
                 </div>
               )}
             </div>
@@ -374,7 +406,7 @@ export default function CRMUserDetailPage(): React.JSX.Element {
 
           {/* Role */}
           <Card>
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Role</h2>
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">{t('role')}</h2>
             <div className="space-y-2">
               {['user', 'admin', 'super_admin'].map((r) => {
                 const RI = ROLE_ICONS[r] ?? UserIcon;
@@ -393,7 +425,7 @@ export default function CRMUserDetailPage(): React.JSX.Element {
                     )}
                   >
                     <RI className="h-4 w-4 flex-shrink-0" />
-                    {r.replace('_', ' ')}
+                    {t(`role_${r}`)}
                     {user.role === r && <span className="ml-auto text-brand-500">✓</span>}
                   </button>
                 );
@@ -405,37 +437,37 @@ export default function CRMUserDetailPage(): React.JSX.Element {
         {/* Usage */}
         <Card>
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Usage</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">{t('usage')}</h2>
             <Button
               variant="ghost"
               size="sm"
               icon={<RefreshCw className="h-3.5 w-3.5" />}
               loading={resetUsageMutation.isPending}
               onClick={() => {
-                if (confirm('Reset AI credits and monthly export counter?')) resetUsageMutation.mutate();
+                if (confirm(t('user_detail_confirm_reset_usage_monthly'))) resetUsageMutation.mutate();
               }}
             >
-              Reset
+              {t('reset')}
             </Button>
           </div>
           <div className="space-y-5">
             <UsageMeter
-              label="CVs Created"
+              label={t('cvs_created')}
               used={user.usage?.cvsCreated ?? 0}
               limit={cvLimit}
             />
             <UsageMeter
-              label="Cover Letters"
+              label={t('cover_letters')}
               used={user.usage?.coverLettersCreated ?? 0}
               limit={clLimit}
             />
             <UsageMeter
-              label="AI Credits"
+              label={t('user_detail_meter_ai_credits')}
               used={user.usage?.aiCreditsUsed ?? 0}
               limit={user.usage?.aiCreditsLimit ?? 5}
             />
             <UsageMeter
-              label="Exports (This Month)"
+              label={t('user_detail_meter_exports')}
               used={user.usage?.exportsThisMonth ?? 0}
               limit={exportLimit}
             />
@@ -444,29 +476,27 @@ export default function CRMUserDetailPage(): React.JSX.Element {
 
         {/* Profile */}
         <Card>
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Profile</h2>
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">{t('profile')}</h2>
           <div className="space-y-3 text-sm">
             {[
-              { label: 'First Name', value: user.profile?.firstName },
-              { label: 'Last Name', value: user.profile?.lastName },
-              { label: 'Headline', value: user.profile?.headline },
-              { label: 'Location', value: user.profile?.location },
-              { label: 'Website', value: user.profile?.website },
-              { label: 'LinkedIn', value: user.profile?.linkedin },
+              { label: t('first_name'), value: user.profile?.firstName },
+              { label: t('last_name'), value: user.profile?.lastName },
+              { label: t('headline'), value: user.profile?.headline },
+              { label: t('location'), value: user.profile?.location },
+              { label: t('website'), value: user.profile?.website },
+              { label: t('linkedin'), value: user.profile?.linkedin },
             ].map(({ label, value }) =>
               value ? (
                 <div key={label} className="flex justify-between gap-4">
                   <span className="flex-shrink-0 text-stone-500 dark:text-stone-400">{label}</span>
-                  <span className="truncate text-right font-medium text-stone-800 dark:text-stone-200">{value}</span>
+                  <span className="truncate text-end font-medium text-stone-800 dark:text-stone-200">{value}</span>
                 </div>
               ) : null,
             )}
             <div className="border-t border-stone-100 pt-3 dark:border-stone-800">
               <div className="flex items-center gap-1.5 text-xs text-stone-500">
                 <Clock className="h-3.5 w-3.5" />
-                Last login: {user.lastLoginAt
-                  ? new Date(user.lastLoginAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
-                  : '—'}
+                {t('user_detail_last_login', { date: formatDateTime(user.lastLoginAt) })}
               </div>
             </div>
           </div>

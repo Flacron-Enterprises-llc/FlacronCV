@@ -94,5 +94,44 @@ describe('TemplatesService', () => {
       const uniqueSlugs = new Set(slugs);
       expect(slugs.length).toBe(uniqueSlugs.size);
     });
+
+    it('re-seeding updates code-owned fields on existing docs (L5 — tier propagates)', async () => {
+      // Pre-create 'modern' with a stale/wrong tier.
+      await service.create(
+        { name: 'Modern', slug: 'modern', category: TemplateCategory.CV, tier: SubscriptionPlan.PRO },
+        'system',
+      );
+      await service.seedDefaults();
+      const modern = await service.findById('modern');
+      expect(modern.tier).toBe(SubscriptionPlan.FREE); // corrected to the code value
+    });
+  });
+
+  describe('public reads (L1 — data minimization)', () => {
+    it('listPublic strips htmlTemplate/cssTemplate/createdBy/isActive', async () => {
+      await service.create(
+        { name: 'X', slug: 'x', htmlTemplate: '<div>secret</div>', cssTemplate: 'body{}' },
+        'admin-uid',
+      );
+      const [t] = await service.listPublic();
+      expect(t).not.toHaveProperty('htmlTemplate');
+      expect(t).not.toHaveProperty('cssTemplate');
+      expect(t).not.toHaveProperty('createdBy');
+      expect(t).not.toHaveProperty('isActive');
+      expect(t.name).toBe('X');
+    });
+
+    it('findPublicById returns a stripped template', async () => {
+      await service.create({ name: 'Y', slug: 'y' }, 'admin-uid');
+      const t = await service.findPublicById('y');
+      expect(t).not.toHaveProperty('createdBy');
+      expect(t.slug).toBe('y');
+    });
+
+    it('findPublicById throws NotFound for a soft-deleted (inactive) template', async () => {
+      await service.create({ name: 'Z', slug: 'z' }, 'admin-uid');
+      await service.delete('z'); // sets isActive=false
+      await expect(service.findPublicById('z')).rejects.toThrow(NotFoundException);
+    });
   });
 });

@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "description": "AI-powered SaaS CV & Cover Letter Builder",
-
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
@@ -23,7 +22,8 @@
     "dev:web": "turbo run dev --filter=web",
     "dev:api": "turbo run dev --filter=api",
     "clean": "turbo run clean && rimraf node_modules",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "emulators": "npx --yes firebase-tools emulators:start --project demo-flacroncv"
   },
   "devDependencies": {
     "prettier": "^3.2.0",

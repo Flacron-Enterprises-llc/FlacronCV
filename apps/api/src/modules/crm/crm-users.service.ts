@@ -1,10 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { CRMAuditService } from './crm-audit.service';
 import {
   PlatformUserItem,
   PlatformUserListParams,
+  PLAN_CONFIGS,
+  SubscriptionPlan,
   User,
+  UserRole,
 } from '@flacroncv/shared-types';
 
 @Injectable()
@@ -99,6 +102,22 @@ export class CRMUsersService {
     actorEmail: string,
   ): Promise<User> {
     const user = await this.getUserById(uid);
+
+    // Never allow demoting the LAST super_admin — that would lock everyone out
+    // of super_admin-only controls (this endpoint is itself super_admin-only).
+    if (user.role === UserRole.SUPER_ADMIN && role !== UserRole.SUPER_ADMIN) {
+      const superAdmins = await this.firebase.firestore
+        .collection(this.col)
+        .where('role', '==', UserRole.SUPER_ADMIN)
+        .get();
+      const hasOtherSuperAdmin = superAdmins.docs.some(
+        (d: any) => (d.data() as { uid?: string }).uid !== uid,
+      );
+      if (!hasOtherSuperAdmin) {
+        throw new BadRequestException('Cannot demote the last super admin.');
+      }
+    }
+
     await this.firebase.firestore.collection(this.col).doc(uid).update({
       role,
       updatedAt: new Date(),
@@ -117,17 +136,36 @@ export class CRMUsersService {
     return this.getUserById(uid);
   }
 
+  // A non-super_admin may not manage a super_admin account (suspend, reactivate,
+  // change plan, reset usage) — mirrors the super_admin-only role endpoint and
+  // protects the top tier from lockout/tampering by a lower admin.
+  private assertCanManageTarget(actorRole: string, targetRole: string): void {
+    if (targetRole === UserRole.SUPER_ADMIN && actorRole !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Only a super admin can manage a super admin account.');
+    }
+  }
+
   async updateUserPlan(
     uid: string,
     plan: string,
     status: string,
     actorId: string,
     actorEmail: string,
+    actorRole: string,
   ): Promise<User> {
     const user = await this.getUserById(uid);
+    this.assertCanManageTarget(actorRole, user.role);
+
+    // Move the AI-credit ceiling with the plan. Stripe's own paths do this
+    // (payment.service.ts writes `usage.aiCreditsLimit` alongside the plan), but
+    // this manual path did not — so an operator comping someone to Pro or
+    // Enterprise left them capped at the FREE allowance of 5 credits, with the
+    // UI cheerfully showing the upgraded plan. The comp silently did nothing.
+    const limits = PLAN_CONFIGS[plan as SubscriptionPlan]?.limits;
     await this.firebase.firestore.collection(this.col).doc(uid).update({
       'subscription.plan': plan,
       'subscription.status': status,
+      ...(limits ? { 'usage.aiCreditsLimit': limits.aiCredits } : {}),
       updatedAt: new Date(),
     });
     await this.audit.log({
@@ -142,15 +180,25 @@ export class CRMUsersService {
     return this.getUserById(uid);
   }
 
-  async suspendUser(uid: string, actorId: string, actorEmail: string): Promise<User> {
+  async suspendUser(uid: string, actorId: string, actorEmail: string, actorRole: string): Promise<User> {
     const user = await this.getUserById(uid);
+    this.assertCanManageTarget(actorRole, user.role);
     await this.firebase.firestore.collection(this.col).doc(uid).update({
       isActive: false,
-      deletedAt: new Date(),
+      // NOT deletedAt — suspension is a moderation state, not a deletion, and
+      // stamping a deletion date made a suspended account indistinguishable
+      // from a self-deleted one.
+      suspendedAt: new Date(),
       updatedAt: new Date(),
     });
-    // Revoke all active sessions so suspended users can't use existing JWTs
+    // Revoking alone does NOT suspend anyone: it invalidates refresh tokens
+    // already issued, but the account stays enabled, so the user simply signs in
+    // again and Firebase mints a fresh token. Disabling the Auth record is what
+    // actually blocks re-authentication — the same pair UsersService.softDelete
+    // uses. Without it the operator saw a success toast and the account kept
+    // full access forever.
     await this.firebase.auth.revokeRefreshTokens(uid);
+    await this.firebase.auth.updateUser(uid, { disabled: true });
     await this.audit.log({
       actorId,
       actorEmail,
@@ -163,13 +211,20 @@ export class CRMUsersService {
     return this.getUserById(uid);
   }
 
-  async reactivateUser(uid: string, actorId: string, actorEmail: string): Promise<User> {
+  async reactivateUser(uid: string, actorId: string, actorEmail: string, actorRole: string): Promise<User> {
     const user = await this.getUserById(uid);
+    this.assertCanManageTarget(actorRole, user.role);
     await this.firebase.firestore.collection(this.col).doc(uid).update({
       isActive: true,
       deletedAt: null,
+      suspendedAt: null,
       updatedAt: new Date(),
     });
+    // Re-enable the Auth record. Reactivating only flipped the Firestore flag,
+    // so an account disabled by suspend — or by self-deletion, which also
+    // disables — stayed permanently unable to sign in even after an operator
+    // "reactivated" it.
+    await this.firebase.auth.updateUser(uid, { disabled: false });
     await this.audit.log({
       actorId,
       actorEmail,
@@ -182,8 +237,9 @@ export class CRMUsersService {
     return this.getUserById(uid);
   }
 
-  async resetUsage(uid: string, actorId: string, actorEmail: string): Promise<User> {
+  async resetUsage(uid: string, actorId: string, actorEmail: string, actorRole: string): Promise<User> {
     const user = await this.getUserById(uid);
+    this.assertCanManageTarget(actorRole, user.role);
     const now = new Date();
     await this.firebase.firestore.collection(this.col).doc(uid).update({
       'usage.aiCreditsUsed': 0,

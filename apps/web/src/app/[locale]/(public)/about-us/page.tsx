@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { Metadata } from 'next';
+import { pageMetadata } from '@/lib/seo';
 import { Link } from '@/i18n/routing';
 import Button from '@/components/ui/Button';
 import {
@@ -14,19 +15,13 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  params: { locale },
+}: {
+  params: { locale: string };
+}): Promise<Metadata> {
   const t = await getTranslations('about');
-  return { title: `${t('title')} — FlacronCV` };
-}
-
-/* ─── Stat card ─── */
-function StatCard({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="rounded-2xl bg-white p-6 text-center shadow-sm ring-1 ring-stone-200 dark:bg-stone-900 dark:ring-stone-800">
-      <p className="text-4xl font-bold text-brand-600">{value}</p>
-      <p className="mt-1 text-sm font-medium text-stone-600 dark:text-stone-400">{label}</p>
-    </div>
-  );
+  return pageMetadata({ locale, path: '/about-us', title: t('title'), description: t('subtitle') });
 }
 
 /* ─── Value card ─── */
@@ -70,18 +65,6 @@ export default async function AboutUsPage() {
           <p className="mx-auto mt-6 max-w-2xl text-lg text-stone-600 dark:text-stone-400">
             {t('hero_desc')}
           </p>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="border-b border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950">
-        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <StatCard value={t('stats_users')} label={t('stats_users_label')} />
-            <StatCard value={t('stats_cvs')} label={t('stats_cvs_label')} />
-            <StatCard value={t('stats_languages')} label={t('stats_languages_label')} />
-            <StatCard value={t('stats_countries')} label={t('stats_countries_label')} />
-          </div>
         </div>
       </section>
 
@@ -150,8 +133,8 @@ export default async function AboutUsPage() {
             <Link href="/register">
               <Button
                 size="lg"
-                icon={<ArrowRight className="h-5 w-5" />}
-                className="bg-white text-brand-600 hover:bg-brand-50"
+                icon={<ArrowRight className="h-5 w-5 rtl:rotate-180" />}
+                className="bg-white text-brand-700 hover:bg-brand-50"
               >
                 {t('cta_btn')}
               </Button>

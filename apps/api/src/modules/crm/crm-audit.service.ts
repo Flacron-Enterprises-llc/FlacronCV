@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
+import { AuditService } from '../audit/audit.service';
 import { AuditLogEntry, AuditLogListParams } from '@flacroncv/shared-types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -7,12 +8,34 @@ import { v4 as uuidv4 } from 'uuid';
 export class CRMAuditService {
   private readonly col = 'crm_audit_log';
 
-  constructor(private firebase: FirebaseAdminService) {}
+  constructor(
+    private firebase: FirebaseAdminService,
+    private audit: AuditService,
+  ) {}
 
   async log(entry: Omit<AuditLogEntry, 'id' | 'timestamp'>): Promise<void> {
     const id = uuidv4();
     const record: AuditLogEntry = { id, ...entry, timestamp: new Date() };
     await this.firebase.firestore.collection(this.col).doc(id).set(record);
+
+    // Mirror into the platform-wide `audit_logs` collection.
+    //
+    // The CRM writes here (role changes, plan changes, suspend/reactivate,
+    // subscription edits, settings) are exactly the events the admin Audit Logs
+    // page is expected to show — but that page reads `audit_logs`, so none of
+    // them were ever visible there. Mirroring in one place covers every current
+    // and future CRM call site; the CRM keeps its own richer record for its own
+    // audit view. Best-effort: AuditService swallows its own write failures, so
+    // a mirroring problem can never fail the CRM action itself.
+    await this.audit.log({
+      actorId: entry.actorId,
+      actorEmail: entry.actorEmail,
+      actorRole: 'admin',
+      action: entry.action,
+      resource: entry.targetType,
+      resourceId: entry.targetId,
+      metadata: { targetName: entry.targetName, ...entry.details },
+    });
   }
 
   async list(params: AuditLogListParams): Promise<{

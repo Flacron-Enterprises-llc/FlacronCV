@@ -79,10 +79,11 @@ function SkillPill({ label }: { label: string }) {
 }
 
 function AiGlow() {
+  const t = useTranslations('hero');
   return (
-    <div className="animate-pulse-slow flex items-center gap-1.5 rounded-full border border-violet-200 bg-gradient-to-r from-brand-50 to-violet-50 px-3 py-1.5 shadow-sm dark:border-violet-800 dark:from-brand-950 dark:to-violet-950">
-      <Sparkles className="h-3.5 w-3.5 text-violet-500" />
-      <span className="text-[11px] font-semibold text-violet-700 dark:text-violet-300">AI writing your summary…</span>
+    <div className="flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 shadow-sm dark:border-brand-800 dark:bg-brand-950/60">
+      <Sparkles className="h-3.5 w-3.5 text-brand-500" />
+      <span className="text-[11px] font-semibold text-brand-700 dark:text-brand-300">{t('mockup_ai_writing')}</span>
       <span className="flex gap-0.5">
         {[0, 1, 2].map((i) => (
           <span
@@ -98,21 +99,22 @@ function AiGlow() {
 
 /* ─── Left editor panel ─── */
 function EditorPanel() {
+  const t = useTranslations('hero');
   return (
     <div className="hidden h-full w-[46%] shrink-0 flex-col gap-2.5 overflow-hidden border-e border-stone-200 bg-stone-50 p-3.5 sm:flex dark:border-stone-700 dark:bg-stone-900/60">
       {/* Personal Info */}
-      <SectionHeader icon={User} label="Personal Info" color="brand" />
+      <SectionHeader icon={User} label={t('mockup_personal_info')} color="brand" />
       <div className="grid grid-cols-2 gap-2 rounded-xl border border-stone-200/60 bg-white p-3 shadow-sm dark:border-stone-700/60 dark:bg-stone-800/50">
-        <FieldRow label="Full Name" value="Alex Johnson" wide />
-        <FieldRow label="Job Title" value="Senior Engineer" />
-        <FieldRow label="Email" value="alex@email.com" />
-        <FieldRow label="Location" value="New York, NY" />
-        <FieldRow label="Phone" value="+1 (555) 012-3456" />
-        <FieldRow label="LinkedIn" value="linkedin.com/in/alex" />
+        <FieldRow label={t('mockup_full_name')} value="Alex Johnson" wide />
+        <FieldRow label={t('mockup_job_title')} value="Senior Engineer" />
+        <FieldRow label={t('mockup_email')} value="alex@email.com" />
+        <FieldRow label={t('mockup_location')} value="New York, NY" />
+        <FieldRow label={t('mockup_phone')} value="+1 (555) 012-3456" />
+        <FieldRow label={t('mockup_linkedin')} value="linkedin.com/in/alex" />
       </div>
 
       {/* Experience */}
-      <SectionHeader icon={Briefcase} label="Work Experience" color="violet" />
+      <SectionHeader icon={Briefcase} label={t('mockup_work_experience')} color="violet" />
       <div className="rounded-xl border border-stone-200/60 bg-white p-3 shadow-sm dark:border-stone-700/60 dark:bg-stone-800/50">
         <div className="flex items-start gap-2">
           <div className="flex-1">
@@ -129,12 +131,12 @@ function EditorPanel() {
           </div>
         </div>
         <button className="mt-2 flex items-center gap-1 text-[10px] font-medium text-brand-600 dark:text-brand-400">
-          <Plus className="h-3 w-3" /> Add bullet
+          <Plus className="h-3 w-3" /> {t('mockup_add_bullet')}
         </button>
       </div>
 
       {/* Skills */}
-      <SectionHeader icon={Wrench} label="Skills" color="emerald" />
+      <SectionHeader icon={Wrench} label={t('mockup_skills')} color="emerald" />
       <div className="rounded-xl border border-stone-200/60 bg-white p-3 shadow-sm dark:border-stone-700/60 dark:bg-stone-800/50">
         <div className="flex flex-wrap gap-1.5">
           {['React', 'Node.js', 'TypeScript', 'Python', 'AWS', 'Docker'].map((s) => (
@@ -148,6 +150,7 @@ function EditorPanel() {
 
 /* ─── Right CV preview panel ─── */
 function PreviewPanel() {
+  const t = useTranslations('hero');
   return (
     <div className="flex flex-1 flex-col overflow-hidden bg-stone-100 p-3 dark:bg-stone-950">
       {/* Paper shadow CV */}
@@ -167,7 +170,7 @@ function PreviewPanel() {
           {/* Summary */}
           <div>
             <div className="mb-1 flex items-center gap-1.5">
-              <span className="text-[8px] font-bold uppercase tracking-widest text-brand-600">Summary</span>
+              <span className="text-[8px] font-bold uppercase tracking-widest text-brand-600">{t('mockup_summary')}</span>
               <div className="h-px flex-1 bg-brand-200" />
             </div>
             <div className="space-y-0.5">
@@ -180,7 +183,7 @@ function PreviewPanel() {
           {/* Experience */}
           <div>
             <div className="mb-1.5 flex items-center gap-1.5">
-              <span className="text-[8px] font-bold uppercase tracking-widest text-brand-600">Experience</span>
+              <span className="text-[8px] font-bold uppercase tracking-widest text-brand-600">{t('mockup_experience')}</span>
               <div className="h-px flex-1 bg-brand-200" />
             </div>
             <div className="space-y-2">
@@ -203,7 +206,7 @@ function PreviewPanel() {
           {/* Education */}
           <div>
             <div className="mb-1 flex items-center gap-1.5">
-              <span className="text-[8px] font-bold uppercase tracking-widest text-brand-600">Education</span>
+              <span className="text-[8px] font-bold uppercase tracking-widest text-brand-600">{t('mockup_education')}</span>
               <div className="h-px flex-1 bg-brand-200" />
             </div>
             <p className="text-[9px] font-bold text-stone-800">BSc Computer Science</p>
@@ -213,7 +216,7 @@ function PreviewPanel() {
           {/* Skills */}
           <div>
             <div className="mb-1 flex items-center gap-1.5">
-              <span className="text-[8px] font-bold uppercase tracking-widest text-brand-600">Skills</span>
+              <span className="text-[8px] font-bold uppercase tracking-widest text-brand-600">{t('mockup_skills')}</span>
               <div className="h-px flex-1 bg-brand-200" />
             </div>
             <div className="flex flex-wrap gap-1">
@@ -262,10 +265,10 @@ export default function Hero() {
       <div className="absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-gradient-to-b from-brand-50/60 via-white to-white dark:from-stone-950 dark:via-stone-950 dark:to-stone-950" />
         <div className="absolute left-1/4 top-0 -z-10 h-[500px] w-[500px] -translate-y-1/3 rounded-full bg-brand-400/10 blur-3xl dark:bg-brand-600/5" />
-        <div className="absolute right-1/4 top-0 -z-10 h-[400px] w-[400px] -translate-y-1/3 rounded-full bg-violet-400/10 blur-3xl dark:bg-violet-600/5" />
+        <div className="absolute right-1/4 top-0 -z-10 h-[400px] w-[400px] -translate-y-1/3 rounded-full bg-brand-400/8 blur-3xl dark:bg-brand-600/5" />
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8 lg:py-32">
+      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
         {/* Hero copy */}
         <div
           ref={contentRef}
@@ -278,9 +281,9 @@ export default function Hero() {
           </div>
 
           {/* Headline */}
-          <h1 className="mb-6 text-4xl font-extrabold tracking-tight text-stone-900 sm:text-5xl lg:text-6xl dark:text-white">
+          <h1 className="mb-6 text-4xl font-bold tracking-tight text-stone-900 sm:text-5xl lg:text-[3.25rem] lg:leading-[1.07] dark:text-white">
             {t('hero.title_part1')}{' '}
-            <span className="bg-gradient-to-r from-brand-500 to-violet-600 bg-clip-text text-transparent">
+            <span className="text-brand-600 dark:text-brand-500">
               {t('hero.title_highlight')}
             </span>{' '}
             {t('hero.title_part2')}
@@ -301,7 +304,10 @@ export default function Hero() {
             <Button
               variant="ghost"
               size="lg"
-              onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() => {
+                const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                document.getElementById('how-it-works')?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+              }}
             >
               {t('hero.cta_secondary')} →
             </Button>
@@ -327,10 +333,10 @@ export default function Hero() {
         {/* ─── Dashboard Showcase ─── */}
         <div
           ref={mockupRef}
-          className={`relative mx-auto mt-20 max-w-5xl transition-all duration-700 delay-300 ${mockupInView ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}
+          className={`relative mx-auto mt-14 max-w-5xl transition-all duration-700 delay-300 ${mockupInView ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}
         >
           {/* Ambient glow */}
-          <div className="absolute -inset-6 -z-10 rounded-3xl bg-gradient-to-r from-brand-400/20 via-violet-400/15 to-brand-400/20 blur-3xl" />
+          <div className="absolute -inset-6 -z-10 rounded-3xl bg-brand-400/15 blur-3xl" />
 
           {/* Floating stat: ATS Score */}
           <FloatingCard className="-top-5 left-6 hidden sm:block">
@@ -339,7 +345,7 @@ export default function Hero() {
                 <TrendingUp className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-[10px] font-medium text-stone-500 dark:text-stone-400">ATS Score</p>
+                <p className="text-[10px] font-medium text-stone-500 dark:text-stone-400">{t('hero.mockup_ats_score')}</p>
                 <p className="text-base font-bold text-stone-900 dark:text-white">94 / 100</p>
               </div>
             </div>
@@ -352,7 +358,7 @@ export default function Hero() {
                 <Sparkles className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-[10px] font-medium text-stone-500 dark:text-stone-400">AI Suggestions</p>
+                <p className="text-[10px] font-medium text-stone-500 dark:text-stone-400">{t('hero.mockup_ai_suggestions')}</p>
                 <p className="text-base font-bold text-stone-900 dark:text-white">3 ready</p>
               </div>
             </div>
@@ -365,8 +371,8 @@ export default function Hero() {
                 <Star className="h-4 w-4 fill-current" />
               </div>
               <div>
-                <p className="text-[10px] font-medium text-stone-500 dark:text-stone-400">This week</p>
-                <p className="text-[13px] font-bold text-stone-900 dark:text-white">3 interview calls 🎉</p>
+                <p className="text-[10px] font-medium text-stone-500 dark:text-stone-400">{t('hero.mockup_this_week')}</p>
+                <p className="text-[13px] font-bold text-stone-900 dark:text-white">{t('hero.mockup_interview_calls', { count: 3 })}</p>
               </div>
             </div>
           </FloatingCard>
@@ -381,7 +387,7 @@ export default function Hero() {
                 <div className="h-3 w-3 rounded-full bg-emerald-400 hover:bg-emerald-500" />
               </div>
               <div className="flex min-w-0 flex-1 items-center overflow-hidden rounded-md border border-stone-200 bg-white px-3 py-1 dark:border-stone-600 dark:bg-stone-700">
-                <div className="mr-2 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
+                <div className="me-2 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
                 <span className="truncate text-[11px] text-stone-400 dark:text-stone-500">app.flacroncv.com/cv/alex-johnson</span>
               </div>
             </div>
@@ -400,8 +406,8 @@ export default function Hero() {
                   <ToolbarBtn><Redo2 className="h-3 w-3" /></ToolbarBtn>
                   <div className="mx-1 h-4 w-px bg-stone-200 dark:bg-stone-700" />
                 </div>
-                <ToolbarBtn active><Sparkles className="h-3 w-3" /> AI Assist</ToolbarBtn>
-                <ToolbarBtn><Download className="h-3 w-3" /> Export</ToolbarBtn>
+                <ToolbarBtn active><Sparkles className="h-3 w-3" /> {t('hero.mockup_ai_assist')}</ToolbarBtn>
+                <ToolbarBtn><Download className="h-3 w-3" /> {t('hero.mockup_export')}</ToolbarBtn>
               </div>
             </div>
 
@@ -417,13 +423,13 @@ export default function Hero() {
                 <AiGlow />
               </div>
               <div className="hidden items-center gap-3 text-[10px] text-stone-400 sm:flex dark:text-stone-500">
-                <span>4 sections</span>
+                <span>{t('hero.mockup_sections_count', { count: 4 })}</span>
                 <span>·</span>
-                <span>342 words</span>
+                <span>{t('hero.mockup_words_count', { count: 342 })}</span>
                 <span>·</span>
-                <span className="font-medium text-emerald-500">ATS Ready</span>
+                <span className="font-medium text-emerald-500">{t('hero.mockup_ats_ready')}</span>
               </div>
-              <span className="text-[10px] font-medium text-emerald-500 sm:hidden">ATS Ready</span>
+              <span className="text-[10px] font-medium text-emerald-500 sm:hidden">{t('hero.mockup_ats_ready')}</span>
             </div>
           </div>
         </div>

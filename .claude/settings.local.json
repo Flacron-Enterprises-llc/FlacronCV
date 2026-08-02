@@ -64,7 +64,34 @@
       "Bash(do python3 -c \":*)",
       "Bash(ipconfig)",
       "Bash(git:*)",
-      "PowerShell(git *)"
+      "PowerShell(git *)",
+      "PowerShell(\"cleared\")",
+      "Bash(pnpm run *)",
+      "Bash(node -e ' *)",
+      "Bash(pnpm --filter @flacroncv/shared-types build)",
+      "Bash(node add-keys.mjs keys-pricing.json)",
+      "Bash(cd \"c:/Users/win 11/Desktop/FlacronCV\" && grep -n \"PLAN_CONFIGS,\\\\|SubscriptionPlan,\\\\|from '@flacroncv/shared-types'\" \"apps/web/src/app/[locale]/\\(dashboard\\)/settings/billing/page.tsx\" | head -5 && sed -n '/from .@flacroncv\\\\/shared-types.;/=' \"apps/web/src/app/[locale]/\\(dashboard\\)/settings/billing/page.tsx\" | head -2)",
+      "Bash(node add-keys.mjs keys-cl-card.json)",
+      "Bash(node add-keys.mjs keys-support-status.json)",
+      "Bash(cd \"c:/Users/win 11/Desktop/FlacronCV\" && grep -n \"CRMStatCard\" \"apps/web/src/app/[locale]/\\(crm\\)/crm/page.tsx\" | head -5 && sed -n '/stats.map/,/\\\\/>/p' \"apps/web/src/app/[locale]/\\(crm\\)/crm/page.tsx\" | head -20)",
+      "Bash(node check-parity.mjs)",
+      "Bash(node add-keys.mjs keys-admin-tmpl.json)",
+      "Bash(cd \"c:/Users/win 11/Desktop/FlacronCV\" && grep -n \"interface Template\\\\|^import.*Template\" \"apps/web/src/app/[locale]/\\(admin\\)/admin/templates/page.tsx\" | head -5 && sed -n '/interface Template/,/^}/p' \"apps/web/src/app/[locale]/\\(admin\\)/admin/templates/page.tsx\")",
+      "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./package.json'\\).scripts,null,1\\)\\)\")",
+      "Bash(grep -rnE \"\\(placeholder|aria-label|title|label|alt\\)=\\\\\"[A-Z][^\\\\\"]{2,}\\\\\"\" \"app/[locale]/\\(crm\\)\" \"app/[locale]/\\(admin\\)\" \"components/crm\" \"components/admin\")",
+      "Bash(grep -rnE \"^\\\\s*[A-Z][A-Za-z0-9,'&\\\\.\\\\!\\\\?\\\\\\(\\\\\\) -]{3,}\\\\s*$\" \"app/[locale]/\\(crm\\)\" \"components/crm\")",
+      "Bash(grep -rnE \"\\(label|Label|name|title|text\\):\\\\s*'[A-Z][^']{2,}'\" \"app/[locale]/\\(crm\\)\" \"app/[locale]/\\(admin\\)\" \"components/crm\" \"components/admin\")",
+      "Bash(cd \"c:/Users/win 11/Desktop/FlacronCV/apps/web/src\" && grep -rn \"minHeight\\\\|1122\" components/cv-builder/templates/*.tsx | head -20; echo \"--- store test undo ---\"; grep -n \"undo\\\\|redo\\\\|pushHistory\\\\|canUndo\" ../src/store/cv-store.test.ts | head -40)",
+      "Read(//c/Users/win 11/Desktop/src/store/**)",
+      "Bash(grep -rnE \">[ ]*[A-Z][A-Za-z][A-Za-z '&,\\\\.\\\\!\\\\?%\\\\\\(\\\\\\)/-]{3,}<\" \"app/[locale]/\\(crm\\)\" \"app/[locale]/\\(admin\\)\" \"components/crm\" \"components/admin\")",
+      "Bash(node \"C:/Users/WIN11~1/AppData/Local/Temp/claude/c--Users-win-11-Desktop-FlacronCV/0fa1b47a-e7e7-4807-8829-536c6f420686/scratchpad/scan.js\" \"apps/web/src\")",
+      "Bash(grep -vE \"[,;{}\\(\\)\\\\[\\\\]=<>]\")",
+      "Bash(node \"C:/Users/WIN11~1/AppData/Local/Temp/claude/c--Users-win-11-Desktop-FlacronCV/0fa1b47a-e7e7-4807-8829-536c6f420686/scratchpad/scan2.js\" \"apps/web/src\")"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\win 11\\Desktop\\FlacronCV\\apps\\web\\src\\app\\[locale]\\(dashboard)\\settings\\billing",
+      "C:\\Users\\win 11\\Desktop\\FlacronCV\\apps\\web\\src\\app\\[locale]\\(crm)\\crm",
+      "C:\\Users\\win 11\\Desktop\\FlacronCV\\apps\\api\\apps\\web\\src\\app\\[locale]\\(admin)\\admin\\templates"
     ]
   }
 }

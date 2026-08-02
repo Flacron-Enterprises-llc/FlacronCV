@@ -1,9 +1,11 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { Sparkles, Check, Crown } from 'lucide-react';
+import { PLAN_CONFIGS, SubscriptionPlan } from '@flacroncv/shared-types';
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -11,39 +13,28 @@ interface UpgradeModalProps {
   reason?: 'ai_credits' | 'exports' | 'templates' | 'cvs' | 'cover_letters';
 }
 
+const REASON_ICON = {
+  ai_credits: Sparkles,
+  exports: Crown,
+  templates: Crown,
+  cvs: Crown,
+  cover_letters: Crown,
+} as const;
+
 export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }: UpgradeModalProps) {
   const router = useRouter();
+  const t = useTranslations('upgrade_modal');
 
-  const reasonMessages = {
-    ai_credits: {
-      title: 'AI Credits Exhausted',
-      description: "You've used all your AI credits for this month. Upgrade to Pro or Enterprise for more AI-powered features!",
-      icon: Sparkles,
-    },
-    exports: {
-      title: 'Export Limit Reached',
-      description: 'Upgrade to unlock unlimited exports and premium features!',
-      icon: Crown,
-    },
-    templates: {
-      title: 'Premium Template',
-      description: 'This template requires a Pro or Enterprise plan. Upgrade to access all premium templates!',
-      icon: Crown,
-    },
-    cvs: {
-      title: 'CV Limit Reached',
-      description: 'Upgrade to create unlimited CVs and access premium features!',
-      icon: Crown,
-    },
-    cover_letters: {
-      title: 'Cover Letter Limit Reached',
-      description: 'Upgrade to create unlimited cover letters and access premium features!',
-      icon: Crown,
-    },
-  };
+  const Icon = REASON_ICON[reason];
 
-  const message = reasonMessages[reason];
-  const Icon = message.icon;
+  // The benefit list is read from PLAN_CONFIGS, not hand-written.
+  //
+  // It previously claimed "Unlimited AI Credits" and "Unlimited CVs & Cover
+  // Letters" for Pro — Pro actually grants 100 credits and 10 CVs. The paywall
+  // was promising more than the plan delivers at the exact moment the user
+  // decides to pay. Reading the real config makes that impossible, and the
+  // advertised-vs-enforced test in the API suite keeps the config itself honest.
+  const proFeatures = PLAN_CONFIGS[SubscriptionPlan.PRO].features;
 
   const handleUpgrade = () => {
     onClose();
@@ -51,7 +42,7 @@ export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }:
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={message.title} size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title={t(`reasons.${reason}.title`)} size="md">
       <div className="space-y-6">
         {/* Icon */}
         <div className="flex justify-center">
@@ -62,33 +53,21 @@ export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }:
 
         {/* Description */}
         <p className="text-center text-sm text-stone-600 dark:text-stone-400">
-          {message.description}
+          {t(`reasons.${reason}.description`)}
         </p>
 
-        {/* Pro Features */}
+        {/* What the Pro plan actually includes */}
         <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/50">
-          <h4 className="mb-3 font-semibold text-stone-900 dark:text-white">Pro Plan Includes:</h4>
+          <h4 className="mb-3 font-semibold text-stone-900 dark:text-white">
+            {t('plan_includes', { plan: PLAN_CONFIGS[SubscriptionPlan.PRO].name })}
+          </h4>
           <ul className="space-y-2 text-sm text-stone-600 dark:text-stone-400">
-            <li className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-emerald-500" />
-              <span>Unlimited AI Credits</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-emerald-500" />
-              <span>Unlimited CVs & Cover Letters</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-emerald-500" />
-              <span>All Premium Templates</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-emerald-500" />
-              <span>Unlimited Exports (PDF & DOCX)</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-emerald-500" />
-              <span>Priority Support</span>
-            </li>
+            {proFeatures.map((feature) => (
+              <li key={feature} className="flex items-start gap-2">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                <span className="min-w-0">{feature}</span>
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -100,10 +79,10 @@ export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }:
             icon={<Crown className="h-4 w-4" />}
             className="flex-1"
           >
-            Upgrade Now
+            {t('upgrade_now')}
           </Button>
           <Button variant="secondary" onClick={onClose} className="flex-1">
-            Maybe Later
+            {t('maybe_later')}
           </Button>
         </div>
       </div>

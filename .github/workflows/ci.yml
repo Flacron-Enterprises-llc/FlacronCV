@@ -32,10 +32,48 @@ jobs:
       - name: Type check
         run: pnpm type-check
 
+  # The suite previously ran nowhere. Lint, type-check, build and the Docker
+  # build were all gated — but nothing executed a single test, so the API and
+  # web suites could go red and still merge. Several defects this project has
+  # shipped were exactly the kind a test catches and a type-check cannot:
+  # a translation key missing from every locale, an audit row silently dropped
+  # by an undefined field, a date filter parsed in the wrong timezone.
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # shared-types is consumed from its build output, so the API suite cannot
+      # resolve @flacroncv/shared-types until it has been compiled.
+      - name: Build shared-types
+        run: pnpm --filter @flacroncv/shared-types build
+
+      # Runs both suites: apps/api (jest) and apps/web (vitest). The web suite
+      # includes the three i18n gates — locale parity, no hardcoded English, and
+      # every t() key resolving — which are the only checks that catch an
+      # untranslated string before a user sees it.
+      - name: Test
+        run: pnpm test
+
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: lint-and-typecheck
+    needs: [lint-and-typecheck, test]
 
     steps:
       - uses: actions/checkout@v4

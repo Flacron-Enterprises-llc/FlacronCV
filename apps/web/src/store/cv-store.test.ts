@@ -115,6 +115,22 @@ describe('cv-store', () => {
       expect(state.cv!.sectionOrder).toEqual(['s3', 's1', 's2']);
       expect(state.sections[0].id).toBe('s3');
     });
+
+    it('syncs each section order field to its new index so the reorder persists', () => {
+      const cv = makeCV({ sectionOrder: ['s1', 's2', 's3'] });
+      useCVStore.getState().setCV(cv);
+      useCVStore.getState().setSections([makeSection('s1'), makeSection('s2'), makeSection('s3')]);
+      useCVStore.getState().reorderSections(['s3', 's1', 's2']);
+
+      const state = useCVStore.getState();
+      // order must match position, or autosave would persist stale values and
+      // getSections() would revert the editor list on reload.
+      expect(state.sections.map((s) => [s.id, s.order])).toEqual([
+        ['s3', 0],
+        ['s1', 1],
+        ['s2', 2],
+      ]);
+    });
   });
 
   describe('undo/redo', () => {
@@ -173,5 +189,98 @@ describe('cv-store', () => {
 
       expect(useCVStore.getState().history.length).toBeLessThanOrEqual(50);
     });
+
+    /**
+     * Locks the snapshot ORDERING contract that CVEditor must follow.
+     *
+     * CVEditor used to call pushHistory() *before* each mutation, which stored
+     * the pre-edit state. Two user-visible bugs followed: the first edit could
+     * never be undone, and each later undo reverted two edits at once. These
+     * tests fail if that ordering is reintroduced.
+     */
+    describe('snapshot ordering (push AFTER the mutation)', () => {
+      it('the first edit is undoable when a baseline is seeded on load', () => {
+        const cv = makeCV();
+        useCVStore.getState().setCV(cv);
+        useCVStore.getState().pushHistory(); // baseline, seeded by the editor page
+
+        useCVStore.getState().updatePersonalInfo('firstName', 'Jane');
+        useCVStore.getState().pushHistory(); // after the edit
+
+        expect(useCVStore.getState().canUndo()).toBe(true);
+        useCVStore.getState().undo();
+        expect(useCVStore.getState().cv!.personalInfo.firstName).toBe('John');
+      });
+
+      it('one undo reverts exactly one edit', () => {
+        const cv = makeCV();
+        useCVStore.getState().setCV(cv);
+        useCVStore.getState().pushHistory(); // baseline: John
+
+        useCVStore.getState().updatePersonalInfo('firstName', 'Jane');
+        useCVStore.getState().pushHistory();
+
+        useCVStore.getState().updatePersonalInfo('firstName', 'Bob');
+        useCVStore.getState().pushHistory();
+
+        useCVStore.getState().undo();
+        // Exactly one step back — not two, and not all the way to baseline.
+        expect(useCVStore.getState().cv!.personalInfo.firstName).toBe('Jane');
+      });
+
+      it('push-BEFORE-mutate is now recoverable too, via drift detection', () => {
+        const cv = makeCV();
+        useCVStore.getState().setCV(cv);
+
+        // The incorrect order CVEditor used to use.
+        useCVStore.getState().pushHistory();
+        useCVStore.getState().updatePersonalInfo('firstName', 'Jane');
+
+        // This used to assert `canUndo() === false`, documenting that an edit
+        // made after the snapshot was unreachable. `undo` now notices the live
+        // document has drifted from the newest snapshot and records that drift
+        // before stepping back, so the edit is undoable regardless of ordering.
+        expect(useCVStore.getState().canUndo()).toBe(true);
+        expect(useCVStore.getState().cv!.personalInfo.firstName).toBe('Jane');
+
+        useCVStore.getState().undo();
+        expect(useCVStore.getState().cv!.personalInfo.firstName).toBe('John');
+      });
+    });
+  });
+});
+
+describe('undo does not discard un-snapshotted typing', () => {
+  // pushHistory() only fires on STRUCTURAL edits. Typing runs ahead of the last
+  // snapshot, and undo used to jump straight past it — losing the text, with no
+  // redo path back because it had never been recorded.
+  it('reverts typing first, and redo brings it back', () => {
+    const s = () => useCVStore.getState();
+
+    s().setCV(makeCV());
+    s().resetHistory();
+
+    // A structural edit takes a snapshot…
+    s().pushHistory();
+    // …then the user types, which does not.
+    s().updatePersonalInfo('firstName', 'Jonathan');
+    expect(s().cv!.personalInfo.firstName).toBe('Jonathan');
+
+    s().undo();
+    expect(s().cv!.personalInfo.firstName).toBe('John');
+
+    s().redo();
+    expect(s().cv!.personalInfo.firstName).toBe('Jonathan');
+  });
+
+  it('reports canUndo while the document has drifted from the newest snapshot', () => {
+    const s = () => useCVStore.getState();
+
+    s().setCV(makeCV());
+    s().resetHistory();
+    expect(s().canUndo()).toBe(false);
+
+    s().updatePersonalInfo('firstName', 'Jane');
+    expect(s().canUndo()).toBe(true);
   });
 });

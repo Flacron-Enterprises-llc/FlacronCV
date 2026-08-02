@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { LucideIcon, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
@@ -13,6 +14,8 @@ interface CRMStatCardProps {
   prefix?: string;
   suffix?: string;
   loading?: boolean;
+  /** Explanatory line under the value, e.g. why a metric is withheld. */
+  hint?: string;
 }
 
 export default function CRMStatCard({
@@ -24,7 +27,9 @@ export default function CRMStatCard({
   prefix = '',
   suffix = '',
   loading = false,
+  hint,
 }: CRMStatCardProps) {
+  const t = useTranslations('crm');
   const hasChange = change !== undefined && change !== null;
   const isPositive = (change ?? 0) > 0;
   const isNeutral = (change ?? 0) === 0;
@@ -40,9 +45,13 @@ export default function CRMStatCard({
           {loading ? (
             <div className="mt-2 h-8 w-24 animate-pulse rounded-md bg-stone-200 dark:bg-stone-700" />
           ) : (
-            <p className="mt-1 text-2xl font-bold text-stone-900 dark:text-white">
+            <p className="mt-1 text-xl font-bold text-stone-900 [overflow-wrap:anywhere] sm:text-2xl dark:text-white">
               {prefix}{typeof value === 'number' ? value.toLocaleString() : value}{suffix}
             </p>
+          )}
+
+          {hint && !loading && (
+            <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-400">{hint}</p>
           )}
 
           {hasChange && !loading && (
@@ -64,7 +73,7 @@ export default function CRMStatCard({
                 <TrendingDown className="h-3.5 w-3.5" />
               )}
               <span>
-                {isPositive ? '+' : ''}{change}% vs last month
+                {t('status_percent_change_vs_last_month', { change: `${isPositive ? '+' : ''}${change}` })}
               </span>
             </div>
           )}

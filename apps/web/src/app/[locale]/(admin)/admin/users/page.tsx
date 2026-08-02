@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { PlatformUserItem } from '@flacroncv/shared-types';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -61,29 +62,66 @@ export default function AdminUsersPage(): React.JSX.Element | null {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const limit = 20;
 
+  // User management is served by the (already audited, working) CRM endpoints;
+  // the CRM list returns `items` (PlatformUserItem[]) which we map into the shape
+  // this page renders.
   const { data, isLoading, error } = useQuery<UsersResponse>({
     queryKey: ['admin', 'users', page, searchQuery],
-    queryFn: () =>
-      api.get(
-        `/admin/users?page=${page}&limit=${limit}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`,
-      ),
+    queryFn: async () => {
+      const res = await api.get<{ items: PlatformUserItem[]; total: number; page: number; pages: number }>(
+        `/crm/users?page=${page}&limit=${limit}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`,
+      );
+      return {
+        users: res.items.map((u): UserData => ({
+          id: u.uid,
+          displayName: u.displayName,
+          email: u.email,
+          role: u.role,
+          status: u.isActive ? 'active' : 'banned',
+          subscription: { plan: u.subscriptionPlan },
+          profile: {
+            firstName: u.displayName?.split(' ')[0] ?? '',
+            lastName: u.displayName?.split(' ').slice(1).join(' ') ?? '',
+            phone: '',
+            country: u.location ?? '',
+          },
+          createdAt: u.createdAt as unknown as string,
+          lastLoginAt: u.lastLoginAt as unknown as string,
+        })),
+        total: res.total,
+        page: res.page,
+        totalPages: res.pages,
+      };
+    },
   });
 
   const updateRoleMutation = useMutation({
+    // Role changes are super_admin-only server-side; a plain admin gets a 403 → onError.
     mutationFn: ({ userId, role }: { userId: string; role: string }) =>
-      api.patch(`/admin/users/${userId}/role`, { role }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      toast.success(t('role_updated'));
+      api.put(`/crm/users/${userId}/role`, { role }),
+    // Optimistic: the <select> reflects the new role instantly instead of snapping
+    // back to the stale cache value during the request; rolled back on failure.
+    onMutate: async ({ userId, role }) => {
+      await queryClient.cancelQueries({ queryKey: ['admin', 'users'] });
+      const prev = queryClient.getQueriesData<UsersResponse>({ queryKey: ['admin', 'users'] });
+      queryClient.setQueriesData<UsersResponse>({ queryKey: ['admin', 'users'] }, (old) =>
+        old ? { ...old, users: old.users.map((u) => (u.id === userId ? ({ ...u, role } as UserData) : u)) } : old,
+      );
+      return { prev };
     },
-    onError: () => {
+    onSuccess: () => toast.success(t('role_updated')),
+    onError: (_e, _v, ctx) => {
+      ctx?.prev?.forEach(([key, d]) => queryClient.setQueryData(key, d));
       toast.error(t('role_update_failed'));
     },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
   });
 
   const toggleBanMutation = useMutation({
     mutationFn: ({ userId, action }: { userId: string; action: 'ban' | 'unban' }) =>
-      api.patch(`/admin/users/${userId}/status`, { action }),
+      action === 'ban'
+        ? api.put(`/crm/users/${userId}/suspend`)
+        : api.put(`/crm/users/${userId}/reactivate`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       toast.success(t('status_updated'));
@@ -167,23 +205,27 @@ export default function AdminUsersPage(): React.JSX.Element | null {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
+              {/* Email folds into the Name cell below the md breakpoint and
+                  Plan into Status below lg, so the essential columns (who,
+                  their role, and the ban control) always fit without the table
+                  overflowing its container. */}
               <tr className="border-b border-stone-200 dark:border-stone-700">
-                <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                <th className="px-4 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 sm:px-6 dark:text-stone-400">
                   {t('name')}
                 </th>
-                <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                <th className="hidden px-4 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 md:table-cell sm:px-6 dark:text-stone-400">
                   {t('email')}
                 </th>
-                <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                <th className="px-4 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 sm:px-6 dark:text-stone-400">
                   {t('role')}
                 </th>
-                <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                <th className="hidden px-4 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 lg:table-cell sm:px-6 dark:text-stone-400">
                   {t('plan')}
                 </th>
-                <th className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                <th className="hidden px-4 py-3 text-start text-xs font-medium uppercase tracking-wider text-stone-500 sm:table-cell sm:px-6 dark:text-stone-400">
                   {t('status')}
                 </th>
-                <th className="px-6 py-3 text-end text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                <th className="px-4 py-3 text-end text-xs font-medium uppercase tracking-wider text-stone-500 sm:px-6 dark:text-stone-400">
                   {t('actions')}
                 </th>
               </tr>
@@ -192,40 +234,58 @@ export default function AdminUsersPage(): React.JSX.Element | null {
               {data?.users?.map((user) => (
                 <tr
                   key={user.id}
-                  className="cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/50"
+                  tabIndex={0}
+                  className="cursor-pointer hover:bg-stone-50 focus:outline-none focus-visible:bg-stone-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 dark:hover:bg-stone-800/50 dark:focus-visible:bg-stone-800/50"
                   onClick={() => openUserDetail(user)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      openUserDetail(user);
+                    }
+                  }}
                 >
-                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-stone-900 dark:text-white">
+                  <td className="px-4 py-4 text-sm font-medium text-stone-900 sm:px-6 dark:text-white">
                     {user.displayName}
+                    {/* Columns hidden at this width, kept legible here. */}
+                    <p className="text-xs font-normal text-stone-500 md:hidden">{user.email}</p>
+                    <p className="text-xs font-normal text-stone-500 sm:hidden">
+                      {user.subscription?.plan?.toUpperCase() || 'FREE'} ·{' '}
+                      {user.status === 'banned' ? t('banned') : t('active')}
+                    </p>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-stone-600 dark:text-stone-400">
+                  <td className="hidden whitespace-nowrap px-4 py-4 text-sm text-stone-600 md:table-cell sm:px-6 dark:text-stone-400">
                     {user.email}
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4">
+                  <td className="whitespace-nowrap px-4 py-4 sm:px-6">
+                    {/* Named per row. Without this every row renders an
+                        identically-unnamed combobox, so a screen-reader user
+                        hears "combo box" N times with no way to tell whose
+                        role they are about to change. */}
                     <select
+                      aria-label={t('change_role_for', { name: user.displayName || user.email })}
                       value={user.role}
+                      disabled={updateRoleMutation.isPending && updateRoleMutation.variables?.userId === user.id}
                       onChange={(e) => {
                         e.stopPropagation();
                         handleRoleChange(user.id, e.target.value);
                       }}
                       onClick={(e) => e.stopPropagation()}
-                      className="rounded-md border border-stone-300 bg-white px-2 py-1 text-xs text-stone-700 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-300"
+                      className="rounded-md border border-stone-300 bg-white px-2 py-1 text-xs text-stone-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-300"
                     >
                       <option value="user">{t('role_user')}</option>
                       <option value="admin">{t('role_admin')}</option>
                     </select>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4">
+                  <td className="hidden whitespace-nowrap px-4 py-4 lg:table-cell sm:px-6">
                     <Badge variant="brand">
                       {user.subscription?.plan?.toUpperCase() || 'FREE'}
                     </Badge>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4">
+                  <td className="hidden whitespace-nowrap px-4 py-4 sm:table-cell sm:px-6">
                     <Badge variant={user.status === 'banned' ? 'danger' : 'success'}>
                       {user.status === 'banned' ? t('banned') : t('active')}
                     </Badge>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-end">
+                  <td className="whitespace-nowrap px-4 py-4 text-end sm:px-6">
                     <Button
                       variant={user.status === 'banned' ? 'secondary' : 'danger'}
                       size="sm"

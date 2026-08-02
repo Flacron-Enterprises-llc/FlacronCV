@@ -4,16 +4,28 @@ import { AuthService } from './auth.service';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { UsersService } from '../users/users.service';
 import { MailService } from '../mail/mail.service';
+import { AuditService } from '../audit/audit.service';
 import { createMockFirebaseAdmin } from '../../test-utils/mock-firebase-admin';
 import { InMemoryFirestore } from '../firebase/in-memory-firestore';
 
+/** Sign-in/out, registration and role changes are audit-logged; spy on them. */
+function makeMockAudit() {
+  return {
+    log: jest.fn().mockResolvedValue(undefined),
+    logUserAction: jest.fn().mockResolvedValue(undefined),
+    logSystemAction: jest.fn().mockResolvedValue(undefined),
+  };
+}
+
 describe('AuthService', () => {
+  let mockAudit: ReturnType<typeof makeMockAudit>;
   let service: AuthService;
   let mockFirebaseAdmin: ReturnType<typeof createMockFirebaseAdmin>;
   let mockUsersService: {
     findById: jest.Mock;
     create: jest.Mock;
     updateLastLogin: jest.Mock;
+    updateRole: jest.Mock;
   };
   let mockMailService: {
     sendWelcomeEmail: jest.Mock;
@@ -28,6 +40,7 @@ describe('AuthService', () => {
       findById: jest.fn(),
       create: jest.fn(),
       updateLastLogin: jest.fn().mockResolvedValue(undefined),
+      updateRole: jest.fn().mockResolvedValue(undefined),
     };
 
     mockMailService = {
@@ -40,6 +53,8 @@ describe('AuthService', () => {
       get: jest.fn().mockReturnValue(undefined),
     };
 
+    mockAudit = makeMockAudit();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -47,6 +62,7 @@ describe('AuthService', () => {
         { provide: UsersService, useValue: mockUsersService },
         { provide: MailService, useValue: mockMailService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: AuditService, useValue: mockAudit },
       ],
     }).compile();
 
@@ -124,6 +140,78 @@ describe('AuthService', () => {
       expect(mockUsersService.updateLastLogin).toHaveBeenCalledWith(uid);
       expect(mockUsersService.create).not.toHaveBeenCalled();
     });
+
+    it('resolves a missing display name from the Auth record on signup', async () => {
+      const uid = 'no-claim-uid';
+      const email = 'named@example.com';
+
+      mockUsersService.findById!.mockResolvedValue(null);
+      mockUsersService.create!.mockImplementation(async (d: any) => d);
+      mockFirebaseAdmin.auth.getUser.mockResolvedValue({ displayName: 'Real Name' } as any);
+      mockFirebaseAdmin.auth.generateEmailVerificationLink.mockResolvedValue('https://verify.link');
+
+      await (mockFirebaseAdmin.firestore as InMemoryFirestore)
+        .collection('users').doc(uid).set({ uid });
+
+      await service.verifyAndSync(uid, email, '', false);
+
+      expect(mockFirebaseAdmin.auth.getUser).toHaveBeenCalledWith(uid);
+      expect(mockUsersService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ displayName: 'Real Name' }),
+      );
+    });
+
+    it('falls back to the email prefix and marks the name pending when no name exists yet', async () => {
+      const uid = 'pending-uid';
+      const email = 'jane.doe@example.com';
+
+      mockUsersService.findById!.mockResolvedValue(null);
+      mockUsersService.create!.mockImplementation(async (d: any) => d);
+      mockFirebaseAdmin.auth.getUser.mockResolvedValue({ displayName: undefined } as any);
+      mockFirebaseAdmin.auth.generateEmailVerificationLink.mockResolvedValue('https://verify.link');
+
+      const store = mockFirebaseAdmin.firestore as InMemoryFirestore;
+      await store.collection('users').doc(uid).set({ uid });
+
+      await service.verifyAndSync(uid, email, '', false);
+
+      expect(mockUsersService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ displayName: 'jane.doe' }),
+      );
+      const doc = await store.collection('users').doc(uid).get();
+      expect(doc.data()?.displayNamePending).toBe(true);
+    });
+
+    it('heals a pending placeholder name on a later sync', async () => {
+      const uid = 'heal-uid';
+      const email = 'heal@example.com';
+      mockUsersService.findById!.mockResolvedValue({ uid, email, displayName: 'heal' } as any);
+      mockFirebaseAdmin.auth.getUser.mockResolvedValue({ displayName: 'Healed Name' } as any);
+
+      const store = mockFirebaseAdmin.firestore as InMemoryFirestore;
+      await store.collection('users').doc(uid).set({ uid, displayNamePending: true, welcomeEmailSent: true });
+
+      const result = await service.verifyAndSync(uid, email, '', false);
+
+      expect(result.displayName).toBe('Healed Name');
+      const doc = await store.collection('users').doc(uid).get();
+      expect(doc.data()?.displayName).toBe('Healed Name');
+      expect(doc.data()?.displayNamePending).toBe(false);
+    });
+
+    it('never rewrites the name when displayNamePending is not set', async () => {
+      const uid = 'settled-uid';
+      const email = 'settled@example.com';
+      mockUsersService.findById!.mockResolvedValue({ uid, email, displayName: 'Chosen Name' } as any);
+
+      const store = mockFirebaseAdmin.firestore as InMemoryFirestore;
+      await store.collection('users').doc(uid).set({ uid, displayName: 'Chosen Name', welcomeEmailSent: true });
+
+      const result = await service.verifyAndSync(uid, email, '', true);
+
+      expect(mockFirebaseAdmin.auth.getUser).not.toHaveBeenCalled();
+      expect(result.displayName).toBe('Chosen Name');
+    });
   });
 
   describe('sendPasswordReset', () => {
@@ -139,6 +227,21 @@ describe('AuthService', () => {
         expect.any(String),
         'https://reset.link',
       );
+    });
+
+    it('silently succeeds for unknown emails so account existence never leaks', async () => {
+      const err = Object.assign(new Error('no user'), { code: 'auth/email-not-found' });
+      mockFirebaseAdmin.auth.generatePasswordResetLink.mockRejectedValue(err);
+
+      await expect(service.sendPasswordReset('ghost@example.com')).resolves.toBeUndefined();
+      expect(mockMailService.sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+
+    it('rethrows unexpected errors', async () => {
+      const err = Object.assign(new Error('boom'), { code: 'auth/internal-error' });
+      mockFirebaseAdmin.auth.generatePasswordResetLink.mockRejectedValue(err);
+
+      await expect(service.sendPasswordReset('reset@example.com')).rejects.toThrow('boom');
     });
   });
 
@@ -161,6 +264,146 @@ describe('AuthService', () => {
         'verify@example.com',
         'Verify User',
         'https://verify.link',
+      );
+    });
+  });
+
+  /**
+   * The admin Audit Logs page reported "No audit logs found" on a live system
+   * because authentication was never recorded — Firebase Auth runs in the
+   * browser, so `/auth/verify` is the only point at which the backend learns a
+   * sign-in happened.
+   */
+  describe('audit trail', () => {
+    it('records a sign-in for a returning user', async () => {
+      await (mockFirebaseAdmin.firestore as InMemoryFirestore)
+        .collection('users')
+        .doc('u1')
+        .set({ uid: 'u1', welcomeEmailSent: true });
+      mockUsersService.findById.mockResolvedValue({ uid: 'u1', displayName: 'A', role: 'user' });
+
+      await service.verifyAndSync('u1', 'a@example.com', 'A', true, undefined, {
+        ipAddress: '203.0.113.7',
+        userAgent: 'jest',
+      });
+
+      expect(mockAudit.logUserAction).toHaveBeenCalledWith(
+        'AUTH_LOGIN',
+        expect.objectContaining({ uid: 'u1', email: 'a@example.com' }),
+        'user',
+        'u1',
+        expect.objectContaining({ ipAddress: '203.0.113.7', userAgent: 'jest' }),
+      );
+    });
+
+    it('does NOT record a sign-in when the last sync was recent (page load, not a new session)', async () => {
+      // `/auth/verify` fires on every mount of the authenticated app. Logging
+      // unconditionally buried every genuine event under navigation noise —
+      // the admin page reads a bounded window, so real events fell out of it.
+      await (mockFirebaseAdmin.firestore as InMemoryFirestore)
+        .collection('users')
+        .doc('u1')
+        .set({ uid: 'u1', welcomeEmailSent: true });
+      mockUsersService.findById.mockResolvedValue({
+        uid: 'u1',
+        displayName: 'A',
+        role: 'user',
+        lastLoginAt: new Date(Date.now() - 60_000), // one minute ago
+      });
+
+      await service.verifyAndSync('u1', 'a@example.com', 'A', true);
+
+      const loginCalls = mockAudit.logUserAction.mock.calls.filter((c) => c[0] === 'AUTH_LOGIN');
+      expect(loginCalls).toHaveLength(0);
+      // The session itself is still tracked.
+      expect(mockUsersService.updateLastLogin).toHaveBeenCalledWith('u1');
+    });
+
+    it('records a sign-in again once the session gap has elapsed', async () => {
+      await (mockFirebaseAdmin.firestore as InMemoryFirestore)
+        .collection('users')
+        .doc('u2')
+        .set({ uid: 'u2', welcomeEmailSent: true });
+      mockUsersService.findById.mockResolvedValue({
+        uid: 'u2',
+        displayName: 'B',
+        role: 'user',
+        lastLoginAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // two hours ago
+      });
+
+      await service.verifyAndSync('u2', 'b@example.com', 'B', true);
+
+      const loginCalls = mockAudit.logUserAction.mock.calls.filter((c) => c[0] === 'AUTH_LOGIN');
+      expect(loginCalls).toHaveLength(1);
+    });
+
+    it('records a registration for a brand-new user', async () => {
+      mockUsersService.findById.mockResolvedValue(null);
+      mockUsersService.create.mockResolvedValue({ uid: 'new1', displayName: 'New' } as any);
+      // Pre-seed the doc so the service's ref.update() calls resolve, matching
+      // the other new-user tests above.
+      await (mockFirebaseAdmin.firestore as InMemoryFirestore)
+        .collection('users')
+        .doc('new1')
+        .set({ uid: 'new1', welcomeEmailSent: false });
+
+      await service.verifyAndSync('new1', 'new@example.com', 'New', true);
+
+      expect(mockAudit.logUserAction).toHaveBeenCalledWith(
+        'AUTH_REGISTERED',
+        expect.objectContaining({ uid: 'new1' }),
+        'user',
+        'new1',
+        expect.anything(),
+      );
+    });
+
+    it('records a sign-out', async () => {
+      await service.recordLogout({ uid: 'u1', email: 'a@example.com', role: 'user' });
+
+      expect(mockAudit.logUserAction).toHaveBeenCalledWith(
+        'AUTH_LOGOUT',
+        expect.objectContaining({ uid: 'u1' }),
+        'user',
+        'u1',
+        expect.anything(),
+      );
+    });
+
+    it('records a failed sign-in without storing any credential', async () => {
+      await service.recordFailedLogin('bad@example.com', 'auth/wrong-password', {
+        ipAddress: '203.0.113.9',
+      });
+
+      expect(mockAudit.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'AUTH_LOGIN_FAILED',
+          actorEmail: 'bad@example.com',
+          actorRole: 'anonymous',
+          metadata: { reason: 'auth/wrong-password' },
+        }),
+      );
+      const entry = mockAudit.log.mock.calls[0][0];
+      expect(JSON.stringify(entry)).not.toMatch(/password["\s]*:/i);
+    });
+
+    it('records a role change with the actor and the before/after values', async () => {
+      mockUsersService.findById.mockResolvedValue({ uid: 'target', role: 'user' });
+
+      await service.setUserRole('target', 'admin' as any, {
+        uid: 'boss',
+        email: 'boss@example.com',
+        role: 'super_admin',
+      });
+
+      expect(mockAudit.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'USER_ROLE_CHANGED',
+          actorId: 'boss',
+          actorRole: 'super_admin',
+          resourceId: 'target',
+          changes: { before: { role: 'user' }, after: { role: 'admin' } },
+        }),
       );
     });
   });

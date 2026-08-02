@@ -18,6 +18,7 @@ import {
   Building2,
   Briefcase,
   Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 import { CoverLetter } from '@flacroncv/shared-types';
 import { formatDate } from '@/lib/utils';
@@ -28,9 +29,9 @@ export default function CoverLettersPage(): React.JSX.Element | null {
   const queryClient = useQueryClient();
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['cover-letters'],
-    queryFn: () => api.get<{ items: CoverLetter[] }>('/cover-letters'),
+    queryFn: () => api.get<{ items: CoverLetter[] }>('/cover-letters?limit=100'),
   });
 
   const deleteMutation = useMutation({
@@ -49,10 +50,10 @@ export default function CoverLettersPage(): React.JSX.Element | null {
     mutationFn: (id: string) => api.post(`/cover-letters/${id}/duplicate`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cover-letters'] });
-      toast.success('Cover letter duplicated');
+      toast.success(t('coverLetters.duplicated'));
     },
     onError: () => {
-      toast.error('Failed to duplicate cover letter. Please try again.');
+      toast.error(t('coverLetters.duplicate_failed'));
     },
   });
 
@@ -70,9 +71,20 @@ export default function CoverLettersPage(): React.JSX.Element | null {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
+        <div className="flex justify-center py-12" role="status" aria-label={t('common.loading')}>
           <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
         </div>
+      ) : isError ? (
+        <Card className="py-16 text-center">
+          <AlertTriangle className="mx-auto h-12 w-12 text-amber-400" />
+          <h3 className="mt-4 text-lg font-semibold text-stone-900 dark:text-white">
+            {t('coverLetters.list_error_title')}
+          </h3>
+          <p className="mt-2 text-sm text-stone-500">{t('coverLetters.list_error_desc')}</p>
+          <Button className="mt-6" variant="secondary" onClick={() => refetch()}>
+            {t('coverLetters.retry')}
+          </Button>
+        </Card>
       ) : coverLetters.length === 0 ? (
         <Card className="py-16 text-center">
           <Mail className="mx-auto h-12 w-12 text-stone-300 dark:text-stone-600" />
@@ -94,7 +106,7 @@ export default function CoverLettersPage(): React.JSX.Element | null {
               coverLetter={cl}
               onDelete={() => setDeleteId(cl.id)}
               onDuplicate={() => duplicateMutation.mutate(cl.id)}
-              duplicating={duplicateMutation.isPending}
+              duplicating={duplicateMutation.isPending && duplicateMutation.variables === cl.id}
             />
           ))}
         </div>
@@ -139,6 +151,8 @@ function CoverLetterCard({
   duplicating?: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations('coverLetters');
+  const statusLabel = coverLetter.status === 'final' ? t('status_final') : t('status_draft');
 
   return (
     <Card hover padding="none" className="group overflow-hidden">
@@ -146,7 +160,7 @@ function CoverLetterCard({
       <button
         className="relative flex h-40 w-full items-center justify-center bg-gradient-to-br from-brand-50 to-brand-100 dark:from-stone-800 dark:to-stone-900"
         onClick={() => router.push(`/cover-letters/${coverLetter.id}`)}
-        aria-label={`Open ${coverLetter.title}`}
+        aria-label={t('card_open', { title: coverLetter.title })}
       >
         <div className="w-24 rounded border border-stone-200 bg-white p-2 shadow-sm dark:border-stone-600 dark:bg-stone-700">
           <div className="mb-1 h-1 w-10 rounded bg-stone-300 dark:bg-stone-500" />
@@ -162,7 +176,7 @@ function CoverLetterCard({
         </div>
         <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all group-hover:bg-black/20">
           <span className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-stone-800 opacity-0 shadow transition-opacity group-hover:opacity-100">
-            Open Editor
+            {t('card_open_editor')}
           </span>
         </div>
       </button>
@@ -183,14 +197,25 @@ function CoverLetterCard({
               {coverLetter.jobTitle}
             </p>
           )}
-          <p className="mt-0.5 text-xs text-stone-400">Updated {formatDate(coverLetter.updatedAt)}</p>
+          {/* Both dates, not just "Updated". `formatDate` now understands the
+              Firestore `_seconds` timestamp shape, which is why these rendered
+              as a bare "Updated" with no date before. */}
+          <p className="mt-1 text-xs text-stone-400">
+            {t('card_created', { date: formatDate(coverLetter.createdAt) })}
+          </p>
+          <p className="text-xs text-stone-400">
+            {t('card_updated', { date: formatDate(coverLetter.updatedAt) })}
+          </p>
         </div>
 
-        <div className="mb-3 flex items-center gap-2">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <Badge variant={coverLetter.status === 'final' ? 'success' : 'default'}>
-            {coverLetter.status}
+            {statusLabel}
           </Badge>
           {coverLetter.aiGenerated && <Badge variant="brand">AI</Badge>}
+          {coverLetter.linkedCVId && (
+            <Badge variant="info">{t('card_linked_cv')}</Badge>
+          )}
         </div>
 
         {/* Action buttons */}
@@ -199,19 +224,19 @@ function CoverLetterCard({
             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-stone-200 py-1.5 text-sm font-medium text-stone-700 hover:border-brand-400 hover:text-brand-600 dark:border-stone-700 dark:text-stone-300 dark:hover:border-brand-500 dark:hover:text-brand-400"
             onClick={() => router.push(`/cover-letters/${coverLetter.id}`)}
           >
-            Edit
+            {t('card_edit')}
           </button>
           <button
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-stone-200 py-1.5 text-sm font-medium text-stone-700 hover:border-stone-300 dark:border-stone-700 dark:text-stone-300"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-stone-200 py-1.5 text-sm font-medium text-stone-700 hover:border-stone-300 disabled:opacity-50 dark:border-stone-700 dark:text-stone-300"
             onClick={onDuplicate}
             disabled={duplicating}
           >
-            <Copy className="h-3.5 w-3.5" /> Duplicate
+            {duplicating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />} {t('card_duplicate')}
           </button>
           <button
             className="flex items-center justify-center rounded-lg border border-stone-200 p-1.5 text-stone-400 hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:border-stone-700 dark:hover:border-red-700 dark:hover:bg-red-900/20 dark:hover:text-red-400"
             onClick={onDelete}
-            aria-label="Delete cover letter"
+            aria-label={t('card_delete')}
           >
             <Trash2 className="h-4 w-4" />
           </button>

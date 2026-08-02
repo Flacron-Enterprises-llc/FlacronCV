@@ -21,6 +21,7 @@ export default function LanguageSwitcher() {
   const t = useTranslations('common');
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -31,6 +32,19 @@ export default function LanguageSwitcher() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Close with Escape and return focus to the trigger.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open]);
 
   const handleSwitch = (newLocale: string) => {
     // Persist immediately so the preference survives hard refreshes before the
@@ -45,9 +59,13 @@ export default function LanguageSwitcher() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
+        ref={triggerRef}
         className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800 transition-colors"
         onClick={() => setOpen(!open)}
         title={t('switch_language')}
+        aria-label={t('switch_language')}
+        aria-haspopup="true"
+        aria-expanded={open}
       >
         <Globe className="h-5 w-5" />
         <span className="hidden text-xs font-medium sm:block">{currentLang?.code.toUpperCase()}</span>
@@ -57,7 +75,7 @@ export default function LanguageSwitcher() {
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute end-0 z-20 mt-1 w-48 animate-scale-in overflow-hidden rounded-lg border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-800">
-            <div className="px-3 py-1.5 text-xs font-semibold text-stone-400 dark:text-stone-500">
+            <div className="px-3 py-1.5 text-xs font-semibold text-stone-500 dark:text-stone-400">
               {t('select_language')}
             </div>
             {LANGUAGES.map((lang) => (

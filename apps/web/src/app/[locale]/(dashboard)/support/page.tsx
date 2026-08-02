@@ -10,12 +10,11 @@ import { formatDate } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import { HelpCircle, Plus, Clock } from 'lucide-react';
+import { HelpCircle, Plus, Clock, AlertCircle } from 'lucide-react';
 import {
   SupportTicket,
   TicketPriority,
   TicketStatus,
-  TicketCategory,
 } from '@flacroncv/shared-types';
 
 const priorityVariantMap: Record<TicketPriority, 'success' | 'warning' | 'danger' | 'danger'> = {
@@ -23,13 +22,6 @@ const priorityVariantMap: Record<TicketPriority, 'success' | 'warning' | 'danger
   [TicketPriority.MEDIUM]: 'warning',
   [TicketPriority.HIGH]: 'danger',
   [TicketPriority.URGENT]: 'danger',
-};
-
-const priorityLabelMap: Record<TicketPriority, string> = {
-  [TicketPriority.LOW]: 'Low',
-  [TicketPriority.MEDIUM]: 'Medium',
-  [TicketPriority.HIGH]: 'High',
-  [TicketPriority.URGENT]: 'Urgent',
 };
 
 const statusVariantMap: Record<
@@ -43,35 +35,19 @@ const statusVariantMap: Record<
   [TicketStatus.CLOSED]: 'default',
 };
 
-const statusLabelMap: Record<TicketStatus, string> = {
-  [TicketStatus.OPEN]: 'Open',
-  [TicketStatus.IN_PROGRESS]: 'In Progress',
-  [TicketStatus.WAITING_ON_CUSTOMER]: 'Waiting',
-  [TicketStatus.RESOLVED]: 'Resolved',
-  [TicketStatus.CLOSED]: 'Closed',
-};
-
-const categoryLabelMap: Record<TicketCategory, string> = {
-  [TicketCategory.GENERAL]: 'General',
-  [TicketCategory.BUG]: 'Bug',
-  [TicketCategory.FEATURE_REQUEST]: 'Feature Request',
-  [TicketCategory.BILLING]: 'Billing',
-  [TicketCategory.ACCOUNT]: 'Account',
-};
-
 export default function SupportPage(): React.JSX.Element | null {
   const t = useTranslations('support');
   const router = useRouter();
   const { user } = useAuth();
 
-  const { data: tickets, isLoading } = useQuery({
+  const { data: tickets, isLoading, isError, refetch } = useQuery({
     queryKey: ['support-tickets'],
     queryFn: () => api.get<SupportTicket[]>('/support/tickets'),
     enabled: !!user,
   });
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
@@ -100,6 +76,16 @@ export default function SupportPage(): React.JSX.Element | null {
             </Card>
           ))}
         </div>
+      ) : isError ? (
+        <Card className="flex flex-col items-center justify-center py-16 text-center">
+          <AlertCircle className="mb-4 h-12 w-12 text-danger-400 dark:text-danger-500" />
+          <h3 className="text-lg font-semibold text-stone-900 dark:text-white">
+            {t('load_error')}
+          </h3>
+          <Button variant="secondary" className="mt-4" onClick={() => refetch()}>
+            {t('retry')}
+          </Button>
+        </Card>
       ) : tickets && tickets.length > 0 ? (
         <div className="space-y-4">
           {tickets.map((ticket) => (
@@ -114,7 +100,7 @@ export default function SupportPage(): React.JSX.Element | null {
                   {ticket.subject}
                 </h3>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="default">{categoryLabelMap[ticket.category]}</Badge>
+                  <Badge variant="default">{t(`categoryLabels.${ticket.category}`)}</Badge>
                   <Badge
                     variant={
                       ticket.priority === TicketPriority.URGENT
@@ -122,10 +108,10 @@ export default function SupportPage(): React.JSX.Element | null {
                         : priorityVariantMap[ticket.priority]
                     }
                   >
-                    {priorityLabelMap[ticket.priority]}
+                    {t(`priorityLabels.${ticket.priority}`)}
                   </Badge>
                   <Badge variant={statusVariantMap[ticket.status]}>
-                    {statusLabelMap[ticket.status]}
+                    {t(`statusLabels.${ticket.status}`)}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400">

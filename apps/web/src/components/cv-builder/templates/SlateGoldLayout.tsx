@@ -15,8 +15,8 @@ import React from 'react';
 import { useTranslations } from 'next-intl';
 import type { LayoutProps } from './shared';
 import {
-  getTokens, hexToRgba, darken,
-  splitSections, formatCVDate, SkillBadge,
+  getTokens, hexToRgba, readableOn, INK,
+  splitSections, formatCVDate, formatDegree, SkillList, SkillLines,
 } from './shared';
 
 /* ─── Palette ────────────────────────────────────────────────────────────────── */
@@ -78,7 +78,10 @@ function SideHeading({ title, gold, headingFont, fs }: SideHeadingProps) {
         color: gold,
         margin: 0,
         paddingBottom: '5px',
-        borderBottom: `1px solid rgba(201,168,76,0.30)`,
+        // Derived from the accent actually in use, not from the literal gold
+        // this template was first drawn with — otherwise every sidebar heading
+        // sat above a rule in a colour appearing nowhere else on the page.
+        borderBottom: `1px solid ${hexToRgba(gold, 0.32)}`,
       }}>
         {title}
       </h3>
@@ -102,7 +105,7 @@ function TimelineItem({ item, gold, bodyFont, headingFont, fs, sp, isLast }: Tim
   const isExperience = !!(item.position || item.company);
   const isEducation  = !!item.institution;
 
-  const title    = isExperience ? item.position : isEducation ? `${item.degree || ''}${item.field ? ` in ${item.field}` : ''}` : (item.name || item.title || '');
+  const title    = isExperience ? item.position : isEducation ? formatDegree(item) : (item.name || item.title || '');
   const subtitle = isExperience ? `${item.company || ''}${item.location ? ` · ${item.location}` : ''}` : isEducation ? item.institution : (item.issuer || item.proficiency || '');
   const start    = formatCVDate(item.startDate);
   const end      = isExperience ? (item.isCurrent ? 'Present' : formatCVDate(item.endDate) || 'Present')
@@ -155,8 +158,8 @@ function TimelineItem({ item, gold, bodyFont, headingFont, fs, sp, isLast }: Tim
             fontFamily: bodyFont,
             fontSize: `${fs.name}px`,
             fontWeight: 500,
-            color: '#5a6a7a',
-            margin: '2px 0 4px',
+            color: INK.subtle,
+            margin: '3px 0 5px',
             lineHeight: 1.4,
           }}>
             {subtitle}
@@ -168,11 +171,12 @@ function TimelineItem({ item, gold, bodyFont, headingFont, fs, sp, isLast }: Tim
           <p style={{
             fontFamily: bodyFont,
             fontSize: `${fs.body}px`,
-            color: '#4b5563',
+            color: INK.body,
             lineHeight: 1.7,
             margin: 0,
             wordBreak: 'break-word',
             overflowWrap: 'break-word',
+            whiteSpace: 'pre-line',
           }}>
             {item.description}
           </p>
@@ -205,7 +209,7 @@ function SideItem({ item, gold, bodyFont, fs, sp }: {
         )}
       </div>
       {detail && (
-        <p style={{ fontFamily: bodyFont, fontSize: `${fs.body}px`, color: 'rgba(255,255,255,0.60)', margin: '2px 0 0', lineHeight: 1.5 }}>
+        <p style={{ fontFamily: bodyFont, fontSize: `${fs.body}px`, color: 'rgba(255,255,255,0.60)', margin: '2px 0 0', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
           {detail}
         </p>
       )}
@@ -217,9 +221,18 @@ function SideItem({ item, gold, bodyFont, fs, sp }: {
 
 export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
   const t = useTranslations('cv_builder');
-  const { primary, bodyFont, headingFont, fs, sp, br } = getTokens(cv);
-  const gold   = primary;   // user's primaryColor doubles as the gold accent
-  const goldDim = hexToRgba(gold, 0.80);
+  const { primary, bodyFont, headingFont, fs, sp } = getTokens(cv);
+
+  // This layout paints the accent onto two fixed, opposite backgrounds: the
+  // slate sidebar and the white main column. One colour cannot serve both. The
+  // template was drawn around a literal gold (#C9A84C), which happens to work
+  // on either — but the accent is the user's own primaryColor, and a deep navy
+  // or maroon on #1a2332 is a sidebar with invisible headings, invisible skill
+  // tags and an invisible job title. Derive one accent per surface instead, each
+  // nudged only as far as legibility requires so the chosen hue still reads.
+  const gold     = readableOn(primary, WHITE, 4.0);   // main column, on white
+  const goldSide = readableOn(primary, SLATE, 4.5);   // sidebar, on slate
+  const goldDim  = hexToRgba(goldSide, 0.85);
 
   const showPhoto = cv.styling.showPhoto && cv.personalInfo.photoURL;
   const { sidebar: sidebarSections, main: mainSections } = splitSections(sections);
@@ -244,7 +257,7 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
         display: 'flex',
         flexDirection: 'column',
         // Top stripe — slightly darker for depth
-        borderTop: `4px solid ${gold}`,
+        borderTop: `4px solid ${goldSide}`,
       }}>
         {/* ── Identity block ── */}
         <div style={{
@@ -262,19 +275,19 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
                 objectFit: 'cover', display: 'block',
                 margin: '0 auto 12px',
                 border: `3px solid ${goldDim}`,
-                boxShadow: `0 0 0 4px ${hexToRgba(gold, 0.15)}`,
+                boxShadow: `0 0 0 4px ${hexToRgba(goldSide, 0.15)}`,
               }}
             />
           ) : (
             <div style={{
               width: '72px', height: '72px', borderRadius: '50%',
-              background: hexToRgba(gold, 0.15),
-              border: `2px solid ${hexToRgba(gold, 0.55)}`,
+              background: hexToRgba(goldSide, 0.15),
+              border: `2px solid ${hexToRgba(goldSide, 0.55)}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 12px',
               fontFamily: headingFont,
               fontSize: `${fs.nameTop - 2}px`, fontWeight: 800,
-              color: gold,
+              color: goldSide,
             }}>
               {initials}
             </div>
@@ -301,15 +314,18 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
             )}
           </h1>
 
-          {/* Headline */}
+          {/* Headline — the job title, which is the second thing anyone reads.
+              It used to be painted in the accent at 80% opacity, so on a dark
+              accent it disappeared into the panel entirely. Accent belongs on
+              headings and dates; the person's own title gets plain white. */}
           {cv.personalInfo.headline && (
             <p style={{
               fontFamily: bodyFont,
               fontSize: `${fs.body}px`,
-              color: goldDim,
+              color: 'rgba(255,255,255,0.78)',
               margin: '7px 0 0',
               lineHeight: 1.45,
-              letterSpacing: '0.2px',
+              letterSpacing: '0.3px',
             }}>
               {cv.personalInfo.headline}
             </p>
@@ -318,7 +334,7 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
 
         {/* ── Contact ── */}
         <div style={{ padding: `${sp.section * 0.7}px ${sp.pad * 0.55}px` }}>
-          <SideHeading title={t('template_contact')} gold={gold} headingFont={headingFont} fs={fs} />
+          <SideHeading title={t('template_contact')} gold={goldSide} headingFont={headingFont} fs={fs} />
           {[
             cv.personalInfo.email,
             cv.personalInfo.phone,
@@ -328,7 +344,7 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
           ].filter(Boolean).map((line, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginBottom: '5px' }}>
               {/* Gold bullet */}
-              <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: gold, marginTop: '5px', flexShrink: 0 }} />
+              <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: goldSide, marginTop: '5px', flexShrink: 0 }} />
               <p style={{
                 fontFamily: bodyFont,
                 fontSize: `${fs.body}px`,
@@ -347,33 +363,13 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
         {/* ── Sidebar sections (skills, languages, certs, awards) ── */}
         {sidebarSections.map(section => (
           <div key={section.id} style={{ padding: `0 ${sp.pad * 0.55}px ${sp.section * 0.7}px` }}>
-            <SideHeading title={section.title} gold={gold} headingFont={headingFont} fs={fs} />
+            <SideHeading title={section.title} gold={goldSide} headingFont={headingFont} fs={fs} />
 
             {section.type === 'skills' ? (
-              <div style={{ lineHeight: 0 }}>
-                {section.items.map((item: any, i: number) => (
-                  <span key={i} style={{ display: 'inline-block', verticalAlign: 'top', marginRight: '4px', marginBottom: '4px' }}>
-                    <span style={{
-                      display: 'inline-block',
-                      verticalAlign: 'top',
-                      lineHeight: 1,
-                      whiteSpace: 'nowrap',
-                      background: hexToRgba(gold, 0.18),
-                      color: goldDim,
-                      border: `1px solid ${hexToRgba(gold, 0.35)}`,
-                      padding: '4px 9px',
-                      borderRadius: br,
-                      fontSize: `${fs.body}px`,
-                      fontWeight: 500,
-                    }}>
-                      {item.name}
-                    </span>
-                  </span>
-                ))}
-              </div>
+              <SkillLines items={section.items.map((i: any) => i.name)} primary={goldSide} fs={fs} tone="dark" />
             ) : (
               section.items.map((item: any, i: number) => (
-                <SideItem key={i} item={item} gold={gold} bodyFont={bodyFont} fs={fs} sp={sp} />
+                <SideItem key={i} item={item} gold={goldSide} bodyFont={bodyFont} fs={fs} sp={sp} />
               ))
             )}
           </div>
@@ -396,10 +392,11 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
             <p style={{
               fontFamily: bodyFont,
               fontSize: `${fs.name}px`,
-              color: '#374151',
+              color: INK.body,
               lineHeight: 1.8,
               wordBreak: 'break-word',
               overflowWrap: 'break-word',
+              whiteSpace: 'pre-line',
               fontStyle: 'italic',
             }}>
               {cv.personalInfo.summary}
@@ -415,14 +412,8 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
               <MainHeading title={section.title} gold={gold} headingFont={headingFont} fs={fs} />
 
               {section.type === 'skills' ? (
-                /* Skills in the main column: pill row */
-                <div style={{ lineHeight: 0 }}>
-                  {section.items.map((item: any, i: number) => (
-                    <span key={i} style={{ display: 'inline-block', verticalAlign: 'top', marginRight: '4px', marginBottom: '4px' }}>
-                      <SkillBadge name={item.name} primary={gold} fs={fs} br={br} variant="pill" />
-                    </span>
-                  ))}
-                </div>
+                /* Skills in the main column: a separated run */
+                <SkillList items={section.items.map((i: any) => i.name)} primary={gold} fs={fs} />
               ) : isExperienceOrEdu ? (
                 /* Experience / Education — timeline style */
                 <div>
@@ -458,7 +449,7 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
                         )}
                       </div>
                       {detail && (
-                        <p style={{ fontFamily: bodyFont, fontSize: `${fs.body}px`, color: '#4b5563', marginTop: '2px', lineHeight: 1.6, wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                        <p style={{ fontFamily: bodyFont, fontSize: `${fs.body}px`, color: INK.body, marginTop: '3px', lineHeight: 1.6, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
                           {detail}
                         </p>
                       )}

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import {
   BarChart,
   Bar,
@@ -33,14 +34,15 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function CustomerGrowthChart({ data, loading }: CustomerGrowthChartProps) {
+  const t = useTranslations('crm');
   return (
     <Card>
       <div className="mb-4">
         <h3 className="text-base font-semibold text-stone-900 dark:text-white">
-          Customer & Lead Growth
+          {t('chart_customer_lead_growth_title')}
         </h3>
         <p className="text-sm text-stone-500 dark:text-stone-400">
-          New additions per month
+          {t('chart_new_additions_per_month')}
         </p>
       </div>
 
@@ -69,8 +71,8 @@ export default function CustomerGrowthChart({ data, loading }: CustomerGrowthCha
                 <span className="text-stone-600 dark:text-stone-400">{value}</span>
               )}
             />
-            <Bar dataKey="customers" name="Customers" fill="#ea580c" radius={[3, 3, 0, 0]} />
-            <Bar dataKey="leads" name="Leads" fill="#c2410c" opacity={0.5} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="customers" name={t('customers')} fill="#ea580c" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="leads" name={t('leads')} fill="#c2410c" opacity={0.5} radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       )}
