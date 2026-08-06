@@ -1,33 +1,48 @@
-FROM node:20-alpine AS base
+# syntax=docker/dockerfile:1
 
-RUN apk add --no-cache chromium
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+# ─────────────────────────────────────────────
+# Base stage
+# ─────────────────────────────────────────────
+FROM node:20-bookworm-slim AS base
 
-RUN npm install -g pnpm@8.15.0
+ENV PNPM_HOME="/pnpm"
+ENV PATH="${PNPM_HOME}:${PATH}"
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true"
+
+RUN npm install --global pnpm@8.15.0
 
 WORKDIR /app
 
-# ── deps: install without mobile (avoids Expo/RN bloat + file: dep resolution error)
+
+# ─────────────────────────────────────────────
+# Dependency installation stage
+# ─────────────────────────────────────────────
 FROM base AS deps
-COPY .npmrc pnpm-workspace.yaml package.json ./
-COPY packages/shared-types/package.json ./packages/shared-types/
-COPY packages/tsconfig/package.json ./packages/tsconfig/
-COPY apps/api/package.json ./apps/api/
-COPY apps/web/package.json ./apps/web/
 
-# No --frozen-lockfile: lockfile was generated with mobile; omitting it causes mismatch
-RUN pnpm install
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 
-# ── builder: compile shared-types then api
+COPY apps/api/package.json ./apps/api/package.json
+COPY packages/shared-types/package.json ./packages/shared-types/package.json
+COPY packages/tsconfig/package.json ./packages/tsconfig/package.json
+
+RUN pnpm install --frozen-lockfile
+
+
+# ─────────────────────────────────────────────
+# Application build stage
+# ─────────────────────────────────────────────
 FROM base AS builder
-WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=deps /app/packages/shared-types/node_modules ./packages/shared-types/node_modules
 
-COPY packages/ ./packages/
-COPY apps/api/ ./apps/api/
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY apps/api ./apps/api
+COPY packages/shared-types ./packages/shared-types
+COPY packages/tsconfig ./packages/tsconfig
 
+<<<<<<< HEAD
 # pnpm places a `workspace:*` dependency as a symlink in the DEPENDENT package's
 # own node_modules, never in the hoisted root — verified on this repo:
 # `apps/api/node_modules/@flacroncv/shared-types -> packages/shared-types`
@@ -55,20 +70,40 @@ RUN test -f apps/api/node_modules/@flacroncv/shared-types/package.json \
 
 RUN node_modules/.bin/tsc -p packages/shared-types/tsconfig.json
 RUN cd apps/api && /app/node_modules/.bin/nest build
+=======
+RUN pnpm --filter @flacroncv/shared-types build
+RUN pnpm --filter api build
+>>>>>>> origin/main
 
-# ── runner: production image (chromium for puppeteer PDF export)
-FROM node:20-alpine AS runner
 
-RUN apk add --no-cache chromium
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-ENV NODE_ENV=production
+# ─────────────────────────────────────────────
+# Production runtime stage
+# ─────────────────────────────────────────────
+FROM node:20-bookworm-slim AS runner
+
+ENV NODE_ENV="production"
+ENV PORT="4000"
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true"
+ENV PUPPETEER_EXECUTABLE_PATH="/usr/bin/chromium"
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        chromium \
+        ca-certificates \
+        dumb-init \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nestjs
+RUN groupadd --system --gid 1001 nodejs \
+    && useradd \
+        --system \
+        --uid 1001 \
+        --gid nodejs \
+        --create-home \
+        nestjs
 
+<<<<<<< HEAD
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
 COPY --from=builder /app/node_modules ./node_modules
@@ -78,6 +113,14 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
 COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/package.json
+=======
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/apps/api/dist ./apps/api/dist
+COPY --from=builder --chown=nestjs:nodejs /app/apps/api/package.json ./apps/api/package.json
+COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/dist ./packages/shared-types/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/package.json ./packages/shared-types/package.json
+>>>>>>> origin/main
 
 # The runtime equivalent of the builder guard: resolve the package exactly as
 # `node apps/api/dist/main.js` will (its package.json main is ./dist/index.js,
@@ -88,6 +131,7 @@ RUN node -e "require.resolve('@flacroncv/shared-types', { paths: ['/app/apps/api
 
 USER nestjs
 
-EXPOSE 10000
+EXPOSE 4000
 
+ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "apps/api/dist/main.js"]
