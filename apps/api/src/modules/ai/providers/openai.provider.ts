@@ -12,8 +12,24 @@ export class OpenAIProvider implements IAIProvider {
   constructor(private configService: ConfigService) {
     const apiKey = this.configService.get<string>('openai.apiKey');
     if (apiKey) {
-      this.client = new OpenAI({ apiKey });
-      this.logger.log(`OpenAI client initialised (key: ${apiKey.slice(0, 8)}...${apiKey.slice(-4)})`);
+      // ── Timeout budget (must stay consistent with apps/web/src/lib/api.ts) ──
+      // Browser AI budget      60s
+      //   └ this request       40s  ← one attempt, no SDK retry
+      //     └ Firestore writes  ~1s
+      //
+      // Was `timeout: 20000, maxRetries: 1`. Two problems:
+      //  1. 20s is below the p95 for a full cover letter (~1500 output tokens),
+      //     so genuine generations were aborted mid-flight — the "Request timed
+      //     out" the client reported.
+      //  2. maxRetries:1 made a timeout cost 2×20s before failing, and the SDK
+      //     treats timeouts as retryable, so raising the timeout WITH a retry
+      //     would have pushed the worst case past the browser's own budget and
+      //     the user would see a timeout while the server was still working.
+      // One generous attempt keeps the server's worst case inside the browser's,
+      // and retrying is now an explicit user action in the UI instead of a
+      // hidden doubling of latency. Never log any part of the key (CWE-532).
+      this.client = new OpenAI({ apiKey, timeout: 40000, maxRetries: 0 });
+      this.logger.log('OpenAI client initialised');
     } else {
       this.logger.error('OPENAI_API_KEY is not set — OpenAI provider disabled');
     }

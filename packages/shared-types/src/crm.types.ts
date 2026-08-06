@@ -240,7 +240,7 @@ export interface PlatformAnalyticsOverview {
   totalUsers: number;
   activeUsers: number;
   newUsersThisMonth: number;
-  usersByPlan: { free: number; pro: number; enterprise: number };
+  usersByPlan: { free: number; pro: number; career_accelerator: number; enterprise: number };
   totalCVs: number;
   totalCoverLetters: number;
   cvsThisMonth: number;

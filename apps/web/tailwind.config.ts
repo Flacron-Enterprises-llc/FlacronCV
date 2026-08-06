@@ -27,6 +27,17 @@ const config: Config = {
         arabic: ['Noto Sans Arabic', 'sans-serif'],
         urdu: ['Noto Nastaliq Urdu', 'sans-serif'],
       },
+      // Refined, layered, low-opacity shadows (cool near-black tint) — the subtle
+      // elevation you see in Stripe/Linear. Overrides Tailwind's flatter defaults
+      // so every card/dropdown/modal shares one restrained elevation language.
+      boxShadow: {
+        xs: '0 1px 2px 0 rgb(17 24 39 / 0.05)',
+        sm: '0 1px 2px 0 rgb(17 24 39 / 0.04), 0 1px 3px 0 rgb(17 24 39 / 0.06)',
+        DEFAULT: '0 1px 3px -1px rgb(17 24 39 / 0.06), 0 2px 6px -1px rgb(17 24 39 / 0.06)',
+        md: '0 2px 4px -2px rgb(17 24 39 / 0.06), 0 6px 12px -3px rgb(17 24 39 / 0.08)',
+        lg: '0 4px 8px -4px rgb(17 24 39 / 0.06), 0 14px 28px -6px rgb(17 24 39 / 0.10)',
+        xl: '0 8px 16px -6px rgb(17 24 39 / 0.08), 0 28px 48px -12px rgb(17 24 39 / 0.14)',
+      },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
         'slide-up': 'slideUp 0.5s ease-out',

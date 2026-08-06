@@ -2,6 +2,12 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
+  // Without this, Playwright's default testMatch (*.spec.ts / *.test.ts) matches
+  // NONE of the *.e2e.ts files in this directory. Only the mobile-chrome project
+  // ran, because it alone sets an explicit testMatch — so `pnpm test:e2e`
+  // reported success while executing 6 of 44 tests and never touching auth, the
+  // CV builder, photo upload or the public pages.
+  testMatch: /\.e2e\.ts$/,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { CRMActivity, CRMActivityType } from '@flacroncv/shared-types';
 import {
   MessageSquare,
@@ -9,43 +10,27 @@ import {
   Tag,
   XCircle,
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatRelative } from '@/lib/format-date';
 import { cn } from '@/lib/utils';
+
+// Restrained palette: neutral chips carry the icon (which conveys the type),
+// with brand reserved for the single most important event (a converted lead).
+const NEUTRAL = { color: 'text-stone-600 dark:text-stone-400', bg: 'bg-stone-100 dark:bg-stone-800' };
 
 const TYPE_CONFIG: Record<
   CRMActivityType,
   { icon: React.ElementType; color: string; bg: string }
 > = {
-  [CRMActivityType.NOTE]: {
-    icon: MessageSquare,
-    color: 'text-violet-600 dark:text-violet-400',
-    bg: 'bg-violet-50 dark:bg-violet-950',
-  },
-  [CRMActivityType.STATUS_CHANGE]: {
-    icon: RefreshCw,
-    color: 'text-amber-600 dark:text-amber-400',
-    bg: 'bg-amber-50 dark:bg-amber-950',
-  },
-  [CRMActivityType.TRANSACTION]: {
-    icon: DollarSign,
-    color: 'text-emerald-600 dark:text-emerald-400',
-    bg: 'bg-emerald-50 dark:bg-emerald-950',
-  },
+  [CRMActivityType.NOTE]: { icon: MessageSquare, ...NEUTRAL },
+  [CRMActivityType.STATUS_CHANGE]: { icon: RefreshCw, ...NEUTRAL },
+  [CRMActivityType.TRANSACTION]: { icon: DollarSign, ...NEUTRAL },
   [CRMActivityType.LEAD_CONVERTED]: {
     icon: UserCheck,
     color: 'text-brand-600 dark:text-brand-400',
     bg: 'bg-brand-50 dark:bg-brand-950',
   },
-  [CRMActivityType.TAG_ADDED]: {
-    icon: Tag,
-    color: 'text-blue-600 dark:text-blue-400',
-    bg: 'bg-blue-50 dark:bg-blue-950',
-  },
-  [CRMActivityType.TAG_REMOVED]: {
-    icon: XCircle,
-    color: 'text-red-500 dark:text-red-400',
-    bg: 'bg-red-50 dark:bg-red-950',
-  },
+  [CRMActivityType.TAG_ADDED]: { icon: Tag, ...NEUTRAL },
+  [CRMActivityType.TAG_REMOVED]: { icon: XCircle, ...NEUTRAL },
 };
 
 interface ActivityTimelineProps {
@@ -54,6 +39,7 @@ interface ActivityTimelineProps {
 }
 
 export default function ActivityTimeline({ activities, loading }: ActivityTimelineProps) {
+  const t = useTranslations('crm');
   if (loading) {
     return (
       <div className="space-y-4">
@@ -73,7 +59,7 @@ export default function ActivityTimeline({ activities, loading }: ActivityTimeli
   if (!activities.length) {
     return (
       <p className="text-sm text-stone-500 dark:text-stone-400">
-        No activity recorded yet.
+        {t('chart_no_activity_recorded')}
       </p>
     );
   }
@@ -88,7 +74,7 @@ export default function ActivityTimeline({ activities, loading }: ActivityTimeli
           <div key={activity.id} className="relative flex gap-3">
             {/* Connector line */}
             {idx < activities.length - 1 && (
-              <div className="absolute left-[17px] top-9 h-full w-px bg-stone-200 dark:bg-stone-700" />
+              <div className="absolute start-[17px] top-9 h-full w-px bg-stone-200 dark:bg-stone-700" />
             )}
 
             {/* Icon */}
@@ -113,7 +99,7 @@ export default function ActivityTimeline({ activities, loading }: ActivityTimeli
               )}
               <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">
                 {activity.authorName} &middot;{' '}
-                {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
+                {formatRelative(activity.createdAt)}
               </p>
             </div>
           </div>

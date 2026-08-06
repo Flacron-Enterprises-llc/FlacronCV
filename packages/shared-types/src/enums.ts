@@ -7,6 +7,10 @@ export enum UserRole {
 export enum SubscriptionPlan {
   FREE = 'free',
   PRO = 'pro',
+  // ASSUMPTION (client to confirm): a premium individual tier positioned BETWEEN
+  // Pro and Enterprise (see PLAN_RANK + PLAN_CONFIGS). Purchase is gated "coming
+  // soon" until a real Stripe price id is configured.
+  CAREER_ACCELERATOR = 'career_accelerator',
   ENTERPRISE = 'enterprise',
 }
 
@@ -76,6 +80,15 @@ export enum TicketStatus {
 export enum TemplateCategory {
   CV = 'cv',
   COVER_LETTER = 'cover_letter',
+}
+
+export enum JobStatus {
+  WISHLIST = 'wishlist',
+  APPLIED = 'applied',
+  INTERVIEWING = 'interviewing',
+  OFFER = 'offer',
+  REJECTED = 'rejected',
+  ACCEPTED = 'accepted',
 }
 
 export enum AIProvider {

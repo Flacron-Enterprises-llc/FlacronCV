@@ -21,7 +21,7 @@ export default function FAQ() {
   ];
 
   return (
-    <section id="faq" className="py-20 sm:py-28">
+    <section id="faq" className="py-16 sm:py-20">
       <div
         ref={sectionRef}
         className={`mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 transition-all duration-700 ${isInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
@@ -39,8 +39,11 @@ export default function FAQ() {
               className="rounded-xl border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-800"
             >
               <button
+                id={`faq-question-${index}`}
                 className="flex w-full items-center justify-between px-6 py-4 text-start"
                 onClick={() => setOpen(open === index ? null : index)}
+                aria-expanded={open === index}
+                aria-controls={`faq-answer-${index}`}
               >
                 <span className="text-sm font-semibold text-stone-900 dark:text-white">
                   {item.q}
@@ -50,10 +53,16 @@ export default function FAQ() {
                     'h-5 w-5 flex-shrink-0 text-stone-400 transition-transform',
                     open === index && 'rotate-180',
                   )}
+                  aria-hidden="true"
                 />
               </button>
               {open === index && (
-                <div className="px-6 pb-4">
+                <div
+                  id={`faq-answer-${index}`}
+                  role="region"
+                  aria-labelledby={`faq-question-${index}`}
+                  className="px-6 pb-4"
+                >
                   <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-400">
                     {item.a}
                   </p>

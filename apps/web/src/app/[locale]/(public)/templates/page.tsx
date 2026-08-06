@@ -26,11 +26,15 @@ import {
   ArrowRight,
   CheckCircle,
   Eye,
+  Search,
+  X,
 } from 'lucide-react';
 import {
   Template,
   TemplateCategory,
   SubscriptionPlan,
+  resolveEffectivePlan,
+  planMeetsTier,
   type CVLayout,
 } from '@flacroncv/shared-types';
 import { Link } from '@/i18n/routing';
@@ -42,21 +46,47 @@ type TierFilter = 'all' | SubscriptionPlan;
 
 const PENDING_TEMPLATE_KEY = 'flacroncv_pending_template';
 
-const tierVariantMap: Record<SubscriptionPlan, 'success' | 'brand' | 'warning'> = {
+const tierVariantMap: Record<SubscriptionPlan, 'success' | 'brand' | 'warning' | 'info'> = {
   [SubscriptionPlan.FREE]: 'success',
   [SubscriptionPlan.PRO]: 'brand',
+  [SubscriptionPlan.CAREER_ACCELERATOR]: 'info',
   [SubscriptionPlan.ENTERPRISE]: 'warning',
 };
 
-const tierLabelMap: Record<SubscriptionPlan, string> = {
+// Translation keys (resolved with t() at render) so badges localize per locale.
+// (No built-in template is Career-Accelerator-tier — templates use free/pro/
+// enterprise — but the maps must cover every plan for exhaustiveness.)
+const tierKeyMap: Record<SubscriptionPlan, string> = {
+  [SubscriptionPlan.FREE]: 'templates.free',
+  [SubscriptionPlan.PRO]: 'templates.pro',
+  [SubscriptionPlan.CAREER_ACCELERATOR]: 'templates.career_accelerator',
+  [SubscriptionPlan.ENTERPRISE]: 'templates.enterprise',
+};
+
+/**
+ * CANONICAL ENGLISH tier names — what `TemplatePreviewModal` expects.
+ *
+ * The modal derives its own translation key from this prop
+ * (`tCommon(tierLabel.toLowerCase())`) and branches its icon on
+ * `tierLabel === 'Enterprise' | 'Pro'`. Passing a LOCALIZED label therefore
+ * breaks it: in Arabic it looked up `common.احترافي`, which exists nowhere, and
+ * next-intl rendered that raw key path into the badge, the upgrade copy and the
+ * perk list. Same contract as `cv/new/pick-template`, which also passes English.
+ * The page's own badges keep using `tierKeyMap` and stay localized.
+ */
+const tierCanonicalMap: Record<SubscriptionPlan, string> = {
   [SubscriptionPlan.FREE]: 'Free',
   [SubscriptionPlan.PRO]: 'Pro',
+  // No built-in template is Career-Accelerator tier, so this is unreachable
+  // today; 'Pro' keeps the modal coherent rather than emitting a key it cannot
+  // resolve, should the catalogue ever gain one.
+  [SubscriptionPlan.CAREER_ACCELERATOR]: 'Pro',
   [SubscriptionPlan.ENTERPRISE]: 'Enterprise',
 };
 
-const categoryLabelMap: Record<TemplateCategory, string> = {
-  [TemplateCategory.CV]: 'CV',
-  [TemplateCategory.COVER_LETTER]: 'Cover Letter',
+const categoryKeyMap: Record<TemplateCategory, string> = {
+  [TemplateCategory.CV]: 'templates.categoryCv',
+  [TemplateCategory.COVER_LETTER]: 'templates.categoryCoverLetter',
 };
 
 /* ─── Slug → layout/color mapping ─── */
@@ -157,6 +187,7 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
   const router = useRouter();
   const { user } = useAuth();
 
+  const [search, setSearch]                 = useState('');
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [tierFilter, setTierFilter]         = useState<TierFilter>('all');
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
@@ -167,21 +198,36 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
     retry: 1,
   });
 
+  // Only the fields the template model actually has are filterable: name/description
+  // (search), category (document type) and tier. There is deliberately no industry or
+  // career-level filter — those fields do not exist on the Template model.
   const filteredTemplates = useMemo(() => {
     if (!templates) return [];
+    const query = search.trim().toLowerCase();
     return templates.filter((tmpl) => {
       if (categoryFilter !== 'all' && tmpl.category !== categoryFilter) return false;
       if (tierFilter !== 'all' && tmpl.tier !== tierFilter) return false;
+      if (query) {
+        const haystack = `${tmpl.name ?? ''} ${tmpl.description ?? ''}`.toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
       return true;
     });
-  }, [templates, categoryFilter, tierFilter]);
+  }, [templates, search, categoryFilter, tierFilter]);
 
-  const userPlan = user?.subscription?.plan || SubscriptionPlan.FREE;
+  const hasActiveFilters = search.trim() !== '' || categoryFilter !== 'all' || tierFilter !== 'all';
+
+  const resetFilters = () => {
+    setSearch('');
+    setCategoryFilter('all');
+    setTierFilter('all');
+  };
+
+  const userPlan = resolveEffectivePlan(user?.subscription);
 
   const canUseTemplate = (template: Template): boolean => {
     if (!user) return false;
-    const planOrder = [SubscriptionPlan.FREE, SubscriptionPlan.PRO, SubscriptionPlan.ENTERPRISE];
-    return planOrder.indexOf(userPlan) >= planOrder.indexOf(template.tier);
+    return planMeetsTier(userPlan, template.tier);
   };
 
   const handleUseTemplate = (template: Template) => {
@@ -194,7 +240,7 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
       } catch {
         // localStorage unavailable — proceed anyway
       }
-      toast.info('Please sign in to use this template.');
+      toast.info(t('public_templates.signin_required'));
       router.push('/login');
       return;
     }
@@ -230,7 +276,8 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
   const previewLayout   = previewMeta?.layout ?? 'classic';
   const previewColor    = previewMeta?.color ?? '#2563eb';
   const previewIsPro    = previewTemplate ? previewTemplate.tier !== SubscriptionPlan.FREE : false;
-  const previewTierLabel = previewTemplate ? tierLabelMap[previewTemplate.tier] : 'Pro';
+  // Canonical English — see tierCanonicalMap. Do NOT localize this.
+  const previewTierLabel = previewTemplate ? tierCanonicalMap[previewTemplate.tier] : 'Pro';
   const previewAccess   = previewTemplate ? canUseTemplate(previewTemplate) : false;
 
   return (
@@ -249,19 +296,51 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
 
       {/* Content */}
       <section className="mx-auto max-w-7xl space-y-6 px-4 py-10 sm:px-6 lg:px-8">
+        {/* Keeps the outline h1 -> h2 -> h3 (card titles are h3) */}
+        <h2 className="sr-only">{t('public_templates.results_heading')}</h2>
+        {/* Search */}
+        <div className="relative max-w-xl">
+          <label htmlFor="template-search" className="sr-only">
+            {t('public_templates.search_label')}
+          </label>
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400"
+          />
+          <input
+            id="template-search"
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('public_templates.search_placeholder')}
+            className="w-full rounded-lg border border-stone-300 bg-white py-2 pe-10 ps-9 text-sm text-stone-900 placeholder:text-stone-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-stone-600 dark:bg-stone-800 dark:text-white dark:placeholder:text-stone-500 [&::-webkit-search-cancel-button]:hidden"
+          />
+          {search !== '' && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label={t('public_templates.clear_search')}
+              className="absolute end-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:hover:bg-stone-700 dark:hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
         {/* Filters */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          {/* Category tabs */}
+          {/* Document type (CV / cover letter) */}
           <div className="flex rounded-lg border border-stone-200 bg-stone-50 p-1 dark:border-stone-700 dark:bg-stone-800/50">
             {categoryTabs.map((tab) => (
               <button
                 key={tab.value}
                 onClick={() => setCategoryFilter(tab.value)}
+                aria-pressed={categoryFilter === tab.value}
                 className={cn(
-                  'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                  'rounded-md px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
                   categoryFilter === tab.value
-                    ? 'bg-white text-stone-900 shadow-sm dark:bg-stone-700 dark:text-white'
-                    : 'text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-white',
+                    ? 'bg-white font-bold text-stone-900 shadow-sm dark:bg-stone-700 dark:text-white'
+                    : 'font-medium text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-white',
                 )}
               >
                 {tab.label}
@@ -271,10 +350,14 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
 
           {/* Tier filter */}
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-stone-600 dark:text-stone-400">
-              {t('templates.tier')}:
-            </span>
+            <label
+              htmlFor="tier-filter"
+              className="text-sm font-medium text-stone-600 dark:text-stone-400"
+            >
+              {t('templates.tier')}
+            </label>
             <select
+              id="tier-filter"
               value={tierFilter}
               onChange={(e) => setTierFilter(e.target.value as TierFilter)}
               className="input-field py-1.5 text-sm"
@@ -287,6 +370,23 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
             </select>
           </div>
         </div>
+
+        {/* Result count (announced when filters change) */}
+        {!isLoading && !isError && (
+          <div className="flex flex-wrap items-center gap-3">
+            <p aria-live="polite" className="text-sm text-stone-500 dark:text-stone-400">
+              {t('public_templates.results_count', {
+                count: filteredTemplates.length,
+                total: templates?.length ?? 0,
+              })}
+            </p>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={resetFilters}>
+                {t('templates.clearFilters')}
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Grid */}
         {isLoading ? (
@@ -302,7 +402,7 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
               {t('common.error')}
             </h3>
             <p className="mt-2 max-w-sm text-sm text-stone-500 dark:text-stone-400">
-              Could not load templates. Please try again later.
+              {t('public_templates.load_error')}
             </p>
           </Card>
         ) : filteredTemplates.length > 0 ? (
@@ -317,8 +417,22 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
                   key={template.id}
                   padding="none"
                   hover
-                  className="group flex flex-col overflow-hidden"
+                  className="group relative flex flex-col overflow-hidden"
                 >
+                  {/* Whole-card preview trigger. A real <button> stretched over the
+                      card (rather than a click handler on the card) keeps it a single
+                      keyboard stop with Enter/Space handled natively, and leaves the
+                      primary action button below un-nested and independently focusable. */}
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTemplate(template)}
+                    className="absolute inset-0 z-10 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500"
+                  >
+                    <span className="sr-only">
+                      {t('template_picker.preview_aria', { name: template.name })}
+                    </span>
+                  </button>
+
                   {/* Thumbnail */}
                   <div className="relative shrink-0">
                     <div className="relative h-52 overflow-hidden bg-white dark:bg-stone-950">
@@ -335,7 +449,7 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
                         <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
                           <div className="flex items-center gap-2 rounded-full bg-black/50 px-4 py-2 text-sm font-semibold text-white">
                             <Lock className="h-4 w-4" />
-                            {tierLabelMap[template.tier]}
+                            {t(tierKeyMap[template.tier])}
                           </div>
                         </div>
                       )}
@@ -350,15 +464,16 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
                         </div>
                       )}
 
-                      {/* Hover preview hint */}
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all group-hover:bg-black/25">
-                        <button
-                          onClick={() => setPreviewTemplate(template)}
-                          className="flex translate-y-2 items-center gap-1.5 rounded-full bg-white/95 px-4 py-1.5 text-xs font-semibold text-stone-800 opacity-0 shadow-md transition-all hover:bg-white group-hover:translate-y-0 group-hover:opacity-100"
-                        >
+                      {/* Hover/focus preview hint — decorative: the stretched button
+                          above owns the interaction and carries the accessible name. */}
+                      <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 transition-all group-hover:bg-black/25 group-focus-within:bg-black/25"
+                      >
+                        <span className="flex translate-y-2 items-center gap-1.5 rounded-full bg-white/95 px-4 py-1.5 text-xs font-semibold text-stone-800 opacity-0 shadow-md transition-all group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
                           <Eye className="h-3.5 w-3.5" />
                           {t('public_templates.preview')}
-                        </button>
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -376,15 +491,17 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge variant="default">{categoryLabelMap[template.category]}</Badge>
+                        <Badge variant="default">{t(categoryKeyMap[template.category])}</Badge>
                         <Badge variant={tierVariantMap[template.tier]}>
-                          {tierLabelMap[template.tier]}
+                          {t(tierKeyMap[template.tier])}
                         </Badge>
                       </div>
                     </div>
 
-                    {/* Action buttons */}
-                    <div className="flex flex-col gap-2">
+                    {/* Action buttons — above the stretched preview trigger so they
+                        keep their own click targets (explicit affordance on touch,
+                        where there is no hover state to reveal the preview hint). */}
+                    <div className="relative z-20 flex flex-col gap-2">
                       <Button
                         className="w-full"
                         variant="ghost"
@@ -399,7 +516,7 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
                           className="w-full"
                           variant="primary"
                           size="sm"
-                          icon={<LogIn className="h-4 w-4" />}
+                          icon={<LogIn className="h-4 w-4 rtl:-scale-x-100" />}
                           onClick={() => handleUseTemplate(template)}
                         >
                           {t('public_templates.login_to_use')}
@@ -440,16 +557,8 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
             <p className="mt-1 max-w-sm text-sm text-stone-500 dark:text-stone-400">
               {t('templates.noTemplatesDescription')}
             </p>
-            {(categoryFilter !== 'all' || tierFilter !== 'all') && (
-              <Button
-                variant="secondary"
-                size="sm"
-                className="mt-4"
-                onClick={() => {
-                  setCategoryFilter('all');
-                  setTierFilter('all');
-                }}
-              >
+            {hasActiveFilters && (
+              <Button variant="secondary" size="sm" className="mt-4" onClick={resetFilters}>
                 {t('templates.clearFilters')}
               </Button>
             )}
@@ -463,7 +572,7 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
           <h2 className="text-3xl font-bold text-white">
             {t('public_templates.cta_title')}
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-brand-200">
+          <p className="mx-auto mt-4 max-w-xl text-lg text-brand-50">
             {t('public_templates.cta_subtitle')}
           </p>
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
@@ -472,7 +581,7 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
                 <Button
                   variant="secondary"
                   size="lg"
-                  icon={<ArrowRight className="h-5 w-5" />}
+                  icon={<ArrowRight className="h-5 w-5 rtl:rotate-180" />}
                   className="bg-white text-brand-600 hover:bg-brand-50"
                 >
                   {t('dashboard.create_cv')}
@@ -484,7 +593,7 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
                   <Button
                     size="lg"
                     icon={<CheckCircle className="h-5 w-5" />}
-                    className="bg-white text-brand-600 hover:bg-brand-50"
+                    className="bg-white text-brand-700 hover:bg-brand-50"
                   >
                     {t('public_templates.cta_btn')}
                   </Button>

@@ -43,6 +43,7 @@ export class CRMPlatformService {
     const usersByPlan = {
       free: users.filter((u) => u.subscription?.plan === 'free').length,
       pro: users.filter((u) => u.subscription?.plan === 'pro').length,
+      career_accelerator: users.filter((u) => u.subscription?.plan === 'career_accelerator').length,
       enterprise: users.filter((u) => u.subscription?.plan === 'enterprise').length,
     };
 

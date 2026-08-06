@@ -17,9 +17,11 @@ import { CRMSettingsController } from './crm-settings.controller';
 import { CRMSettingsService } from './crm-settings.service';
 import { CRMSubscriptionsController } from './crm-subscriptions.controller';
 import { CRMSubscriptionsService } from './crm-subscriptions.service';
+import { AppConfigController } from './app-config.controller';
 
 @Module({
   controllers: [
+    AppConfigController,
     CRMCustomersController,
     CRMLeadsController,
     CRMTransactionsController,

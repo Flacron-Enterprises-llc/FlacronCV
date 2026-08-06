@@ -8,19 +8,26 @@ import { Loader2 } from 'lucide-react';
 import { useRouter } from '@/i18n/routing';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, placeholderAccount } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (loading) return;
+    if (!user) {
       router.push('/login');
-    } else if (!loading && user && user.role !== 'admin' && user.role !== 'super_admin') {
+      return;
+    }
+    // `placeholderAccount` means the account never synced, so `role` is a
+    // default and not a fact. Bouncing here would lock a genuine admin out of
+    // this panel for the rest of the session over a momentary API failure.
+    if (placeholderAccount) return;
+    if (user.role !== 'admin' && user.role !== 'super_admin') {
       router.push('/dashboard');
     }
-  }, [loading, user, router]);
+  }, [loading, user, placeholderAccount, router]);
 
-  if (loading || !user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+  if (loading || !user || placeholderAccount || (user.role !== 'admin' && user.role !== 'super_admin')) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
@@ -36,7 +43,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">{children}</main>
+        <main id="main-content" className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

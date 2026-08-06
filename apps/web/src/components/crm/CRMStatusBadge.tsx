@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import {
   CRMCustomerStatus,
@@ -42,20 +43,21 @@ const TX_STATUS_STYLES: Record<CRMTransactionStatus, string> = {
     'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
 };
 
-const LABEL_MAP: Record<string, string> = {
-  active: 'Active',
-  inactive: 'Inactive',
-  lead: 'Lead',
-  new: 'New',
-  contacted: 'Contacted',
-  qualified: 'Qualified',
-  proposal: 'Proposal',
-  closed_won: 'Won',
-  closed_lost: 'Lost',
-  completed: 'Completed',
-  pending: 'Pending',
-  refunded: 'Refunded',
-  failed: 'Failed',
+// Maps each status/stage/transaction enum value to its crm i18n key.
+const LABEL_KEY_MAP: Record<string, string> = {
+  active: 'active',
+  inactive: 'inactive',
+  lead: 'lead',
+  new: 'new',
+  contacted: 'contacted',
+  qualified: 'qualified',
+  proposal: 'proposal',
+  closed_won: 'won',
+  closed_lost: 'lost',
+  completed: 'completed',
+  pending: 'pending',
+  refunded: 'refunded',
+  failed: 'failed',
 };
 
 interface CRMStatusBadgeProps {
@@ -69,6 +71,7 @@ export default function CRMStatusBadge({
   type,
   size = 'md',
 }: CRMStatusBadgeProps) {
+  const t = useTranslations('crm');
   let style = '';
 
   if (type === 'customer') {
@@ -87,7 +90,7 @@ export default function CRMStatusBadge({
         style,
       )}
     >
-      {LABEL_MAP[value] ?? value}
+      {LABEL_KEY_MAP[value] ? t(LABEL_KEY_MAP[value]) : value}
     </span>
   );
 }

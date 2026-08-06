@@ -14,17 +14,22 @@ import {
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CoverLetterService } from './cover-letter.service';
 import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
+import { FeatureFlagGuard, RequireFeature } from '../../common/guards/feature-flag.guard';
 import { CurrentUser, FirebaseUser } from '../../common/decorators/current-user.decorator';
 import { CreateCoverLetterData, UpdateCoverLetterData, GenerateCoverLetterData } from '@flacroncv/shared-types';
 
 @ApiTags('cover-letters')
 @Controller('cover-letters')
-@UseGuards(FirebaseAuthGuard)
+@UseGuards(FirebaseAuthGuard, FeatureFlagGuard)
 @ApiBearerAuth()
 export class CoverLetterController {
   constructor(private readonly coverLetterService: CoverLetterService) {}
 
+  // Creation/generation is gated by the coverLettersEnabled flag; reading,
+  // editing, and deleting existing letters stay available so turning the
+  // feature off never traps a user's existing data.
   @Post()
+  @RequireFeature('coverLettersEnabled')
   async create(@CurrentUser() user: FirebaseUser, @Body() data: CreateCoverLetterData) {
     return this.coverLetterService.create(user.uid, data);
   }
@@ -49,6 +54,7 @@ export class CoverLetterController {
   }
 
   @Post(':id/duplicate')
+  @RequireFeature('coverLettersEnabled')
   async duplicate(@CurrentUser() user: FirebaseUser, @Param('id') id: string) {
     return this.coverLetterService.duplicate(id, user.uid);
   }
@@ -60,6 +66,10 @@ export class CoverLetterController {
   }
 
   @Post(':id/ai/generate')
+  // Both switches: this is a cover-letter route AND an AI route. With only the
+  // former, flipping the AI kill-switch off still let this endpoint spend
+  // credits and call the provider.
+  @RequireFeature('coverLettersEnabled', 'aiEnabled')
   async generateWithAI(
     @CurrentUser() user: FirebaseUser,
     @Param('id') id: string,

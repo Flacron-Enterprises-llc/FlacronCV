@@ -11,6 +11,8 @@ import {
   Res,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { csvCell } from '../../common/utils/csv';
+import { toIsoString } from '../../common/utils/date';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CRMLeadsService } from './crm-leads.service';
 import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
@@ -61,15 +63,15 @@ export class CRMLeadsController {
     const rows = leads.map((l) =>
       [
         l.id,
-        `"${l.name.replace(/"/g, '""')}"`,
-        l.email,
+        csvCell(l.name),
+        csvCell(l.email),
         l.phone ?? '',
-        l.company ? `"${l.company.replace(/"/g, '""')}"` : '',
+        csvCell(l.company),
         l.source,
         l.stage,
         l.assignedToName ?? '',
-        l.notes ? `"${l.notes.replace(/"/g, '""')}"` : '',
-        new Date(l.createdAt).toISOString(),
+        csvCell(l.notes),
+        toIsoString(l.createdAt),
       ].join(','),
     );
 

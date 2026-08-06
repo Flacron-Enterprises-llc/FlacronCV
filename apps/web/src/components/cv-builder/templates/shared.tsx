@@ -3,6 +3,7 @@
 import React from 'react';
 import type { CV, CVSection } from '@flacroncv/shared-types';
 import { fontNameToCssVar } from '../toolbar/FontPanel';
+import { hexToRgba, contrastRatio, readableOn, INK } from '@/lib/design-tokens';
 
 export interface LayoutProps {
   cv: CV;
@@ -36,29 +37,36 @@ export function getTokens(cv: CV) {
   const bodyFont    = fontNameToCssVar(cv.styling.fontFamily || 'Inter');
   const headingFont = fontNameToCssVar((cv.styling as any).headingFontFamily || cv.styling.fontFamily || 'Inter');
   const fs  = fontSizeScale[(cv.styling.fontSize  || 'medium') as keyof typeof fontSizeScale];
-  const sp  = spacingScale[(cv.styling.spacing    || 'normal')  as keyof typeof spacingScale];
+  const spBase = spacingScale[(cv.styling.spacing || 'normal')  as keyof typeof spacingScale];
+  // Auto-fit multiplier (set by LivePreview via useAutoFitPage): lets a short CV
+  // expand to fill the A4 page and a slightly-long one compress back onto it.
+  // Only VERTICAL rhythm is scaled — `pad` is deliberately excluded so the left/
+  // right page margins never shift. Absent/invalid ⇒ 1 ⇒ byte-identical layout.
+  const rawFit = Number((cv.styling as any).__autoFit);
+  const fit = Number.isFinite(rawFit) && rawFit > 0 ? rawFit : 1;
+  const sp = fit === 1 ? spBase : {
+    ...spBase,
+    section:   spBase.section   * fit,
+    item:      spBase.item      * fit,
+    headerPad: spBase.headerPad * fit,
+  };
   const br  = borderRadiusScale[((cv.styling as any).borderRadius || 'small') as keyof typeof borderRadiusScale];
   const sectionStyle: string = (cv.styling as any).sectionStyle || 'underline';
   return { primary, secondary, bodyFont, headingFont, fs, sp, br, sectionStyle };
 }
 
 // ─── Colour helpers ──────────────────────────────────────────────────────────
+// Defined in @/lib/design-tokens (no React import) so the gallery thumbnails —
+// and the cover-letter templates, which need exactly the same guarantees — can
+// derive their colours with the same maths, without pulling this module's
+// component tree into their bundles. Re-exported here because every CV template
+// already imports its styling vocabulary from `shared`.
 
-export function hexToRgba(hex: string, alpha: number): string {
-  const safe = hex.startsWith('#') ? hex : '#2563eb';
-  const r = parseInt(safe.slice(1, 3), 16) || 0;
-  const g = parseInt(safe.slice(3, 5), 16) || 0;
-  const b = parseInt(safe.slice(5, 7), 16) || 0;
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-
-export function darken(hex: string, amount = 0.15): string {
-  const safe = hex.startsWith('#') ? hex : '#2563eb';
-  const r = Math.max(0, Math.round(parseInt(safe.slice(1, 3), 16) * (1 - amount)));
-  const g = Math.max(0, Math.round(parseInt(safe.slice(3, 5), 16) * (1 - amount)));
-  const b = Math.max(0, Math.round(parseInt(safe.slice(5, 7), 16) * (1 - amount)));
-  return `rgb(${r},${g},${b})`;
-}
+export {
+  hexToRgba, darken, lighten,
+  luminance, contrastRatio, readableOn, ensureDarkSurface,
+  INK,
+} from '@/lib/design-tokens';
 
 // ─── Section heading variants ────────────────────────────────────────────────
 
@@ -72,40 +80,72 @@ interface HeadingProps {
 }
 
 export function SectionHeading({ title, primary, headingFont, fs, sectionStyle, br }: HeadingProps) {
+  // Heading *text* in the accent has to clear a text contrast threshold on
+  // white; the rules and bars beside it do not, so they keep the accent exactly
+  // as chosen. Splitting the two is what lets a pale accent stay visible as a
+  // graphic element while the words it sits next to remain readable.
+  const ink = readableOn(primary, '#ffffff', 4.0);
   const base: React.CSSProperties = {
     fontFamily: headingFont,
     fontWeight: 700,
-    letterSpacing: '0.6px',
+    // Wider tracking on small uppercase. Set solid, uppercase text at 12–14px
+    // reads as a cramped block at the browser default; opening it up is the
+    // single cheapest thing that makes a heading look typeset rather than
+    // <h2>-shaped.
+    letterSpacing: '1px',
     textTransform: 'uppercase',
     marginTop: 0,
-    marginBottom: '8px',
+    marginBottom: '9px',
     fontSize: `${fs.sectionTitle}px`,
   };
 
   if (sectionStyle === 'underline') {
+    // A hairline rule under the whole heading, with the accent carried by a
+    // short bar under the words themselves. A full-width 2px accent bar shouts
+    // at the same volume as the name at the top of the page and flattens the
+    // hierarchy; a 2px stub plus a 1px neutral rule keeps the accent present
+    // without letting six section headings out-shout the person's name.
     return (
-      <h2 style={{ ...base, color: primary, borderBottom: `2px solid ${primary}`, paddingBottom: '4px' }}>
-        {title}
-      </h2>
+      <div style={{ marginBottom: base.marginBottom, position: 'relative' }}>
+        <h2 style={{ ...base, color: ink, marginBottom: 0, paddingBottom: '5px' }}>
+          {title}
+        </h2>
+        <div style={{ height: '1px', background: INK.hair }} />
+        <div style={{ height: '2px', width: '34px', background: primary, marginTop: '-1px' }} />
+      </div>
     );
   }
   if (sectionStyle === 'card') {
+    // Label colour is chosen against the fill, not assumed. Hard-coding white
+    // works for the mid-to-dark accents in the swatch row and fails completely
+    // for a pale one — someone who picks a light gold or a pastel gets white
+    // text on a near-white block, i.e. section headings that are simply not
+    // there. Pick whichever of white/near-black actually reads on their colour.
+    const label = contrastRatio('#ffffff', primary) >= contrastRatio('#1f2933', primary)
+      ? '#ffffff'
+      : '#1f2933';
     return (
-      <h2 style={{ ...base, color: '#fff', background: primary, padding: '4px 10px', borderRadius: br, display: 'inline-block', marginBottom: '10px' }}>
+      <h2 style={{ ...base, color: label, background: primary, padding: '4px 11px', borderRadius: br, display: 'inline-block', marginBottom: '10px' }}>
         {title}
       </h2>
     );
   }
   if (sectionStyle === 'left-border') {
+    // Logical, not physical. The preview inherits the document's direction, so
+    // on the Arabic and Urdu locales the whole CV mirrors — and a border-left
+    // spine stayed pinned to the left of right-aligned text, which is the one
+    // detail that makes an RTL CV look machine-translated. html2canvas 1.4.1
+    // resolves border-inline-start correctly under dir=rtl, so the PDF export
+    // mirrors along with the preview.
     return (
-      <h2 style={{ ...base, color: primary, borderLeft: `4px solid ${primary}`, paddingLeft: '8px' }}>
+      <h2 style={{ ...base, color: ink, borderInlineStart: `3px solid ${primary}`, paddingInlineStart: '9px' }}>
         {title}
       </h2>
     );
   }
   // minimal
   return (
-    <h2 style={{ ...base, color: '#666', borderBottom: '1px solid #e5e5e5', paddingBottom: '4px' }}>
+    <h2 style={{ ...base, color: INK.meta, borderBottom: `1px solid ${INK.hair}`, paddingBottom: '5px' }}>
       {title}
     </h2>
   );
@@ -119,12 +159,12 @@ export function SidebarSectionHeading({ title, headingFont, fs }: { title: strin
       fontFamily: headingFont,
       fontSize: `${fs.sectionTitle - 1}px`,
       fontWeight: 700,
-      letterSpacing: '0.8px',
+      letterSpacing: '1.1px',
       textTransform: 'uppercase',
       color: '#fff',
-      borderBottom: '1px solid rgba(255,255,255,0.25)',
-      paddingBottom: '4px',
-      marginBottom: '8px',
+      borderBottom: '1px solid rgba(255,255,255,0.28)',
+      paddingBottom: '5px',
+      marginBottom: '9px',
     }}>
       {title}
     </h3>
@@ -149,38 +189,55 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
 
   const cardWrapper: React.CSSProperties = isCard ? {
     background: '#fff',
-    border: `1px solid ${hexToRgba(primary, 0.15)}`,
-    borderLeft: `3px solid ${primary}`,
+    // Neutral hairline + accent spine, and no drop shadow. A soft shadow is a
+    // screen affordance — it says "this element floats above the page". On a
+    // printed CV there is no page behind the page, so it renders as a grey
+    // smear along two edges and nothing else. Structure comes from the spine.
+    border: `1px solid ${INK.hair}`,
+    // Inline-start, so the spine follows the text in RTL — see SectionHeading.
+    borderInlineStart: `3px solid ${primary}`,
     borderRadius: br,
-    padding: '10px 12px',
+    padding: '11px 13px',
     marginBottom: `${sp.item + 2}px`,
-    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
   } : {
     marginBottom: `${sp.item}px`,
   };
 
-  const textColor = isSidebar ? '#e8e8e8' : '#444';
-  const subtitleColor = isSidebar ? 'rgba(255,255,255,0.7)' : '#666';
-  const metaColor = isSidebar ? 'rgba(255,255,255,0.5)' : '#999';
+  const titleColor    = isSidebar ? '#fff' : INK.heading;
+  const textColor     = isSidebar ? 'rgba(255,255,255,0.88)' : INK.body;
+  const subtitleColor = isSidebar ? 'rgba(255,255,255,0.74)' : INK.subtle;
+  const metaColor     = isSidebar ? 'rgba(255,255,255,0.64)' : INK.meta;
+
+  // Dates sit opposite the title, so they read as a column of their own. Giving
+  // them a little weight and tracking keeps that column crisp at 9–11px instead
+  // of dissolving into grey the way a plain light-grey date does in print.
+  const dateStyle: React.CSSProperties = {
+    fontSize: `${fs.meta}px`,
+    fontWeight: 500,
+    letterSpacing: '0.2px',
+    color: metaColor,
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
+  };
 
   if (item.position || item.company) {
     const start = formatCVDate(item.startDate);
     const end   = item.isCurrent ? 'Present' : formatCVDate(item.endDate) || 'Present';
     return (
       <div style={cardWrapper}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '4px' }}>
-          <span style={{ fontSize: `${fs.headline}px`, fontWeight: 600, color: isSidebar ? '#fff' : '#1a1a1a' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' }}>
+          <span style={{ fontSize: `${fs.headline}px`, fontWeight: 600, color: titleColor, lineHeight: 1.3 }}>
             {item.position}
           </span>
-          <span style={{ fontSize: `${fs.meta}px`, color: metaColor, whiteSpace: 'nowrap', flexShrink: 0 }}>
+          <span style={dateStyle}>
             {start}{start ? ` – ${end}` : end}
           </span>
         </div>
-        <p style={{ fontSize: `${fs.name}px`, color: subtitleColor, margin: '2px 0' }}>
+        <p style={{ fontSize: `${fs.name}px`, fontWeight: 500, color: subtitleColor, margin: '3px 0 0' }}>
           {item.company}{item.location ? ` · ${item.location}` : ''}
         </p>
         {item.description && (
-          <p style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '4px', lineHeight: 1.65, wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+          <p style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '5px', marginBottom: 0, lineHeight: 1.65, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
             {item.description}
           </p>
         )}
@@ -194,19 +251,19 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
     const dateRange = [start, end].filter(Boolean).join(' – ');
     return (
       <div style={cardWrapper}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '4px' }}>
-          <span style={{ fontSize: `${fs.headline}px`, fontWeight: 600, color: isSidebar ? '#fff' : '#1a1a1a' }}>
-            {item.degree}{item.field ? ` in ${item.field}` : ''}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' }}>
+          <span style={{ fontSize: `${fs.headline}px`, fontWeight: 600, color: titleColor, lineHeight: 1.3 }}>
+            {formatDegree(item)}
           </span>
-          <span style={{ fontSize: `${fs.meta}px`, color: metaColor, whiteSpace: 'nowrap', flexShrink: 0 }}>
+          <span style={dateStyle}>
             {dateRange}
           </span>
         </div>
-        <p style={{ fontSize: `${fs.name}px`, color: subtitleColor, margin: '2px 0' }}>
+        <p style={{ fontSize: `${fs.name}px`, fontWeight: 500, color: subtitleColor, margin: '3px 0 0' }}>
           {item.institution}
         </p>
         {item.description && (
-          <p style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '4px', lineHeight: 1.6, wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+          <p style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '5px', marginBottom: 0, lineHeight: 1.6, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
             {item.description}
           </p>
         )}
@@ -220,82 +277,125 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
   const date = formatCVDate(item.date || item.startDate);
   return (
     <div style={cardWrapper}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '4px' }}>
-        <span style={{ fontSize: `${fs.name}px`, fontWeight: 600, color: isSidebar ? '#fff' : '#1a1a1a' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' }}>
+        <span style={{ fontSize: `${fs.name}px`, fontWeight: 600, color: titleColor, lineHeight: 1.3 }}>
           {label}
         </span>
-        {date && <span style={{ fontSize: `${fs.meta}px`, color: metaColor, whiteSpace: 'nowrap' }}>{date}</span>}
+        {date && <span style={dateStyle}>{date}</span>}
       </div>
       {detail && (
-        <p style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '2px', lineHeight: 1.55, wordBreak: 'break-word', overflowWrap: 'break-word' }}>{detail}</p>
+        <p style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '3px', marginBottom: 0, lineHeight: 1.55, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>{detail}</p>
       )}
     </div>
   );
 }
 
-// ─── Skill badge ─────────────────────────────────────────────────────────────
+// ─── Degree + field ──────────────────────────────────────────────────────────
 
-// Shared badge base — html2canvas rendering constraints:
-//   • display:inline-block instead of inline-flex — html2canvas does not
-//     reliably render inline-flex spans.
-//   • No margin on the badge itself — spacing is handled by the wrapper <span>
-//     (marginRight/marginBottom) in each template's skills container.
-//     Templates use inline-block + margin wrappers instead of flex+gap because
-//     html2canvas's JS layout engine does not fully support CSS `gap` on flex
-//     containers, causing badges to render without spacing in the PDF.
-// verticalAlign:'top' avoids strut-alignment issues in html2canvas where
-// 'middle' causes badges to shift when the parent has a non-zero line-box height.
-const BADGE_BASE: React.CSSProperties = {
-  display: 'inline-block',
-  verticalAlign: 'top',
-  lineHeight: 1,
-  whiteSpace: 'nowrap',
-};
+/**
+ * Join an education entry's degree and field into one title.
+ *
+ * The editor offers both a "Degree" and a "Field of study" box, and most people
+ * type the whole qualification into the first one and then dutifully fill in the
+ * second as well. Blindly rendering `${degree} in ${field}` turned that into
+ * "Bachelor of Science in Computer Science in Computer Science" — on every
+ * layout, in the PDF, on the CV they send to employers.
+ *
+ * So: append the field only when the degree does not already say it. The
+ * comparison is normalised (case, punctuation) and padded with spaces so it
+ * matches on whole words — a degree of "Bachelor of Arts" must not be treated
+ * as already containing a field of "Liberal Arts".
+ */
+export function formatDegree(item: { degree?: string | null; field?: string | null }): string {
+  const degree = (item.degree || '').trim();
+  const field  = (item.field  || '').trim();
+  if (!field)  return degree;
+  if (!degree) return field;
+  const norm = (s: string) => ` ${s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `;
+  return norm(degree).includes(norm(field)) ? degree : `${degree} in ${field}`;
+}
 
-export function SkillBadge({ name, primary, fs, br, variant = 'default' }: {
-  name: string; primary: string;
+// ─── Skills ──────────────────────────────────────────────────────────────────
+//
+// Skills are set as typeset text, not as bordered tags. That is a rendering
+// decision as much as a design one.
+//
+// The PDF is produced by html2canvas, which re-implements CSS layout in JS. It
+// does not place a text baseline where the browser does: measured against a
+// descender-free probe string, the browser centres a label in its box to within
+// half a pixel, while html2canvas draws it 2–3px low. Inside a bordered box that
+// is glaring — the label sits on the floor of the tag with a band of dead space
+// above it — and it is not fixable from the CSS side. Padding, unitless vs px
+// line-height, min-height, even inline-flex centring were all measured; every
+// one of them still came out 2–3px low, because the error is in how the
+// rasteriser positions the baseline, not in how the box is described.
+//
+// A box is the only thing that makes that error visible. Without one there is no
+// edge to be off-centre against, and the skills read as what they are — a list
+// of competencies — rather than as UI chips pasted onto a document. This is also
+// what senior CVs actually do; tag clouds are a web idiom.
+
+/**
+ * Skills as a running, separated list — for full-width and wide columns.
+ *
+ * Each skill and the separator that follows it form one non-breaking unit, so
+ * lines can only break *between* skills. A separator can therefore never begin
+ * a line, which is what a naive join would allow.
+ */
+export function SkillList({ items, primary, fs, tone = 'light' }: {
+  items: string[];
+  primary: string;
   fs: ReturnType<typeof getTokens>['fs'];
-  br: string;
-  variant?: 'default' | 'sidebar' | 'pill';
+  tone?: 'light' | 'dark';
 }) {
-  if (variant === 'sidebar') {
-    return (
-      <span style={{
-        ...BADGE_BASE,
-        background: 'rgba(255,255,255,0.2)',
-        color: '#fff',
-        padding: '4px 9px',
-        borderRadius: br,
-        fontSize: `${fs.body}px`,
-        border: '1px solid rgba(255,255,255,0.3)',
-      }}>{name}</span>
-    );
-  }
-  if (variant === 'pill') {
-    return (
-      <span style={{
-        ...BADGE_BASE,
-        background: hexToRgba(primary, 0.1),
-        color: primary,
-        border: `1px solid ${hexToRgba(primary, 0.3)}`,
-        padding: '4px 11px',
-        borderRadius: '999px',
-        fontSize: `${fs.body}px`,
-        fontWeight: 500,
-      }}>{name}</span>
-    );
-  }
-  // default
+  const names = items.map((s) => (s ?? '').trim()).filter(Boolean);
+  if (!names.length) return null;
+
+  const textColor = tone === 'dark' ? 'rgba(255,255,255,0.92)' : INK.body;
+  const sepColor  = tone === 'dark' ? 'rgba(255,255,255,0.45)' : hexToRgba(primary, 0.55);
+
   return (
-    <span style={{
-      ...BADGE_BASE,
-      background: hexToRgba(primary, 0.1),
-      color: primary,
-      padding: '4px 10px',
-      borderRadius: br,
-      fontSize: `${fs.body}px`,
-      fontWeight: 500,
-    }}>{name}</span>
+    <div style={{ fontSize: `${fs.name}px`, lineHeight: 1.9, color: textColor }}>
+      {names.map((name, i) => (
+        <span key={i} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
+          <span style={{ fontWeight: 500 }}>{name}</span>
+          {i < names.length - 1 && (
+            <span style={{ color: sepColor, padding: '0 9px' }} aria-hidden="true">·</span>
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Skills stacked one per line — for the narrow sidebar columns.
+ *
+ * A separated run in a 30%-wide column wraps every two or three items and stops
+ * reading as a list at all; stacked, the same content scans instantly. Each row
+ * is plain text on its own line, so there is again no box to mis-centre.
+ */
+export function SkillLines({ items, primary, fs, tone = 'dark' }: {
+  items: string[];
+  primary: string;
+  fs: ReturnType<typeof getTokens>['fs'];
+  tone?: 'light' | 'dark';
+}) {
+  const names = items.map((s) => (s ?? '').trim()).filter(Boolean);
+  if (!names.length) return null;
+
+  const textColor = tone === 'dark' ? 'rgba(255,255,255,0.92)' : INK.body;
+  const dotColor  = tone === 'dark' ? 'rgba(255,255,255,0.55)' : hexToRgba(primary, 0.6);
+
+  return (
+    <div style={{ fontSize: `${fs.body}px`, lineHeight: 1.7, color: textColor }}>
+      {names.map((name, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: '7px' }}>
+          <span style={{ color: dotColor, flexShrink: 0 }} aria-hidden="true">·</span>
+          <span style={{ minWidth: 0, overflowWrap: 'break-word', fontWeight: 500 }}>{name}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 

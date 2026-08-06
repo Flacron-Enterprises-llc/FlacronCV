@@ -16,6 +16,13 @@ export function useInView({ threshold = 0.1, triggerOnce = true, rootMargin = '0
     const element = ref.current;
     if (!element) return;
 
+    // Users who prefer reduced motion get the content immediately, with no
+    // scroll-triggered reveal animation.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setIsInView(true);
+      return;
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {

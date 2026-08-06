@@ -9,9 +9,9 @@ import React from 'react';
 import { useTranslations } from 'next-intl';
 import type { LayoutProps } from './shared';
 import {
-  getTokens, darken, buildContactLine, buildLinksLine,
+  getTokens, ensureDarkSurface, INK,
   splitSections, SidebarSectionHeading, SectionHeading,
-  ItemRenderer, SkillBadge,
+  ItemRenderer, SkillLines,
 } from './shared';
 
 export default function SidebarLayout({ cv, sections }: LayoutProps) {
@@ -20,7 +20,10 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
   const showPhoto = cv.styling.showPhoto && cv.personalInfo.photoURL;
   const { sidebar: sidebarSections, main: mainSections } = splitSections(sections);
 
-  const sidebarBg = darken(primary, 0.05);
+  // Every mark in the sidebar is white or white-alpha, so the panel has to be
+  // dark enough to carry white. A 5% darken of the accent was fine for the
+  // preset navys and left a pale accent as a blank white-on-white column.
+  const sidebarBg = ensureDarkSurface(primary);
   const sidebarWidth = '30%';
   const mainWidth = '70%';
 
@@ -73,25 +76,38 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
             </div>
           )}
 
+          {/* Given name light, family name bold, on two lines. The column is
+              only 30% wide, so the name would break somewhere regardless —
+              breaking it deliberately at the space is better than letting it
+              land mid-word, and the weight contrast turns the forced break into
+              part of the design. overflowWrap catches the genuinely long single
+              name that still will not fit on one line. */}
           <h1 style={{
             fontFamily: headingFont,
             fontSize: `${fs.nameTop}px`,
-            fontWeight: 800,
-            color: '#fff',
+            fontWeight: 300,
+            color: 'rgba(255,255,255,0.92)',
             margin: 0,
-            lineHeight: 1.2,
+            lineHeight: 1.18,
+            letterSpacing: '0.2px',
+            overflowWrap: 'break-word',
           }}>
             {cv.personalInfo.firstName}
-            <br />
-            {cv.personalInfo.lastName}
+            {cv.personalInfo.lastName && (
+              <>
+                <br />
+                <span style={{ fontWeight: 800, color: '#fff' }}>{cv.personalInfo.lastName}</span>
+              </>
+            )}
           </h1>
 
           {cv.personalInfo.headline && (
             <p style={{
               fontSize: `${fs.body}px`,
-              color: 'rgba(255,255,255,0.75)',
-              margin: '5px 0 0',
+              color: 'rgba(255,255,255,0.78)',
+              margin: '7px 0 0',
               lineHeight: 1.5,
+              letterSpacing: '0.3px',
             }}>
               {cv.personalInfo.headline}
             </p>
@@ -108,7 +124,7 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
             cv.personalInfo.linkedin,
             cv.personalInfo.website,
           ].filter(Boolean).map((line, i) => (
-            <p key={i} style={{ fontSize: `${fs.body}px`, color: 'rgba(255,255,255,0.8)', margin: '3px 0', lineHeight: 1.4, wordBreak: 'break-word' }}>
+            <p key={i} style={{ fontSize: `${fs.body}px`, color: 'rgba(255,255,255,0.84)', margin: '4px 0', lineHeight: 1.45, wordBreak: 'break-word' }}>
               {line}
             </p>
           ))}
@@ -119,13 +135,7 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
           <div key={section.id}>
             <SidebarSectionHeading title={section.title} headingFont={headingFont} fs={fs} />
             {section.type === 'skills' ? (
-              <div style={{ lineHeight: 0 }}>
-                {section.items.map((item: any, i) => (
-                  <span key={i} style={{ display: 'inline-block', verticalAlign: 'top', marginRight: '4px', marginBottom: '4px' }}>
-                    <SkillBadge name={item.name} primary={primary} fs={fs} br={br} variant="sidebar" />
-                  </span>
-                ))}
-              </div>
+              <SkillLines items={section.items.map((i: any) => i.name)} primary={primary} fs={fs} tone="dark" />
             ) : (
               section.items.map((item: any, i) => (
                 <ItemRenderer key={i} item={item} sectionType={section.type} primary={primary} fs={fs} sp={sp} br={br} variant="sidebar" />
@@ -148,7 +158,7 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
         {cv.personalInfo.summary && (
           <div>
             <SectionHeading title={t('template_profile')} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
-            <p style={{ fontSize: `${fs.name}px`, lineHeight: 1.75, color: '#333', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+            <p style={{ fontSize: `${fs.name}px`, lineHeight: 1.75, color: INK.body, margin: 0, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
               {cv.personalInfo.summary}
             </p>
           </div>

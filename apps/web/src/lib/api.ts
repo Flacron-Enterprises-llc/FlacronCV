@@ -2,6 +2,66 @@ import { auth } from './firebase';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
+// A hung request must not wedge the UI (e.g. the auth loading state) forever.
+// Ordinary CRUD is quick, so it keeps a tight budget — but AI-backed endpoints
+// call an LLM and legitimately take much longer. Giving those the default 15s
+// cut generation off mid-flight, which is the "resume import stuck / too slow"
+// symptom: the browser aborted before the model finished, so the user retried
+// into the same wall.
+//
+// This 60s must stay ABOVE the server's own AI budget (OpenAIProvider: one 40s
+// attempt, no retry) so the server always fails first with a real, explainable
+// error instead of the browser aborting a request that is still in flight.
+const REQUEST_TIMEOUT_MS = 15000;
+const AI_TIMEOUT_MS = 60000;
+
+/**
+ * Longer budget for LLM-backed endpoints.
+ *
+ * Note this must cover routes that call the model *indirectly*, not just the
+ * `/ai/*` namespace: creating a cover letter with `generateWithAI` runs a full
+ * generation inside `POST /cover-letters`, and importing a resume runs one
+ * inside `POST /cvs/import`. Those callers also pass an explicit `timeoutMs`,
+ * but matching here means a missed override degrades to "slow" rather than to a
+ * spurious timeout.
+ */
+function timeoutForEndpoint(endpoint: string, override?: number): number {
+  if (typeof override === 'number') return override;
+  if (
+    endpoint.includes('/ai/') ||
+    endpoint.startsWith('/cvs/import') ||
+    endpoint.startsWith('/cover-letters/generate')
+  ) {
+    return AI_TIMEOUT_MS;
+  }
+  return REQUEST_TIMEOUT_MS;
+}
+
+export type ApiErrorKind = 'timeout' | 'offline' | 'network' | 'http';
+
+/**
+ * Error carrying enough context for the UI to decide what to offer the user.
+ * It extends Error, so every existing `(e as Error).message` call site keeps
+ * working unchanged; `retryable` lets a caller show a Retry action only when
+ * retrying could actually help.
+ */
+export class ApiError extends Error {
+  readonly kind: ApiErrorKind;
+  readonly status?: number;
+  readonly retryable: boolean;
+
+  constructor(
+    message: string,
+    opts: { kind: ApiErrorKind; status?: number; retryable?: boolean },
+  ) {
+    super(message);
+    this.name = 'ApiError';
+    this.kind = opts.kind;
+    this.status = opts.status;
+    this.retryable = opts.retryable ?? false;
+  }
+}
+
 async function getAuthHeaders(): Promise<Record<string, string>> {
   if (!auth) return {};
   const user = auth.currentUser;
@@ -17,22 +77,57 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 
 async function request<T>(
   endpoint: string,
-  options: RequestInit = {},
+  options: RequestInit & { timeoutMs?: number } = {},
 ): Promise<T> {
+  const { timeoutMs, ...init } = options;
   const authHeaders = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders,
-      ...options.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${endpoint}`, {
+      signal: init.signal ?? AbortSignal.timeout(timeoutForEndpoint(endpoint, timeoutMs)),
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+        ...init.headers,
+      },
+    });
+  } catch (error) {
+    const name = (error as Error)?.name;
+    if (name === 'TimeoutError' || name === 'AbortError') {
+      // Distinguish the two failure modes the user can actually act on: the
+      // request was still running and we gave up (retry may well succeed), vs.
+      // the device is offline (retrying now cannot succeed). A bare "the server
+      // did not respond" told the user neither.
+      // `typeof` guard, not `navigator?.` — optional chaining still throws a
+      // ReferenceError on an undeclared global during SSR.
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      throw new ApiError(
+        offline
+          ? 'You appear to be offline. Your work is saved — reconnect and try again.'
+          : 'This is taking longer than expected. Your work is saved — please try again.',
+        { kind: offline ? 'offline' : 'timeout', retryable: true },
+      );
+    }
+    // fetch() rejects with a TypeError for DNS/CORS/connection-refused.
+    if (name === 'TypeError') {
+      throw new ApiError("Couldn't reach the server. Please check your connection and try again.", {
+        kind: 'network',
+        retryable: true,
+      });
+    }
+    throw error;
+  }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Request failed' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    const body = await response.json().catch(() => ({}) as { message?: string });
+    // A 5xx / 429 is worth retrying; a 4xx is the caller's own fault and is not.
+    throw new ApiError(body.message || `Request failed (HTTP ${response.status})`, {
+      kind: 'http',
+      status: response.status,
+      retryable: response.status >= 500 || response.status === 429,
+    });
   }
 
   if (response.status === 204 || response.headers.get('content-length') === '0') {
@@ -44,16 +139,30 @@ async function request<T>(
 }
 
 export const api = {
-  get: <T>(endpoint: string) => request<T>(endpoint),
+  get: <T>(endpoint: string, opts?: { timeoutMs?: number }) =>
+    request<T>(endpoint, { timeoutMs: opts?.timeoutMs }),
 
-  post: <T>(endpoint: string, body?: unknown) =>
-    request<T>(endpoint, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
+  post: <T>(endpoint: string, body?: unknown, opts?: { timeoutMs?: number }) =>
+    request<T>(endpoint, {
+      method: 'POST',
+      body: body ? JSON.stringify(body) : undefined,
+      timeoutMs: opts?.timeoutMs,
+    }),
 
-  put: <T>(endpoint: string, body?: unknown) =>
-    request<T>(endpoint, { method: 'PUT', body: body ? JSON.stringify(body) : undefined }),
+  put: <T>(endpoint: string, body?: unknown, opts?: { timeoutMs?: number }) =>
+    request<T>(endpoint, {
+      method: 'PUT',
+      body: body ? JSON.stringify(body) : undefined,
+      timeoutMs: opts?.timeoutMs,
+    }),
 
-  patch: <T>(endpoint: string, body?: unknown) =>
-    request<T>(endpoint, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
+  patch: <T>(endpoint: string, body?: unknown, opts?: { timeoutMs?: number }) =>
+    request<T>(endpoint, {
+      method: 'PATCH',
+      body: body ? JSON.stringify(body) : undefined,
+      timeoutMs: opts?.timeoutMs,
+    }),
 
-  delete: <T>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' }),
+  delete: <T>(endpoint: string, opts?: { timeoutMs?: number }) =>
+    request<T>(endpoint, { method: 'DELETE', timeoutMs: opts?.timeoutMs }),
 };

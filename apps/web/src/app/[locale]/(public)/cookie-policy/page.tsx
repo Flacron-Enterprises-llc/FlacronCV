@@ -1,10 +1,15 @@
 import { getTranslations } from 'next-intl/server';
 import { Metadata } from 'next';
+import { pageMetadata } from '@/lib/seo';
 import { Cookie } from 'lucide-react';
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  params: { locale },
+}: {
+  params: { locale: string };
+}): Promise<Metadata> {
   const t = await getTranslations('cookies_policy');
-  return { title: `${t('title')} — FlacronCV` };
+  return pageMetadata({ locale, path: '/cookie-policy', title: t('title'), description: t('intro') });
 }
 
 export default async function CookiePolicyPage() {

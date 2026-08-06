@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { FirebaseModule } from './modules/firebase/firebase.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -15,7 +16,10 @@ import { SupportModule } from './modules/support/support.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { MailModule } from './modules/mail/mail.module';
+import { ContactModule } from './modules/contact/contact.module';
 import { CRMModule } from './modules/crm/crm.module';
+import { JobsModule } from './modules/jobs/jobs.module';
+import { LeadsModule } from './modules/leads/leads.module';
 import configuration from './config/configuration';
 
 @Module({
@@ -24,16 +28,15 @@ import configuration from './config/configuration';
       isGlobal: true,
       load: [configuration],
     }),
+    // Single global definition on purpose: with a global ThrottlerGuard,
+    // EVERY definition listed here applies to EVERY route — a second, stricter
+    // "auth" entry would rate-limit the whole API to 10 requests / 15 min.
+    // Sensitive endpoints tighten this via @Throttle({ default: {...} }).
     ThrottlerModule.forRoot([
       {
         name: 'default',
         ttl: 60000,
         limit: 100,
-      },
-      {
-        name: 'auth',
-        ttl: 900000, // 15 minutes
-        limit: 10,
       },
     ]),
     ScheduleModule.forRoot(),
@@ -50,7 +53,16 @@ import configuration from './config/configuration';
     SupportModule,
     AdminModule,
     AuditModule,
+    ContactModule,
     CRMModule,
+    JobsModule,
+    LeadsModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

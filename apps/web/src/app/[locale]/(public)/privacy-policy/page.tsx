@@ -1,10 +1,15 @@
 import { getTranslations } from 'next-intl/server';
 import { Metadata } from 'next';
+import { pageMetadata } from '@/lib/seo';
 import { Shield } from 'lucide-react';
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  params: { locale },
+}: {
+  params: { locale: string };
+}): Promise<Metadata> {
   const t = await getTranslations('privacy');
-  return { title: `${t('title')} — FlacronCV` };
+  return pageMetadata({ locale, path: '/privacy-policy', title: t('title'), description: t('intro') });
 }
 
 export default async function PrivacyPolicyPage() {

@@ -8,7 +8,7 @@
 import React from 'react';
 import { useTranslations } from 'next-intl';
 import type { LayoutProps } from './shared';
-import { getTokens, hexToRgba, buildContactLine, buildLinksLine, SectionHeading, ItemRenderer, SkillBadge } from './shared';
+import { getTokens, readableOn, INK, buildContactLine, buildLinksLine, SectionHeading, ItemRenderer, SkillLines } from './shared';
 import { CVSectionType } from '@flacroncv/shared-types';
 
 // Sections that belong in the right column (secondary)
@@ -45,8 +45,11 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
         display: 'flex',
         alignItems: 'center',
         gap: '14px',
-        borderBottom: `3px solid ${primary}`,
-        paddingBottom: `${tightSp.item + 2}px`,
+        // 2px, not 3px. The header rule is the widest single mark on an
+        // Executive CV; at 3px it reads as a banner and pulls weight away from
+        // the name sitting on top of it.
+        borderBottom: `2px solid ${primary}`,
+        paddingBottom: `${tightSp.item + 3}px`,
         marginBottom: `${tightSp.section}px`,
       }}>
         {showPhoto && (
@@ -68,22 +71,27 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
               fontFamily: headingFont,
               fontSize: `${fs.nameTop}px`,
               fontWeight: 800,
-              color: primary,
+              // Accent, but never below readable — see ClassicLayout's nameInk.
+              color: readableOn(primary, '#ffffff', 3.0),
               margin: 0,
               letterSpacing: '-0.3px',
             }}>
               {cv.personalInfo.firstName} {cv.personalInfo.lastName}
             </h1>
+            {/* The job title sits inline beside the name, so it needs a visible
+                separator to stop the two running together as one phrase — and
+                enough ink to be read at 12px next to an 800-weight name. */}
             {cv.personalInfo.headline && (
-              <span style={{ fontSize: `${fs.name}px`, color: '#666', fontWeight: 400 }}>
+              <span style={{ fontSize: `${fs.name}px`, color: INK.subtle, fontWeight: 500 }}>
+                <span style={{ color: INK.hair, marginInlineEnd: '10px' }}>|</span>
                 {cv.personalInfo.headline}
               </span>
             )}
           </div>
-          <p style={{ fontSize: `${fs.body}px`, color: '#888', margin: '4px 0 0', letterSpacing: '0.2px' }}>
+          <p style={{ fontSize: `${fs.body}px`, color: INK.meta, margin: '5px 0 0', letterSpacing: '0.2px' }}>
             {buildContactLine(cv)}
             {(cv.personalInfo.linkedin || cv.personalInfo.website) && (
-              <span style={{ marginLeft: '10px', color: '#aaa' }}>{buildLinksLine(cv)}</span>
+              <span style={{ marginInlineStart: '10px', color: INK.meta }}>{buildLinksLine(cv)}</span>
             )}
           </p>
         </div>
@@ -93,7 +101,7 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
       {cv.personalInfo.summary && (
         <div style={{ marginBottom: `${tightSp.section}px` }}>
           <SectionHeading title={t('template_summary')} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
-          <p style={{ fontSize: `${fs.body}px`, lineHeight: 1.65, color: '#333', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+          <p style={{ fontSize: `${fs.body}px`, lineHeight: 1.65, color: INK.body, margin: 0, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
             {cv.personalInfo.summary}
           </p>
         </div>
@@ -120,13 +128,9 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
             <div key={section.id} style={{ marginBottom: `${tightSp.section}px` }}>
               <SectionHeading title={section.title} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
               {section.type === 'skills' ? (
-                <div style={{ lineHeight: 0 }}>
-                  {section.items.map((item: any, i) => (
-                    <span key={i} style={{ display: 'inline-block', verticalAlign: 'top', marginRight: '4px', marginBottom: '4px' }}>
-                      <SkillBadge name={item.name} primary={primary} fs={fs} br={br} variant="default" />
-                    </span>
-                  ))}
-                </div>
+                // Stacked, not a run: this is the 40% column, where a separated
+                // list wraps every two or three items and stops scanning as one.
+                <SkillLines items={section.items.map((i: any) => i.name)} primary={primary} fs={fs} tone="light" />
               ) : (
                 section.items.map((item: any, i) => (
                   <ItemRenderer key={i} item={item} sectionType={section.type} primary={primary} fs={fs} sp={tightSp} br={br} variant="default" />

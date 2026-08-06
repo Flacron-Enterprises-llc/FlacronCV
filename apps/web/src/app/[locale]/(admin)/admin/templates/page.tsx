@@ -31,10 +31,13 @@ interface Template {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  /** How many documents reference this template; drives the archive warning. */
+  usageCount?: number;
 }
 
 export default function AdminTemplatesPage(): React.JSX.Element | null {
   const t = useTranslations('admin');
+  const tc = useTranslations('common');
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
@@ -49,7 +52,7 @@ export default function AdminTemplatesPage(): React.JSX.Element | null {
     mutationFn: (data: typeof form) => api.post('/templates', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'templates'] });
-      toast.success('Template created');
+      toast.success(t('template_created'));
       closeModal();
     },
     onError: (err: Error) => toast.error(err.message),
@@ -60,7 +63,7 @@ export default function AdminTemplatesPage(): React.JSX.Element | null {
       api.put(`/templates/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'templates'] });
-      toast.success('Template updated');
+      toast.success(t('template_updated'));
       closeModal();
     },
     onError: (err: Error) => toast.error(err.message),
@@ -70,7 +73,7 @@ export default function AdminTemplatesPage(): React.JSX.Element | null {
     mutationFn: (id: string) => api.delete(`/templates/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'templates'] });
-      toast.success('Template deleted');
+      toast.success(t('template_deleted'));
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -137,11 +140,11 @@ export default function AdminTemplatesPage(): React.JSX.Element | null {
             {t('templates')}
           </h1>
           <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
-            Manage CV and cover letter templates
+            {t('templates_subtitle')}
           </p>
         </div>
         <Button onClick={openCreate} icon={<Plus className="h-4 w-4" />}>
-          Create Template
+          {t('create_template')}
         </Button>
       </div>
 
@@ -161,13 +164,30 @@ export default function AdminTemplatesPage(): React.JSX.Element | null {
                 <div className="flex gap-1">
                   <button
                     onClick={() => openEdit(tmpl)}
+                    aria-label={t('edit_template')}
+                    title={t('edit_template')}
                     className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700"
                   >
                     <Edit2 className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => deleteMutation.mutate(tmpl.id)}
-                    className="rounded-lg p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    onClick={() => {
+                      // Name the template and state how many documents already
+                      // use it, so an admin can see the blast radius before
+                      // archiving. Deletion is a soft archive server-side
+                      // (isActive:false), so existing documents keep rendering.
+                      const inUse = tmpl.usageCount ?? 0;
+                      const message = inUse
+                        ? t('delete_template_confirm_in_use', { name: tmpl.name, count: inUse })
+                        : t('delete_template_confirm_named', { name: tmpl.name });
+                      if (window.confirm(message)) {
+                        deleteMutation.mutate(tmpl.id);
+                      }
+                    }}
+                    disabled={deleteMutation.isPending}
+                    aria-label={tc('delete')}
+                    title={tc('delete')}
+                    className="rounded-lg p-1.5 text-red-400 hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-900/20"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -178,7 +198,7 @@ export default function AdminTemplatesPage(): React.JSX.Element | null {
                 <Badge variant={tierVariant(tmpl.tier)}>{tmpl.tier.toUpperCase()}</Badge>
               </div>
               <p className="mt-3 text-xs text-stone-400">
-                Updated {formatDate(tmpl.updatedAt)}
+                {t('updated_at', { date: formatDate(tmpl.updatedAt) })}
               </p>
             </Card>
           ))}
@@ -187,10 +207,10 @@ export default function AdminTemplatesPage(): React.JSX.Element | null {
         <Card className="py-16 text-center">
           <LayoutTemplate className="mx-auto h-12 w-12 text-stone-300 dark:text-stone-600" />
           <h3 className="mt-4 text-lg font-semibold text-stone-900 dark:text-white">
-            No templates yet
+            {t('no_templates')}
           </h3>
           <Button className="mt-4" onClick={openCreate} icon={<Plus className="h-4 w-4" />}>
-            Create First Template
+            {t('create_first_template')}
           </Button>
         </Card>
       )}
@@ -199,53 +219,53 @@ export default function AdminTemplatesPage(): React.JSX.Element | null {
       <Modal
         isOpen={modalOpen}
         onClose={closeModal}
-        title={editingTemplate ? 'Edit Template' : 'Create Template'}
+        title={editingTemplate ? t('edit_template') : t('create_template')}
         size="md"
       >
         <div className="space-y-4">
           <Input
             id="template-name"
-            label="Template Name"
+            label={t('template_name')}
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            placeholder="e.g. Modern Professional"
+            placeholder={t('template_name_placeholder')}
           />
           <div>
             <label className="mb-1.5 block text-sm font-medium text-stone-700 dark:text-stone-300">
-              Category
+              {t('category')}
             </label>
             <select
               value={form.category}
               onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
               className="input-field w-full"
             >
-              <option value="cv">CV</option>
-              <option value="cover_letter">Cover Letter</option>
+              <option value="cv">{t('category_cv')}</option>
+              <option value="cover_letter">{t('category_cover_letter')}</option>
             </select>
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-stone-700 dark:text-stone-300">
-              Tier
+              {t('tier')}
             </label>
             <select
               value={form.tier}
               onChange={(e) => setForm((f) => ({ ...f, tier: e.target.value }))}
               className="input-field w-full"
             >
-              <option value="free">Free</option>
-              <option value="pro">Pro</option>
-              <option value="enterprise">Enterprise</option>
+              <option value="free">{tc('free')}</option>
+              <option value="pro">{tc('pro')}</option>
+              <option value="enterprise">{tc('enterprise')}</option>
             </select>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" onClick={closeModal}>
-              Cancel
+              {tc('cancel')}
             </Button>
             <Button
               onClick={handleSubmit}
               loading={createMutation.isPending || updateMutation.isPending}
             >
-              {editingTemplate ? 'Update' : 'Create'}
+              {editingTemplate ? t('update') : t('create')}
             </Button>
           </div>
         </div>
