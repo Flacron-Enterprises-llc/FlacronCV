@@ -3,7 +3,7 @@ import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { CVService } from '../cv/cv.service';
 import { CoverLetterService } from '../cover-letter/cover-letter.service';
 import { UsersService } from '../users/users.service';
-import { PLAN_CONFIGS } from '@flacroncv/shared-types';
+import { PLAN_CONFIGS, SubscriptionPlan, resolveEffectivePlan } from '@flacroncv/shared-types';
 import * as Handlebars from 'handlebars';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -42,7 +42,7 @@ export class ExportService {
 
   private async checkExportLimit(userId: string): Promise<void> {
     const user = await this.usersService.findByIdOrThrow(userId);
-    const limits = PLAN_CONFIGS[user.subscription.plan].limits;
+    const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
     if (limits.exports !== 'unlimited' && user.usage.exportsThisMonth >= limits.exports) {
       throw new ForbiddenException(
         `Export limit reached for your plan (${limits.exports}/month). Please upgrade.`,
@@ -52,11 +52,41 @@ export class ExportService {
 
   private async checkDocxAccess(userId: string): Promise<void> {
     const user = await this.usersService.findByIdOrThrow(userId);
-    if (user.subscription.plan === 'free') {
+    if (resolveEffectivePlan(user.subscription) === SubscriptionPlan.FREE) {
       throw new ForbiddenException(
         'DOCX export is not available on the free plan. Please upgrade to Pro or Enterprise.',
       );
     }
+  }
+
+  /**
+   * Server-authorized gate for the CLIENT-SIDE export flow. Because the CV /
+   * cover-letter file is rendered in the browser (html2canvas/jsPDF/docx), the
+   * client calls this FIRST and only proceeds to generate when { allowed: true }.
+   * This is the single point where DOCX-is-paid and the monthly export quota are
+   * actually enforced, and the only place usage.exportsThisMonth is incremented
+   * for the real in-editor export UX. Returns a decision rather than throwing so
+   * the client can show the right paywall without parsing error strings.
+   */
+  async recordClientExport(
+    userId: string,
+    format: 'pdf' | 'docx',
+  ): Promise<{ allowed: boolean; reason?: 'docx_requires_paid' | 'limit_reached' }> {
+    const user = await this.usersService.findByIdOrThrow(userId);
+    const plan = resolveEffectivePlan(user.subscription);
+    const limits = PLAN_CONFIGS[plan].limits;
+
+    // DOCX is a paid-plan feature.
+    if (format === 'docx' && plan === SubscriptionPlan.FREE) {
+      return { allowed: false, reason: 'docx_requires_paid' };
+    }
+    // Monthly export quota (FREE = 2/month; paid plans = unlimited).
+    if (limits.exports !== 'unlimited' && user.usage.exportsThisMonth >= limits.exports) {
+      return { allowed: false, reason: 'limit_reached' };
+    }
+
+    await this.usersService.incrementUsage(userId, 'exportsThisMonth');
+    return { allowed: true };
   }
 
   private loadTemplates() {
@@ -73,7 +103,7 @@ export class ExportService {
           }
         });
       }
-    } catch (error) {
+    } catch {
       this.logger.warn('Could not load templates directory');
     }
   }
@@ -96,6 +126,17 @@ export class ExportService {
 
     try {
       const page = await browser.newPage();
+      // Harden against SSRF / injected-script execution: these print templates are
+      // fully self-contained (no external fonts/images/scripts), so disable JS and
+      // block every non-inline outbound request. This neutralizes injected markup
+      // such as <img src="http://169.254.169.254/…"> or <script>fetch(internal)</script>
+      // embedded in user-supplied CV / cover-letter fields.
+      await page.setJavaScriptEnabled(false);
+      await page.setRequestInterception(true);
+      page.on('request', (req: any) => {
+        if (req.url().startsWith('data:')) req.continue();
+        else req.abort();
+      });
       await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
 
       const pdfBuffer = await page.pdf({
@@ -233,6 +274,16 @@ export class ExportService {
     return { downloadUrl: url, expiresAt: new Date(Date.now() + 60 * 60 * 1000) };
   }
 
+  /** HTML-escape a plaintext value before interpolating it into a template. */
+  private esc(v: unknown): string {
+    return String(v ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   private renderCVHTML(cv: any, sections: any[]): string {
     const template = this.templates.get(cv.templateId);
     if (template) {
@@ -266,40 +317,40 @@ export class ExportService {
 </head>
 <body>
   <div class="header">
-    <h1>${cv.personalInfo.firstName} ${cv.personalInfo.lastName}</h1>
-    <div class="headline">${cv.personalInfo.headline}</div>
-    <div class="contact">${cv.personalInfo.email} | ${cv.personalInfo.phone} | ${cv.personalInfo.city}, ${cv.personalInfo.country}</div>
+    <h1>${this.esc(cv.personalInfo.firstName)} ${this.esc(cv.personalInfo.lastName)}</h1>
+    <div class="headline">${this.esc(cv.personalInfo.headline)}</div>
+    <div class="contact">${this.esc(cv.personalInfo.email)} | ${this.esc(cv.personalInfo.phone)} | ${this.esc(cv.personalInfo.city)}, ${this.esc(cv.personalInfo.country)}</div>
   </div>
-  ${cv.personalInfo.summary ? `<div class="summary"><h2>Professional Summary</h2><p>${cv.personalInfo.summary}</p></div>` : ''}
+  ${cv.personalInfo.summary ? `<div class="summary"><h2>Professional Summary</h2><p>${this.esc(cv.personalInfo.summary)}</p></div>` : ''}
   ${sections
     .filter((s: any) => s.isVisible)
     .map((section: any) => {
       let itemsHtml: string;
       if (section.type === 'skills') {
         itemsHtml = `<div class="skills-list">${section.items
-          .map((item: any) => `<span class="skill-tag">${item.name}${item.level ? ` <span class="skill-level">${item.level}</span>` : ''}</span>`)
+          .map((item: any) => `<span class="skill-tag">${this.esc(item.name)}${item.level ? ` <span class="skill-level">${this.esc(item.level)}</span>` : ''}</span>`)
           .join('')}</div>`;
       } else {
         itemsHtml = section.items
           .map((item: any) => {
             if (item.company) {
               return `<div class="item">
-              <div class="item-header"><span class="item-title">${item.position}</span><span class="item-date">${item.startDate} - ${item.endDate || 'Present'}</span></div>
-              <div class="item-subtitle">${item.company}${item.location ? ` | ${item.location}` : ''}</div>
-              ${item.description ? `<div class="item-desc">${item.description}</div>` : ''}
+              <div class="item-header"><span class="item-title">${this.esc(item.position)}</span><span class="item-date">${this.esc(item.startDate)} - ${this.esc(item.endDate || 'Present')}</span></div>
+              <div class="item-subtitle">${this.esc(item.company)}${item.location ? ` | ${this.esc(item.location)}` : ''}</div>
+              ${item.description ? `<div class="item-desc">${this.esc(item.description)}</div>` : ''}
             </div>`;
             }
             if (item.institution) {
               return `<div class="item">
-              <div class="item-header"><span class="item-title">${item.degree} in ${item.field}</span><span class="item-date">${item.startDate} - ${item.endDate || 'Present'}</span></div>
-              <div class="item-subtitle">${item.institution}</div>
+              <div class="item-header"><span class="item-title">${this.esc(item.degree)} in ${this.esc(item.field)}</span><span class="item-date">${this.esc(item.startDate)} - ${this.esc(item.endDate || 'Present')}</span></div>
+              <div class="item-subtitle">${this.esc(item.institution)}</div>
             </div>`;
             }
-            return `<div class="item"><span class="item-title">${item.name || item.title || ''}</span></div>`;
+            return `<div class="item"><span class="item-title">${this.esc(item.name || item.title || '')}</span></div>`;
           })
           .join('');
       }
-      return `<div class="section"><h2>${section.title}</h2>${itemsHtml}</div>`;
+      return `<div class="section"><h2>${this.esc(section.title)}</h2>${itemsHtml}</div>`;
     })
     .join('')}
 </body>
@@ -323,6 +374,17 @@ export class ExportService {
 
     try {
       const page = await browser.newPage();
+      // Harden against SSRF / injected-script execution: these print templates are
+      // fully self-contained (no external fonts/images/scripts), so disable JS and
+      // block every non-inline outbound request. This neutralizes injected markup
+      // such as <img src="http://169.254.169.254/…"> or <script>fetch(internal)</script>
+      // embedded in user-supplied CV / cover-letter fields.
+      await page.setJavaScriptEnabled(false);
+      await page.setRequestInterception(true);
+      page.on('request', (req: any) => {
+        if (req.url().startsWith('data:')) req.continue();
+        else req.abort();
+      });
       await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
 
       const pdfBuffer = await page.pdf({
@@ -477,13 +539,13 @@ export class ExportService {
   <div class="date">${currentDate}</div>
   ${coverLetter.recipientName || coverLetter.companyName ? `
   <div class="recipient">
-    ${coverLetter.recipientName ? `<div class="recipient-line">${coverLetter.recipientName}</div>` : ''}
-    ${coverLetter.recipientTitle ? `<div class="recipient-line">${coverLetter.recipientTitle}</div>` : ''}
-    ${coverLetter.companyName ? `<div class="recipient-line">${coverLetter.companyName}</div>` : ''}
-    ${coverLetter.companyAddress ? `<div class="recipient-line">${coverLetter.companyAddress}</div>` : ''}
+    ${coverLetter.recipientName ? `<div class="recipient-line">${this.esc(coverLetter.recipientName)}</div>` : ''}
+    ${coverLetter.recipientTitle ? `<div class="recipient-line">${this.esc(coverLetter.recipientTitle)}</div>` : ''}
+    ${coverLetter.companyName ? `<div class="recipient-line">${this.esc(coverLetter.companyName)}</div>` : ''}
+    ${coverLetter.companyAddress ? `<div class="recipient-line">${this.esc(coverLetter.companyAddress)}</div>` : ''}
   </div>
   ` : ''}
-  ${coverLetter.jobTitle ? `<div class="subject">RE: ${coverLetter.jobTitle}</div>` : ''}
+  ${coverLetter.jobTitle ? `<div class="subject">RE: ${this.esc(coverLetter.jobTitle)}</div>` : ''}
   <div class="content">${coverLetter.content}</div>
 </body>
 </html>`;

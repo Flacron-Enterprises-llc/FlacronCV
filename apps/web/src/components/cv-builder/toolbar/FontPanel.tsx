@@ -50,6 +50,10 @@ export default function FontPanel() {
   return (
     <div className="relative">
       <button
+        type="button"
+        aria-label={t('font_family')}
+        aria-haspopup="dialog"
+        aria-expanded={open}
         className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800 transition-colors"
         onClick={() => setOpen(!open)}
         title={t('font_family')}
@@ -123,13 +127,15 @@ export default function FontPanel() {
                 className="text-sm font-semibold text-stone-700 dark:text-stone-300"
                 style={{ fontFamily: fontNameToCssVar(currentHeadingFont) }}
               >
-                Heading Preview
+                {t('font_preview_heading')}
               </p>
               <p
                 className="text-xs text-stone-500 dark:text-stone-400"
                 style={{ fontFamily: fontNameToCssVar(currentBodyFont) }}
               >
-                Body text preview — The quick brown fox jumps over the lazy dog.
+                {/* Script-appropriate per locale — a Latin pangram tells an
+                    Arabic or Urdu user nothing about how their font renders. */}
+                {t('font_preview_body')}
               </p>
             </div>
           </div>

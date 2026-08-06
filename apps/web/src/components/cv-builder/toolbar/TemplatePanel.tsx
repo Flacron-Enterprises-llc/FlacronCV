@@ -1,66 +1,61 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useCVStore } from '@/store/cv-store';
 import { useAuth } from '@/providers/AuthProvider';
 import { LayoutTemplate, X, ChevronDown, Lock } from 'lucide-react';
 import { useRouter } from '@/i18n/routing';
 import type { CVLayout, SectionStyle, BorderRadiusStyle } from '@flacroncv/shared-types';
-import { SubscriptionPlan } from '@flacroncv/shared-types';
+import { resolveEffectivePlan, CV_LAYOUT_TIER, canUseCvLayout } from '@flacroncv/shared-types';
 import CVThumbnail from '@/components/cv-builder/CVThumbnail';
 
 // ─── Layout cards ─────────────────────────────────────────────────────────────
 
-// Layouts gated by plan
-const LAYOUT_PLAN: Record<CVLayout, SubscriptionPlan> = {
-  'classic':    SubscriptionPlan.FREE,
-  'sidebar':    SubscriptionPlan.FREE,
-  'top-bar':    SubscriptionPlan.PRO,
-  'compact':    SubscriptionPlan.PRO,
-  'slate-gold': SubscriptionPlan.PRO,
-};
-
 interface LayoutOption {
   key: CVLayout;
-  label: string;
-  personality: string;
+  labelKey: string;
+  personalityKey: string;
 }
 
+// Option tables hold i18n KEYS, not literals — the panel is rendered in all six
+// locales (including RTL Arabic and Urdu) and previously showed raw English here.
+// Same pattern as FontPanel's FONT_SIZE_OPTIONS.
 const LAYOUTS: LayoutOption[] = [
-  { key: 'classic',    label: 'Classic',    personality: 'Modern Minimal'        },
-  { key: 'sidebar',    label: 'Sidebar',    personality: 'Corporate Professional' },
-  { key: 'top-bar',    label: 'Top Bar',    personality: 'Creative / Bold'        },
-  { key: 'compact',    label: 'Compact',    personality: 'Executive Dense'        },
-  { key: 'slate-gold', label: 'Slate Gold', personality: 'High-Impact Minimalist' },
+  { key: 'classic',    labelKey: 'layout_classic',    personalityKey: 'layout_classic_desc'    },
+  { key: 'sidebar',    labelKey: 'layout_sidebar',    personalityKey: 'layout_sidebar_desc'    },
+  { key: 'top-bar',    labelKey: 'layout_top_bar',    personalityKey: 'layout_top_bar_desc'    },
+  { key: 'compact',    labelKey: 'layout_compact',    personalityKey: 'layout_compact_desc'    },
+  { key: 'slate-gold', labelKey: 'layout_slate_gold', personalityKey: 'layout_slate_gold_desc' },
 ];
 
 const COLORS = [
-  { label: 'Indigo',     value: '#4f46e5' },
-  { label: 'Blue',       value: '#2563eb' },
-  { label: 'Cyan',       value: '#0891b2' },
-  { label: 'Emerald',    value: '#059669' },
-  { label: 'Teal',       value: '#0d9488' },
-  { label: 'Rose',       value: '#e11d48' },
-  { label: 'Orange',     value: '#ea580c' },
-  { label: 'Amber',      value: '#d97706' },
-  { label: 'Violet',     value: '#7c3aed' },
-  { label: 'Slate',      value: '#475569' },
-  { label: 'Stone',      value: '#78716c' },
-  { label: 'Zinc',       value: '#3f3f46' },
+  { labelKey: 'color_indigo',     value: '#4f46e5' },
+  { labelKey: 'color_blue',       value: '#2563eb' },
+  { labelKey: 'color_cyan',       value: '#0891b2' },
+  { labelKey: 'color_emerald',    value: '#059669' },
+  { labelKey: 'color_teal',       value: '#0d9488' },
+  { labelKey: 'color_rose',       value: '#e11d48' },
+  { labelKey: 'color_orange',     value: '#ea580c' },
+  { labelKey: 'color_amber',      value: '#d97706' },
+  { labelKey: 'color_violet',     value: '#7c3aed' },
+  { labelKey: 'color_slate',      value: '#475569' },
+  { labelKey: 'color_stone',      value: '#78716c' },
+  { labelKey: 'color_zinc',       value: '#3f3f46' },
 ];
 
-const SECTION_STYLES: { key: SectionStyle; label: string }[] = [
-  { key: 'underline',    label: 'Underline' },
-  { key: 'left-border',  label: 'Left border' },
-  { key: 'card',         label: 'Badge' },
-  { key: 'minimal',      label: 'Minimal' },
+const SECTION_STYLES: { key: SectionStyle; labelKey: string }[] = [
+  { key: 'underline',    labelKey: 'section_style_underline' },
+  { key: 'left-border',  labelKey: 'section_style_left_border' },
+  { key: 'card',         labelKey: 'section_style_badge' },
+  { key: 'minimal',      labelKey: 'section_style_minimal' },
 ];
 
-const BORDER_RADII: { key: BorderRadiusStyle; label: string }[] = [
-  { key: 'none',   label: 'Sharp' },
-  { key: 'small',  label: 'Subtle' },
-  { key: 'medium', label: 'Rounded' },
-  { key: 'large',  label: 'Soft' },
+const BORDER_RADII: { key: BorderRadiusStyle; labelKey: string }[] = [
+  { key: 'none',   labelKey: 'corner_sharp' },
+  { key: 'small',  labelKey: 'corner_subtle' },
+  { key: 'medium', labelKey: 'corner_rounded' },
+  { key: 'large',  labelKey: 'corner_soft' },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -71,11 +66,10 @@ export default function TemplatePanel() {
   const { cv, updateStyling } = useCVStore();
   const { user } = useAuth();
   const router = useRouter();
+  const t = useTranslations('template_picker');
 
-  const userPlan = (user?.subscription?.plan || SubscriptionPlan.FREE) as SubscriptionPlan;
-  const planOrder = [SubscriptionPlan.FREE, SubscriptionPlan.PRO, SubscriptionPlan.ENTERPRISE];
-  const canUseLayout = (layout: CVLayout) =>
-    planOrder.indexOf(userPlan) >= planOrder.indexOf(LAYOUT_PLAN[layout]);
+  const userPlan = resolveEffectivePlan(user?.subscription);
+  const canUseLayout = (layout: CVLayout) => canUseCvLayout(layout, userPlan);
 
   const currentLayout    = ((cv?.styling as any)?.layout     || 'classic')   as CVLayout;
   const currentColor     = cv?.styling.primaryColor || '#2563eb';
@@ -100,10 +94,12 @@ export default function TemplatePanel() {
     <div className="relative" ref={panelRef}>
       <button
         onClick={() => setOpen(o => !o)}
+        aria-label={t('design_panel')}
+        aria-expanded={open}
         className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800 transition-colors"
       >
         <LayoutTemplate className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Design</span>
+        <span className="hidden sm:inline">{t('design_panel')}</span>
         <ChevronDown className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -116,7 +112,7 @@ export default function TemplatePanel() {
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-stone-100 px-4 py-2.5 dark:border-stone-800">
-              <span className="text-xs font-semibold text-stone-700 dark:text-stone-300">CV Design</span>
+              <span className="text-xs font-semibold text-stone-700 dark:text-stone-300">{t('cv_design')}</span>
               <button onClick={() => setOpen(false)} className="rounded p-0.5 text-stone-400 hover:text-stone-600">
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -125,7 +121,7 @@ export default function TemplatePanel() {
             <div className="space-y-5 p-4">
               {/* ── Layout ── */}
               <div>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">Layout</p>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">{t('layout_heading')}</p>
                 <div className="grid grid-cols-4 gap-2">
                   {LAYOUTS.map(opt => {
                     const locked = !canUseLayout(opt.key);
@@ -140,7 +136,7 @@ export default function TemplatePanel() {
                           }
                           updateStyling('layout' as any, opt.key);
                         }}
-                        title={locked ? `${opt.label} — Requires ${LAYOUT_PLAN[opt.key]} plan` : `${opt.label} — ${opt.personality}`}
+                        title={locked ? t('layout_locked_tooltip', { name: t(opt.labelKey), tier: CV_LAYOUT_TIER[opt.key] }) : t('layout_tooltip', { name: t(opt.labelKey), personality: t(opt.personalityKey) })}
                         className={`relative flex flex-col items-center gap-1.5 rounded-lg p-1.5 transition-all ${
                           currentLayout === opt.key
                             ? 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-900/20'
@@ -157,7 +153,7 @@ export default function TemplatePanel() {
                         >
                           <CVThumbnail layout={opt.key} color={currentColor} />
                         </div>
-                        <span className="text-[9px] font-medium text-stone-600 dark:text-stone-400">{opt.label}</span>
+                        <span className="text-[9px] font-medium text-stone-600 dark:text-stone-400">{t(opt.labelKey)}</span>
                         {locked && (
                           <div className="absolute inset-0 flex items-center justify-center rounded-lg">
                             <div className="rounded-full bg-stone-900/70 p-1">
@@ -171,18 +167,21 @@ export default function TemplatePanel() {
                 </div>
                 {/* Personality label */}
                 <p className="mt-1.5 text-center text-[10px] text-stone-400 italic">
-                  {LAYOUTS.find(l => l.key === currentLayout)?.personality}
+                  {(() => {
+                    const key = LAYOUTS.find(l => l.key === currentLayout)?.personalityKey;
+                    return key ? t(key) : null;
+                  })()}
                 </p>
               </div>
 
               {/* ── Primary colour ── */}
               <div>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">Accent Colour</p>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">{t('accent_colour')}</p>
                 <div className="flex flex-wrap gap-2">
                   {COLORS.map(c => (
                     <button
                       key={c.value}
-                      title={c.label}
+                      title={t(c.labelKey)}
                       onClick={() => updateStyling('primaryColor', c.value)}
                       style={{ background: c.value, width: 22, height: 22, borderRadius: '50%' }}
                       className={`transition-transform hover:scale-110 ${
@@ -191,7 +190,7 @@ export default function TemplatePanel() {
                     />
                   ))}
                   {/* Custom colour */}
-                  <label title="Custom colour" style={{ position: 'relative', width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', border: '2px dashed #ccc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <label title={t('custom_colour')} style={{ position: 'relative', width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', border: '2px dashed #ccc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <span style={{ fontSize: 12, color: '#999' }}>+</span>
                     <input
                       type="color"
@@ -205,7 +204,7 @@ export default function TemplatePanel() {
 
               {/* ── Section heading style ── */}
               <div>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">Section Headings</p>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">{t('section_headings')}</p>
                 <div className="grid grid-cols-2 gap-1.5">
                   {SECTION_STYLES.map(s => (
                     <button
@@ -217,7 +216,7 @@ export default function TemplatePanel() {
                           : 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-400 dark:hover:bg-stone-700'
                       }`}
                     >
-                      {s.label}
+                      {t(s.labelKey)}
                     </button>
                   ))}
                 </div>
@@ -225,7 +224,7 @@ export default function TemplatePanel() {
 
               {/* ── Border radius ── */}
               <div>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">Corner Style</p>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">{t('corner_style')}</p>
                 <div className="grid grid-cols-4 gap-1.5">
                   {BORDER_RADII.map(r => (
                     <button
@@ -237,7 +236,7 @@ export default function TemplatePanel() {
                           : 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-400'
                       }`}
                     >
-                      {r.label}
+                      {t(r.labelKey)}
                     </button>
                   ))}
                 </div>

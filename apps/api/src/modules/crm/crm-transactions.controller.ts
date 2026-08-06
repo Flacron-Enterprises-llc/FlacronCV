@@ -10,6 +10,8 @@ import {
   Res,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { csvCell } from '../../common/utils/csv';
+import { toIsoString } from '../../common/utils/date';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CRMTransactionsService } from './crm-transactions.service';
 import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
@@ -66,14 +68,14 @@ export class CRMTransactionsController {
       [
         t.id,
         t.customerId,
-        `"${t.customerName.replace(/"/g, '""')}"`,
+        csvCell(t.customerName),
         t.amount.toFixed(2),
         t.currency,
         t.paymentMethod ?? '',
-        t.description ? `"${t.description.replace(/"/g, '""')}"` : '',
-        new Date(t.date).toISOString(),
+        csvCell(t.description),
+        toIsoString(t.date),
         t.status,
-        new Date(t.createdAt).toISOString(),
+        toIsoString(t.createdAt),
       ].join(','),
     );
 

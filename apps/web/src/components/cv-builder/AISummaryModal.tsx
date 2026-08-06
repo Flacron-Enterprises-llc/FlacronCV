@@ -1,15 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useCVStore } from '@/store/cv-store';
 import { useAuth } from '@/providers/AuthProvider';
+import { useModalA11y } from '@/hooks/useModalA11y';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import Button from '@/components/ui/Button';
 import UpgradeModal from '@/components/shared/UpgradeModal';
 import { X, Sparkles, RefreshCw, PlusCircle, Replace } from 'lucide-react';
 import { toast } from 'sonner';
+import { PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
 
 interface AISummaryModalProps {
   cvId: string;
@@ -38,11 +40,25 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const titleId = useId();
+
+  const handleClose = () => {
+    onClose();
+    setGeneratedSummary('');
+    setIsEditing(false);
+    setProfession('');
+    setKeySkills('');
+    setCareerGoal('');
+  };
+  const dialogRef = useModalA11y<HTMLDivElement>(open, handleClose);
 
   if (!open) return null;
 
   const creditsUsed = user?.usage?.aiCreditsUsed ?? 0;
-  const creditsLimit = user?.usage?.aiCreditsLimit ?? 5;
+  const creditsLimit = Math.min(
+    user?.usage?.aiCreditsLimit ?? 5,
+    PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)].limits.aiCredits,
+  );
   const outOfCredits = creditsUsed >= creditsLimit;
 
   const handleGenerate = async () => {
@@ -67,12 +83,21 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
       setGeneratedSummary(result.content);
       refreshUser();
     } catch (error) {
-      // Fallback: generate a local summary if API fails
-      const skills = keySkills.split(',').map((s) => s.trim()).filter(Boolean);
-      const levelText = experienceLevel.replace('_', ' ');
-      const fallback = `${levelText.charAt(0).toUpperCase() + levelText.slice(1)} ${profession} with expertise in ${skills.length > 0 ? skills.join(', ') : 'various technologies'}. ${careerGoal ? careerGoal + '.' : 'Passionate about delivering high-quality results and continuous professional growth.'}`;
-      setGeneratedSummary(fallback);
-      toast.info(t('generated_locally'));
+      const message = (error as Error)?.message || '';
+      // An out-of-credits 503 (stale-state race — the client thought credits
+      // remained) must surface the upgrade prompt, NOT be masked by a fabricated
+      // "local" summary that looks like real output.
+      if (/credit/i.test(message)) {
+        setShowUpgrade(true);
+      } else {
+        // Genuine transient failure (network / timeout / provider down): fall
+        // back to a local, clearly-labelled summary rather than blocking the user.
+        const skills = keySkills.split(',').map((s) => s.trim()).filter(Boolean);
+        const levelText = experienceLevel.replace('_', ' ');
+        const fallback = `${levelText.charAt(0).toUpperCase() + levelText.slice(1)} ${profession} with expertise in ${skills.length > 0 ? skills.join(', ') : 'various technologies'}. ${careerGoal ? careerGoal + '.' : 'Passionate about delivering high-quality results and continuous professional growth.'}`;
+        setGeneratedSummary(fallback);
+        toast.info(t('generated_locally'));
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -104,15 +129,6 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
     setCareerGoal('');
   };
 
-  const handleClose = () => {
-    onClose();
-    setGeneratedSummary('');
-    setIsEditing(false);
-    setProfession('');
-    setKeySkills('');
-    setCareerGoal('');
-  };
-
   return (
     <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -120,17 +136,25 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleClose} />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg animate-scale-in rounded-xl border border-stone-200 bg-white shadow-2xl dark:border-stone-700 dark:bg-stone-900">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="relative flex max-h-[90vh] w-full max-w-lg flex-col animate-scale-in overflow-hidden rounded-xl border border-stone-200 bg-white shadow-2xl outline-none dark:border-stone-700 dark:bg-stone-900"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4 dark:border-stone-700">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-brand-600" />
-            <h3 className="text-lg font-semibold text-stone-900 dark:text-white">
+            <h3 id={titleId} className="text-lg font-semibold text-stone-900 dark:text-white">
               {t('ai_summary_title')}
             </h3>
           </div>
           <button
             onClick={handleClose}
+            aria-label={tCommon('close')}
             className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800"
           >
             <X className="h-5 w-5" />
@@ -138,7 +162,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
         </div>
 
         {/* Body */}
-        <div className="space-y-4 px-5 py-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
           {!generatedSummary ? (
             <>
               {/* Profession */}
@@ -215,9 +239,18 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
                 />
               ) : (
                 <div
-                  className="cursor-pointer rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm leading-relaxed text-stone-700 hover:border-brand-300 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-300"
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm leading-relaxed text-stone-700 hover:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-300"
                   onClick={() => setIsEditing(true)}
-                  title="Click to edit"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setIsEditing(true);
+                    }
+                  }}
+                  title={t('click_to_edit')}
+                  aria-label={t('click_to_edit')}
                 >
                   {generatedSummary}
                 </div>

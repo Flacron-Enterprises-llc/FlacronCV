@@ -136,6 +136,20 @@ export class CRMSubscriptionsService {
     await this.stripe.subscriptions.cancel(subscriptionId);
     this.logger.log(`Admin canceled subscription ${subscriptionId} for user ${sub.userId}`);
 
+    // Reflect the cancellation on the local record immediately so the row this
+    // method returns (and the list view) shows "canceled" right away, instead of
+    // the stale "active" it held until the async customer.subscription.deleted
+    // webhook arrived (which also re-confirms these same fields).
+    await this.firebase.firestore.collection(this.subCol).doc(subscriptionId).set(
+      {
+        status: 'canceled',
+        canceledAt: new Date(),
+        cancelAtPeriodEnd: false,
+        updatedAt: new Date(),
+      },
+      { merge: true },
+    );
+
     await this.audit.log({
       actorId,
       actorEmail,

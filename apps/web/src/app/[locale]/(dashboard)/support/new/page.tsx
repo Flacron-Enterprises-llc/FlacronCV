@@ -20,19 +20,19 @@ import {
   TicketPriority,
 } from '@flacroncv/shared-types';
 
-const categoryOptions: { value: TicketCategory; label: string }[] = [
-  { value: TicketCategory.GENERAL, label: 'General' },
-  { value: TicketCategory.BUG, label: 'Bug Report' },
-  { value: TicketCategory.FEATURE_REQUEST, label: 'Feature Request' },
-  { value: TicketCategory.BILLING, label: 'Billing' },
-  { value: TicketCategory.ACCOUNT, label: 'Account' },
+const CATEGORY_VALUES: TicketCategory[] = [
+  TicketCategory.GENERAL,
+  TicketCategory.BUG,
+  TicketCategory.FEATURE_REQUEST,
+  TicketCategory.BILLING,
+  TicketCategory.ACCOUNT,
 ];
 
-const priorityOptions: { value: TicketPriority; label: string }[] = [
-  { value: TicketPriority.LOW, label: 'Low' },
-  { value: TicketPriority.MEDIUM, label: 'Medium' },
-  { value: TicketPriority.HIGH, label: 'High' },
-  { value: TicketPriority.URGENT, label: 'Urgent' },
+const PRIORITY_VALUES: TicketPriority[] = [
+  TicketPriority.LOW,
+  TicketPriority.MEDIUM,
+  TicketPriority.HIGH,
+  TicketPriority.URGENT,
 ];
 
 export default function NewSupportTicketPage(): React.JSX.Element | null {
@@ -79,7 +79,7 @@ export default function NewSupportTicketPage(): React.JSX.Element | null {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-2xl space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/support">
           <Button variant="ghost" size="sm" icon={<ArrowLeft className="h-4 w-4" />}>
@@ -121,9 +121,9 @@ export default function NewSupportTicketPage(): React.JSX.Element | null {
                 onChange={(e) => setCategory(e.target.value as TicketCategory)}
                 className="input-field w-full"
               >
-                {categoryOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
+                {CATEGORY_VALUES.map((value) => (
+                  <option key={value} value={value}>
+                    {t(`categoryLabels.${value}`)}
                   </option>
                 ))}
               </select>
@@ -142,9 +142,9 @@ export default function NewSupportTicketPage(): React.JSX.Element | null {
                 onChange={(e) => setPriority(e.target.value as TicketPriority)}
                 className="input-field w-full"
               >
-                {priorityOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
+                {PRIORITY_VALUES.map((value) => (
+                  <option key={value} value={value}>
+                    {t(`priorityLabels.${value}`)}
                   </option>
                 ))}
               </select>

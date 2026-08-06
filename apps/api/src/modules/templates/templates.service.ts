@@ -28,6 +28,30 @@ export class TemplatesService {
     return doc.data() as Template;
   }
 
+  // ─── Public (data-minimized) reads ──────────────────────────────────────────
+  // The /templates GET endpoints are unauthenticated (the gallery is public), so
+  // strip internal fields — the render templates and the creator uid — from what
+  // the browser receives.
+  private toPublic(t: Template): Omit<Template, 'htmlTemplate' | 'cssTemplate' | 'createdBy' | 'isActive'> {
+    const { htmlTemplate, cssTemplate, createdBy, isActive, ...rest } = t;
+    void htmlTemplate;
+    void cssTemplate;
+    void createdBy;
+    void isActive;
+    return rest;
+  }
+
+  async listPublic(category?: TemplateCategory, tier?: SubscriptionPlan) {
+    const templates = await this.list(category, tier);
+    return templates.map((t) => this.toPublic(t));
+  }
+
+  async findPublicById(id: string) {
+    const template = await this.findById(id);
+    if (!template.isActive) throw new NotFoundException('Template not found');
+    return this.toPublic(template);
+  }
+
   async create(data: Partial<Template>, createdBy: string): Promise<Template> {
     const id = data.slug || uuidv4();
     const now = new Date();
@@ -215,6 +239,16 @@ export class TemplatesService {
         .get();
       if (!existing.exists) {
         await this.create(tmpl, 'system');
+      } else {
+        // Re-seeding keeps the code-owned fields (tier/name/description/category/
+        // localization) in sync; usageCount/rating/createdBy are preserved.
+        await this.update(tmpl.slug, {
+          name: tmpl.name,
+          description: tmpl.description,
+          category: tmpl.category,
+          tier: tmpl.tier,
+          nameLocalized: tmpl.nameLocalized,
+        });
       }
     }
   }

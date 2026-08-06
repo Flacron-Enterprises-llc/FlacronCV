@@ -29,6 +29,15 @@ export class CVController {
     return this.cvService.create(user.uid, data);
   }
 
+  // Import an existing resume: AI parses the pasted text into a populated CV.
+  @Post('import')
+  async importResume(
+    @CurrentUser() user: FirebaseUser,
+    @Body() data: { title?: string; resumeText: string },
+  ) {
+    return this.cvService.importFromResume(user.uid, data);
+  }
+
   @Get()
   async list(
     @CurrentUser() user: FirebaseUser,
@@ -87,6 +96,20 @@ export class CVController {
     return this.cvService.addSection(id, data);
   }
 
+  // Static route MUST precede ':id/sections/:sectionId' — otherwise a PUT to
+  // /sections/reorder is captured by the parameterized handler (sectionId='reorder')
+  // and errors. Express/Nest match in declaration order.
+  @Put(':id/sections/reorder')
+  async reorderSections(
+    @CurrentUser() user: FirebaseUser,
+    @Param('id') id: string,
+    @Body() body: { sectionOrder: string[] },
+  ) {
+    await this.cvService.findByIdOrThrow(id, user.uid);
+    await this.cvService.reorderSections(id, body.sectionOrder);
+    return { message: 'Sections reordered' };
+  }
+
   @Put(':id/sections/:sectionId')
   async updateSection(
     @CurrentUser() user: FirebaseUser,
@@ -107,17 +130,6 @@ export class CVController {
   ) {
     await this.cvService.findByIdOrThrow(id, user.uid);
     await this.cvService.deleteSection(id, sectionId);
-  }
-
-  @Put(':id/sections/reorder')
-  async reorderSections(
-    @CurrentUser() user: FirebaseUser,
-    @Param('id') id: string,
-    @Body() body: { sectionOrder: string[] },
-  ) {
-    await this.cvService.findByIdOrThrow(id, user.uid);
-    await this.cvService.reorderSections(id, body.sectionOrder);
-    return { message: 'Sections reordered' };
   }
 
   // Versions

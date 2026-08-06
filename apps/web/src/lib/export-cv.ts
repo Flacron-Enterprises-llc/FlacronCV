@@ -2,6 +2,7 @@ import type { CV, CVSection, CVSectionType } from '@flacroncv/shared-types';
 import type { CoverLetter } from '@flacroncv/shared-types';
 import { getTokens, formatCVDate } from '@/components/cv-builder/templates/shared';
 import { renderLayout, SIDEBAR_LEFT_TYPES, type LayoutDescriptor } from '@/lib/render-layout';
+import { serializeCVToText } from '@/lib/serializeCV';
 
 // ─── Shared helpers (for PDF — image-based, pixel-perfect) ───────────────────
 
@@ -72,6 +73,124 @@ async function captureToCanvas(el: HTMLElement) {
   return canvas;
 }
 
+// ─── Invisible text layer (makes the image-based PDF machine-readable) ───────
+//
+// The visible PDF is a rasterised screenshot of the preview, which is what gives
+// it pixel-perfect fidelity with the editor — and what makes it completely
+// unreadable to an applicant tracking system, because a PNG contains no text.
+//
+// Rather than swap to a different renderer (which would change how every
+// existing user's PDF LOOKS), we add the document's text to the page in PDF
+// rendering mode 3 — "neither fill nor stroke". The glyphs are positioned and
+// recorded in the content stream, so `pdftotext`, an ATS parser, or Ctrl+F all
+// find them, while nothing is painted. This is the same technique that makes a
+// scanned PDF searchable. Visible output is byte-for-byte unchanged.
+
+/**
+ * Fold common typographic characters to their ASCII equivalents.
+ *
+ * jsPDF's built-in fonts are WinAnsi/Latin-1. Curly quotes, en/em dashes,
+ * ellipses, bullets and the euro sign all sit OUTSIDE Latin-1 — and they are
+ * everywhere in real CVs, both from ordinary typing and from our own AI output.
+ * Rejecting text because it contained an em dash would have meant almost no CV
+ * got a text layer, which is the opposite of the point (a unit test caught
+ * exactly that). Fold them instead: the layer is never painted, and an ATS
+ * reads "Engineer - Acme" just as happily as "Engineer \u2014 Acme".
+ */
+function toEncodableText(text: string): string {
+  return text
+    .replace(/[\u2010-\u2015\u2212]/g, '-')   // hyphens, en/em dash, minus
+    .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+    .replace(/\u2026/g, '...')                  // ellipsis
+    .replace(/[\u2022\u2023\u25E6\u2043]/g, '-') // bullets
+    .replace(/\u20AC/g, 'EUR')
+    .replace(/\u2122/g, '(TM)')
+    .replace(/\u2044/g, '/')
+    .replace(/[\u2190-\u21FF]/g, '->')          // arrows
+    .replace(/\u00A0/g, ' ');                    // non-breaking space
+}
+
+/**
+ * True when (after folding) the text can be written with a built-in font.
+ *
+ * Arabic, Urdu and CJK cannot be: embedding them would emit mojibake into the
+ * extraction stream, which is actively worse for a parser than no text layer at
+ * all. Those documents keep today's behaviour until a subsetted Unicode font is
+ * embedded — tracked separately for the client.
+ */
+function isEncodableByStandardFont(text: string): boolean {
+  return !/[^\u0020-\u00FF\n\r\t]/.test(toEncodableText(text));
+}
+
+/**
+ * Write `text` across the PDF's existing pages as invisible, extractable text.
+ *
+ * Lines are distributed proportionally across the pages that the image already
+ * occupies, so global reading order is preserved and a per-page extractor sees
+ * roughly the right content on the right page. Must be called AFTER all
+ * addImage/addPage calls so the page count is final.
+ */
+function addInvisibleTextLayer(pdf: any, text: string, pageCount: number): void {
+  const trimmed = (text || '').trim();
+  if (!trimmed || pageCount < 1) return;
+
+  if (!isEncodableByStandardFont(trimmed)) {
+    // Arabic / Urdu / CJK CVs keep today's behaviour. Making these extractable
+    // needs a subsetted Unicode font embedded in the PDF — a real but separate
+    // piece of work, tracked for the client.
+    console.debug('[exportToPDF] text layer skipped — content needs a Unicode font');
+    return;
+  }
+
+  const encodable = toEncodableText(trimmed);
+  const marginMm = 10;
+  const usableW = pdf.internal.pageSize.getWidth() - marginMm * 2;
+  const usableH = pdf.internal.pageSize.getHeight() - marginMm * 2;
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  const lineH = 3.6; // mm, comfortably fits ~9pt
+
+  // Wrap to the usable width first so nothing is lost off the edge, then split
+  // the resulting lines evenly across the pages.
+  const wrapped: string[] = [];
+  for (const raw of encodable.split('\n')) {
+    if (!raw.trim()) {
+      wrapped.push('');
+      continue;
+    }
+    for (const piece of pdf.splitTextToSize(raw, usableW) as string[]) wrapped.push(piece);
+  }
+
+  const perPage = Math.max(1, Math.ceil(wrapped.length / pageCount));
+  const maxLinesPerPage = Math.max(1, Math.floor(usableH / lineH));
+
+  for (let page = 0; page < pageCount; page++) {
+    const slice = wrapped.slice(page * perPage, (page + 1) * perPage);
+    if (!slice.length) continue;
+    pdf.setPage(page + 1);
+    // Never overflow the page box; anything beyond is already covered by the
+    // next page's slice in the common case.
+    slice.slice(0, maxLinesPerPage).forEach((line, i) => {
+      if (!line) return;
+      pdf.text(line, marginMm, marginMm + i * lineH, {
+        renderingMode: 'invisible',
+        baseline: 'top',
+      });
+    });
+  }
+}
+
+/**
+ * Internals exposed for unit testing only.
+ *
+ * The exported functions above all require a live DOM + html2canvas, so the text
+ * layer — the part with real logic and real consequences if it breaks — would
+ * otherwise be untestable.
+ */
+export const __testables = { addInvisibleTextLayer, isEncodableByStandardFont };
+
 // ─── PDF Export ───────────────────────────────────────────────────────────────
 export async function exportToPDF(cv: CV, _sections: CVSection[], locale: string = 'en'): Promise<void> {
   console.debug(`[exportToPDF] locale=${locale}, layout=${(cv.styling as any)?.layout || 'classic'}`);
@@ -92,13 +211,20 @@ export async function exportToPDF(cv: CV, _sections: CVSection[], locale: string
     const pdfH = pdf.internal.pageSize.getHeight();
     const imgH = (canvas.height * pdfW) / canvas.width;
 
-    let pos = 0, rem = imgH;
+    let pos = 0, rem = imgH, pageCount = 0;
     while (rem > 2) {
       if (pos > 0) pdf.addPage();
       pdf.addImage(imgData, 'PNG', 0, -pos, pdfW, imgH);
+      pageCount++;
       pos += pdfH;
       rem -= pdfH;
     }
+
+    // Make the exported CV readable by applicant tracking systems without
+    // altering a single visible pixel. Uses the same serialiser the ATS-check
+    // feature already feeds, so what a recruiter's parser sees matches what our
+    // own ATS score was calculated from.
+    addInvisibleTextLayer(pdf, serializeCVToText(cv, _sections || []), pageCount);
 
     pdf.save(`${cv.title || 'CV'}.pdf`);
   } finally {
@@ -751,7 +877,12 @@ async function buildCVDocx(cv: CV, sections: CVSection[], labels: DocxLabels): P
   let margin: { top: number; bottom: number; left: number; right: number };
 
   switch (layoutType) {
+    // Slate-Gold uses the same two-column [left, right] descriptor as Sidebar,
+    // so it must use the sidebar builder — the classic default only reads
+    // columns[0] and would drop every right-column section (experience,
+    // education, projects, references, custom).
     case 'sidebar':
+    case 'slate-gold':
       margin   = { top: toTwip(0.5), bottom: toTwip(0.75), left: toTwip(0.4), right: toTwip(0.4) };
       children = buildSidebarChildren(d, cv, descriptor, color, tokens, labels);
       break;
@@ -819,6 +950,12 @@ export async function exportCoverLetterToPDF(title: string): Promise<void> {
   const sourceEl = document.getElementById('cl-preview-content');
   if (!sourceEl) throw new Error('Cover letter preview not found.');
 
+  // Read the rendered text straight off the preview BEFORE cloning, so the
+  // invisible text layer matches exactly what the reader sees — including the
+  // localised salutation, date and closing the templates generate. `innerText`
+  // (not textContent) respects line breaks and skips hidden nodes.
+  const previewText = (sourceEl as HTMLElement).innerText || sourceEl.textContent || '';
+
   const clone = cloneForCapture(sourceEl);
   // Give the browser extra time to fully lay out the clone before capture.
   await new Promise((r) => setTimeout(r, 300));
@@ -833,13 +970,16 @@ export async function exportCoverLetterToPDF(title: string): Promise<void> {
     const pdfH = pdf.internal.pageSize.getHeight();
     const imgH = (canvas.height * pdfW) / canvas.width;
 
-    let pos = 0, rem = imgH;
+    let pos = 0, rem = imgH, pageCount = 0;
     while (rem > 2) {
       if (pos > 0) pdf.addPage();
       pdf.addImage(imgData, 'PNG', 0, -pos, pdfW, imgH);
+      pageCount++;
       pos += pdfH;
       rem -= pdfH;
     }
+
+    addInvisibleTextLayer(pdf, previewText, pageCount);
 
     pdf.save(`${title || 'cover-letter'}.pdf`);
   } finally {

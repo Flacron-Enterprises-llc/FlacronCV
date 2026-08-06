@@ -47,8 +47,34 @@
   }
 
   body {
-    @apply bg-white text-stone-900 dark:bg-black dark:text-stone-50;
+    @apply bg-white text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* The page itself must never scroll sideways: a stray wide/decorative element
+     should be contained, not turn the whole document into a horizontal scroller.
+     Content that legitimately needs to scroll horizontally (wide data tables)
+     uses its own `overflow-x-auto` wrapper, which is unaffected by this.
+     `hidden` is the fallback; `clip` (where supported) wins and — unlike
+     `hidden` — does NOT create a scroll container, so it can't break
+     position:sticky or scroll-anchoring. */
+  html {
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+
+  /* Premium headings read tighter; leave body copy at its natural tracking. */
+  h1, h2, h3, h4 {
+    @apply tracking-tight;
+  }
+
+  /* Branded text selection. */
+  ::selection {
+    @apply bg-brand-500/25 text-brand-950;
+  }
+  .dark ::selection {
+    @apply bg-brand-500/30 text-brand-50;
   }
 
   /* RTL support */
@@ -75,7 +101,7 @@
   }
 
   .input-field {
-    @apply block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm leading-5 text-stone-900 placeholder-stone-400 transition-colors focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-stone-600 dark:bg-stone-900 dark:text-stone-100 dark:placeholder-stone-500;
+    @apply block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm leading-5 text-stone-900 placeholder-stone-400 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:placeholder-stone-500;
   }
 
   /* Ensure native <select> chrome is stripped when using the input-field token,
@@ -110,6 +136,54 @@
 
 .dark ::-webkit-scrollbar-thumb {
   background: rgb(87 83 78);
+}
+
+/* ── Cover-letter body typography ───────────────────────────────────────────
+   The letter body is rich text injected with dangerouslySetInnerHTML, so it
+   arrives as bare <p>/<ul>/<li> with no styling of its own. Tailwind's
+   preflight zeroes margins and list markers globally, which meant the injected
+   paragraphs rendered with NO separation at all — four paragraphs of a cover
+   letter came out as one unbroken slab, and any bullet list lost its bullets.
+
+   Scoped to [data-cl-body] (set by LetterBody) rather than to the preview
+   container, so it styles the author's prose and nothing the template itself
+   draws around it. Outside @media print deliberately: html2canvas rasterises
+   the on-screen DOM, so print-only rules never reach the exported PDF.        */
+[data-cl-body] > * { margin-block: 0; }
+
+[data-cl-body] p,
+[data-cl-body] ul,
+[data-cl-body] ol,
+[data-cl-body] blockquote {
+  margin-block: 0 0.85em;
+}
+
+[data-cl-body] > *:last-child { margin-block-end: 0; }
+
+[data-cl-body] ul,
+[data-cl-body] ol {
+  padding-inline-start: 1.4em;
+}
+[data-cl-body] ul { list-style: disc; }
+[data-cl-body] ol { list-style: decimal; }
+[data-cl-body] li { margin-block: 0.2em; }
+/* TipTap wraps each list item's text in its own <p>; without this the
+   paragraph rule adds a full blank line between every bullet. */
+[data-cl-body] li > p { margin-block: 0; }
+
+[data-cl-body] strong, [data-cl-body] b { font-weight: 700; }
+[data-cl-body] em, [data-cl-body] i { font-style: italic; }
+[data-cl-body] a { color: inherit; text-decoration: underline; }
+
+/* A pasted heading should not shout inside a letter — normalise it to bold
+   body text rather than letting it render at browser-default h1 size. */
+[data-cl-body] h1,
+[data-cl-body] h2,
+[data-cl-body] h3,
+[data-cl-body] h4 {
+  font-size: 1em;
+  font-weight: 700;
+  margin-block: 0 0.5em;
 }
 
 /* ── Print styles — CV preview isolation ────────────────────────────────────

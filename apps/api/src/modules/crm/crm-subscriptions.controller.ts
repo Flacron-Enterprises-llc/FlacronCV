@@ -8,6 +8,8 @@ import {
   Res,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { csvCell } from '../../common/utils/csv';
+import { toIsoString } from '../../common/utils/date';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CRMSubscriptionsService } from './crm-subscriptions.service';
 import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
@@ -58,17 +60,17 @@ export class CRMSubscriptionsController {
       [
         s.id,
         s.userId,
-        `"${s.userEmail.replace(/"/g, '""')}"`,
-        `"${s.userDisplayName.replace(/"/g, '""')}"`,
+        csvCell(s.userEmail),
+        csvCell(s.userDisplayName),
         s.plan,
         s.status,
         s.interval,
         (s.amount / 100).toFixed(2),
         s.currency.toUpperCase(),
-        new Date(s.currentPeriodStart).toISOString(),
-        new Date(s.currentPeriodEnd).toISOString(),
+        toIsoString(s.currentPeriodStart),
+        toIsoString(s.currentPeriodEnd),
         s.cancelAtPeriodEnd ? 'true' : 'false',
-        new Date(s.createdAt).toISOString(),
+        toIsoString(s.createdAt),
       ].join(','),
     );
 

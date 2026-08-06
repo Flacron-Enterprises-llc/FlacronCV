@@ -1,12 +1,15 @@
 import type { Metadata } from 'next';
 import { Inter, Merriweather, Playfair_Display, Roboto, Lora, Open_Sans, Montserrat } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
-import { getMessages } from 'next-intl/server';
+import { getMessages, getTranslations } from 'next-intl/server';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { ThemeProvider } from '@/providers/ThemeProvider';
 import { QueryProvider } from '@/providers/QueryProvider';
 import LoadingBar from '@/components/shared/LoadingBar';
+import CookieConsent from '@/components/shared/CookieConsent';
+import AnalyticsProvider from '@/providers/AnalyticsProvider';
 import { Toaster } from 'sonner';
+import { SITE_URL } from '@/lib/seo';
 import '@/styles/globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -18,6 +21,10 @@ const openSans = Open_Sans({ subsets: ['latin'], variable: '--font-opensans' });
 const montserrat = Montserrat({ subsets: ['latin'], variable: '--font-montserrat' });
 
 const RTL_LOCALES = ['ar', 'ur'];
+
+// Applies the saved theme before first paint so dark-mode users never see a
+// flash of the light theme. Must stay in sync with ThemeProvider's storage key.
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('theme');var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);document.documentElement.style.colorScheme=d?'dark':'light';}catch(e){}})()`;
 
 export const metadata: Metadata = {
   title: {
@@ -39,6 +46,18 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL || 'https://flacroncv-web.onrender.com',
   ),
+  // Site-wide social-card defaults; per-page metadata overrides these.
+  openGraph: {
+    type: 'website',
+    siteName: 'FlacronCV',
+    images: [
+      { url: '/og.png', width: 1200, height: 630, alt: 'FlacronCV – AI-Powered CV & Cover Letter Builder' },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    images: ['/og.png'],
+  },
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -60,18 +79,56 @@ export default async function LocaleLayout({
   params: { locale: string };
 }) {
   const messages = await getMessages();
+  const t = await getTranslations();
   const dir = RTL_LOCALES.includes(locale) ? 'rtl' : 'ltr';
+
+  // Site-wide Organization + WebSite structured data (brand identity / logo).
+  const orgSchema = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${SITE_URL}/#organization`,
+        name: 'FlacronCV',
+        url: SITE_URL,
+        // Light-background lockup: search engines render this on a white surface.
+        logo: `${SITE_URL}/flacronCvlight.png`,
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${SITE_URL}/#website`,
+        name: 'FlacronCV',
+        url: SITE_URL,
+        publisher: { '@id': `${SITE_URL}/#organization` },
+        inLanguage: locale,
+      },
+    ],
+  };
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <body suppressHydrationWarning className={`${inter.variable} ${merriweather.variable} ${playfair.variable} ${roboto.variable} ${lora.variable} ${openSans.variable} ${montserrat.variable} font-sans antialiased`}>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
+        />
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg"
+        >
+          {t('common.skip_to_content')}
+        </a>
         <NextIntlClientProvider messages={messages}>
           <QueryProvider>
             <ThemeProvider>
               <AuthProvider>
-                <LoadingBar />
-                {children}
-                <Toaster position="bottom-right" richColors />
+                <AnalyticsProvider>
+                  <LoadingBar />
+                  {children}
+                  <Toaster position="bottom-right" richColors />
+                  <CookieConsent />
+                </AnalyticsProvider>
               </AuthProvider>
             </ThemeProvider>
           </QueryProvider>

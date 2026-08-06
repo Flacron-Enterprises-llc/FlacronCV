@@ -3,13 +3,25 @@ import { loginAsUser, mockApiRoute } from './fixtures/auth';
 
 const PENDING_TEMPLATE_KEY = 'flacroncv_pending_template';
 
+/**
+ * Target the inputs by id, not by label.
+ *
+ * `getByLabel(/password/i)` matched TWO elements once the password-visibility
+ * toggle was added — the input and the `aria-label="Show password"` button —
+ * so every fill died on a Playwright strict-mode violation. The forms give each
+ * field a stable id (`#name`, `#email`, `#password` in login/register), which is
+ * both unambiguous and immune to label copy changes.
+ */
+const emailField = (page: import('@playwright/test').Page) => page.locator('input#email');
+const passwordField = (page: import('@playwright/test').Page) => page.locator('input#password');
+
 test.describe('Auth flows', () => {
   test('login flow redirects to dashboard', async ({ page }) => {
     await loginAsUser(page);
     await page.goto('/en/login');
 
-    await page.getByLabel(/email/i).fill('e2e@example.com');
-    await page.getByLabel(/password/i).fill('Test1234!');
+    await emailField(page).fill('e2e@example.com');
+    await passwordField(page).fill('Test1234!');
     await page.getByRole('button', { name: /log in|sign in/i }).click();
 
     await expect(page).toHaveURL(/\/en\/dashboard/, { timeout: 10000 });
@@ -19,14 +31,12 @@ test.describe('Auth flows', () => {
     await loginAsUser(page);
     await page.goto('/en/register');
 
-    await page.getByLabel(/name/i).fill('New User');
-    await page.getByLabel(/email/i).fill('e2e@example.com');
-    // Find password field — may have two (password + confirm)
-    const passwordFields = page.getByLabel(/password/i);
-    await passwordFields.first().fill('Test1234!');
-    if ((await passwordFields.count()) > 1) {
-      await passwordFields.nth(1).fill('Test1234!');
-    }
+    await page.locator('input#name').fill('New User');
+    await emailField(page).fill('e2e@example.com');
+    // The register form has a single password field — there is no confirm
+    // input, so the old count()/nth(1) branch was dead code guarding against a
+    // field that does not exist.
+    await passwordField(page).fill('Test1234!');
     await page.getByRole('button', { name: /sign up|register|create account/i }).click();
 
     await expect(page).toHaveURL(/\/en\/(verify-email|dashboard)/, { timeout: 10000 });
@@ -42,8 +52,8 @@ test.describe('Auth flows', () => {
       [PENDING_TEMPLATE_KEY, 'modern'],
     );
 
-    await page.getByLabel(/email/i).fill('e2e@example.com');
-    await page.getByLabel(/password/i).fill('Test1234!');
+    await emailField(page).fill('e2e@example.com');
+    await passwordField(page).fill('Test1234!');
     await page.getByRole('button', { name: /log in|sign in/i }).click();
 
     await expect(page).toHaveURL(/\/en\/cv\/new\?template=modern/, { timeout: 10000 });
@@ -76,8 +86,8 @@ test.describe('Auth flows', () => {
     });
 
     await page.goto('/en/login');
-    await page.getByLabel(/email/i).fill('wrong@example.com');
-    await page.getByLabel(/password/i).fill('wrongpass');
+    await emailField(page).fill('wrong@example.com');
+    await passwordField(page).fill('wrongpass');
     await page.getByRole('button', { name: /log in|sign in/i }).click();
 
     // Should show an error toast

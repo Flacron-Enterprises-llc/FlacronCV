@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/routing';
 import {
@@ -11,8 +12,8 @@ import {
   FileSearch,
   ArrowLeft,
   X,
-  Shield,
 } from 'lucide-react';
+import Logo from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
 interface AdminSidebarProps {
@@ -22,7 +23,18 @@ interface AdminSidebarProps {
 
 export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
   const t = useTranslations('admin');
+  const tCommon = useTranslations('common');
   const pathname = usePathname();
+
+  // Close the mobile drawer with Escape.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open, onClose]);
 
   const navItems = [
     { href: '/admin', icon: BarChart3, label: t('dashboard') },
@@ -50,6 +62,7 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
     <Link
       href={href}
       onClick={onClose}
+      aria-current={isActive(href) ? 'page' : undefined}
       className={cn(
         'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
         isActive(href)
@@ -69,38 +82,35 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
         <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onClose} />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar — the closed-state transform must flip with the writing
+          direction, or the drawer stays partially on-screen in RTL. */}
       <aside
         className={cn(
-          'fixed inset-y-0 start-0 z-50 flex w-64 flex-col border-e border-stone-200 bg-white transition-transform lg:static lg:transtone-x-0 dark:border-stone-700 dark:bg-stone-900',
-          open ? 'transtone-x-0' : '-transtone-x-full',
+          'fixed inset-y-0 start-0 z-50 flex w-64 flex-col border-e border-stone-200 bg-white transition-transform lg:static lg:translate-x-0 dark:border-stone-700 dark:bg-stone-900',
+          open ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full lg:rtl:translate-x-0',
         )}
       >
         {/* Logo */}
         <div className="flex h-16 items-center justify-between border-b border-stone-200 px-4 dark:border-stone-700">
-          <Link href="/admin" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-              <Shield className="h-4 w-4" />
-            </div>
-            <span className="text-lg font-bold text-stone-900 dark:text-white">
-              Flacron<span className="text-brand-600">CV</span>
-            </span>
+          <Link href="/admin" className="flex items-center">
+            <Logo className="h-8" />
           </Link>
           <button
             className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 lg:hidden dark:hover:bg-stone-800"
             onClick={onClose}
+            aria-label={tCommon('close_menu')}
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Admin badge */}
-        <div className="mx-3 mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-          {t('admin_panel')}
+        <div className="mx-3 mt-3 rounded-lg bg-stone-100 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+          {t('title')}
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+        <nav aria-label={tCommon('main_navigation')} className="flex-1 space-y-1 overflow-y-auto p-3">
           {navItems.map((item) => (
             <NavLink key={item.href} {...item} />
           ))}
@@ -112,7 +122,7 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
             href="/dashboard"
             className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200"
           >
-            <ArrowLeft className="h-5 w-5 flex-shrink-0" />
+            <ArrowLeft className="h-5 w-5 flex-shrink-0 rtl:rotate-180" />
             {t('back_to_dashboard')}
           </Link>
         </div>

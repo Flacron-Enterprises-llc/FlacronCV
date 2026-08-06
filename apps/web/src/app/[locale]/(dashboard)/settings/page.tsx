@@ -8,12 +8,32 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 import { api } from '@/lib/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { User, UserProfile, UserPreferences, Locale, Theme } from '@flacroncv/shared-types';
+import {
+  User,
+  UserProfile,
+  UserPreferences,
+  Locale,
+  Theme,
+  ProfileLinkField,
+  validateProfileLink,
+} from '@flacroncv/shared-types';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
-import { Camera, Save, Trash2, Lock, Globe, Palette, Bell, Loader2 } from 'lucide-react';
+import {
+  Camera,
+  Save,
+  Trash2,
+  Lock,
+  Globe,
+  Palette,
+  Bell,
+  Megaphone,
+  Loader2,
+  Download,
+  LogOut,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { updateProfile } from 'firebase/auth';
@@ -21,7 +41,7 @@ import { storage, auth } from '@/lib/firebase';
 
 export default function SettingsPage(): React.JSX.Element | null {
   const t = useTranslations('settings');
-  const { user, resetPassword, refreshUser } = useAuth();
+  const { user, resetPassword, refreshUser, logout } = useAuth();
   const { setTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
@@ -30,6 +50,10 @@ export default function SettingsPage(): React.JSX.Element | null {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Per-field messages for LinkedIn/GitHub/Website, shown under the input that
+  // is actually wrong rather than as one generic "save failed" toast.
+  const [linkErrors, setLinkErrors] = useState<Partial<Record<ProfileLinkField, string>>>({});
 
   // Profile form state
   const [profile, setProfile] = useState<Partial<UserProfile>>({
@@ -40,6 +64,7 @@ export default function SettingsPage(): React.JSX.Element | null {
     location: '',
     linkedin: '',
     github: '',
+    website: '',
   });
 
   // Preferences state
@@ -47,6 +72,7 @@ export default function SettingsPage(): React.JSX.Element | null {
     language: Locale.EN,
     theme: Theme.SYSTEM,
     emailNotifications: true,
+    marketingEmails: false,
   });
 
   // Delete account modal
@@ -56,6 +82,11 @@ export default function SettingsPage(): React.JSX.Element | null {
   // Change password modal
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordResetSent, setPasswordResetSent] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
+
+  // Privacy & data
+  const [downloadingData, setDownloadingData] = useState(false);
+  const [showSignOutAllModal, setShowSignOutAllModal] = useState(false);
 
   // Populate form from user data
   useEffect(() => {
@@ -68,11 +99,13 @@ export default function SettingsPage(): React.JSX.Element | null {
         location: user.profile?.location || '',
         linkedin: user.profile?.linkedin || '',
         github: user.profile?.github || '',
+        website: user.profile?.website || '',
       });
       setPreferences({
         language: user.preferences?.language || Locale.EN,
         theme: user.preferences?.theme || Theme.SYSTEM,
         emailNotifications: user.preferences?.emailNotifications ?? true,
+        marketingEmails: user.preferences?.marketingEmails ?? false,
       });
     }
   }, [user]);
@@ -116,14 +149,71 @@ export default function SettingsPage(): React.JSX.Element | null {
   // Delete account mutation
   const deleteMutation = useMutation({
     mutationFn: () => api.delete('/users/me'),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(t('account.deleteSuccess'));
+      // Clear the local session — the server has revoked this account's refresh
+      // token, so the client must not keep a signed-in state around.
+      try {
+        await logout();
+      } catch {
+        /* already deleted server-side; ignore */
+      }
       router.push('/');
     },
     onError: (error: Error) => {
       toast.error(error.message || t('account.deleteError'));
     },
   });
+
+  // Sign out of every device. Firebase Auth has no per-device session handle,
+  // so this is all-or-nothing by nature — including this browser, which is why
+  // it ends with a local sign-out and a redirect home.
+  const signOutEverywhereMutation = useMutation({
+    mutationFn: () => api.post('/users/me/sign-out-everywhere'),
+    onSuccess: async () => {
+      setShowSignOutAllModal(false);
+      toast.success(t('account.signOutEverywhereSuccess'));
+      try {
+        await logout();
+      } catch {
+        /* the server already revoked this session; nothing left to clear */
+      }
+      router.push('/');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || t('account.signOutEverywhereError'));
+    },
+  });
+
+  // Right to Access / Portability: fetch the account's full export and save it
+  // as a file the user keeps. Not a React Query mutation because the payload is
+  // never cached — it goes straight to disk.
+  const handleDownloadData = async () => {
+    if (downloadingData) return;
+    setDownloadingData(true);
+    let objectUrl: string | null = null;
+    try {
+      // The export fans out across several collections server-side, so it needs
+      // more than the client's default 15s budget.
+      const data = await api.get<unknown>('/users/me/export', { timeoutMs: 60000 });
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = `flacroncv-data-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      toast.success(t('account.downloadDataSuccess'));
+    } catch (error) {
+      toast.error((error as Error)?.message || t('account.downloadDataError'));
+    } finally {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      setDownloadingData(false);
+    }
+  };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -133,11 +223,11 @@ export default function SettingsPage(): React.JSX.Element | null {
     const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
     if (!ALLOWED.includes(file.type)) {
-      toast.error('Only JPEG, PNG, or WebP images are allowed.');
+      toast.error(t('avatar.invalidType'));
       return;
     }
     if (file.size > MAX_BYTES) {
-      toast.error('Image must be smaller than 5 MB.');
+      toast.error(t('avatar.tooLarge', { max: '5 MB' }));
       return;
     }
 
@@ -146,7 +236,7 @@ export default function SettingsPage(): React.JSX.Element | null {
     setPreviewUrl(localUrl);
 
     if (!storage || !auth?.currentUser || !user) {
-      toast.error('Upload is not available right now. Please try again later.');
+      toast.error(t('avatar.unavailable'));
       setPreviewUrl(null);
       return;
     }
@@ -173,10 +263,10 @@ export default function SettingsPage(): React.JSX.Element | null {
       await refreshUser();
       setPreviewUrl(null);
 
-      toast.success('Profile picture updated.');
+      toast.success(t('avatar.updated'));
     } catch (err: any) {
       setPreviewUrl(null);
-      toast.error(err?.message || 'Failed to upload profile picture.');
+      toast.error(err?.message || t('avatar.uploadFailed'));
     } finally {
       setUploading(false);
       // Reset so the same file can be re-selected if needed
@@ -184,28 +274,89 @@ export default function SettingsPage(): React.JSX.Element | null {
     }
   };
 
+  const handleRemoveAvatar = async () => {
+    if (!user?.photoURL || uploading) return;
+    setUploading(true);
+    try {
+      // Clear both the Firebase Auth photoURL and the backend record so the
+      // avatar reverts to the initials fallback everywhere.
+      if (auth?.currentUser) {
+        await updateProfile(auth.currentUser, { photoURL: '' });
+      }
+      await api.put('/users/me', { photoURL: null });
+      await refreshUser();
+      setPreviewUrl(null);
+      toast.success(t('avatar.removed'));
+    } catch (err: any) {
+      toast.error(err?.message || t('avatar.uploadFailed'));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Revoke the object URL created for the optimistic avatar preview when it is
+  // replaced or the component unmounts — otherwise each preview leaks memory.
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  /**
+   * Validate the link fields with the SAME rule the API enforces, so the user
+   * is corrected in place instead of after a round-trip and a red toast. The
+   * server still re-checks — this is feedback, not the control.
+   *
+   * Saves the normalised value too, so pasting "github.com/name" is stored as
+   * "https://github.com/name" rather than silently becoming a broken CV link.
+   */
   const handleProfileSave = () => {
-    profileMutation.mutate(profile);
+    const errors: Partial<Record<ProfileLinkField, string>> = {};
+    const normalized = { ...profile };
+
+    (['linkedin', 'github', 'website'] as ProfileLinkField[]).forEach((field) => {
+      const result = validateProfileLink(field, profile[field] ?? '');
+      if (result.error) errors[field] = result.error;
+      else normalized[field] = result.value;
+    });
+
+    setLinkErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast.error(t('profile.fixLinks'));
+      return;
+    }
+
+    setProfile(normalized);
+    profileMutation.mutate(normalized);
   };
 
   const handlePreferencesSave = () => {
     preferencesMutation.mutate(preferences);
   };
 
+  // The confirmation word is localized per language (F6) — a non-English user
+  // shouldn't have to type the English "DELETE". Case-insensitive + trimmed.
+  const deleteKeyword = t('account.deleteKeyword');
+  const deleteConfirmed =
+    deleteConfirmText.trim().toLowerCase() === deleteKeyword.trim().toLowerCase();
+
   const handleDeleteAccount = () => {
-    if (deleteConfirmText === 'DELETE') {
+    if (deleteConfirmed) {
       deleteMutation.mutate();
     }
   };
 
   const handleSendPasswordReset = async () => {
-    if (!user?.email) return;
+    if (!user?.email || sendingReset) return;
+    setSendingReset(true);
     try {
       await resetPassword(user.email);
       setPasswordResetSent(true);
       toast.success(t('account.passwordResetEmailSent'));
     } catch (error) {
       toast.error(t('account.passwordResetFailed'));
+    } finally {
+      setSendingReset(false);
     }
   };
 
@@ -225,7 +376,7 @@ export default function SettingsPage(): React.JSX.Element | null {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Avatar Section */}
       <Card>
         <div className="flex flex-col items-center gap-6 sm:flex-row">
@@ -234,7 +385,7 @@ export default function SettingsPage(): React.JSX.Element | null {
               {previewUrl || user?.photoURL ? (
                 <img
                   src={previewUrl || user!.photoURL!}
-                  alt={user?.displayName || 'Avatar'}
+                  alt={user?.displayName || t('avatar.alt')}
                   className="h-full w-full object-cover"
                 />
               ) : (
@@ -252,6 +403,7 @@ export default function SettingsPage(): React.JSX.Element | null {
               type="button"
               disabled={uploading}
               onClick={() => fileInputRef.current?.click()}
+              aria-label={t('avatar.change')}
               className="absolute -bottom-1 -end-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-brand-600 text-white shadow-sm transition-colors hover:bg-brand-700 disabled:opacity-60 dark:border-stone-800"
             >
               <Camera className="h-4 w-4" />
@@ -268,7 +420,16 @@ export default function SettingsPage(): React.JSX.Element | null {
             <h2 className="text-lg font-semibold text-stone-900 dark:text-white">
               {user?.displayName || t('profile.unnamed')}
             </h2>
-            <p className="text-sm text-stone-500 dark:text-stone-400">{user?.email}</p>
+            <p className="break-all text-sm text-stone-500 dark:text-stone-400">{user?.email}</p>
+            {user?.photoURL && !uploading && (
+              <button
+                type="button"
+                onClick={handleRemoveAvatar}
+                className="mt-2 text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400"
+              >
+                {t('avatar.remove')}
+              </button>
+            )}
           </div>
         </div>
       </Card>
@@ -330,17 +491,39 @@ export default function SettingsPage(): React.JSX.Element | null {
               id="linkedin"
               label={t('profile.linkedin')}
               value={profile.linkedin}
-              onChange={(e) => setProfile((p) => ({ ...p, linkedin: e.target.value }))}
+              // Clear the error as soon as the field is touched — leaving a stale
+              // message under a field the user is actively fixing reads as the
+              // fix not having worked.
+              onChange={(e) => {
+                setProfile((p) => ({ ...p, linkedin: e.target.value }));
+                setLinkErrors((errs) => ({ ...errs, linkedin: undefined }));
+              }}
+              error={linkErrors.linkedin}
               placeholder="https://linkedin.com/in/username"
             />
             <Input
               id="github"
               label={t('profile.github')}
               value={profile.github}
-              onChange={(e) => setProfile((p) => ({ ...p, github: e.target.value }))}
+              onChange={(e) => {
+                setProfile((p) => ({ ...p, github: e.target.value }));
+                setLinkErrors((errs) => ({ ...errs, github: undefined }));
+              }}
+              error={linkErrors.github}
               placeholder="https://github.com/username"
             />
           </div>
+          <Input
+            id="website"
+            label={t('profile.website')}
+            value={profile.website}
+            onChange={(e) => {
+              setProfile((p) => ({ ...p, website: e.target.value }));
+              setLinkErrors((errs) => ({ ...errs, website: undefined }));
+            }}
+            error={linkErrors.website}
+            placeholder="https://yoursite.com"
+          />
           <div className="flex justify-end">
             <Button
               onClick={handleProfileSave}
@@ -375,6 +558,7 @@ export default function SettingsPage(): React.JSX.Element | null {
               </div>
             </div>
             <select
+              aria-label={t('preferences.language')}
               value={preferences.language}
               onChange={(e) =>
                 setPreferences((p) => ({ ...p, language: e.target.value as Locale }))
@@ -392,8 +576,8 @@ export default function SettingsPage(): React.JSX.Element | null {
           {/* Theme */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-900/30">
-                <Palette className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-stone-100 dark:bg-stone-800">
+                <Palette className="h-5 w-5 text-stone-600 dark:text-stone-400" />
               </div>
               <div>
                 <p className="text-sm font-medium text-stone-900 dark:text-white">
@@ -405,10 +589,16 @@ export default function SettingsPage(): React.JSX.Element | null {
               </div>
             </div>
             <select
+              aria-label={t('preferences.theme')}
               value={preferences.theme}
-              onChange={(e) =>
-                setPreferences((p) => ({ ...p, theme: e.target.value as Theme }))
-              }
+              onChange={(e) => {
+                const next = e.target.value as Theme;
+                setPreferences((p) => ({ ...p, theme: next }));
+                // Apply immediately: the page and the header toggle both read
+                // ThemeProvider, so they stay in sync the moment you pick.
+                // Saving still persists the choice to the account.
+                setTheme(next);
+              }}
               className="input-field w-full sm:w-44"
             >
               {themeOptions.map((option) => (
@@ -422,8 +612,8 @@ export default function SettingsPage(): React.JSX.Element | null {
           {/* Email Notifications */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/30">
-                <Bell className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-stone-100 dark:bg-stone-800">
+                <Bell className="h-5 w-5 text-stone-600 dark:text-stone-400" />
               </div>
               <div>
                 <p className="text-sm font-medium text-stone-900 dark:text-white">
@@ -437,13 +627,43 @@ export default function SettingsPage(): React.JSX.Element | null {
             <label className="relative inline-flex cursor-pointer items-center">
               <input
                 type="checkbox"
+                aria-label={t('preferences.emailNotifications')}
                 checked={preferences.emailNotifications}
                 onChange={(e) =>
                   setPreferences((p) => ({ ...p, emailNotifications: e.target.checked }))
                 }
                 className="peer sr-only"
               />
-              <div className="peer h-6 w-11 rounded-full bg-stone-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-stone-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-600 peer-checked:after:transtone-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-brand-300 rtl:peer-checked:after:-transtone-x-full dark:border-stone-600 dark:bg-stone-700 dark:peer-focus:ring-brand-800" />
+              <div className="peer h-6 w-11 rounded-full bg-stone-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-stone-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-brand-300 rtl:peer-checked:after:-translate-x-full dark:border-stone-600 dark:bg-stone-700 dark:peer-focus:ring-brand-800" />
+            </label>
+          </div>
+
+          {/* Marketing Emails */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-stone-100 dark:bg-stone-800">
+                <Megaphone className="h-5 w-5 text-stone-600 dark:text-stone-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-stone-900 dark:text-white">
+                  {t('preferences.marketingEmails')}
+                </p>
+                <p className="text-xs text-stone-500 dark:text-stone-400">
+                  {t('preferences.marketingEmailsDescription')}
+                </p>
+              </div>
+            </div>
+            <label className="relative inline-flex cursor-pointer items-center">
+              <input
+                type="checkbox"
+                aria-label={t('preferences.marketingEmails')}
+                checked={preferences.marketingEmails}
+                onChange={(e) =>
+                  setPreferences((p) => ({ ...p, marketingEmails: e.target.checked }))
+                }
+                className="peer sr-only"
+              />
+              <div className="peer h-6 w-11 rounded-full bg-stone-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-stone-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-brand-300 rtl:peer-checked:after:-translate-x-full dark:border-stone-600 dark:bg-stone-700 dark:peer-focus:ring-brand-800" />
             </label>
           </div>
 
@@ -496,6 +716,59 @@ export default function SettingsPage(): React.JSX.Element | null {
             </Button>
           </div>
 
+          {/* Download my data (Right to Access / Portability) */}
+          <div className="flex flex-col gap-3 rounded-lg border border-stone-200 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-stone-700">
+            <div className="flex items-start gap-3">
+              <Download className="mt-0.5 h-5 w-5 shrink-0 text-stone-400" />
+              <div>
+                <p className="text-sm font-medium text-stone-900 dark:text-white">
+                  {t('account.dataTitle')}
+                </p>
+                <p className="text-xs text-stone-500 dark:text-stone-400">
+                  {t('account.downloadDataDescription')}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 self-start sm:self-auto"
+              loading={downloadingData}
+              onClick={handleDownloadData}
+              icon={<Download className="h-4 w-4" />}
+            >
+              {downloadingData ? t('account.downloadDataPreparing') : t('account.downloadData')}
+            </Button>
+          </div>
+
+          {/* Sign out of all devices. Deliberately NOT an "active sessions"
+              table: Firebase Auth exposes no per-device session list, so the
+              only honest offer is revoking every session at once. */}
+          <div className="flex flex-col gap-3 rounded-lg border border-stone-200 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-stone-700">
+            <div className="flex items-start gap-3">
+              <LogOut className="mt-0.5 h-5 w-5 shrink-0 text-stone-400" />
+              <div>
+                <p className="text-sm font-medium text-stone-900 dark:text-white">
+                  {t('account.signOutEverywhereTitle')}
+                </p>
+                <p className="text-xs text-stone-500 dark:text-stone-400">
+                  {t('account.signOutEverywhereDescription')}
+                </p>
+                <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">
+                  {t('account.signOutEverywhereNote')}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 self-start sm:self-auto"
+              onClick={() => setShowSignOutAllModal(true)}
+            >
+              {t('account.signOutEverywhereAction')}
+            </Button>
+          </div>
+
           {/* Danger Zone */}
           <div className="rounded-lg border border-red-200 p-4 dark:border-red-900/50">
             <h4 className="mb-2 text-sm font-semibold text-red-600 dark:text-red-400">
@@ -532,10 +805,10 @@ export default function SettingsPage(): React.JSX.Element | null {
           </p>
           <Input
             id="deleteConfirm"
-            label={t('account.deleteModalLabel')}
+            label={t('account.deleteModalLabel', { keyword: deleteKeyword })}
             value={deleteConfirmText}
             onChange={(e) => setDeleteConfirmText(e.target.value)}
-            placeholder="DELETE"
+            placeholder={deleteKeyword}
           />
           <div className="flex justify-end gap-3">
             <Button
@@ -550,10 +823,36 @@ export default function SettingsPage(): React.JSX.Element | null {
             <Button
               variant="danger"
               onClick={handleDeleteAccount}
-              disabled={deleteConfirmText !== 'DELETE'}
+              disabled={!deleteConfirmed}
               loading={deleteMutation.isPending}
             >
               {t('account.confirmDelete')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Sign Out Everywhere Modal */}
+      <Modal
+        isOpen={showSignOutAllModal}
+        onClose={() => setShowSignOutAllModal(false)}
+        title={t('account.signOutEverywhereConfirmTitle')}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-stone-600 dark:text-stone-400">
+            {t('account.signOutEverywhereConfirmBody')}
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setShowSignOutAllModal(false)}>
+              {t('account.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              loading={signOutEverywhereMutation.isPending}
+              onClick={() => signOutEverywhereMutation.mutate()}
+            >
+              {t('account.signOutEverywhereAction')}
             </Button>
           </div>
         </div>
@@ -606,6 +905,8 @@ export default function SettingsPage(): React.JSX.Element | null {
                 </Button>
                 <Button
                   variant="primary"
+                  loading={sendingReset}
+                  disabled={sendingReset}
                   onClick={handleSendPasswordReset}
                 >
                   {t('account.sendResetLink')}

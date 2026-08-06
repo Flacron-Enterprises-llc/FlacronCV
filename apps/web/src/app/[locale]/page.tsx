@@ -3,13 +3,10 @@ import Navbar from '@/components/landing/Navbar';
 import Hero from '@/components/landing/Hero';
 import Features from '@/components/landing/Features';
 import Pricing from '@/components/landing/Pricing';
-import Testimonials from '@/components/landing/Testimonials';
 import HowItWorks from '@/components/landing/HowItWorks';
 import FAQ from '@/components/landing/FAQ';
 import Footer from '@/components/landing/Footer';
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://flacroncv-web.onrender.com';
+import { SITE_URL, localizedAlternates } from '@/lib/seo';
 
 export async function generateMetadata({
   params: { locale },
@@ -17,7 +14,8 @@ export async function generateMetadata({
   params: { locale: string };
 }): Promise<Metadata> {
   return {
-    title: 'Build Your Perfect CV with AI | FlacronCV',
+    // Bare title — the root layout template appends " | FlacronCV".
+    title: 'Build Your Perfect CV with AI',
     description:
       'Create ATS-optimized CVs and cover letters in minutes using AI. Professional templates, PDF & DOCX export, multilingual support. Free to start — no credit card required.',
     keywords: [
@@ -53,9 +51,7 @@ export async function generateMetadata({
         'Create ATS-optimized CVs and cover letters in minutes. Free to start.',
       images: [`${SITE_URL}/og.png`],
     },
-    alternates: {
-      canonical: `${SITE_URL}/${locale}`,
-    },
+    alternates: localizedAlternates('', locale),
   };
 }
 
@@ -117,7 +113,7 @@ const faqSchema = {
 
 export default function LandingPage(): React.JSX.Element | null {
   return (
-    <main className="min-h-screen">
+    <main id="main-content" className="min-h-screen">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
@@ -126,7 +122,8 @@ export default function LandingPage(): React.JSX.Element | null {
       <Hero />
       <HowItWorks />
       <Features />
-      <Testimonials />
+      {/* Testimonials intentionally hidden until real, verifiable customer
+          testimonials are collected — do not re-enable with placeholder data. */}
       <Pricing />
       <FAQ />
       <Footer />

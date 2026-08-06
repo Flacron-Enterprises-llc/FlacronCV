@@ -31,16 +31,49 @@ export class FirebaseAdminService implements OnModuleInit {
         await this.app.firestore().listCollections();
         this.logger.log('Firestore connection verified');
       } catch (error) {
-        this.logger.warn(`Firestore not accessible: ${(error as Error).message}`);
-        this.logger.warn('Falling back to in-memory store (dev mode - data lost on restart)');
-        this._useInMemory = true;
-        this._inMemoryFirestore = new InMemoryFirestore();
+        this.failFastOrFallBack(`Firestore not accessible: ${(error as Error).message}`);
       }
     } else {
-      this._useInMemory = true;
-      this._inMemoryFirestore = new InMemoryFirestore();
-      this.logger.warn('Using in-memory store (dev mode - data lost on restart)');
+      this.failFastOrFallBack('Firebase Admin is not configured.');
     }
+  }
+
+  /**
+   * The in-memory store is a DEV convenience and must never serve production.
+   *
+   * This probe is a single `listCollections()` call at boot. Any transient
+   * failure at that instant — DNS blip, cold-start timeout, a momentary IAM or
+   * quota error, a Google 503 — used to flip the process onto an in-memory
+   * store permanently: there is no retry, and the `firestore` getter consults
+   * the flag on every later call. The process then started cleanly and
+   * `/health` reported ok, so the load balancer sent it live traffic.
+   *
+   * That failure mode is worse than a crash, because `auth` does NOT consult
+   * the flag — it always talks to real Firebase Auth. So users sign in
+   * successfully, `AuthService.verifyAndSync` sees no document, and silently
+   * recreates a blank free-tier account: their CVs and paid subscription
+   * vanish, and every write (including a Stripe webhook's plan grant, which
+   * Stripe will not redeliver once the event is marked processed) goes to RAM
+   * and is discarded on restart.
+   *
+   * In production the right answer is to die loudly so the deploy rolls back
+   * or the container restarts against a healthy Firestore.
+   */
+  private failFastOrFallBack(reason: string): never | void {
+    const isProduction = (this.configService.get<string>('nodeEnv') ?? process.env.NODE_ENV) === 'production';
+
+    if (isProduction) {
+      this.logger.error(reason);
+      throw new Error(
+        `${reason} — refusing to start in production. The in-memory store is a development ` +
+          'fallback only; serving it would silently discard every write and hide existing user data.',
+      );
+    }
+
+    this.logger.warn(reason);
+    this.logger.warn('Falling back to in-memory store (dev mode - data lost on restart)');
+    this._useInMemory = true;
+    this._inMemoryFirestore = new InMemoryFirestore();
   }
 
   private initializeApp() {

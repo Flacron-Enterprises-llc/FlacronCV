@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Lock, Sparkles, ArrowRight, Crown, Zap, Eye } from 'lucide-react';
 import { useRouter } from '@/i18n/routing';
 import Badge from '@/components/ui/Badge';
@@ -52,12 +53,16 @@ export default function TemplateCard({
   onSelect,
   userCanAccess,
 }: TemplateCardProps) {
+  const t = useTranslations('template_picker');
+  const tc = useTranslations('common');
   const router = useRouter();
   const [showPaywall, setShowPaywall]   = useState(false);
   const [showPreview, setShowPreview]   = useState(false);
 
   const isLocked = isPro && !userCanAccess;
   const TierIcon = tierLabel === 'Enterprise' ? Crown : Zap;
+  // Display the tier via the shared common namespace; logic keeps the canonical label.
+  const tierName = tc(tierLabel.toLowerCase());
 
   const handleSelectClick = () => {
     if (isPro && !userCanAccess) {
@@ -92,7 +97,7 @@ export default function TemplateCard({
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40 backdrop-blur-[2px]">
               <Lock className="h-6 w-6 text-white drop-shadow" />
               <span className="rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white">
-                {tierLabel} Plan Required
+                {t('tier_required', { tier: tierName })}
               </span>
             </div>
           )}
@@ -103,10 +108,10 @@ export default function TemplateCard({
               onClick={() => setShowPreview(true)}
               disabled={isDisabled}
               className="flex translate-y-2 items-center gap-1.5 rounded-full bg-white/95 px-4 py-1.5 text-xs font-semibold text-stone-800 opacity-0 shadow-md transition-all hover:bg-white group-hover:translate-y-0 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label={`Preview ${name} template`}
+              aria-label={t('preview_aria', { name })}
             >
               <Eye className="h-3.5 w-3.5" />
-              Preview
+              {t('preview')}
             </button>
           </div>
 
@@ -131,12 +136,12 @@ export default function TemplateCard({
               {isPro ? (
                 <Badge variant="brand" size="sm">
                   <TierIcon className="me-1 h-3 w-3" />
-                  {tierLabel}
+                  {tierName}
                 </Badge>
               ) : (
                 <Badge variant="success" size="sm">
                   <Sparkles className="me-1 h-3 w-3" />
-                  Free
+                  {tc('free')}
                 </Badge>
               )}
             </div>
@@ -153,7 +158,7 @@ export default function TemplateCard({
               icon={!userCanAccess ? <Lock className="h-3.5 w-3.5" /> : undefined}
               onClick={handleSelectClick}
             >
-              {userCanAccess ? 'Select Template' : 'Buy to Use'}
+              {userCanAccess ? t('select_template') : t('buy_to_use')}
             </Button>
           ) : (
             <Button
@@ -164,7 +169,7 @@ export default function TemplateCard({
               disabled={isDisabled}
               onClick={handleSelectClick}
             >
-              Use for Free
+              {t('use_free')}
             </Button>
           )}
         </div>
@@ -193,18 +198,16 @@ export default function TemplateCard({
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-900/40">
             <TierIcon className="h-8 w-8 text-brand-600 dark:text-brand-400" />
           </div>
-          <h3 className="text-xl font-bold text-stone-900 dark:text-white">Purchase Required</h3>
+          <h3 className="text-xl font-bold text-stone-900 dark:text-white">{t('purchase_required')}</h3>
           <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
-            <span className="font-semibold text-stone-800 dark:text-stone-200">{name}</span> is a{' '}
-            <span className="font-semibold text-brand-600 dark:text-brand-400">{tierLabel}</span>{' '}
-            template. Upgrade your plan to unlock it and all other {tierLabel} templates.
+            {t('purchase_desc', { name, tier: tierName })}
           </p>
-          <ul className="mt-4 w-full space-y-2 rounded-xl border border-stone-100 bg-stone-50 px-4 py-3 text-left text-sm dark:border-stone-700 dark:bg-stone-800/60">
+          <ul className="mt-4 w-full space-y-2 rounded-xl border border-stone-100 bg-stone-50 px-4 py-3 text-start text-sm dark:border-stone-700 dark:bg-stone-800/60">
             {[
-              'Unlimited CV exports (PDF & DOCX)',
-              `Access to all ${tierLabel} templates`,
-              'AI-powered writing assistant',
-              'Priority customer support',
+              t('benefit_exports'),
+              t('benefit_templates', { tier: tierName }),
+              t('benefit_ai'),
+              t('benefit_support'),
             ].map((benefit) => (
               <li key={benefit} className="flex items-center gap-2 text-stone-700 dark:text-stone-300">
                 <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
@@ -219,10 +222,10 @@ export default function TemplateCard({
               icon={<ArrowRight className="h-4 w-4" />}
               onClick={handleUpgrade}
             >
-              Upgrade to {tierLabel}
+              {t('upgrade_to', { tier: tierName })}
             </Button>
             <Button variant="ghost" className="w-full" onClick={() => setShowPaywall(false)}>
-              Maybe Later
+              {t('maybe_later')}
             </Button>
           </div>
         </div>

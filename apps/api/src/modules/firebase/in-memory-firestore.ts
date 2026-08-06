@@ -4,12 +4,32 @@
  * Data is lost on server restart.
  */
 
+import { FieldValue } from 'firebase-admin/firestore';
+
 type DocData = Record<string, unknown>;
+
+/**
+ * Resolves FieldValue transforms the way real Firestore would. Only numeric
+ * increment is supported (the only transform this codebase uses); other
+ * transforms leave the existing value untouched.
+ */
+function resolveFieldValue(existing: unknown, value: unknown): unknown {
+  if (value instanceof FieldValue) {
+    const operand = (value as unknown as { operand?: unknown }).operand;
+    if (typeof operand === 'number') {
+      return ((typeof existing === 'number' ? existing : 0) as number) + operand;
+    }
+    return existing;
+  }
+  return value;
+}
 
 class InMemoryDocumentSnapshot {
   constructor(
     private _id: string,
     private _data: DocData | undefined,
+    // Real Firestore snapshots expose .ref; consumers use it for batch writes.
+    public readonly ref?: InMemoryDocumentReference,
   ) {}
 
   get exists(): boolean {
@@ -54,7 +74,7 @@ class InMemoryDocumentReference {
   async get(): Promise<InMemoryDocumentSnapshot> {
     const coll = this.store.get(this.collectionPath);
     const data = coll?.get(this.docId);
-    return new InMemoryDocumentSnapshot(this.docId, data);
+    return new InMemoryDocumentSnapshot(this.docId, data, this);
   }
 
   async update(data: DocData): Promise<void> {
@@ -75,9 +95,10 @@ class InMemoryDocumentReference {
           }
           obj = obj[parts[i]];
         }
-        obj[parts[parts.length - 1]] = value;
+        const leaf = parts[parts.length - 1];
+        obj[leaf] = resolveFieldValue(obj[leaf], value);
       } else {
-        updated[key] = value;
+        updated[key] = resolveFieldValue(updated[key], value);
       }
     }
     coll!.set(this.docId, updated);
@@ -109,6 +130,33 @@ class InMemoryBatch {
   }
 
   async commit(): Promise<void> {
+    for (const op of this.operations) {
+      await op();
+    }
+  }
+}
+
+class InMemoryTransaction {
+  private operations: Array<() => Promise<void>> = [];
+
+  // Reads are live (single-threaded test double — no real isolation needed).
+  async get(ref: InMemoryDocumentReference): Promise<InMemoryDocumentSnapshot> {
+    return ref.get();
+  }
+
+  update(ref: InMemoryDocumentReference, data: DocData): void {
+    this.operations.push(() => ref.update(data));
+  }
+
+  set(ref: InMemoryDocumentReference, data: DocData): void {
+    this.operations.push(() => ref.set(data));
+  }
+
+  delete(ref: InMemoryDocumentReference): void {
+    this.operations.push(() => ref.delete());
+  }
+
+  async commitOps(): Promise<void> {
     for (const op of this.operations) {
       await op();
     }
@@ -211,7 +259,14 @@ class InMemoryQuery {
       entries = entries.slice(0, this.limitCount);
     }
 
-    const docs = entries.map(([id, data]) => new InMemoryDocumentSnapshot(id, data));
+    const docs = entries.map(
+      ([id, data]) =>
+        new InMemoryDocumentSnapshot(
+          id,
+          data,
+          new InMemoryDocumentReference(this.store, this.collectionPath, id),
+        ),
+    );
     return new InMemoryQuerySnapshot(docs);
   }
 
@@ -251,6 +306,10 @@ class InMemoryCollectionReference extends InMemoryQuery {
 
 export class InMemoryFirestore {
   private store = new Map<string, Map<string, DocData>>();
+  // Serialize transactions so concurrent runTransaction() calls don't read stale
+  // state — a conservative model of Firestore's serializable-transaction guarantee
+  // (never permits a race the real DB would reject).
+  private txChain: Promise<unknown> = Promise.resolve();
 
   collection(name: string): InMemoryCollectionReference {
     return new InMemoryCollectionReference(this.store, name);
@@ -258,5 +317,20 @@ export class InMemoryFirestore {
 
   batch(): InMemoryBatch {
     return new InMemoryBatch();
+  }
+
+  async runTransaction<T>(fn: (tx: InMemoryTransaction) => Promise<T>): Promise<T> {
+    const run = this.txChain.then(async () => {
+      const tx = new InMemoryTransaction();
+      const result = await fn(tx);
+      await tx.commitOps();
+      return result;
+    });
+    // Keep the chain alive even if this transaction rejects.
+    this.txChain = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
   }
 }

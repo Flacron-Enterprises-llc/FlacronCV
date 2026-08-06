@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -10,12 +10,13 @@ import {
   CRMActivity,
   CRMTransaction,
   CRMCustomerStatus,
+  CRMCustomerSource,
 } from '@flacroncv/shared-types';
 import CRMStatusBadge from '@/components/crm/CRMStatusBadge';
 import ActivityTimeline from '@/components/crm/ActivityTimeline';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import { Link } from '@/i18n/routing';
+import { Link, useRouter } from '@/i18n/routing';
 import {
   ArrowLeft,
   Mail,
@@ -29,18 +30,40 @@ import {
   Globe,
   Edit3,
   Save,
+  Trash2,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { safeFormat } from '@/lib/format-date';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 export default function CustomerProfilePage(): React.JSX.Element | null {
+  const t = useTranslations('crm');
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const [noteText, setNoteText] = useState('');
   const [newTag, setNewTag] = useState('');
   const [editingStatus, setEditingStatus] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<CRMCustomerStatus | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    phone: '',
+    company: '',
+    source: CRMCustomerSource.MANUAL,
+  });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Accessible-dialog wiring for the two hand-rolled modals below.
+  const editTitleId = useId();
+  const deleteTitleId = useId();
+  const fieldId = useId();
+  const editDialogRef = useModalA11y<HTMLDivElement>(showEditModal, () => setShowEditModal(false));
+  const deleteDialogRef = useModalA11y<HTMLDivElement>(showDeleteConfirm, () =>
+    setShowDeleteConfirm(false),
+  );
 
   const { data: customer, isLoading } = useQuery<CRMCustomer>({
     queryKey: ['crm', 'customer', id],
@@ -52,7 +75,7 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
     queryFn: () => api.get(`/crm/customers/${id}/activities`),
   });
 
-  const { data: transactionsData } = useQuery<{ items: CRMTransaction[] }>({
+  const { data: transactionsData, isLoading: txLoading, isError: txError } = useQuery<{ items: CRMTransaction[] }>({
     queryKey: ['crm', 'transactions', { customerId: id }],
     queryFn: () => api.get(`/crm/transactions?customerId=${id}&limit=10`),
   });
@@ -65,14 +88,14 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
   const addNoteMutation = useMutation({
     mutationFn: (content: string) =>
       api.post(`/crm/customers/${id}/notes`, { content }),
-    onSuccess: () => { setNoteText(''); invalidate(); toast.success('Note added'); },
+    onSuccess: () => { setNoteText(''); invalidate(); toast.success(t('customer_detail_note_added')); },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const deleteNoteMutation = useMutation({
     mutationFn: (noteId: string) =>
       api.delete(`/crm/customers/${id}/notes/${noteId}`),
-    onSuccess: () => { invalidate(); toast.success('Note deleted'); },
+    onSuccess: () => { invalidate(); toast.success(t('customer_detail_note_deleted')); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -97,7 +120,41 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
       setEditingStatus(false);
       invalidate();
       queryClient.invalidateQueries({ queryKey: ['crm', 'customers'] });
-      toast.success('Status updated');
+      toast.success(t('customer_detail_status_updated'));
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Seed the edit form from the loaded customer, then open the modal.
+  const openEdit = () => {
+    if (!customer) return;
+    setEditForm({
+      name: customer.name,
+      phone: customer.phone ?? '',
+      company: customer.company ?? '',
+      source: customer.source,
+    });
+    setShowEditModal(true);
+  };
+
+  const updateMutation = useMutation({
+    mutationFn: (dto: typeof editForm) => api.put(`/crm/customers/${id}`, dto),
+    onSuccess: () => {
+      setShowEditModal(false);
+      invalidate();
+      queryClient.invalidateQueries({ queryKey: ['crm', 'customers'] });
+      toast.success(t('customer_detail_update_success'));
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.delete(`/crm/customers/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crm', 'customers'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'analytics'] });
+      toast.success(t('customer_detail_delete_success'));
+      router.push('/crm/customers');
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -126,14 +183,14 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
             className="mb-2 inline-flex items-center gap-1 text-sm text-stone-500 hover:text-stone-900 dark:hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Customers
+            {t('customer_detail_back_to_customers')}
           </Link>
           <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{customer.name}</h1>
           <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-            Customer since {format(new Date(customer.createdAt), 'MMMM d, yyyy')}
+            {t('customer_detail_customer_since', { date: safeFormat(customer.createdAt, 'MMMM d, yyyy') })}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <CRMStatusBadge value={customer.status} type="customer" />
           {!editingStatus ? (
             <Button
@@ -142,7 +199,7 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
               icon={<Edit3 className="h-4 w-4" />}
               onClick={() => { setSelectedStatus(customer.status); setEditingStatus(true); }}
             >
-              Change Status
+              {t('customer_detail_change_status')}
             </Button>
           ) : (
             <div className="flex items-center gap-2">
@@ -161,17 +218,35 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
                 icon={<Save className="h-4 w-4" />}
                 onClick={() => selectedStatus && updateStatusMutation.mutate(selectedStatus)}
               >
-                Save
+                {t('save')}
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
+                aria-label={t('cancel')}
+                title={t('cancel')}
                 onClick={() => setEditingStatus(false)}
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
           )}
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<Edit3 className="h-4 w-4" />}
+            onClick={openEdit}
+          >
+            {t('customer_detail_edit')}
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            icon={<Trash2 className="h-4 w-4" />}
+            onClick={() => setShowDeleteConfirm(true)}
+          >
+            {t('customer_detail_delete')}
+          </Button>
         </div>
       </div>
 
@@ -181,7 +256,7 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
           {/* Basic Info */}
           <Card>
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-              Contact Info
+              {t('customer_detail_contact_info')}
             </h2>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
@@ -203,14 +278,14 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
               <div className="flex items-center gap-3">
                 <Globe className="h-4 w-4 flex-shrink-0 text-stone-400" />
                 <span className="text-sm capitalize text-stone-600 dark:text-stone-300">
-                  Source: {customer.source}
+                  {t('customer_detail_source_label', { source: customer.source })}
                 </span>
               </div>
               {customer.lastActivity && (
                 <div className="flex items-center gap-3">
                   <Calendar className="h-4 w-4 flex-shrink-0 text-stone-400" />
                   <span className="text-sm text-stone-600 dark:text-stone-300">
-                    Last activity: {format(new Date(customer.lastActivity), 'MMM d, yyyy')}
+                    {t('customer_detail_last_activity', { date: safeFormat(customer.lastActivity, 'MMM d, yyyy') })}
                   </span>
                 </div>
               )}
@@ -218,14 +293,14 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
           </Card>
 
           {/* Revenue */}
-          <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 dark:from-emerald-950 dark:to-emerald-900 dark:border-emerald-800">
+          <Card>
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900">
-                <DollarSign className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
+                <DollarSign className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-emerald-700 dark:text-emerald-400">Total Revenue</p>
-                <p className="text-3xl font-bold text-emerald-800 dark:text-emerald-200">
+                <p className="text-sm text-stone-500 dark:text-stone-400">{t('customer_detail_total_revenue')}</p>
+                <p className="text-3xl font-bold text-stone-900 dark:text-white">
                   ${customer.totalRevenue.toLocaleString()}
                 </p>
               </div>
@@ -236,7 +311,7 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
           <Card>
             <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
               <Tag className="h-3.5 w-3.5" />
-              Tags
+              {t('customer_detail_tags')}
             </h2>
             <div className="flex flex-wrap gap-2">
               {customer.tags.map((tag) => (
@@ -246,8 +321,11 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
                 >
                   {tag}
                   <button
+                    type="button"
                     onClick={() => removeTagMutation.mutate(tag)}
-                    className="ml-1 text-stone-400 hover:text-red-500"
+                    aria-label={t('customer_detail_remove_tag', { tag })}
+                    title={t('customer_detail_remove_tag', { tag })}
+                    className="ms-1 text-stone-400 hover:text-red-500"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -257,7 +335,7 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
             <div className="mt-3 flex gap-2">
               <input
                 type="text"
-                placeholder="Add tag..."
+                placeholder={t('customer_detail_add_tag_placeholder')}
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
                 onKeyDown={(e) => {
@@ -271,6 +349,8 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
                 size="sm"
                 variant="secondary"
                 icon={<Plus className="h-4 w-4" />}
+                aria-label={t('customer_detail_add_tag')}
+                title={t('customer_detail_add_tag')}
                 disabled={!newTag.trim()}
                 onClick={() => addTagMutation.mutate(newTag.trim())}
               />
@@ -283,29 +363,33 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
           {/* Purchase History */}
           <Card>
             <h2 className="mb-4 text-base font-semibold text-stone-900 dark:text-white">
-              Purchase History
+              {t('customer_detail_purchase_history')}
             </h2>
-            {transactionsData?.items.length ? (
+            {txLoading ? (
+              <div className="h-16 animate-pulse rounded-lg bg-stone-100 dark:bg-stone-800" />
+            ) : txError ? (
+              <p className="text-sm text-red-600 dark:text-red-400">{t('data_load_error')}</p>
+            ) : transactionsData?.items.length ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-stone-200 dark:border-stone-700 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
-                      <th className="pb-2 pr-4">Date</th>
-                      <th className="pb-2 pr-4">Description</th>
-                      <th className="pb-2 pr-4">Amount</th>
-                      <th className="pb-2">Status</th>
+                    <tr className="border-b border-stone-200 dark:border-stone-700 text-start text-xs font-semibold uppercase tracking-wide text-stone-500">
+                      <th className="pb-2 pe-4">{t('date')}</th>
+                      <th className="pb-2 pe-4">{t('description')}</th>
+                      <th className="pb-2 pe-4">{t('amount')}</th>
+                      <th className="pb-2">{t('status')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {transactionsData.items.map((tx) => (
                       <tr key={tx.id} className="border-b border-stone-100 dark:border-stone-800">
-                        <td className="py-2 pr-4 text-stone-500 dark:text-stone-400">
-                          {format(new Date(tx.date), 'MMM d, yyyy')}
+                        <td className="py-2 pe-4 text-stone-500 dark:text-stone-400">
+                          {safeFormat(tx.date, 'MMM d, yyyy')}
                         </td>
-                        <td className="py-2 pr-4 text-stone-700 dark:text-stone-300">
+                        <td className="py-2 pe-4 text-stone-700 dark:text-stone-300">
                           {tx.description ?? '—'}
                         </td>
-                        <td className="py-2 pr-4 font-medium text-stone-900 dark:text-white">
+                        <td className="py-2 pe-4 font-medium text-stone-900 dark:text-white">
                           ${tx.amount.toLocaleString()} {tx.currency}
                         </td>
                         <td className="py-2">
@@ -317,14 +401,14 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
                 </table>
               </div>
             ) : (
-              <p className="text-sm text-stone-500 dark:text-stone-400">No transactions yet.</p>
+              <p className="text-sm text-stone-500 dark:text-stone-400">{t('customer_detail_no_transactions')}</p>
             )}
           </Card>
 
           {/* Notes */}
           <Card>
             <h2 className="mb-4 text-base font-semibold text-stone-900 dark:text-white">
-              Notes
+              {t('customer_detail_notes')}
             </h2>
             <div className="space-y-3">
               {(customer.notes ?? []).map((note) => (
@@ -335,14 +419,17 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm text-stone-700 dark:text-stone-300">{note.content}</p>
                     <button
+                      type="button"
                       onClick={() => deleteNoteMutation.mutate(note.id)}
-                      className="flex-shrink-0 text-stone-300 opacity-0 hover:text-red-500 group-hover:opacity-100 dark:text-stone-600 transition-opacity"
+                      aria-label={t('customer_detail_delete_note')}
+                      title={t('customer_detail_delete_note')}
+                      className="flex-shrink-0 text-stone-300 opacity-0 hover:text-red-500 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 dark:text-stone-600 transition-opacity"
                     >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                   <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">
-                    {note.authorName} &middot; {format(new Date(note.createdAt), 'MMM d, yyyy HH:mm')}
+                    {note.authorName} &middot; {safeFormat(note.createdAt, 'MMM d, yyyy HH:mm')}
                   </p>
                 </div>
               ))}
@@ -350,7 +437,7 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
 
             <div className="mt-4 space-y-2">
               <textarea
-                placeholder="Add a note..."
+                placeholder={t('customer_detail_add_note_placeholder')}
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
                 rows={3}
@@ -362,7 +449,7 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
                 loading={addNoteMutation.isPending}
                 onClick={() => addNoteMutation.mutate(noteText.trim())}
               >
-                Add Note
+                {t('customer_detail_add_note')}
               </Button>
             </div>
           </Card>
@@ -370,7 +457,7 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
           {/* Activity Timeline */}
           <Card>
             <h2 className="mb-4 text-base font-semibold text-stone-900 dark:text-white">
-              Activity Timeline
+              {t('customer_detail_activity_timeline')}
             </h2>
             <ActivityTimeline
               activities={activities ?? []}
@@ -379,6 +466,156 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
           </Card>
         </div>
       </div>
+
+      {/* Edit Customer Modal */}
+      {showEditModal && (
+        <div
+          ref={editDialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={editTitleId}
+          tabIndex={-1}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 outline-none"
+        >
+          <Card className="max-h-[90vh] w-full max-w-md overflow-y-auto">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 id={editTitleId} className="text-lg font-semibold text-stone-900 dark:text-white">
+                {t('customer_detail_edit_title')}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                aria-label={t('close')}
+                className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => { e.preventDefault(); updateMutation.mutate(editForm); }}
+              className="space-y-4"
+            >
+              <div>
+                <label
+                  htmlFor={`${fieldId}-name`}
+                  className="mb-1 block text-sm font-medium text-stone-700 dark:text-stone-300"
+                >
+                  {t('customers_field_name')}
+                </label>
+                <input
+                  id={`${fieldId}-name`}
+                  type="text"
+                  required
+                  value={editForm.name}
+                  onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
+                  className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-stone-700 dark:bg-stone-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor={`${fieldId}-phone`}
+                  className="mb-1 block text-sm font-medium text-stone-700 dark:text-stone-300"
+                >
+                  {t('phone')}
+                </label>
+                <input
+                  id={`${fieldId}-phone`}
+                  type="tel"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))}
+                  className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-stone-700 dark:bg-stone-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor={`${fieldId}-company`}
+                  className="mb-1 block text-sm font-medium text-stone-700 dark:text-stone-300"
+                >
+                  {t('company')}
+                </label>
+                <input
+                  id={`${fieldId}-company`}
+                  type="text"
+                  value={editForm.company}
+                  onChange={(e) => setEditForm((p) => ({ ...p, company: e.target.value }))}
+                  className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-stone-700 dark:bg-stone-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor={`${fieldId}-source`}
+                  className="mb-1 block text-sm font-medium text-stone-700 dark:text-stone-300"
+                >
+                  {t('source')}
+                </label>
+                <select
+                  id={`${fieldId}-source`}
+                  value={editForm.source}
+                  onChange={(e) => setEditForm((p) => ({ ...p, source: e.target.value as CRMCustomerSource }))}
+                  className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-white"
+                >
+                  {Object.values(CRMCustomerSource).map((v) => (
+                    <option key={v} value={v} className="capitalize">{v}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Button type="button" variant="secondary" onClick={() => setShowEditModal(false)}>
+                  {t('cancel')}
+                </Button>
+                <Button type="submit" loading={updateMutation.isPending}>
+                  {t('save')}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div
+          ref={deleteDialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={deleteTitleId}
+          tabIndex={-1}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 outline-none"
+        >
+          <Card className="w-full max-w-sm">
+            <div className="mb-3 flex items-center gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <h2 id={deleteTitleId} className="text-lg font-semibold text-stone-900 dark:text-white">
+                {t('customer_detail_delete_title')}
+              </h2>
+            </div>
+            <p className="text-sm text-stone-600 dark:text-stone-400">
+              {t('customer_detail_delete_confirm', { name: customer.name })}
+            </p>
+            <div className="mt-5 flex justify-end gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleteMutation.isPending}
+              >
+                {t('cancel')}
+              </Button>
+              <Button
+                variant="danger"
+                loading={deleteMutation.isPending}
+                icon={<Trash2 className="h-4 w-4" />}
+                onClick={() => deleteMutation.mutate()}
+              >
+                {t('customer_detail_delete')}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
