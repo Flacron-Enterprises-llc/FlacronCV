@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Both Dockerfiles do `COPY apps/<app>/ ./apps/<app>/`. With no .dockerignore
 # that swept the developer's local .env into the builder layer — for the API
 # that is the production Firebase service-account private key, the Stripe
@@ -36,3 +37,35 @@
 # comment in each Dockerfile: Expo/RN pulls in a file: dependency that breaks
 # workspace install).
 apps/mobile
+=======
+.git
+.github
+.vscode
+.idea
+
+node_modules
+**/node_modules
+
+.next
+**/.next
+
+dist
+**/dist
+
+coverage
+**/coverage
+
+.env
+.env.*
+!.env.example
+
+*.log
+
+package-lock.json
+**/package-lock.json
+
+apps/web
+apps/mobile
+
+docker
+>>>>>>> origin/main
