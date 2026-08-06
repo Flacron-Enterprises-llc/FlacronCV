@@ -8,7 +8,15 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 import { api } from '@/lib/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { User, UserProfile, UserPreferences, Locale, Theme } from '@flacroncv/shared-types';
+import {
+  User,
+  UserProfile,
+  UserPreferences,
+  Locale,
+  Theme,
+  ProfileLinkField,
+  validateProfileLink,
+} from '@flacroncv/shared-types';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
@@ -42,6 +50,10 @@ export default function SettingsPage(): React.JSX.Element | null {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Per-field messages for LinkedIn/GitHub/Website, shown under the input that
+  // is actually wrong rather than as one generic "save failed" toast.
+  const [linkErrors, setLinkErrors] = useState<Partial<Record<ProfileLinkField, string>>>({});
 
   // Profile form state
   const [profile, setProfile] = useState<Partial<UserProfile>>({
@@ -290,8 +302,32 @@ export default function SettingsPage(): React.JSX.Element | null {
     };
   }, [previewUrl]);
 
+  /**
+   * Validate the link fields with the SAME rule the API enforces, so the user
+   * is corrected in place instead of after a round-trip and a red toast. The
+   * server still re-checks — this is feedback, not the control.
+   *
+   * Saves the normalised value too, so pasting "github.com/name" is stored as
+   * "https://github.com/name" rather than silently becoming a broken CV link.
+   */
   const handleProfileSave = () => {
-    profileMutation.mutate(profile);
+    const errors: Partial<Record<ProfileLinkField, string>> = {};
+    const normalized = { ...profile };
+
+    (['linkedin', 'github', 'website'] as ProfileLinkField[]).forEach((field) => {
+      const result = validateProfileLink(field, profile[field] ?? '');
+      if (result.error) errors[field] = result.error;
+      else normalized[field] = result.value;
+    });
+
+    setLinkErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast.error(t('profile.fixLinks'));
+      return;
+    }
+
+    setProfile(normalized);
+    profileMutation.mutate(normalized);
   };
 
   const handlePreferencesSave = () => {
@@ -455,14 +491,25 @@ export default function SettingsPage(): React.JSX.Element | null {
               id="linkedin"
               label={t('profile.linkedin')}
               value={profile.linkedin}
-              onChange={(e) => setProfile((p) => ({ ...p, linkedin: e.target.value }))}
+              // Clear the error as soon as the field is touched — leaving a stale
+              // message under a field the user is actively fixing reads as the
+              // fix not having worked.
+              onChange={(e) => {
+                setProfile((p) => ({ ...p, linkedin: e.target.value }));
+                setLinkErrors((errs) => ({ ...errs, linkedin: undefined }));
+              }}
+              error={linkErrors.linkedin}
               placeholder="https://linkedin.com/in/username"
             />
             <Input
               id="github"
               label={t('profile.github')}
               value={profile.github}
-              onChange={(e) => setProfile((p) => ({ ...p, github: e.target.value }))}
+              onChange={(e) => {
+                setProfile((p) => ({ ...p, github: e.target.value }));
+                setLinkErrors((errs) => ({ ...errs, github: undefined }));
+              }}
+              error={linkErrors.github}
               placeholder="https://github.com/username"
             />
           </div>
@@ -470,7 +517,11 @@ export default function SettingsPage(): React.JSX.Element | null {
             id="website"
             label={t('profile.website')}
             value={profile.website}
-            onChange={(e) => setProfile((p) => ({ ...p, website: e.target.value }))}
+            onChange={(e) => {
+              setProfile((p) => ({ ...p, website: e.target.value }));
+              setLinkErrors((errs) => ({ ...errs, website: undefined }));
+            }}
+            error={linkErrors.website}
             placeholder="https://yoursite.com"
           />
           <div className="flex justify-end">

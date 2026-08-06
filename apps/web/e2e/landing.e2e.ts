@@ -11,12 +11,15 @@ test.describe('Landing page', () => {
     await expect(hero).toBeVisible();
   });
 
-  test('CTA "Get Started" navigates to register page', async ({ page }) => {
-    // Find any link/button pointing to /register
-    const cta = page
-      .getByRole('link', { name: /get started/i })
-      .or(page.getByRole('button', { name: /get started/i }))
-      .first();
+  test('primary CTA navigates to the register page', async ({ page }) => {
+    // Targets the LINK, not its label. The old version searched for the text
+    // "Get Started", which this page has never rendered — the hero CTA reads
+    // `hero.cta_primary` ("Start Building for Free") and Hero.tsx sets
+    // `primaryHref = user ? '/dashboard' : '/register'`. Matching on href keeps
+    // this test working when marketing copy is reworded, which is exactly the
+    // kind of drift that broke it.
+    const cta = page.locator('a[href$="/register"]').first();
+    await expect(cta).toBeVisible();
     await cta.click();
     await expect(page).toHaveURL(/\/register/);
   });
@@ -28,12 +31,20 @@ test.describe('Landing page', () => {
     await expect(pricing).toBeVisible();
   });
 
-  test('testimonials section is visible', async ({ page }) => {
-    const testimonials = page
-      .locator('[id*="testimonial"], section:has-text("Testimonial"), section:has-text("What our")')
-      .first();
-    await testimonials.scrollIntoViewIfNeeded();
-    await expect(testimonials).toBeVisible();
+  // Was 'testimonials section is visible'. The landing page has never had one —
+  // page.tsx composes Navbar, Hero, Features, Pricing, HowItWorks, FAQ, Footer,
+  // and testimonials live on their own route (/[locale]/testimonials, already
+  // smoke-tested in public-pages.e2e.ts). The old test asserted a section that
+  // does not exist, so it could only ever fail. These assert the sections the
+  // page actually renders, by the ids the navbar anchors to.
+  test.describe('landing sections render', () => {
+    for (const id of ['features', 'how-it-works', 'faq']) {
+      test(`#${id} section is visible`, async ({ page }) => {
+        const section = page.locator(`section#${id}`);
+        await section.scrollIntoViewIfNeeded();
+        await expect(section).toBeVisible();
+      });
+    }
   });
 
   test('navbar links are functional', async ({ page }) => {
@@ -60,10 +71,12 @@ test.describe('Landing page — mobile', () => {
 
     if (await menuButton.isVisible()) {
       await menuButton.click();
-      // After opening, menu should be visible
-      const mobileMenu = page.locator('[data-testid="mobile-menu"], nav[aria-expanded="true"]').first();
-      // Just verify no crash happened and page is still functional
-      await expect(page).toHaveURL(/\/en\//);
+      // `/\/en\//` required a TRAILING SLASH, but next-intl normalises `/en/`
+      // to `/en`, so this could never match however the menu behaved. The
+      // assertion is also near-tautological — the real signal that the menu
+      // works is that navigation links become reachable after the click.
+      await expect(page).toHaveURL(/\/en(\/|$)/);
+      await expect(page.locator('nav').getByRole('link').first()).toBeVisible();
     } else {
       // On some layouts the hamburger might not be needed — skip gracefully
       test.skip();

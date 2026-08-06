@@ -46,11 +46,41 @@ function resolveRange(range?: AnalyticsRange): { from: Date | null; to: Date | n
   return { from: parse(range?.from, false), to: parse(range?.to, true) };
 }
 
+/**
+ * Coerce whatever Firestore handed back into a Date.
+ *
+ * Date fields come out of firebase-admin as `Timestamp` objects, not strings.
+ * `new Date(timestamp)` on one of those produces an Invalid Date, which is why
+ * every ranged figure on the CRM dashboard silently reported zero the moment a
+ * date filter was applied — `inRange` rejected every single record rather than
+ * erroring, so the numbers looked plausible and simply were not.
+ */
+function toDate(value: unknown): Date | null {
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  // Firestore Timestamp — duck-typed so this does not need the Firestore import.
+  if (value && typeof (value as { toDate?: unknown }).toDate === 'function') {
+    const d = (value as { toDate(): Date }).toDate();
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  // A Timestamp that has been through JSON (an export, a cache, a test double)
+  // keeps its fields but loses `toDate`. Reconstruct from seconds rather than
+  // silently treating it as out-of-range.
+  if (value && typeof (value as { seconds?: unknown }).seconds === 'number') {
+    const d = new Date((value as { seconds: number }).seconds * 1000);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
 /** True when `value` falls inside the (possibly open-ended) window. */
 function inRange(value: unknown, from: Date | null, to: Date | null): boolean {
   if (!from && !to) return true;
-  const d = new Date(value as string);
-  if (Number.isNaN(d.getTime())) return false;
+  const d = toDate(value);
+  if (!d) return false;
   if (from && d < from) return false;
   if (to && d > to) return false;
   return true;

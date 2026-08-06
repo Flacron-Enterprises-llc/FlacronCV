@@ -10,8 +10,17 @@
       "persistent": true
     },
     "lint": {},
-    "type-check": {},
+    "type-check": {
+      // shared-types resolves through its compiled `dist` (see its package.json
+      // main/types). Without this, `pnpm type-check` on a fresh clone runs tsc
+      // before that dist exists and every `@flacroncv/shared-types` import fails
+      // to resolve. It passed locally only because a previous build had left
+      // dist/ behind — in CI, which installs fresh, the gate broke.
+      "dependsOn": ["^build"]
+    },
     "test": {
+      // Same reason: jest/vitest load the package's compiled entrypoint.
+      "dependsOn": ["^build"],
       "cache": false
     },
     "test:watch": {

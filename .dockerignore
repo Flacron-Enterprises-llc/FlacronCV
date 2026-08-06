@@ -1,0 +1,38 @@
+# Both Dockerfiles do `COPY apps/<app>/ ./apps/<app>/`. With no .dockerignore
+# that swept the developer's local .env into the builder layer — for the API
+# that is the production Firebase service-account private key, the Stripe
+# secret key and the webhook signing secret, baked into an image layer. It also
+# made builds non-reproducible: `next build` auto-loads apps/web/.env, so the
+# client bundle inlined whatever NEXT_PUBLIC_* values happened to be on the
+# machine that built it (locally, NEXT_PUBLIC_API_URL=http://localhost:4000).
+#
+# Secrets must reach the container at RUNTIME from the platform's env, never
+# through the build context.
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.local.example
+
+# Build context bloat — none of this is needed to build, and shipping it slows
+# every deploy and enlarges the layer cache.
+**/node_modules
+**/.next
+**/dist
+**/build
+**/coverage
+**/.turbo
+.git
+.github
+**/.expo
+**/*.log
+
+# Test and tooling artefacts
+**/playwright-report
+**/test-results
+**/.vscode
+**/.idea
+
+# The mobile app is deliberately excluded from both images (see the deps stage
+# comment in each Dockerfile: Expo/RN pulls in a file: dependency that breaks
+# workspace install).
+apps/mobile

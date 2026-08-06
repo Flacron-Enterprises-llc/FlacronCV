@@ -629,7 +629,8 @@
       "website": "Sitio web",
       "save": "Guardar perfil",
       "saveSuccess": "Perfil guardado con éxito",
-      "saveError": "Error al guardar el perfil"
+      "saveError": "Error al guardar el perfil",
+        "fixLinks": "Corrige los enlaces marcados antes de guardar."
     },
     "preferences": {
       "title": "Preferencias",
@@ -775,6 +776,7 @@
     "yearly": "Anual",
     "yearly_coming_soon": "Próximamente",
     "yearly_unavailable_note": "La facturación anual aún no está disponible — empieza con el plan mensual y cambia cuando quieras.",
+    "yearly_save": "Ahorra {percent}%",
     "per_year": "/año",
     "activated_title": "¡Suscripción activada!",
     "activated_desc": "Tu plan se ha mejorado. Disfruta de tus nuevas funciones y créditos.",

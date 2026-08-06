@@ -71,3 +71,7 @@ packages/*/dist/
 apps/*/.next/
 apps/*/out/
 nul
+
+# Playwright run artefacts — regenerated on every run, never committed.
+apps/web/playwright-report/
+apps/web/test-results/

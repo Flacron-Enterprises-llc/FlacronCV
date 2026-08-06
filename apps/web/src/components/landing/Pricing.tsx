@@ -133,8 +133,21 @@ export default function Pricing() {
               title={YEARLY_BILLING_ENABLED ? undefined : t('pricing.yearly_unavailable_note')}
             >
               {t('pricing.yearly')}
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:bg-amber-900/60 dark:text-amber-400">
-                {t('pricing.yearly_coming_soon')}
+              {/* The badge tracks the flag. It was unconditional, so once real
+                  annual prices were configured and YEARLY_BILLING_ENABLED went
+                  true this control became clickable while still reading
+                  "Coming soon" — a working button labelled as unavailable. */}
+              <span
+                className={cn(
+                  'rounded-full px-2 py-0.5 text-[11px] font-bold',
+                  YEARLY_BILLING_ENABLED
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-400'
+                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-400',
+                )}
+              >
+                {YEARLY_BILLING_ENABLED
+                  ? t('pricing.save_vs_monthly', { percent: yearlySavingsPercent(SubscriptionPlan.PRO) })
+                  : t('pricing.yearly_coming_soon')}
               </span>
             </button>
           </div>

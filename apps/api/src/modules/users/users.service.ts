@@ -14,6 +14,9 @@ import {
   Theme,
   PLAN_CONFIGS,
   resolveEffectivePlan,
+  ProfileLinkField,
+  isProfileLinkField,
+  validateProfileLink,
 } from '@flacroncv/shared-types';
 
 /**
@@ -154,7 +157,13 @@ export class UsersService {
       Object.entries(data.profile).forEach(([key, value]) => {
         const max = UsersService.PROFILE_MAX_LENGTHS[key as keyof UserProfile];
         if (max === undefined) return; // unknown key — drop
-        updateData[`profile.${key}`] = this.assertString(`profile.${key}`, value, max);
+        const str = this.assertString(`profile.${key}`, value, max);
+        // The link fields get the shared rule (right site, real URL, http/https
+        // only) rather than just a length cap. Length alone let a GitHub URL
+        // save into the LinkedIn field and ship onto a CV labelled LinkedIn.
+        updateData[`profile.${key}`] = isProfileLinkField(key)
+          ? this.assertProfileLink(key, str, max)
+          : str;
       });
 
       // Keep top-level displayName in sync when name parts change
@@ -186,6 +195,19 @@ export class UsersService {
       throw new BadRequestException(`${field} must be at most ${maxLen} characters.`);
     }
     return value;
+  }
+
+  /**
+   * Runs the shared link rule and turns a rejection into a 400.
+   *
+   * Returns the NORMALISED value (scheme added when the user pasted
+   * "github.com/name"), so what lands in Firestore is always a parseable URL —
+   * the CV renderer and the public profile page both assume that.
+   */
+  private assertProfileLink(field: ProfileLinkField, value: string, maxLen: number): string {
+    const result = validateProfileLink(field, value, maxLen);
+    if (result.error) throw new BadRequestException(result.error);
+    return result.value;
   }
 
   private assertPhotoURL(value: unknown): string {
