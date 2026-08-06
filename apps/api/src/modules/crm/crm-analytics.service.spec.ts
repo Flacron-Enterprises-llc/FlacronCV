@@ -143,3 +143,88 @@ describe('CRMAnalyticsService date-range filtering', () => {
     expect(overview.totalCustomers).toBe(3);
   });
 });
+
+/**
+ * The fixtures above seed ISO **strings**, but real Firestore never returns
+ * those for a date field — firebase-admin hands back a `Timestamp` object.
+ * `new Date(timestamp)` yields an Invalid Date, so the range check rejected
+ * every record and every filtered figure on the CRM dashboard silently read
+ * zero. Nothing threw; the numbers were simply wrong, which is why the
+ * string-based fixtures never caught it.
+ *
+ * These tests seed the shape production actually stores.
+ */
+describe('CRMAnalyticsService with Firestore Timestamp values', () => {
+  /**
+   * A real Timestamp, not the in-memory double.
+   *
+   * `InMemoryFirestore` round-trips every document through
+   * `JSON.parse(JSON.stringify(...))` on both write and read, so a `toDate`
+   * method cannot survive it — the store literally cannot represent the type
+   * production returns. That is precisely why the existing string-based
+   * fixtures never caught this, so these tests use a hand-rolled firestore stub
+   * that hands back the object shape firebase-admin actually produces.
+   */
+  const ts = (iso: string) => ({
+    toDate: () => new Date(iso),
+    seconds: Math.floor(new Date(iso).getTime() / 1000),
+    nanoseconds: 0,
+  });
+
+  const stubFirestore = (data: Record<string, unknown[]>) => ({
+    collection: (name: string) => ({
+      get: async () => ({ docs: (data[name] ?? []).map((d) => ({ data: () => d })) }),
+    }),
+  });
+
+  const CUSTOMERS = [
+    { id: 'c1', createdAt: ts('2026-01-15T10:00:00.000Z'), status: CRMCustomerStatus.ACTIVE },
+    { id: 'c2', createdAt: ts('2026-06-10T10:00:00.000Z'), status: CRMCustomerStatus.ACTIVE },
+  ];
+  const TRANSACTIONS = [
+    { id: 't1', date: ts('2026-01-20T10:00:00.000Z'), amount: 100, status: CRMTransactionStatus.COMPLETED },
+    { id: 't2', date: ts('2026-06-15T10:00:00.000Z'), amount: 200, status: CRMTransactionStatus.COMPLETED },
+  ];
+
+  const serviceWith = (customers: unknown[], transactions: unknown[]) =>
+    new CRMAnalyticsService({
+      firestore: stubFirestore({
+        crm_customers: customers,
+        crm_leads: [],
+        crm_transactions: transactions,
+      }),
+    } as any);
+
+  it('filters Timestamp-valued records instead of discarding all of them', async () => {
+    const service = serviceWith(CUSTOMERS, TRANSACTIONS);
+
+    const overview = await service.getOverview({ from: '2026-06-01', to: '2026-06-30' });
+
+    // Before the fix both of these were 0 — the window matched nothing at all,
+    // and the dashboard reported no customers and no revenue without erroring.
+    expect(overview.totalCustomers).toBe(1);
+    expect(overview.totalRevenue).toBe(200);
+  });
+
+  it('still returns everything when no range is given', async () => {
+    const service = serviceWith(CUSTOMERS, TRANSACTIONS);
+
+    const overview = await service.getOverview();
+
+    expect(overview.totalCustomers).toBe(2);
+    expect(overview.totalRevenue).toBe(300);
+  });
+
+  it('also understands a Timestamp that has been through JSON (toDate lost)', async () => {
+    const plain = (iso: string) => ({ seconds: Math.floor(new Date(iso).getTime() / 1000), nanoseconds: 0 });
+    const service = serviceWith(
+      [{ id: 'c2', createdAt: plain('2026-06-10T10:00:00.000Z'), status: CRMCustomerStatus.ACTIVE }],
+      [{ id: 't2', date: plain('2026-06-15T10:00:00.000Z'), amount: 200, status: CRMTransactionStatus.COMPLETED }],
+    );
+
+    const overview = await service.getOverview({ from: '2026-06-01', to: '2026-06-30' });
+
+    expect(overview.totalCustomers).toBe(1);
+    expect(overview.totalRevenue).toBe(200);
+  });
+});

@@ -1,5 +1,6 @@
 export * from './enums';
 export * from './user.types';
+export * from './profile-links';
 export * from './cv.types';
 export * from './cover-letter.types';
 export * from './job.types';

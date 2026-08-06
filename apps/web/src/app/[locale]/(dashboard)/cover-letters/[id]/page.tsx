@@ -102,7 +102,13 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     }
   }, [coverLetter]);
 
-  // Load cover letter data
+  // Load cover letter data.
+  //
+  // refetchOnWindowFocus MUST stay off: it defaults to true and staleTime is 60s
+  // (QueryProvider), and this queryFn writes straight into component state via
+  // setCoverLetter. Tabbing away for a minute and returning therefore replaced
+  // the in-progress draft with the server copy and reset the dirty flag, losing
+  // unsaved edits with no warning.
   const { isLoading, isError, refetch } = useQuery({
     queryKey: ['cover-letter', coverLetterId],
     queryFn: async () => {
@@ -110,6 +116,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
       setCoverLetter(data);
       return data;
     },
+    refetchOnWindowFocus: false,
   });
 
   // Tiptap editor

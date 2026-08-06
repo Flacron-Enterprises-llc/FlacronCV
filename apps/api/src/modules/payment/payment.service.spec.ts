@@ -44,6 +44,16 @@ async function seedUser(firestore: InMemoryFirestore, uid: string, overrides: Re
 }
 
 /**
+ * A `customers.retrieve` that always finds the customer.
+ *
+ * Checkout and the portal now verify a stored customer id still resolves
+ * before using it — a stale id left behind by a switched STRIPE_SECRET_KEY
+ * made Stripe answer "No such customer" and every billing call 500. Stubs for
+ * tests about OTHER behaviour need this to state the ordinary case: it's there.
+ */
+const liveCustomers = () => ({ retrieve: jest.fn(async (id: string) => ({ id })) });
+
+/**
  * Subscription lifecycle events are written to the audit trail, so the service
  * takes an AuditService. It is a fire-and-forget dependency here — the spies let
  * a test assert an event was recorded without any of them needing to.
@@ -77,65 +87,112 @@ describe('PaymentService', () => {
   // ─── createCheckoutSession ───────────────────────────────────────────────────
 
   describe('createCheckoutSession', () => {
-    // A real monthly plan price ID (whitelisted) — passes the guard.
-    const PRO_MONTHLY = PLAN_CONFIGS[SubscriptionPlan.PRO].stripePriceIdMonthly;
-    const PRO_YEARLY = PLAN_CONFIGS[SubscriptionPlan.PRO].stripePriceIdYearly;
-
-    // Was "rejects a non-whitelisted price (the yearly-that-bills-monthly ID)".
-    // A verified year-interval price is now configured and yearly billing is on,
-    // so the annual id is legitimately purchasable — asserting it is REJECTED
-    // would now be asserting the feature is broken. The property that still
-    // matters is that the annual id tracks the feature flag, which is covered
-    // by 'admits annual price ids exactly when yearly billing is enabled'.
-    it('accepts the whitelisted yearly price when yearly billing is enabled', async () => {
+    it('accepts an annual selection when yearly billing is enabled', async () => {
       if (!YEARLY_BILLING_ENABLED) return;
       await seedUser(firestore, 'uid-1');
       await expect(
-        service.createCheckoutSession('uid-1', PRO_YEARLY, 'http://ok', 'http://cancel'),
+        service.createCheckoutSession('uid-1', { plan: SubscriptionPlan.PRO, interval: 'year' }),
       ).rejects.not.toThrow('Unsupported plan selection.');
     });
 
-    it('rejects an arbitrary/unknown price ID', async () => {
+    it('rejects a plan with no configured Stripe price', async () => {
       await seedUser(firestore, 'uid-1');
+      // Career Accelerator is advertised but has no price id anywhere — it must
+      // not reach Stripe, and it must not fall through to some other plan's price.
       await expect(
-        service.createCheckoutSession('uid-1', 'price_arbitrary', 'http://ok', 'http://cancel'),
+        service.createCheckoutSession('uid-1', { plan: SubscriptionPlan.CAREER_ACCELERATOR }),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('accepts a whitelisted monthly price (then fails later because Stripe is not configured)', async () => {
+    it('rejects an unknown plan', async () => {
       await seedUser(firestore, 'uid-1');
-      // Passes the whitelist guard, so the error is NOT the "Unsupported plan" one.
       await expect(
-        service.createCheckoutSession('uid-1', PRO_MONTHLY, 'http://ok', 'http://cancel'),
+        service.createCheckoutSession('uid-1', { plan: 'platinum' as SubscriptionPlan }),
+      ).rejects.toThrow('Unsupported plan selection.');
+    });
+
+    it('accepts a monthly selection (then fails later because Stripe is not configured)', async () => {
+      await seedUser(firestore, 'uid-1');
+      // Passes the plan guard, so the error is NOT the "Unsupported plan" one.
+      await expect(
+        service.createCheckoutSession('uid-1', { plan: SubscriptionPlan.PRO, interval: 'month' }),
       ).rejects.not.toThrow('Unsupported plan selection.');
     });
 
     /**
-     * The server must refuse an annual purchase on its own, not because the UI
-     * hides the option.
+     * The price the customer is charged is chosen by the SERVER, from its own
+     * configuration — never named by the caller.
      *
-     * The ids in STRIPE_*_YEARLY_PRICE_ID are named "yearly" but point at
-     * MONTH-interval Stripe prices ($359.99/mo and $1,199.00/mo — verified
-     * against the API). Selling either as an annual plan bills roughly 14x the
-     * advertised amount. The "Coming soon" label on the pricing page is a
-     * presentation choice; this whitelist is the control that actually prevents
-     * the charge, and it has to hold even if that label is removed.
+     * A price id is issued by one Stripe account. When the account changed, the
+     * ids compiled into PLAN_CONFIGS stopped existing, and because the browser
+     * read those constants and posted them, every checkout failed with "No such
+     * price" while the correct ids sat unused in STRIPE_*_PRICE_ID. Env has to
+     * outrank the constant, and this is the assertion that keeps it that way.
+     */
+    it('prefers the env price id over the compiled-in PLAN_CONFIGS one', () => {
+      const configured = new PaymentService(
+        makeConfig({
+          proMonthly: 'price_env_pro_monthly',
+          proYearly: 'price_env_pro_yearly',
+          enterpriseMonthly: 'price_env_ent_monthly',
+          enterpriseYearly: 'price_env_ent_yearly',
+        }),
+        makeFirebaseAdmin(firestore),
+        usersService,
+        audit as any,
+      );
+      const resolve = (plan: SubscriptionPlan, interval: string) =>
+        (configured as never as { resolvePriceId(p: SubscriptionPlan, i: string): string | null })
+          .resolvePriceId(plan, interval);
+
+      expect(resolve(SubscriptionPlan.PRO, 'month')).toBe('price_env_pro_monthly');
+      expect(resolve(SubscriptionPlan.PRO, 'year')).toBe('price_env_pro_yearly');
+      expect(resolve(SubscriptionPlan.ENTERPRISE, 'month')).toBe('price_env_ent_monthly');
+      expect(resolve(SubscriptionPlan.ENTERPRISE, 'year')).toBe('price_env_ent_yearly');
+    });
+
+    it('falls back to PLAN_CONFIGS when no price env vars are set', () => {
+      const resolve = (service as never as {
+        resolvePriceId(p: SubscriptionPlan, i: string): string | null;
+      }).resolvePriceId;
+
+      expect(resolve.call(service, SubscriptionPlan.PRO, 'month')).toBe(
+        PLAN_CONFIGS[SubscriptionPlan.PRO].stripePriceIdMonthly,
+      );
+    });
+
+    /**
+     * The two clients spell the interval differently — the web page uses
+     * 'monthly'/'yearly', the mobile app sends the BillingInterval enum
+     * ('month'/'year'). One endpoint serves both, so both must resolve the same
+     * price. An unrecognised value must bill MONTHLY: that is the cheaper of
+     * the two, so a garbled interval can never charge a year up front.
      */
     it.each([
-      ['pro yearly', 'STRIPE_PRO_YEARLY_PRICE_ID'],
-      ['enterprise yearly', 'STRIPE_ENTERPRISE_YEARLY_PRICE_ID'],
-    ])('refuses to check out with the %s price id while yearly billing is off', async (_label, envKey) => {
-      // Only meaningful while the feature is gated; once a real year-interval
-      // price exists and the flag is on, these ids become legitimate.
+      ['yearly', 'stripePriceIdYearly'],
+      ['year', 'stripePriceIdYearly'],
+      ['monthly', 'stripePriceIdMonthly'],
+      ['month', 'stripePriceIdMonthly'],
+      ['nonsense', 'stripePriceIdMonthly'],
+      [undefined, 'stripePriceIdMonthly'],
+    ])('interval %s resolves to %s', (interval, field) => {
+      const resolved = (service as never as {
+        resolvePriceId(p: SubscriptionPlan, i: unknown): string | null;
+      }).resolvePriceId(
+        SubscriptionPlan.PRO,
+        (service as never as { normalizeInterval(i?: string): string }).normalizeInterval(
+          interval as string | undefined,
+        ),
+      );
+      expect(resolved).toBe((PLAN_CONFIGS[SubscriptionPlan.PRO] as Record<string, any>)[field]);
+    });
+
+    it('refuses an annual purchase outright while yearly billing is off', async () => {
       if (YEARLY_BILLING_ENABLED) return;
-
-      const priceId = process.env[envKey] ?? PLAN_CONFIGS[SubscriptionPlan.PRO].stripePriceIdYearly;
-      if (!priceId) return;
-
       await seedUser(firestore, 'uid-1');
       await expect(
-        service.createCheckoutSession('uid-1', priceId, 'http://ok', 'http://cancel'),
-      ).rejects.toThrow('Unsupported plan selection.');
+        service.createCheckoutSession('uid-1', { plan: SubscriptionPlan.PRO, interval: 'year' }),
+      ).rejects.toThrow('Annual billing is not available yet.');
     });
 
     /**
@@ -164,6 +221,160 @@ describe('PaymentService', () => {
       for (const c of Object.values(PLAN_CONFIGS)) {
         if (c.stripePriceIdMonthly) expect(ids).toContain(c.stripePriceIdMonthly);
       }
+    });
+  });
+
+  // ─── stale stripeCustomerId recovery ─────────────────────────────────────────
+
+  /**
+   * A customer id in Firestore that Stripe no longer recognises.
+   *
+   * Switching STRIPE_SECRET_KEY between test and live mode (or between
+   * accounts), or deleting a customer from the Dashboard, leaves the id behind
+   * in our user doc. Every billing call then handed Stripe an unknown customer
+   * and came back 500 — checkout, the portal and the invoice list all at once,
+   * with nothing in the app able to clear the id.
+   */
+  describe('stale stripeCustomerId', () => {
+    const STALE = 'cus_StaleFromAnotherAccount';
+
+    /** Shaped like a real `StripeInvalidRequestError` for a missing object. */
+    function noSuchCustomer() {
+      return Object.assign(new Error(`No such customer: '${STALE}'`), {
+        type: 'StripeInvalidRequestError',
+        code: 'resource_missing',
+        statusCode: 404,
+      });
+    }
+
+    /** A blip — rate limit, network, outage. Must never look like "it's gone". */
+    function transientFailure() {
+      return Object.assign(new Error('Request timed out'), {
+        type: 'StripeConnectionError',
+        statusCode: 500,
+      });
+    }
+
+    function installStripe(overrides: Record<string, unknown>) {
+      const stripe = {
+        customers: {
+          retrieve: jest.fn(async () => { throw noSuchCustomer(); }),
+          create: jest.fn(async () => ({ id: 'cus_Fresh' })),
+        },
+        subscriptions: { list: jest.fn(async () => ({ data: [] })) },
+        checkout: { sessions: { create: jest.fn(async () => ({ id: 'cs_1', url: 'http://checkout' })) } },
+        billingPortal: { sessions: { create: jest.fn(async () => ({ url: 'http://portal' })) } },
+        invoices: { list: jest.fn(async () => ({ data: [] })) },
+        ...overrides,
+      };
+      (service as unknown as { stripe: unknown }).stripe = stripe;
+      return stripe;
+    }
+
+    it('replaces the customer and checks out instead of 500ing', async () => {
+      await seedUser(firestore, 'uid-stale', {
+        subscription: { plan: SubscriptionPlan.FREE, status: SubscriptionStatus.ACTIVE, stripeCustomerId: STALE },
+      });
+      const stripe = installStripe({});
+
+      const result = await service.createCheckoutSession(
+        'uid-stale',
+        { plan: SubscriptionPlan.PRO },
+        'http://ok',
+        'http://cancel',
+      );
+
+      expect(result.url).toBe('http://checkout');
+      expect(stripe.customers.create).toHaveBeenCalledTimes(1);
+      // The replacement must be PERSISTED, or the next request repeats the work.
+      expect(usersService.updateSubscription).toHaveBeenCalledWith('uid-stale', { stripeCustomerId: 'cus_Fresh' });
+      // ...and the session must be opened against the new id, not the dead one.
+      expect(stripe.checkout.sessions.create).toHaveBeenCalledWith(
+        expect.objectContaining({ customer: 'cus_Fresh' }),
+      );
+    });
+
+    it('treats a DELETED customer as missing (it resolves, it does not throw)', async () => {
+      await seedUser(firestore, 'uid-deleted', {
+        subscription: { plan: SubscriptionPlan.FREE, status: SubscriptionStatus.ACTIVE, stripeCustomerId: STALE },
+      });
+      const stripe = installStripe({
+        customers: {
+          retrieve: jest.fn(async () => ({ id: STALE, deleted: true })),
+          create: jest.fn(async () => ({ id: 'cus_Fresh' })),
+        },
+      });
+
+      await service.createCheckoutSession(
+        'uid-deleted',
+        { plan: SubscriptionPlan.PRO },
+        'http://ok',
+        'http://cancel',
+      );
+
+      expect(stripe.customers.create).toHaveBeenCalledTimes(1);
+    });
+
+    /**
+     * The guard that makes self-healing safe. Replacing a customer because
+     * Stripe timed out would orphan the real one — its invoices, saved cards
+     * and subscription history — permanently and silently.
+     */
+    it('does NOT replace the customer on a transient Stripe failure', async () => {
+      await seedUser(firestore, 'uid-blip', {
+        subscription: { plan: SubscriptionPlan.FREE, status: SubscriptionStatus.ACTIVE, stripeCustomerId: STALE },
+      });
+      const stripe = installStripe({
+        customers: {
+          retrieve: jest.fn(async () => { throw transientFailure(); }),
+          create: jest.fn(async () => ({ id: 'cus_Fresh' })),
+        },
+      });
+
+      await expect(
+        service.createCheckoutSession(
+          'uid-blip',
+          { plan: SubscriptionPlan.PRO },
+          'http://ok',
+          'http://cancel',
+        ),
+      ).rejects.toThrow('Request timed out');
+
+      expect(stripe.customers.create).not.toHaveBeenCalled();
+      expect(usersService.updateSubscription).not.toHaveBeenCalled();
+    });
+
+    it('answers the portal with a 400, not a 500, and creates no empty customer', async () => {
+      await seedUser(firestore, 'uid-portal', {
+        subscription: { plan: SubscriptionPlan.PRO, status: SubscriptionStatus.ACTIVE, stripeCustomerId: STALE },
+      });
+      const stripe = installStripe({});
+
+      await expect(service.createPortalSession('uid-portal', 'http://back')).rejects.toThrow(BadRequestException);
+      expect(stripe.customers.create).not.toHaveBeenCalled();
+      expect(stripe.billingPortal.sessions.create).not.toHaveBeenCalled();
+    });
+
+    it('degrades the invoice list to empty rather than throwing', async () => {
+      await seedUser(firestore, 'uid-inv', {
+        subscription: { plan: SubscriptionPlan.PRO, status: SubscriptionStatus.ACTIVE, stripeCustomerId: STALE },
+      });
+      installStripe({
+        invoices: { list: jest.fn(async () => { throw noSuchCustomer(); }) },
+      });
+
+      await expect(service.getInvoices('uid-inv')).resolves.toEqual([]);
+    });
+
+    it('still surfaces a real invoice failure', async () => {
+      await seedUser(firestore, 'uid-inv2', {
+        subscription: { plan: SubscriptionPlan.PRO, status: SubscriptionStatus.ACTIVE, stripeCustomerId: STALE },
+      });
+      installStripe({
+        invoices: { list: jest.fn(async () => { throw transientFailure(); }) },
+      });
+
+      await expect(service.getInvoices('uid-inv2')).rejects.toThrow('Request timed out');
     });
   });
 
@@ -508,6 +719,51 @@ describe('PaymentService', () => {
       );
     });
 
+    /**
+     * Stripe has EIGHT subscription statuses; SubscriptionStatus has six.
+     *
+     * This handler used to persist `subscription.status` with a bare cast, so
+     * the two with no enum member — `incomplete_expired` and `paused` — were
+     * written to Firestore as raw strings. Entitlements are decided by
+     * `ACCESS_ENDING_STATUSES.includes(status)`, and neither string is in that
+     * list, so the check fell through and the stored PRO/ENTERPRISE plan was
+     * returned unconditionally and forever, with no period-end grace.
+     *
+     * Concretely: an `incomplete` subscription whose payment never succeeds
+     * expires after ~23h and Stripe sends `customer.subscription.updated` with
+     * `incomplete_expired` — which left the user on permanent paid access
+     * having paid nothing, with no path that would ever revoke it.
+     */
+    it.each(['incomplete_expired', 'paused', 'unrecognised_future_status'])(
+      'maps the unmapped Stripe status %s to a revoking status, never the raw string',
+      async (stripeStatus) => {
+        await seedUser(firestore, 'u-unmapped', {
+          subscription: { plan: SubscriptionPlan.PRO, status: SubscriptionStatus.ACTIVE, stripeCustomerId: 'cus_x' },
+        });
+
+        await service.handleWebhookEvent({
+          id: `evt_${stripeStatus}`,
+          type: 'customer.subscription.updated',
+          data: {
+            object: {
+              customer: 'cus_x',
+              status: stripeStatus,
+              cancel_at_period_end: false,
+              current_period_end: 1_702_600_000,
+              items: { data: [{ price: { id: PRO_PRICE } }] },
+            },
+          },
+        } as any);
+
+        const written = usersService.updateSubscription.mock.calls.at(-1)[1];
+
+        // Must be a member of our enum — never Stripe's raw vocabulary.
+        expect(Object.values(SubscriptionStatus)).toContain(written.status);
+        // And must be one that actually ends access, or the user keeps PRO free.
+        expect(written.status).toBe(SubscriptionStatus.CANCELED);
+      },
+    );
+
     it('applies a downgrade on customer.subscription.updated (ENTERPRISE → PRO)', async () => {
       await seedUser(firestore, 'u-down', {
         subscription: { plan: SubscriptionPlan.ENTERPRISE, status: SubscriptionStatus.ACTIVE, stripeCustomerId: 'cus_d' },
@@ -567,8 +823,6 @@ describe('PaymentService', () => {
   // ─── free trial ──────────────────────────────────────────────────────────────
 
   describe('free trial', () => {
-    const PRO_PRICE = PLAN_CONFIGS[SubscriptionPlan.PRO].stripePriceIdMonthly;
-
     it('does NOT re-offer a trial to a customer who has subscribed before', async () => {
       // The abuse this blocks: revoking access nulls stripeSubscriptionId, so
       // "have they ever subscribed?" answered no after every cancellation and
@@ -578,11 +832,12 @@ describe('PaymentService', () => {
       });
       const create = jest.fn().mockResolvedValue({ id: 'cs_2', url: 'https://stripe.test/cs_2' });
       (service as any).stripe = {
+        customers: liveCustomers(),
         checkout: { sessions: { create } },
         subscriptions: { list: jest.fn().mockResolvedValue({ data: [{ id: 'sub_old', status: 'canceled' }] }) },
       };
 
-      await service.createCheckoutSession('u-repeat', PRO_PRICE, 'http://ok', 'http://cancel');
+      await service.createCheckoutSession('u-repeat', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
 
       expect(create).toHaveBeenCalledWith(
         expect.not.objectContaining({ subscription_data: expect.anything() }),
@@ -595,11 +850,12 @@ describe('PaymentService', () => {
       });
       const create = jest.fn().mockResolvedValue({ id: 'cs_3', url: 'https://stripe.test/cs_3' });
       (service as any).stripe = {
+        customers: liveCustomers(),
         checkout: { sessions: { create } },
         subscriptions: { list: jest.fn().mockRejectedValue(new Error('stripe down')) },
       };
 
-      await service.createCheckoutSession('u-err', PRO_PRICE, 'http://ok', 'http://cancel');
+      await service.createCheckoutSession('u-err', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
 
       // Fail closed — an outage must not become a free-trial dispenser.
       expect(create).toHaveBeenCalledWith(
@@ -677,6 +933,7 @@ describe('PaymentService', () => {
       });
       const create = jest.fn().mockResolvedValue({ id: 'cs_1', url: 'https://stripe.test/cs_1' });
       (service as any).stripe = {
+        customers: liveCustomers(),
         checkout: { sessions: { create } },
         // Trial eligibility is now decided from the customer's Stripe
         // subscription history, not from our own stripeSubscriptionId field —
@@ -685,7 +942,7 @@ describe('PaymentService', () => {
         subscriptions: { list: jest.fn().mockResolvedValue({ data: [] }) },
       };
 
-      await service.createCheckoutSession('u-trial', PRO_PRICE, 'http://ok', 'http://cancel');
+      await service.createCheckoutSession('u-trial', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
 
       expect(create).toHaveBeenCalledWith(
         expect.objectContaining({ subscription_data: { trial_period_days: 7 } }),
@@ -697,9 +954,9 @@ describe('PaymentService', () => {
         subscription: { plan: SubscriptionPlan.FREE, stripeCustomerId: 'cus_r', stripeSubscriptionId: 'sub_old' },
       });
       const create = jest.fn().mockResolvedValue({ id: 'cs_2', url: 'x' });
-      (service as any).stripe = { checkout: { sessions: { create } } };
+      (service as any).stripe = { customers: liveCustomers(), checkout: { sessions: { create } } };
 
-      await service.createCheckoutSession('u-ret', PRO_PRICE, 'http://ok', 'http://cancel');
+      await service.createCheckoutSession('u-ret', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
 
       expect(create.mock.calls[0][0].subscription_data).toBeUndefined();
     });

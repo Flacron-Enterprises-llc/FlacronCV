@@ -42,17 +42,30 @@ services:
         sync: false
       - key: STRIPE_ENTERPRISE_YEARLY_PRICE_ID
         sync: false
-      - key: BREVO_API_KEY
+      # Transactional email is AWS SES (`@aws-sdk/client-sesv2` in
+      # modules/mail/mail.service.ts). The BREVO_* keys that used to be here were
+      # dead — grep confirms zero BREVO references anywhere in apps/api/src — and
+      # none of the SES variables the code actually reads were declared. Render
+      # has no instance role, so without explicit credentials the AWS default
+      # chain finds nothing and every send throws: password reset, email
+      # verification and the public contact form all fail in production.
+      - key: AWS_REGION
+        value: us-east-1
+      - key: AWS_ACCESS_KEY_ID
         sync: false
-      - key: BREVO_FROM_EMAIL
+      - key: AWS_SECRET_ACCESS_KEY
         sync: false
-      - key: BREVO_FROM_NAME
+      # These three have code-side defaults, but the defaults point at
+      # flacronenterprises.com — set them explicitly so the sender is a verified
+      # SES identity for this account rather than an assumption.
+      - key: SES_FROM_EMAIL
         sync: false
-      - key: BREVO_TEMPLATE_WELCOME
+      - key: SES_FROM_NAME
         sync: false
-      - key: BREVO_TEMPLATE_VERIFICATION
+      - key: SES_REPLY_TO
         sync: false
-      - key: BREVO_TEMPLATE_PASSWORD_RESET
+      # Inbox that public contact-form submissions are delivered to.
+      - key: CONTACT_EMAIL
         sync: false
 
   # Frontend Web App (Docker — uses Next.js standalone output)
@@ -63,12 +76,21 @@ services:
     dockerContext: .
     region: oregon
     plan: starter
+    # NEXT_PUBLIC_* is inlined into the client bundle by `next build`, so it must
+    # exist at BUILD time, not just at runtime. Render automatically translates a
+    # service's env vars into Docker build arguments, but Docker discards a build
+    # arg unless the Dockerfile declares a matching ARG — which it did not, so
+    # every NEXT_PUBLIC_* compiled to `undefined`. apps/web/Dockerfile now
+    # declares an ARG + ENV for each key below; the two lists must stay in sync.
     envVars:
       - key: NODE_ENV
         value: production
+      # Renamed from NEXT_PUBLIC_APP_URL: no code reads that key. The app reads
+      # NEXT_PUBLIC_SITE_URL (SEO canonicals, sitemap, robots), which was never
+      # supplied — canonical URLs and the sitemap would have been undefined.
       - key: NEXT_PUBLIC_API_URL
         value: https://flacroncv-api.onrender.com/api/v1
-      - key: NEXT_PUBLIC_APP_URL
+      - key: NEXT_PUBLIC_SITE_URL
         value: https://flacroncv-web.onrender.com
       - key: NEXT_PUBLIC_FIREBASE_API_KEY
         sync: false
@@ -82,5 +104,10 @@ services:
         sync: false
       - key: NEXT_PUBLIC_FIREBASE_APP_ID
         sync: false
-      - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+      - key: NEXT_PUBLIC_GA4_MEASUREMENT_ID
+        sync: false
+      # Selects the analytics backend in lib/analytics.ts. Read at build time
+      # like every other NEXT_PUBLIC_*, so it needs both an ARG in the
+      # Dockerfile and a declaration here.
+      - key: NEXT_PUBLIC_ANALYTICS_PROVIDER
         sync: false

@@ -93,6 +93,52 @@ pnpm lint         # web: next/core-web-vitals · api: @typescript-eslint
 pnpm test         # web: Vitest · api: Jest
 ```
 
+## Firebase Storage CORS (avatar upload)
+
+Avatar upload writes straight from the browser to Firebase Storage, so the
+**bucket** — not this codebase — decides whether the request is allowed. A bucket
+with no CORS policy rejects the `OPTIONS` preflight, and the browser reports:
+
+```
+Access to XMLHttpRequest at 'https://firebasestorage.googleapis.com/v0/b/…'
+from origin 'http://localhost:3000' has been blocked by CORS policy:
+Response to preflight request doesn't pass access control check:
+It does not have HTTP ok status.
+```
+
+Nothing in the app can fix that; the policy has to be applied to the bucket once
+per project. [`cors.json`](cors.json) at the repo root is that policy — it lists
+localhost plus the deployed origins from `render.yaml`, and the `X-Goog-Upload-*`
+response headers the Firebase JS SDK's **resumable** upload needs (a plain
+`GET`-only policy is not enough; the upload will still fail).
+
+`gcloud` is not installed on the dev machine. The quickest route is
+**[Cloud Shell](https://console.cloud.google.com/?cloudshell=true)** (browser,
+`gcloud`/`gsutil` preinstalled, already authenticated) — paste `cors.json` into
+it with the editor and run the commands there. Otherwise install the
+[gcloud CLI](https://cloud.google.com/sdk/docs/install) and `gcloud auth login`.
+
+```bash
+# 1. Confirm the bucket name — this is the other cause of the same error.
+#    Projects created before ~Oct 2024 use <project>.appspot.com; newer ones use
+#    <project>.firebasestorage.app. Pointing at a bucket that does not exist
+#    also returns a non-OK preflight, which looks identical in the console.
+gcloud storage buckets list --project flacron-cv --format="value(name)"
+
+# 2. Apply the policy to whichever name step 1 printed.
+gcloud storage buckets update gs://flacron-cv.firebasestorage.app --cors-file=cors.json
+
+# 3. Verify it stuck.
+gcloud storage buckets describe gs://flacron-cv.firebasestorage.app --format="default(cors_config)"
+```
+
+If step 1 prints `flacron-cv.appspot.com`, the bucket name is the bug: update
+`NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` (`apps/web/.env`) and
+`FIREBASE_STORAGE_BUCKET` (`apps/api/.env`) to match, and re-run step 2 against it.
+
+`maxAgeSeconds` caches the preflight for an hour, so hard-reload (or wait) before
+concluding a change did not work.
+
 ## Local testing with Firebase Emulators
 
 By default `pnpm dev` talks to the **live Firebase project**, so any account you

@@ -100,11 +100,15 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
     priceMonthly: 29.99,
     // $299.99/year against $359.88 billed monthly — a saving of $59.89 (17%).
     priceYearly: 299.99,
-    stripePriceIdMonthly: 'price_1T1LzDAWDS7HwRCx1DxhqRq1',
-    // Verified interval=year, $299.99 USD, active — see
-    // scripts/verify-yearly-prices.mjs. NOT `price_1T1M3YAWDS7HwRCx11Tl15x4`,
-    // which is named "Pro Yearly" in Stripe but bills $359.99 every MONTH.
-    stripePriceIdYearly: 'price_1TziQiAWDS7HwRCxGF8bcHY7',
+    // These are FALLBACKS. STRIPE_PRO_MONTHLY_PRICE_ID / _YEARLY_ in the API's
+    // env win when set — see PaymentService.resolvePriceId. A price id belongs
+    // to one Stripe account, so it cannot be a constant shared across
+    // environments; the previous values here (…AWDS7HwRCx…) were left behind by
+    // an account switch and made every checkout fail with "No such price".
+    stripePriceIdMonthly: 'price_1U0xNhKFLhrvSzkgWFAU2LuD',
+    // Verified interval=year, $299.99 USD, active in acct_1HUAchKFLhrvSzkg —
+    // see scripts/verify-yearly-prices.mjs.
+    stripePriceIdYearly: 'price_1U0xNjKFLhrvSzkgYWyB6I6f',
     limits: {
       cvs: 10,
       coverLetters: 20,
@@ -161,10 +165,10 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
     priceMonthly: 99.99,
     // $999.99/year against $1,199.88 billed monthly — a saving of $199.89 (17%).
     priceYearly: 999.99,
-    stripePriceIdMonthly: 'price_1T1LziAWDS7HwRCxozxuJtnx',
-    // Verified interval=year, $999.99 USD, active. NOT
-    // `price_1T1M49AWDS7HwRCxFxY8ZR5y`, which bills $1,199.00 every MONTH.
-    stripePriceIdYearly: 'price_1TziQiAWDS7HwRCxcsgvkn4I',
+    // Fallbacks — STRIPE_ENTERPRISE_*_PRICE_ID in the API's env win when set.
+    stripePriceIdMonthly: 'price_1U0xNlKFLhrvSzkgl98Q71yw',
+    // Verified interval=year, $999.99 USD, active in acct_1HUAchKFLhrvSzkg.
+    stripePriceIdYearly: 'price_1U0xNnKFLhrvSzkgSkx7sca7',
     limits: {
       cvs: 'unlimited',
       coverLetters: 'unlimited',

@@ -629,7 +629,8 @@
       "website": "Website",
       "save": "Save Profile",
       "saveSuccess": "Profile saved successfully",
-      "saveError": "Failed to save profile"
+      "saveError": "Failed to save profile",
+        "fixLinks": "Please fix the highlighted links before saving."
     },
     "preferences": {
       "title": "Preferences",
@@ -775,6 +776,7 @@
     "yearly": "Yearly",
     "yearly_coming_soon": "Coming soon",
     "yearly_unavailable_note": "Yearly billing isn’t available yet — start monthly and switch anytime.",
+    "yearly_save": "Save {percent}%",
     "per_year": "/year",
     "activated_title": "Subscription activated!",
     "activated_desc": "Your plan has been upgraded. Enjoy your new features and credits.",

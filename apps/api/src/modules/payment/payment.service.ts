@@ -5,7 +5,7 @@ import { UsersService } from '../users/users.service';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/audit-actions';
 import Stripe from 'stripe';
-import { SubscriptionPlan, SubscriptionStatus, PLAN_CONFIGS, BillingInvoice, TRIAL_PERIOD_DAYS, YEARLY_BILLING_ENABLED } from '@flacroncv/shared-types';
+import { SubscriptionPlan, SubscriptionStatus, BillingInterval, PLAN_CONFIGS, BillingInvoice, TRIAL_PERIOD_DAYS, YEARLY_BILLING_ENABLED } from '@flacroncv/shared-types';
 
 @Injectable()
 export class PaymentService {
@@ -60,21 +60,128 @@ export class PaymentService {
     return [...ids];
   }
 
+  /**
+   * Is this Stripe error "that id does not exist in this account"?
+   *
+   * Stripe answers a request naming an unknown object with a 404
+   * `StripeInvalidRequestError` carrying `code: 'resource_missing'` — the
+   * "No such customer: 'cus_...'" case. Telling that apart from a network
+   * blip, a rate limit or an auth failure is the whole point: a genuinely
+   * missing customer is safe to replace, a transient error is NOT. Replacing
+   * on a timeout would abandon the real customer and permanently detach its
+   * invoices, payment methods and subscription history.
+   */
+  private static isMissingResource(err: unknown): boolean {
+    const e = err as { type?: string; code?: string; statusCode?: number } | null;
+    return e?.code === 'resource_missing' || (e?.type === 'StripeInvalidRequestError' && e?.statusCode === 404);
+  }
+
+  /**
+   * The stored Stripe customer id — but only if it still resolves against the
+   * account the current STRIPE_SECRET_KEY points at. Returns null when there
+   * is no usable customer, and rethrows anything that isn't "it's gone".
+   *
+   * A stored id stops resolving in three ordinary ways: the key was switched
+   * between test and live mode, the key was pointed at a different Stripe
+   * account, or the customer was deleted from the Dashboard. Firestore keeps
+   * the id regardless, so every subsequent checkout and portal request handed
+   * Stripe a customer it had never heard of and came back 500 — with no path
+   * for the user to recover, since nothing in the app ever cleared the id.
+   */
+  private async liveCustomerId(customerId: string | null | undefined): Promise<string | null> {
+    if (!customerId) return null;
+    try {
+      const customer = await this.stripe.customers.retrieve(customerId);
+      // A DELETED customer resolves successfully rather than throwing, and
+      // then fails every call that references it. `deleted` is the only tell.
+      if ((customer as Stripe.DeletedCustomer).deleted) return null;
+      return customer.id;
+    } catch (err) {
+      if (PaymentService.isMissingResource(err)) {
+        this.logger.warn(`Stored Stripe customer ${customerId} no longer exists — treating as unset.`);
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * The Stripe price to charge for a plan at an interval — env first.
+   *
+   * A price id is issued by ONE Stripe account and is meaningless in any other,
+   * so it cannot be a constant baked into shared code. It was, and switching
+   * the account left `PLAN_CONFIGS` pointing at four prices that no longer
+   * existed; the browser read those constants directly and posted them, so
+   * every checkout died on "No such price" while the correct ids sat unused in
+   * STRIPE_*_PRICE_ID. Configuration has to outrank the compiled-in default,
+   * which is what this ordering establishes. The constants remain as the
+   * fallback for environments that set no price env vars at all.
+   */
+  private resolvePriceId(plan: SubscriptionPlan, interval: BillingInterval): string | null {
+    const envPrices = this.configService.get<Record<string, string>>('stripe.prices');
+    const yearly = interval === BillingInterval.YEAR;
+
+    let fromEnv: string | undefined;
+    if (plan === SubscriptionPlan.PRO) fromEnv = yearly ? envPrices?.proYearly : envPrices?.proMonthly;
+    if (plan === SubscriptionPlan.ENTERPRISE) {
+      fromEnv = yearly ? envPrices?.enterpriseYearly : envPrices?.enterpriseMonthly;
+    }
+
+    const config = PLAN_CONFIGS[plan];
+    const fromConfig = yearly ? config?.stripePriceIdYearly : config?.stripePriceIdMonthly;
+
+    return (fromEnv || fromConfig || '').trim() || null;
+  }
+
+  /**
+   * Both spellings, because the two clients disagree: the web billing page uses
+   * 'monthly'/'yearly' and the mobile app sends the BillingInterval enum
+   * ('month'/'year'). Normalising here is what lets one endpoint serve both.
+   * Anything unrecognised bills MONTHLY — the cheaper of the two, so a garbled
+   * value can never silently charge a year up front.
+   */
+  private normalizeInterval(interval?: string): BillingInterval {
+    return interval === BillingInterval.YEAR || interval === 'yearly'
+      ? BillingInterval.YEAR
+      : BillingInterval.MONTH;
+  }
+
   async createCheckoutSession(
     userId: string,
-    priceId: string,
-    successUrl: string,
-    cancelUrl: string,
+    selection: { plan: SubscriptionPlan; interval?: string },
+    successUrl?: string,
+    cancelUrl?: string,
   ) {
-    // Reject any price that isn't an offered monthly plan price (blocks the
-    // yearly-price-that-bills-monthly overcharge and arbitrary price injection).
+    const interval = this.normalizeInterval(selection?.interval);
+
+    if (interval === BillingInterval.YEAR && !YEARLY_BILLING_ENABLED) {
+      throw new BadRequestException('Annual billing is not available yet.');
+    }
+
+    const priceId = this.resolvePriceId(selection?.plan, interval);
+    if (!priceId) {
+      throw new BadRequestException('Unsupported plan selection.');
+    }
+
+    // Kept as a second gate even though the id is now server-chosen: it is what
+    // ties annual sales to YEARLY_BILLING_ENABLED, so a stray yearly price id
+    // in the env cannot be sold while the feature is off.
     if (!this.allowedCheckoutPriceIds().includes(priceId)) {
       throw new BadRequestException('Unsupported plan selection.');
     }
 
+    // The mobile client sends no URLs at all, so fall back to the configured
+    // frontend rather than handing Stripe `undefined` and 500ing.
+    const frontendUrl = this.configService.get<string>('frontendUrl') ?? '';
+    const resolvedSuccessUrl =
+      successUrl || `${frontendUrl}/settings/billing?success=true&session_id={CHECKOUT_SESSION_ID}`;
+    const resolvedCancelUrl = cancelUrl || `${frontendUrl}/settings/billing?canceled=true`;
+
     const user = await this.usersService.findByIdOrThrow(userId);
 
-    let customerId = user.subscription.stripeCustomerId;
+    // Resolve BEFORE the trial check below, so a replacement customer is the
+    // one whose subscription history that check reads.
+    let customerId = await this.liveCustomerId(user.subscription?.stripeCustomerId);
     if (!customerId) {
       const customer = await this.stripe.customers.create({
         email: user.email,
@@ -116,8 +223,8 @@ export class PaymentService {
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
-      success_url: successUrl,
-      cancel_url: cancelUrl,
+      success_url: resolvedSuccessUrl,
+      cancel_url: resolvedCancelUrl,
       allow_promotion_codes: true,
       metadata: { firebaseUid: userId },
       ...(subscriptionData ? { subscription_data: subscriptionData } : {}),
@@ -247,10 +354,24 @@ export class PaymentService {
     const customerId = user.subscription?.stripeCustomerId;
     if (!customerId) return [];
 
-    const invoices = await this.stripe.invoices.list({
-      customer: customerId,
-      limit: Math.min(Math.max(limit, 1), 100),
-    });
+    // A stale customer id makes this list call fail the same way checkout and
+    // the portal did. Caught rather than pre-verified with a `customers.retrieve`
+    // so the billing page keeps loading in ONE Stripe round-trip; the promise
+    // in this method's contract is that it degrades to an empty list, and a
+    // customer Stripe cannot find has no invoices by definition.
+    let invoices: Stripe.ApiList<Stripe.Invoice>;
+    try {
+      invoices = await this.stripe.invoices.list({
+        customer: customerId,
+        limit: Math.min(Math.max(limit, 1), 100),
+      });
+    } catch (err) {
+      if (PaymentService.isMissingResource(err)) {
+        this.logger.warn(`Invoices requested for missing Stripe customer ${customerId} — returning none.`);
+        return [];
+      }
+      throw err;
+    }
 
     return invoices.data.map((inv) => ({
       id: inv.id,
@@ -267,12 +388,19 @@ export class PaymentService {
 
   async createPortalSession(userId: string, returnUrl: string) {
     const user = await this.usersService.findByIdOrThrow(userId);
-    if (!user.subscription.stripeCustomerId) {
+
+    // Same staleness check as checkout, opposite remedy: a portal exists to
+    // manage an EXISTING billing relationship, so a customer Stripe no longer
+    // knows about has nothing to show. Creating a replacement here would open
+    // an empty portal; report it as the 400 the user can act on instead of
+    // letting Stripe's "No such customer" escape as a 500.
+    const customerId = await this.liveCustomerId(user.subscription?.stripeCustomerId);
+    if (!customerId) {
       throw new BadRequestException('No active subscription found. Please subscribe to a plan first.');
     }
 
     const session = await this.stripe.billingPortal.sessions.create({
-      customer: user.subscription.stripeCustomerId,
+      customer: customerId,
       return_url: returnUrl,
     });
 
@@ -444,9 +572,18 @@ export class PaymentService {
     if (!userId) return;
 
     const plan = this.determinePlan(subscription.items.data[0].price.id);
+    // Map, never cast. Stripe has EIGHT subscription statuses; SubscriptionStatus
+    // has six. A bare cast persisted the raw string for the two with no enum
+    // member — `incomplete_expired` and `paused` — and entitlements are decided
+    // by `ACCESS_ENDING_STATUSES.includes(status)`, which neither string is in.
+    // The stored plan was then returned unconditionally and forever, with no
+    // period-end grace: an `incomplete` subscription that expired unpaid after
+    // 23h left the user on permanent PRO, for free, with no revocation path.
+    // The sibling handlers (handleCheckoutCompleted, handleInvoicePaid) already
+    // map; this one was the outlier.
     await this.usersService.updateSubscription(userId, {
       plan,
-      status: subscription.status as SubscriptionStatus,
+      status: this.mapStripeStatus(subscription.status),
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
       currentPeriodEnd: new Date(subscription.current_period_end * 1000),
     });

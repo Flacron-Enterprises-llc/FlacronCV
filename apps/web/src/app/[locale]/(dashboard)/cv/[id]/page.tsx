@@ -159,15 +159,25 @@ export default function CVBuilderPage(): React.JSX.Element | null {
   }, [isDirty]);
 
   // Fetch CV data — use React Query data for enabled/loading, sync to store separately
+  // refetchOnWindowFocus MUST stay off on an editor.
+  //
+  // It defaults to true and staleTime is 60s (QueryProvider), so tabbing away
+  // for a minute and coming back refetched the server copy, handed a new object
+  // to the sync effect below, and `setCV` overwrote the store — discarding every
+  // unsaved edit. Worse, `setCV` also sets `isDirty = false` (cv-store.ts:75),
+  // so the unsaved-changes guard and autosave both went quiet and the loss was
+  // silent. Refetching is only safe on read-only views.
   const { data: cvData, isLoading: cvLoading, isError: cvError, refetch: refetchCV } = useQuery<CV>({
     queryKey: ['cv', cvId],
     queryFn: () => api.get<CV>(`/cvs/${cvId}`),
+    refetchOnWindowFocus: false,
   });
 
   const { data: sectionsData, isLoading: sectionsLoading, isError: sectionsError, refetch: refetchSections } = useQuery<CVSection[]>({
     queryKey: ['cv-sections', cvId],
     queryFn: () => api.get<CVSection[]>(`/cvs/${cvId}/sections`),
     enabled: !!cvData,
+    refetchOnWindowFocus: false,
   });
 
   // Sync React Query results into Zustand store

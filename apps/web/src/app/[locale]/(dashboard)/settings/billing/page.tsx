@@ -15,6 +15,8 @@ import {
   TRIAL_PERIOD_DAYS,
   customerFacingPlans,
   isPlanPurchasable,
+  YEARLY_BILLING_ENABLED,
+  yearlySavingsPercent,
 } from '@flacroncv/shared-types';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -108,17 +110,19 @@ export default function BillingPage(): React.JSX.Element | null {
 
   // Create checkout session mutation
   const checkoutMutation = useMutation({
-    mutationFn: ({ plan }: { plan: SubscriptionPlan; interval: 'monthly' | 'yearly' }) => {
-      const planConfig = PLAN_CONFIGS[plan];
-      // Yearly billing is not available yet — always checkout the monthly price.
-      // (The API also rejects any non-monthly price ID as a safety net.)
-      const priceId = planConfig.stripePriceIdMonthly;
-      // A plan with no configured Stripe price (e.g. Career Accelerator until the
-      // client sets it) is not purchasable — never send an empty price to Stripe.
-      if (!priceId) return Promise.reject(new Error(t('coming_soon')));
+    mutationFn: ({ plan, interval }: { plan: SubscriptionPlan; interval: 'monthly' | 'yearly' }) => {
+      // A plan with no configured Stripe price (e.g. Career Accelerator until
+      // the client sets it) is not purchasable. This stays a client-side check
+      // so the user gets "coming soon" rather than a round-trip and an error.
+      if (!PLAN_CONFIGS[plan].stripePriceIdMonthly) return Promise.reject(new Error(t('coming_soon')));
 
+      // Send the PLAN, never a price id. The server resolves the actual Stripe
+      // price from its own configuration — the ids in PLAN_CONFIGS are only
+      // fallbacks and belong to whichever Stripe account was current when they
+      // were written, which is not necessarily the one the API is talking to.
       return api.post<{ url: string }>('/payments/create-checkout-session', {
-        priceId,
+        plan,
+        interval,
         successUrl: `${window.location.origin}/${locale}/settings/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${window.location.origin}/${locale}/settings/billing?canceled=true`,
       });
@@ -228,17 +232,19 @@ export default function BillingPage(): React.JSX.Element | null {
   // soon") while public pricing did not list it at all.
   const visiblePlans = customerFacingPlans();
 
+  // Price and suffix for the SELECTED interval, used by both the plan cards and
+  // the comparison table so they cannot tell different stories. The cards used
+  // to render priceMonthly unconditionally — harmless only while the Yearly
+  // toggle was disabled. With annual selectable that would advertise
+  // "$29.99/month" on a button that charges $299.99 once.
+  const planAmount = (plan: SubscriptionPlan) =>
+    billingInterval === 'yearly' ? PLAN_CONFIGS[plan].priceYearly : PLAN_CONFIGS[plan].priceMonthly;
+  const intervalSuffix = billingInterval === 'yearly' ? t('per_year') : `/${t('plans.month')}`;
+
   const plans = visiblePlans.map((key) =>
     key === SubscriptionPlan.FREE
       ? { key, price: '$0', period: t('plans.free') }
-      : {
-          key,
-          price:
-            billingInterval === 'yearly'
-              ? `$${(PLAN_CONFIGS[key].priceYearly / 12).toFixed(2)}`
-              : `$${PLAN_CONFIGS[key].priceMonthly}`,
-          period: t('plans.perMonth'),
-        },
+      : { key, price: `$${planAmount(key).toFixed(2)}`, period: intervalSuffix },
   );
 
   // Career Accelerator becomes purchasable only once a real Stripe price is set.
@@ -390,15 +396,35 @@ export default function BillingPage(): React.JSX.Element | null {
               >
                 {t('monthly')}
               </button>
+              {/* Follows YEARLY_BILLING_ENABLED rather than being hard-disabled.
+                  Real year-interval Stripe prices are configured and verified
+                  ($299.99 and $999.99, interval=year), so annual is genuinely
+                  purchasable and labelling it "Coming soon" was false. The flag
+                  still governs: if the annual price ids are ever removed it
+                  turns off, and this control reverts to disabled with the
+                  badge — see the yearly-billing guard in plan-advertising.spec. */}
               <button
                 type="button"
-                disabled
-                title={t('yearly_unavailable_note')}
-                aria-disabled="true"
-                className="cursor-not-allowed rounded-full px-6 py-2 text-sm font-medium text-stone-400 dark:text-stone-500"
+                disabled={!YEARLY_BILLING_ENABLED}
+                title={YEARLY_BILLING_ENABLED ? undefined : t('yearly_unavailable_note')}
+                aria-pressed={billingInterval === 'yearly'}
+                onClick={() => YEARLY_BILLING_ENABLED && setBillingInterval('yearly')}
+                className={`rounded-full px-6 py-2 text-sm font-medium transition-all ${
+                  !YEARLY_BILLING_ENABLED
+                    ? 'cursor-not-allowed text-stone-400 dark:text-stone-500'
+                    : billingInterval === 'yearly'
+                      ? 'bg-brand-600 text-white shadow-sm'
+                      : 'text-stone-600 hover:text-stone-900 dark:text-stone-400'
+                }`}
               >
                 {t('yearly')}
-                <span className="ms-1.5 text-xs font-semibold text-amber-500">{t('yearly_coming_soon')}</span>
+                {YEARLY_BILLING_ENABLED ? (
+                  <span className="ms-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                    {t('yearly_save', { percent: yearlySavingsPercent(SubscriptionPlan.PRO) })}
+                  </span>
+                ) : (
+                  <span className="ms-1.5 text-xs font-semibold text-amber-500">{t('yearly_coming_soon')}</span>
+                )}
               </button>
             </div>
           </div>
@@ -422,10 +448,10 @@ export default function BillingPage(): React.JSX.Element | null {
                   without wrapping the "/month" suffix is clipped on narrow cards. */}
               <div className="mt-2 flex flex-wrap items-baseline gap-1">
                 <span className="text-3xl font-bold text-stone-900 dark:text-white">
-                  ${PLAN_CONFIGS[SubscriptionPlan.PRO].priceMonthly.toFixed(2)}
+                  ${planAmount(SubscriptionPlan.PRO).toFixed(2)}
                 </span>
                 <span className="text-sm text-stone-500 dark:text-stone-400">
-                  /{t('plans.month')}
+                  {intervalSuffix}
                 </span>
               </div>
             </div>
@@ -460,10 +486,10 @@ export default function BillingPage(): React.JSX.Element | null {
                   without wrapping the "/month" suffix is clipped on narrow cards. */}
               <div className="mt-2 flex flex-wrap items-baseline gap-1">
                 <span className="text-3xl font-bold text-stone-900 dark:text-white">
-                  ${PLAN_CONFIGS[SubscriptionPlan.CAREER_ACCELERATOR].priceMonthly.toFixed(2)}
+                  ${planAmount(SubscriptionPlan.CAREER_ACCELERATOR).toFixed(2)}
                 </span>
                 <span className="text-sm text-stone-500 dark:text-stone-400">
-                  /{t('plans.month')}
+                  {intervalSuffix}
                 </span>
               </div>
             </div>
@@ -499,10 +525,10 @@ export default function BillingPage(): React.JSX.Element | null {
                   without wrapping the "/month" suffix is clipped on narrow cards. */}
               <div className="mt-2 flex flex-wrap items-baseline gap-1">
                 <span className="text-3xl font-bold text-stone-900 dark:text-white">
-                  ${PLAN_CONFIGS[SubscriptionPlan.ENTERPRISE].priceMonthly.toFixed(2)}
+                  ${planAmount(SubscriptionPlan.ENTERPRISE).toFixed(2)}
                 </span>
                 <span className="text-sm text-stone-500 dark:text-stone-400">
-                  /{t('plans.month')}
+                  {intervalSuffix}
                 </span>
               </div>
             </div>
@@ -616,9 +642,7 @@ export default function BillingPage(): React.JSX.Element | null {
                     <div>{PLAN_CONFIGS[plan.key].name}</div>
                     <div className="mt-0.5 text-xs font-normal">
                       {plan.price}
-                      {plan.key !== SubscriptionPlan.FREE && (
-                        <span>/{t('plans.month')}</span>
-                      )}
+                      {plan.key !== SubscriptionPlan.FREE && <span>{intervalSuffix}</span>}
                     </div>
                   </th>
                 ))}
