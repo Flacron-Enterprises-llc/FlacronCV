@@ -1,3 +1,12 @@
+# ⚠️ NOT THE LIVE DEPLOYMENT. flacroncv.com runs on AWS:
+#   API → buildspec-api.yml → CodeBuild → ECR
+#   Web → buildspec-web.yml → CodeBuild → ECR
+#
+# This file is kept only as a reference/fallback for a Render deployment. Nothing
+# here affects production, so changing an env var in this file does NOT change
+# anything on the live site — set those on the CodeBuild project and the ECS
+# task definition instead. Treat the buildspec files as the source of truth.
+
 services:
   # Backend API (Docker — needs Chromium for Puppeteer PDF export)
   - type: web
