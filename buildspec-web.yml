@@ -1,0 +1,114 @@
+version: 0.2
+
+# Web image build for AWS CodeBuild → ECR.
+#
+# WHY THIS FILE EXISTS
+# The repo had buildspec-api.yml but nothing for the web app, so the web image
+# was built by a buildspec configured inline in the CodeBuild console — and that
+# one passes no --build-arg. NEXT_PUBLIC_* is INLINED INTO THE BROWSER BUNDLE by
+# `next build`, so a value supplied only to the running container (task env, ECS
+# task definition, Parameter Store at runtime) never reaches the compiled
+# JavaScript. It compiles to `undefined`.
+#
+# That is what put this in production:
+#   [firebase] NOT INITIALISED — Missing at BUILD time: NEXT_PUBLIC_FIREBASE_API_KEY, …
+# and made sign-in fail with an empty Network tab (Firebase never initialised, so
+# no request was ever sent).
+#
+# Every NEXT_PUBLIC_* the app reads must therefore be a --build-arg here, and the
+# Dockerfile declares a matching ARG for each. The two lists must stay in sync.
+#
+# THESE VALUES ARE NOT SECRETS. Firebase web config ships inside the client
+# bundle by design — anyone can read it in DevTools. Access is controlled by
+# Firestore/Storage rules and App Check, not by hiding the apiKey. They are still
+# read from the environment rather than hardcoded so that one repo can build for
+# staging and production.
+#
+# SET THEM ON THE CODEBUILD PROJECT (Edit → Environment → Additional
+# configuration → Environment variables), or swap the `variables:` block below
+# for `parameter-store:` / `secrets-manager:` if you prefer them centralised.
+
+env:
+  variables:
+    AWS_DEFAULT_REGION: us-east-1
+    AWS_ACCOUNT_ID: "482881544977"
+    ECR_REPOSITORY: flacroncv-web
+    DOCKER_BUILDKIT: "1"
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
+      - IMAGE_TAG="$(echo "${CODEBUILD_RESOLVED_SOURCE_VERSION}" | cut -c 1-12)"
+      - test -n "${IMAGE_TAG}" || IMAGE_TAG="manual-$(date +%Y%m%d%H%M%S)"
+      # Fail here, with a clear message, rather than shipping an image whose
+      # bundle has `undefined` baked in. The Dockerfile guards the two most
+      # critical ones too, but failing before the build saves several minutes.
+      - |
+        missing=""
+        for v in NEXT_PUBLIC_API_URL NEXT_PUBLIC_SITE_URL \
+                 NEXT_PUBLIC_FIREBASE_API_KEY NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN \
+                 NEXT_PUBLIC_FIREBASE_PROJECT_ID NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET \
+                 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID NEXT_PUBLIC_FIREBASE_APP_ID; do
+          eval "val=\${$v}"
+          test -n "${val}" || missing="${missing} ${v}"
+        done
+        if [ -n "${missing}" ]; then
+          echo "ERROR: required build-time variables are not set on this CodeBuild project:${missing}"
+          echo "NEXT_PUBLIC_* is inlined by 'next build'. Setting them on the ECS task has NO effect."
+          exit 1
+        fi
+      - aws ecr get-login-password --region "${AWS_DEFAULT_REGION}" | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
+
+  build:
+    commands:
+      - echo "Building FlacronCV web image..."
+      - |
+        docker build --platform linux/amd64 \
+          --file apps/web/Dockerfile \
+          --tag "${ECR_REPOSITORY}:${IMAGE_TAG}" \
+          --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
+          --build-arg NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL}" \
+          --build-arg NEXT_PUBLIC_FIREBASE_API_KEY="${NEXT_PUBLIC_FIREBASE_API_KEY}" \
+          --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}" \
+          --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID="${NEXT_PUBLIC_FIREBASE_PROJECT_ID}" \
+          --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}" \
+          --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}" \
+          --build-arg NEXT_PUBLIC_FIREBASE_APP_ID="${NEXT_PUBLIC_FIREBASE_APP_ID}" \
+          --build-arg NEXT_PUBLIC_GA4_MEASUREMENT_ID="${NEXT_PUBLIC_GA4_MEASUREMENT_ID}" \
+          --build-arg NEXT_PUBLIC_ANALYTICS_PROVIDER="${NEXT_PUBLIC_ANALYTICS_PROVIDER}" \
+          .
+      - docker tag "${ECR_REPOSITORY}:${IMAGE_TAG}" "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+      # Prove the config actually landed in the bundle before shipping it. This
+      # is the check that would have caught the original breakage: grep the
+      # compiled client chunks for the project id.
+      - |
+        echo "Verifying NEXT_PUBLIC_FIREBASE_PROJECT_ID is present in the built bundle..."
+        docker run --rm --entrypoint sh "${ECR_REPOSITORY}:${IMAGE_TAG}" -c \
+          "grep -rql '${NEXT_PUBLIC_FIREBASE_PROJECT_ID}' /app/apps/web/.next/static 2>/dev/null | head -1" \
+          | grep -q . \
+          || (echo "ERROR: Firebase config is NOT inlined in the client bundle — do not deploy this image." && exit 1)
+      - echo "Bundle verification passed."
+
+  post_build:
+    commands:
+      - |
+        if [ "${CODEBUILD_BUILD_SUCCEEDING}" = "1" ]; then
+          echo "Pushing image to Amazon ECR..."
+          docker push "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+
+          printf '[{"name":"flacroncv-web","imageUri":"%s"}]' \
+            "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}" \
+            > imagedefinitions.json
+
+          echo "Image pushed successfully:"
+          echo "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+        else
+          echo "Docker build failed; skipping ECR push."
+          exit 1
+        fi
+
+artifacts:
+  files:
+    - imagedefinitions.json
