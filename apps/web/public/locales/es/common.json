@@ -209,7 +209,8 @@
       "weak_password": "Elige una contraseña más segura.",
       "popup_blocked": "Tu navegador bloqueó la ventana de acceso. Permite ventanas emergentes para este sitio e inténtalo de nuevo.",
       "network": "No pudimos conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.",
-      "generic": "Algo salió mal. Inténtalo de nuevo."
+      "generic": "Algo salió mal. Inténtalo de nuevo.",
+      "auth_unavailable": "El inicio de sesión no está disponible ahora. Inténtalo más tarde o contacta con soporte."
     },
     "verify_signout_failed": "No se pudo cerrar sesión. Inténtalo de nuevo.",
     "verify_not_yet": "Tu correo aún no está verificado: haz clic en el enlace que te enviamos.",
@@ -630,7 +631,7 @@
       "save": "Guardar perfil",
       "saveSuccess": "Perfil guardado con éxito",
       "saveError": "Error al guardar el perfil",
-        "fixLinks": "Corrige los enlaces marcados antes de guardar."
+      "fixLinks": "Corrige los enlaces marcados antes de guardar."
     },
     "preferences": {
       "title": "Preferencias",

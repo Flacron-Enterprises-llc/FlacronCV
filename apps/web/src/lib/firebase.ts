@@ -23,6 +23,43 @@ const firebaseConfig = {
 
 export const isConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
 
+/**
+ * Say so, loudly, when the Firebase config is missing.
+ *
+ * NEXT_PUBLIC_* is inlined by `next build`. If those values are absent at BUILD
+ * time (e.g. a Docker build that never received them as --build-arg) they
+ * compile to `undefined`, `isConfigured` is false, and the block below is
+ * skipped — leaving `auth`, `db` and `storage` null while throwing nothing and
+ * logging nothing.
+ *
+ * The result is a production-only mystery: sign-in fails with a generic
+ * "Something went wrong", the network tab is EMPTY because Firebase was never
+ * initialised so no request is ever sent, and the console is clean. Exactly the
+ * symptoms that are hardest to diagnose. One explicit error turns that into a
+ * five-second fix, and costs nothing when the app is configured correctly.
+ */
+if (!isConfigured && typeof window !== 'undefined') {
+  const missing = (
+    [
+      ['NEXT_PUBLIC_FIREBASE_API_KEY', firebaseConfig.apiKey],
+      ['NEXT_PUBLIC_FIREBASE_PROJECT_ID', firebaseConfig.projectId],
+      ['NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', firebaseConfig.authDomain],
+      ['NEXT_PUBLIC_FIREBASE_APP_ID', firebaseConfig.appId],
+    ] as const
+  )
+    .filter(([, value]) => !value)
+    .map(([name]) => name);
+
+  // eslint-disable-next-line no-console
+  console.error(
+    '[firebase] NOT INITIALISED — sign-in, sign-up and every Firestore/Storage ' +
+      'call will fail with no network request.\n' +
+      `Missing at BUILD time: ${missing.join(', ')}\n` +
+      'These are inlined by `next build`, so setting them only at runtime has no ' +
+      'effect. Pass them as --build-arg (see apps/web/Dockerfile) and rebuild.',
+  );
+}
+
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
