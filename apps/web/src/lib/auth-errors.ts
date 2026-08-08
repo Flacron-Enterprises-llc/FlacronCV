@@ -34,6 +34,16 @@ export function authErrorKey(error: unknown): string {
   }
 
   const message = (error as Error)?.message ?? '';
+
+  // Firebase was never initialised — `auth` is null because the NEXT_PUBLIC_*
+  // config was missing at BUILD time, so every call throws before any request
+  // leaves the browser. Without this branch it fell through to the generic
+  // "Something went wrong", which sent people hunting through an empty network
+  // tab and a clean console for a problem that is purely a build-config one.
+  if (/expected auth instance|auth.*null|null.*auth|not.*initial/i.test(message)) {
+    return 'errors.auth_unavailable';
+  }
+
   // fetch() failures (API unreachable), timeouts, and other transport errors
   if (/failed to fetch|network|timed out/i.test(message)) {
     return 'errors.network';

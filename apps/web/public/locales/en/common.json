@@ -209,7 +209,8 @@
       "weak_password": "Please choose a stronger password.",
       "popup_blocked": "Your browser blocked the sign-in window. Allow popups for this site and try again.",
       "network": "We could not reach the server. Check your connection and try again.",
-      "generic": "Something went wrong. Please try again."
+      "generic": "Something went wrong. Please try again.",
+      "auth_unavailable": "Sign-in is unavailable right now. Please try again shortly or contact support."
     },
     "verify_signout_failed": "Couldn’t sign out. Please try again.",
     "verify_not_yet": "Your email is not verified yet — please click the link we sent you.",
@@ -630,7 +631,7 @@
       "save": "Save Profile",
       "saveSuccess": "Profile saved successfully",
       "saveError": "Failed to save profile",
-        "fixLinks": "Please fix the highlighted links before saving."
+      "fixLinks": "Please fix the highlighted links before saving."
     },
     "preferences": {
       "title": "Preferences",

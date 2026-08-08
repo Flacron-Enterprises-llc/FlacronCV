@@ -209,7 +209,8 @@
       "weak_password": "Bitte wähle ein stärkeres Passwort.",
       "popup_blocked": "Dein Browser hat das Anmeldefenster blockiert. Erlaube Popups für diese Seite und versuche es erneut.",
       "network": "Der Server ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
-      "generic": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
+      "generic": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+      "auth_unavailable": "Die Anmeldung ist derzeit nicht verfügbar. Bitte versuche es später erneut oder kontaktiere den Support."
     },
     "verify_signout_failed": "Abmeldung fehlgeschlagen. Bitte erneut versuchen.",
     "verify_not_yet": "Deine E-Mail ist noch nicht bestätigt — bitte klicke auf den gesendeten Link.",
@@ -630,7 +631,7 @@
       "save": "Profil speichern",
       "saveSuccess": "Profil erfolgreich gespeichert",
       "saveError": "Profil konnte nicht gespeichert werden",
-        "fixLinks": "Bitte korrigiere die markierten Links vor dem Speichern."
+      "fixLinks": "Bitte korrigiere die markierten Links vor dem Speichern."
     },
     "preferences": {
       "title": "Einstellungen",
