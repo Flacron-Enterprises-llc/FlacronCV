@@ -1,4 +1,8 @@
-<<<<<<< HEAD
+# Resolved from a merge conflict between this file and origin/main. Both sides
+# are kept EXCEPT origin/main's `apps/web` entry, which is deliberately dropped:
+# apps/web/Dockerfile does `COPY apps/web/ ./apps/web/`, so excluding it from the
+# build context makes the web image impossible to build.
+
 # Both Dockerfiles do `COPY apps/<app>/ ./apps/<app>/`. With no .dockerignore
 # that swept the developer's local .env into the builder layer — for the API
 # that is the production Firebase service-account private key, the Stripe
@@ -27,45 +31,21 @@
 **/.expo
 **/*.log
 
+# npm lockfiles are not used here (pnpm workspace). NOTE: pnpm-lock.yaml is
+# deliberately NOT ignored — the Dockerfiles should copy it for reproducible
+# installs.
+**/package-lock.json
+
 # Test and tooling artefacts
 **/playwright-report
 **/test-results
 **/.vscode
 **/.idea
 
+# Compose/nginx assets are not consumed by either image build.
+docker
+
 # The mobile app is deliberately excluded from both images (see the deps stage
 # comment in each Dockerfile: Expo/RN pulls in a file: dependency that breaks
 # workspace install).
 apps/mobile
-=======
-.git
-.github
-.vscode
-.idea
-
-node_modules
-**/node_modules
-
-.next
-**/.next
-
-dist
-**/dist
-
-coverage
-**/coverage
-
-.env
-.env.*
-!.env.example
-
-*.log
-
-package-lock.json
-**/package-lock.json
-
-apps/web
-apps/mobile
-
-docker
->>>>>>> origin/main
