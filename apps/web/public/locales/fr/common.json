@@ -209,7 +209,8 @@
       "weak_password": "Choisissez un mot de passe plus robuste.",
       "popup_blocked": "Votre navigateur a bloqué la fenêtre de connexion. Autorisez les popups pour ce site et réessayez.",
       "network": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
-      "generic": "Une erreur est survenue. Veuillez réessayer."
+      "generic": "Une erreur est survenue. Veuillez réessayer.",
+      "auth_unavailable": "La connexion est indisponible pour le moment. Réessayez plus tard ou contactez le support."
     },
     "verify_signout_failed": "Impossible de se déconnecter. Veuillez réessayer.",
     "verify_not_yet": "Votre e-mail n’est pas encore vérifié — cliquez sur le lien que nous vous avons envoyé.",
@@ -630,7 +631,7 @@
       "save": "Enregistrer le profil",
       "saveSuccess": "Profil enregistré avec succès",
       "saveError": "Échec de l'enregistrement du profil",
-        "fixLinks": "Corrigez les liens signalés avant d'enregistrer."
+      "fixLinks": "Corrigez les liens signalés avant d'enregistrer."
     },
     "preferences": {
       "title": "Préférences",
