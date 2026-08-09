@@ -87,6 +87,13 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME="0.0.0.0"
+# MUST match EXPOSE below and the ECS task definition's containerPort.
+#
+# The standalone server Next generates binds `parseInt(process.env.PORT,10) || 3000`.
+# With no PORT set it therefore listened on 3000 while this image advertised
+# 10000, so an ECS target group pointing at 10000 would have failed every health
+# check with connection refused — a green build that never serves traffic.
+ENV PORT=10000
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
