@@ -80,24 +80,63 @@ phases:
           --build-arg NEXT_PUBLIC_ANALYTICS_PROVIDER="${NEXT_PUBLIC_ANALYTICS_PROVIDER}" \
           .
       - docker tag "${ECR_REPOSITORY}:${IMAGE_TAG}" "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
-      # Prove the config actually landed in the bundle before shipping it. This
-      # is the check that would have caught the original breakage: grep the
-      # compiled client chunks for the project id.
+      # Prove the config actually landed in the client bundle before shipping.
+      #
+      # Verified with NODE, not grep, and deliberately so:
+      #
+      #  * node is guaranteed present — this is a node:20-alpine image. The image's
+      #    grep is BusyBox, whose `-r` support cannot be assumed the way GNU grep's
+      #    can, and a missing option there is indistinguishable from "not found".
+      #  * String.includes() is a LITERAL match. grep would treat the needle as a
+      #    basic regular expression; Firebase values contain `.`, `-` and `:`, so a
+      #    future value could quietly match the wrong thing (or nothing).
+      #  * It separates the three failure modes that the old check collapsed into
+      #    one useless message, via distinct exit codes.
+      #  * It reports COUNTS, never the value itself, so nothing lands in the logs.
+      #
+      # The shell structure matters as much as the tool. The previous version put
+      # `|| (echo "...")` INSIDE the `sh -c "..."` string with nested unescaped
+      # double quotes and no closing quote, so the CodeBuild shell died with
+      # "unexpected EOF while looking for matching quote" — exit status 2 — before
+      # docker ever ran. Here the container command is a single-quoted script (no
+      # shell interpolation possible) and ALL error handling lives outside it in a
+      # plain if/else, so that class of quoting bug cannot recur.
       - |
-        echo "Verifying NEXT_PUBLIC_FIREBASE_PROJECT_ID is present in the built bundle..."
-        docker run --rm --entrypoint sh "${ECR_REPOSITORY}:${IMAGE_TAG}" -c \
-          "grep -rl '${NEXT_PUBLIC_FIREBASE_PROJECT_ID}' /app/apps/web/.next/static 2>/dev/null \
-          | grep -q . \
-          || (echo "ERROR: Firebase config is NOT inlined in the client bundle — do not deploy this image." && exit 1)
-      - echo "Bundle verification passed."
+        echo "Verifying the Firebase project id is inlined in the client bundle..."
+        if docker run --rm \
+             --env VERIFY_NEEDLE="${NEXT_PUBLIC_FIREBASE_PROJECT_ID}" \
+             --entrypoint node "${ECR_REPOSITORY}:${IMAGE_TAG}" \
+             -e 'const fs=require("fs"),p=require("path");const dir="/app/apps/web/.next/static";const needle=process.env.VERIFY_NEEDLE||"";if(!needle){console.error("verify: VERIFY_NEEDLE is empty");process.exit(2)}if(!fs.existsSync(dir)){console.error("verify: missing directory "+dir);process.exit(3)}let files=0,hits=0;(function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const q=p.join(d,e.name);if(e.isDirectory()){walk(q)}else{files++;if(fs.readFileSync(q,"latin1").includes(needle)){hits++}}}})(dir);console.log("verify: scanned "+files+" files; "+hits+" contain the project id");process.exit(hits>0?0:1)'; then
+          echo "Bundle verification passed."
+        else
+          status=$?
+          echo "ERROR: Firebase config is NOT inlined in the client bundle (verifier exit ${status})."
+          echo "  1 = project id found in no file under .next/static (build args did not reach next build)"
+          echo "  2 = NEXT_PUBLIC_FIREBASE_PROJECT_ID was empty in the CodeBuild environment"
+          echo "  3 = /app/apps/web/.next/static does not exist in the image (Dockerfile COPY problem)"
+          echo "Refusing to push this image."
+          exit 1
+        fi
 
   post_build:
     commands:
       - |
         if [ "${CODEBUILD_BUILD_SUCCEEDING}" = "1" ]; then
           echo "Pushing image to Amazon ECR..."
-          docker push "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          # `|| exit 1` is load-bearing. CodeBuild takes the exit status of the
+          # LAST statement in a '- |' block, and there is no `set -e`, so an
+          # unchecked `docker push` failure was discarded: the block carried on,
+          # wrote imagedefinitions.json naming an image that is not in the
+          # registry, printed "Image pushed successfully", and exited 0 on the
+          # final echo. CodeBuild reported SUCCEEDED, CodePipeline registered an
+          # ECS task-definition revision pointing at a missing image, and every
+          # task died with CannotPullContainerError while the log claimed the
+          # push worked. Triggered by a missing ecr:PutImage permission, a layer
+          # upload timeout, throttling, or a full build volume.
+          docker push "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}" || exit 1
 
+          # Written only AFTER the push is confirmed, so the deploy artifact can
+          # never name an image that was not uploaded.
           printf '[{"name":"flacroncv-web","imageUri":"%s"}]' \
             "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}" \
             > imagedefinitions.json
@@ -105,7 +144,11 @@ phases:
           echo "Image pushed successfully:"
           echo "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
         else
-          echo "Docker build failed; skipping ECR push."
+          # Deliberately not "Docker build failed" — this branch fires for ANY
+          # earlier failure, and saying "build failed" sent us hunting through a
+          # Docker build that had actually succeeded. The real failure is
+          # whichever command in pre_build/build reported it, above this line.
+          echo "An earlier phase failed; skipping ECR push. See the first error above."
           exit 1
         fi
 
