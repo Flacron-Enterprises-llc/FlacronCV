@@ -86,7 +86,7 @@ phases:
       - |
         echo "Verifying NEXT_PUBLIC_FIREBASE_PROJECT_ID is present in the built bundle..."
         docker run --rm --entrypoint sh "${ECR_REPOSITORY}:${IMAGE_TAG}" -c \
-          "grep -rql '${NEXT_PUBLIC_FIREBASE_PROJECT_ID}' /app/apps/web/.next/static 2>/dev/null | head -1" \
+          "grep -rl '${NEXT_PUBLIC_FIREBASE_PROJECT_ID}' /app/apps/web/.next/static 2>/dev/null \
           | grep -q . \
           || (echo "ERROR: Firebase config is NOT inlined in the client bundle — do not deploy this image." && exit 1)
       - echo "Bundle verification passed."
