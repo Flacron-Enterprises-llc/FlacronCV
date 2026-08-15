@@ -71,14 +71,62 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_GA4_MEASUREMENT_ID=$NEXT_PUBLIC_GA4_MEASUREMENT_ID \
     NEXT_PUBLIC_ANALYTICS_PROVIDER=$NEXT_PUBLIC_ANALYTICS_PROVIDER
 
-# Fail the BUILD, not the first user request, when the two values without which
-# the app cannot function are missing. A silently misconfigured bundle looks
-# like a successful deploy and breaks only in the browser.
-RUN test -n "$NEXT_PUBLIC_FIREBASE_API_KEY" || (echo "ERROR: NEXT_PUBLIC_FIREBASE_API_KEY build arg is required" && exit 1)
-RUN test -n "$NEXT_PUBLIC_API_URL" || (echo "ERROR: NEXT_PUBLIC_API_URL build arg is required" && exit 1)
+# Fail the BUILD, not the first user request, when a value the app cannot
+# function without is missing. A silently misconfigured bundle looks like a
+# successful deploy and breaks only in the browser.
+#
+# This used to guard NEXT_PUBLIC_FIREBASE_API_KEY and NEXT_PUBLIC_API_URL only —
+# two of the ten. That is precisely the wrong two-thirds to leave open: the
+# production console reported NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+# NEXT_PUBLIC_FIREBASE_PROJECT_ID and NEXT_PUBLIC_FIREBASE_APP_ID missing, and
+# none of them was checked, so a build with only the API key set produced a
+# green pipeline and an unusable sign-in page.
+#
+# One RUN, not eight, so a misconfigured pipeline is fixed in ONE round trip:
+# every missing name is listed at once instead of surfacing the next one only
+# after another full build. Names only — never a value.
+RUN missing=""; \
+    [ -n "$NEXT_PUBLIC_API_URL" ]                        || missing="$missing NEXT_PUBLIC_API_URL"; \
+    [ -n "$NEXT_PUBLIC_SITE_URL" ]                       || missing="$missing NEXT_PUBLIC_SITE_URL"; \
+    [ -n "$NEXT_PUBLIC_FIREBASE_API_KEY" ]               || missing="$missing NEXT_PUBLIC_FIREBASE_API_KEY"; \
+    [ -n "$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN" ]           || missing="$missing NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"; \
+    [ -n "$NEXT_PUBLIC_FIREBASE_PROJECT_ID" ]            || missing="$missing NEXT_PUBLIC_FIREBASE_PROJECT_ID"; \
+    [ -n "$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET" ]        || missing="$missing NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET"; \
+    [ -n "$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID" ]   || missing="$missing NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID"; \
+    [ -n "$NEXT_PUBLIC_FIREBASE_APP_ID" ]                || missing="$missing NEXT_PUBLIC_FIREBASE_APP_ID"; \
+    if [ -n "$missing" ]; then \
+      echo "ERROR: these --build-arg values are empty or were never passed:$missing"; \
+      echo "next build INLINES NEXT_PUBLIC_* into the browser bundle, so supplying them to the"; \
+      echo "running container (ECS task definition, docker run --env) has NO effect. They must be"; \
+      echo "passed to 'docker build' as --build-arg. See buildspec-web.yml for the full command."; \
+      exit 1; \
+    fi; \
+    echo "All 8 required NEXT_PUBLIC_* build args are present (values intentionally not printed)."
 
 RUN node_modules/.bin/tsc -p packages/shared-types/tsconfig.json
 RUN cd apps/web && /app/node_modules/.bin/next build
+
+# Proving the values were SET is not the same as proving they were INLINED, and
+# only the second one is what the browser depends on. The check above cannot
+# catch a variable the app stopped reading, a `process.env[name]` lookup webpack
+# cannot statically replace, or ARGs declared in the wrong stage — all of which
+# still yield `undefined` in the bundle from a build whose environment looked
+# perfect. This reads the emitted chunks and fails here, so a bundle without
+# Firebase config can never become an image at all — not merely "an image we
+# decline to push". It prints names and match counts, never values.
+RUN node apps/web/scripts/verify-public-env.mjs
+
+# Which commit is actually serving? Fetch https://<host>/build-info.json.
+#
+# "Deployed successfully but the browser still shows the old error" is otherwise
+# unfalsifiable from the outside — a stale CloudFront/browser copy of the HTML
+# and a genuinely stale image look identical. Both ARGs default, so a caller
+# that does not pass them (the current CodeBuild command, docker-compose, a
+# local build) still builds normally.
+ARG BUILD_SHA=unknown
+ARG BUILD_TIME=unknown
+RUN printf '{"sha":"%s","builtAt":"%s","firebaseInlined":true}\n' \
+      "$BUILD_SHA" "$BUILD_TIME" > apps/web/public/build-info.json
 
 # ── runner: standalone Next.js (only traced production deps, no node_modules bloat)
 FROM node:20-alpine AS runner
@@ -102,6 +150,14 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
+
+# Carried into the runtime image so the SHIPPED artefact can be re-verified from
+# outside, which catches a different failure than the builder-stage run: that
+# the three COPYs above put .next/static somewhere the server does not serve
+# from. buildspec-web.yml runs it against this image before pushing. A few KB of
+# ES module, no dependencies, no effect at runtime — nothing executes it unless
+# the entrypoint is overridden.
+COPY --from=builder /app/apps/web/scripts/verify-public-env.mjs ./apps/web/scripts/verify-public-env.mjs
 
 USER nextjs
 

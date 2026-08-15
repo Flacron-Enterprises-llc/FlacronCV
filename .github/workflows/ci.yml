@@ -117,8 +117,10 @@ jobs:
       # values passed as --build-arg and declared with ARG in the Dockerfile.
       # These were set as `env:`, so the build received none of them and the
       # image was compiled with every NEXT_PUBLIC_* undefined. The Dockerfile now
-      # fails fast when the two essential ones are missing, which would have
-      # turned this into a hard CI failure.
+      # fails fast when ANY of the eight required ones is missing, and then reads
+      # the emitted chunks to confirm they were actually inlined — so this job is
+      # the regression guard for the whole ARG → ENV → `next build` → bundle path,
+      # on every push to main, with throwaway values.
       - name: Build Web Docker image
         run: |
           docker build -f apps/web/Dockerfile -t flacroncv-web:latest . \
