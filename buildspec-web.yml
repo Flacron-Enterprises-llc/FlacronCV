@@ -40,7 +40,7 @@ phases:
     commands:
       - echo "Logging in to Amazon ECR..."
       - ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
-      - IMAGE_TAG="$(echo "${CODEBUILD_RESOLVED_SOURCE_VERSION}" | cut -c 1-12)"
+      - IMAGE_TAG="$(echo "${CODEBUILD_RESOLVED_SOURCE_VERSION}" | cut -c 1-12)-${CODEBUILD_BUILD_NUMBER}"
       - test -n "${IMAGE_TAG}" || IMAGE_TAG="manual-$(date +%Y%m%d%H%M%S)"
       # Fail here, with a clear message, rather than shipping an image whose
       # bundle has `undefined` baked in. The Dockerfile guards the two most
