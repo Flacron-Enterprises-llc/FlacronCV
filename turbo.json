@@ -1,15 +1,45 @@
 {
   "$schema": "https://turbo.build/schema.json",
+
+  // Har task ke hash mein shaamil. NODE_ENV badle to sab kuch rebuild ho.
+  "globalEnv": ["NODE_ENV"],
+
+  // Ye vars tasks ko milte hain lekin cache hash mein shaamil nahi hote —
+  // CI/runner ke apne vars hain, inse cache invalidate nahi hona chahiye.
+  "globalPassThroughEnv": [
+    "CI",
+    "AWS_*",
+    "AMPLIFY_*",
+    "NODE_OPTIONS",
+    "npm_*"
+  ],
+
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "dist/**"]
+      // NEXT_PUBLIC_* `next build` ke waqt bundle mein inline hote hain.
+      // Yahan declare na hon to strict env mode inhe undefined kar deta hai —
+      // aur browser mein Firebase initialise hi nahi hota.
+      "env": [
+        "NEXT_PUBLIC_*",
+        "NEXT_*",
+        "FIREBASE_*",
+        "STRIPE_*",
+        "GEMINI_*",
+        "DATABASE_URL"
+      ],
+      // .next/cache ko outputs se nikaalna zaroori hai, warna turbo cache
+      // artifact har build par phoolta jata hai.
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
+
     "dev": {
       "cache": false,
       "persistent": true
     },
+
     "lint": {},
+
     "type-check": {
       // shared-types resolves through its compiled `dist` (see its package.json
       // main/types). Without this, `pnpm type-check` on a fresh clone runs tsc
@@ -18,23 +48,28 @@
       // dist/ behind — in CI, which installs fresh, the gate broke.
       "dependsOn": ["^build"]
     },
+
     "test": {
       // Same reason: jest/vitest load the package's compiled entrypoint.
       "dependsOn": ["^build"],
       "cache": false
     },
+
     "test:watch": {
       "cache": false,
       "persistent": true
     },
+
     "test:cov": {
       "cache": false,
       "outputs": ["coverage/**"]
     },
+
     "test:e2e": {
       "cache": false,
       "dependsOn": ["build"]
     },
+
     "clean": {
       "cache": false
     }
