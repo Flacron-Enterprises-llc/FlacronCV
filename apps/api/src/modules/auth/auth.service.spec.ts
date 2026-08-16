@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
@@ -32,6 +33,7 @@ describe('AuthService', () => {
     sendPasswordResetEmail: jest.Mock;
     sendEmailVerificationEmail: jest.Mock;
   };
+  let mockConfigService: { get: jest.Mock };
 
   beforeEach(async () => {
     mockFirebaseAdmin = createMockFirebaseAdmin();
@@ -49,8 +51,8 @@ describe('AuthService', () => {
       sendEmailVerificationEmail: jest.fn().mockResolvedValue(undefined),
     };
 
-    const mockConfigService = {
-      get: jest.fn().mockReturnValue(undefined),
+    mockConfigService = {
+      get: jest.fn((key: string) => (key === 'frontendUrl' ? 'https://app.example.com' : undefined)),
     };
 
     mockAudit = makeMockAudit();
@@ -258,13 +260,86 @@ describe('AuthService', () => {
 
       expect(mockFirebaseAdmin.auth.generateEmailVerificationLink).toHaveBeenCalledWith(
         'verify@example.com',
-        expect.any(Object),
+        { url: 'https://app.example.com/dashboard' },
       );
       expect(mockMailService.sendEmailVerificationEmail).toHaveBeenCalledWith(
         'verify@example.com',
         'Verify User',
         'https://verify.link',
       );
+    });
+
+    /**
+     * The production failure this guards: FRONTEND_URL pointed at a domain that
+     * was not on the Firebase authorized-domains list, so every link request
+     * threw. Signup swallows that error and the resend endpoint returned a bare
+     * 500, leaving the account unable to verify by any route.
+     */
+    it.each([
+      'auth/unauthorized-continue-uri',
+      'auth/invalid-continue-uri',
+      'auth/missing-continue-uri',
+      'auth/invalid-dynamic-link-domain',
+    ])('retries without a continue URL when Firebase rejects it with %s', async (code) => {
+      mockFirebaseAdmin.auth.getUser.mockResolvedValue({
+        email: 'verify@example.com',
+        displayName: 'Verify User',
+      } as any);
+      mockFirebaseAdmin.auth.generateEmailVerificationLink
+        .mockRejectedValueOnce(Object.assign(new Error('rejected'), { code }))
+        .mockResolvedValueOnce('https://fallback.link');
+
+      await service.sendEmailVerification('uid-verify');
+
+      expect(mockFirebaseAdmin.auth.generateEmailVerificationLink).toHaveBeenNthCalledWith(
+        2,
+        'verify@example.com',
+      );
+      expect(mockMailService.sendEmailVerificationEmail).toHaveBeenCalledWith(
+        'verify@example.com',
+        'Verify User',
+        'https://fallback.link',
+      );
+    });
+
+    it('rethrows errors that are not about the continue URL', async () => {
+      mockFirebaseAdmin.auth.getUser.mockResolvedValue({
+        email: 'verify@example.com',
+        displayName: 'Verify User',
+      } as any);
+      mockFirebaseAdmin.auth.generateEmailVerificationLink.mockRejectedValue(
+        Object.assign(new Error('boom'), { code: 'auth/internal-error' }),
+      );
+
+      await expect(service.sendEmailVerification('uid-verify')).rejects.toThrow('boom');
+      expect(mockFirebaseAdmin.auth.generateEmailVerificationLink).toHaveBeenCalledTimes(1);
+      expect(mockMailService.sendEmailVerificationEmail).not.toHaveBeenCalled();
+    });
+
+    // A relative or scheme-less FRONTEND_URL would be rejected by Firebase, so
+    // it is never sent in the first place.
+    it('omits an unusable continue URL instead of sending it to Firebase', async () => {
+      mockConfigService.get.mockImplementation((key: string) =>
+        key === 'frontendUrl' ? 'app.example.com' : undefined,
+      );
+      mockFirebaseAdmin.auth.getUser.mockResolvedValue({
+        email: 'verify@example.com',
+        displayName: 'Verify User',
+      } as any);
+      mockFirebaseAdmin.auth.generateEmailVerificationLink.mockResolvedValue('https://verify.link');
+
+      await service.sendEmailVerification('uid-verify');
+
+      expect(mockFirebaseAdmin.auth.generateEmailVerificationLink).toHaveBeenCalledWith(
+        'verify@example.com',
+      );
+    });
+
+    it('rejects an account with no email address instead of failing inside Firebase', async () => {
+      mockFirebaseAdmin.auth.getUser.mockResolvedValue({ email: undefined } as any);
+
+      await expect(service.sendEmailVerification('uid-verify')).rejects.toThrow(BadRequestException);
+      expect(mockFirebaseAdmin.auth.generateEmailVerificationLink).not.toHaveBeenCalled();
     });
   });
 

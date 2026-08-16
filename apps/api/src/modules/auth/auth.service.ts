@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { UsersService } from '../users/users.service';
@@ -6,6 +6,20 @@ import { MailService } from '../mail/mail.service';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/audit-actions';
 import { UserRole } from '@flacroncv/shared-types';
+
+/**
+ * Firebase refuses to mint an action link whose `continueUrl` it does not trust.
+ * Every code here means "the continue URL is the problem, the account is fine" —
+ * most often FRONTEND_URL missing its scheme, or the live domain never being
+ * added under Auth → Settings → Authorized domains. Verification must not die
+ * with it, so these are recoverable (see `generateAndSendVerification`).
+ */
+const CONTINUE_URL_ERROR_CODES = new Set([
+  'auth/invalid-continue-uri',
+  'auth/unauthorized-continue-uri',
+  'auth/missing-continue-uri',
+  'auth/invalid-dynamic-link-domain',
+]);
 
 @Injectable()
 export class AuthService {
@@ -263,11 +277,61 @@ export class AuthService {
     this.logger.log(`Tokens revoked for user ${uid}`);
   }
 
+  /**
+   * Where the verification link drops the user once Firebase has consumed the
+   * code. Returns null when FRONTEND_URL is unusable as a `continueUrl` — a
+   * relative value, or one without an http(s) scheme — because passing it on
+   * would make Firebase reject the whole request.
+   */
+  private verificationContinueUrl(): string | null {
+    const configured = (this.configService.get<string>('frontendUrl') || '').trim().replace(/\/+$/, '');
+    if (!configured) return null;
+    try {
+      const { protocol } = new URL(configured);
+      if (protocol !== 'http:' && protocol !== 'https:') {
+        this.logger.error(`FRONTEND_URL "${configured}" is not http(s); verification links will use the Firebase default handler`);
+        return null;
+      }
+    } catch {
+      this.logger.error(`FRONTEND_URL "${configured}" is not an absolute URL; verification links will use the Firebase default handler`);
+      return null;
+    }
+    return `${configured}/dashboard`;
+  }
+
   private async generateAndSendVerification(uid: string, email: string, displayName: string): Promise<void> {
-    const frontendUrl = this.configService.get<string>('frontendUrl') || 'http://localhost:3000';
-    const link = await this.firebaseAdmin.auth.generateEmailVerificationLink(email, {
-      url: `${frontendUrl}/dashboard`,
-    });
+    if (!email) {
+      throw new BadRequestException('This account has no email address to verify');
+    }
+
+    const continueUrl = this.verificationContinueUrl();
+    let link: string;
+    try {
+      link = continueUrl
+        ? await this.firebaseAdmin.auth.generateEmailVerificationLink(email, { url: continueUrl })
+        : await this.firebaseAdmin.auth.generateEmailVerificationLink(email);
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+
+      // A rejected continue URL is a deployment misconfiguration, but it used to
+      // strand the account permanently: signup swallows this failure and the
+      // resend endpoint turned it into a bare 500, so the user could never
+      // obtain a link at all. Fall back to a link with no continue URL — it is
+      // handled on Firebase's own domain, needs no whitelisting, and the
+      // verify-email page polls for the state change anyway.
+      if (continueUrl && CONTINUE_URL_ERROR_CODES.has(code ?? '')) {
+        this.logger.error(
+          `Firebase rejected verification continue URL "${continueUrl}" (${code}) — ` +
+            'add its domain under Auth → Settings → Authorized domains and check FRONTEND_URL. ' +
+            'Falling back to a link without a continue URL.',
+        );
+        link = await this.firebaseAdmin.auth.generateEmailVerificationLink(email);
+      } else {
+        this.logger.error(`Could not generate verification link for ${uid}: ${code ?? (error as Error).message}`);
+        throw error;
+      }
+    }
+
     await this.mailService.sendEmailVerificationEmail(email, displayName, link);
   }
 }
