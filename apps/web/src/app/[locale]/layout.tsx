@@ -43,9 +43,11 @@ export const metadata: Metadata = {
     'job application',
     'free resume builder',
   ],
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || 'https://flacroncv-web.onrender.com',
-  ),
+  // SITE_URL is already imported above. This line re-implemented it instead,
+  // keeping a second copy of the fallback — so seo.ts and the metadataBase
+  // could disagree about the site's own origin, and fixing one left the other
+  // pointing at the dead Render host.
+  metadataBase: new URL(SITE_URL),
   // Site-wide social-card defaults; per-page metadata overrides these.
   openGraph: {
     type: 'website',

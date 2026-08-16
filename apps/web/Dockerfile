@@ -39,16 +39,21 @@ RUN test -f apps/web/node_modules/@flacroncv/shared-types/package.json \
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # NEXT_PUBLIC_* is INLINED INTO THE CLIENT BUNDLE AT BUILD TIME. Setting these
-# on the Render service only affects the runtime process, which is too late —
-# the browser JavaScript has already been compiled with whatever was present
+# on the ECS task definition only affects the runtime process, which is too late
+# — the browser JavaScript has already been compiled with whatever was present
 # during `next build`.
 #
-# Previously nothing supplied them here. `.env` is gitignored, so Render's build
-# context has none either, and every `process.env.NEXT_PUBLIC_*` compiled to
-# `undefined`: no Firebase config (auth cannot initialise), no API URL (every
-# request goes nowhere). Docker does not inherit the host environment, so each
-# value must be declared as an ARG and promoted to ENV before the build runs,
-# and passed from render.yaml.
+# Previously nothing supplied them here. `.env` is gitignored AND excluded by
+# .dockerignore, so the build context has none either, and every
+# `process.env.NEXT_PUBLIC_*` compiled to `undefined`: no Firebase config (auth
+# cannot initialise), no API URL (every request goes nowhere). Docker does not
+# inherit the host environment, so each value must be declared as an ARG and
+# promoted to ENV before the build runs.
+#
+# THE LIVE PIPELINE IS AWS: CodeBuild (buildspec-web.yml) → ECR → ECS. These
+# values come from the CodeBuild project's environment variables. render.yaml is
+# a dormant reference file that nothing in the AWS path reads — editing it does
+# not change any build. Keep this ARG list in sync with buildspec-web.yml.
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_FIREBASE_API_KEY

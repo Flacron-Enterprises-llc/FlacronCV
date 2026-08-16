@@ -38,13 +38,80 @@ env:
 phases:
   pre_build:
     commands:
+      # ── PROOF OF PROVENANCE ────────────────────────────────────────────────
+      # If this marker is absent from the CodeBuild log, THIS FILE DID NOT RUN.
+      # The project is then executing an inline buildspec pasted into the console
+      # (Edit → Buildspec → "Insert build commands"), which is a copy frozen at
+      # whatever the repo looked like when it was pasted — editing this file can
+      # never affect it. That is invisible from the repository side and is the
+      # single most likely explanation for a build that ignores every guard added
+      # here. Note there is deliberately no `buildspec.yml` at the repo root, so a
+      # project left on CodeBuild's default buildspec name cannot be using a file
+      # from this repo at all.
+      - echo "BUILDSPEC-MARKER buildspec-web.yml@repo is running"
+      - echo "Source commit ${CODEBUILD_RESOLVED_SOURCE_VERSION} / build #${CODEBUILD_BUILD_NUMBER}"
+
+      # ── PROOF THAT THE CHECKOUT IS CURRENT ─────────────────────────────────
+      # An image can only be as good as the source it was built from. If CodeBuild
+      # is checking out an older commit (wrong branch, pinned source version,
+      # stale CodePipeline artifact), apps/web/Dockerfile will not contain the
+      # build-arg guards and the whole chain silently reverts to the broken
+      # behaviour. Assert the guards are physically present rather than assuming.
+      - |
+        for f in apps/web/Dockerfile apps/web/scripts/verify-public-env.mjs; do
+          if [ ! -f "$f" ]; then
+            echo "ERROR: ${f} is not in this checkout."
+            echo "CodeBuild is building source OLDER than main. Fix the project's source/branch"
+            echo "configuration; passing build args cannot help until the checkout is current."
+            exit 1
+          fi
+        done
+        if ! grep -q 'verify-public-env.mjs' apps/web/Dockerfile; then
+          echo "ERROR: apps/web/Dockerfile in this checkout predates the build-arg guards."
+          echo "CodeBuild is building source OLDER than main."
+          exit 1
+        fi
+        echo "Checkout contains the hardened Dockerfile and bundle verifier."
+
+      # ── BUILD-TIME VARIABLE PRESENCE ───────────────────────────────────────
+      # Deliberately placed BEFORE the fail-fast guard below, not immediately
+      # before `docker build`. If it ran later, the one build that actually needs
+      # this table — the one where a variable is missing — would exit before
+      # printing it, which is exactly backwards. The `build` phase begins on the
+      # next line after the guard, so this is still the last thing logged before
+      # the image is built.
+      #
+      # SET/EMPTY and a quoting warning only. No value, and no length, is printed.
+      - |
+        echo "── Firebase build-time variable presence (values never printed) ──"
+        for v in NEXT_PUBLIC_FIREBASE_API_KEY NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN \
+                 NEXT_PUBLIC_FIREBASE_PROJECT_ID NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET \
+                 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID NEXT_PUBLIC_FIREBASE_APP_ID \
+                 NEXT_PUBLIC_API_URL NEXT_PUBLIC_SITE_URL; do
+          eval "val=\${$v}"
+          if [ -z "${val}" ]; then
+            echo "${v}: EMPTY"
+          else
+            # A value pasted into the console WITH its surrounding quotes, or with
+            # a stray newline from a copy-paste, is "set" but produces a bundle
+            # containing `"\"AIza…\""` — Firebase then rejects it at runtime and
+            # the symptom looks nothing like a build problem. Report the shape,
+            # never the content.
+            case "${val}" in
+              \"*\" | \'*\' ) echo "${v}: SET  (WARNING: value includes surrounding quote characters — the console field must hold the RAW value)" ;;
+              *' '* | *"$(printf '\t')"* ) echo "${v}: SET  (WARNING: value contains whitespace)" ;;
+              * ) echo "${v}: SET" ;;
+            esac
+          fi
+        done
+
       - echo "Logging in to Amazon ECR..."
       - ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
       - IMAGE_TAG="$(echo "${CODEBUILD_RESOLVED_SOURCE_VERSION}" | cut -c 1-12)-${CODEBUILD_BUILD_NUMBER}"
       - test -n "${IMAGE_TAG}" || IMAGE_TAG="manual-$(date +%Y%m%d%H%M%S)"
       # Fail here, with a clear message, rather than shipping an image whose
-      # bundle has `undefined` baked in. The Dockerfile guards the two most
-      # critical ones too, but failing before the build saves several minutes.
+      # bundle has `undefined` baked in. The Dockerfile guards every one of these
+      # too, but failing before the build saves several minutes.
       - |
         missing=""
         for v in NEXT_PUBLIC_API_URL NEXT_PUBLIC_SITE_URL \

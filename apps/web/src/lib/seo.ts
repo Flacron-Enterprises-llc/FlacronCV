@@ -1,10 +1,18 @@
 import type { Metadata } from 'next';
 import { routing } from '@/i18n/routing';
 
-// Single source of truth for the site's canonical origin. Falls back to the
-// Render host; set NEXT_PUBLIC_SITE_URL to the production/custom domain.
-export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://flacroncv-web.onrender.com';
+// Single source of truth for the site's canonical origin.
+//
+// The fallback was the old Render host. Production runs on AWS ECS and that
+// Render service is gone, so any build missing NEXT_PUBLIC_SITE_URL emitted
+// canonical links, the sitemap and robots.txt all pointing at a dead domain —
+// which is what search engines take to be this site's real address. The failure
+// is silent: the pages render perfectly.
+//
+// apps/web/Dockerfile now requires NEXT_PUBLIC_SITE_URL at build time, so a
+// deployed image cannot reach this fallback at all. It remains for `next dev`
+// and unit tests, and now names the live domain so a miss is harmless.
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://flacroncv.com';
 
 export const LOCALES = routing.locales;
 export const DEFAULT_LOCALE = routing.defaultLocale;
