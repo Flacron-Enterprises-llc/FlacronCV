@@ -41,9 +41,10 @@ export default () => ({
     fromName: process.env.SES_FROM_NAME || 'FlacronAI',
     replyTo: process.env.SES_REPLY_TO || 'support@flacronenterprises.com',
     // Inbox that public contact-form submissions are delivered to.
+    // Last hardcoded fallback is the customer-facing inbox, not SES_FROM_*.
     contactTo:
       process.env.CONTACT_EMAIL ||
       process.env.SES_REPLY_TO ||
-      'support@flacronenterprises.com',
+      'contact@flacroncv.com',
   },
 });

@@ -110,16 +110,23 @@ the route group — the groups only control layout and client-side redirects.
 
 | Group | Routes | Access |
 |---|---|---|
-| `(public)` | `/`, `about-us`, `contact-us`, `templates`, `testimonials`, `confirm`, `privacy-policy`, `terms-of-service`, `cookie-policy` | Public |
+| `(public)` | `/`, `about-us`, `contact-us`, `templates`, `testimonials`, `confirm`, `privacy-policy`, `terms-of-service`, `cookie-policy`, `disclaimer`, `refund-policy` | Public |
 | `(auth)` | `login`, `register`, `forgot-password`, `verify-email` | Public; redirects away when signed in |
 | `(dashboard)` | `dashboard`, `cv` (+`new`, `pick-template`, `[id]`), `cover-letters` (+`new`, `[id]`), `jobs`, `support`, `settings` (+`billing`) | Signed-in |
 | `(admin)` | `users`, `subscriptions`, `templates`, `tickets`, `audit-logs` | `admin` / `super_admin` claim |
 | `(crm)` | `customers`, `leads`, `revenue`, `subscriptions`, `users`, `platform`, `audit`, `settings` | `admin` / `super_admin` claim |
 | `[...rest]` | Localised 404 | Public |
 
-**Legal routes are `/privacy-policy`, `/terms-of-service`, `/cookie-policy`** — not `/privacy` and
-`/terms` as some planning docs say. There is no `/disclaimer` and no `/refund-policy`. Their content
-comes from locale namespaces `privacy`, `terms`, `cookies_policy`, not from static pages.
+**Legal routes are `/privacy-policy`, `/terms-of-service`, `/cookie-policy`, `/disclaimer`,
+`/refund-policy`, plus `/contact-us`.** The client's checklist names `/privacy`, `/terms`,
+`/contact` — those slugs were **not** adopted; existing links and sitemap entries stay.
+English bodies for terms, disclaimer, refund, and cookies live in `apps/web/src/legal/*.ts`
+(version `2026-08-16`) and render through `LegalDocumentView`. Chrome (Last updated, TOC,
+Back to top, footer labels) stays in `t()`. Canonical + hreflang for those four documents
+is the `en` URL only (`englishDocumentAlternates` in `lib/seo.ts`); `/ar/terms-of-service`
+is still served for RTL chrome. **Privacy is still the locale namespace `privacy`** until
+the client names AWS SES and OpenAI in the new §4 — `subprocessor-disclosure.spec.ts` still
+reads `privacy.s3_desc`. `terms` and `cookies_policy` locale namespaces were deleted.
 
 ---
 
@@ -145,6 +152,9 @@ comes from locale namespaces `privacy`, `terms`, `cookies_policy`, not from stat
 `legalAcceptances` — a repo-wide search finds those names only inside `CLIENT_REQUIREMENTS.md`
 itself. The nearest existing precedent is the `leads` `ConsentRecord` (useful as a shape for
 `legalAcceptances`, not as a grant ledger). Batch F.1 and G.1–G.3 are genuinely new build.
+**Sequencing:** the client's Privacy §1.9 discloses hashed device and IP identifiers. That text
+must not replace the live privacy page until G exists; publishing it first would describe a
+practice we do not have. `LEGAL_VERSION_MAP.privacy` is `pending-client-subprocessors`.
 
 ---
 
@@ -171,7 +181,7 @@ itself. The nearest existing precedent is the `leads` `ConsentRecord` (useful as
 | `SES_FROM_EMAIL` | **FROM address. Defaults to `no-reply@flacronenterprises.com` — the parent domain** | should be set |
 | `SES_FROM_NAME` | Display name (default `FlacronAI`) | optional |
 | `SES_REPLY_TO` | Reply-To | optional |
-| `CONTACT_EMAIL` | Contact-form destination inbox | optional |
+| `CONTACT_EMAIL` | Contact-form destination inbox. Fallback chain: `CONTACT_EMAIL` → `SES_REPLY_TO` → `contact@flacroncv.com`. **Not** `SES_FROM_EMAIL` (transactional sender identity). | optional |
 | `FIRESTORE_EMULATOR_HOST` | **The only guard against local dev hitting production Firestore** | local only |
 
 ### `apps/web` (all build-time — every one is `NEXT_PUBLIC_*`)
@@ -220,7 +230,7 @@ the other four cannot see a corrupted character.
 | File | Rejects |
 |---|---|
 | `apps/web/src/i18n/locale-parity.test.ts` | A key in one locale and not another; empty values; mismatched ICU placeholders |
-| `apps/web/src/i18n/keys-resolve.test.ts` | A static `t()` / `t.rich()` key that does not exist in `en/common.json` — the only gate that catches a key missing from **all six** locales. **Widened 2026-08-18** to bind `await getTranslations(…)`, which brought ten previously-unchecked server components (all four legal pages, the auth layout, `not-found`) into scope, and again the same day to optional `.rich(` (CookieConsent). Still blind to `getTranslations({locale, namespace})`, `t.markup` / `t.raw`, double-quoted keys, and template-literal keys — check those by hand |
+| `apps/web/src/i18n/keys-resolve.test.ts` | A static `t()` / `t.rich()` key that does not exist in `en/common.json` — the only gate that catches a key missing from **all six** locales. **Widened 2026-08-18** to bind `await getTranslations(…)`, which brought previously-unchecked server components (legal pages, the auth layout, `not-found`) into scope, and again the same day to optional `.rich(` (CookieConsent). English legal bodies no longer call `t()` for the document text. Still blind to `getTranslations({locale, namespace})`, `t.markup` / `t.raw`, double-quoted keys, and template-literal keys — check those by hand |
 | `apps/web/src/i18n/no-hardcoded-english.test.ts` | English JSX text and `placeholder`/`title`/`aria-label`/`alt` literals. Ratchets against a small reviewed allowlist |
 | `apps/web/src/i18n/locale-untranslated.test.ts` | **A key present in all six files whose non-English value is still the English sentence.** Copying English text into all six locales to satisfy parity fails this one in five locales at once |
 | `apps/web/src/i18n/locale-encoding.test.ts` | **A locale file that is not strict UTF-8, or a value containing HTML entities, `U+FFFD`, C1 controls, or known mojibake (`Ã©`, `â€™`, …).** Also asserts each locale's values contain at least one letter from its own alphabet (non-vacuity). **Does not catch missing diacritics** (`cree` vs `crée`) — that is a spelling problem a regex cannot honestly gate |

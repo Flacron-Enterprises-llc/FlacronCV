@@ -134,6 +134,16 @@ export default function Footer() {
                   {t('footer.cookies')}
                 </Link>
               </li>
+              <li>
+                <Link href="/disclaimer" className={linkClass}>
+                  {t('footer.disclaimer')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/refund-policy" className={linkClass}>
+                  {t('footer.refund')}
+                </Link>
+              </li>
               {/* A button, not a link: it reopens the consent manager rather than
                   navigating. Withdrawing consent has to stay as easy to reach as
                   giving it was, which means permanently and from every page. */}

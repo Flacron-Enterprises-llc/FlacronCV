@@ -134,13 +134,29 @@ export class MailService {
     subject: string;
     category: string;
     message: string;
+    accountEmail?: string;
+    plan?: string;
+    userId?: string;
+    timestamp?: string;
   }): Promise<void> {
+    const accountBits = [
+      msg.accountEmail
+        ? `<p style="margin:0 0 8px"><strong>Account email:</strong> ${escapeHtml(msg.accountEmail)}</p>`
+        : '',
+      msg.plan ? `<p style="margin:0 0 8px"><strong>Plan:</strong> ${escapeHtml(msg.plan)}</p>` : '',
+      msg.userId ? `<p style="margin:0 0 8px"><strong>User ID:</strong> ${escapeHtml(msg.userId)}</p>` : '',
+      msg.timestamp
+        ? `<p style="margin:0 0 8px"><strong>Submitted at:</strong> ${escapeHtml(msg.timestamp)}</p>`
+        : '',
+    ].filter(Boolean);
+
     const html = layout(
       `New contact message · ${msg.category}`,
       [
         `<p style="margin:0 0 8px"><strong>From:</strong> ${escapeHtml(msg.name)} &lt;${escapeHtml(msg.email)}&gt;</p>`,
         `<p style="margin:0 0 8px"><strong>Category:</strong> ${escapeHtml(msg.category)}</p>`,
         `<p style="margin:0 0 16px"><strong>Subject:</strong> ${escapeHtml(msg.subject)}</p>`,
+        ...accountBits,
         '<hr style="border:none;border-top:1px solid #e7e5e4;margin:16px 0" />',
         `<p style="margin:0;color:#44403c">${escapeHtml(msg.message).replace(/\n/g, '<br />')}</p>`,
       ].join('\n'),

@@ -7,11 +7,48 @@ export interface ContactMessageInput {
   subject?: string;
   category?: string;
   message?: string;
+  accountEmail?: string;
+  plan?: string;
+  userId?: string;
+  timestamp?: string;
 }
 
 @Injectable()
 export class ContactService {
-  private static readonly CATEGORIES = ['general', 'support', 'billing', 'partnership'];
+  // Current public form + the four legacy values so an old client is not
+  // coerced to "general" until caches turn over.
+  private static readonly CATEGORIES = [
+    'general_question',
+    'account_support',
+    'login_password',
+    'technical_support',
+    'free_plan',
+    'pro_plan',
+    'enterprise_plan',
+    'billing_subscription',
+    'trial',
+    'cancellation',
+    'refund_request',
+    'cv_builder',
+    'cover_letter_builder',
+    'ats_optimization',
+    'ats_score',
+    'ai_writing_assistant',
+    'templates',
+    'export_problem',
+    'job_tracker',
+    'feature_request',
+    'partnership',
+    'business_enterprise',
+    'media_inquiry',
+    'privacy_request',
+    'legal_inquiry',
+    'security_concern',
+    'other',
+    'general',
+    'support',
+    'billing',
+  ];
 
   constructor(private readonly mail: MailService) {}
 
@@ -24,7 +61,17 @@ export class ContactService {
       ? (data.category as string)
       : 'general';
 
-    await this.mail.sendContactMessage({ name, email, subject, category, message });
+    await this.mail.sendContactMessage({
+      name,
+      email,
+      subject,
+      category,
+      message,
+      accountEmail: this.optionalEmail(data.accountEmail),
+      plan: this.optionalString(data.plan, 40),
+      userId: this.optionalString(data.userId, 128),
+      timestamp: this.optionalString(data.timestamp, 40) ?? new Date().toISOString(),
+    });
     return { ok: true };
   }
 
@@ -44,5 +91,19 @@ export class ContactService {
       throw new BadRequestException('A valid email address is required.');
     }
     return value.trim();
+  }
+
+  private optionalString(value: unknown, max: number): string | undefined {
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    return trimmed.slice(0, max);
+  }
+
+  private optionalEmail(value: unknown): string | undefined {
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return undefined;
+    return trimmed.slice(0, 254);
   }
 }

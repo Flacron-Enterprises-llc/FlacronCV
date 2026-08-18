@@ -4,24 +4,24 @@ import { pageMetadata } from '@/lib/seo';
 import JsonLd from '@/components/seo/JsonLd';
 import { pageBreadcrumbs } from '@/lib/json-ld';
 import LegalDocumentView from '@/components/legal/LegalDocumentView';
-import { COOKIES } from '@/legal/cookies';
+import { DISCLAIMER } from '@/legal/disclaimer';
 
 export async function generateMetadata(): Promise<Metadata> {
   return pageMetadata({
     locale: 'en',
-    path: COOKIES.path,
-    title: COOKIES.title,
-    description: COOKIES.description,
+    path: DISCLAIMER.path,
+    title: DISCLAIMER.title,
+    description: DISCLAIMER.description,
     englishDocument: true,
   });
 }
 
-export default async function CookiePolicyPage() {
+export default async function DisclaimerPage() {
   const tNav = await getTranslations();
   return (
     <>
-      <JsonLd data={pageBreadcrumbs('en', tNav('nav.home'), COOKIES.title, COOKIES.path)} />
-      <LegalDocumentView doc={COOKIES} />
+      <JsonLd data={pageBreadcrumbs('en', tNav('nav.home'), DISCLAIMER.title, DISCLAIMER.path)} />
+      <LegalDocumentView doc={DISCLAIMER} />
     </>
   );
 }

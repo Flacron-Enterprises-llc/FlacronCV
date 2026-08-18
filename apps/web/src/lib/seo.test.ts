@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { LOCALES, SITE_URL, localizedAlternates, pageMetadata } from '@/lib/seo';
+import { LOCALES, SITE_URL, englishDocumentAlternates, localizedAlternates, pageMetadata } from '@/lib/seo';
 
 /**
  * The canonical host has silently regressed twice.
@@ -53,6 +53,15 @@ describe('localizedAlternates', () => {
   });
 });
 
+describe('englishDocumentAlternates', () => {
+  it('emits only en and x-default, both pointing at the English URL', () => {
+    const languages = englishDocumentAlternates('/disclaimer')!.languages!;
+    expect(Object.keys(languages).sort()).toEqual(['en', 'x-default']);
+    expect(languages.en).toBe('https://www.flacroncv.com/en/disclaimer');
+    expect(languages['x-default']).toBe('https://www.flacroncv.com/en/disclaimer');
+  });
+});
+
 describe('pageMetadata', () => {
   const meta = pageMetadata({
     locale: 'de',
@@ -77,6 +86,24 @@ describe('pageMetadata', () => {
   it('carries alternates so no page relies on the layout default', () => {
     expect(meta.alternates!.canonical).toBe('https://www.flacroncv.com/de/about-us');
     expect(meta.alternates!.languages).toBeDefined();
+  });
+
+  it('pins English-only legal pages to the en canonical regardless of viewing locale', () => {
+    const meta = pageMetadata({
+      locale: 'ar',
+      path: '/terms-of-service',
+      title: 'FlacronCV Terms of Service',
+      description: 'Terms',
+      englishDocument: true,
+    });
+    expect(meta.alternates!.canonical).toBe('https://www.flacroncv.com/en/terms-of-service');
+    expect(meta.alternates!.languages).toEqual({
+      en: 'https://www.flacroncv.com/en/terms-of-service',
+      'x-default': 'https://www.flacroncv.com/en/terms-of-service',
+    });
+    expect((meta.openGraph as { url?: string }).url).toBe(
+      'https://www.flacroncv.com/en/terms-of-service',
+    );
   });
 
   it('passes through an explicit robots directive when given one', () => {

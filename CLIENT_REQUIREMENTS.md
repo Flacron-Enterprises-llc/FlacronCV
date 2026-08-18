@@ -46,7 +46,7 @@ now lives in `DEPLOYMENT_AND_OPS.md`.
 | §44 Document ownership | ✅ IDOR audit 2026-07-20 — 10 agents, 0 cross-user findings |
 | §43 Export entitlement | ✅ A8, server-authorised `POST /exports/record` |
 | §47 Analytics | ◐ GA4 adapter wired + consent-gated + 7 funnel events — needs only `NEXT_PUBLIC_GA4_MEASUREMENT_ID` |
-| Legal pages | ◐ The routes are **`/privacy-policy`, `/terms-of-service`, `/cookie-policy`, `/contact-us`** (corrected 2026-08-18 — not `/privacy` or `/terms`; B.1/B.2 below name them loosely). Content lives in locale namespaces `privacy`, `terms`, `cookies_policy` across 6 locales. No `/disclaimer`, no `/refund-policy` |
+| Legal pages | ◐ English bodies for terms, disclaimer, refund, cookies in `apps/web/src/legal/*.ts` (version `2026-08-16`). Routes kept: **`/privacy-policy`, `/terms-of-service`, `/cookie-policy`, `/contact-us`** — not the client's checklist `/privacy`, `/terms`, `/contact`. New: `/disclaimer`, `/refund-policy`. **Privacy still the locale-JSON policy** until the client names AWS SES and OpenAI in §4. Contact UI localised × 6. |
 | Cookie consent | ◐ banner exists (Accept/Decline) — needs the 3-button + preference-center upgrade |
 | §5 ATS-parseable export | ✅ text-layer PDF shipped 2026-07-30 (render mode 3), proven by stream inspection |
 
@@ -109,27 +109,25 @@ switched, customer deleted) falls through to a fresh customer with no history (`
 address is a new Stripe customer by definition — which is the device/identity problem in G.1–G.3, not
 this one. A backfill is only needed if you add the flag.
 
-**R-3 — Legal content vs the i18n gates. Decide before touching Batch B.**
-Legal text lives in **six locale JSON files** (`privacy.s3_desc`, `terms.*`, …), not static pages.
-⚠️ **CORRECTED 2026-08-18 — there are FIVE gates, not four.** The first four are
+**R-3 — Legal content vs the i18n gates. Q-10 answered 2026-08-18: option (b), bodies out of JSON.**
+Legal chrome stays in `t()`. English bodies for terms / disclaimer / refund / cookies live in
+`apps/web/src/legal/*.ts`. Privacy is still locale JSON (`privacy.s3_desc`) until MC1.
+⚠️ **There are FIVE gates, not four.** The first four are
 `locale-parity.test.ts` (identical key sets), `no-hardcoded-english.test.ts`, `keys-resolve.test.ts`,
 **and `locale-untranslated.test.ts`** — which rejects a key that exists in all six files but whose
 non-English value is still the English sentence. **So "copy the English text into all six locales to
-satisfy parity" fails CI in five locales at once.** The fifth, `locale-encoding.test.ts` (added
+satisfy parity" fails CI in five locales at once.** That is why the bodies were not stuffed into
+`ALLOWED` (that list is for brands and addresses). The fifth, `locale-encoding.test.ts` (added
 2026-08-18 after French `footer.about` shipped as "ì propos"), rejects a file that is not strict
 UTF-8, HTML entities, `U+FFFD`, C1 controls, known mojibake sequences, and a locale whose values
 contain no letter from its own alphabet. **It does not catch missing diacritics** (`cree` vs `crée`).
-That leaves option (b) as the only path that needs
-neither ~75,000 translated words nor a deliberate allowlist entry per legal key
-(`locale-untranslated.test.ts:34`). The legal routes are also `/privacy-policy`, `/terms-of-service`
-and `/cookie-policy` — not `/privacy` and `/terms` — and their content is in the locale namespaces
-`privacy`, `terms`, `cookies_policy`. The client's package is ~15,000 English words. Options:
+Live slugs are `/privacy-policy`, `/terms-of-service`, `/cookie-policy`, `/contact-us` — not
+`/privacy`, `/terms`, `/contact`. Options that were considered:
 - **(a) Translate everything into 5 languages.** Faithful, expensive, and a mistranslated Terms
   is a legal liability.
-- **(b) English-only legal pages** with "the English version controls," exempted from the gates
-  via the documented allowlist. Standard industry practice. **Recommended.**
+- **(b) English-only legal pages** with "the English version controls." Standard industry practice.
+  **Chosen.** Bodies are TypeScript modules, not an allowlist of 200 English keys.
 - **(c) Update only changed sections**, keeping existing translations.
-This is a client decision (Q-10), not an engineering one.
 
 **i18n gate remainder — `keys-resolve` now matches `t.rich('key')`.** Closed 2026-08-18; the
 call regex allows optional `.rich` and a non-vacuity assert requires at least one bound `.rich(`
@@ -199,8 +197,8 @@ recently-fixed export path. Changes to shared-types affect it. It is absent from
 | Q-7 | **Public LinkedIn URL.** The supplied link is an admin dashboard — visitors hit a login wall. | Socials |
 | Q-8 | **Stripe live keys — when?** **Answered 2026-08-18: stay in TEST mode.** Keys from env vars only; clean test-to-live switch with no code change. | §7 legal |
 | Q-9 | **Enterprise as a team plan?** **Answered 2026-08-18: no.** Individual high-usage plan. No seats, no team workspace, no org admin. | §21 |
-| Q-10 | **Legal pages: English-only or fully translated?** See R-3. | Legal pkg |
-| Q-11 | **`contact@flacroncv.com` — does the mailbox actually route?** Currently configured to `@flacronenterprises.com`. Ties to B-2. | §25 legal |
+| Q-10 | **Legal pages: English-only or fully translated?** **Answered 2026-08-18: English-only bodies, controlling-version sentence, contact UI stays localised.** Implemented for terms / disclaimer / refund / cookies. Privacy waits on subprocessors (B.1 / B.10). | Legal pkg |
+| Q-11 | **`contact@flacroncv.com` — does the mailbox actually route?** Customer-facing copy and the `CONTACT_EMAIL` last fallback now name `contact@flacroncv.com`. `SES_FROM_*` untouched (transactional sender identity). Whether that mailbox actually receives mail is still an AWS/DNS check (ties to B-2). | §25 legal |
 | Q-12 | **Marketing cookie category.** Client package specifies a Marketing cookie category; no advertising, pixel, or campaign technology exists in the product. Built three categories per client §7. Confirm, or specify the planned marketing technology. | §9 legal |
 
 ---
@@ -222,17 +220,17 @@ recently-fixed export path. Changes to shared-types affect it. It is absent from
 
 | ID | Task | Status |
 |---|---|---|
-| B.1 | Replace `/privacy` content with the new Privacy Policy (17 sections). Existing content is localised — apply the Q-10 decision. **Keeps the documented GDPR Art.13(1)(a) gap closed:** the new package finally supplies the controller identity (Flacron Enterprises, Brooklyn NY) and governing law (New York). | ☐ |
-| B.2 | Replace `/terms` (30 sections) | ☐ |
-| B.3 | **New** `/disclaimer` — AI, ATS & Employment Disclaimer | ☐ |
-| B.4 | **New** `/refund-policy` | ☐ |
-| B.5 | Replace `/cookie-policy` (14 sections) | ☐ |
-| B.6 | Update `/contact` — 26-option category dropdown, new copy, success/error states | ☐ |
-| B.7 | Contact routing → `contact@flacroncv.com`. **`ContactModule` + `POST /contact` already exist** (throttled 5/min, HTML-escaped, replyTo=visitor). Change `CONTACT_EMAIL`; extend payload with account email, plan, user ID, timestamp. | ☐ |
-| B.8 | Shared legal layout: 900–1000px, uncropped logo, light/dark, orange accents, desktop TOC, Last Updated, Back to Top | ☐ |
-| B.9 | Legal document versioning (`2026-08-16`) across all five documents | ☐ |
-| B.10 | **Subprocessor list must stay accurate** — `subprocessor-disclosure.spec.ts` (9 tests) ties the Privacy Policy to the SDKs in `apps/api/package.json`, both directions. New privacy text must name **AWS SES**, Firebase, Stripe, OpenAI or the test fails. | ☐ |
-| B.11 | Sweep for stale contact addresses; standardise on `contact@flacroncv.com` | ☐ |
+| B.1 | Replace `/privacy-policy` (keep the live slug) with the new Privacy Policy (17 sections). **Blocked:** client §4 does not name AWS SES or OpenAI; `subprocessor-disclosure.spec.ts` still requires those names in `privacy.s3_desc`. Do not replace the page until they are in the client text. **Also recorded:** client §10 is weaker than the live deactivation-vs-erasure wording (not false; raise later). Client §1.9 discloses hashed device/IP identifiers Batch G has not built — do not publish that section ahead of G. | ☐ |
+| B.2 | Replace `/terms-of-service` (keep the live slug; 30 sections) | ☑ |
+| B.3 | **New** `/disclaimer` — AI, ATS & Employment Disclaimer | ☑ |
+| B.4 | **New** `/refund-policy` | ☑ |
+| B.5 | Replace `/cookie-policy`. Three categories. **§6 Marketing omitted. §2 “Support marketing where permitted” held pending the client.** Original numbers kept. | ☑ |
+| B.6 | Update `/contact-us` — 26-option category dropdown, new copy, success/error states. Slug kept (not `/contact`). | ☑ |
+| B.7 | Contact routing → `contact@flacroncv.com`. **`ContactModule` + `POST /contact` already exist** (throttled 5/min, HTML-escaped, replyTo=visitor). `CONTACT_EMAIL` last fallback updated; payload extended with account email, plan, user ID, timestamp. **`SES_FROM_EMAIL` / `SES_FROM_NAME` not changed.** | ☑ |
+| B.8 | Shared legal layout: 900–1000px, uncropped logo, light/dark, orange accents, desktop TOC, Last Updated, Back to Top | ☑ |
+| B.9 | Legal document versioning (`2026-08-16`) across published English documents. Privacy recorded as pending. **No acceptance modal** (Batch H). | ☑ |
+| B.10 | **Subprocessor list must stay accurate** — `subprocessor-disclosure.spec.ts` (9 tests) ties the Privacy Policy to the SDKs in `apps/api/package.json`, both directions. New privacy text must name **AWS SES**, Firebase, Stripe, OpenAI or the test fails. **Unchanged — blocked with B.1.** | ☐ |
+| B.11 | Sweep for stale customer-facing addresses; standardise on `contact@flacroncv.com` | ☑ |
 | B.12 | In-app disclaimers: AI builder, ATS screens, cover letter, export review gate | ☐ |
 
 **Not in this batch:** the acceptance modal and its DB record — Batch G.
@@ -264,12 +262,13 @@ four-category text belongs to Batch B. See **Q-12**.
 ---
 
 ## BATCH D — SEO, socials, footer branding
-**Depends on:** B. **Already built:** `app/sitemap.ts` (48 URLs with hreflang + x-default),
+**Depends on:** B. **Already built:** `app/sitemap.ts` (localized public paths × 6 locales with
+hreflang + `x-default`; English legal bodies are a single `en` loc),
 `app/robots.ts`, `lib/seo.ts` `pageMetadata()`, Organization + WebSite JSON-LD, `site.webmanifest`.
 
 | ID | Task | Status |
 |---|---|---|
-| D.1 | Extend sitemap to the new legal routes (`/disclaimer`, `/refund-policy`) | ☐ — routes do not exist yet (Batch B). Existing 8 public paths × 6 locales now emit `x-default` and no longer stamp `lastmod` with build time. |
+| D.1 | Extend sitemap to the new legal routes (`/disclaimer`, `/refund-policy`) | ☑ — added. English legal bodies (terms, cookies, disclaimer, refund) emit **one `en` URL** with hreflang `en` + `x-default` only. Privacy and contact keep 6-locale hreflang. Live slugs kept (`/privacy-policy`, `/terms-of-service`, `/contact-us`), not the client's `/privacy` `/terms` `/contact`. |
 | D.2 | Per-page metadata audit — the record says only some pages have full metadata | ☑ — auth pages localized; `/confirm` and 404 covered; private groups `noindex`. Homepage `generateMetadata` is still **English-only** (hand-rolled, not `pageMetadata()`). |
 | D.3 | SoftwareApplication + BreadcrumbList JSON-LD (noted as an outstanding LOW) | ☑ — **no `aggregateRating`**, deliberately: no real reviews exist. Organization/WebSite scoped to public routes + homepage, not site-wide. |
 | D.4 | Footer rebuild — Product / Company / Legal / Account, contact block, parent company | ☑ |

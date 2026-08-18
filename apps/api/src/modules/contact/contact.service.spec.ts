@@ -58,4 +58,36 @@ describe('ContactService', () => {
   it('rejects an over-length message (>5000 chars)', async () => {
     await expect(service.submit({ ...VALID, message: 'x'.repeat(5001) })).rejects.toThrow(BadRequestException);
   });
+
+  it('accepts a current 26-option category', async () => {
+    await service.submit({ ...VALID, category: 'privacy_request' });
+    expect(mail.sendContactMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'privacy_request' }),
+    );
+  });
+
+  it('forwards optional account fields and stamps a timestamp', async () => {
+    await service.submit({
+      ...VALID,
+      accountEmail: 'acct@example.com',
+      plan: 'pro',
+      userId: 'uid-1',
+      timestamp: '2026-08-16T12:00:00.000Z',
+    });
+    expect(mail.sendContactMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountEmail: 'acct@example.com',
+        plan: 'pro',
+        userId: 'uid-1',
+        timestamp: '2026-08-16T12:00:00.000Z',
+      }),
+    );
+  });
+
+  it('drops a malformed optional account email rather than rejecting the message', async () => {
+    await service.submit({ ...VALID, accountEmail: 'not-an-email' });
+    expect(mail.sendContactMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ accountEmail: undefined }),
+    );
+  });
 });

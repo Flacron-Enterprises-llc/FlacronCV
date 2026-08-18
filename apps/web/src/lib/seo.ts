@@ -46,6 +46,22 @@ export function localizedAlternates(path: string, locale: string): Metadata['alt
 }
 
 /**
+ * Canonical + hreflang for English-only legal bodies. Chrome is still served
+ * at `/ar/terms-of-service` (RTL), but the document itself is English, so the
+ * canonical and hreflang must not advertise five translations that do not exist.
+ */
+export function englishDocumentAlternates(path: string): Metadata['alternates'] {
+  const enUrl = `${SITE_URL}/${DEFAULT_LOCALE}${path}`;
+  return {
+    canonical: enUrl,
+    languages: {
+      [DEFAULT_LOCALE]: enUrl,
+      'x-default': enUrl,
+    },
+  };
+}
+
+/**
  * Shared page metadata: page-specific title (the root layout template appends
  * " | FlacronCV", so pass the bare title to avoid a double suffix), description,
  * canonical + hreflang alternates, and OpenGraph/Twitter cards.
@@ -56,14 +72,19 @@ export function pageMetadata(opts: {
   title: string;
   description: string;
   robots?: Metadata['robots'];
+  /** English-only legal body: canonical and hreflang are the `en` URL only. */
+  englishDocument?: boolean;
 }): Metadata {
-  const { locale, path, title, description, robots } = opts;
-  const canonical = `${SITE_URL}/${locale}${path}`;
+  const { locale, path, title, description, robots, englishDocument } = opts;
+  const alternates = englishDocument
+    ? englishDocumentAlternates(path)
+    : localizedAlternates(path, locale);
+  const canonical = String(alternates?.canonical ?? `${SITE_URL}/${locale}${path}`);
   const ogTitle = `${title} | FlacronCV`;
   return {
     title,
     description,
-    alternates: localizedAlternates(path, locale),
+    alternates,
     openGraph: {
       title: ogTitle,
       description,

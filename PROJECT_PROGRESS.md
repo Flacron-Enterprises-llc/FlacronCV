@@ -39,6 +39,7 @@ Last updated: 2026-08-18
 - API modules: `apps/api/src/modules/{auth,users,cv,cover-letter,ai,templates,export,payment,support,admin,audit,mail,crm,firebase}`
 - Plans/entitlements: `packages/shared-types/src/subscription.types.ts` (`PLAN_CONFIGS`)
 - Locales: `apps/web/public/locales/<loc>/common.json`
+- English legal bodies: `apps/web/src/legal/*.ts` (chrome still in `t()`)
 
 ---
 
@@ -782,6 +783,60 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 9. Change log (append newest at top)
 
+- 2026-08-18 — **Batch B — legal & contact (MC2–MC13 minus Privacy).** Client
+  package applied. **Do not commit.** Privacy `/privacy-policy` is **not**
+  replaced — MC1 waits until the client names **AWS SES** and **OpenAI** in §4.
+  `subprocessor-disclosure.spec.ts` still reads `privacy.s3_desc` in locale JSON.
+  **QA: `pnpm lint` 0 errors (pre-existing `<img>` / mobile unused-var warnings
+  only) · `pnpm type-check` ✓ · `pnpm test` ✓ — web 274/274 (vitest
+  `--pool=threads`; forks pool timed out on this machine as before), api
+  390/390, all five i18n gates green.**
+  **Cookie §2 bullet “Support marketing where permitted” held** pending the
+  client; §6 Marketing omitted; Marketing omitted from §7 and the §9 toggles;
+  original numbering kept (1–5, skip 6, 7–14).
+  **Architecture:** legal bodies live in `apps/web/src/legal/*.ts` (English).
+  Chrome (`legal.last_updated`, TOC, Back to top, footer labels, contact UI)
+  stays in `t()` × 6. Controlling-version sentence is a module constant, not a
+  JSX literal and not 200 allowlist entries.
+  **Routes kept:** `/privacy-policy`, `/terms-of-service`, `/contact-us` (client
+  checklist says `/privacy`, `/terms`, `/contact` — mismatch recorded; existing
+  links and sitemap locs not broken for a naming preference). New:
+  `/disclaimer`, `/refund-policy`.
+  **MC11:** customer-facing `support@` / `privacy@` / `billing@` /
+  `legal@flacroncv.com` → `contact@flacroncv.com`, including FAQ, settings
+  delete modal, remaining privacy JSON, and `CONTACT_EMAIL` last fallback.
+  **`SES_FROM_EMAIL` / `SES_FROM_NAME` untouched.** `SES_REPLY_TO` default
+  untouched.
+  **Recorded, not a blocker — deletion:** the live privacy text distinguished
+  deactivation (settings) from erasure on request to `privacy@`. Client §10 is
+  weaker but not false. That clarity is lost when MC1 lands; raise with the
+  client later.
+  **Recorded — Privacy §1.9 vs Batch G:** the new policy discloses hashed
+  device and IP identifiers that G has not built. Once G ships, the text is
+  accurate; until then it describes a practice we do not have. Sequencing is
+  deliberate — do not publish that section ahead of G, and do not treat G as
+  implied by this batch.
+  **Not built:** B.1 Privacy page; B.12 in-app AI/ATS/cover-letter/export
+  disclaimers; Batch H acceptance modal / `legalAcceptances`.
+  - **MC2.** `/terms-of-service` — client Terms, 30 sections, English module.
+  - **MC3.** New `/disclaimer`.
+  - **MC4.** New `/refund-policy`, 15 sections.
+  - **MC5.** `/cookie-policy` replaced with the holds above.
+  - **MC6.** Shared `LegalDocumentView`: max 1000px, `Logo` `h-20`, light/dark,
+    orange heading/link/button accents, `text-base` body, desktop TOC, Last
+    Updated, Back to Top (respects `prefers-reduced-motion`).
+  - **MC7.** `/contact-us` copy + 26-option category dropdown, success/error
+    states; UI via `t()`.
+  - **MC8.** `POST /contact` keeps throttle 5/min + HTML escape; optional
+    `accountEmail` / `plan` / `userId` / `timestamp`; unknown category still
+    `general`. `CONTACT_EMAIL` last fallback `contact@flacroncv.com`.
+  - **MC9.** Footer Legal column adds Disclaimer and Refund Policy.
+  - **MC10.** Sitemap: localized paths keep 6-locale hreflang; English legal
+    bodies emit one `en` loc with hreflang `en` + `x-default` only. Pages still
+    serve `/ar/terms-of-service` for RTL chrome. Canonical via
+    `englishDocumentAlternates()`. Privacy and contact unchanged (6 locales).
+  - **MC12.** `LEGAL_VERSION_MAP` records `2026-08-16`. Privacy marked
+    `pending-client-subprocessors` / live source locale JSON.
 - 2026-08-18 — **Batch E — plan configuration.** Client answers applied. **Do not commit.**
   **QA: `pnpm lint` 0 errors (pre-existing `<img>` / mobile unused-var warnings only) ·
   `pnpm type-check` ✓ · `pnpm test` ✓ — web 264/264 (vitest `--pool=threads`; forks pool
