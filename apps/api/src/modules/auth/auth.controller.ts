@@ -36,6 +36,19 @@ export class AuthController {
     return { ipAddress, userAgent: req.headers['user-agent'] };
   }
 
+  /**
+   * 128-bit hex token from the client. Rejected (treated as absent) if it is
+   * not exactly 32 hex chars — never logged.
+   */
+  private static deviceToken(req: Request): string | undefined {
+    const raw = req.headers['x-device-token'];
+    const value = Array.isArray(raw) ? raw[0] : raw;
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim().toLowerCase();
+    if (!/^[0-9a-f]{32}$/.test(trimmed)) return undefined;
+    return trimmed;
+  }
+
   @Post('verify')
   @UseGuards(FirebaseAuthGuard)
   @ApiBearerAuth()
@@ -48,6 +61,7 @@ export class AuthController {
       (user.emailVerified as boolean) || false,
       (user as Record<string, unknown>).picture as string,
       AuthController.requestContext(req),
+      AuthController.deviceToken(req),
     );
   }
 

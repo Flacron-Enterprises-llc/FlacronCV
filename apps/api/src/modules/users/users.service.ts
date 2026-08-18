@@ -47,6 +47,7 @@ export interface PersonalDataExport {
   preferences: Record<string, unknown>;
   subscription: Record<string, unknown>;
   usage: Record<string, unknown>;
+  abuse: Record<string, unknown>;
   cvs: Record<string, unknown>[];
   coverLetters: Record<string, unknown>[];
   jobApplications: Record<string, unknown>[];
@@ -105,6 +106,7 @@ export class UsersService {
         stripeSubscriptionId: null,
         currentPeriodEnd: null,
         cancelAtPeriodEnd: false,
+        hasUsedTrial: false,
       },
       usage: {
         cvsCreated: 0,
@@ -398,6 +400,17 @@ export class UsersService {
     'status',
     'currentPeriodEnd',
     'cancelAtPeriodEnd',
+    'hasUsedTrial',
+  ] as const;
+
+  private static readonly EXPORTED_ABUSE_FIELDS = [
+    'deviceHash',
+    'ipHash',
+    'networkHash',
+    'riskScore',
+    'riskBand',
+    'riskSignals',
+    'scoredAt',
   ] as const;
 
   private static readonly EXPORTED_ACCOUNT_FIELDS = [
@@ -646,6 +659,10 @@ export class UsersService {
       usage: UsersService.pick(
         userRecord.usage as Record<string, unknown> | undefined,
         UsersService.EXPORTED_USAGE_FIELDS,
+      ),
+      abuse: UsersService.pick(
+        userRecord.abuse as Record<string, unknown> | undefined,
+        UsersService.EXPORTED_ABUSE_FIELDS,
       ),
       cvs: cvs.sort(UsersService.byCreatedAtDesc),
       coverLetters: coverLetterDocs.rows

@@ -29,6 +29,7 @@ describe('UsersService', () => {
       expect(user.email).toBe('user@example.com');
       expect(user.role).toBe(UserRole.USER);
       expect(user.subscription.plan).toBe(SubscriptionPlan.FREE);
+      expect(user.subscription.hasUsedTrial).toBe(false);
       expect(user.usage.aiCreditsLimit).toBe(
         PLAN_CONFIGS[SubscriptionPlan.FREE].limits.aiCredits,
       );
@@ -315,6 +316,40 @@ describe('UsersService', () => {
       expect(serialized).not.toContain('Their Experience');
       expect(serialized).not.toContain('Their private problem');
       expect(serialized).not.toContain('other@example.com');
+    });
+
+    it("exports this user's abuse fields and no other uid from the device lookup", async () => {
+      await firestore.collection('users').doc(OWNER).update({
+        'subscription.hasUsedTrial': true,
+        abuse: {
+          deviceHash: 'abc123hash',
+          ipHash: 'def456hash',
+          networkHash: 'def456hash',
+          riskScore: 35,
+          riskBand: 'allow',
+          riskSignals: ['network_burst'],
+          scoredAt: '2026-08-18T00:00:00.000Z',
+          linkedUids: [OTHER],
+        },
+      });
+      await firestore.collection('abuse_devices').doc('abc123hash').set({
+        uids: [OWNER, OTHER],
+        uidCount: 2,
+        receivedFree: true,
+      });
+
+      const data = await service.exportPersonalData(OWNER);
+      const serialized = JSON.stringify(data);
+
+      expect(data.abuse.deviceHash).toBe('abc123hash');
+      expect(data.abuse.riskScore).toBe(35);
+      expect(data.abuse.riskBand).toBe('allow');
+      expect(data.abuse.linkedUids).toBeUndefined();
+      expect(data.subscription.hasUsedTrial).toBe(true);
+
+      const known = [OWNER, OTHER, 'staff-uid-999'];
+      const present = known.filter((id) => serialized.includes(id));
+      expect(present).toEqual([OWNER]);
     });
 
     it('excludes Stripe identifiers from the subscription summary', async () => {

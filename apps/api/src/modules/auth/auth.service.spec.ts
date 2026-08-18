@@ -6,6 +6,7 @@ import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { UsersService } from '../users/users.service';
 import { MailService } from '../mail/mail.service';
 import { AuditService } from '../audit/audit.service';
+import { AbuseService } from '../abuse/abuse.service';
 import { createMockFirebaseAdmin } from '../../test-utils/mock-firebase-admin';
 import { InMemoryFirestore } from '../firebase/in-memory-firestore';
 
@@ -34,6 +35,7 @@ describe('AuthService', () => {
     sendEmailVerificationEmail: jest.Mock;
   };
   let mockConfigService: { get: jest.Mock };
+  let mockAbuse: { recordRegistrationSignals: jest.Mock };
 
   beforeEach(async () => {
     mockFirebaseAdmin = createMockFirebaseAdmin();
@@ -56,6 +58,9 @@ describe('AuthService', () => {
     };
 
     mockAudit = makeMockAudit();
+    mockAbuse = {
+      recordRegistrationSignals: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -65,6 +70,7 @@ describe('AuthService', () => {
         { provide: MailService, useValue: mockMailService },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: AuditService, useValue: mockAudit },
+        { provide: AbuseService, useValue: mockAbuse },
       ],
     }).compile();
 
@@ -431,6 +437,50 @@ describe('AuthService', () => {
         'new1',
         expect.anything(),
       );
+    });
+
+    it('scores a new registration and never puts the device token on the audit row', async () => {
+      mockUsersService.findById.mockResolvedValue(null);
+      mockUsersService.create.mockResolvedValue({ uid: 'new2', displayName: 'New' } as any);
+      await (mockFirebaseAdmin.firestore as InMemoryFirestore)
+        .collection('users')
+        .doc('new2')
+        .set({ uid: 'new2', welcomeEmailSent: false });
+
+      const deviceToken = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      await service.verifyAndSync(
+        'new2',
+        'new2@example.com',
+        'New',
+        true,
+        undefined,
+        { ipAddress: '203.0.113.7', userAgent: 'jest' },
+        deviceToken,
+      );
+
+      expect(mockAbuse.recordRegistrationSignals).toHaveBeenCalledWith(
+        expect.objectContaining({
+          uid: 'new2',
+          deviceToken,
+          ipAddress: '203.0.113.7',
+        }),
+      );
+      const registered = mockAudit.logUserAction.mock.calls.find((c) => c[0] === 'AUTH_REGISTERED');
+      expect(JSON.stringify(registered)).not.toContain(deviceToken);
+    });
+
+    it('still creates the user when scoring throws', async () => {
+      mockUsersService.findById.mockResolvedValue(null);
+      mockUsersService.create.mockResolvedValue({ uid: 'new3', displayName: 'New' } as any);
+      mockAbuse.recordRegistrationSignals.mockRejectedValueOnce(new Error('scoring down'));
+      await (mockFirebaseAdmin.firestore as InMemoryFirestore)
+        .collection('users')
+        .doc('new3')
+        .set({ uid: 'new3', welcomeEmailSent: false });
+
+      const result = await service.verifyAndSync('new3', 'new3@example.com', 'New', true);
+      expect(result.uid).toBe('new3');
+      expect(mockUsersService.create).toHaveBeenCalled();
     });
 
     it('records a sign-out', async () => {

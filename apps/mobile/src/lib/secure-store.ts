@@ -5,7 +5,18 @@ const KEYS = {
   REFRESH_TOKEN: 'flacroncv_refresh_token',
   USER_ID: 'flacroncv_user_id',
   PENDING_TEMPLATE: 'flacroncv_pending_template',
+  // Survives logout on purpose — clearAll() must never delete this. A new
+  // token on every sign-out would make the device identifier useless.
+  DEVICE_TOKEN: 'flacroncv_device_token',
 } as const;
+
+const DEVICE_TOKEN_RE = /^[0-9a-f]{32}$/i;
+
+function randomDeviceToken(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 export const secureStore = {
   async setAuthToken(token: string): Promise<void> {
@@ -54,6 +65,18 @@ export const secureStore = {
 
   async deletePendingTemplate(): Promise<void> {
     await SecureStore.deleteItemAsync(KEYS.PENDING_TEMPLATE);
+  },
+
+  async getOrCreateDeviceToken(): Promise<string | null> {
+    try {
+      const existing = await SecureStore.getItemAsync(KEYS.DEVICE_TOKEN);
+      if (existing && DEVICE_TOKEN_RE.test(existing)) return existing.toLowerCase();
+      const token = randomDeviceToken();
+      await SecureStore.setItemAsync(KEYS.DEVICE_TOKEN, token);
+      return token;
+    } catch {
+      return null;
+    }
   },
 
   async clearAll(): Promise<void> {

@@ -356,8 +356,41 @@ export interface AppSettings {
     message: string;
     type: 'info' | 'warning' | 'success' | 'danger';
   };
+  /**
+   * Risk-engine weights and bands. Read by the scorer (code defaults if
+   * missing). Not editable through UpdateAppSettingsDto — CRM settings saves
+   * must preserve this field so they cannot wipe it.
+   */
+  abuse?: AbuseRiskSettings;
   updatedAt: Date | null;
   updatedBy: string | null;
+}
+
+export interface AbuseRiskWeights {
+  identityReceivedFree: number;
+  deviceReceivedFree: number;
+  multipleAccountsDevice: number;
+  networkBurst: number;
+  disposableEmail: number;
+  botActivity: number;
+  vpnDatacenter: number;
+  repeatCreateDelete: number;
+}
+
+export interface AbuseRiskThresholds {
+  /** Score strictly below this is `allow`. Default 40. */
+  allowBelow: number;
+  /** Score at or above this is `deny`. Default 70. Between is `verify`. */
+  denyAt: number;
+  /** Cap when the only firing signal is a network burst. Default 39. */
+  ipAloneMax: number;
+}
+
+export interface AbuseRiskSettings {
+  weights: AbuseRiskWeights;
+  thresholds: AbuseRiskThresholds;
+  networkBurstCount: number;
+  networkBurstWindowHours: number;
 }
 
 export interface UpdateAppSettingsDto {

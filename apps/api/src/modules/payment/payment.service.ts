@@ -207,17 +207,25 @@ export class PaymentService {
     // The card is still collected upfront (Stripe default) and auto-charged
     // when the trial ends unless the user cancels.
     //
-    // `stripeSubscriptionId` alone cannot answer this: revoking access nulls it,
-    // so cancel → re-subscribe looked like a brand-new customer and handed out
-    // another 7 free days, indefinitely. Ask Stripe instead — the customer's
-    // subscription history is the fact we actually care about and it cannot be
-    // erased by our own writes. `status: 'all'` includes canceled ones.
+    // `stripeSubscriptionId` alone cannot answer this: revoking access nulls it.
+    // Cancel → re-subscribe is already blocked by Stripe's own history
+    // (`subscriptions.list` status=all, fail closed). `hasUsedTrial` is
+    // defence-in-depth for residual cases (stale customer id, etc.) and is
+    // never cleared. It does not replace the Stripe check.
     const trialOfferedOnPlan = selection.plan === SubscriptionPlan.PRO && TRIAL_PERIOD_DAYS > 0;
-    let isFirstTimeSubscriber = trialOfferedOnPlan && !user.subscription.stripeSubscriptionId;
+    let isFirstTimeSubscriber =
+      trialOfferedOnPlan &&
+      !user.subscription.stripeSubscriptionId &&
+      !user.subscription.hasUsedTrial;
     if (isFirstTimeSubscriber) {
       try {
         const prior = await this.stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 1 });
-        if (prior.data.length > 0) isFirstTimeSubscriber = false;
+        if (prior.data.length > 0) {
+          isFirstTimeSubscriber = false;
+          if (!user.subscription.hasUsedTrial) {
+            await this.usersService.updateSubscription(userId, { hasUsedTrial: true });
+          }
+        }
       } catch (err) {
         // Fail closed: if we cannot prove this is a first subscription, do not
         // give away a trial.
@@ -240,6 +248,10 @@ export class PaymentService {
       metadata: { firebaseUid: userId },
       ...(subscriptionData ? { subscription_data: subscriptionData } : {}),
     });
+
+    if (isFirstTimeSubscriber) {
+      await this.usersService.updateSubscription(userId, { hasUsedTrial: true });
+    }
 
     return { sessionId: session.id, url: session.url };
   }
@@ -322,6 +334,7 @@ export class PaymentService {
       'subscription.trialStart': trial.trialStart,
       'subscription.trialEnd': trial.trialEnd,
       'subscription.cancelAtPeriodEnd': false,
+      ...(trial.trialStart ? { 'subscription.hasUsedTrial': true } : {}),
       'usage.aiCreditsLimit': limits.aiCredits,
       updatedAt: now,
     });

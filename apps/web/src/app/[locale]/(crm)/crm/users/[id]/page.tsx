@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { User } from '@flacroncv/shared-types';
+import { User, RiskSignalCode } from '@flacroncv/shared-types';
 import { Link } from '@/i18n/routing';
 import { toast } from 'sonner';
 import { PLAN_CONFIGS } from '@flacroncv/shared-types';
@@ -50,6 +50,17 @@ const ROLE_ICONS: Record<string, React.ElementType> = {
   admin: ShieldCheck,
   super_admin: Crown,
 };
+
+const RISK_SIGNAL_CODES: RiskSignalCode[] = [
+  'identity_received_free',
+  'device_received_free',
+  'multiple_accounts_device',
+  'network_burst',
+  'disposable_email',
+  'bot_activity',
+  'vpn_datacenter',
+  'repeat_create_delete',
+];
 
 function UsageMeter({ label, used, limit }: { label: string; used: number; limit: number }) {
   const isUnlimited = limit === -1;
@@ -430,6 +441,53 @@ export default function CRMUserDetailPage(): React.JSX.Element {
                   </button>
                 );
               })}
+            </div>
+          </Card>
+
+          <Card>
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">{t('user_detail_risk')}</h2>
+            {user.abuse ? (
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-stone-600 dark:text-stone-400">{t('user_detail_risk_score')}</span>
+                  <span className="font-medium text-stone-800 dark:text-stone-200">{user.abuse.riskScore}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-stone-600 dark:text-stone-400">{t('user_detail_risk_band')}</span>
+                  <span className="font-medium text-stone-800 dark:text-stone-200">
+                    {user.abuse.riskBand === 'allow' || user.abuse.riskBand === 'verify' || user.abuse.riskBand === 'deny'
+                      ? t(`user_detail_risk_band_${user.abuse.riskBand}`)
+                      : user.abuse.riskBand}
+                  </span>
+                </div>
+                {user.abuse.riskSignals?.length ? (
+                  <div>
+                    <p className="mb-1 text-stone-600 dark:text-stone-400">{t('user_detail_risk_signals')}</p>
+                    <ul className="list-inside list-disc text-stone-800 dark:text-stone-200">
+                      {user.abuse.riskSignals
+                        .filter((code): code is RiskSignalCode =>
+                          (RISK_SIGNAL_CODES as string[]).includes(code),
+                        )
+                        .map((code) => (
+                          <li key={code}>{t(`user_detail_risk_signal_${code}`)}</li>
+                        ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {user.abuse.scoredAt && (
+                  <p className="text-xs text-stone-500">
+                    {t('user_detail_risk_scored_at', { date: formatDateTime(user.abuse.scoredAt) })}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-stone-500 dark:text-stone-400">{t('user_detail_risk_none')}</p>
+            )}
+            <div className="mt-3 flex items-center justify-between gap-4 border-t border-stone-100 pt-3 text-sm dark:border-stone-800">
+              <span className="text-stone-600 dark:text-stone-400">{t('user_detail_has_used_trial')}</span>
+              <span className="font-medium text-stone-800 dark:text-stone-200">
+                {user.subscription?.hasUsedTrial ? t('yes') : t('no')}
+              </span>
             </div>
           </Card>
         </div>

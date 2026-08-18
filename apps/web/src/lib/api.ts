@@ -1,4 +1,5 @@
 import { auth } from './firebase';
+import { getOrCreateDeviceToken } from './device-token';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
@@ -75,12 +76,18 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   }
 }
 
+function getDeviceHeaders(): Record<string, string> {
+  const token = getOrCreateDeviceToken();
+  return token ? { 'X-Device-Token': token } : {};
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit & { timeoutMs?: number } = {},
 ): Promise<T> {
   const { timeoutMs, ...init } = options;
   const authHeaders = await getAuthHeaders();
+  const deviceHeaders = getDeviceHeaders();
 
   let response: Response;
   try {
@@ -90,6 +97,7 @@ async function request<T>(
       headers: {
         'Content-Type': 'application/json',
         ...authHeaders,
+        ...deviceHeaders,
         ...init.headers,
       },
     });

@@ -172,15 +172,14 @@ Legend: ✓ done · ◐ partial · ✗ missing · ⤵ deferred/decision-needed
   paid-through date via `resolveEffectivePlan()` (grace-until-period-end).
 - ⚠️ **UPDATED 2026-08-18 — the cancel→resubscribe trial hole is now substantially CLOSED.** The
   deferred item (d)/(a) in the 2026-07-20 change-log entries described `isFirstTimeSubscriber` as
-  reading only `stripeSubscriptionId`, which is nulled on cancel. It now falls back to Stripe's own
-  history: `subscriptions.list({ customer, status: 'all' })` and **fails closed** on error
-  (`apps/api/src/modules/payment/payment.service.ts:204-219`). `stripeCustomerId` is *not* cleared
-  by cancel or `revokeToFree()` (`:618`), so the prior subscription is found and no second trial is
-  granted. **Residual gaps a `hasUsedTrial` flag would still close:** a stored customer id that no
-  longer resolves in Stripe (key switched test↔live, account switched, customer deleted) falls
-  through to a fresh customer with no history (`:186`); and a new email address is a new Stripe
-  customer by definition (that is the device/identity problem, not this one). **Re-scope before
-  paying for a production backfill.**
+  reading only `stripeSubscriptionId`, which is nulled on cancel. **That description is wrong as of
+  this date — do not commission a backfill or a “fix the live leak” task on it.** It falls back to
+  Stripe's own history: `subscriptions.list({ customer, status: 'all' })` and **fails closed** on
+  error (`apps/api/src/modules/payment/payment.service.ts`). `stripeCustomerId` is *not* cleared
+  by cancel or `revokeToFree()`. **Batch G part 1 added `subscription.hasUsedTrial` as
+  defence-in-depth** (never cleared; consulted *in addition to* the Stripe list). No production
+  backfill was run. Residual: a stored customer id that no longer resolves in Stripe; a new email
+  (that is the device/identity problem, not this flag).
 - ✓ **Trial system** — **BUILT 2026-07-20, Pro-only as of Batch E 2026-08-18.** Stripe
   `trial_period_days` on **Pro** checkout for a first-time subscriber (anti-abuse via Stripe
   history). **Enterprise never receives a trial** — server skips `trial_period_days` even for a
@@ -748,6 +747,20 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   **2026-08-18:** AWS IAM user `flacronai-ses` access key was in a public `apps/api/.zip` on GitHub.
   Deleting the file does **not** revoke the key — deactivate it in IAM and rotate every other
   credential that was in that archive.
+- **⚠️ ADDED 2026-08-18 — open privacy defect: raw IP on REGISTERED (and login) audit rows.**
+  `apps/api/src/modules/auth/auth.controller.ts:32-36` (`requestContext`) reads
+  `x-forwarded-for` / `req.ip` and `auth.service.ts` spreads that object into
+  `AuditAction.REGISTERED` / login audit writes (`audit_logs.ipAddress` next to
+  `actorId`). Batch G hashes IPs before any *user-doc* write and never logs a
+  raw IP in the new scorer. **Do not silently “fix” the audit path in the same
+  batch as signup scoring** — it is pre-existing; hashing historical audit IPs
+  is J.5-adjacent.
+- **⚠️ ADDED 2026-08-18 — H.6 erasure must include Batch G collections.** When the
+  erasure cascade is built, delete or anonymise `users/{uid}.abuse` **and**
+  the lookup docs `abuse_devices/{deviceHash}` / `abuse_networks/{ipHash}`
+  (remove this uid from the device uid list; do not leave a dangling hash→uid
+  map). Until H.6 exists, a **manual** erasure request has to cover those by
+  hand. Soft-delete today does not.
 - **⚠️ ADDED 2026-08-18 — `crm-settings.planLimits`: a phantom entitlements control. DECISION NEEDED
   (delete or wire).** `DEFAULT_SETTINGS.planLimits` (`apps/api/src/modules/crm/crm-settings.service.ts:8-10`)
   defines a **second** set of plan limits — `free: {cvs 3, letters 2, credits 5, exports 2}`,
@@ -782,6 +795,44 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-18 — **Batch G part 1 — abuse signals and risk scoring (no enforcement).**
+  Client review §§ 3, 4, 5, 6, 10, 11, 12, 13, 23. **Do not commit.** Signup
+  behaviour is unchanged: nothing denies, nothing blocks, Free allowance
+  unchanged, existing users unaffected. No App Check / Turnstile / GeoIP
+  dependency. No `apps/api/package.json` or lockfile change.
+  **Correction recorded:** the 2026-07-20 deferred item (a) calling cancel→resubscribe
+  a “live revenue leak” is **wrong**. Stripe `subscriptions.list(status=all)`
+  already fails closed. `hasUsedTrial` is defence-in-depth only; **no backfill
+  was run and none should be commissioned on that old premise.**
+  **MC1 device:** 128-bit random token (web cookie+localStorage; mobile
+  SecureStore key **not** in `clearAll`). HMAC-SHA256 server-side
+  (`ABUSE_HMAC_SECRET`). Survives logout. **Does not survive** clearing cookies
+  and localStorage together, incognito / a fresh profile, another browser, or
+  another machine. No canvas fingerprint, no evercookie.
+  **MC2:** hashed IP (IPv6 /64 as network hash). Never stored raw next to a uid
+  on `users`.
+  **MC3:** `users/{uid}.abuse` + `abuse_devices/{hash}` + `abuse_networks/{hash}`.
+  No parallel usage ledger. Lookups are doc-id gets — **no new composite index.**
+  **MC4–MC6:** scorer reads `app_settings/main.abuse` (code defaults if missing).
+  VPN/datacenter weight **0**. Disposable domain list in-repo. Network-burst-only
+  clamped to ≤39. Test: three accounts, one IP, three devices → all `allow`.
+  **MC7:** score recorded on registration, logged (uid + score + band + signal
+  codes; never raw IP/token/email), surfaced on CRM user detail. GDPR export
+  includes this user’s abuse fields; a test asserts no uid but the requester’s.
+  **MC8:** `subscription.hasUsedTrial` never-cleared, consulted **in addition to**
+  the Stripe list. Missing `ABUSE_HMAC_SECRET` fails **soft** (user created,
+  scoring skipped, warning, no values).
+  **Open, not fixed:** raw IP already in `audit_logs` via
+  `auth.controller.ts:32-36`. H.6 erasure must include `users.abuse` and the
+  lookup docs; until then a manual erasure request covers them by hand.
+  **Bot protection:** Firebase App Check recommended for a later part; nothing
+  installed.
+  **G.5 / G.8 / G.10 / generation-export throttles:** not this part.
+  **QA:** `pnpm --filter api lint` 0 errors · `pnpm --filter web lint` 0 errors
+  (pre-existing `<img>` / mobile unused-var warnings only) · api `tsc --noEmit`
+  ✓ · web `tsc --noEmit` ✓ · api **419/419** · web **274/274** (vitest
+  `--pool=threads --no-file-parallelism`; all five i18n gates green).
 
 - 2026-08-18 — **Batch B — legal & contact (MC2–MC13 minus Privacy).** Client
   package applied. **Do not commit.** Privacy `/privacy-policy` is **not**
@@ -1758,8 +1809,11 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
     per-language translations (en/es/fr/de/ar/ur) — admin dashboard/users/subscriptions/sidebar were rendering raw key
     paths; CV list page + `CVCard` fully localized; shared `Select` chevron switched to logical `pe-8`/`end-2.5` for RTL.
   - **Deferred — require a business/product decision (documented, NOT patched):**
-    (a) **Trial-abuse** — `isFirstTimeSubscriber` reads `stripeSubscriptionId`, which is cleared on cancel, so cancel→resubscribe
-    grants unlimited free trials; fix needs a never-cleared `hasUsedTrial` flag + a **prod data backfill**. (revenue leak — high priority)
+    (a) **SUPERSEDED 2026-08-18 — do not act on this.** It claimed cancel→resubscribe
+    granted unlimited trials via `stripeSubscriptionId`. That hole is closed by a
+    Stripe history check that fails closed. `hasUsedTrial` later shipped as
+    defence-in-depth (Batch G part 1); **there is no live leak and no backfill
+    to run.** Left in place so the original words are not silently rewritten.
     (b) **CV list pagination** — only the first 10 CVs load; needs a "load more"/cursor UI (design-frozen).
     (c) **Export quota on client-failure** — a failed client-side export still consumes quota; a correct fix is a
     check-then-commit split (enforcement-design tradeoff).

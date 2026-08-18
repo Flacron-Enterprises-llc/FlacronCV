@@ -26,6 +26,38 @@ export interface UserSubscription {
   stripeSubscriptionId: string | null;
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
+  /**
+   * Never cleared. Defence-in-depth alongside the Stripe subscription-history
+   * check — not a replacement for it. Existing accounts may omit this field
+   * (treated as false). No production backfill.
+   */
+  hasUsedTrial?: boolean;
+}
+
+export type RiskBand = 'allow' | 'verify' | 'deny';
+
+export type RiskSignalCode =
+  | 'identity_received_free'
+  | 'device_received_free'
+  | 'multiple_accounts_device'
+  | 'network_burst'
+  | 'disposable_email'
+  | 'bot_activity'
+  | 'vpn_datacenter'
+  | 'repeat_create_delete';
+
+/**
+ * Abuse-prevention snapshot on the user doc. Hashes only — never a raw IP or
+ * device token. Optional so accounts created before Batch G stay valid.
+ */
+export interface UserAbuse {
+  deviceHash: string | null;
+  ipHash: string | null;
+  networkHash: string | null;
+  riskScore: number;
+  riskBand: RiskBand;
+  riskSignals: RiskSignalCode[];
+  scoredAt: Date;
 }
 
 export interface UserUsage {
@@ -47,6 +79,8 @@ export interface User {
   preferences: UserPreferences;
   subscription: UserSubscription;
   usage: UserUsage;
+  /** Present after a scored registration. Omitted on older accounts. */
+  abuse?: UserAbuse | null;
   role: UserRole;
   createdAt: Date;
   updatedAt: Date;

@@ -43,6 +43,9 @@ export class CRMSettingsService {
     actorEmail: string,
   ): Promise<AppSettings> {
     const current = await this.getSettings();
+    // `.abuse` is not on UpdateAppSettingsDto. A full-doc set() here would
+    // wipe the risk-engine config the scorer actually reads.
+    const existingAbuse = current.abuse;
     const updated: AppSettings = {
       ...current,
       planLimits: dto.planLimits
@@ -61,6 +64,7 @@ export class CRMSettingsService {
       announcement: dto.announcement
         ? { ...current.announcement, ...dto.announcement }
         : current.announcement,
+      ...(existingAbuse ? { abuse: existingAbuse } : {}),
       updatedAt: new Date(),
       updatedBy: actorEmail,
     };

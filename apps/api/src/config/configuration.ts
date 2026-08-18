@@ -47,4 +47,10 @@ export default () => ({
       process.env.SES_REPLY_TO ||
       'contact@flacroncv.com',
   },
+
+  // HMAC key for hashing device tokens and IPs before any user-doc write.
+  // Trimmed for the same reason STRIPE_WEBHOOK_SECRET is: a stray space would
+  // silently mint a different hash and split one device into two. If unset or
+  // blank, signup still succeeds and scoring is skipped (fail soft).
+  abuseHmacSecret: process.env.ABUSE_HMAC_SECRET?.trim(),
 });

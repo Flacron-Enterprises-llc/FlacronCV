@@ -4,6 +4,7 @@ import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { UsersService } from '../users/users.service';
 import { MailService } from '../mail/mail.service';
 import { AuditService } from '../audit/audit.service';
+import { AbuseService } from '../abuse/abuse.service';
 import { AuditAction } from '../audit/audit-actions';
 import { UserRole } from '@flacroncv/shared-types';
 
@@ -31,6 +32,7 @@ export class AuthService {
     private mailService: MailService,
     private configService: ConfigService,
     private audit: AuditService,
+    private abuse: AbuseService,
   ) {}
 
   async verifyAndSync(
@@ -40,6 +42,7 @@ export class AuthService {
     emailVerified: boolean,
     photoURL?: string,
     context: { ipAddress?: string; userAgent?: string } = {},
+    deviceToken?: string,
   ) {
     const ref = this.firebaseAdmin.firestore.collection('users').doc(uid);
     let user = await this.usersService.findById(uid);
@@ -72,6 +75,18 @@ export class AuthService {
         await ref.update({ displayNamePending: true });
       }
       this.logger.log(`New user created: ${uid}`);
+
+      try {
+        await this.abuse.recordRegistrationSignals({
+          uid,
+          email,
+          ipAddress: context.ipAddress,
+          userAgent: context.userAgent,
+          deviceToken,
+        });
+      } catch {
+        this.logger.warn(`Abuse scoring skipped uid=${uid}`);
+      }
 
       if (emailVerified) {
         // OAuth provider (Google/GitHub) — email already verified → welcome immediately

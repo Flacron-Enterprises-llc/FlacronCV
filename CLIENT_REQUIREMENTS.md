@@ -102,12 +102,12 @@ and still open.
 queries Stripe's own history — `subscriptions.list({ customer, status: 'all' })` — and **fails closed**
 on error (`payment.service.ts:204-219`). `stripeCustomerId` is **not** cleared by cancel or
 `revokeToFree()` (`:618`), so cancel → resubscribe finds the prior subscription and grants no second
-trial. There is exactly **one** call site that decides trial eligibility, so a `hasUsedTrial` flag
-remains a reasonable defence-in-depth, but it is no longer the fix for a live leak. **Residual gaps it
-would close:** a stored customer id that no longer resolves in Stripe (key switched test↔live, account
-switched, customer deleted) falls through to a fresh customer with no history (`:186`); and a new email
-address is a new Stripe customer by definition — which is the device/identity problem in G.1–G.3, not
-this one. A backfill is only needed if you add the flag.
+trial. There is exactly **one** call site that decides trial eligibility. **`hasUsedTrial` shipped
+in Batch G part 1 (2026-08-18)** as defence-in-depth, consulted in addition to the Stripe list, and
+is never cleared. **No production backfill was run** — existing accounts omit the field (treated as
+false); the Stripe check still covers cancel→resubscribe. Residual: a stored customer id that no
+longer resolves in Stripe; a new email (G device identity). **Do not commission a backfill on the
+old “live leak” premise.**
 
 **R-3 — Legal content vs the i18n gates. Q-10 answered 2026-08-18: option (b), bodies out of JSON.**
 Legal chrome stays in `t()`. English bodies for terms / disclaimer / refund / cookies live in
@@ -353,15 +353,15 @@ counters left as they stood.
 
 | ID | Task | Status |
 |---|---|---|
-| G.1 | Persistent device identifier, hashed server-side | ☐ |
-| G.2 | Hashed IP/network storage | ☐ |
-| G.3 | Risk engine. Signals per §10. Thresholds <40 allow / 40–69 challenge / 70+ deny, **configurable**. | ☐ |
-| G.4 | **Never block on IP alone.** Families, dorms, offices, cafés, hotels share IPs — three housemates each get their own grant. | ☐ |
-| G.5 | Bot protection — **Firebase App Check** is the lowest-friction option here (already on Firebase). Server-side validation mandatory. | ☐ |
+| G.1 | Persistent device identifier, hashed server-side | ☑ |
+| G.2 | Hashed IP/network storage | ☑ |
+| G.3 | Risk engine. Signals per §10. Thresholds <40 allow / 40–69 challenge / 70+ deny, **configurable**. **Part 1 records only — no deny.** | ☑ |
+| G.4 | **Never block on IP alone.** Families, dorms, offices, cafés, hotels share IPs — three housemates each get their own grant. Clamp + test shipped; enforcement is part 2. | ☑ |
+| G.5 | Bot protection — **Firebase App Check** is the lowest-friction option here (already on Firebase). Server-side validation mandatory. **Recommended in part 1, not installed.** | ☐ |
 | G.6 | Extend rate limiting to generation, export, verification endpoints. Global throttler + `@Throttle` pattern already established. | ◐ |
-| G.7 | Disposable email detection | ☐ |
+| G.7 | Disposable email detection | ☑ |
 | G.8 | Step-up verification, not instant bans | ☐ |
-| G.9 | **Trial abuse — see the R-2 correction.** ⚠️ **Re-scope 2026-08-18: cancel→resubscribe is already blocked** by a Stripe history check that fails closed. A `hasUsedTrial` flag is now defence-in-depth against two narrow residual cases, not a fix for a live leak — **do not commission a production backfill on the old premise.** | ◐ |
+| G.9 | **Trial abuse — see the R-2 correction.** `hasUsedTrial` shipped 2026-08-18 as defence-in-depth; Stripe history check kept. **No backfill.** The earlier “live revenue leak” wording is wrong. | ☑ |
 | G.10 | Eligibility flow end-to-end per §6 | ☐ |
 
 ---
@@ -376,7 +376,7 @@ counters left as they stood.
 | H.3 | Re-consent on material version change | ☐ |
 | H.4 | Signup page legal text with three clickable links | ☐ |
 | H.5 | **Server-side `emailVerified` enforcement — see R-5.** Must exempt verify/resend endpoints and handle token-refresh lag. | ☐ |
-| H.6 | Account deletion UI exists; **the erasure cascade and purge job do not**. The Privacy Policy was already corrected to describe manual erasure on request. New policy text must not re-promise automated deletion unless it's built. | ☐ |
+| H.6 | Account deletion UI exists; **the erasure cascade and purge job do not**. The Privacy Policy was already corrected to describe manual erasure on request. New policy text must not re-promise automated deletion unless it's built. **When H.6 is built it must include `users/{uid}.abuse`, `abuse_devices/{hash}`, and `abuse_networks/{hash}`.** Until then a manual erasure request has to cover those by hand. | ☐ |
 
 ---
 

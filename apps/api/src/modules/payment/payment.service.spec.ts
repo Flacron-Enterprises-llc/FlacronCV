@@ -947,6 +947,32 @@ describe('PaymentService', () => {
       expect(create).toHaveBeenCalledWith(
         expect.objectContaining({ subscription_data: { trial_period_days: TRIAL_PERIOD_DAYS } }),
       );
+      expect(usersService.updateSubscription).toHaveBeenCalledWith(
+        'u-trial',
+        expect.objectContaining({ hasUsedTrial: true }),
+      );
+    });
+
+    it('does NOT offer a trial when hasUsedTrial is already set (defence-in-depth)', async () => {
+      await seedUser(firestore, 'u-flag', {
+        subscription: {
+          plan: SubscriptionPlan.FREE,
+          stripeCustomerId: 'cus_flag',
+          hasUsedTrial: true,
+        },
+      });
+      const create = jest.fn().mockResolvedValue({ id: 'cs_flag', url: 'https://stripe.test/cs' });
+      const list = jest.fn().mockResolvedValue({ data: [] });
+      (service as any).stripe = {
+        customers: liveCustomers(),
+        checkout: { sessions: { create } },
+        subscriptions: { list },
+      };
+
+      await service.createCheckoutSession('u-flag', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
+
+      expect(create.mock.calls[0][0].subscription_data).toBeUndefined();
+      expect(list).not.toHaveBeenCalled();
     });
 
     it('does NOT apply trial_period_days on Enterprise checkout even for a first-time subscriber', async () => {

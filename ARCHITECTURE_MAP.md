@@ -74,12 +74,13 @@ access until the token expires (open MEDIUM in `AUDIT_OPEN_FINDINGS.md`).
 
 ## 3. `apps/api` module map
 
-17 modules under `apps/api/src/modules/`.
+18 modules under `apps/api/src/modules/`.
 
 | Module | Owns | Key services | External |
 |---|---|---|---|
 | `firebase` | SDK initialisation, `firestore`/`auth`/`storage` handles | `FirebaseAdminService` | Firebase Admin |
-| `auth` | Register, login sync, email verification, password reset, token revocation | `AuthService` | Firebase Auth, `MailService` |
+| `auth` | Register, login sync, email verification, password reset, token revocation | `AuthService` | Firebase Auth, `MailService`, `AbuseService` |
+| `abuse` | Device/IP hashing, registration risk score (record only — no deny) | `AbuseService` | Firestore `abuse_devices` / `abuse_networks`, `app_settings/main.abuse` |
 | `users` | User docs, usage counters, monthly reset, GDPR export, soft delete | `UsersService`, `UsageResetService` | Firestore |
 | `cv` | CVs, sections, versions, public share slugs | `CVService` | Firestore |
 | `cover-letter` | Cover letters + AI improve | `CoverLetterService` | Firestore, `AIService` |
@@ -134,7 +135,7 @@ reads `privacy.s3_desc`. `terms` and `cookies_policy` locale namespaces were del
 
 | Collection | Shape (abridged) |
 |---|---|
-| `users` | `{ uid, email, displayName, photoURL, role, isActive, subscription{plan,status,stripeCustomerId,stripeSubscriptionId,currentPeriodEnd,trialStart,trialEnd,cancelAtPeriodEnd}, usage{cvsCreated,coverLettersCreated,aiCreditsUsed,aiCreditsLimit,exportsThisMonth,lastExportReset}, preferences{…}, createdAt, updatedAt, lastLoginAt, deletedAt }` |
+| `users` | `{ uid, email, displayName, photoURL, role, isActive, subscription{plan,status,stripeCustomerId,stripeSubscriptionId,currentPeriodEnd,trialStart,trialEnd,cancelAtPeriodEnd,hasUsedTrial}, usage{cvsCreated,coverLettersCreated,aiCreditsUsed,aiCreditsLimit,exportsThisMonth,lastExportReset}, abuse{deviceHash,ipHash,networkHash,riskScore,riskBand,riskSignals,scoredAt}, preferences{…}, createdAt, updatedAt, lastLoginAt, deletedAt }` |
 | `cvs` | Owner-scoped; soft-deleted via `deletedAt`; `isPublic` + `publicSlug` for sharing. Subcollections `sections`, `versions` |
 | `cover_letters` | Owner-scoped, soft-deleted, optional `linkedCVId` |
 | `job_applications` | Owner-scoped, 6 statuses wishlist→applied→interviewing→offer→rejected→accepted |
@@ -144,17 +145,27 @@ reads `privacy.s3_desc`. `terms` and `cookies_policy` locale namespaces were del
 | `payment_events` | Stripe webhook idempotency, TTL'd |
 | `audit_logs` | Actor, action, target, metadata |
 | `leads` | + `ConsentRecord` (consent text/version/date/source/ip) |
-| `app_settings/main` | CRM-editable app settings, incl. the **unenforced** `planLimits` — see §8 |
+| `app_settings/main` | CRM-editable app settings, incl. the **unenforced** `planLimits` — see §8. **`abuse` weights/thresholds are read by `AbuseService`** (code defaults if missing). CRM settings saves preserve `.abuse` so a full-doc set cannot wipe it. |
+| `abuse_devices/{deviceHash}` | Lookup: `uids[]` (capped), `uidCount`, `receivedFree`, `lastSeenAt`, `createdAt`. Doc-id get — no composite index. Soft-deleted uids stay (create/delete signal). |
+| `abuse_networks/{ipHash}` | Lookup: `recentAt[]` timestamps, **no uid list**. Doc-id get — no composite index. |
 | `system/usage_reset` | Single marker doc holding the last completed reset period (`YYYY-MM`) |
 | `crm_customers`, `crm_leads`, `crm_transactions`, `crm_activities`, `crm_audit_log` | CRM domain |
 
-**`free_grants`: does not exist.** Neither do `device_hash`, `first_ip_hash`, `risk_score` or
-`legalAcceptances` — a repo-wide search finds those names only inside `CLIENT_REQUIREMENTS.md`
-itself. The nearest existing precedent is the `leads` `ConsentRecord` (useful as a shape for
-`legalAcceptances`, not as a grant ledger). Batch F.1 and G.1–G.3 are genuinely new build.
-**Sequencing:** the client's Privacy §1.9 discloses hashed device and IP identifiers. That text
-must not replace the live privacy page until G exists; publishing it first would describe a
-practice we do not have. `LEGAL_VERSION_MAP.privacy` is `pending-client-subprocessors`.
+**`free_grants`: does not exist** (client chose option b). Batch G part 1 (2026-08-18) **did** add
+hashed `users.abuse`, `abuse_devices`, `abuse_networks`, and a registration risk score that is
+**recorded, not enforced**. Device identifier: 128-bit random token, HMAC-SHA256 with
+`ABUSE_HMAC_SECRET` before storage. **Honest limits:** it survives logout; it does **not**
+survive clearing cookies and localStorage together, incognito / a fresh profile, another
+browser, or another machine. No canvas fingerprint, no evercookie. A determined user with a
+new profile gets a new token.
+**Privacy §1.9** now matches the practice (hashed device identifiers, hashed IP/network
+identifiers, fraud-risk indicators). Do not publish the new Privacy page until AWS SES and
+OpenAI are named in client §4 (`LEGAL_VERSION_MAP.privacy` is still
+`pending-client-subprocessors`). `legalAcceptances` still does not exist (Batch H).
+**Erasure:** H.6 must include `users.abuse` and the two lookup collections; until then a
+manual erasure request covers them by hand.
+**GDPR export** (`GET /users/me/export`) includes this user's `abuse` snapshot (hashes, score,
+band, signal codes, `hasUsedTrial`) and must never include other uids from the device lookup.
 
 ---
 
@@ -182,6 +193,7 @@ practice we do not have. `LEGAL_VERSION_MAP.privacy` is `pending-client-subproce
 | `SES_FROM_NAME` | Display name (default `FlacronAI`) | optional |
 | `SES_REPLY_TO` | Reply-To | optional |
 | `CONTACT_EMAIL` | Contact-form destination inbox. Fallback chain: `CONTACT_EMAIL` → `SES_REPLY_TO` → `contact@flacroncv.com`. **Not** `SES_FROM_EMAIL` (transactional sender identity). | optional |
+| `ABUSE_HMAC_SECRET` | HMAC-SHA256 key for hashing device tokens and IPs before storage. If unset or blank, **signup still succeeds** and scoring is skipped (warning logged, no values). | optional (fail soft) |
 | `FIRESTORE_EMULATOR_HOST` | **The only guard against local dev hitting production Firestore** | local only |
 
 ### `apps/web` (all build-time — every one is `NEXT_PUBLIC_*`)
