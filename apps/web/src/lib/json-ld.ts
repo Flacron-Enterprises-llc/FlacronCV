@@ -10,7 +10,7 @@
  * watermark claim: a published promise with no mechanism. Do not add one.
  */
 
-import { PLAN_CONFIGS, SubscriptionPlan } from '@flacroncv/shared-types';
+import { PLAN_CONFIGS, SubscriptionPlan, customerFacingPlans } from '@flacroncv/shared-types';
 import { SITE_URL } from '@/lib/seo';
 
 export function organizationAndWebsite(locale: string) {
@@ -45,10 +45,10 @@ export function softwareApplication() {
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
     url: SITE_URL,
-    offers: Object.values(PLAN_CONFIGS).map((plan) => ({
+    offers: customerFacingPlans().map((plan) => ({
       '@type': 'Offer',
-      name: plan.name,
-      price: String(plan.priceMonthly),
+      name: PLAN_CONFIGS[plan].name,
+      price: String(PLAN_CONFIGS[plan].priceMonthly),
       priceCurrency: 'USD',
     })),
   };

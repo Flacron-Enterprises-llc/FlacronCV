@@ -83,11 +83,15 @@ function findUnresolved(): Unresolved[] {
     // metadata rather than body copy, and widening the pattern that far risks
     // binding a name to the wrong namespace.
     //
-    // `t.rich(...)` is also outside this gate. The call regex matches
-    // `varName('key'`, not `varName.rich('key'`. One key uses it today
-    // (`cookie_consent.message`); it was hand-verified across all six locales.
-    // The next `t.rich` will not be caught here — check it by hand, or widen
-    // the call regex, before shipping. Tracked in CLIENT_REQUIREMENTS.md.
+    // `t.rich('key')` is in scope: the call regex allows an optional `.rich`
+    // between the bound name and `(`. `CookieConsent.tsx` is the only caller
+    // today (`cookie_consent.message`). Still out of this regex, on purpose:
+    //   - `t.markup` / `t.raw`
+    //   - double-quoted keys (`t("foo")`)
+    //   - template-literal keys (`t(\`foo.${x}\`)`)
+    //   - `getTranslations({ locale, namespace })` (object form — still
+    //     dishonest to widen with a regex; it needs scope analysis)
+    // Check those by hand, or widen only the form you can match honestly.
     //
     // A Set, not a single value: the same name is routinely declared in two
     // scopes — `cover-letters/page.tsx` has `const t = useTranslations()` in the
@@ -109,7 +113,7 @@ function findUnresolved(): Unresolved[] {
       // Only STATIC keys can be checked. `t(`status.${x}`)` and `t(someVar)` are
       // resolved at runtime and are deliberately out of scope — flagging them
       // would train people to ignore this test.
-      const call = new RegExp(`\\b${varName}\\(\\s*'([a-zA-Z0-9_.]+)'`, 'g');
+      const call = new RegExp(`\\b${varName}(?:\\.rich)?\\(\\s*'([a-zA-Z0-9_.]+)'`, 'g');
       for (const m of src.matchAll(call)) {
         const key = m[1];
         const resolves = [...namespaces].some((ns) => has(ns ? `${ns}.${key}` : key));
@@ -154,5 +158,20 @@ describe('translation keys resolve', () => {
       [...readFileSync(f, 'utf8').matchAll(BINDING)].some((m) => m[0].includes('getTranslations')),
     );
     expect(bound.length).toBeGreaterThan(5);
+  });
+
+  it('t.rich is scanned too (guards against a call-regex slip)', () => {
+    // The check above would stay green if the optional `.rich` were dropped
+    // from the call regex while CookieConsent kept compiling. Assert at least
+    // one scanned file binds a translator and then calls `.rich(` on that name,
+    // so a later slip cannot pass vacuously. Remaining uncovered forms are
+    // listed on the BINDING comment above — this assert is not a claim that
+    // every next-intl call shape is covered.
+    const files = walk(SRC).filter((f) => {
+      const src = readFileSync(f, 'utf8');
+      const names = [...src.matchAll(BINDING)].map((m) => m[1]);
+      return names.some((n) => new RegExp(`\\b${n}\\.rich\\(`).test(src));
+    });
+    expect(files.length).toBeGreaterThan(0);
   });
 });

@@ -8,7 +8,7 @@ import { Button } from '../../../src/components/ui/Button';
 import { useCreateCheckoutSession, useCreatePortalSession } from '../../../src/hooks/usePayment';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { BillingInterval, SubscriptionPlan, SubscriptionStatus } from '../../../src/types/enums';
-import { PLAN_CONFIGS } from '../../../src/types/subscription.types';
+import { PLAN_CONFIGS, yearlySavingsPercent } from '../../../src/types/subscription.types';
 import { formatDate } from '../../../src/lib/utils';
 
 export default function BillingScreen() {
@@ -48,7 +48,7 @@ export default function BillingScreen() {
     }
   };
 
-  const yearlyDiscount = Math.round(((PLAN_CONFIGS[SubscriptionPlan.PRO].priceMonthly * 12 - PLAN_CONFIGS[SubscriptionPlan.PRO].priceYearly) / (PLAN_CONFIGS[SubscriptionPlan.PRO].priceMonthly * 12)) * 100);
+  const yearlyDiscount = yearlySavingsPercent(SubscriptionPlan.PRO);
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50">

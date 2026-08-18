@@ -2,7 +2,8 @@ import { MetadataRoute } from 'next';
 import { SITE_URL, LOCALES, DEFAULT_LOCALE } from '@/lib/seo';
 
 // Public, indexable routes (without the locale prefix). Dashboard/CRM/admin
-// routes are intentionally excluded (they are also Disallowed in robots).
+// are excluded here and carry `noindex` on their layouts. They are not
+// Disallowed in robots.txt — a Disallow would hide that directive.
 // /disclaimer and /refund-policy do not exist yet — they arrive in Batch B.
 // Do not add them here ahead of the routes.
 const PATHS = [

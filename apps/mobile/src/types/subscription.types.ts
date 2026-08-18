@@ -1,12 +1,11 @@
 import { BillingInterval, SubscriptionPlan, SubscriptionStatus } from './enums';
+import {
+  PLAN_CONFIGS as SHARED_PLAN_CONFIGS,
+  yearlySavingsPercent as sharedYearlySavingsPercent,
+  type PlanLimits as SharedPlanLimits,
+} from '../../../../packages/shared-types/src/subscription.types';
 
-export interface PlanLimits {
-  cvs: number | 'unlimited';
-  coverLetters: number | 'unlimited';
-  aiCredits: number | 'unlimited';
-  templates: 'free_only' | 'all';
-  exports: number | 'unlimited';
-}
+export type PlanLimits = SharedPlanLimits;
 
 export interface PlanConfig {
   plan: SubscriptionPlan;
@@ -18,74 +17,37 @@ export interface PlanConfig {
   features: string[];
 }
 
+/**
+ * Wrapper around shared-types `PLAN_CONFIGS`. Every price, limit, feature line
+ * and Stripe id is read from there — restating a number here is how this app
+ * previously advertised $239.88/yr while the server charged $299.99.
+ *
+ * This enum has three plans only, so Career Accelerator stays off mobile even
+ * if someone fills `stripePriceIdMonthly` in shared-types (that fill is the
+ * web launch pin — see `isPlanPurchasable`).
+ */
+function fromShared(plan: SubscriptionPlan): PlanConfig {
+  const shared = SHARED_PLAN_CONFIGS[plan as unknown as keyof typeof SHARED_PLAN_CONFIGS];
+  return {
+    plan,
+    priceMonthly: shared.priceMonthly,
+    priceYearly: shared.priceYearly,
+    stripePriceIdMonthly: shared.stripePriceIdMonthly || undefined,
+    stripePriceIdYearly: shared.stripePriceIdYearly || undefined,
+    limits: shared.limits,
+    features: shared.features,
+  };
+}
+
 export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
-  [SubscriptionPlan.FREE]: {
-    plan: SubscriptionPlan.FREE,
-    priceMonthly: 0,
-    priceYearly: 0,
-    limits: {
-      cvs: 5,
-      coverLetters: 1,
-      aiCredits: 5,
-      templates: 'free_only',
-      exports: 2,
-    },
-    features: [
-      '5 CVs',
-      '1 Cover Letter',
-      '5 AI Credits/month',
-      '2 PDF Exports/month',
-      'Free templates only',
-    ],
-  },
-  [SubscriptionPlan.PRO]: {
-    plan: SubscriptionPlan.PRO,
-    priceMonthly: 29.99,
-    priceYearly: 239.88,
-    stripePriceIdMonthly: 'price_1T1LzDAWDS7HwRCx1DxhqRq1',
-    stripePriceIdYearly: 'price_1T1M3YAWDS7HwRCx11Tl15x4',
-    limits: {
-      cvs: 10,
-      coverLetters: 20,
-      aiCredits: 100,
-      templates: 'all',
-      exports: 'unlimited',
-    },
-    features: [
-      '10 CVs',
-      '20 Cover Letters',
-      '100 AI Credits/month',
-      'Unlimited PDF Exports',
-      'All templates',
-      'No watermark',
-      'Priority support',
-    ],
-  },
-  [SubscriptionPlan.ENTERPRISE]: {
-    plan: SubscriptionPlan.ENTERPRISE,
-    priceMonthly: 99.99,
-    priceYearly: 799.88,
-    stripePriceIdMonthly: 'price_1T1LziAWDS7HwRCxozxuJtnx',
-    stripePriceIdYearly: 'price_1T1M49AWDS7HwRCxFxY8ZR5y',
-    limits: {
-      cvs: 'unlimited',
-      coverLetters: 'unlimited',
-      aiCredits: 500,
-      templates: 'all',
-      exports: 'unlimited',
-    },
-    features: [
-      'Unlimited CVs',
-      'Unlimited Cover Letters',
-      '500 AI Credits/month',
-      'Unlimited PDF Exports',
-      'All templates',
-      'No watermark',
-      'Dedicated support',
-      'Priority AI processing',
-    ],
-  },
+  [SubscriptionPlan.FREE]: fromShared(SubscriptionPlan.FREE),
+  [SubscriptionPlan.PRO]: fromShared(SubscriptionPlan.PRO),
+  [SubscriptionPlan.ENTERPRISE]: fromShared(SubscriptionPlan.ENTERPRISE),
 };
+
+export function yearlySavingsPercent(plan: SubscriptionPlan): number {
+  return sharedYearlySavingsPercent(plan as unknown as Parameters<typeof sharedYearlySavingsPercent>[0]);
+}
 
 export interface Subscription {
   id: string;

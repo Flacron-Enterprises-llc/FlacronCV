@@ -25,10 +25,17 @@ export class PaymentService {
   }
 
   /**
-   * Price IDs a client is allowed to check out with. Only MONTHLY plan prices
-   * are permitted — the "yearly" IDs in Stripe actually bill monthly at a
-   * higher amount, so yearly checkout is disabled until real annual prices
-   * exist. This is the server-side guard behind the UI's monthly-only flow.
+   * Price IDs a client is allowed to check out with.
+   *
+   * Monthly ids are always admitted. Yearly ids are admitted only when
+   * YEARLY_BILLING_ENABLED is on — the same switch the UI uses — so flipping
+   * the flag cannot offer an annual plan the server will not sell.
+   *
+   * Do not remove this allowlist. It exists because a monthly-interval Stripe
+   * price was once sold as annual and billed ~18× the advertised amount. A
+   * price id does not encode its interval; the flag plus this list is what
+   * keeps a stray yearly id in the env from reaching Checkout while annual
+   * billing is off.
    */
   private allowedCheckoutPriceIds(): string[] {
     const ids = new Set<string>();
@@ -192,17 +199,22 @@ export class PaymentService {
       await this.usersService.updateSubscription(userId, { stripeCustomerId: customerId });
     }
 
-    // Offer the free trial only to a genuinely NEW subscriber. The card is still
-    // collected upfront (Stripe default) and auto-charged when the trial ends
-    // unless the user cancels.
+    // Trial is Pro-only. Enterprise is a paid plan from the first charge —
+    // attaching trial_period_days here was giving Enterprise the same 7 free
+    // days the client explicitly ruled out.
+    //
+    // Among Pro checkouts, offer the trial only to a genuinely NEW subscriber.
+    // The card is still collected upfront (Stripe default) and auto-charged
+    // when the trial ends unless the user cancels.
     //
     // `stripeSubscriptionId` alone cannot answer this: revoking access nulls it,
     // so cancel → re-subscribe looked like a brand-new customer and handed out
     // another 7 free days, indefinitely. Ask Stripe instead — the customer's
     // subscription history is the fact we actually care about and it cannot be
     // erased by our own writes. `status: 'all'` includes canceled ones.
-    let isFirstTimeSubscriber = !user.subscription.stripeSubscriptionId;
-    if (isFirstTimeSubscriber && TRIAL_PERIOD_DAYS > 0) {
+    const trialOfferedOnPlan = selection.plan === SubscriptionPlan.PRO && TRIAL_PERIOD_DAYS > 0;
+    let isFirstTimeSubscriber = trialOfferedOnPlan && !user.subscription.stripeSubscriptionId;
+    if (isFirstTimeSubscriber) {
       try {
         const prior = await this.stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 1 });
         if (prior.data.length > 0) isFirstTimeSubscriber = false;
@@ -213,10 +225,9 @@ export class PaymentService {
         isFirstTimeSubscriber = false;
       }
     }
-    const subscriptionData =
-      TRIAL_PERIOD_DAYS > 0 && isFirstTimeSubscriber
-        ? { trial_period_days: TRIAL_PERIOD_DAYS }
-        : undefined;
+    const subscriptionData = isFirstTimeSubscriber
+      ? { trial_period_days: TRIAL_PERIOD_DAYS }
+      : undefined;
 
     const session = await this.stripe.checkout.sessions.create({
       customer: customerId,

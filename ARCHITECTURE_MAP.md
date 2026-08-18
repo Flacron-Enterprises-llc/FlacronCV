@@ -21,7 +21,7 @@ pnpm workspaces + turbo. Root scripts fan out via `turbo run <task>`.
 |---|---|---|
 | `apps/web` | Next.js 14 App Router frontend | next-intl (6 locales), Zustand+immer, React Query, Tailwind, TipTap, @dnd-kit, client-side export |
 | `apps/api` | NestJS 10 REST API | Global prefix `/api/v1`, port 4000, 17 feature modules |
-| `apps/mobile` | React Native / Expo Router app | **Does not import `@flacroncv/shared-types`** — keeps parallel type copies. See §8 |
+| `apps/mobile` | React Native / Expo Router app | Own enums (3 plans). **Batch E:** `PLAN_CONFIGS` wraps `packages/shared-types` via a relative import (no new package.json dep). See §8 |
 | `packages/shared-types` | The contract between web and api | `PLAN_CONFIGS`, `PLAN_RANK`, `resolveEffectivePlan()`, `isPlanPurchasable()`, entity types. **The API resolves it from `dist/`, so it must be built before type-check or tests** |
 | `packages/tsconfig` | Shared TS base configs | |
 | `functions/` | A separate Firebase Functions project | Own `package.json` + lockfile; the repo's only long-standing eslint config lived here (`functions/.eslintrc.js`) |
@@ -220,7 +220,7 @@ the other four cannot see a corrupted character.
 | File | Rejects |
 |---|---|
 | `apps/web/src/i18n/locale-parity.test.ts` | A key in one locale and not another; empty values; mismatched ICU placeholders |
-| `apps/web/src/i18n/keys-resolve.test.ts` | A static `t()` key that does not exist in `en/common.json` — the only gate that catches a key missing from **all six** locales. **Widened 2026-08-18** to bind `await getTranslations(…)`, which brought ten previously-unchecked server components (all four legal pages, the auth layout, `not-found`) into scope. Still blind to `getTranslations({locale, namespace})` and to `t.rich(…)` — check those by hand |
+| `apps/web/src/i18n/keys-resolve.test.ts` | A static `t()` / `t.rich()` key that does not exist in `en/common.json` — the only gate that catches a key missing from **all six** locales. **Widened 2026-08-18** to bind `await getTranslations(…)`, which brought ten previously-unchecked server components (all four legal pages, the auth layout, `not-found`) into scope, and again the same day to optional `.rich(` (CookieConsent). Still blind to `getTranslations({locale, namespace})`, `t.markup` / `t.raw`, double-quoted keys, and template-literal keys — check those by hand |
 | `apps/web/src/i18n/no-hardcoded-english.test.ts` | English JSX text and `placeholder`/`title`/`aria-label`/`alt` literals. Ratchets against a small reviewed allowlist |
 | `apps/web/src/i18n/locale-untranslated.test.ts` | **A key present in all six files whose non-English value is still the English sentence.** Copying English text into all six locales to satisfy parity fails this one in five locales at once |
 | `apps/web/src/i18n/locale-encoding.test.ts` | **A locale file that is not strict UTF-8, or a value containing HTML entities, `U+FFFD`, C1 controls, or known mojibake (`Ã©`, `â€™`, …).** Also asserts each locale's values contain at least one letter from its own alphabet (non-vacuity). **Does not catch missing diacritics** (`cree` vs `crée`) — that is a spelling problem a regex cannot honestly gate |
@@ -242,26 +242,28 @@ component. Everything below sits outside that guard.
 
 ### Tier 1 — a second source of truth for prices and Stripe ids (`apps/mobile`)
 
-| Location | What it holds |
+**Batch E (2026-08-18):** `apps/mobile/src/types/subscription.types.ts` now **wraps**
+`packages/shared-types` `PLAN_CONFIGS` (relative import, no new dependency). Prices, limits,
+features and Stripe ids are no longer restated. The dead `AWDS7HwRCx` ids are gone.
+`index.tsx` upgrade CTA reads `PLAN_CONFIGS[PRO].priceMonthly`. Billing yearly badge uses
+`yearlySavingsPercent`. The app still has its own 3-plan enum (Career Accelerator stays off
+mobile even if the web launch pin is filled).
+
+Still outside the wrap:
+
+| Location | What remains |
 |---|---|
-| `apps/mobile/src/types/subscription.types.ts:21` | A whole duplicate `PLAN_CONFIGS` — **three plans only**, no `CAREER_ACCELERATOR` |
-| `apps/mobile/src/types/subscription.types.ts:44-45` | Pro `29.99` / **`priceYearly: 239.88`** (shared-types: `299.99`) |
-| `apps/mobile/src/types/subscription.types.ts:67-68` | Enterprise `99.99` / **`priceYearly: 799.88`** (shared-types: `999.99`) |
-| `apps/mobile/src/types/subscription.types.ts:46-47, 69-70` | The four **dead** `AWDS7HwRCx` Stripe price ids from the old account |
-| `apps/mobile/src/types/subscription.types.ts:26-32, 48-54, 71-77` | Duplicate limit sets (currently agree with shared-types) |
-| `apps/mobile/src/types/subscription.types.ts:37-39` | FREE features claim `'Watermark on PDF'` — no watermark exists |
-| `apps/mobile/app/(dashboard)/settings/billing.tsx:51` | Yearly discount derived from the stale table → renders **-33%** |
-| `apps/mobile/app/(dashboard)/settings/billing.tsx:101-112` | Yearly toggle, always enabled, posts `interval: 'year'` |
-| `apps/mobile/app/(dashboard)/index.tsx:174` | Hardcoded `Upgrade Now — $29.99/mo` |
-| `apps/mobile/src/lib/utils.ts:41, 50, 59, 68` | CV / cover-letter / credit / export gates reading the mobile table |
+| `apps/mobile/src/types/enums.ts` | Three plans only — intentional |
+| `apps/mobile/app/(dashboard)/settings/billing.tsx` | Yearly toggle is not gated by `YEARLY_BILLING_ENABLED` (the flag is currently on, so the toggle is honest) |
+| `apps/mobile/app/(dashboard)/index.tsx` | Subtitle still restates “100 AI credits” |
+| `apps/mobile/src/lib/utils.ts:41, 50, 59, 68` | Gates read the wrapped table (now shared figures) |
 | `apps/mobile/app/(dashboard)/index.tsx:102`, `settings/index.tsx:89`, `src/components/cv-builder/steps/SummaryStep.tsx:110` | Literal FREE-value fallbacks in usage display |
 
-**The one that would cost money:** mobile shows **$239.88/yr with a "-33%" badge** and posts
-`interval: 'year'`; the server resolves the real annual price and charges **$299.99**. A $60 gap
-between the screen and the card. Latent only because the app does not currently ship — `app.json`
-carries the literal placeholder `"projectId": "your-eas-project-id"` and there is no `eas.json`
-(⚠️ UNVERIFIED that no external pipeline builds it). The dead price ids are inert today because
-mobile sends `{plan, interval}` and never a price id (`billing.tsx:29`).
+The previous $239.88 / −33% vs $299.99 overcharge on screen **is closed** as long as the wrap
+stays. Latent only because the app does not currently ship — `app.json` still has the placeholder
+`"projectId": "your-eas-project-id"` and there is no `eas.json`
+(⚠️ UNVERIFIED that no external pipeline builds it). Mobile still sends `{plan, interval}` and
+never a price id (`billing.tsx:29`).
 
 ### Tier 2 — a second plan-limits table in the API, enforced nowhere
 
@@ -287,8 +289,6 @@ None of the remaining sites is currently *wrong*; all go stale together the day 
 
 Still open:
 
-`apps/api/src/modules/users/usage-reset.service.ts:94` (`?? 5` fallback — sits on the F.3 path; do not
-fix it in isolation) ·
 `apps/api/src/modules/crm/crm-users.service.ts:286` · `apps/api/src/modules/crm/crm-users.controller.ts:76` ·
 `apps/web/src/providers/AuthProvider.tsx:91` · `apps/web/src/components/cv-builder/AISummaryModal.tsx:59` ·
 `ATSCheckModal.tsx:81` · `InterviewPrepModal.tsx:75` · `LinkedInModal.tsx:73` · `ImportResumeModal.tsx:49` ·
@@ -300,20 +300,19 @@ The five CV-builder modals are the mild case — each already caps against
 
 ### Tier 4 — copy and fixtures
 
-- `apps/web/public/locales/en/common.json:91` — `"save": "Save 33%"`, replicated across all six
-  locales. The real saving is 17%. **Currently unreferenced** (`Pricing.tsx` uses the derived
-  `save_vs_monthly` / `save_amount` at `:149, 245, 247`) — a dead false price claim, one `t()` call
-  from being live again.
-- `packages/shared-types/src/subscription.types.ts:89` onward — `features` are **English string
+- `apps/web/src/lib/json-ld.ts` `softwareApplication()` offers — **Batch E:** iterates
+  `customerFacingPlans()`, so Career Accelerator is omitted while unpurchasable.
+- `apps/web/src/lib/json-ld.ts` `faqPage()` — **was** hardcoded Free/Pro limits in
+  `[locale]/page.tsx`; now interpolates `PLAN_CONFIGS`. Guarded by
+  `apps/web/src/lib/json-ld.test.ts`. The **visible** FAQ copy at
+  `en/common.json` `faq.a1` still restates the same numbers (and still says
+  Free exports `/month`) and is **not** covered by that guard. `faq.a2` dropped
+  `/month` on Free exports in Batch E.
+- `packages/shared-types/src/subscription.types.ts` `features` are **English string
   literals** rendered on the public pricing page, billing upgrade cards and the paywall modal. Open
   MEDIUM in `AUDIT_OPEN_FINDINGS.md:63`; the one place "goes through `PLAN_CONFIGS`" and "is
   translated" genuinely conflict.
 - `apps/api/scripts/seed-emulator.mjs:109` — `aiCreditsLimit: 500` (emulator only).
-- `apps/web/src/lib/json-ld.ts` `faqPage()` — **was** hardcoded Free/Pro limits in
-  `[locale]/page.tsx`; now interpolates `PLAN_CONFIGS`. Guarded by
-  `apps/web/src/lib/json-ld.test.ts`. The **visible** FAQ copy at
-  `en/common.json` `faq.a1` still restates the same numbers and is **not**
-  covered by that guard.
 
 ### Correct, for contrast
 

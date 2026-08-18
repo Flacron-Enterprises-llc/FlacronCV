@@ -162,9 +162,10 @@ Legend: ✓ done · ◐ partial · ✗ missing · ⤵ deferred/decision-needed
 
 ### 5.1 Subscriptions, entitlements & usage control ("users get exactly what they paid for")
 - ✓ Plans defined — **FREE / PRO / CAREER ACCELERATOR / ENTERPRISE.** The 4th plan (**Career Accelerator**, PDF requirement)
-  was added 2026-07-20 (A6) — full enum/config/entitlements/billing-UI/CRM — with **assumed** price ($49.99) + limits +
-  mid-tier positioning (see change log). **Self-serve checkout is gated "coming soon" until the client sets a real Stripe
-  price;** admins can grant it now.
+  was added 2026-07-20 (A6) — full enum/config/entitlements/CRM. **Batch E 2026-08-18: hidden from
+  every public surface** (pricing, billing, comparison, upgrade modal, JSON-LD offers) via
+  `customerFacingPlans()` / empty `stripePriceIdMonthly`. **Filling that Stripe id is the launch
+  pin — do not fill it by accident.** Admin CRM grant still lists it.
 - ✓ Entitlement enforcement — CV/cover-letter/export/AI limits enforced server-side; usage atomic; now
   **status-aware** — delinquent (past_due/unpaid/incomplete) accounts fall back to FREE limits after their
   paid-through date via `resolveEffectivePlan()` (grace-until-period-end).
@@ -179,9 +180,10 @@ Legend: ✓ done · ◐ partial · ✗ missing · ⤵ deferred/decision-needed
   through to a fresh customer with no history (`:186`); and a new email address is a new Stripe
   customer by definition (that is the device/identity problem, not this one). **Re-scope before
   paying for a production backfill.**
-- ✓ **Trial system** — **BUILT 2026-07-20.** Stripe `trial_period_days` on checkout (first-time subscribers only,
-  anti-abuse), trial-aware activation (`verifySession`/webhook honour `trialing` status + `no_payment_required` + record
-  trialStart/End), and trial UI (CTA + "trial ends" line). Assumed **7-day, card-upfront** trial — see change log.
+- ✓ **Trial system** — **BUILT 2026-07-20, Pro-only as of Batch E 2026-08-18.** Stripe
+  `trial_period_days` on **Pro** checkout for a first-time subscriber (anti-abuse via Stripe
+  history). **Enterprise never receives a trial** — server skips `trial_period_days` even for a
+  first-time subscriber; CTA is "Choose Enterprise". Card still collected upfront. Assumed **7-day**.
 - ◐ Subscription lifecycle: **refund / dispute / paused now downgrade to FREE** (✓, implemented +
   tested); expired/failed/upgraded still to verify.
 - ⚠️ **CORRECTED 2026-08-18 — yearly billing is now ENABLED.** The bullet below is left as written
@@ -780,11 +782,109 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 9. Change log (append newest at top)
 
+- 2026-08-18 — **Batch E — plan configuration.** Client answers applied. **Do not commit.**
+  **QA: `pnpm lint` 0 errors (pre-existing `<img>` / mobile unused-var warnings only) ·
+  `pnpm type-check` ✓ · `pnpm test` ✓ — web 264/264 (vitest `--pool=threads`; forks pool
+  timed out on this machine as before), api 387/387, all five i18n gates green.**
+  **Currency (recorded, not changed):** checkout does not pin currency or country; Stripe infers
+  location. A Lithuania test session presented **€26.94/month** against advertised **$29.99**.
+  Advertising USD and charging a converted amount is a **client decision**.
+  **Q-4 is a launch blocker:** yearly price ids exist in config and the allowlist already admits
+  them when `YEARLY_BILLING_ENABLED` is on, but **`interval=year` is UNVERIFIED**. The client must
+  run `apps/api/scripts/verify-yearly-prices.mjs` (not run here — it reaches Stripe). This codebase
+  once billed a monthly interval against a yearly price.
+  - **MC1 — confirm.** Shared-types already has Pro $299.99/yr and Enterprise $999.99/yr. Mobile
+    `PLAN_CONFIGS` now wraps shared-types (relative import, no lockfile change). Dead
+    `AWDS7HwRCx` ids removed. Dashboard CTA reads `priceMonthly`. Yearly badge uses
+    `yearlySavingsPercent`.
+  - **MC2 — comment only.** `allowedCheckoutPriceIds()` already admitted yearly ids under the flag.
+    Header comment rewritten so it no longer claims “monthly only”. Allowlist not removed.
+  - **MC3.** Deleted dead `pricing.save` (“Save 33%”) from all six locales. Live badge remains
+    `yearlySavingsPercent`.
+  - **MC4.** JSON-LD `softwareApplication` offers iterate `customerFacingPlans()`. Career
+    Accelerator stays in CRM grant. Filling `stripePriceIdMonthly` auto-launches it on every
+    customer-facing surface.
+  - **MC5 — revenue.** `createCheckoutSession` attaches `trial_period_days` only for **Pro**.
+    Spec: Enterprise first-time checkout has no `subscription_data` and does not call
+    `subscriptions.list`. Billing + public pricing: Pro keeps “Start {days}-day free trial”;
+    Enterprise “Choose Enterprise”.
+  - **MC6.** Billing Pro card shows `trial_disclosure` (amounts from `PLAN_CONFIGS`, both
+    intervals, six locales). No Stripe `custom_text`.
+  - **MC7.** Comparison cells read `PLAN_CONFIGS[plan].limits`; header and body still share `plans`.
+  - **MC8.** `faq.a2` dropped “/month” on Free exports × 6. Mobile Free `/month` went away with
+    the shared-types wrap.
+  - **Not built:** Adaptive Pricing / checkout currency; `crm-settings.planLimits`; Q-2 Pro
+    CV/letter monthly reset; extra E.6 comparison rows (PDF/ATS/…); `faq.a1` still says Free
+    credits and exports `/month`; JSON-LD FAQ still interpolates Free exports `/month`.
+
+- 2026-08-18 — **Batch F.3 — Free is a one-time allowance.** Client: 5 CVs / 1 letter / 5 AI
+  credits / 2 exports total, existing Free users included, **do not zero consumed counters**.
+  **QA: `pnpm lint` 0 errors (pre-existing `<img>` / mobile unused-var warnings only) ·
+  `pnpm type-check` ✓ · `pnpm test` ✓ — web 264/264, api 386/386, all five i18n gates green.**
+  - **MC1 — `UsageResetService` skips stored Free.** Loop at
+    `usage-reset.service.ts` `continue`s when `subscription.plan` is `FREE` (or missing —
+    same fallback as before). **No write** — not a rewrite of the same numbers.
+    `onApplicationBootstrap` unchanged. Filter is stored plan, not `resolveEffectivePlan`, so a
+    `past_due` Pro still resets. Specs: 500/501 batch seeds moved off `free` onto `pro`; a mixed
+    Free+Pro test spies `batch.update` and expects `writtenIds === ['pro-1']` (past_due Pro).
+  - **MC3 — `?? 5`.** Same path now uses `PLAN_CONFIGS[plan]?.limits?.aiCredits ??
+    PLAN_CONFIGS[FREE].limits.aiCredits`.
+  - **MC2 — copy, option (b).** Paid `upgrade_modal.reasons.ai_credits` / `exports` unchanged.
+    Added `ai_credits_free` / `exports_free` × 6 locales. `UpgradeModal` branches on stored Free
+    vs paid; degraded/placeholder accounts keep the paid copy (placeholder always claims Free).
+    `PLAN_CONFIGS[FREE].features`: `'5 AI Credits'`, `'2 exports'` (no `/month`). Mobile
+    duplicate table not touched.
+  - **Missing-plan fallback — cannot count live docs** (no production Firestore read). From
+    code: `users.service.ts:101-102` always writes `plan: FREE` on create; Stripe and CRM
+    grant use dotted `'subscription.plan'` updates. A paid user is not left without a plan on
+    those paths. **Exception, not fixed here:** `apps/api/scripts/seed-qa-accounts.mjs`
+    `set({ subscription: { stripeCustomerId } }, { merge: true })` replaces the whole
+    `subscription` map (Firestore does not deep-merge nested objects) and can wipe `plan` on a
+    QA paid seed. Logged, not built.
+  - **Q-2 not implemented.** Client wants Pro CVs/letters to reset monthly; decrement-on-delete
+    would then allow 10+10 in a month. Re-asked as (a′)/(b)/(c).
+  - **Recorded, not built:** hide Career Accelerator publicly; annual Pro $299.99 / Enterprise
+    $999.99 with toggle; 7-day Pro trial with card, Enterprise no trial; Enterprise stays
+    individual; Stripe test mode / env keys only; legal English-only with controlling-version
+    sentence; three cookie categories; header/footer navy as a separate batch; LinkedIn icon
+    stays hidden (URL still `/admin/page-posts/published/`).
+  - **Leftover copy, not this batch:** `faq.a2` still says the Free plan includes
+    "2 exports/month" (six locales). Mobile `PLAN_CONFIGS` still has `/month` on Free.
+
 - 2026-08-18 — **Removed `apps/api/.zip` from `main` (leaked credentials).** Added in `b56454f`
   as a zip whose only entry was a `.env`. It contained the AWS IAM user `flacronai-ses` access
   key plus other env material. Deleted from the tree and ignored. **Deactivate that IAM key in
   AWS immediately** — removing the file does not revoke it. Same for every other secret in that
-  archive. History still contains the old blob until a history rewrite is approved.
+  archive. History was rewritten and force-pushed to `main` (`25e6fcd` → `5158a86`).
+  GitHub may still serve the old SHA until their GC; ask GitHub Support to purge it.
+
+- 2026-08-18 — **Cleanup batch: untrack backup, drop robots Disallow, cover `t.rich`.**
+  **QA: `pnpm lint` 0 errors (pre-existing `<img>` / mobile unused-var warnings only) ·
+  `pnpm type-check` ✓ · `pnpm test` ✓ — web 264/264, api 384/384, all five i18n gates green.**
+  - **MC1 — `PROJECT_PROGRESS.backup.md`.** Untracked (`git rm --cached`); file kept on disk;
+    added to `.gitignore`. It was a local safety copy committed in `6f4c48a` and does not
+    belong in the client's repository.
+  - **MC2 — robots.txt vs `noindex`.** Dropped the entire `disallow` list in `robots.ts`.
+    Private groups already export `robots: { index: false, follow: false }` on server layouts;
+    Disallow blocked the fetch, so a polite crawler never read that directive, while the
+    footer Account column still discovered the URLs. Comments updated in `robots.ts`,
+    `(dashboard|crm|admin)/layout.tsx`, and `sitemap.ts`. `/forgot-password` comment left:
+    it is still not Disallowed, which is why its `noindex, follow` can be read.
+  - **MC3 — `keys-resolve` covers `t.rich`.** Call regex is now
+    `varName(?:\\.rich)?(` plus a non-vacuity assert that at least one scanned file binds
+    a translator and calls `.rich(` on that name. Remaining uncovered forms are listed in
+    the test file: `t.markup` / `t.raw`, double-quoted keys, template-literal keys,
+    `getTranslations({ locale, namespace })`.
+  - **MC4 — `apps/api/package.json` / lockfile (no code).** Settled so this pair is not
+    re-investigated. Working tree is clean for both. Diff `5dea269..HEAD` on
+    `apps/api/package.json` is **one script**: `"seed:qa": "node scripts/seed-qa-accounts.mjs"`.
+    No dependency line changed. `pnpm-lock.yaml` is unchanged over that range.
+    `--frozen-lockfile` in `.github/workflows/ci.yml` would **not** break from a scripts-only
+    `package.json` change. Local `pnpm install` peer warnings are **not** from that script:
+    `apps/mobile` Firebase 10 vs peer `^11.3.0 || ^12.0.0` and `react-dom@18` vs `react@19`;
+    `apps/api` deprecations already on `5dea269` (`eslint@8`, `puppeteer@22`, `docx@8`);
+    `@nestjs/schedule@^6.1.1` was already there and matches Nest 10. Do not bump or
+    regenerate the lockfile from this finding.
 
 - 2026-08-18 — **French `footer.about` + fifth i18n gate.** Stored value only:
   `ì propos` (`U+00EC`) → `À propos` (`U+00C0`) in `fr/common.json`. Navbar and

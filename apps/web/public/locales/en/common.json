@@ -88,7 +88,6 @@
     "subtitle": "Start free, upgrade when you need more",
     "monthly": "Monthly",
     "yearly": "Yearly",
-    "save": "Save 33%",
     "free": "Free",
     "pro": "Pro",
     "enterprise": "Enterprise",
@@ -96,6 +95,8 @@
     "current_plan": "Current Plan",
     "get_started": "Get Started",
     "upgrade": "Upgrade Now",
+    "start_trial": "Start {days}-day free trial",
+    "choose_enterprise": "Choose Enterprise",
     "contact_sales": "Contact Sales",
     "per_month": "/month",
     "per_year": "/year",
@@ -137,7 +138,7 @@
     "q1": "Is FlacronCV really free?",
     "a1": "Yes! The Free plan lets you create up to 5 CVs, 1 cover letter, use 5 AI credits/month, and export up to 2 documents/month as PDF — no credit card required. Upgrade to Pro for 10 CVs, 20 cover letters, 100 AI credits, unlimited exports, and DOCX format.",
     "q2": "What export formats are supported?",
-    "a2": "All plans support PDF export. Pro and Enterprise plans also unlock DOCX (Microsoft Word) format. The Free plan includes 2 exports/month; Pro and Enterprise offer unlimited exports. TXT export is not currently available.",
+    "a2": "All plans support PDF export. Pro and Enterprise plans also unlock DOCX (Microsoft Word) format. The Free plan includes 2 exports; Pro and Enterprise offer unlimited exports. TXT export is not currently available.",
     "q3": "How does the AI writing work?",
     "a3": "Our AI analyzes your experience and the job description to generate tailored content. It uses advanced language models to create professional, impactful text.",
     "q4": "Is my data secure?",
@@ -746,9 +747,12 @@
     "plans": {
       "free": "Free forever",
       "perMonth": "/month",
-      "month": "month"
+      "month": "month",
+      "year": "year"
     },
     "upgradeTo": "Upgrade to {plan}",
+    "choose_enterprise": "Choose Enterprise",
+    "trial_disclosure": "Today: $0 — {days} days free, then {price}/{interval} unless cancelled before the trial ends.",
     "checkoutError": "Failed to start checkout",
     "portalError": "Failed to open billing portal",
     "usage": {
@@ -1973,9 +1977,17 @@
         "title": "You're out of AI credits",
         "description": "You've used every AI credit in this month's allowance. Upgrade for a larger monthly allowance, or wait for it to reset at the start of your next billing month."
       },
+      "ai_credits_free": {
+        "title": "You're out of AI credits",
+        "description": "You've used every AI credit in your Free plan allowance. Upgrade to Pro for a monthly allowance — Free credits do not reset."
+      },
       "exports": {
         "title": "Export limit reached",
         "description": "You've used all the exports included in your plan this month. Upgrade for unlimited exports in both PDF and DOCX."
+      },
+      "exports_free": {
+        "title": "Export limit reached",
+        "description": "You've used all the exports included in your Free plan. Upgrade to Pro for unlimited exports in PDF and DOCX — Free exports do not reset."
       },
       "templates": {
         "title": "This template needs a paid plan",

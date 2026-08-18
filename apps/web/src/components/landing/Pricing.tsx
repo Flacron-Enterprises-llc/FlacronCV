@@ -13,6 +13,7 @@ import {
   YEARLY_BILLING_ENABLED,
   yearlySavings,
   yearlySavingsPercent,
+  TRIAL_PERIOD_DAYS,
 } from '@flacroncv/shared-types';
 import { cn } from '@/lib/utils';
 import { useInView } from '@/hooks/useInView';
@@ -32,7 +33,7 @@ const PLAN_PRESENTATION: Record<
   [SubscriptionPlan.PRO]: {
     featured: true,
     bestForKey: 'pricing.best_for_pro',
-    ctaKey: 'pricing.upgrade',
+    ctaKey: 'pricing.start_trial',
   },
   [SubscriptionPlan.CAREER_ACCELERATOR]: {
     featured: false,
@@ -42,10 +43,7 @@ const PLAN_PRESENTATION: Record<
   [SubscriptionPlan.ENTERPRISE]: {
     featured: false,
     bestForKey: 'pricing.best_for_enterprise',
-    // Enterprise has a real Stripe price and the in-app billing page sells it
-    // directly, so advertising "Contact Sales" here sent the two flows in
-    // different directions. Self-serve upgrade, consistent with billing.
-    ctaKey: 'pricing.upgrade',
+    ctaKey: 'pricing.choose_enterprise',
   },
 };
 
@@ -83,7 +81,10 @@ export default function Pricing() {
     key,
     featured: PLAN_PRESENTATION[key].featured,
     bestFor: t(PLAN_PRESENTATION[key].bestForKey),
-    cta: t(PLAN_PRESENTATION[key].ctaKey),
+    cta:
+      key === SubscriptionPlan.PRO
+        ? t(PLAN_PRESENTATION[key].ctaKey, { days: TRIAL_PERIOD_DAYS })
+        : t(PLAN_PRESENTATION[key].ctaKey),
   }));
 
   return (

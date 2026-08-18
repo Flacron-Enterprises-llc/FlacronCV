@@ -15,6 +15,9 @@ dist/
 # Production
 build/
 
+# Local safety copies — never the client's repository
+PROJECT_PROGRESS.backup.md
+
 # Misc
 .DS_Store
 *.pem

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { PLAN_CONFIGS, SubscriptionPlan } from '@flacroncv/shared-types';
+import { PLAN_CONFIGS, SubscriptionPlan, customerFacingPlans } from '@flacroncv/shared-types';
 import {
   faqPage,
   organizationAndWebsite,
@@ -49,11 +49,14 @@ describe('softwareApplication', () => {
     expect(JSON.stringify(schema)).not.toContain('aggregateRating');
   });
 
-  it('prices offers from PLAN_CONFIGS', () => {
+  it('prices offers from PLAN_CONFIGS for customer-facing plans only', () => {
     const byName = Object.fromEntries(schema.offers.map((o) => [o.name, o.price]));
-    for (const plan of Object.values(PLAN_CONFIGS)) {
-      expect(byName[plan.name]).toBe(String(plan.priceMonthly));
+    const visible = customerFacingPlans();
+    expect(schema.offers).toHaveLength(visible.length);
+    for (const plan of visible) {
+      expect(byName[PLAN_CONFIGS[plan].name]).toBe(String(PLAN_CONFIGS[plan].priceMonthly));
     }
+    expect(byName[PLAN_CONFIGS[SubscriptionPlan.CAREER_ACCELERATOR].name]).toBeUndefined();
   });
 });
 

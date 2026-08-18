@@ -47,10 +47,10 @@ export interface BillingInvoice {
 }
 
 /**
- * Free-trial length applied to a NEW subscriber's first checkout (Stripe
- * `trial_period_days`). ASSUMPTION (client to confirm): 7 days, card-required
- * upfront, auto-charges when the trial ends unless cancelled. Set to 0 to
- * disable trials.
+ * Free-trial length applied to a NEW Pro subscriber's first checkout (Stripe
+ * `trial_period_days`). Enterprise never receives a trial. ASSUMPTION (client
+ * confirmed 2026-08-18): 7 days, card-required upfront, auto-charges when the
+ * trial ends unless cancelled. Set to 0 to disable trials.
  */
 export const TRIAL_PERIOD_DAYS = 7;
 
@@ -89,9 +89,9 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
     features: [
       '5 CVs',
       '1 Cover Letter',
-      '5 AI Credits/month',
+      '5 AI Credits',
       'Free templates only',
-      '2 exports/month',
+      '2 exports',
       'PDF export',
     ],
   },
@@ -200,11 +200,11 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
 //     a plan is shown to customers if, and only if, they can actually buy it
 //
 // "Can actually buy it" means it has a real Stripe monthly price configured.
-// So Career Accelerator stays hidden while `stripePriceIdMonthly` is empty, and
-// the moment the client creates its Stripe price and fills that field in, it
-// appears on the public pricing page AND the billing comparison together, with
-// no further code change. The same guard is why no unpurchasable price can be
-// advertised by accident.
+// Career Accelerator is fully built and stays hidden while
+// `stripePriceIdMonthly` is empty. Filling that field is the launch pin: the
+// plan appears on public pricing, in-app billing, plan comparison, and JSON-LD
+// offers together, with no further code change. Do not fill it by accident.
+// Admin CRM grant still lists every plan regardless of this rule.
 
 /** True when `plan` has a real Stripe monthly price and can be checked out. */
 export function isPlanPurchasable(plan: SubscriptionPlan): boolean {

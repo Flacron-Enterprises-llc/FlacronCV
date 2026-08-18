@@ -88,7 +88,6 @@
     "subtitle": "Kostenlos starten, upgraden wenn du mehr brauchst",
     "monthly": "Monatlich",
     "yearly": "Jährlich",
-    "save": "33% sparen",
     "free": "Kostenlos",
     "pro": "Pro",
     "enterprise": "Enterprise",
@@ -96,6 +95,8 @@
     "current_plan": "Aktueller Plan",
     "get_started": "Loslegen",
     "upgrade": "Jetzt upgraden",
+    "start_trial": "{days}-tägige kostenlose Testphase starten",
+    "choose_enterprise": "Enterprise wählen",
     "contact_sales": "Vertrieb kontaktieren",
     "per_month": "/Monat",
     "per_year": "/Jahr",
@@ -137,7 +138,7 @@
     "q1": "Ist FlacronCV wirklich kostenlos?",
     "a1": "Ja! Der kostenlose Plan ermöglicht bis zu 5 Lebensläufe, 1 Anschreiben, 5 KI-Credits/Monat und 2 PDF-Exporte/Monat – keine Kreditkarte erforderlich. Upgrade auf Pro für 10 Lebensläufe, 20 Anschreiben, 100 KI-Credits, unbegrenzte Exporte und DOCX-Format.",
     "q2": "Welche Exportformate werden unterstützt?",
-    "a2": "Alle Pläne unterstützen PDF-Export. Pro- und Enterprise-Pläne ermöglichen auch DOCX (Microsoft Word). Der kostenlose Plan umfasst 2 Exporte/Monat; Pro und Enterprise bieten unbegrenzte Exporte. TXT-Export ist derzeit nicht verfügbar.",
+    "a2": "Alle Pläne unterstützen PDF-Export. Pro- und Enterprise-Pläne ermöglichen auch DOCX (Microsoft Word). Der kostenlose Plan umfasst 2 Exporte; Pro und Enterprise bieten unbegrenzte Exporte. TXT-Export ist derzeit nicht verfügbar.",
     "q3": "Wie funktioniert das KI-Schreiben?",
     "a3": "Unsere KI analysiert deine Erfahrung und die Stellenbeschreibung, um maßgeschneiderte Inhalte zu generieren. Sie nutzt fortschrittliche Sprachmodelle für professionelle, wirkungsvolle Texte.",
     "q4": "Sind meine Daten sicher?",
@@ -746,9 +747,12 @@
     "plans": {
       "free": "Dauerhaft kostenlos",
       "perMonth": "/Monat",
-      "month": "Monat"
+      "month": "Monat",
+      "year": "Jahr"
     },
     "upgradeTo": "Upgrade auf {plan}",
+    "choose_enterprise": "Enterprise wählen",
+    "trial_disclosure": "Heute: $0 — {days} Tage kostenlos, danach {price}/{interval}, sofern nicht vor Ablauf der Testphase gekündigt wird.",
     "checkoutError": "Checkout konnte nicht gestartet werden",
     "portalError": "Abrechnungsportal konnte nicht geöffnet werden",
     "usage": {
@@ -1973,9 +1977,17 @@
         "title": "Deine KI-Guthaben sind aufgebraucht",
         "description": "Du hast dein gesamtes KI-Guthaben für diesen Monat verbraucht. Mit einem Upgrade erhältst du ein größeres monatliches Kontingent, oder du wartest bis zum Beginn deines nächsten Abrechnungsmonats."
       },
+      "ai_credits_free": {
+        "title": "Deine KI-Guthaben sind aufgebraucht",
+        "description": "Du hast das gesamte KI-Guthaben deines Gratis-Tarifs verbraucht. Mit einem Upgrade auf Pro erhältst du ein monatliches Kontingent — das Gratis-Guthaben wird nicht zurückgesetzt."
+      },
       "exports": {
         "title": "Export-Limit erreicht",
         "description": "Du hast alle in deinem Tarif enthaltenen Exporte für diesen Monat genutzt. Mit einem Upgrade exportierst du unbegrenzt als PDF und DOCX."
+      },
+      "exports_free": {
+        "title": "Export-Limit erreicht",
+        "description": "Du hast alle Exporte deines Gratis-Tarifs genutzt. Mit einem Upgrade auf Pro exportierst du unbegrenzt als PDF und DOCX — Gratis-Exporte werden nicht zurückgesetzt."
       },
       "templates": {
         "title": "Diese Vorlage erfordert einen bezahlten Tarif",

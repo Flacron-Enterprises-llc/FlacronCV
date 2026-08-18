@@ -56,7 +56,7 @@ describe('UsageResetService', () => {
     });
 
     it('uses a fresh batch for every 500 writes so large user bases reset fully', async () => {
-      await seedUsers(501, 'free');
+      await seedUsers(501, 'pro');
       batchSpy.mockClear();
 
       await service.resetMonthlyUsage();
@@ -68,7 +68,7 @@ describe('UsageResetService', () => {
     });
 
     it('completes cleanly when the user count is an exact batch multiple', async () => {
-      await seedUsers(500, 'free');
+      await seedUsers(500, 'pro');
       const commitSpies: jest.SpyInstance[] = [];
       batchSpy.mockClear();
       batchSpy.mockImplementation(function (this: InMemoryFirestore) {
@@ -110,6 +110,79 @@ describe('UsageResetService', () => {
 
       const doc = await firestore.collection('users').doc('inactive').get();
       expect((doc.data()?.usage as Record<string, unknown>).aiCreditsUsed).toBe(9);
+    });
+
+    it('does not write a FREE document at all', async () => {
+      // Values-unchanged is not enough: a write of the same numbers would
+      // also pass. Spy the batch so a skip and a no-op write cannot look alike.
+      await firestore.collection('users').doc('free-1').set({
+        uid: 'free-1',
+        isActive: true,
+        subscription: { plan: 'free' },
+        usage: { aiCreditsUsed: 4, exportsThisMonth: 1, aiCreditsLimit: 5 },
+      });
+      await firestore.collection('users').doc('pro-1').set({
+        uid: 'pro-1',
+        isActive: true,
+        subscription: { plan: 'pro', status: 'past_due' },
+        usage: { aiCreditsUsed: 42, exportsThisMonth: 7, aiCreditsLimit: 1 },
+      });
+
+      const writtenIds: string[] = [];
+      batchSpy.mockClear();
+      batchSpy.mockImplementation(function (this: InMemoryFirestore) {
+        const batch = InMemoryFirestore.prototype.batch.call(firestore);
+        const origUpdate = batch.update.bind(batch);
+        batch.update = (ref, data) => {
+          writtenIds.push(ref.id);
+          origUpdate(ref, data);
+        };
+        return batch;
+      });
+
+      await service.resetMonthlyUsage();
+
+      expect(writtenIds).toEqual(['pro-1']);
+      const free = await firestore.collection('users').doc('free-1').get();
+      const freeUsage = free.data()?.usage as Record<string, unknown>;
+      expect(freeUsage.aiCreditsUsed).toBe(4);
+      expect(freeUsage.exportsThisMonth).toBe(1);
+      expect(freeUsage.aiCreditsLimit).toBe(5);
+      expect(freeUsage.lastExportReset).toBeUndefined();
+      const pro = await firestore.collection('users').doc('pro-1').get();
+      const proUsage = pro.data()?.usage as Record<string, unknown>;
+      expect(proUsage.aiCreditsUsed).toBe(0);
+      expect(proUsage.exportsThisMonth).toBe(0);
+    });
+
+    it('treats a missing subscription.plan as Free and does not write the doc', async () => {
+      await firestore.collection('users').doc('no-plan').set({
+        uid: 'no-plan',
+        isActive: true,
+        subscription: {},
+        usage: { aiCreditsUsed: 3, exportsThisMonth: 1, aiCreditsLimit: 5 },
+      });
+
+      const writtenIds: string[] = [];
+      batchSpy.mockClear();
+      batchSpy.mockImplementation(function (this: InMemoryFirestore) {
+        const batch = InMemoryFirestore.prototype.batch.call(firestore);
+        const origUpdate = batch.update.bind(batch);
+        batch.update = (ref, data) => {
+          writtenIds.push(ref.id);
+          origUpdate(ref, data);
+        };
+        return batch;
+      });
+
+      await service.resetMonthlyUsage();
+
+      expect(writtenIds).toEqual([]);
+      const usage = (await firestore.collection('users').doc('no-plan').get()).data()?.usage as Record<
+        string,
+        unknown
+      >;
+      expect(usage.aiCreditsUsed).toBe(3);
     });
   });
 

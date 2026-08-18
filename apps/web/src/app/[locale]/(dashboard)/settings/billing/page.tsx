@@ -247,76 +247,59 @@ export default function BillingPage(): React.JSX.Element | null {
       : { key, price: `$${planAmount(key).toFixed(2)}`, period: intervalSuffix },
   );
 
-  // Career Accelerator becomes purchasable only once a real Stripe price is set.
-  // Until then it is hidden from BOTH surfaces rather than shown as "coming
-  // soon" on one of them; set its Stripe price id to reveal it everywhere.
+  // Career Accelerator becomes purchasable — and publicly visible — only once
+  // a real Stripe monthly price is set. Filling stripePriceIdMonthly is the
+  // launch pin. Do not fill it by accident.
   const careerPurchasable = isPlanPurchasable(SubscriptionPlan.CAREER_ACCELERATOR);
 
-  // A never-subscribed user is eligible for the free trial (mirrors the backend).
+  // A never-subscribed user is eligible for the Pro free trial (mirrors the
+  // backend). Enterprise never gets a trial — it goes straight to checkout.
   const trialEligible = TRIAL_PERIOD_DAYS > 0 && !user?.subscription?.stripeSubscriptionId;
   const isTrialing = user?.subscription?.status === 'trialing';
-  const upgradeCta = (plan: string) =>
-    trialEligible ? t('start_trial', { days: TRIAL_PERIOD_DAYS }) : t('upgradeTo', { plan });
+  const proCta = trialEligible
+    ? t('start_trial', { days: TRIAL_PERIOD_DAYS })
+    : t('upgradeTo', { plan: 'Pro' });
+  const enterpriseCta = t('choose_enterprise');
+  const trialDisclosure =
+    trialEligible
+      ? t('trial_disclosure', {
+          days: TRIAL_PERIOD_DAYS,
+          price: `$${planAmount(SubscriptionPlan.PRO).toFixed(2)}`,
+          interval: billingInterval === 'yearly' ? t('plans.year') : t('plans.month'),
+        })
+      : null;
 
-  // Maps a plan to its column key in `comparisonFeatures`. Typed as a full
-  // Record, so adding a plan to the enum without adding its column is a
-  // compile error rather than a silently blank cell.
-  const FEATURE_KEY_BY_PLAN: Record<SubscriptionPlan, 'free' | 'pro' | 'career' | 'enterprise'> = {
-    [SubscriptionPlan.FREE]: 'free',
-    [SubscriptionPlan.PRO]: 'pro',
-    [SubscriptionPlan.CAREER_ACCELERATOR]: 'career',
-    [SubscriptionPlan.ENTERPRISE]: 'enterprise',
-  };
+  const formatLimit = (value: number | 'unlimited') =>
+    value === 'unlimited' ? t('features.unlimited') : String(value);
 
-  const comparisonFeatures = [
+  const comparisonFeatures: { label: string; cell: (plan: SubscriptionPlan) => string | boolean }[] = [
     {
       label: t('features.cvs'),
-      free: '5',
-      pro: '10',
-      career: '25',
-      enterprise: t('features.unlimited'),
+      cell: (plan) => formatLimit(PLAN_CONFIGS[plan].limits.cvs),
     },
     {
       label: t('features.coverLetters'),
-      free: '1',
-      pro: '20',
-      career: '50',
-      enterprise: t('features.unlimited'),
+      cell: (plan) => formatLimit(PLAN_CONFIGS[plan].limits.coverLetters),
     },
     {
       label: t('features.aiCredits'),
-      free: '5',
-      pro: '100',
-      career: '250',
-      enterprise: '500',
+      cell: (plan) => formatLimit(PLAN_CONFIGS[plan].limits.aiCredits),
     },
     {
       label: t('features.templates'),
-      free: false,
-      pro: true,
-      career: true,
-      enterprise: true,
+      cell: (plan) => PLAN_CONFIGS[plan].limits.templates === 'all',
     },
     {
       label: t('features.unlimitedExports'),
-      free: false,
-      pro: true,
-      career: true,
-      enterprise: true,
+      cell: (plan) => PLAN_CONFIGS[plan].limits.exports === 'unlimited',
     },
     {
       label: t('features.docxExport'),
-      free: false,
-      pro: true,
-      career: true,
-      enterprise: true,
+      cell: (plan) => plan !== SubscriptionPlan.FREE,
     },
     {
       label: t('features.prioritySupport'),
-      free: false,
-      pro: true,
-      career: true,
-      enterprise: true,
+      cell: (plan) => plan !== SubscriptionPlan.FREE,
     },
   ];
 
@@ -469,8 +452,13 @@ export default function BillingPage(): React.JSX.Element | null {
               loading={checkoutMutation.isPending}
               icon={<Zap className="h-4 w-4" />}
             >
-              {upgradeCta('Pro')}
+              {proCta}
             </Button>
+            {trialDisclosure && (
+              <p className="mt-3 text-xs leading-5 text-stone-500 dark:text-stone-400">
+                {trialDisclosure}
+              </p>
+            )}
           </Card>
 
           {/* Career Accelerator. Rendered only when it is genuinely purchasable
@@ -510,7 +498,7 @@ export default function BillingPage(): React.JSX.Element | null {
               loading={checkoutMutation.isPending}
               icon={<Sparkles className="h-4 w-4" />}
             >
-              {upgradeCta(PLAN_CONFIGS[SubscriptionPlan.CAREER_ACCELERATOR].name)}
+              {t('upgradeTo', { plan: PLAN_CONFIGS[SubscriptionPlan.CAREER_ACCELERATOR].name })}
             </Button>
           </Card>
           )}
@@ -547,7 +535,7 @@ export default function BillingPage(): React.JSX.Element | null {
               loading={checkoutMutation.isPending}
               icon={<Crown className="h-4 w-4" />}
             >
-              {upgradeCta('Enterprise')}
+              {enterpriseCta}
             </Button>
           </Card>
         </div>
@@ -635,7 +623,7 @@ export default function BillingPage(): React.JSX.Element | null {
                     loading={checkoutMutation.isPending}
                     icon={<Zap className="h-4 w-4" />}
                   >
-                    {upgradeCta('Pro')}
+                    {proCta}
                   </Button>
                 )}
               </div>
@@ -687,7 +675,7 @@ export default function BillingPage(): React.JSX.Element | null {
                       Accelerator's limits. Driving both from one source makes
                       that class of mismatch impossible. */}
                   {plans.map((plan) => {
-                    const value = feature[FEATURE_KEY_BY_PLAN[plan.key]];
+                    const value = feature.cell(plan.key);
                     return (
                       <td key={plan.key} className="px-6 py-3 text-center">
                         {typeof value === 'boolean' ? (

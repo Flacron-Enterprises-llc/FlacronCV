@@ -63,8 +63,15 @@ export class UsageResetService implements OnApplicationBootstrap {
 
   /**
    * Runs at midnight on the 1st of every month.
-   * Resets aiCreditsUsed and exportsThisMonth for all active users,
+   * Resets aiCreditsUsed and exportsThisMonth for active **paid** users,
    * and syncs aiCreditsLimit to the user's current plan.
+   *
+   * Free is a one-time allowance. Those docs are skipped entirely — no write —
+   * so consumed counters stay as they stand. Catch-up uses this same method.
+   *
+   * Plan is the **stored** `subscription.plan`, not `resolveEffectivePlan`.
+   * A past_due Pro user still has plan `pro` and still resets. Missing plan
+   * is treated as Free and skipped (same fallback as before this skip).
    */
   @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
   async resetMonthlyUsage(): Promise<void> {
@@ -91,7 +98,13 @@ export class UsageResetService implements OnApplicationBootstrap {
       for (const doc of snapshot.docs) {
         const data = doc.data();
         const plan = (data?.subscription as { plan?: SubscriptionPlan } | undefined)?.plan || SubscriptionPlan.FREE;
-        const newCreditsLimit = PLAN_CONFIGS[plan]?.limits?.aiCredits ?? 5;
+        // Stored plan, not effective plan. Skip is the whole update — including
+        // the aiCreditsLimit re-sync — so a Free doc is not written at all.
+        if (plan === SubscriptionPlan.FREE) {
+          continue;
+        }
+        const newCreditsLimit =
+          PLAN_CONFIGS[plan]?.limits?.aiCredits ?? PLAN_CONFIGS[SubscriptionPlan.FREE].limits.aiCredits;
 
         batch.update(doc.ref, {
           'usage.aiCreditsUsed': 0,

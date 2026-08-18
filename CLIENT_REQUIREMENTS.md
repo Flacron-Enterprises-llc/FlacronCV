@@ -87,10 +87,9 @@ guard existed. **What actually protects the path now is different and stronger:*
 chooses a price at all — checkout takes `{plan, interval}` and the server resolves the id
 (`payment.service.ts:120-134`), `normalizeInterval` defaults anything unrecognised to the *cheaper*
 MONTH (`:143`), and the resolved id is still allowlist-checked (`:169`). **So `B-5` and `E.5` below are
-no longer blocked, and the remaining exposure has moved to `apps/mobile`**, which advertises the
-pre-correction annual prices ($239.88/yr with a "-33%" badge) while posting `interval: 'year'` to the
-same endpoint — the server charges $299.99. Contained only because that app does not currently ship.
-Full audit in `ARCHITECTURE_MAP.md` §8. Still unverified: Q-4.
+no longer blocked.** **Batch E** wrapped mobile `PLAN_CONFIGS` around shared-types, so that app
+no longer advertises $239.88/yr. What remains is Q-4: **UNVERIFIED that the configured yearly
+ids are `interval=year` in Stripe — a launch blocker.** Full audit in `ARCHITECTURE_MAP.md` §8.
 
 **R-2 — §23 Trial abuse is a live revenue leak, already diagnosed.**
 `isFirstTimeSubscriber` reads `stripeSubscriptionId`, which is **cleared on cancellation** — so
@@ -132,10 +131,11 @@ and `/cookie-policy` — not `/privacy` and `/terms` — and their content is in
 - **(c) Update only changed sections**, keeping existing translations.
 This is a client decision (Q-10), not an engineering one.
 
-**i18n gate gap — `t.rich` sits outside `keys-resolve`.** That gate's call regex matches
-`t('key')` only, not `t.rich('key')`. One key uses it today (`cookie_consent.message`); it was
-hand-verified across all six locales in Batch C. The next `t.rich` will not be caught. Flagged
-in `keys-resolve.test.ts` so this is visible at the gate, not only here.
+**i18n gate remainder — `keys-resolve` now matches `t.rich('key')`.** Closed 2026-08-18; the
+call regex allows optional `.rich` and a non-vacuity assert requires at least one bound `.rich(`
+in the scan. Still outside the regex, recorded in that test file: `t.markup` / `t.raw`,
+double-quoted keys, template-literal keys, and `getTranslations({ locale, namespace })` (object
+form — dishonest to widen with a regex).
 
 **R-4 — §1/§2 Free Plan one-time is not a label change — but the reset scope is narrower than it looks.**
 *Rewritten 2026-08-18 after reading the service.* `UsageResetService` resets every user with
@@ -165,8 +165,11 @@ higher limit unless the downgrade path (`payment.service.ts:622`, `:703`) is rel
 
 A `free_grants` table (old F.1) is **not being built** — option (b), 2026-08-18: a uid-keyed grant
 cannot survive a new email, monthly resets destroyed the consumption history a migration would need,
-and identity belongs in Batch G. F.3 (exclude Free from the cron) is still pending confirmation; when
-it ships it must change `upgrade_modal.reasons.ai_credits` in the **same** change.
+and identity belongs in Batch G. **F.3 shipped 2026-08-18** — see the update below.
+
+**R-4 update 2026-08-18 — F.3 shipped.** Free is excluded from `UsageResetService` on stored
+`subscription.plan` (not `resolveEffectivePlan`). Paid plans still reset `aiCreditsUsed` /
+`exportsThisMonth`. `cvsCreated` / `coverLettersCreated` remain untouched for every plan — see Q-2.
 
 **R-5 — §3 "Require verified email" reverses a deferred decision.**
 Server-side `emailVerified` enforcement was explicitly deferred: it must exempt the verify/resend
@@ -188,14 +191,14 @@ recently-fixed export path. Changes to shared-types affect it. It is absent from
 | ID | Question | Source |
 |---|---|---|
 | Q-1 | **Confirm the AI-credit definition we already publish.** *Reframed 2026-08-18 — a definition does exist, in shipped customer-facing copy.* `pricing.terms_credit_desc` (`apps/web/public/locales/en/common.json:122`, all six locales) defines one credit as one AI request across summary generation, cover-letter generation, ATS check, interview prep and LinkedIn optimisation, **not charged on failure** — and the code matches (`AIService.generate` reserves one credit per call and refunds on failure). So the ask is **confirm or amend the published definition**, not supply a new one. It is already a representation to customers. | §14 |
-| Q-2 | **Do Pro's 10 CVs / 20 cover letters reset monthly?** If yes, label "10 CVs/month". ⚠️ **Now blocking a HIGH finding — see R-4.** Today they reset **never**: no job touches `cvsCreated` / `coverLettersCreated`, and both are decremented on delete, so they are **concurrent slots** ("10 stored at once"), not a monthly allowance. The billing page already headlines them as "Usage This Month". Your three possible answers are three different builds: (a) add them to the monthly reset, (b) keep slots and relabel the UI, (c) a true lifetime cap. **(a) and (c) change what a paying customer receives, so they need your explicit sign-off.** | §20 |
-| Q-3 | **Career Accelerator ($49.99) — still wanted?** A fourth plan is fully built (enum, config, entitlements, billing UI, CRM grant) and gated "coming soon" pending a Stripe price. Your documents never mention it. Ship it, drop it, or leave it hidden? | Codebase |
-| Q-4 | **Annual prices for each plan — confirm, rather than supply.** *Updated 2026-08-18.* Annual prices **are already asserted in config and on sale**: `YEARLY_BILLING_ENABLED = true` with Pro `299.99/yr` and Enterprise `999.99/yr` and year-interval Stripe price ids (`packages/shared-types/src/subscription.types.ts`). `plan-advertising.spec.ts:127` asserts the flag is on **iff** both annual ids are present. ⚠️ **UNVERIFIED that those two Stripe ids really are `interval=year` in the deployed account** — `apps/api/scripts/verify-yearly-prices.mjs` settles it in one run and was not run here (it reaches Stripe). **Run it before marketing annual plans:** a month-interval price sitting in `stripePriceIdYearly` is exactly what caused the ~18× overcharge. Career Accelerator still has no annual price (ties to Q-3). See R-1. | §25 |
-| Q-5 | **Card required for the trial?** Currently yes (Stripe default). Determines whether Stripe fraud signals are available for §23. | §22 |
-| Q-6 | **Does Enterprise get a trial?** | §22 |
+| Q-2 | **Do Pro's 10 CVs / 20 cover letters reset monthly?** **Answered 2026-08-18: the client wants monthly reset.** Not implemented: those counters decrement on delete (`cv.service.ts:523`, `cover-letter.service.ts:274`) — they are storage slots. Monthly reset without changing that lets a Pro user create 10, delete 10, create 10 more = 20 in a month. **New question for the client:** (a′) monthly reset *and* stop refunding paid deletes, (b) keep slots and relabel the billing UI (no "this month"), or (c) a true lifetime cap. Do not ship (a) as originally described. | §20 |
+| Q-3 | **Career Accelerator ($49.99) — still wanted?** **Answered 2026-08-18: keep the code, hide it from every public surface, do not launch.** `customerFacingPlans()` / empty `stripePriceIdMonthly` is the hide rule. **Filling `stripePriceIdMonthly` auto-launches it** on pricing, billing, comparison, and JSON-LD. Do not fill it by accident. Admin CRM grant still works. | Codebase |
+| Q-4 | **Annual prices for each plan — confirm, rather than supply.** *Updated 2026-08-18.* Annual prices **are already asserted in config and on sale**: `YEARLY_BILLING_ENABLED = true` with Pro `299.99/yr` and Enterprise `999.99/yr`. Mobile now reads those figures from shared-types. ⚠️ **UNVERIFIED that those two Stripe ids really are `interval=year` in the deployed account — this is a launch blocker for marketing annual plans.** `apps/api/scripts/verify-yearly-prices.mjs` settles it and was not run here (it reaches Stripe). A month-interval price sitting in `stripePriceIdYearly` is exactly what caused the ~18× overcharge. Career Accelerator still has no annual price (ties to Q-3). See R-1. | §25 |
+| Q-5 | **Card required for the trial?** **Answered 2026-08-18: yes.** Stripe default; Pro 7-day trial. | §22 |
+| Q-6 | **Does Enterprise get a trial?** **Answered 2026-08-18: no.** Server skips `trial_period_days` for Enterprise even on a first-time subscriber. CTA is “Choose Enterprise”, straight to checkout. | §22 |
 | Q-7 | **Public LinkedIn URL.** The supplied link is an admin dashboard — visitors hit a login wall. | Socials |
-| Q-8 | **Stripe live keys — when?** | §7 legal |
-| Q-9 | **Enterprise as a team plan?** Already verified as individual-only and the copy corrected accordingly. Confirm that stands — seats/workspace/central billing is a large new build. | §21 |
+| Q-8 | **Stripe live keys — when?** **Answered 2026-08-18: stay in TEST mode.** Keys from env vars only; clean test-to-live switch with no code change. | §7 legal |
+| Q-9 | **Enterprise as a team plan?** **Answered 2026-08-18: no.** Individual high-usage plan. No seats, no team workspace, no org admin. | §21 |
 | Q-10 | **Legal pages: English-only or fully translated?** See R-3. | Legal pkg |
 | Q-11 | **`contact@flacroncv.com` — does the mailbox actually route?** Currently configured to `@flacronenterprises.com`. Ties to B-2. | §25 legal |
 | Q-12 | **Marketing cookie category.** Client package specifies a Marketing cookie category; no advertising, pixel, or campaign technology exists in the product. Built three categories per client §7. Confirm, or specify the planned marketing technology. | §9 legal |
@@ -294,13 +297,13 @@ parent-company accounts, not FlacronCV-specific.
 
 | ID | Task | Status |
 |---|---|---|
-| E.1 | Audit every surface for plan data **not** read from `PLAN_CONFIGS`. **⚠️ DONE 2026-08-18 — the audit is complete and lives in `ARCHITECTURE_MAP.md` §8** (four tiers, every `path:line`). `plan-advertising.spec.ts` guards only `PLAN_CONFIGS.features` against `PLAN_CONFIGS.limits` *inside shared-types*; outside it sit (1) a full duplicate `PLAN_CONFIGS` in `apps/mobile` with stale annual prices and dead Stripe ids, (2) `crm-settings.planLimits` — a second limits table, super-admin editable, **enforced nowhere**, and needing a delete-or-wire decision from you (`PROJECT_PROGRESS.md` §8; Batch F left it untouched), (3) FREE-plan literal `5` fallbacks — **one fixed 2026-08-18:** `users.service.ts` now seeds `aiCreditsLimit` from `PLAN_CONFIGS[FREE]`; the rest remain, including `usage-reset.service.ts:94`'s `?? 5` on the F.3 path, (4) the false `pricing.save` copy. Remaining work is the fixing, not the finding. | ◐ |
-| E.2 | Resolve Q-3 — ship, hide, or remove Career Accelerator | ☐ |
+| E.1 | Audit every surface for plan data **not** read from `PLAN_CONFIGS`. Audit lives in `ARCHITECTURE_MAP.md` §8. **Batch E:** mobile wrap + billing comparison cells + dead `pricing.save` removed. Remaining: `crm-settings.planLimits` (unenforced), Tier 3 `?? 5` leftovers, English `features` literals, `faq.a1` cadence copy. | ◐ |
+| E.2 | Resolve Q-3 — **hide, keep code.** Public surfaces use `customerFacingPlans()`. JSON-LD offers filtered. CRM grant unchanged. Filling `stripePriceIdMonthly` is the launch pin. | ☑ |
 | E.3 | Q-1 answer → define and document the AI credit unit; surface cost before the action ("Improve with AI — Uses 1 AI Credit") and remaining after | ☐ |
 | E.4 | Q-2 answer → label reset cadence per plan ("10 CVs/month" vs "10 CVs") | ☐ |
-| E.5 | ⚠️ Yearly toggle — ~~only after Q-4 delivers real Stripe yearly prices~~. **⚠️ Largely DONE 2026-08-18: web yearly billing is already enabled and on sale (see the R-1 correction).** The remaining work is not the toggle: (1) run `verify-yearly-prices.mjs` per Q-4; (2) fix `apps/mobile`, which shows $239.88/yr and "-33%" while the server charges $299.99; (3) the unused `pricing.save` = "Save 33%" key in all six locales is a false claim one `t()` call from going live. Status left as ⛔ pending your read of the correction. | ⛔ |
-| E.6 | Plan comparison table: add PDF Export, ATS Optimisation, ATS Score, Multilingual, AI Writing Assistant rows if they differ by plan. **The body must iterate the same array as the header** — a column-misalignment bug once rendered Enterprise's name above another plan's limits. | ☐ |
-| E.7 | Enterprise CTA differentiated; Pro keeps "Most Popular"; Enterprise must not look disabled | ☐ |
+| E.5 | Yearly toggle on web already live. **Batch E:** mobile reads shared-types annual prices; dead `pricing.save` deleted. **Q-4 remains a launch blocker** — `interval=year` UNVERIFIED; client must run `verify-yearly-prices.mjs`. | ◐ |
+| E.6 | Plan comparison: header/body already shared `plans`. **Batch E:** numeric cells from `PLAN_CONFIGS.limits`. Extra rows (PDF Export, ATS, …) **not** added this batch. | ◐ |
+| E.7 | Enterprise CTA “Choose Enterprise”; Pro keeps “Most Popular” + trial CTA. Server: no Enterprise trial. | ☑ |
 | E.8 | Primary free CTA → "Start Building for Free" | ☐ |
 | E.9 | §33 — any publicly advertised feature that isn't built must read "Coming soon". A prior sweep already removed several false claims; re-verify against the current feature set. | ☐ |
 | E.10 | **Remove the false "Watermark on PDF" claim** from the FREE plan's advertised features (`apps/mobile/src/types/subscription.types.ts:37-39`). **Found 2026-08-18 while scoping D.6** — no watermark exists anywhere in the export path, so this advertises a restriction the product does not apply. **The fix is deleting the claim, not building to match it:** building a watermark would invent a free-vs-paid differentiator nobody agreed and change what a Free user receives. Belongs with the rest of the mobile duplicate-config work in E.1. **Done 2026-08-18** — claim deleted; the rest of the mobile duplicate-config divergence still stands with E.1. | ☑ |
@@ -315,14 +318,26 @@ parent-company accounts, not FlacronCV-specific.
 grant cannot survive a new email (new Firebase uid = fresh `users/{uid}` zeros); monthly resets of
 `aiCreditsUsed` / `exportsThisMonth` destroyed the consumption history a migration onto a grant
 table would need; identity is Batch G. Same-uid already survives cookie/logout/incognito because
-usage lives on the user document. F.3 (who the cron resets) waits on confirmation — it changes what
-existing Free users receive.
+usage lives on the user document. **F.3 done 2026-08-18** — Free excluded from the cron; existing
+counters left as they stood.
+
+**Client answers recorded 2026-08-18:**
+- Career Accelerator: keep the code, hide it everywhere public. **Batch E built this.** Filling `stripePriceIdMonthly` auto-launches it — do not fill by accident.
+- Annual: Pro $299.99/year, Enterprise $999.99/year; yearly toggle updates displayed price and Stripe checkout price; savings computed. **Batch E:** mobile wrap + dead `pricing.save` deleted. **Q-4 launch blocker:** client must verify `interval=year`.
+- Trial: card required. 7-day **Pro only**. Enterprise no trial — CTA "Choose Enterprise". **Batch E built this server-side.**
+- Enterprise stays an individual high-usage plan. No seats, no team workspace, no org admin.
+- Stripe stays in test mode. Keys from environment variables; clean test-to-live switch; no hard-coded values.
+- **Currency (do not act):** advertised USD vs Stripe-presented EUR is a client decision. Checkout does not pin currency or country.
+- Legal pages: English only, with "The English version of these legal terms is the official and controlling version. Any translation is provided for convenience only." Product UI stays multilingual.
+- Cookie categories: three, as built. Marketing only if advertising tech is added later.
+- Header and footer: client wants them dark navy. Separate batch.
+- LinkedIn: replacement URL is still `/admin/page-posts/published/`. Icon stays hidden. No `#`, no admin URL, no private URL.
 
 | ID | Task | Status |
 |---|---|---|
 | F.1 | **Cancelled (option b).** No `free_grants` collection. Hashes wait for Batch G. | ⛔ |
 | F.2 | Same-uid already survives cookie/logout/incognito (`users/{uid}.usage`). New email = new uid = fresh zeros — that is Batch G identity, not a grant table. | ◐ |
-| F.3 | **Exclude Free from `UsageResetService`** while paid plans keep resetting. **Narrowed 2026-08-18: this applies to `aiCreditsUsed` and `exportsThisMonth` only** — those are the only counters the service resets. `cvsCreated` / `coverLettersCreated` are never reset for any plan (concurrent slots, refunded on delete), so they are out of scope here and blocked on **Q-2** — see R-4. Do not break the bootstrap-hook ordering fix (`onApplicationBootstrap`, not `onModuleInit`) — that was a real production bug. Note that skipping Free also skips the `aiCreditsLimit` re-sync at `usage-reset.service.ts:99`. **Must ship in the SAME change as the cadence copy that would become a lie:** `upgrade_modal.reasons.ai_credits` (credits return "next billing month"), `upgrade_modal.reasons.exports` ("this month"), and `PLAN_CONFIGS[FREE].features` `'5 AI Credits/month'` / `'2 exports/month'`. Also replace `usage-reset.service.ts:94`'s `?? 5` fallback on that path. **Not this batch — waiting on confirmation.** | ☐ |
+| F.3 | **Exclude Free from `UsageResetService`.** **Done 2026-08-18.** Stored `subscription.plan === FREE` (including missing plan) is skipped — no write. Paid plans still reset AI credits and exports. Bootstrap hook unchanged. `?? 5` now reads `PLAN_CONFIGS[FREE].limits.aiCredits`. Paywall: paid copy kept; `ai_credits_free` / `exports_free` added; FREE features dropped `/month`. CVs/letters still never reset (Q-2). | ☑ |
 | F.4 | Billing page: Free users see **"Free Plan Usage"**; Pro/Enterprise keep "Usage This Month". Heading is keyed off `isFreePlan`, not cadence, so it stays honest before and after F.3. **Done 2026-08-18.** | ☑ |
 | F.5 | Low-allowance warning + exhausted state + upgrade prompt. **Done 2026-08-18** by extending the billing usage card (amber `usage.low` at ≥70% not exhausted; `billing.upgradeTo` when remaining === 0 and Free). Exhausted+upgrade on generate/export already lived in `UpgradeModal` (Epic R) — reused, not duplicated. | ☑ |
 | F.6 | Upgrade preserves CVs, cover letters, profile, applications, templates, job tracker, account. Never a new account. | ☐ |
@@ -455,7 +470,7 @@ is pure Node and needs no Java.
 | §14–17 | E.3, F.5, F.6, K.6 |
 | §18–21 | E.1–E.4, E.9 (mostly ☑) |
 | §22–24 | I.1, I.2, G.9 (R-2) |
-| §25 | E.5 (⛔ R-1) |
+| §25 | E.5 (◐ Q-4 launch blocker) |
 | §26–28 | I.3–I.8 (R-6) |
 | §29–34 | E.7–E.9, B.12 |
 | §35–39 | K.3–K.5 |

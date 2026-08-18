@@ -5,10 +5,9 @@ import AdminShell from '@/components/admin/AdminShell';
 // the sign-in redirect and the admin/super_admin role gate — lives in
 // AdminShell, moved here unchanged on 2026-08-18.
 //
-// `noindex, follow: false` for the whole group. robots.txt already disallows
-// these paths, but a Disallow only stops the fetch; it does not stop a URL
-// being indexed with no content. This directive is what removes them from an
-// index, and it covers any crawler that fetches without reading robots.txt.
+// `noindex, follow: false` for the whole group. robots.txt does not Disallow
+// these paths: a Disallow would prevent the fetch, so this directive would
+// never be read. This is what removes them from an index.
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };

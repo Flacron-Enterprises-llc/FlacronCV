@@ -6,6 +6,7 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { Sparkles, Check, Crown } from 'lucide-react';
 import { PLAN_CONFIGS, SubscriptionPlan } from '@flacroncv/shared-types';
+import { useAuth } from '@/providers/AuthProvider';
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -24,8 +25,19 @@ const REASON_ICON = {
 export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }: UpgradeModalProps) {
   const router = useRouter();
   const t = useTranslations('upgrade_modal');
+  const { user, degraded, placeholderAccount } = useAuth();
 
   const Icon = REASON_ICON[reason];
+
+  // Stored plan, not resolveEffectivePlan — a past_due Pro user must still see
+  // the paid copy (credits reset next billing month). The placeholder account
+  // always claims Free; treating that as real would tell a paying customer
+  // their allowance never renews whenever the API blips.
+  const storedPlan = user?.subscription?.plan;
+  const isStoredFree =
+    Boolean(user) && !degraded && !placeholderAccount && (storedPlan === SubscriptionPlan.FREE || !storedPlan);
+  const copyKey =
+    isStoredFree && (reason === 'ai_credits' || reason === 'exports') ? `${reason}_free` : reason;
 
   // The benefit list is read from PLAN_CONFIGS, not hand-written.
   //
@@ -42,7 +54,7 @@ export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }:
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t(`reasons.${reason}.title`)} size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title={t(`reasons.${copyKey}.title`)} size="md">
       <div className="space-y-6">
         {/* Icon */}
         <div className="flex justify-center">
@@ -53,7 +65,7 @@ export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }:
 
         {/* Description */}
         <p className="text-center text-sm text-stone-600 dark:text-stone-400">
-          {t(`reasons.${reason}.description`)}
+          {t(`reasons.${copyKey}.description`)}
         </p>
 
         {/* What the Pro plan actually includes */}

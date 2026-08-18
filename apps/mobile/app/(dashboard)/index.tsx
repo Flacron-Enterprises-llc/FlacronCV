@@ -16,6 +16,7 @@ import { useCVList } from '../../src/hooks/useCVs';
 import { useCoverLetterList } from '../../src/hooks/useCoverLetters';
 import { useCurrentUser } from '../../src/hooks/useUser';
 import { SubscriptionPlan } from '../../src/types/enums';
+import { PLAN_CONFIGS } from '../../src/types/subscription.types';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -171,7 +172,9 @@ export default function DashboardScreen() {
                 onPress={() => router.push('/(dashboard)/settings/billing')}
                 className="bg-white mt-4 rounded-xl py-2.5 items-center"
               >
-                <Text className="text-brand-600 font-bold">Upgrade Now — $29.99/mo</Text>
+                <Text className="text-brand-600 font-bold">
+                  {`Upgrade Now — $${PLAN_CONFIGS[SubscriptionPlan.PRO].priceMonthly.toFixed(2)}/mo`}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

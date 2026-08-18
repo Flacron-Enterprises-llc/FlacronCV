@@ -88,7 +88,6 @@
     "subtitle": "Empieza gratis, actualiza cuando necesites más",
     "monthly": "Mensual",
     "yearly": "Anual",
-    "save": "Ahorra 33%",
     "free": "Gratis",
     "pro": "Pro",
     "enterprise": "Enterprise",
@@ -96,6 +95,8 @@
     "current_plan": "Plan actual",
     "get_started": "Empezar",
     "upgrade": "Actualizar ahora",
+    "start_trial": "Empieza la prueba gratuita de {days} días",
+    "choose_enterprise": "Elegir Enterprise",
     "contact_sales": "Contactar ventas",
     "per_month": "/mes",
     "per_year": "/año",
@@ -137,7 +138,7 @@
     "q1": "¿Es FlacronCV realmente gratis?",
     "a1": "¡Sí! El plan gratuito te permite crear hasta 5 CVs, 1 carta de presentación, usar 5 créditos IA/mes y exportar hasta 2 documentos/mes en PDF — sin tarjeta de crédito. Actualiza a Pro para 10 CVs, 20 cartas de presentación, 100 créditos IA, exportaciones ilimitadas y formato DOCX.",
     "q2": "¿Qué formatos de exportación son compatibles?",
-    "a2": "Todos los planes admiten exportación en PDF. Los planes Pro y Enterprise también desbloquean el formato DOCX (Microsoft Word). El plan gratuito incluye 2 exportaciones/mes; Pro y Enterprise ofrecen exportaciones ilimitadas. La exportación TXT no está disponible actualmente.",
+    "a2": "Todos los planes admiten exportación en PDF. Los planes Pro y Enterprise también desbloquean el formato DOCX (Microsoft Word). El plan gratuito incluye 2 exportaciones; Pro y Enterprise ofrecen exportaciones ilimitadas. La exportación TXT no está disponible actualmente.",
     "q3": "¿Cómo funciona la escritura con IA?",
     "a3": "Nuestra IA analiza tu experiencia y la descripción del puesto para generar contenido personalizado. Utiliza modelos de lenguaje avanzados para crear textos profesionales e impactantes.",
     "q4": "¿Están seguros mis datos?",
@@ -746,9 +747,12 @@
     "plans": {
       "free": "Gratis para siempre",
       "perMonth": "/mes",
-      "month": "mes"
+      "month": "mes",
+      "year": "año"
     },
     "upgradeTo": "Actualizar a {plan}",
+    "choose_enterprise": "Elegir Enterprise",
+    "trial_disclosure": "Hoy: $0 — {days} días gratis, luego {price}/{interval} salvo cancelación antes de que termine la prueba.",
     "checkoutError": "Error al iniciar el pago",
     "portalError": "No se pudo abrir el portal de facturación",
     "usage": {
@@ -1973,9 +1977,17 @@
         "title": "Te has quedado sin créditos de IA",
         "description": "Has usado todos los créditos de IA de este mes. Mejora tu plan para obtener una asignación mensual mayor, o espera a que se reinicie al comenzar tu próximo mes de facturación."
       },
+      "ai_credits_free": {
+        "title": "Te has quedado sin créditos de IA",
+        "description": "Has usado todos los créditos de IA de tu plan Gratuito. Mejora a Pro para una asignación mensual: los créditos del plan Gratuito no se restablecen."
+      },
       "exports": {
         "title": "Límite de exportaciones alcanzado",
         "description": "Has usado todas las exportaciones incluidas en tu plan este mes. Mejora tu plan para tener exportaciones ilimitadas en PDF y DOCX."
+      },
+      "exports_free": {
+        "title": "Límite de exportaciones alcanzado",
+        "description": "Has usado todas las exportaciones incluidas en tu plan Gratuito. Mejora a Pro para exportaciones ilimitadas en PDF y DOCX: las del plan Gratuito no se restablecen."
       },
       "templates": {
         "title": "Esta plantilla requiere un plan de pago",

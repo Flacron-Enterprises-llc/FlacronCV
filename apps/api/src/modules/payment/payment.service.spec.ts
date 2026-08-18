@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { InMemoryFirestore } from '../firebase/in-memory-firestore';
-import { SubscriptionPlan, SubscriptionStatus, PLAN_CONFIGS, YEARLY_BILLING_ENABLED } from '@flacroncv/shared-types';
+import { SubscriptionPlan, SubscriptionStatus, PLAN_CONFIGS, YEARLY_BILLING_ENABLED, TRIAL_PERIOD_DAYS } from '@flacroncv/shared-types';
 
 function makeFirebaseAdmin(firestore: InMemoryFirestore) {
   return { firestore } as any;
@@ -945,8 +945,31 @@ describe('PaymentService', () => {
       await service.createCheckoutSession('u-trial', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
 
       expect(create).toHaveBeenCalledWith(
-        expect.objectContaining({ subscription_data: { trial_period_days: 7 } }),
+        expect.objectContaining({ subscription_data: { trial_period_days: TRIAL_PERIOD_DAYS } }),
       );
+    });
+
+    it('does NOT apply trial_period_days on Enterprise checkout even for a first-time subscriber', async () => {
+      await seedUser(firestore, 'u-ent-trial', {
+        subscription: { plan: SubscriptionPlan.FREE, stripeCustomerId: 'cus_ent_t' },
+      });
+      const create = jest.fn().mockResolvedValue({ id: 'cs_ent', url: 'https://stripe.test/cs_ent' });
+      const list = jest.fn().mockResolvedValue({ data: [] });
+      (service as any).stripe = {
+        customers: liveCustomers(),
+        checkout: { sessions: { create } },
+        subscriptions: { list },
+      };
+
+      await service.createCheckoutSession(
+        'u-ent-trial',
+        { plan: SubscriptionPlan.ENTERPRISE },
+        'http://ok',
+        'http://cancel',
+      );
+
+      expect(create.mock.calls[0][0].subscription_data).toBeUndefined();
+      expect(list).not.toHaveBeenCalled();
     });
 
     it('does NOT offer a trial to a returning subscriber (anti-abuse)', async () => {

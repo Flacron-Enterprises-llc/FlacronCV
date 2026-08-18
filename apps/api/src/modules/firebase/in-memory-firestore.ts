@@ -64,6 +64,11 @@ class InMemoryDocumentReference {
     private docId: string,
   ) {}
 
+  /** Matches Firestore DocumentReference.id — used by tests that spy batch writes. */
+  get id(): string {
+    return this.docId;
+  }
+
   async set(data: DocData): Promise<void> {
     if (!this.store.has(this.collectionPath)) {
       this.store.set(this.collectionPath, new Map());
