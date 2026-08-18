@@ -47,6 +47,10 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
+/** Declaration of a translator variable. Group 1 = variable, group 2 = namespace. */
+const BINDING =
+  /(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:await\s+)?(?:use|get)Translations\(\s*(?:'([^']*)')?\s*\)/g;
+
 interface Unresolved {
   file: string;
   line: number;
@@ -70,6 +74,21 @@ function findUnresolved(): Unresolved[] {
     //   const t       = useTranslations()        → t(…)        fully qualified
     // varName → every namespace it is bound to anywhere in the file.
     //
+    // `getTranslations` (the server-component equivalent, always awaited) is
+    // bound too. It was omitted originally, which left every server component
+    // unchecked — the legal pages, the auth layout, every `generateMetadata`.
+    // That is a large blind spot for the one gate that catches a key missing
+    // from ALL SIX locales. The object form, `getTranslations({locale,
+    // namespace})`, still does not match and so stays unchecked; it is used for
+    // metadata rather than body copy, and widening the pattern that far risks
+    // binding a name to the wrong namespace.
+    //
+    // `t.rich(...)` is also outside this gate. The call regex matches
+    // `varName('key'`, not `varName.rich('key'`. One key uses it today
+    // (`cookie_consent.message`); it was hand-verified across all six locales.
+    // The next `t.rich` will not be caught here — check it by hand, or widen
+    // the call regex, before shipping. Tracked in CLIENT_REQUIREMENTS.md.
+    //
     // A Set, not a single value: the same name is routinely declared in two
     // scopes — `cover-letters/page.tsx` has `const t = useTranslations()` in the
     // page and `const t = useTranslations('coverLetters')` in the card below it.
@@ -79,9 +98,7 @@ function findUnresolved(): Unresolved[] {
     // Slightly permissive, but it has no false positives — and the failure this
     // gate exists to catch is a key that exists in NO namespace at all.
     const translators = new Map<string, Set<string>>();
-    for (const m of src.matchAll(
-      /(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*useTranslations\(\s*(?:'([^']*)')?\s*\)/g,
-    )) {
+    for (const m of src.matchAll(BINDING)) {
       const set = translators.get(m[1]) ?? new Set<string>();
       set.add(m[2] ?? '');
       translators.set(m[1], set);
@@ -125,5 +142,17 @@ describe('translation keys resolve', () => {
     // would pass vacuously forever. Assert it is really looking at something.
     const files = walk(SRC).filter((f) => /useTranslations\(/.test(readFileSync(f, 'utf8')));
     expect(files.length).toBeGreaterThan(30);
+  });
+
+  it('server components are bound too (guards against the getTranslations blind spot)', () => {
+    // The check above only proves client components are reached. Server
+    // components declare their translator with `await getTranslations(…)`, and
+    // for a long time this gate did not match that at all — the legal pages and
+    // the auth layout were invisible to it. Assert the server side is really
+    // bound, so nobody can narrow the pattern back and still see green.
+    const bound = walk(SRC).filter((f) =>
+      [...readFileSync(f, 'utf8').matchAll(BINDING)].some((m) => m[0].includes('getTranslations')),
+    );
+    expect(bound.length).toBeGreaterThan(5);
   });
 });

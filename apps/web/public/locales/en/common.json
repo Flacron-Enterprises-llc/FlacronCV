@@ -157,11 +157,27 @@
     "blog": "Blog",
     "contact": "Contact Us",
     "testimonials": "Testimonials",
-    "parent_company": "Flacron Group",
+    "parent_company": "Flacron Enterprises",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
     "cookies": "Cookie Policy",
-    "rights": "All rights reserved."
+    "cookie_preferences": "Cookie Preferences",
+    "rights": "All rights reserved.",
+    "account": "Account",
+    "sign_in": "Sign In",
+    "create_account": "Create Account",
+    "dashboard": "Dashboard",
+    "billing": "Billing & Plans",
+    "contact_heading": "Get in Touch",
+    "address": "Flacron Enterprises, 410 E 95th St, Brooklyn, NY 11212, United States",
+    "phone": "929-990-1182",
+    "email": "contact@flacroncv.com",
+    "parent_heading": "Parent Company",
+    "parent_email": "Contact@flacronenterprises.com",
+    "follow_us": "Follow Us",
+    "social_aria": "Follow us on {platform}",
+    "powered_by": "Powered by",
+    "powered_by_engine": "Flacron Engine"
   },
   "auth": {
     "login_title": "Welcome Back",
@@ -737,11 +753,13 @@
     "portalError": "Failed to open billing portal",
     "usage": {
       "title": "Usage This Month",
+      "title_free": "Free Plan Usage",
       "cvsCreated": "CVs Created",
       "coverLetters": "Cover Letters",
       "aiCredits": "AI Credits Used",
       "exports": "Exports",
-      "remaining": "{count} remaining"
+      "remaining": "{count} remaining",
+      "low": "Running low"
     },
     "features": {
       "cvs": "CVs",
@@ -1895,10 +1913,20 @@
     "subs_copy_error": "Couldn't copy to the clipboard"
   },
   "cookie_consent": {
-    "message": "We use cookies to analyze traffic and improve your experience. You can accept or decline analytics cookies.",
-    "accept": "Accept",
-    "decline": "Decline",
-    "learn_more": "Learn more",
+    "title": "Your Privacy Choices",
+    "message": "FlacronCV uses necessary technologies to securely operate the service. With your permission, we may also use optional preference and analytics technologies to improve the experience and understand how FlacronCV is used. Review our <cookies>Cookie Policy</cookies> and <privacy>Privacy Policy</privacy> for more information.",
+    "accept_all": "Accept All",
+    "reject_all": "Reject Non-Essential",
+    "manage": "Manage Preferences",
+    "save": "Save Preferences",
+    "panel_title": "Cookie Preferences",
+    "always_active": "Always Active",
+    "necessary_title": "Strictly Necessary",
+    "necessary_desc": "Required for account authentication, security, fraud prevention, billing, and basic operation.",
+    "preferences_title": "Preferences",
+    "preferences_desc": "Allows FlacronCV to remember settings such as language and theme.",
+    "analytics_title": "Analytics",
+    "analytics_desc": "Allows FlacronCV to understand service usage and improve performance.",
     "aria_label": "Cookie consent"
   },
   "newsletter": {
@@ -1916,6 +1944,8 @@
     "loading": "Confirming your subscription…",
     "ok_title": "You’re subscribed!",
     "ok_desc": "Thanks for confirming — you’ll hear from us occasionally.",
+    "meta_title": "Confirm your subscription",
+    "meta_desc": "Confirm your FlacronCV newsletter subscription.",
     "fail_title": "We couldn’t confirm this link",
     "fail_desc": "The link may have expired or already been used.",
     "home": "Back to home"

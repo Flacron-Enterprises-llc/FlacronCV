@@ -556,8 +556,11 @@ export default function BillingPage(): React.JSX.Element | null {
 
       {/* Usage Stats */}
       <Card>
+        {/* Plan-keyed, not cadence-keyed: "Free Plan Usage" stays honest
+            before and after F.3 (which changes who the cron resets, not
+            this heading). Paid keep "Usage This Month". */}
         <h3 className="mb-6 text-lg font-semibold text-stone-900 dark:text-white">
-          {t('usage.title')}
+          {isFreePlan ? t('usage.title_free') : t('usage.title')}
         </h3>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           {usageItems.map((item) => {
@@ -613,6 +616,27 @@ export default function BillingPage(): React.JSX.Element | null {
                   <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-400">
                     {t('usage.remaining', { count: remaining })}
                   </p>
+                )}
+                {remaining !== null && remaining > 0 && percentage >= 70 && (
+                  <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+                    {t('usage.low')}
+                  </p>
+                )}
+                {remaining === 0 && isFreePlan && (
+                  <Button
+                    variant="outline"
+                    className="mt-3 w-full"
+                    onClick={() =>
+                      checkoutMutation.mutate({
+                        plan: SubscriptionPlan.PRO,
+                        interval: billingInterval,
+                      })
+                    }
+                    loading={checkoutMutation.isPending}
+                    icon={<Zap className="h-4 w-4" />}
+                  >
+                    {upgradeCta('Pro')}
+                  </Button>
                 )}
               </div>
             );

@@ -159,9 +159,25 @@
     "privacy": "Datenschutzrichtlinie",
     "terms": "Nutzungsbedingungen",
     "cookies": "Cookie-Richtlinie",
+    "cookie_preferences": "Cookie-Einstellungen",
     "rights": "Alle Rechte vorbehalten.",
     "testimonials": "Erfahrungsberichte",
-    "parent_company": "Flacron Group"
+    "parent_company": "Flacron Enterprises",
+    "account": "Konto",
+    "sign_in": "Anmelden",
+    "create_account": "Konto erstellen",
+    "dashboard": "Übersicht",
+    "billing": "Abrechnung und Tarife",
+    "contact_heading": "Kontakt aufnehmen",
+    "address": "Flacron Enterprises, 410 E 95th St, Brooklyn, NY 11212, United States",
+    "phone": "929-990-1182",
+    "email": "contact@flacroncv.com",
+    "parent_heading": "Muttergesellschaft",
+    "parent_email": "Contact@flacronenterprises.com",
+    "follow_us": "Folgen Sie uns",
+    "social_aria": "Folgen Sie uns auf {platform}",
+    "powered_by": "Bereitgestellt von",
+    "powered_by_engine": "Flacron Engine"
   },
   "auth": {
     "login_title": "Willkommen zurück",
@@ -737,11 +753,13 @@
     "portalError": "Abrechnungsportal konnte nicht geöffnet werden",
     "usage": {
       "title": "Nutzung diesen Monat",
+      "title_free": "Nutzung des kostenlosen Plans",
       "cvsCreated": "Erstellte Lebensläufe",
       "coverLetters": "Anschreiben",
       "aiCredits": "Genutzte KI-Credits",
       "exports": "Exporte",
-      "remaining": "{count} übrig"
+      "remaining": "{count} übrig",
+      "low": "Wird knapp"
     },
     "features": {
       "cvs": "Lebensläufe",
@@ -1895,10 +1913,20 @@
     "subs_copy_error": "Kopieren in die Zwischenablage nicht möglich"
   },
   "cookie_consent": {
-    "message": "Wir verwenden Cookies, um den Datenverkehr zu analysieren und dein Erlebnis zu verbessern. Du kannst Analyse-Cookies akzeptieren oder ablehnen.",
-    "accept": "Akzeptieren",
-    "decline": "Ablehnen",
-    "learn_more": "Mehr erfahren",
+    "title": "Deine Datenschutzoptionen",
+    "message": "FlacronCV verwendet notwendige Technologien, um den Dienst sicher zu betreiben. Mit deiner Erlaubnis können wir außerdem optionale Technologien für Einstellungen und Analyse einsetzen, um das Erlebnis zu verbessern und zu verstehen, wie FlacronCV genutzt wird. Weitere Informationen findest du in unserer <cookies>Cookie-Richtlinie</cookies> und unserer <privacy>Datenschutzerklärung</privacy>.",
+    "accept_all": "Alle akzeptieren",
+    "reject_all": "Nicht notwendige ablehnen",
+    "manage": "Einstellungen verwalten",
+    "save": "Einstellungen speichern",
+    "panel_title": "Cookie-Einstellungen",
+    "always_active": "Immer aktiv",
+    "necessary_title": "Unbedingt erforderlich",
+    "necessary_desc": "Erforderlich für Kontoanmeldung, Sicherheit, Betrugsprävention, Abrechnung und den grundlegenden Betrieb.",
+    "preferences_title": "Einstellungen",
+    "preferences_desc": "Ermöglicht FlacronCV, Einstellungen wie Sprache und Design zu speichern.",
+    "analytics_title": "Analyse",
+    "analytics_desc": "Ermöglicht FlacronCV, die Nutzung des Dienstes zu verstehen und die Leistung zu verbessern.",
     "aria_label": "Cookie-Zustimmung"
   },
   "newsletter": {
@@ -1916,6 +1944,8 @@
     "loading": "Abo wird bestätigt…",
     "ok_title": "Du bist abonniert!",
     "ok_desc": "Danke für die Bestätigung – du hörst gelegentlich von uns.",
+    "meta_title": "Abonnement bestätigen",
+    "meta_desc": "Bestätige dein FlacronCV-Newsletter-Abonnement.",
     "fail_title": "Wir konnten diesen Link nicht bestätigen",
     "fail_desc": "Der Link ist möglicherweise abgelaufen oder wurde bereits verwendet.",
     "home": "Zurück zur Startseite"

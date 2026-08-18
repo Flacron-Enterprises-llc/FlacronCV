@@ -2,6 +2,8 @@ import { getTranslations } from 'next-intl/server';
 import { Metadata } from 'next';
 import { pageMetadata } from '@/lib/seo';
 import { Link } from '@/i18n/routing';
+import JsonLd from '@/components/seo/JsonLd';
+import { pageBreadcrumbs } from '@/lib/json-ld';
 import Button from '@/components/ui/Button';
 import {
   Target,
@@ -47,11 +49,17 @@ function ValueCard({
   );
 }
 
-export default async function AboutUsPage() {
+export default async function AboutUsPage({
+  params: { locale },
+}: {
+  params: { locale: string };
+}) {
   const t = await getTranslations('about');
+  const tNav = await getTranslations();
 
   return (
     <>
+      <JsonLd data={pageBreadcrumbs(locale, tNav('nav.home'), t('title'), '/about-us')} />
       {/* Hero */}
       <section className="border-b border-stone-200 bg-gradient-to-b from-brand-50 to-white dark:border-stone-800 dark:from-stone-900 dark:to-black">
         <div className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 lg:px-8">

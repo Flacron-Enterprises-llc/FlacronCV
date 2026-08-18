@@ -1,9 +1,14 @@
 import { Link } from '@/i18n/routing';
 import { getTranslations } from 'next-intl/server';
 import Logo from '@/components/ui/Logo';
+import PoweredBy from '@/components/shared/PoweredBy';
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   const t = await getTranslations('auth');
+  // A second translator: `t` above is bound to the `auth` namespace, and the
+  // copyright line belongs to `footer` (it was hardcoded English here until now
+  // for exactly that reason — AUDIT_OPEN_FINDINGS.md).
+  const tf = await getTranslations('footer');
   return (
     <div className="flex min-h-screen">
       {/* Left: Brand panel — refined near-black with a subtle brand glow (no loud gradient). */}
@@ -27,9 +32,12 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         </div>
 
         {/* Pinned to the bottom so it anchors the panel without forcing a gap. */}
-        <p className="absolute inset-x-12 bottom-12 z-10 text-sm text-stone-500">
-          &copy; {new Date().getFullYear()} FlacronCV. All rights reserved.
-        </p>
+        <div className="absolute inset-x-12 bottom-12 z-10 space-y-1">
+          <p className="text-sm text-stone-500">
+            &copy; {new Date().getFullYear()} FlacronCV. {tf('rights')}
+          </p>
+          <PoweredBy tone="dark" />
+        </div>
       </div>
 
       {/* Right: Auth form.

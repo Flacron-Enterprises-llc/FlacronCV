@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Mail, RefreshCw, LogOut, Loader2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { getPostLoginRedirect } from '@/lib/post-auth-redirect';
+import { currentUserRole } from '@/lib/current-user-role';
 
 export default function VerifyEmailPage(): React.JSX.Element | null {
   const t = useTranslations('auth');
@@ -33,7 +34,7 @@ export default function VerifyEmailPage(): React.JSX.Element | null {
       return;
     }
     if (emailVerified) {
-      router.push(getPostLoginRedirect());
+      void currentUserRole().then((role) => router.push(getPostLoginRedirect(null, role)));
       return;
     }
 

@@ -159,9 +159,25 @@
     "privacy": "رازداری کی پالیسی",
     "terms": "سروس کی شرائط",
     "cookies": "کوکیز پالیسی",
+    "cookie_preferences": "کوکی ترجیحات",
     "rights": "تمام حقوق محفوظ ہیں۔",
     "testimonials": "صارفین کی آراء",
-    "parent_company": "Flacron Group"
+    "parent_company": "Flacron Enterprises",
+    "account": "اکاؤنٹ",
+    "sign_in": "سائن ان",
+    "create_account": "اکاؤنٹ بنائیں",
+    "dashboard": "ڈیش بورڈ",
+    "billing": "بلنگ اور پلانز",
+    "contact_heading": "ہم سے رابطہ کریں",
+    "address": "Flacron Enterprises, 410 E 95th St, Brooklyn, NY 11212, United States",
+    "phone": "929-990-1182",
+    "email": "contact@flacroncv.com",
+    "parent_heading": "پیرنٹ کمپنی",
+    "parent_email": "Contact@flacronenterprises.com",
+    "follow_us": "ہمیں فالو کریں",
+    "social_aria": "ہمیں {platform} پر فالو کریں",
+    "powered_by": "پاورڈ بائی",
+    "powered_by_engine": "Flacron Engine"
   },
   "auth": {
     "login_title": "واپس خوش آمدید",
@@ -737,11 +753,13 @@
     "portalError": "بلنگ پورٹل کھولنے میں ناکامی",
     "usage": {
       "title": "اس مہینے کا استعمال",
+      "title_free": "مفت پلان کا استعمال",
       "cvsCreated": "بنائے گئے CVs",
       "coverLetters": "کور لیٹرز",
       "aiCredits": "استعمال شدہ AI کریڈٹس",
       "exports": "ایکسپورٹس",
-      "remaining": "{count} باقی"
+      "remaining": "{count} باقی",
+      "low": "کم رہ گیا ہے"
     },
     "features": {
       "cvs": "سی وی",
@@ -1895,10 +1913,20 @@
     "subs_copy_error": "کلپ بورڈ پر کاپی نہیں ہو سکا"
   },
   "cookie_consent": {
-    "message": "ہم ٹریفک کا تجزیہ کرنے اور آپ کے تجربے کو بہتر بنانے کے لیے کوکیز استعمال کرتے ہیں۔ آپ تجزیاتی کوکیز قبول یا مسترد کر سکتے ہیں۔",
-    "accept": "قبول کریں",
-    "decline": "مسترد کریں",
-    "learn_more": "مزید جانیں",
+    "title": "آپ کی پرائیویسی کے انتخاب",
+    "message": "FlacronCV سروس کو محفوظ طریقے سے چلانے کے لیے ضروری ٹیکنالوجیز استعمال کرتا ہے۔ آپ کی اجازت سے، ہم تجربہ بہتر بنانے اور یہ سمجھنے کے لیے کہ FlacronCV کیسے استعمال ہوتا ہے، ترجیحات اور تجزیات کی اختیاری ٹیکنالوجیز بھی استعمال کر سکتے ہیں۔ مزید معلومات کے لیے ہماری <cookies>کوکی پالیسی</cookies> اور <privacy>پرائیویسی پالیسی</privacy> دیکھیں۔",
+    "accept_all": "سب قبول کریں",
+    "reject_all": "غیر ضروری مسترد کریں",
+    "manage": "ترجیحات کا انتظام کریں",
+    "save": "ترجیحات محفوظ کریں",
+    "panel_title": "کوکی ترجیحات",
+    "always_active": "ہمیشہ فعال",
+    "necessary_title": "سختی سے ضروری",
+    "necessary_desc": "اکاؤنٹ کی تصدیق، سیکیورٹی، فراڈ کی روک تھام، بلنگ اور بنیادی آپریشن کے لیے ضروری۔",
+    "preferences_title": "ترجیحات",
+    "preferences_desc": "FlacronCV کو زبان اور تھیم جیسی ترتیبات یاد رکھنے کی اجازت دیتا ہے۔",
+    "analytics_title": "تجزیات",
+    "analytics_desc": "FlacronCV کو سروس کے استعمال کو سمجھنے اور کارکردگی بہتر بنانے کی اجازت دیتا ہے۔",
     "aria_label": "کوکی رضامندی"
   },
   "newsletter": {
@@ -1916,6 +1944,8 @@
     "loading": "آپ کی سبسکرپشن کی تصدیق ہو رہی ہے…",
     "ok_title": "آپ سبسکرائب ہو گئے!",
     "ok_desc": "تصدیق کا شکریہ — ہم کبھی کبھار آپ سے رابطہ کریں گے۔",
+    "meta_title": "اپنی سبسکرپشن کی تصدیق کریں",
+    "meta_desc": "FlacronCV نیوز لیٹر کی سبسکرپشن کی تصدیق کریں۔",
     "fail_title": "ہم اس لنک کی تصدیق نہیں کر سکے",
     "fail_desc": "ممکن ہے لنک کی میعاد ختم ہو گئی ہو یا پہلے استعمال ہو چکا ہو۔",
     "home": "ہوم پیج پر واپس جائیں"

@@ -33,6 +33,12 @@ function layout(heading: string, bodyHtml: string): string {
     <p style="margin:20px 0 0;text-align:center;color:#a8a29e;font-size:12px">
       &copy; ${new Date().getFullYear()} FlacronCV. All rights reserved.
     </p>
+    <!-- Brand name only, and English only. These templates are not localised —
+         the API has no next-intl — so no translatable prose is added here. A
+         brand needs no translation; a sentence would. -->
+    <p style="margin:6px 0 0;text-align:center;color:#c4c0bd;font-size:11px">
+      Powered by <a href="https://flacronenterprises.com/" style="color:#a8a29e;text-decoration:none">Flacron Engine</a>
+    </p>
   </div>
 </body></html>`;
 }

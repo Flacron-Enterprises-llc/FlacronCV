@@ -110,7 +110,7 @@ export class UsersService {
         cvsCreated: 0,
         coverLettersCreated: 0,
         aiCreditsUsed: 0,
-        aiCreditsLimit: 5,
+        aiCreditsLimit: PLAN_CONFIGS[SubscriptionPlan.FREE].limits.aiCredits,
         exportsThisMonth: 0,
         lastExportReset: now,
       },

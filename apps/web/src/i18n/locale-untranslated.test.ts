@@ -43,6 +43,9 @@ const ALLOWED: Record<string, string> = {
   'linkedin.button': 'brand',
   'crm.linkedin': 'brand',
   'crm.user_detail_stripe_id': 'brand + identifier',
+  'footer.powered_by_engine': 'brand — the engine name, never translated',
+  // A postal address must stay in the form the postal service delivers to.
+  'footer.address': 'postal address — must remain deliverable as written',
   // Product and plan names — deliberately not localised, like "Pro".
   'pricing.career_accelerator': 'plan name',
   'templates.career_accelerator': 'plan name',
@@ -52,6 +55,8 @@ const ALLOWED: Record<string, string> = {
   'cv_builder.ph_linkedin': 'example URL',
   'cv_builder.ph_website': 'example URL',
   'contact.info_email': 'literal address',
+  'footer.email': 'literal address',
+  'footer.parent_email': 'literal address',
   'newsletter.email_placeholder': 'example address',
   // Language names are shown in their own language, by convention.
   'settings.preferences.languages.en': 'endonym',

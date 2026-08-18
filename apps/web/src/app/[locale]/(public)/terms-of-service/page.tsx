@@ -2,6 +2,8 @@ import { getTranslations } from 'next-intl/server';
 import { Metadata } from 'next';
 import { pageMetadata } from '@/lib/seo';
 import { FileText } from 'lucide-react';
+import JsonLd from '@/components/seo/JsonLd';
+import { pageBreadcrumbs } from '@/lib/json-ld';
 
 export async function generateMetadata({
   params: { locale },
@@ -12,11 +14,17 @@ export async function generateMetadata({
   return pageMetadata({ locale, path: '/terms-of-service', title: t('title'), description: t('intro') });
 }
 
-export default async function TermsOfServicePage() {
+export default async function TermsOfServicePage({
+  params: { locale },
+}: {
+  params: { locale: string };
+}) {
   const t = await getTranslations('terms');
+  const tNav = await getTranslations();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
+      <JsonLd data={pageBreadcrumbs(locale, tNav('nav.home'), t('title'), '/terms-of-service')} />
       {/* Header */}
       <div className="mb-10 flex items-start gap-4">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-600 dark:bg-brand-950 dark:text-brand-400">

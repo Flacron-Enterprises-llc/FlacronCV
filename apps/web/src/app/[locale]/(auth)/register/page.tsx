@@ -8,6 +8,7 @@ import { useSearchParams } from 'next/navigation';
 import { useAuth, GOOGLE_ERROR_KEY } from '@/providers/AuthProvider';
 import { auth } from '@/lib/firebase';
 import { getPostLoginRedirect } from '@/lib/post-auth-redirect';
+import { currentUserRole } from '@/lib/current-user-role';
 import { authErrorKey, isAccountExistsError, accountExistsEmail } from '@/lib/auth-errors';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -45,7 +46,7 @@ function RegisterForm(): React.JSX.Element {
   useEffect(() => {
     if (!loading && user && !redirectHandled.current) {
       redirectHandled.current = true;
-      router.push(getPostLoginRedirect(callbackUrl));
+      void currentUserRole().then((role) => router.push(getPostLoginRedirect(callbackUrl, role)));
     }
   }, [user, loading, router, callbackUrl]);
 
@@ -76,7 +77,7 @@ function RegisterForm(): React.JSX.Element {
       if (auth?.currentUser) {
         track('sign_up', { method: 'google' });
         redirectHandled.current = true;
-        router.push(getPostLoginRedirect(callbackUrl));
+        router.push(getPostLoginRedirect(callbackUrl, await currentUserRole()));
       }
     } catch (error) {
       if (isAccountExistsError(error)) {

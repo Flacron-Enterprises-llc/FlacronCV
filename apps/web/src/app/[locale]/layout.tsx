@@ -84,37 +84,10 @@ export default async function LocaleLayout({
   const t = await getTranslations();
   const dir = RTL_LOCALES.includes(locale) ? 'rtl' : 'ltr';
 
-  // Site-wide Organization + WebSite structured data (brand identity / logo).
-  const orgSchema = {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'Organization',
-        '@id': `${SITE_URL}/#organization`,
-        name: 'FlacronCV',
-        url: SITE_URL,
-        // Light-background lockup: search engines render this on a white surface.
-        logo: `${SITE_URL}/flacronCvlight.png`,
-      },
-      {
-        '@type': 'WebSite',
-        '@id': `${SITE_URL}/#website`,
-        name: 'FlacronCV',
-        url: SITE_URL,
-        publisher: { '@id': `${SITE_URL}/#organization` },
-        inLanguage: locale,
-      },
-    ],
-  };
-
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <body suppressHydrationWarning className={`${inter.variable} ${merriweather.variable} ${playfair.variable} ${roboto.variable} ${lora.variable} ${openSans.variable} ${montserrat.variable} font-sans antialiased`}>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
-        />
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg"

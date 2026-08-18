@@ -2,6 +2,8 @@ import { getTranslations } from 'next-intl/server';
 import { Metadata } from 'next';
 import { pageMetadata } from '@/lib/seo';
 import { Link } from '@/i18n/routing';
+import JsonLd from '@/components/seo/JsonLd';
+import { pageBreadcrumbs } from '@/lib/json-ld';
 import Button from '@/components/ui/Button';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
@@ -14,11 +16,17 @@ export async function generateMetadata({
   return pageMetadata({ locale, path: '/testimonials', title: t('title'), description: t('subtitle') });
 }
 
-export default async function TestimonialsPage() {
+export default async function TestimonialsPage({
+  params: { locale },
+}: {
+  params: { locale: string };
+}) {
   const t = await getTranslations('testimonials_page');
+  const tNav = await getTranslations();
 
   return (
     <>
+      <JsonLd data={pageBreadcrumbs(locale, tNav('nav.home'), t('title'), '/testimonials')} />
       {/* Hero */}
       <section className="border-b border-stone-200 bg-gradient-to-b from-stone-50 to-white dark:border-stone-800 dark:from-stone-900 dark:to-black">
         <div className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 lg:px-8">

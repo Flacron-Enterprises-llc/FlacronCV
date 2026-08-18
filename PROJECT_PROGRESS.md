@@ -12,7 +12,11 @@
 > 4. Tick completed items here; log every change in the Change Log.
 > 5. Report Out-of-Scope / architectural items separately — do not implement without approval.
 
-Last updated: 2026-07-29
+Last updated: 2026-08-18
+
+> **Note on dates.** The header previously read `2026-07-29` while the two newest change-log
+> entries were dated `2026-07-30`; the header was stale, the entries were right. Corrected
+> 2026-08-18 by the verification pass logged at the top of §9. Nothing was removed.
 
 ---
 
@@ -46,6 +50,58 @@ Last updated: 2026-07-29
 - ⚠️ Uses the **real (production) Firebase project `flacron-cv`** for local dev — the client
   chose this. A dedicated dev/emulator project is still the recommended long-term setup.
 - To run: `cd apps/api && pnpm dev` and `cd apps/web && pnpm dev`.
+
+---
+
+## 2A. Production infrastructure — AWS (verified 2026-08-16)
+
+> **Added 2026-08-18.** Everything above this section predates the AWS migration. This section
+> is the infrastructure record; §2 above describes **local dev only**. Operational detail and
+> the post-deploy verification procedure live in `DEPLOYMENT_AND_OPS.md`.
+
+**Where it runs.**
+- **Frontend:** AWS Amplify, app `FlacronCV`, `main` branch, auto-deploys on push.
+  `flacroncv.com` → `https://www.flacroncv.com`; apex and www both point at the Amplify
+  CloudFront distribution via Hostinger DNS.
+- **Backend:** ECS Fargate, cluster `flacroncv-production`, service `flacroncv-api`, container
+  port **4000**, behind ALB `flacroncv-alb`, served at `https://api.flacroncv.com`. Region `us-east-1`.
+- **Images:** ECR repo `flacroncv-api`, tagged with the 12-char commit SHA.
+- **Deployment:** CodePipeline `flacroncv-api-pipeline` — GitHub `main` push → CodeBuild
+  `flacroncv-api-build` (`buildspec-api.yml`) → ECS deploy consuming `imagedefinitions.json`.
+  Fully automatic. **Do not hand-edit task definitions.**
+- **Health check:** the health route is mounted on the raw HTTP adapter **outside** the global
+  `api/v1` prefix so the load balancer can reach it (`apps/api/src/main.ts:143`).
+  **`/api/v1/health` returning 404 is by design, not a bug.**
+
+**The four regressions from the 2026-08-16 firefight — guard against all of them.**
+1. **`www` DNS pointed at a dead ALB** → `ERR_SSL_PROTOCOL_ERROR` for every visitor on the
+   canonical hostname. Both apex and www must point at the **Amplify CloudFront** target.
+2. **Firebase env vars lacked the `NEXT_PUBLIC_` prefix in Amplify**, so `next build` inlined
+   nothing and Firebase never initialised in the browser. Localhost worked; production did not.
+   These are **build-time** — changing them requires a **rebuild**, not a redeploy. This is the
+   same class of bug recorded earlier in this file for local dev; it recurred in Amplify.
+   *(CI now guards it: the `docker` job fails fast if any of the eight `NEXT_PUBLIC_*` build args
+   is missing — `.github/workflows/ci.yml`.)*
+3. **ECS ran a month-old image** while source had moved far ahead. The task definition referenced
+   an immutable SHA tag, so "force new deployment" faithfully re-pulled the *same old image*.
+   Cost hours of misdiagnosis. The pipeline now prevents it.
+4. **CORS allowlist contained no production origin.** Origins are built from `FRONTEND_URL` +
+   `ADDITIONAL_ORIGINS` (`apps/api/src/main.ts:50`). **Both** production origins must be present,
+   because the apex→www redirect means either can be the browser's `Origin`. Comma-separated,
+   no spaces. An empty allowlist is a fatal boot error by design; an unlisted origin is denied by
+   omitting the header rather than throwing, because throwing surfaced as a 500.
+
+**Open, handled outside the codebase — do not attempt to fix in code:**
+- 🔴 **Email verification 500** (`POST /api/v1/auth/send-verification`) — SES identity and sandbox
+  status under investigation. See the V4 diagnosis in the 2026-08-18 change-log entry: the raw 500
+  is **expected filter behaviour**, not proof of an unhandled path.
+- **Stripe still in test mode.**
+- **Secrets rotation in progress** (long-outstanding, also §8).
+
+**Dead path — do not follow:** `RENDER_DEPLOYMENT.md` describes a Render.com Blueprint deploy from
+a `render.yaml` that **does not exist in this repo**. Superseded by the pipeline above. `docker/`
+(compose + nginx) belongs to the same pre-AWS path. `apps/api/src/main.ts:42` still carries a
+comment reasoning about "Render's proxy" — harmless, but it is stale.
 
 ---
 
@@ -112,11 +168,35 @@ Legend: ✓ done · ◐ partial · ✗ missing · ⤵ deferred/decision-needed
 - ✓ Entitlement enforcement — CV/cover-letter/export/AI limits enforced server-side; usage atomic; now
   **status-aware** — delinquent (past_due/unpaid/incomplete) accounts fall back to FREE limits after their
   paid-through date via `resolveEffectivePlan()` (grace-until-period-end).
+- ⚠️ **UPDATED 2026-08-18 — the cancel→resubscribe trial hole is now substantially CLOSED.** The
+  deferred item (d)/(a) in the 2026-07-20 change-log entries described `isFirstTimeSubscriber` as
+  reading only `stripeSubscriptionId`, which is nulled on cancel. It now falls back to Stripe's own
+  history: `subscriptions.list({ customer, status: 'all' })` and **fails closed** on error
+  (`apps/api/src/modules/payment/payment.service.ts:204-219`). `stripeCustomerId` is *not* cleared
+  by cancel or `revokeToFree()` (`:618`), so the prior subscription is found and no second trial is
+  granted. **Residual gaps a `hasUsedTrial` flag would still close:** a stored customer id that no
+  longer resolves in Stripe (key switched test↔live, account switched, customer deleted) falls
+  through to a fresh customer with no history (`:186`); and a new email address is a new Stripe
+  customer by definition (that is the device/identity problem, not this one). **Re-scope before
+  paying for a production backfill.**
 - ✓ **Trial system** — **BUILT 2026-07-20.** Stripe `trial_period_days` on checkout (first-time subscribers only,
   anti-abuse), trial-aware activation (`verifySession`/webhook honour `trialing` status + `no_payment_required` + record
   trialStart/End), and trial UI (CTA + "trial ends" line). Assumed **7-day, card-upfront** trial — see change log.
 - ◐ Subscription lifecycle: **refund / dispute / paused now downgrade to FREE** (✓, implemented +
   tested); expired/failed/upgraded still to verify.
+- ⚠️ **CORRECTED 2026-08-18 — yearly billing is now ENABLED.** The bullet below is left as written
+  because it was true when written. Current state: `YEARLY_BILLING_ENABLED = true`
+  (`packages/shared-types/src/subscription.types.ts:273`), real year-interval price ids are
+  configured for Pro and Enterprise, and `allowedCheckoutPriceIds()` admits the yearly ids under
+  that same flag (`apps/api/src/modules/payment/payment.service.ts:52`). Yearly plans are on sale.
+  The overcharge is now structurally prevented by a different mechanism: the browser no longer
+  chooses a price at all — checkout takes `{plan, interval}` and the server resolves the id
+  (`payment.service.ts:120-134`), `normalizeInterval` defaults anything unrecognised to the
+  *cheaper* MONTH (`:143`), and the resolved id is still allowlist-checked (`:169`).
+  `plan-advertising.spec.ts:127` asserts the flag is on **iff** both annual ids are present, so the
+  flag cannot be flipped without ids and ids cannot be added without noticing the flag.
+  ⚠️ **UNVERIFIED:** that both Stripe ids really are `interval=year` in the deployed account.
+  `apps/api/scripts/verify-yearly-prices.mjs` settles it; it was not run (reaches Stripe).
 - ◐ **Billing & usage page** (`settings/billing`) — **yearly overcharge path removed** (✓ monthly-only;
   yearly toggle shows "Coming soon"); **billing history + invoice access now real (✓ A3, 2026-07-19** — native
   invoice list from Stripe with PDF download links); **usage-remaining now shown (✓ A2, 2026-07-19** — each metered
@@ -164,7 +244,9 @@ Legend: ✓ done · ◐ partial · ✗ missing · ⤵ deferred/decision-needed
 ### 5.4 Analytics / event tracking (◐ — layer built, GA4 wired, awaiting the client's measurement id)
 - ◐ **Provider-agnostic event layer built (D1)** + **GA4 adapter wired as the default provider (2026-07-20).** 7 funnel
   events instrumented (sign_up/in, cv_created, cv_exported, cover_letter_created, checkout_started, plan_upgraded,
-  ai_generation) + page views + identify. Consent-gated by the cookie banner. **To go live the client sets
+  ai_generation) + page views + identify. Consent-gated by the cookie banner — **as of 2026-08-18 by the
+  Analytics category of the three-category consent record (`lib/consent.ts`), reconciled on every page load
+  so a grant from the old one-boolean banner cannot fire before the visitor re-decides.** **To go live the client sets
   `NEXT_PUBLIC_GA4_MEASUREMENT_ID`** (until then GA4 no-ops safely). Broader event coverage (CTA clicks, template
   selected, etc.) can be added by dropping `track()` calls at more sites — no wiring changes.
 
@@ -188,6 +270,8 @@ Legend: ✓ done · ◐ partial · ✗ missing · ⤵ deferred/decision-needed
   - 🔴→✅ CRITICAL (FIXED): `settings/billing` "Yearly" toggle sent `stripePriceIdYearly`, which bills **monthly**
     ($359.99/mo Pro, $1,199/mo Ent) while the UI showed $239.88/yr / $799.88/yr → ~18× overcharge, reachable by all free users.
     **Fix A(b):** billing page is now monthly-only — yearly toggle is disabled and marked "Coming soon", checkout always sends the monthly price, false "Save 33%" removed. Backend `createCheckoutSession` now enforces a **monthly-price whitelist** (`allowedCheckoutPriceIds()`), rejecting yearly/arbitrary IDs with `BadRequestException` (defense in depth).
+    **⚠️ SUPERSEDED 2026-08-18:** yearly is enabled again and the whitelist now admits the yearly ids
+    under `YEARLY_BILLING_ENABLED`. The fix above is history; see the corrected bullet in §5.1.
   - 🟠→✅ HIGH (FIXED): **Fix B** — added webhook handlers `charge.refunded` (full refunds only), `charge.dispute.created`, and `customer.subscription.paused`, all routed through a shared `revokeToFree()` that cancels the Stripe subscription (best-effort) and downgrades the user to FREE. Refunded/disputed users no longer keep paid access.
   - 🟡→✅ MED (FIXED, C): Entitlement checks read `subscription.plan` only, never `subscription.status` → past_due/unpaid kept paid access during dunning. **Fix:** new `resolveEffectivePlan(subscription, now?)` in shared-types resolves delinquent (past_due/unpaid/incomplete) accounts to FREE once past `currentPeriodEnd` (grace-until-period-end, client-approved policy); all backend gates (cv ×3, cover-letter ×2, export quota + DOCX, AI credit ceiling) now route through it. +19 resolver unit tests.
   - 🟡 MED: No trial system (`trial_period_days` never set; trialStart/End always null).
@@ -539,6 +623,10 @@ Each becomes its own review→approve→implement→QA cycle. Ordered by suggest
   best-effort, wired into `LeadsService.capture`). The **welcome email + actual lead-magnet delivery** are still to build.
 - ◐ C5: Preference center, unsubscribe, suppression list, **cookie consent ✓ (DONE 2026-07-19** — site-wide banner wiring
   the D1 analytics consent gate; the rest — preference center / unsubscribe / suppression list — still to build).
+  **Updated 2026-08-18 (Batch C):** the *cookie* preference centre is now built — three categories
+  (Strictly Necessary / Preferences / Analytics), each gating real technology, reopenable from the
+  footer, `apps/web/src/lib/consent.ts`. The **email/marketing** preference centre, unsubscribe and
+  suppression list referred to above are a different thing and are still to build.
 - [ ] C6: CRM lead flow + tags/segments + automated campaigns + delivery/open/click tracking.
 
 **Epic D — Analytics / event tracking**
@@ -654,10 +742,362 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   ValidationPipe is a no-op; arbitrary fields can reach Firestore.
 - **Data model** — `CVSectionItem` is a loose `any` union.
 - **Secrets rotation** — Firebase Admin private key, Stripe, Brevo, OpenAI keys were shared in chat/docs; rotate them.
+- **⚠️ ADDED 2026-08-18 — `crm-settings.planLimits`: a phantom entitlements control. DECISION NEEDED
+  (delete or wire).** `DEFAULT_SETTINGS.planLimits` (`apps/api/src/modules/crm/crm-settings.service.ts:8-10`)
+  defines a **second** set of plan limits — `free: {cvs 3, letters 2, credits 5, exports 2}`,
+  `pro: {50, 50, 100, 50}`, `enterprise: {-1 …}` — which **disagree with `PLAN_CONFIGS`**
+  (FREE is 5 CVs / 1 letter; PRO is 10 CVs / 20 letters / unlimited exports) and use a `-1`
+  sentinel that `PLAN_CONFIGS` does not. It is fully plumbed — typed in
+  `packages/shared-types/src/crm.types.ts:339`, written by the settings service, audit-logged, and
+  editable by a super-admin at `apps/web/src/app/[locale]/(crm)/crm/settings/page.tsx:170-259` —
+  **and read by no enforcement path anywhere.** Every real gate goes through
+  `PLAN_CONFIGS[resolveEffectivePlan(...)]`. So an operator can set Pro to 50 CVs, see "Saved", and
+  change nothing. **Do not wire it up without an explicit decision:** doing so creates a
+  runtime-editable second source of truth for entitlements, which is a data-shape *and* billing
+  change (standing rule 8) and would put four numbers that currently disagree with the enforced
+  limits directly in charge of them. Deleting it removes a control that lies. Either way it needs
+  the client's call, not an agent's.
+- **⚠️ ADDED 2026-08-18 — `apps/mobile` maintains a duplicate `PLAN_CONFIGS`.** It does not import
+  `@flacroncv/shared-types` at all; it keeps parallel copies (`apps/mobile/src/types/subscription.types.ts`,
+  `enums.ts`, `user.types.ts`). So shared-types changes never *break* it — it silently **diverges**,
+  and with no `type-check` or `test` script in its `package.json` nothing in CI would say so. It
+  already carries the pre-correction yearly prices ($239.88 / $799.88), the four **dead**
+  `AWDS7HwRCx` Stripe price ids from the old account, only three plans (no Career Accelerator), and
+  a FREE feature bullet claiming a PDF watermark the product does not have. Making it consume
+  shared-types is the right fix but is larger than a micro-change — see the full audit in
+  `ARCHITECTURE_MAP.md`.
+- **⚠️ ADDED 2026-08-18 — `PRICING_UPDATE.md` should be deleted.** It contains a Stripe **webhook
+  signing secret in full** and a secret-key prefix in plaintext at the repo root (rotate as part of
+  the secrets work above), documents the superseded price ids, and presents the exact
+  monthly-interval-against-yearly-price design that caused the ~18× overcharge as
+  "Stripe checkout works perfectly" with a green testing checklist. It is a live trap for the next
+  reader. Values are deliberately not reproduced here.
 
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-18 — **French `footer.about` + fifth i18n gate.** Stored value only:
+  `ì propos` (`U+00EC`) → `À propos` (`U+00C0`) in `fr/common.json`. Navbar and
+  footer Company column both read that one key. **Fifth gate built:**
+  `apps/web/src/i18n/locale-encoding.test.ts` — strict UTF-8, HTML entities,
+  `U+FFFD`, C1 controls, known mojibake sequences, and per-locale alphabet
+  non-vacuity (each file's values must contain at least one letter from its
+  own alphabet). **No incident denylist** — a one-bug list is not a gate.
+  The test file records the remaining hole: a regex cannot tell `cree` from
+  `crée`, so this reduces the class and does not close spelling.
+  **QA: `pnpm lint` 0 errors (pre-existing `<img>` / mobile unused-var warnings only) ·
+  `pnpm type-check` ✓ · `pnpm test` ✓ — web 263/263, api 384/384, all five i18n gates green.**
+
+- 2026-08-18 — **Locale encoding audit (report only — no string fix yet).** French
+  `footer.about` renders "ì propos" in the navbar and the footer Company column
+  (one key, two surfaces). The six `common.json` files are **strict UTF-8**, no BOM,
+  no `U+FFFD`, no HTML entities, no `Ã©` / `â€™` family. The defect is a single
+  wrong character (`U+00EC` ì instead of `U+00C0` À) in an otherwise valid UTF-8
+  file; the same file already has the correct "À propos" at `about.title` and
+  `parent_company.about_title`. Not a file-wide recode. **Not fixed this entry —
+  waiting on approval of the occurrence list.**
+  **Proposed fifth gate (not built):** `locale-encoding.test.ts` — fail on HTML
+  entities, classic mojibake sequences (`Ã©`, `Ã¨`, `Ã¼`, `Â `, `â€™`, `â€œ`,
+  `Ã€`), `U+FFFD`, C1 controls, and a short denylist of known-bad French
+  substitutions (`ì propos` / leading `ì`+Latin). Optionally assert each of
+  fr/de/es/ar/ur actually contains letters from its alphabet (non-vacuity).
+  Missing diacritics in general need a dictionary or a spellchecker — a regex
+  cannot honestly do that. The four existing gates cannot catch this class:
+  the corrupted string is present, unique vs English, and resolvable.
+
+- 2026-08-18 — **Batch F, option (b) — no `free_grants` table.** Client-approved after the audit:
+  a uid-keyed grant cannot survive a new email (new Firebase uid = a new `users/{uid}` with zeros);
+  monthly resets of `aiCreditsUsed` / `exportsThisMonth` destroyed the consumption history a
+  migration onto a grant table would need; identity (device/IP) belongs in Batch G, and storing
+  hashes no consumer reads would be a fourth source of identity with no engine. Same-uid already
+  survives cookie/logout/incognito.   **F.3 (who `UsageResetService` resets) is not in this batch**
+  — it changes what existing Free users receive, so it waits on confirmation.
+  **QA: `pnpm lint` 0 errors (pre-existing `<img>` / mobile unused-var warnings only) ·
+  `pnpm type-check` ✓ · `pnpm test` ✓ — web 250/250, api 384/384, all four i18n gates green.**
+  - **MC1 / F.4 — billing heading.** Free sees `billing.usage.title_free` ("Free Plan Usage");
+    paid keep `billing.usage.title` ("Usage This Month"). Keyed off the page's existing
+    `isFreePlan`, not `resolveEffectivePlan` and not the cron, so F.3 is a one-line change of
+    *who* gets reset, not a heading rewrite. The Free string names the plan, not a cadence —
+    honest today (CVs/letters are slots; AI/exports still monthly) and honest after F.3.
+  - **MC2 — seed from config.** `users.service.ts` create path now sets `aiCreditsLimit` from
+    `PLAN_CONFIGS[SubscriptionPlan.FREE].limits.aiCredits`. Create-spec asserts against that
+    config, not a coincident `5`. Added to / removed from the V1 plan-data list in
+    `ARCHITECTURE_MAP.md` §8 Tier 3.
+  - **MC3 / F.5 — extend the billing usage card, do not add a second modal.** Epic R already
+    covers exhausted + upgrade via `UpgradeModal` (AI, export, CV, cover-letter). This batch
+    adds: amber `usage.low` when percentage ≥ 70 and not exhausted (same 70/90 bars as before);
+    the existing `billing.upgradeTo` / `upgradeCta('Pro')` control when `remaining === 0` and
+    `isFreePlan`. No dashboard change.
+  - **Must ship together later:** F.3 and `upgrade_modal.reasons.ai_credits`. That string
+    promises credits return "next billing month", which is true for Free today and false the
+    moment F.3 lands. Shipping F.3 alone would trade one honesty defect for another. Same
+    class, not fixed here: `upgrade_modal.reasons.exports` ("this month");
+    `PLAN_CONFIGS[FREE].features` `'5 AI Credits/month'` and `'2 exports/month'` (English
+    literals on pricing, billing cards, and the paywall). On the F.3 path:
+    `usage-reset.service.ts:94` still has `?? 5`.
+  - **`crm-settings.service.ts:8` left untouched.** Third source of plan data (`free: cvsLimit 3,
+    coverLettersLimit 2` vs `PLAN_CONFIGS[FREE]` 5 / 1). Still on the V1 audit list and the
+    existing delete-or-wire decision in §8. Do not grow a third table.
+  - **Not this batch:** F.3 cron split, F.6, F.7, device/IP hashes, `UsageResetService`.
+
+- 2026-08-18 — **Batch D remainder: SEO and metadata.** Client review "the SEO also needs to be
+  fixed." Audit first (against production, not just source), then MC1–MC7.
+  **QA: `pnpm lint` 0 errors (only the 7 pre-existing `<img>` warnings) · `pnpm type-check` ✓ ·
+  `pnpm test` ✓ — web 250/250, api 384/384, all four i18n gates green.**
+  - **MC1 — canonical host.** `seo.ts` fallback is now `https://www.flacroncv.com`. Production was
+    observed emitting the apex on every canonical, hreflang, `og:url`, sitemap `<loc>` and the
+    robots `Sitemap:` line, while the apex answers **302** to www. **Half the fix:**
+    `NEXT_PUBLIC_SITE_URL` must ALSO be set to the www host on the deploy platform. It is
+    `NEXT_PUBLIC_*`, so it needs a **rebuild, not a redeploy**. The Dockerfile/ECS path fails the
+    build if it is missing; **the live Amplify path has no equivalent guard.** Guarded by
+    `apps/web/src/lib/seo.test.ts`.
+  - **MC2 — auth metadata.** `/login` and `/register` are indexable with localized
+    `generateMetadata` (existing `auth.*` keys, no new strings). `/forgot-password` and
+    `/verify-email` are `noindex, follow`. **No robots.txt Disallow for the auth group** — a
+    Disallow would prevent the fetch, so the directives would never be read.
+  - **MC3 — private routes.** `robots.ts` trailing slashes dropped so `/*/cv` matches `/en/cv`;
+    `/jobs` and `/support` added. Dashboard, CRM and admin layouts split into a server wrapper
+    exporting `robots: { index: false, follow: false }` and a client shell. Sign-in redirect and
+    admin/super_admin role gate moved verbatim — see the implementation report. **Runtime redirect
+    behaviour was not verified in a browser.**
+  - **MC4 — FAQ JSON-LD reads PLAN_CONFIGS.** No restated numbers in the builder; guarded by
+    `json-ld.test.ts`. The **visible** FAQ at `faq.a1` still restates the same numbers in locale
+    JSON — out of scope, recorded in the V1 audit list.
+  - **MC5 — sitemap.** `x-default` added so it agrees with the pages. `lastmod` dropped: a
+    build-time date on all 48 URLs is a false claim. Upgrade path (a per-path revision map) is
+    named in the file. `/disclaimer` and `/refund-policy` not added — they do not exist yet.
+  - **MC6 — `/confirm` and 404.** Two new `lead_confirm.meta_*` keys × 6 locales. 404 gained an
+    `<h1>` (was a `<p>`) and `noindex`. `/confirm` is `noindex, follow: false`.
+  - **MC7 — JSON-LD.** SoftwareApplication + BreadcrumbList. Organization/WebSite scoped to
+    public routes and the homepage, no longer injected on dashboard/CRM/admin.
+    **`aggregateRating` is a deliberate omission:** we have no real reviews (testimonials are
+    hidden until we do), and inventing a rating is a Google policy violation and the watermark
+    defect class. Do not add one later thinking it was an oversight.
+  - **Homepage `generateMetadata` is still English-only** and still hand-rolled rather than
+    going through `pageMetadata()`. Not converted in this batch: it already had full metadata,
+    and folding it in would drop its extra `keywords` and collapse two slightly different OG
+    descriptions. Flagged, not fixed.
+  - **i18n:** `t.rich` remains outside `keys-resolve` (matches `t('…')` only). Flagged in the
+    test file and in `CLIENT_REQUIREMENTS.md`.
+
+- 2026-08-18 — **Batch C: cookie consent — three categories that actually gate something.**
+  Client legal package §9 → C.1–C.4, preceded by two standalone micro-changes.
+  **QA: `pnpm lint` 0 errors (only the 7 pre-existing `<img>` warnings) · `pnpm type-check` ✓ ·
+  `pnpm test` ✓ — web 233/233, api 384/384, all four i18n gates green.**
+  - **MC0a — the `keys-resolve` gate now covers server components.** It bound only
+    `useTranslations`, so every `await getTranslations(…)` component was invisible to the one gate
+    that catches a key missing from **all six** locales — the four legal pages, the auth layout,
+    `not-found`, and more: **ten files, previously unchecked.** Widening it revealed **no missing
+    keys**, which is the good outcome but also the dangerous one, because a pattern that matches
+    nothing passes identically. So non-vacuity is now asserted: a third test fails if fewer than
+    five files bind a translator via `getTranslations`, and the regex is a single `BINDING` const
+    shared by the scan and both guards, so it cannot be narrowed in one place and stay green. The
+    object form `getTranslations({locale, namespace})` is still unchecked — it is used for metadata,
+    and binding it needs scope analysis a regex cannot do honestly. Documented in the file.
+  - **MC0b — E.10 done.** Deleted `'Watermark on PDF'` from the mobile FREE plan's features
+    (`apps/mobile/src/types/subscription.types.ts`). Claim removed; nothing built. The rest of the
+    mobile duplicate-config divergence still stands (§8).
+  - **🔴 THREE CATEGORIES, NOT FOUR — a deliberate deviation from the client's package.** The
+    package specifies Marketing ("permitted advertising, attribution, and campaign measurement").
+    **No advertising, pixel, attribution, or campaign technology exists anywhere in the product**,
+    so that toggle would have controlled nothing — the identical defect to E.10's watermark: a
+    published promise with no mechanism. The live `/cookie-policy` documents exactly three
+    categories, and its Preference examples ("language selection, dark/light mode, sidebar state")
+    match precisely what the new Preferences toggle gates, so three keeps code and published policy
+    in agreement. Client-approved, on the authority of their own Cookie Policy §7 and §6. Tracked as
+    **Q-12**. When a marketing technology arrives: add the category, gate it, update the policy in
+    the same change.
+  - **C.4 is the load-bearing part. What each category now gates, verified by inventory** of every
+    `localStorage` / `sessionStorage` / `document.cookie` write in `apps/web/src`:
+    **Preferences** → `theme`, `flacroncv_locale`, `flacroncv_sidebar_collapsed`, listed as
+    `PREFERENCE_STORAGE_KEYS` in one place and enforced at all three write sites
+    (`ThemeProvider`, `LanguageSwitcher`, dashboard layout). Denying **deletes** them — otherwise
+    "reject" would only mean "stop adding more". **Analytics** → the GA4 script load and its
+    cookies, via the existing `setAnalyticsConsent()`. **Strictly Necessary** keeps auth session,
+    the OAuth-error and in-flight-draft `sessionStorage`, **the CV editor's local crash backup**,
+    and the pending-template hand-off — the last two are judgement calls, recorded as such: they
+    are storage strictly necessary to a service the user explicitly requested, and gating a
+    data-loss backup behind a cosmetic toggle would be the wrong trade.
+  - **Migration: re-prompt once, nothing inherited (client decision).** v1 stored the bare strings
+    `'accepted'`/`'declined'` under the same key. A v1 value now reads as **undecided**: that banner
+    asked only about analytics, so it cannot carry specific, informed consent for Preferences, and a
+    previous "accept" must not survive as a **pre-ticked default** — pre-ticking is exactly what
+    invalidates consent. The record is versioned JSON (`{v:2, preferences, analytics, ts}`) and
+    **fails closed**: anything that is not literally `true` is a denial, so a corrupt or hand-edited
+    record grants nothing.
+  - **⚠️ The subtle bug this batch had to close.** `analytics.ts` owns a **separate**
+    `analytics_consent` key and trusts it at import time. A visitor from the old banner still holds
+    `'1'` there while holding no current decision — so GA4 would have loaded and sent a page view
+    **before the re-prompt was answered**, in the one batch that is about consent.
+    `syncConsentOnLoad()` reconciles the two, called as the **first** effect in `AnalyticsProvider`
+    (effects run in declaration order, so it lands ahead of that component's page view).
+  - **Rejection is not de-emphasised, structurally.** "Accept All" and "Reject Non-Essential" share
+    one `decisiveButtonClass` constant in both the banner and the panel — they cannot drift apart
+    without someone deliberately splitting it. "Manage Preferences" is the quiet one, which the
+    requirement permits.
+  - **Files:** new `apps/web/src/lib/consent.ts` (record, migration, gate, enforcement — framework-
+    free and unit-tested, **12 new tests**) and `consent.test.ts`; `CookieConsent.tsx` rewritten
+    (banner + preference centre, reusing the existing `Modal` for the focus trap and Escape
+    handling, so no new a11y code and no new `close` key); the three preference write sites;
+    `AnalyticsProvider.tsx`; the persistent control added to the landing footer's Legal column and
+    the dashboard footer strip (extended, not restructured).
+  - **i18n:** the `cookie_consent` namespace went 5 keys → 15, plus `footer.cookie_preferences`,
+    genuinely translated across all six locales. Banner body and all three category descriptions are
+    the **client's own wording**. The body is a single `t.rich` unit with `<cookies>`/`<privacy>`
+    tags so the sentence stays one translatable string instead of being spliced per locale — this is
+    the repo's **first** use of `t.rich`, and note `keys-resolve` matches `t('…')` only, so rich keys
+    are outside it (verified by hand across all six). Retired `accept`, `decline`, `learn_more`; the
+    gate caught all three references the moment the keys went, which is the gate working. Switch
+    knobs are positioned by **flex alignment, not transforms**, so they move to the correct edge in
+    RTL with no direction-specific classes. **No new allowlist entries in any gate.**
+  - **Not verified by me:** RTL, dark mode, breakpoints, and the browser-level behaviour (cookie and
+    request absence in DevTools) — no dev server was run. Left to eyeball.
+  - **C.5 filed, not built:** client legal §12 asks for recognised browser privacy signals (Global
+    Privacy Control). Nothing reads `navigator.globalPrivacyControl` or `Sec-GPC`. Its own
+    micro-change, and it needs a precedence decision when GPC and a saved choice disagree.
+
+- 2026-08-18 — **Batch D (partial): footer rebuild, social links, © sweep, "Powered by Flacron
+  Engine".** Client review §53–57 → D.4–D.7. Six micro-changes, gated after each.
+  **QA: `pnpm lint` 0 errors (3/3 packages) · `pnpm type-check` 3/3 ✓ · `pnpm test` ✓ —
+  web 220/220, api 384/384, all four i18n gates green.**
+  - **D.4 Footer rebuilt** (`apps/web/src/components/landing/Footer.tsx`, rendered by the
+    `(public)` layout). Brand column + **Product / Company / Legal / Account**, then a
+    contact block (postal address, `tel:` link, `mailto:`) and a parent-company block, then a
+    bottom bar. Grid went `md:grid-cols-4` → `sm:grid-cols-2 lg:grid-cols-5`; `NewsletterSignup`
+    untouched. Account links are **static** (client decision): a signed-out visitor following
+    Dashboard or Billing is redirected to sign-in, which is the normal flow, and making the column
+    auth-aware would pull the auth provider into a public layout for no real gain.
+  - **D.5 Social links** — new `apps/web/src/components/shared/SocialLinks.tsx`: Pinterest, X,
+    Bluesky, YouTube, TikTok, Instagram (all parent-company accounts), each
+    `target="_blank" rel="noopener noreferrer"` with a translated `aria-label`.
+    **LinkedIn deliberately omitted** — the supplied URL was `/admin/dashboard/`, a login wall
+    for visitors; TODO in the file points at Q-7.
+    **Deviation from plan, flagged:** these render as **text links, not brand icons**.
+    `lucide-react` 0.309 ships none of Pinterest, TikTok, Bluesky or the current X mark, and no
+    dependency could be added, so the alternative was hand-drawn approximations of six registered
+    marks. An approximated logo is worse than a word. TODO in the file; swap when the official
+    SVGs arrive.
+  - **D.6 © sweep.** Was in three places, two of them fine and one wrong. Now: the landing footer
+    (already translated), the **auth panel — which had `All rights reserved.` hardcoded in English
+    despite `footer.rights` existing** (this closes the open LOW at `AUDIT_OPEN_FINDINGS.md:215`,
+    and needed a second `getTranslations('footer')` because the layout's `t` is bound to `auth`),
+    the **dashboard layout — which had no copyright at all** (this is also how billing gets one,
+    since that page lives in this layout), and the email shell. Admin and CRM layouts were out of
+    the client's list and are untouched.
+  - **D.7 "Powered by Flacron Engine"** — new `apps/web/src/components/shared/PoweredBy.tsx`,
+    used by all three layouts, with a `tone="dark"` variant for the auth panel's near-black
+    background. Quieter than the copyright beside it (prefix one step down in colour) while the
+    brand keeps enough contrast to read as a link. **`FLACRON_ENGINE_URL` lives in that one file**
+    with a TODO — interim target is the parent-company site, so the link is never a dead `#`.
+  - **Email footer is English-only, deliberately** (`mail.service.ts`). The API has no next-intl,
+    so **brand name only, no translatable prose** was added — a brand needs no translation, a
+    sentence would. Recorded here so it is not mistaken for an i18n miss.
+  - **i18n:** 15 new `footer.*` keys × 6 locales, genuinely translated (not copied English).
+    Four values are Latin by design and are now in `locale-untranslated.test.ts` ALLOWED **with
+    reasons**: the postal address (must stay deliverable as written), the two literal email
+    addresses (precedent: `contact.info_email`), and `Flacron Engine` (brand). **Zero additions
+    to the `no-hardcoded-english` allowlist** — that one is capped at 6 entries with 5 used, so
+    the components were written to pass it cleanly rather than to be excused from it.
+  - **🟠 NEW FINDING — the inverse of a watermark request. Batch E item, NOT actioned.**
+    While confirming that generated documents carry no branding (they do not, and adding it was
+    dropped from D.6 by client decision — stamping "Powered by" on a CV a user sends to employers
+    is damage, not branding), the mobile plan table was confirmed to **advertise a feature the
+    product does not have**: `apps/mobile/src/types/subscription.types.ts:37-39` lists
+    **`'Watermark on PDF'`** among the FREE plan's features. No watermark exists anywhere in the
+    export path. **The fix is deleting the false claim, not building to match it** — building it
+    would invent a free-vs-paid differentiator nobody has agreed and change what a Free user
+    receives. Sits with the rest of the mobile duplicate-config problem in §8 and
+    `ARCHITECTURE_MAP.md` §8; tracked as **E.10** in `CLIENT_REQUIREMENTS.md`.
+  - **Test counts now measured, not carried:** web **220**, api **384**, **604 total** — the
+    "~410" figure quoted since 2026-07-30 is stale. `ARCHITECTURE_MAP.md` §7 updated.
+  - **Not verified by me:** RTL, dark mode and the responsive breakpoints are code-reviewed
+    against existing patterns, not seen in a browser — no dev server was run. Left with the
+    client to eyeball.
+
+- 2026-08-18 — **Verification pass + documentation refresh (read-only audit; no application code
+  touched).** Re-read this record in full against the source to find where the code had moved past
+  it, then refreshed the docs only. **No lint/type-check/test run and no application, locale,
+  dependency or lockfile change** — this entry documents an audit, not a build. Added `§2A` (AWS
+  infrastructure), created `ARCHITECTURE_MAP.md` and `DEPLOYMENT_AND_OPS.md`, and marked the
+  corrections below in place rather than deleting them. `PROJECT_PROGRESS.backup.md` was taken
+  before editing.
+
+  - **🔴 NEW FINDING — HIGH — `cvsCreated` and `coverLettersCreated` are never reset, for any plan.
+    BLOCKED on client confirmation (Q-2). Deliberately NOT fixed.**
+    `UsageResetService` writes exactly four fields — `usage.aiCreditsUsed`, `usage.exportsThisMonth`,
+    `usage.aiCreditsLimit`, `usage.lastExportReset` (`apps/api/src/modules/users/usage-reset.service.ts:96-102`).
+    `cvsCreated` and `coverLettersCreated` are **not** among them, and no other scheduled job touches
+    them. **The consequence depends on a mechanism worth stating precisely, because it cuts both
+    ways:** these counters *are* decremented on delete — `cv.service.ts:523` and
+    `cover-letter.service.ts:274` — so they behave as a **concurrent-slot cap** ("10 CVs stored at
+    once, freed by deleting"), **not** as a monthly allowance and **not** as a true lifetime cap. That
+    decrement was deliberate and is documented at the call site: without it a FREE user who created
+    and deleted their one cover letter "left the user permanently unable to write another"
+    (`cover-letter.service.ts:271-273`). **Why it is still a HIGH finding:** a Pro subscriber paying
+    monthly gets 10 CV *slots* for the life of the account, not 10 CVs per month. If the plan is ever
+    labelled "10 CVs/month" the product under-delivers to paying customers — the **inverse** of the
+    abuse problem the client's list is focused on, and the direction that costs trust rather than
+    money. The billing page heading already reads "Usage This Month" over these two counters
+    (`apps/web/public/locales/*/common.json` → `usage.cvsCreated`, line 740 in all six locales),
+    which is the misleading half already shipped.
+    **Cannot be resolved without Q-2** (do Pro's 10 CVs / 20 cover letters reset monthly?). The three
+    possible answers are three different builds — monthly reset, keep concurrent slots and relabel, or
+    a true lifetime cap — and two of them are billing-adjacent. **Affected call sites, for whoever
+    picks this up:**
+    - *Enforcement (reads the counter against the plan limit):* `apps/api/src/modules/cv/cv.service.ts:146`
+      (create), `:291` (import), `:529` (duplicate); `apps/api/src/modules/cover-letter/cover-letter.service.ts:36`,
+      `:239`.
+    - *Increment:* `cv.service.ts:198`, `:345`, `:569`; `cover-letter.service.ts:79`, `:259`.
+    - *Decrement (the slot-refund behaviour above):* `cv.service.ts:523` (delete);
+      `cover-letter.service.ts:154` (rollback of a failed AI create), `:274` (delete).
+    - *Reset — the gap itself:* `apps/api/src/modules/users/usage-reset.service.ts:96-102`.
+    - *Initialised to 0:* `apps/api/src/modules/users/users.service.ts:110-111`.
+    - *Displayed to the user:* `apps/web/src/app/[locale]/(dashboard)/dashboard/page.tsx:95-97`,
+      `settings/billing/page.tsx:197-206`, `cv/page.tsx:37-38`;
+      `apps/web/src/app/[locale]/(crm)/crm/users/page.tsx:355-362`, `crm/users/[id]/page.tsx:196-202`
+      and `:456-461`; `apps/mobile/app/(dashboard)/index.tsx:81-87`, `cvs/new.tsx:48`,
+      `cover-letters/new.tsx:49`, `apps/mobile/src/lib/utils.ts:39-43`.
+    - *Copy:* the `usage.cvsCreated` / month-framed headings in all six locale files.
+    **Consequence for the client's list:** `F.3` and `R-4` in `CLIENT_REQUIREMENTS.md` are narrower
+    than they read — only `aiCreditsUsed` and `exportsThisMonth` are actually on a monthly reset, so
+    only those two need the Free/paid split. Corrected there 2026-08-18.
+
+  - **⚠️ CORRECTED — yearly billing is ENABLED** (`YEARLY_BILLING_ENABLED = true`,
+    `packages/shared-types/src/subscription.types.ts:273`). This record said monthly-only with the
+    toggle "Coming soon" (§5.1, §6); both bullets are now marked in place. The overcharge is
+    structurally prevented by a different mechanism now — server-side price resolution from
+    `{plan, interval}` — not by the whitelist alone. `CLIENT_REQUIREMENTS.md` B-5/E.5/R-1 still treat
+    it as blocked; Q-4 annotated there.
+  - **⚠️ CORRECTED — the trial hole is substantially closed** (`payment.service.ts:204-219` now
+    consults Stripe's subscription history and fails closed). The 2026-07-20 deferred item and
+    `CLIENT_REQUIREMENTS.md` R-2/G.9 describe it as a live leak needing a production backfill; §5.1
+    now carries the correction and the residual gaps.
+  - **⚠️ CORRECTED — there are FOUR i18n gates, not three.** This record, `.cursor/rules/flacroncv.mdc`,
+    `CLIENT_REQUIREMENTS.md` and the CI comment all say three. The fourth is
+    `apps/web/src/i18n/locale-untranslated.test.ts` — it catches a key that exists in all six files but
+    whose non-English value is still the English sentence. **This is decisive for the legal-content
+    decision (R-3/Q-10):** copying English legal text into all six locales to satisfy parity fails
+    *this* gate in five locales at once.
+  - **⚠️ CORRECTED — this IS a git repo** (branch `main`). The 2026-07-20 audit entry below reasoned
+    "this is NOT a git repo, so deletions are irreversible" and held items back on that basis. The
+    historical entry is left exactly as written; the premise no longer holds, so the items it held
+    back can be revisited with a normal safety net.
+  - **Stale sibling docs, for the next reader:** `RENDER_DEPLOYMENT.md` is a dead path (no
+    `render.yaml` exists — see §2A). `FEATURES_COMPLETE.md:66-68` claims Pro has *unlimited* AI
+    credits (it is 100) and both it and `IMPLEMENTATION_SUMMARY.md` still describe
+    `ui/PageLoader.tsx`, which the 2026-07-20 cleanup deleted. `PRICING_UPDATE.md` carries a secret
+    and should go — §8.
+  - **Verified as claimed, do not rebuild:** atomic transactional `reserveAiCredit` +
+    reserve-before-call / refund-on-failure in `AIService.generate` (`users.service.ts:305`,
+    `ai.service.ts:147`, `:184`); the `onApplicationBootstrap` ordering fix and its 19-line rationale
+    (`usage-reset.service.ts:24-36`); the health route outside the `api/v1` prefix (`main.ts:143`);
+    CORS built from `FRONTEND_URL` + `ADDITIONAL_ORIGINS` (`main.ts:50`); the four-job CI pipeline
+    with the `NEXT_PUBLIC_*` build-arg guard.
+  - **Left undetermined on purpose:** the cause of the live verification 500 (needs the CloudWatch
+    `Internal error details:` line — the filter maps every non-`HttpException` to a bare 500, so
+    source reading cannot distinguish a real `MessageRejected` from a Firebase link failure); whether
+    the two Stripe yearly ids are truly `interval=year`; and whether `apps/mobile` is ever built.
 
 - 2026-07-30 — **🔴 CI was never running the tests — and had been failing at its FIRST step the whole time.**
   Went to wire the i18n resolution check into CI and found the pipeline itself was the problem.

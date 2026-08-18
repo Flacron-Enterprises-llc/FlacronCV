@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { isAllowed } from '@/lib/consent';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -42,11 +43,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Persist only on explicit user/app changes — never write on mount, or a
   // stale initial value can clobber the stored theme before it is read
   // (this happens under React StrictMode's double-mount).
+  //
+  // Persisting needs Preferences consent; the theme itself never does. Without
+  // consent the choice applies for the session and is simply not remembered.
   const setTheme = (next: Theme) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      // Persisting is best-effort; the in-memory theme still applies.
+    if (isAllowed('preferences')) {
+      try {
+        localStorage.setItem(STORAGE_KEY, next);
+      } catch {
+        // Persisting is best-effort; the in-memory theme still applies.
+      }
     }
     setThemeState(next);
   };

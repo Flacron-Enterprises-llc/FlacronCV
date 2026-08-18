@@ -1,8 +1,20 @@
 import { getTranslations } from 'next-intl/server';
+import type { Metadata } from 'next';
 import { Link } from '@/i18n/routing';
 import Button from '@/components/ui/Button';
 import { Home } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('not_found');
+  return {
+    title: t('title'),
+    description: t('desc'),
+    robots: { index: false, follow: true },
+    // No canonical: a 404 is not a document with a preferred URL. Indexing it
+    // at all is the defect; noindex is the fix.
+  };
+}
 
 export default async function NotFound() {
   const t = await getTranslations('not_found');
@@ -23,7 +35,7 @@ export default async function NotFound() {
           </p>
           <div className="-mt-8 flex justify-center">
             <div className="rounded-2xl bg-brand-600 px-6 py-2">
-              <p className="text-lg font-bold text-white">{t('title')}</p>
+              <h1 className="text-lg font-bold text-white">{t('title')}</h1>
             </div>
           </div>
         </div>

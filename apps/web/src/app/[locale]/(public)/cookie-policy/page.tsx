@@ -2,6 +2,8 @@ import { getTranslations } from 'next-intl/server';
 import { Metadata } from 'next';
 import { pageMetadata } from '@/lib/seo';
 import { Cookie } from 'lucide-react';
+import JsonLd from '@/components/seo/JsonLd';
+import { pageBreadcrumbs } from '@/lib/json-ld';
 
 export async function generateMetadata({
   params: { locale },
@@ -12,11 +14,17 @@ export async function generateMetadata({
   return pageMetadata({ locale, path: '/cookie-policy', title: t('title'), description: t('intro') });
 }
 
-export default async function CookiePolicyPage() {
+export default async function CookiePolicyPage({
+  params: { locale },
+}: {
+  params: { locale: string };
+}) {
   const t = await getTranslations('cookies_policy');
+  const tNav = await getTranslations();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
+      <JsonLd data={pageBreadcrumbs(locale, tNav('nav.home'), t('title'), '/cookie-policy')} />
       {/* Header */}
       <div className="mb-10 flex items-start gap-4">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400">

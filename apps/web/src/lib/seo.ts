@@ -12,7 +12,22 @@ import { routing } from '@/i18n/routing';
 // apps/web/Dockerfile now requires NEXT_PUBLIC_SITE_URL at build time, so a
 // deployed image cannot reach this fallback at all. It remains for `next dev`
 // and unit tests, and now names the live domain so a miss is harmless.
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://flacroncv.com';
+//
+// The fallback MUST be the `www` host. It was the apex, and on 2026-08-18
+// production was observed emitting `https://flacroncv.com/en` as the canonical
+// of every page while the apex answers `302` to `https://www.flacroncv.com/en`
+// — a canonical nominating a host that redirects away, so Google is told the
+// real address is one that declines the job. That covers canonicals, hreflang,
+// og:url, all sitemap <loc>s and the robots Sitemap line, since every one of
+// them derives from this constant.
+//
+// ⚠️ Fixing this constant is only half the fix. NEXT_PUBLIC_SITE_URL must ALSO
+// be set to `https://www.flacroncv.com` on the deploy platform, and because
+// every NEXT_PUBLIC_* is inlined by `next build`, changing it requires a
+// REBUILD, not a redeploy. The Dockerfile/ECS path fails the build when it is
+// missing; the live Amplify path has no equivalent guard, so there a miss is
+// silent and this fallback is the only thing standing behind it.
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.flacroncv.com';
 
 export const LOCALES = routing.locales;
 export const DEFAULT_LOCALE = routing.defaultLocale;
@@ -40,8 +55,9 @@ export function pageMetadata(opts: {
   path: string;
   title: string;
   description: string;
+  robots?: Metadata['robots'];
 }): Metadata {
-  const { locale, path, title, description } = opts;
+  const { locale, path, title, description, robots } = opts;
   const canonical = `${SITE_URL}/${locale}${path}`;
   const ogTitle = `${title} | FlacronCV`;
   return {
@@ -62,5 +78,6 @@ export function pageMetadata(opts: {
       description,
       images: [OG_IMAGE],
     },
+    ...(robots ? { robots } : {}),
   };
 }

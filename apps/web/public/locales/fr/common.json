@@ -152,16 +152,32 @@
     "product": "Produit",
     "company": "Entreprise",
     "legal": "Mentions légales",
-    "about": "ì propos",
+    "about": "À propos",
     "careers": "Carrières",
     "blog": "Blog",
     "contact": "Contactez-nous",
     "privacy": "Politique de confidentialité",
     "terms": "Conditions d'utilisation",
     "cookies": "Politique des cookies",
+    "cookie_preferences": "Préférences de cookies",
     "rights": "Tous droits réservés.",
     "testimonials": "Témoignages",
-    "parent_company": "Flacron Group"
+    "parent_company": "Flacron Enterprises",
+    "account": "Compte",
+    "sign_in": "Se connecter",
+    "create_account": "Créer un compte",
+    "dashboard": "Tableau de bord",
+    "billing": "Facturation et forfaits",
+    "contact_heading": "Nous contacter",
+    "address": "Flacron Enterprises, 410 E 95th St, Brooklyn, NY 11212, United States",
+    "phone": "929-990-1182",
+    "email": "contact@flacroncv.com",
+    "parent_heading": "Société mère",
+    "parent_email": "Contact@flacronenterprises.com",
+    "follow_us": "Suivez-nous",
+    "social_aria": "Suivez-nous sur {platform}",
+    "powered_by": "Propulsé par",
+    "powered_by_engine": "Flacron Engine"
   },
   "auth": {
     "login_title": "Bon retour",
@@ -737,11 +753,13 @@
     "portalError": "Impossible d'ouvrir le portail de facturation",
     "usage": {
       "title": "Utilisation ce mois-ci",
+      "title_free": "Utilisation du plan gratuit",
       "cvsCreated": "CV créés",
       "coverLetters": "Lettres de motivation",
       "aiCredits": "Crédits IA utilisés",
       "exports": "Exports",
-      "remaining": "{count} restants"
+      "remaining": "{count} restants",
+      "low": "Presque épuisé"
     },
     "features": {
       "cvs": "CV",
@@ -1895,10 +1913,20 @@
     "subs_copy_error": "Impossible de copier dans le presse-papiers"
   },
   "cookie_consent": {
-    "message": "Nous utilisons des cookies pour analyser le trafic et améliorer votre expérience. Vous pouvez accepter ou refuser les cookies d’analyse.",
-    "accept": "Accepter",
-    "decline": "Refuser",
-    "learn_more": "En savoir plus",
+    "title": "Vos choix de confidentialité",
+    "message": "FlacronCV utilise des technologies nécessaires pour assurer le fonctionnement sécurisé du service. Avec votre autorisation, nous pouvons également utiliser des technologies optionnelles de préférences et de mesure d’audience afin d’améliorer l’expérience et de comprendre comment FlacronCV est utilisé. Consultez notre <cookies>Politique relative aux cookies</cookies> et notre <privacy>Politique de confidentialité</privacy> pour plus d’informations.",
+    "accept_all": "Tout accepter",
+    "reject_all": "Refuser les non essentiels",
+    "manage": "Gérer les préférences",
+    "save": "Enregistrer les préférences",
+    "panel_title": "Préférences de cookies",
+    "always_active": "Toujours actifs",
+    "necessary_title": "Strictement nécessaires",
+    "necessary_desc": "Nécessaires à l’authentification du compte, à la sécurité, à la prévention de la fraude, à la facturation et au fonctionnement de base.",
+    "preferences_title": "Préférences",
+    "preferences_desc": "Permet à FlacronCV de mémoriser des paramètres tels que la langue et le thème.",
+    "analytics_title": "Mesure d’audience",
+    "analytics_desc": "Permet à FlacronCV de comprendre l’utilisation du service et d’améliorer les performances.",
     "aria_label": "Consentement aux cookies"
   },
   "newsletter": {
@@ -1916,6 +1944,8 @@
     "loading": "Confirmation de votre abonnement…",
     "ok_title": "Vous êtes abonné !",
     "ok_desc": "Merci d’avoir confirmé — vous aurez de nos nouvelles à l’occasion.",
+    "meta_title": "Confirmez votre inscription",
+    "meta_desc": "Confirmez votre inscription à la newsletter FlacronCV.",
     "fail_title": "Nous n’avons pas pu confirmer ce lien",
     "fail_desc": "Le lien a peut-être expiré ou déjà été utilisé.",
     "home": "Retour à l’accueil"

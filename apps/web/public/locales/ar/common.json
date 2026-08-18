@@ -159,9 +159,25 @@
     "privacy": "سياسة الخصوصية",
     "terms": "شروط الخدمة",
     "cookies": "سياسة ملفات تعريف الارتباط",
+    "cookie_preferences": "تفضيلات ملفات تعريف الارتباط",
     "rights": "جميع الحقوق محفوظة.",
     "testimonials": "آراء العملاء",
-    "parent_company": "Flacron Group"
+    "parent_company": "Flacron Enterprises",
+    "account": "الحساب",
+    "sign_in": "تسجيل الدخول",
+    "create_account": "إنشاء حساب",
+    "dashboard": "لوحة التحكم",
+    "billing": "الفواتير والخطط",
+    "contact_heading": "تواصل معنا",
+    "address": "Flacron Enterprises, 410 E 95th St, Brooklyn, NY 11212, United States",
+    "phone": "929-990-1182",
+    "email": "contact@flacroncv.com",
+    "parent_heading": "الشركة الأم",
+    "parent_email": "Contact@flacronenterprises.com",
+    "follow_us": "تابعنا",
+    "social_aria": "تابعنا على {platform}",
+    "powered_by": "مدعوم بواسطة",
+    "powered_by_engine": "Flacron Engine"
   },
   "auth": {
     "login_title": "مرحبًا بعودتك",
@@ -737,11 +753,13 @@
     "portalError": "فشل فتح بوابة الفوترة",
     "usage": {
       "title": "الاستخدام هذا الشهر",
+      "title_free": "استخدام الخطة المجانية",
       "cvsCreated": "السيرات الذاتية المنشأة",
       "coverLetters": "خطابات التقديم",
       "aiCredits": "أرصدة الذكاء الاصطناعي المستخدمة",
       "exports": "التصديرات",
-      "remaining": "{count} متبقٍ"
+      "remaining": "{count} متبقٍ",
+      "low": "المتبقي قليل"
     },
     "features": {
       "cvs": "السيرات الذاتية",
@@ -1895,10 +1913,20 @@
     "subs_copy_error": "تعذّر النسخ إلى الحافظة"
   },
   "cookie_consent": {
-    "message": "نستخدم ملفات تعريف الارتباط لتحليل حركة المرور وتحسين تجربتك. يمكنك قبول ملفات تعريف ارتباط التحليلات أو رفضها.",
-    "accept": "قبول",
-    "decline": "رفض",
-    "learn_more": "معرفة المزيد",
+    "title": "خياراتك الخاصة بالخصوصية",
+    "message": "يستخدم FlacronCV تقنيات ضرورية لتشغيل الخدمة بأمان. وبعد الحصول على إذنك، قد نستخدم أيضًا تقنيات اختيارية للتفضيلات والتحليلات لتحسين التجربة وفهم كيفية استخدام FlacronCV. راجع <cookies>سياسة ملفات تعريف الارتباط</cookies> و<privacy>سياسة الخصوصية</privacy> لمزيد من المعلومات.",
+    "accept_all": "قبول الكل",
+    "reject_all": "رفض غير الضرورية",
+    "manage": "إدارة التفضيلات",
+    "save": "حفظ التفضيلات",
+    "panel_title": "تفضيلات ملفات تعريف الارتباط",
+    "always_active": "مُفعَّلة دائمًا",
+    "necessary_title": "ضرورية للغاية",
+    "necessary_desc": "ضرورية لمصادقة الحساب والأمان ومنع الاحتيال والفواتير والتشغيل الأساسي.",
+    "preferences_title": "التفضيلات",
+    "preferences_desc": "تتيح لـ FlacronCV تذكّر الإعدادات مثل اللغة والمظهر.",
+    "analytics_title": "التحليلات",
+    "analytics_desc": "تتيح لـ FlacronCV فهم استخدام الخدمة وتحسين الأداء.",
     "aria_label": "موافقة ملفات تعريف الارتباط"
   },
   "newsletter": {
@@ -1916,6 +1944,8 @@
     "loading": "جارٍ تأكيد اشتراكك…",
     "ok_title": "تم اشتراكك!",
     "ok_desc": "شكرًا للتأكيد — سنراسلك من حين لآخر.",
+    "meta_title": "تأكيد اشتراكك",
+    "meta_desc": "أكّد اشتراكك في نشرة FlacronCV.",
     "fail_title": "تعذّر تأكيد هذا الرابط",
     "fail_desc": "ربما انتهت صلاحية الرابط أو تم استخدامه من قبل.",
     "home": "العودة إلى الصفحة الرئيسية"

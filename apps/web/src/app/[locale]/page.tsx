@@ -6,7 +6,9 @@ import Pricing from '@/components/landing/Pricing';
 import HowItWorks from '@/components/landing/HowItWorks';
 import FAQ from '@/components/landing/FAQ';
 import Footer from '@/components/landing/Footer';
+import JsonLd from '@/components/seo/JsonLd';
 import { SITE_URL, localizedAlternates } from '@/lib/seo';
+import { faqPage, organizationAndWebsite, softwareApplication } from '@/lib/json-ld';
 
 export async function generateMetadata({
   params: { locale },
@@ -55,69 +57,16 @@ export async function generateMetadata({
   };
 }
 
-// FAQ structured data (English — primary crawl language)
-const faqSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: 'Is FlacronCV really free?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes! The Free plan lets you create up to 5 CVs, 1 cover letter, use 5 AI credits/month, and export up to 2 documents/month as PDF — no credit card required. Upgrade to Pro for 10 CVs, 20 cover letters, 100 AI credits, unlimited exports, and DOCX format.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'What export formats are supported?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'All plans support PDF export. Pro and Enterprise plans also unlock DOCX (Microsoft Word) format. The Free plan includes 2 exports/month; Pro and Enterprise offer unlimited exports.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'How does the AI writing work?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Our AI analyzes your experience and the job description to generate tailored content. It uses advanced language models to create professional, impactful bullet points, summaries, and cover letters.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Is my data secure?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes. All data is encrypted in transit (TLS) and at rest (AES-256). We are GDPR compliant, we never sell your data to third parties, and you can request complete deletion of your account and all associated files at any time from your account settings.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Can I cancel my subscription anytime?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes, you can cancel anytime from your billing settings — no questions asked. Your subscription stays active until the end of the current billing period, and you will not be charged again.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'What languages are supported?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'FlacronCV currently supports English, Spanish, French, German, Arabic, and Urdu — for both the app interface and your CV content. More languages (including Portuguese, Italian, and Chinese) are coming soon.',
-      },
-    },
-  ],
-};
-
-export default function LandingPage(): React.JSX.Element | null {
+export default function LandingPage({
+  params: { locale },
+}: {
+  params: { locale: string };
+}): React.JSX.Element | null {
   return (
     <main id="main-content" className="min-h-screen">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-      />
+      <JsonLd data={organizationAndWebsite(locale)} />
+      <JsonLd data={softwareApplication()} />
+      <JsonLd data={faqPage()} />
       <Navbar />
       <Hero />
       <HowItWorks />

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useRouter, usePathname } from '@/i18n/routing';
 import { Globe } from 'lucide-react';
+import { isAllowed } from '@/lib/consent';
 
 const LANGUAGES = [
   { code: 'en', name: 'English', flag: '🇬🇧' },
@@ -48,8 +49,12 @@ export default function LanguageSwitcher() {
 
   const handleSwitch = (newLocale: string) => {
     // Persist immediately so the preference survives hard refreshes before the
-    // settings API call has a chance to write it to the database.
-    try { localStorage.setItem('flacroncv_locale', newLocale); } catch {}
+    // settings API call has a chance to write it to the database. Remembering it
+    // in the browser needs Preferences consent; switching language does not, and
+    // the signed-in user's stored setting is account data, not a cookie.
+    if (isAllowed('preferences')) {
+      try { localStorage.setItem('flacroncv_locale', newLocale); } catch {}
+    }
     router.replace(pathname, { locale: newLocale as any });
     setOpen(false);
   };

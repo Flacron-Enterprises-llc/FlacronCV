@@ -1,7 +1,7 @@
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { InMemoryFirestore } from '../firebase/in-memory-firestore';
-import { UserRole, SubscriptionPlan, SubscriptionStatus } from '@flacroncv/shared-types';
+import { UserRole, SubscriptionPlan, SubscriptionStatus, PLAN_CONFIGS } from '@flacroncv/shared-types';
 
 function makeFirebaseAdmin(firestore: InMemoryFirestore) {
   return { firestore } as any;
@@ -17,7 +17,7 @@ describe('UsersService', () => {
   });
 
   describe('create', () => {
-    it('returns a well-formed User with role=user, plan=free, aiCreditsLimit=5', async () => {
+    it('returns a well-formed User with role=user, plan=free, aiCreditsLimit from PLAN_CONFIGS[FREE]', async () => {
       const user = await service.create({
         uid: 'uid-1',
         email: 'user@example.com',
@@ -29,7 +29,9 @@ describe('UsersService', () => {
       expect(user.email).toBe('user@example.com');
       expect(user.role).toBe(UserRole.USER);
       expect(user.subscription.plan).toBe(SubscriptionPlan.FREE);
-      expect(user.usage.aiCreditsLimit).toBe(5);
+      expect(user.usage.aiCreditsLimit).toBe(
+        PLAN_CONFIGS[SubscriptionPlan.FREE].limits.aiCredits,
+      );
       expect(user.isActive).toBe(true);
       expect(user.createdAt).toBeInstanceOf(Date);
     });

@@ -36,7 +36,6 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
       '5 AI Credits/month',
       '2 PDF Exports/month',
       'Free templates only',
-      'Watermark on PDF',
     ],
   },
   [SubscriptionPlan.PRO]: {

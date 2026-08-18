@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { usePathname } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import { identify, page, resetAnalytics } from '@/lib/analytics';
+import { syncConsentOnLoad } from '@/lib/consent';
 
 /**
  * Bridges auth + routing state into the provider-agnostic analytics layer:
@@ -15,6 +16,15 @@ export default function AnalyticsProvider({ children }: { children: React.ReactN
   const { user } = useAuth();
   const pathname = usePathname();
   const lastKey = useRef<string | null>(null);
+
+  // FIRST, deliberately. `analytics.ts` trusts its own `analytics_consent` key at
+  // import time, and a visitor from the one-boolean banner can still hold a grant
+  // there while holding no current decision. Effects run in declaration order, so
+  // reconciling here — ahead of the page view below — is what stops GA4 loading
+  // before the visitor has answered the banner.
+  useEffect(() => {
+    syncConsentOnLoad();
+  }, []);
 
   // Identify on sign-in, reset on sign-out. Re-identify when the id OR the plan
   // changes for the same user (e.g. an upgrade mid-session), so traits stay fresh.
