@@ -24,6 +24,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Credential archives — a zip was used to smuggle .env into git
+apps/api/.zip
+
 # Local env files
 .env
 .env*.local

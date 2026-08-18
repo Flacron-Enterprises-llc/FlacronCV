@@ -742,6 +742,9 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   ValidationPipe is a no-op; arbitrary fields can reach Firestore.
 - **Data model** — `CVSectionItem` is a loose `any` union.
 - **Secrets rotation** — Firebase Admin private key, Stripe, Brevo, OpenAI keys were shared in chat/docs; rotate them.
+  **2026-08-18:** AWS IAM user `flacronai-ses` access key was in a public `apps/api/.zip` on GitHub.
+  Deleting the file does **not** revoke the key — deactivate it in IAM and rotate every other
+  credential that was in that archive.
 - **⚠️ ADDED 2026-08-18 — `crm-settings.planLimits`: a phantom entitlements control. DECISION NEEDED
   (delete or wire).** `DEFAULT_SETTINGS.planLimits` (`apps/api/src/modules/crm/crm-settings.service.ts:8-10`)
   defines a **second** set of plan limits — `free: {cvs 3, letters 2, credits 5, exports 2}`,
@@ -776,6 +779,12 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-18 — **Removed `apps/api/.zip` from `main` (leaked credentials).** Added in `b56454f`
+  as a zip whose only entry was a `.env`. It contained the AWS IAM user `flacronai-ses` access
+  key plus other env material. Deleted from the tree and ignored. **Deactivate that IAM key in
+  AWS immediately** — removing the file does not revoke it. Same for every other secret in that
+  archive. History still contains the old blob until a history rewrite is approved.
 
 - 2026-08-18 — **French `footer.about` + fifth i18n gate.** Stored value only:
   `ì propos` (`U+00EC`) → `À propos` (`U+00C0`) in `fr/common.json`. Navbar and
