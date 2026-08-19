@@ -227,7 +227,7 @@ recently-fixed export path. Changes to shared-types affect it. It is absent from
 | B.9 | Legal document versioning (`2026-08-16`) across published English documents. Privacy recorded as pending. **No acceptance modal** (Batch H). | ☑ |
 | B.10 | **Subprocessor list must stay accurate** — `subprocessor-disclosure.spec.ts` (9 tests) ties the Privacy Policy to the SDKs in `apps/api/package.json`, both directions. New privacy text must name **AWS SES**, Firebase, Stripe, OpenAI or the test fails. **Unchanged — blocked with B.1.** | ☐ |
 | B.11 | Sweep for stale customer-facing addresses; standardise on `contact@flacroncv.com` | ☑ |
-| B.12 | In-app disclaimers: AI builder, ATS screens, cover letter, export review gate | ☐ |
+| B.12 | In-app disclaimers: AI builder, ATS screens, cover letter, export review. **Done 2026-08-19 as product UI (×6), not a legal-document body.** Export is a **passive notice** (full client title+body, no second click) — a blocking gate would steal Free's 2-export lifetime on Cancel because `/exports/record` runs before the file is built. §18 support email omitted (already in footer / contact / legal docs). Mobile out — `PROJECT_PROGRESS.md` §8 Mobile localisation gap. | ☑ |
 
 **Not in this batch:** the acceptance modal and its DB record — Batch G.
 
@@ -325,7 +325,7 @@ counters left as they stood.
 - **Currency (do not act):** advertised USD vs Stripe-presented EUR is a client decision. Checkout does not pin currency or country.
 - Legal pages: English only, with "The English version of these legal terms is the official and controlling version. Any translation is provided for convenience only." Product UI stays multilingual.
 - Cookie categories: three, as built. Marketing only if advertising tech is added later.
-- Header and footer: client wants them dark navy. Separate batch.
+- Header and footer: dark navy (`chrome` `#1e3a5f`) on public Navbar + Footer + shared TopBar in **light mode only**. Dark mode keeps near-black. Done 2026-08-19. Not applied to sidebars, auth panel, or admin/CRM footers. Logo on those bars is `on-dark`. Opaque baked-in logo rectangle is a standing asset request (`PROJECT_PROGRESS.md` §8).
 - LinkedIn: replacement URL is still `/admin/page-posts/published/`. Icon stays hidden. No `#`, no admin URL, no private URL.
 
 | ID | Task | Status |

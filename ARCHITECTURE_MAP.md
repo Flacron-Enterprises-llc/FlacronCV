@@ -129,6 +129,17 @@ is still served for RTL chrome. **Privacy is still the locale namespace `privacy
 the client names AWS SES and OpenAI in the new §4 — `subprocessor-disclosure.spec.ts` still
 reads `privacy.s3_desc`. `terms` and `cookies_policy` locale namespaces were deleted.
 
+**Chrome (light-mode headers/footers).** One Tailwind token, not a scale:
+`chrome: '#1e3a5f'` in `apps/web/tailwind.config.ts` — the Classic CV / cover-letter default.
+Applied to public `Navbar`, public `Footer`, and shared `TopBar` (dashboard/admin/CRM headers
+follow TopBar). **Light mode only.** Dark mode keeps today's near-black. Logo on those bars is
+always `Logo variant="on-dark"` (auto would put navy ink on navy). Body and links are
+`stone-300` (**7.72:1** on chrome); hover is `brand-400` (**5.08:1**); headings white
+(**11.50:1**); PoweredBy brand `stone-200` (**9.16:1**). Gate:
+`apps/web/src/lib/chrome-contrast.test.ts`. **Not** sidebars, auth panel, admin/CRM footers,
+or the dashboard copyright strip in `DashboardShell`. Both logo PNGs still have an opaque
+baked-in rectangle — standing request in `PROJECT_PROGRESS.md` §8.
+
 ---
 
 ## 5. Firestore data model
@@ -261,7 +272,9 @@ the other four cannot see a corrupted character.
 Other notable specs: `plan-advertising.spec.ts` (advertised copy vs enforced limits, and the
 `YEARLY_BILLING_ENABLED` ⇔ annual-ids invariant), `subprocessor-disclosure.spec.ts` (Privacy Policy
 must name the SDKs actually in `apps/api/package.json`, both directions),
-`subscription-entitlements.spec` (grace / delinquency / expired access).
+`subscription-entitlements.spec` (grace / delinquency / expired access),
+`apps/web/src/lib/chrome-contrast.test.ts` (WCAG AA pairs on `#1e3a5f`),
+`apps/web/src/i18n/allowance-copy.test.ts` (delete does not restore a creation).
 
 ---
 

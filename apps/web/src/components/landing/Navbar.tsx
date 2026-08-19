@@ -62,22 +62,25 @@ export default function Navbar() {
 
   const navLinkClass = (href?: string) =>
     href && isCurrentPage(href)
-      ? 'text-sm font-medium text-brand-600 transition-colors dark:text-brand-400'
-      : 'text-sm font-medium text-stone-600 hover:text-brand-600 transition-colors dark:text-stone-400 dark:hover:text-brand-400';
+      ? 'text-sm font-medium text-brand-400 transition-colors dark:text-brand-400'
+      : 'text-sm font-medium text-stone-300 hover:text-brand-400 transition-colors dark:text-stone-400 dark:hover:text-brand-400';
 
   const mobileNavLinkClass = (href?: string) =>
     href && isCurrentPage(href)
-      ? 'rounded-lg px-3 py-2 text-sm font-medium text-brand-600 bg-brand-50 dark:text-brand-400 dark:bg-brand-950'
-      : 'rounded-lg px-3 py-2 text-sm font-medium text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800';
+      ? 'rounded-lg px-3 py-2 text-sm font-medium text-brand-400 bg-white/10 dark:text-brand-400 dark:bg-brand-950'
+      : 'rounded-lg px-3 py-2 text-sm font-medium text-stone-300 hover:bg-white/10 dark:text-stone-400 dark:hover:bg-stone-800';
 
   return (
-    <nav className="fixed top-0 z-50 w-full border-b border-stone-200/70 bg-white/80 backdrop-blur-lg dark:border-stone-800/80 dark:bg-stone-950/70">
+    <nav className="fixed top-0 z-50 w-full border-b border-white/10 bg-chrome dark:border-stone-800/80 dark:bg-stone-950/70 dark:backdrop-blur-lg">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center">
           {/* h-12 in an h-16 bar: the brand assets have generous internal padding,
-              so a smaller height renders the wordmark almost illegibly. */}
-          <Logo className="h-12" priority />
+              so a smaller height renders the wordmark almost illegibly.
+              on-dark: this bar is navy in light mode and near-black in dark.
+              The lockup still has a baked-in opaque black rectangle — standing
+              asset request, see PROJECT_PROGRESS.md. */}
+          <Logo variant="on-dark" className="h-12" priority />
         </Link>
 
         {/* Desktop nav */}
@@ -111,7 +114,7 @@ export default function Navbar() {
         <div className="hidden items-center gap-3 md:flex">
           <LanguageSwitcher />
           <button
-            className="rounded-lg p-2 text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+            className="rounded-lg p-2 text-stone-300 hover:bg-white/10 dark:text-stone-400 dark:hover:bg-stone-800"
             onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
             aria-label={resolvedTheme === 'dark' ? t('common.switch_to_light') : t('common.switch_to_dark')}
           >
@@ -124,7 +127,12 @@ export default function Navbar() {
           ) : (
             <>
               <Link href="/login">
-                <Button variant="ghost">{t('nav.login')}</Button>
+                <Button
+                  variant="ghost"
+                  className="text-stone-300 hover:bg-white/10 hover:text-white dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-100"
+                >
+                  {t('nav.login')}
+                </Button>
               </Link>
               <Link href="/register">
                 <Button variant="primary">{t('nav.signup')}</Button>
@@ -136,7 +144,7 @@ export default function Navbar() {
         {/* Mobile toggle */}
         <button
           ref={mobileToggleRef}
-          className="rounded-lg p-2 text-stone-600 hover:bg-stone-100 md:hidden dark:text-stone-400"
+          className="rounded-lg p-2 text-stone-300 hover:bg-white/10 md:hidden dark:text-stone-400"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label={mobileOpen ? t('common.close_menu') : t('common.open_menu')}
           aria-expanded={mobileOpen}
@@ -147,7 +155,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="border-t border-stone-200 bg-white px-4 py-4 md:hidden dark:border-stone-700 dark:bg-black">
+        <div className="border-t border-white/10 bg-chrome px-4 py-4 md:hidden dark:border-stone-700 dark:bg-black">
           <div className="flex flex-col gap-1">
             <a
               href="/#features"
@@ -190,7 +198,7 @@ export default function Navbar() {
 
             <div className="flex items-center justify-between rounded-lg px-3 py-2">
               <button
-                className="rounded-lg p-2 text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+                className="rounded-lg p-2 text-stone-300 hover:bg-white/10 dark:text-stone-400 dark:hover:bg-stone-800"
                 onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
                 aria-label={resolvedTheme === 'dark' ? t('common.switch_to_light') : t('common.switch_to_dark')}
               >
@@ -199,7 +207,7 @@ export default function Navbar() {
               <LanguageSwitcher />
             </div>
 
-            <hr className="border-stone-200 dark:border-stone-700" />
+            <hr className="border-white/10 dark:border-stone-700" />
 
             {user ? (
               <Link href="/dashboard" onClick={() => setMobileOpen(false)}>

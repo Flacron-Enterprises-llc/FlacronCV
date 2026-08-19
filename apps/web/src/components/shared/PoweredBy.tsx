@@ -15,16 +15,16 @@ const FLACRON_ENGINE_URL = 'https://flacronenterprises.com/';
  * next to (§57): the prefix is one step down in colour, while the brand itself
  * keeps enough contrast to read as a link rather than disabled text.
  *
- * `tone="dark"` is for the auth panel's near-black background, where the light
- * palette would be invisible.
+ * `tone="dark"` is for permanently dark surfaces (auth panel near-black, and
+ * the light-mode navy `chrome` footer) where the light palette would fail AA.
  */
 export default function PoweredBy({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
   const t = useTranslations();
 
-  const prefixClass = tone === 'dark' ? 'text-stone-600' : 'text-stone-400 dark:text-stone-500';
+  const prefixClass = tone === 'dark' ? 'text-stone-300' : 'text-stone-400 dark:text-stone-500';
   const linkClass =
     tone === 'dark'
-      ? 'font-medium text-stone-400 transition-colors hover:text-brand-400'
+      ? 'font-medium text-stone-200 transition-colors hover:text-brand-400'
       : 'font-medium text-stone-500 transition-colors hover:text-brand-600 dark:text-stone-400 dark:hover:text-brand-400';
 
   return (

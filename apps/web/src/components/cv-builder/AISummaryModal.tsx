@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import Button from '@/components/ui/Button';
 import UpgradeModal from '@/components/shared/UpgradeModal';
+import InAppWarning from '@/components/shared/InAppWarning';
 import { X, Sparkles, RefreshCw, PlusCircle, Replace } from 'lucide-react';
 import { toast } from 'sonner';
 import { PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
@@ -28,6 +29,7 @@ const LOCALE_LANGUAGE_NAMES: Record<string, string> = {
 export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalProps) {
   const t = useTranslations('cv_builder');
   const tCommon = useTranslations('common');
+  const tw = useTranslations('in_app_warnings');
   const locale = useLocale();
   const { cv, updatePersonalInfo } = useCVStore();
   const { user, refreshUser } = useAuth();
@@ -163,6 +165,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
 
         {/* Body */}
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+          <InAppWarning>{tw('ai')}</InAppWarning>
           {!generatedSummary ? (
             <>
               {/* Profession */}

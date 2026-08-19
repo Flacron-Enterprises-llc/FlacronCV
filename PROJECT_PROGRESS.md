@@ -257,8 +257,9 @@ Legend: ✓ done · ◐ partial · ✗ missing · ⤵ deferred/decision-needed
   dark elevation, tighter typography; unified card/input/button/modal; landing hero de-gradient-text + single-accent;
   auth panel reworked). Deeper per-page polish (dashboard KPIs/tables, all forms, full mobile audit) is ongoing E2.
 - ◐ **Logo update** — **official brand logos wired everywhere 2026-07-20** via a theme-aware `<Logo/>`
-  (`flacronCvblack.png` light / `flacronCvlight.png` dark). *(Client note: the two assets have different aspect ratios;
-  matched exports would render identically across themes.)*
+  (`logo-ink-dark.png` on light / `logo-ink-light.png` on dark). **Standing client request — do not
+  re-discover:** both PNGs still have an **opaque baked-in rectangle** (on-dark is a black box).
+  Needed from the brand owner: **transparent SVG exports at matched proportions**. See §8.
 - ◐ **SEO** — homepage has metadata/OG/JSON-LD; **every page** needs proper metadata, canonical,
   sitemap.xml, robots, structured data, per-locale hreflang. Full SEO audit required.
 - ◐ Security / accessibility / mobile responsiveness — improved on reviewed sections; remaining pages pending.
@@ -797,10 +798,68 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   monthly-interval-against-yearly-price design that caused the ~18× overcharge as
   "Stripe checkout works perfectly" with a green testing checklist. It is a live trap for the next
   reader. Values are deliberately not reproduced here.
+- **⚠️ ADDED 2026-08-19 — Standing brand-asset request (second time this has blocked good work).**
+  Both logo PNGs (`apps/web/public/logo-ink-dark.png` / `logo-ink-light.png`) have an **opaque
+  baked-in rectangle**. The on-dark lockup is a black box; on light-mode chrome `#1e3a5f` that box
+  is visible even with `Logo variant="on-dark"`. **Not fixable in code.** Ask the brand owner for
+  **transparent SVG exports at matched proportions**, and ideally a horizontal header lockup for
+  the 64px bar (the stacked mark's taglines vanish at navbar height). Until those files exist,
+  Navbar and Footer stay on-dark on navy and the rectangle remains. This is a standing request to
+  the client, not a one-off changelog note.
+- **⚠️ ADDED 2026-08-19 — Mobile localisation gap (one list).** `apps/mobile` is not on the
+  six-locale pipeline (no next-intl). English-only by existing limitation, not by choice:
+  1. CV list delete `Alert.alert` — `apps/mobile/app/(dashboard)/cvs/index.tsx`
+  2. Cover-letter list delete `Alert.alert` — `apps/mobile/app/(dashboard)/cover-letters/index.tsx`
+  3. In-app warnings (legal §§18–21): AI / ATS / cover-letter / export notice — **web only**
+     (2026-08-19 navy-chrome batch). Do not invent next-intl on mobile to close this.
 
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-19 — **Navy chrome + in-app warnings (legal §§18–21 / B.12 + header/footer navy).**
+  **Do not commit.** Web only. Mobile out — see §8 **Mobile localisation gap** (item 3).
+  Auth, billing, and data shape untouched. `/exports/record` unchanged.
+
+  **MC2 — light-mode navy chrome.** One token, not a scale: `chrome: '#1e3a5f'` in
+  `apps/web/tailwind.config.ts` (Classic CV / cover-letter default). Surfaces: public `Navbar`,
+  public `Footer`, shared `TopBar` (dashboard/admin/CRM headers follow TopBar). **Light mode
+  only.** Dark mode keeps today's near-black (`Navbar` `stone-950/70`, `TopBar` `stone-900`,
+  `Footer` `stone-900`). **Not** sidebars, auth panel, admin/CRM footers, Footer grid, or the
+  dashboard copyright strip in `DashboardShell`. Logo on those bars is always
+  `variant="on-dark"` (auto would put navy ink on navy). Body and links: `stone-300`; hover:
+  `brand-400` (not `brand-600`); headings: white; PoweredBy on chrome: `tone="dark"`
+  (`stone-300` / `stone-200`). **WCAG 2.1 contrast on `#1e3a5f` (acceptance criteria, measured):**
+  white headings **11.50:1**; stone-300 body/links **7.72:1**; stone-200 PoweredBy brand
+  **9.16:1**; brand-400 hover **5.08:1** — all AA. stone-500 (2.40:1), stone-600 (1.51:1),
+  brand-600 (3.23:1) fail and must not be used on chrome. Gate:
+  `apps/web/src/lib/chrome-contrast.test.ts`. Opaque logo rectangle recorded as a **standing
+  client request** in §8 (transparent SVGs at matched proportions).
+
+  **MC3–MC5 — in-app warnings, client wording verbatim in EN, product UI × 6.** Shared
+  `InAppWarning` (`role="note"`). §18 support email omitted (already in footer, contact, every
+  legal document). Keys `in_app_warnings.{ai,ats,cover_letter,export_title,export_body}`.
+  - §18 AI: `AISummaryModal`, `InterviewPrepModal`, `LinkedInModal` (kept visible on results).
+    Not ATS, not cover-letter generate, not resume import.
+  - §19 ATS: `ATSCheckModal` only (kept visible on score results).
+  - §20 Cover letter: `cover-letters/new` near generate; editor slim row under the toolbar
+    (near AI Improve). Existing `ai_improve_confirm_*` replace-confirm modal kept.
+
+  **MC6 — export: passive notice, not a blocking gate.** Client's own wording is "consider
+  showing." Full title + body in the CV `EditorToolbar` export menu and the cover-letter
+  editor export menu (widened from `w-44`). No second click. A modal after `/exports/record`
+  would steal Free's 2-export lifetime on Cancel because record currently runs **before**
+  the file is built.
+
+  **MC7.** This entry; `CLIENT_REQUIREMENTS.md` B.12 ticked and the navy-header line closed;
+  `ARCHITECTURE_MAP.md` §4 chrome note. Logo defect + mobile gap live in §8, not scattered.
+
+  **QA:** `pnpm --filter api lint` 0 errors · `pnpm --filter web lint` 0 errors
+  (pre-existing `<img>` warnings only) · api `tsc --noEmit` ✓ · web `tsc --noEmit` ✓
+  · api **470/470** · web **300/300** (vitest `--pool=threads --no-file-parallelism`;
+  +5 `chrome-contrast` vs the 295 of the usage-counters batch). All six i18n
+  gates green (parity, untranslated, keys-resolve, no-hardcoded-english, encoding,
+  allowance-copy). **Do not commit.**
 
 - 2026-08-19 — **Usage counters: creation-based, not storage-based. Q-2 closed as (a′).**
   **Do not commit.**
@@ -834,10 +893,8 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
     display-source change.
   - **MC7.** List-delete dialogs: always "Deleting it does **not restore** a creation" (not
     "deleting spends one"). Extra line when remaining === 0. Web CV list and cover-letter list
-    (`useAuth` + `PLAN_CONFIGS` added on cover letters). **Mobile:** the two `Alert.alert`
-    strings on `apps/mobile/app/(dashboard)/cvs/index.tsx` and `cover-letters/index.tsx` were
-    updated in English. **Mobile is not on the six-locale pipeline, so those two dialogs are
-    English-only by existing limitation, not by choice.** Not warned: editor section delete,
+    (`useAuth` + `PLAN_CONFIGS` added on cover letters). **Mobile:** English `Alert.alert` only —
+    see §8 **Mobile localisation gap** (items 1–2). Not warned: editor section delete,
     account delete, jobs/CRM.
   - **MC8.** This entry; `ARCHITECTURE_MAP.md` §10 rewritten; `CLIENT_REQUIREMENTS.md` Q-2
     closed, E.4 done, F.3 note that CVs/letters now reset for paid only.

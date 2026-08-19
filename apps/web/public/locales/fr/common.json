@@ -2050,5 +2050,12 @@
     "on_this_page": "Sur cette page",
     "back_to_top": "Retour en haut",
     "home": "Accueil FlacronCV"
+  },
+  "in_app_warnings": {
+    "ai": "Le contenu généré par l'IA peut contenir des erreurs. Vérifiez toutes les informations avant de les utiliser dans une candidature.",
+    "ats": "Les scores ATS et les recommandations sont des estimations à titre indicatif uniquement. Les employeurs et les systèmes de suivi des candidatures peuvent évaluer les CV différemment. FlacronCV ne garantit ni classement ATS, ni entretiens, ni offres d'emploi, ni embauche.",
+    "cover_letter": "Veuillez relire tout le contenu généré de la lettre de motivation avant de l'envoyer. Vous êtes responsable de vous assurer que toutes les déclarations représentent fidèlement vos qualifications et votre expérience.",
+    "export_title": "Vérifiez avant de télécharger",
+    "export_body": "Veuillez confirmer que les noms, dates, parcours professionnel, formation, compétences et autres informations sont exacts avant d'envoyer ce document à un employeur."
   }
 }

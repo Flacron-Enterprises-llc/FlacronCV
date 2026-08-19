@@ -26,25 +26,25 @@ export default function Footer() {
     }
   };
 
-  const linkClass = 'text-sm text-stone-500 hover:text-brand-600 dark:text-stone-400 dark:hover:text-brand-400 transition-colors';
+  const linkClass = 'text-sm text-stone-300 hover:text-brand-400 dark:text-stone-400 dark:hover:text-brand-400 transition-colors';
 
   return (
-    <footer className="border-t border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-900">
+    <footer className="border-t border-chrome bg-chrome dark:border-stone-800 dark:bg-stone-900">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         {/* Newsletter opt-in (Epic C2) */}
-        <div className="mb-10 border-b border-stone-200 pb-10 dark:border-stone-800">
+        <div className="mb-10 border-b border-white/10 pb-10 dark:border-stone-800">
           <NewsletterSignup />
         </div>
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-1">
             <Link href="/" className="flex items-center">
-              <Logo className="h-8" />
+              <Logo variant="on-dark" className="h-8" />
             </Link>
-            <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">
+            <p className="mt-3 text-sm text-stone-300 dark:text-stone-400">
               {t('footer.description')}
             </p>
-            <h3 className="mt-6 text-sm font-semibold text-stone-900 dark:text-white">
+            <h3 className="mt-6 text-sm font-semibold text-white">
               {t('footer.follow_us')}
             </h3>
             <div className="mt-3">
@@ -54,7 +54,7 @@ export default function Footer() {
 
           {/* Product */}
           <div>
-            <h3 className="text-sm font-semibold text-stone-900 dark:text-white">
+            <h3 className="text-sm font-semibold text-white">
               {t('footer.product')}
             </h3>
             <ul className="mt-3 space-y-2">
@@ -86,7 +86,7 @@ export default function Footer() {
 
           {/* Company */}
           <div>
-            <h3 className="text-sm font-semibold text-stone-900 dark:text-white">
+            <h3 className="text-sm font-semibold text-white">
               {t('footer.company')}
             </h3>
             <ul className="mt-3 space-y-2">
@@ -115,7 +115,7 @@ export default function Footer() {
 
           {/* Legal */}
           <div>
-            <h3 className="text-sm font-semibold text-stone-900 dark:text-white">
+            <h3 className="text-sm font-semibold text-white">
               {t('footer.legal')}
             </h3>
             <ul className="mt-3 space-y-2">
@@ -160,7 +160,7 @@ export default function Footer() {
               the column auth-aware would pull the auth provider into a public
               layout for no real gain. */}
           <div>
-            <h3 className="text-sm font-semibold text-stone-900 dark:text-white">
+            <h3 className="text-sm font-semibold text-white">
               {t('footer.account')}
             </h3>
             <ul className="mt-3 space-y-2">
@@ -189,12 +189,12 @@ export default function Footer() {
         </div>
 
         {/* Contact + parent company */}
-        <div className="mt-10 grid gap-8 border-t border-stone-200 pt-8 sm:grid-cols-2 dark:border-stone-800">
+        <div className="mt-10 grid gap-8 border-t border-white/10 pt-8 sm:grid-cols-2 dark:border-stone-800">
           <div>
-            <h3 className="text-sm font-semibold text-stone-900 dark:text-white">
+            <h3 className="text-sm font-semibold text-white">
               {t('footer.contact_heading')}
             </h3>
-            <address className="mt-3 space-y-1 text-sm not-italic text-stone-500 dark:text-stone-400">
+            <address className="mt-3 space-y-1 text-sm not-italic text-stone-300 dark:text-stone-400">
               <p>{t('footer.address')}</p>
               <p>
                 <a href={PHONE_HREF} className={linkClass}>
@@ -210,10 +210,10 @@ export default function Footer() {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-stone-900 dark:text-white">
+            <h3 className="text-sm font-semibold text-white">
               {t('footer.parent_heading')}
             </h3>
-            <div className="mt-3 space-y-1 text-sm text-stone-500 dark:text-stone-400">
+            <div className="mt-3 space-y-1 text-sm text-stone-300 dark:text-stone-400">
               <p>
                 <a
                   href="https://flacronenterprises.com/"
@@ -233,11 +233,11 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-8 flex flex-col items-center gap-2 border-t border-stone-200 pt-8 sm:flex-row sm:justify-between dark:border-stone-800">
-          <p className="text-xs text-stone-500 dark:text-stone-400">
+        <div className="mt-8 flex flex-col items-center gap-2 border-t border-white/10 pt-8 sm:flex-row sm:justify-between dark:border-stone-800">
+          <p className="text-xs text-stone-300 dark:text-stone-400">
             &copy; {new Date().getFullYear()} FlacronCV. {t('footer.rights')}
           </p>
-          <PoweredBy />
+          <PoweredBy tone="dark" />
         </div>
       </div>
     </footer>

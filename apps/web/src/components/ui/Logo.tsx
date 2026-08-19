@@ -14,9 +14,10 @@ interface LogoProps {
 }
 
 /**
- * These are derived from the supplied brand PNGs: background removed, empty
- * margins trimmed, and both exported at the SAME dimensions so the logo renders
- * identically in either theme.
+ * These are derived from the supplied brand PNGs: empty margins trimmed and
+ * both exported at the SAME dimensions so the logo renders identically in
+ * either theme. The opaque baked-in rectangle was NOT removed — standing
+ * brand-asset request in PROJECT_PROGRESS.md §8.
  *
  * Named for the INK, not the background — the original `flacronCvlight` /
  * `flacronCvblack` names describe their *backdrop*, which is what caused the

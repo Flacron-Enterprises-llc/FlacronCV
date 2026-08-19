@@ -2050,5 +2050,12 @@
     "on_this_page": "Auf dieser Seite",
     "back_to_top": "Nach oben",
     "home": "FlacronCV-Startseite"
+  },
+  "in_app_warnings": {
+    "ai": "KI-generierte Inhalte können Fehler enthalten. Prüfe und verifiziere alle Angaben, bevor du sie in einer Bewerbung verwendest.",
+    "ats": "ATS-Werte und Empfehlungen sind Schätzungen nur zur Orientierung. Unterschiedliche Arbeitgeber und Bewerbermanagementsysteme können Lebensläufe anders bewerten. FlacronCV garantiert weder ATS-Ranking, noch Vorstellungsgespräche, Stellenangebote oder eine Anstellung.",
+    "cover_letter": "Bitte prüfe alle generierten Anschreiben-Inhalte, bevor du sie einreichst. Du bist dafür verantwortlich, dass alle Angaben deine Qualifikationen und Erfahrung zutreffend wiedergeben.",
+    "export_title": "Vor dem Download prüfen",
+    "export_body": "Bitte bestätige, dass Namen, Daten, Berufserfahrung, Ausbildung, Fähigkeiten und alle weiteren Angaben korrekt sind, bevor du dieses Dokument an einen Arbeitgeber sendest."
   }
 }

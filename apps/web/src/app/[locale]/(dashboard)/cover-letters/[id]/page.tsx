@@ -13,6 +13,7 @@ import { CoverLetter, UpdateCoverLetterData, SubscriptionPlan, PLAN_CONFIGS, res
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import UpgradeModal from '@/components/shared/UpgradeModal';
+import InAppWarning from '@/components/shared/InAppWarning';
 import CoverLetterPreview, { COVER_LETTER_TEMPLATES } from '@/components/cover-letter/CoverLetterPreview';
 import { ensureDarkSurface, readableOn, INK } from '@/lib/design-tokens';
 import { exportCoverLetterToPDF, exportCoverLetterToDocx } from '@/lib/export-cv';
@@ -638,7 +639,13 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
                   className="fixed inset-0 z-10"
                   onClick={() => setExportMenuOpen(false)}
                 />
-                <div className="absolute end-0 z-20 mt-1 w-44 rounded-lg border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-800">
+                <div className="absolute end-0 z-20 mt-1 w-72 rounded-lg border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-800">
+                  <div className="px-2 pt-2 pb-1">
+                    <InAppWarning>
+                      <strong className="block">{t('in_app_warnings.export_title')}</strong>
+                      {t('in_app_warnings.export_body')}
+                    </InAppWarning>
+                  </div>
                   <button
                     className="flex w-full items-center gap-2 px-3 py-2 text-sm text-stone-600 hover:bg-stone-50 dark:text-stone-400 dark:hover:bg-stone-700"
                     onClick={() => handleExport('pdf')}
@@ -658,6 +665,10 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
             )}
           </div>
         </div>
+      </div>
+
+      <div className="border-b border-stone-200 bg-white px-4 py-2 dark:border-stone-700 dark:bg-stone-900">
+        <InAppWarning>{t('in_app_warnings.cover_letter')}</InAppWarning>
       </div>
 
       {/* Mobile edit/preview switch — hidden on lg where both panels show */}

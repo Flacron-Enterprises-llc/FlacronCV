@@ -61,8 +61,8 @@ export default function NewsletterSignup() {
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="lg:max-w-sm">
-        <h3 className="text-base font-semibold text-stone-900 dark:text-white">{t('heading')}</h3>
-        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{t('subtext')}</p>
+        <h3 className="text-base font-semibold text-white">{t('heading')}</h3>
+        <p className="mt-1 text-sm text-stone-300 dark:text-stone-400">{t('subtext')}</p>
       </div>
       <form onSubmit={handleSubmit} className="w-full lg:max-w-md">
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -85,7 +85,7 @@ export default function NewsletterSignup() {
             {loading ? t('subscribing') : t('subscribe')}
           </button>
         </div>
-        <label className="mt-2 flex items-start gap-2 text-xs text-stone-500 dark:text-stone-400">
+        <label className="mt-2 flex items-start gap-2 text-xs text-stone-300 dark:text-stone-400">
           <input
             type="checkbox"
             checked={consent}

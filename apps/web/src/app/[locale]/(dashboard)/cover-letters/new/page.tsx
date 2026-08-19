@@ -12,6 +12,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import UpgradeModal from '@/components/shared/UpgradeModal';
+import InAppWarning from '@/components/shared/InAppWarning';
 import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
 import { CoverLetter, CV, CVSection, PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
@@ -517,6 +518,8 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
             </div>
           </Card>
         )}
+
+        <InAppWarning>{t('in_app_warnings.cover_letter')}</InAppWarning>
 
         {/* Action buttons */}
         {draft !== null && !generateMutation.isPending ? (

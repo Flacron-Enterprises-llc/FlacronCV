@@ -2050,5 +2050,12 @@
     "on_this_page": "On this page",
     "back_to_top": "Back to top",
     "home": "FlacronCV home"
+  },
+  "in_app_warnings": {
+    "ai": "AI-generated content may contain errors. Review and verify all information before using it in a job application.",
+    "ats": "ATS scores and recommendations are estimates for guidance only. Different employers and applicant-tracking systems may evaluate CVs differently. FlacronCV does not guarantee ATS ranking, interviews, job offers, or employment.",
+    "cover_letter": "Please review all generated Cover Letter content before submitting it. You are responsible for ensuring that all statements accurately represent your qualifications and experience.",
+    "export_title": "Review Before Downloading",
+    "export_body": "Please confirm that names, dates, employment history, education, skills, and other information are accurate before sending this document to an employer."
   }
 }

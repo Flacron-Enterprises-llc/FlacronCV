@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import UpgradeModal from '@/components/shared/UpgradeModal';
+import InAppWarning from '@/components/shared/InAppWarning';
 import { api } from '@/lib/api';
 import { exportToPDF, exportToDocx, type DocxLabels } from '@/lib/export-cv';
 import { track } from '@/lib/analytics';
@@ -37,6 +38,7 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
   const tats = useTranslations('ats');
   const tint = useTranslations('interview');
   const tli = useTranslations('linkedin');
+  const tw = useTranslations('in_app_warnings');
   const locale = useLocale();
   const { cv, sections, isDirty, isSaving, lastSavedAt, undo, redo, canUndo, canRedo } = useCVStore();
   const [exportOpen, setExportOpen] = useState(false);
@@ -174,7 +176,13 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
                   cannot read a word of it. The DOCX is built from real
                   Paragraph/TextRun content and parses correctly. Say so at the
                   point of choice rather than claiming "ATS-optimized" globally. */}
-              <div className="absolute end-0 z-20 mt-1 w-60 rounded-lg border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-800">
+              <div className="absolute end-0 z-20 mt-1 w-72 rounded-lg border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-800">
+                <div className="px-2 pt-2 pb-1">
+                  <InAppWarning>
+                    <strong className="block">{tw('export_title')}</strong>
+                    {tw('export_body')}
+                  </InAppWarning>
+                </div>
                 <button
                   className="flex w-full items-start gap-2 px-3 py-2 text-start text-sm text-stone-600 hover:bg-stone-50 dark:text-stone-400 dark:hover:bg-stone-700"
                   onClick={() => handleExport('pdf')}

@@ -2050,5 +2050,12 @@
     "on_this_page": "En esta página",
     "back_to_top": "Volver arriba",
     "home": "Inicio de FlacronCV"
+  },
+  "in_app_warnings": {
+    "ai": "El contenido generado por IA puede contener errores. Revise y verifique toda la información antes de usarla en una solicitud de empleo.",
+    "ats": "Las puntuaciones ATS y las recomendaciones son estimaciones solo orientativas. Distintos empleadores y sistemas de seguimiento de candidatos pueden evaluar los CV de forma diferente. FlacronCV no garantiza ranking ATS, entrevistas, ofertas de trabajo ni empleo.",
+    "cover_letter": "Revise todo el contenido generado de la carta de presentación antes de enviarla. Usted es responsable de que todas las declaraciones representen con exactitud su cualificación y experiencia.",
+    "export_title": "Revise antes de descargar",
+    "export_body": "Confirme que nombres, fechas, historial laboral, formación, habilidades y demás información son correctos antes de enviar este documento a un empleador."
   }
 }

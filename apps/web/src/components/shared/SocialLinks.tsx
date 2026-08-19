@@ -44,7 +44,7 @@ export default function SocialLinks() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label={t('footer.social_aria', { platform })}
-            className="rounded-md px-2 py-1 text-xs font-medium text-stone-600 ring-1 ring-stone-200 transition-colors hover:text-brand-600 hover:ring-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-stone-300 dark:ring-stone-700 dark:hover:text-brand-400 dark:hover:ring-brand-700"
+            className="rounded-md px-2 py-1 text-xs font-medium text-stone-300 ring-1 ring-white/20 transition-colors hover:text-brand-400 hover:ring-brand-400/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 dark:text-stone-300 dark:ring-stone-700 dark:hover:text-brand-400 dark:hover:ring-brand-700"
           >
             {platform}
           </a>

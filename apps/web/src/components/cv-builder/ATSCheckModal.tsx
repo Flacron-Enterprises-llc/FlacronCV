@@ -10,6 +10,7 @@ import { extractJsonObject } from '@/lib/ai-json';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import Button from '@/components/ui/Button';
 import UpgradeModal from '@/components/shared/UpgradeModal';
+import InAppWarning from '@/components/shared/InAppWarning';
 import { X, Target, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
@@ -58,6 +59,7 @@ export default function ATSCheckModal({ open, onClose }: ATSCheckModalProps) {
   const t = useTranslations('ats');
   const tcv = useTranslations('cv_builder');
   const tCommon = useTranslations('common');
+  const tw = useTranslations('in_app_warnings');
   const { cv, sections } = useCVStore();
   const { user, refreshUser } = useAuth();
 
@@ -155,6 +157,7 @@ export default function ATSCheckModal({ open, onClose }: ATSCheckModalProps) {
 
           {/* Body */}
           <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+            <InAppWarning>{tw('ats')}</InAppWarning>
             {!result ? (
               <>
                 <p className="text-sm text-stone-500 dark:text-stone-400">{t('subtitle')}</p>
