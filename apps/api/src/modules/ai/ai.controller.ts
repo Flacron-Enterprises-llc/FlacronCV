@@ -3,6 +3,17 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { IsOptional, IsString, IsNotEmpty, MaxLength } from 'class-validator';
 import { AIService } from './ai.service';
 import { GenerateDto } from './dto/generate.dto';
+import {
+  AtsCheckDto,
+  GenerateAiCoverLetterDto,
+  GenerateCvSummaryDto,
+  GenerateJobDescriptionDto,
+  ImproveSectionDto,
+  InterviewPrepDto,
+  LinkedinOptimizeDto,
+  SuggestSkillsDto,
+  TranslateContentDto,
+} from './dto/ai-feature.dto';
 import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
 import { FeatureFlagGuard, RequireFeature } from '../../common/guards/feature-flag.guard';
 import { CurrentUser, FirebaseUser } from '../../common/decorators/current-user.decorator';
@@ -102,7 +113,7 @@ export class AIController {
   @Post('improve')
   async improve(
     @CurrentUser() user: FirebaseUser,
-    @Body() body: { sectionType: string; content: string; language?: string },
+    @Body() body: ImproveSectionDto,
   ) {
     return this.withAudit(user, 'improve', () =>
       this.aiService.improveSection(body.sectionType, body.content, user.uid, body.language),
@@ -112,7 +123,7 @@ export class AIController {
   @Post('translate')
   async translate(
     @CurrentUser() user: FirebaseUser,
-    @Body() body: { content: string; targetLanguage: string },
+    @Body() body: TranslateContentDto,
   ) {
     return this.withAudit(user, 'translate', () =>
       this.aiService.translateContent(body.content, body.targetLanguage, user.uid),
@@ -122,7 +133,7 @@ export class AIController {
   @Post('cv-summary')
   async generateCVSummary(
     @CurrentUser() user: FirebaseUser,
-    @Body() body: { experience: string; skills: string; targetRole: string; language?: string },
+    @Body() body: GenerateCvSummaryDto,
   ) {
     return this.withAudit(user, 'cv-summary', () =>
       this.aiService.generateCVSummary(body.experience, body.skills, body.targetRole, user.uid, body.language),
@@ -132,7 +143,7 @@ export class AIController {
   @Post('suggest-skills')
   async suggestSkills(
     @CurrentUser() user: FirebaseUser,
-    @Body() body: { experience: string; currentSkills: string },
+    @Body() body: SuggestSkillsDto,
   ) {
     return this.withAudit(user, 'suggest-skills', () =>
       this.aiService.suggestSkills(body.experience, body.currentSkills, user.uid),
@@ -142,7 +153,7 @@ export class AIController {
   @Post('generate-job-description')
   async generateJobDescription(
     @CurrentUser() user: FirebaseUser,
-    @Body() body: { jobTitle: string; companyName?: string; language?: string },
+    @Body() body: GenerateJobDescriptionDto,
   ) {
     return this.withAudit(user, 'generate-job-description', () =>
       this.aiService.generateJobDescription(body.jobTitle, body.companyName, user.uid, body.language),
@@ -152,17 +163,7 @@ export class AIController {
   @Post('cover-letter')
   async generateCoverLetter(
     @CurrentUser() user: FirebaseUser,
-    @Body()
-    body: {
-      jobTitle: string;
-      jobDescription: string;
-      companyName: string;
-      candidateSummary: string;
-      tone: string;
-      language?: string;
-      /** 'short' | 'medium' | 'long'. Anything else falls back to medium. */
-      length?: string;
-    },
+    @Body() body: GenerateAiCoverLetterDto,
   ) {
     return this.withAudit(user, 'cover-letter', () =>
       this.aiService.generateCoverLetter(
@@ -200,7 +201,7 @@ export class AIController {
   @Post('ats-check')
   async atsCheck(
     @CurrentUser() user: FirebaseUser,
-    @Body() body: { cvContent: string; jobDescription: string },
+    @Body() body: AtsCheckDto,
   ) {
     return this.withAudit(user, 'ats-check', () =>
       this.aiService.atsCheck(body.cvContent, body.jobDescription, user.uid),
@@ -210,7 +211,7 @@ export class AIController {
   @Post('interview-prep')
   async interviewPrep(
     @CurrentUser() user: FirebaseUser,
-    @Body() body: { jobDescription: string; cvContent?: string },
+    @Body() body: InterviewPrepDto,
   ) {
     return this.withAudit(user, 'interview-prep', () =>
       this.aiService.interviewPrep(body.jobDescription, body.cvContent ?? '', user.uid),
@@ -220,7 +221,7 @@ export class AIController {
   @Post('linkedin')
   async linkedin(
     @CurrentUser() user: FirebaseUser,
-    @Body() body: { cvContent: string; targetRole?: string },
+    @Body() body: LinkedinOptimizeDto,
   ) {
     return this.withAudit(user, 'linkedin', () =>
       this.aiService.linkedinOptimize(body.cvContent, body.targetRole ?? '', user.uid),

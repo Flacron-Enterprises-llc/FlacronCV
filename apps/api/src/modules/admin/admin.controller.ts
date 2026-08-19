@@ -18,7 +18,9 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, FirebaseUser } from '../../common/decorators/current-user.decorator';
 import { AddMessageDto } from '../support/dto/add-message.dto';
-import { UpdateUserData, SupportTicket } from '@flacroncv/shared-types';
+import { UpdateTicketDto } from '../support/dto/update-ticket.dto';
+import { UpdateUserDto } from '../users/dto/update-user.dto';
+import { SupportTicket } from '@flacroncv/shared-types';
 
 @ApiTags('admin')
 @Controller('admin')
@@ -57,7 +59,7 @@ export class AdminController {
   async updateUser(
     @CurrentUser() actor: FirebaseUser,
     @Param('id') id: string,
-    @Body() data: UpdateUserData,
+    @Body() data: UpdateUserDto,
   ) {
     const result = await this.usersService.update(id, data);
     await this.audit.log({
@@ -170,9 +172,9 @@ export class AdminController {
   async updateTicket(
     @CurrentUser() actor: FirebaseUser,
     @Param('id') id: string,
-    @Body() data: Partial<SupportTicket>,
+    @Body() data: UpdateTicketDto,
   ) {
-    const result = await this.supportService.updateTicket(id, data);
+    const result = await this.supportService.updateTicket(id, data as Partial<SupportTicket>);
     await this.audit.log({
       actorId: actor.uid,
       actorEmail: actor.email,

@@ -72,6 +72,24 @@ describe('TemplatesService', () => {
     });
   });
 
+  describe('update', () => {
+    it('writes named fields and ignores usageCount, createdBy, and id', async () => {
+      await service.create({ name: 'Original', slug: 'orig' }, 'admin');
+      await service.update('orig', {
+        name: 'Renamed',
+        usageCount: 999,
+        createdBy: 'attacker',
+        id: 'hijacked',
+      } as any);
+
+      const t = await service.findById('orig');
+      expect(t.name).toBe('Renamed');
+      expect(t.usageCount).toBe(0);
+      expect(t.createdBy).toBe('admin');
+      expect(t.id).toBe('orig');
+    });
+  });
+
   describe('delete', () => {
     it('soft-deletes the template (sets isActive=false)', async () => {
       await service.create({ name: 'To Delete', slug: 'to-delete' }, 'admin');

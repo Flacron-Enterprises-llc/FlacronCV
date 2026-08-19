@@ -17,8 +17,10 @@ import { CoverLetterService } from './cover-letter.service';
 import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
 import { FeatureFlagGuard, RequireFeature } from '../../common/guards/feature-flag.guard';
 import { CurrentUser, FirebaseUser } from '../../common/decorators/current-user.decorator';
-import { CreateCoverLetterData, UpdateCoverLetterData, GenerateCoverLetterData } from '@flacroncv/shared-types';
 import { AbuseIdempotencyInterceptor } from '../../common/interceptors/abuse-idempotency.interceptor';
+import { CreateCoverLetterDto } from './dto/create-cover-letter.dto';
+import { UpdateCoverLetterDto } from './dto/update-cover-letter.dto';
+import { GenerateCoverLetterDto } from './dto/generate-cover-letter.dto';
 
 @ApiTags('cover-letters')
 @Controller('cover-letters')
@@ -32,7 +34,7 @@ export class CoverLetterController {
   // feature off never traps a user's existing data.
   @Post()
   @RequireFeature('coverLettersEnabled')
-  async create(@CurrentUser() user: FirebaseUser, @Body() data: CreateCoverLetterData) {
+  async create(@CurrentUser() user: FirebaseUser, @Body() data: CreateCoverLetterDto) {
     return this.coverLetterService.create(user.uid, data);
   }
 
@@ -50,7 +52,7 @@ export class CoverLetterController {
   async update(
     @CurrentUser() user: FirebaseUser,
     @Param('id') id: string,
-    @Body() data: UpdateCoverLetterData,
+    @Body() data: UpdateCoverLetterDto,
   ) {
     return this.coverLetterService.update(id, user.uid, data);
   }
@@ -76,7 +78,7 @@ export class CoverLetterController {
   async generateWithAI(
     @CurrentUser() user: FirebaseUser,
     @Param('id') id: string,
-    @Body() data: GenerateCoverLetterData,
+    @Body() data: GenerateCoverLetterDto,
   ) {
     return this.coverLetterService.generateWithAI(id, user.uid, data);
   }

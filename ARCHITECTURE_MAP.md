@@ -102,6 +102,16 @@ access until the token expires (open MEDIUM in `AUDIT_OPEN_FINDINGS.md`).
 globally; CORS built at `:50` with an empty allowlist treated as a fatal boot error; Swagger disabled
 in production (`:122`); rawBody retained for Stripe signature verification.
 
+**Write-body DTOs (Batch J, 2026-08-19).** The global ValidationPipe (`whitelist` +
+`forbidNonWhitelisted` + `transform`) is a no-op on TypeScript **interfaces**. CV, cover-letter,
+user, remaining `/ai/*`, contact, admin ticket, and template write routes bind `class-validator`
+classes under `apps/api/src/modules/*/dto/`. Service-layer field allow-lists stay as defence in
+depth. **Not in this batch:** CRM interface-DTOs, payment bodies, auth set-claims, `exports/record`.
+`CVSectionItem` writes check known-field types/lengths and **allow extra keys** — a nested
+`forbidNonWhitelisted` class would 400 legacy autosaves; full union enforcement is a migration.
+Mobile `POST /cvs` and `POST /cover-letters` extra keys are ignored optionals (not persisted).
+Template `update` copies named fields only — never `...data`.
+
 ---
 
 ## 4. `apps/web` route map

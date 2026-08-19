@@ -741,9 +741,24 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   larger change — revisit with client approval. (Contradicts the product's "ATS-optimized" promise.)
 - **Save-state / Undo-Redo (CV)** — edits-during-autosave and undo/redo have latent data-loss bugs;
   minimal fixes exist but touch the save-state model.
-- **Backend DTO validation** — CV/cover-letter/user write bodies are untyped interfaces → global
-  ValidationPipe is a no-op; arbitrary fields can reach Firestore.
-- **Data model** — `CVSectionItem` is a loose `any` union.
+- **Backend DTO validation — CLOSED 2026-08-19 (Batch J).** Class DTOs now sit on CV,
+  cover-letter, user, remaining `/ai/*`, contact, admin ticket, and template write bodies, so
+  the global ValidationPipe (`whitelist` + `forbidNonWhitelisted`) is no longer a no-op there.
+  Service-layer allow-lists were kept as defence in depth. **Not this batch:** payment bodies,
+  auth set-claims/revoke, CRM interface-DTOs, `exports/record`.
+- **CVSectionItem write-time validation — DECISION, not an oversight (Batch J).** Known fields
+  get type and length checks; extra keys are allowed. A nested item class with
+  `forbidNonWhitelisted` would 400 existing autosaves that still carry legacy keys. Full union
+  enforcement is deferred to a migration that first strips or maps those keys.
+- **⚠️ ADDED 2026-08-19 — Three mobile API calls that do not exist (do not fix here).** These
+  are live broken features in the shipping app, not DTO problems. Mapping for whoever fixes
+  mobile:
+  1. `PATCH /users/me` — `apps/mobile/src/hooks/useUser.ts` (`useUpdateProfile`). Correct:
+     `PUT /users/me` (profile) or `PATCH /users/me/preferences`.
+  2. `POST /cover-letters/:id/generate` — `apps/mobile/src/hooks/useCoverLetters.ts`. Correct:
+     `POST /cover-letters/:id/ai/generate`.
+  3. `POST /users/:uid/photo` — `apps/mobile/src/hooks/useUser.ts` (`useUploadProfilePhoto`).
+     No such route; web uploads to Firebase Storage then `PUT /users/me` `{ photoURL }`.
 - **Secrets rotation** — Firebase Admin private key, Stripe, Brevo, OpenAI keys were shared in chat/docs; rotate them.
   **2026-08-18:** AWS IAM user `flacronai-ses` access key was in a public `apps/api/.zip` on GitHub.
   Deleting the file does **not** revoke the key — deactivate it in IAM and rotate every other
@@ -816,6 +831,49 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-19 — **Batch J — backend validation + API security sweep (MC1–MC8).** **Do not commit.**
+  API only. Auth/billing/data-shape untouched except write-body validation. Audit IP writes
+  left alone (still §8 / J.5-adjacent). No secrets logged.
+
+  **MC1–MC3 — class DTOs on CV, cover-letter, and user writes.** Controllers now bind
+  `class-validator` classes so the global ValidationPipe is real. Nested `personalInfo` /
+  `styling` extra keys are **rejected** (stops dotted Firestore mass-assignment). Service
+  allow-lists kept (`users.service.update`, cover-letter `UPDATABLE_FIELDS`).
+
+  **Mobile create = option (b).** Extra keys on `POST /cvs` and `POST /cover-letters` are
+  declared optionals, commented as mobile-only and **intentionally not persisted**. A
+  ValidationPipe test asserts the shipping mobile payload is **accepted**. Option (a)
+  (reject extras) would 400 a live client for no security gain.
+
+  **CVSectionItem = explicit looseness.** Type/length on known fields; extra keys allowed.
+  `@ValidateNested` + `forbidNonWhitelisted` on items would 400 legacy autosaves. Full union
+  deferred to a migration. `@Type(() => Object)` on `items` so `enableImplicitConversion`
+  cannot coerce each item into an Array.
+
+  **MC4 — remaining `/ai/*` bodies (length caps), public contact DTO, admin `updateTicket`
+  DTO, template update.** `templates.service.update` no longer spreads `...data`. Named
+  fields only; `usageCount` / `createdBy` / `id` / `rating` / timestamps are not
+  caller-writable. Admin-only was not a reason to leave mass assignment.
+
+  **MC5.** Client 503 is now the stable `"AI generation failed"` (credits-exhausted message
+  unchanged). Provider `Error.message` is not echoed.
+
+  **MC6.** Welcome/verification failures log `uid`, not raw email. Provider and cover-letter
+  salvage logs no longer append `error.message` (can echo prompt fragments). Audit IP writes
+  not touched.
+
+  **Broken mobile routes recorded in §8, not fixed:** `PATCH /users/me`,
+  `POST /cover-letters/:id/generate`, `POST /users/:uid/photo` — file + correct API path
+  each.
+
+  **MC8.** This entry; `CLIENT_REQUIREMENTS.md` J.4 ticked, J.3 narrowed, J.5 still ◐
+  (IP family); `ARCHITECTURE_MAP.md` write-body DTO note.
+
+  **QA:** `pnpm --filter api lint` 0 errors · `pnpm --filter web lint` 0 errors
+  (pre-existing next/image warnings only) · api type-check ✓ · web type-check ✓ ·
+  **api 514/514** (was 470) · **web 300/300** including locale parity, no-hardcoded-English,
+  and key resolution. No new user-facing `t()` strings.
 
 - 2026-08-19 — **Navy chrome + in-app warnings (legal §§18–21 / B.12 + header/footer navy).**
   **Do not commit.** Web only. Mobile out — see §8 **Mobile localisation gap** (item 3).

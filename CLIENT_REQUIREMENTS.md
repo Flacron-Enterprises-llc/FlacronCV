@@ -399,9 +399,9 @@ counters left as they stood.
 |---|---|---|
 | J.1 | ✅ Document ownership / IDOR — audited clean 2026-07-20. Re-verify only. | ☑ |
 | J.2 | ✅ Export entitlement — A8 server-authorised gate. **Residual:** export is client-side, so a tampered browser could render a *stored* premium design. A free user can never store one. True enforcement needs the server Puppeteer path. | ◐ |
-| J.3 | API sweep — authz, validation, injection, duplicate handling, error sanitisation | ☐ |
-| J.4 | **Backend DTO validation** — §8 of the record notes CV/cover-letter/user write bodies are untyped interfaces, so the global ValidationPipe is a no-op on them. Directly serves §45. | ☐ |
-| J.5 | Minimise sensitive logging — CVs carry names, addresses, phones, employment history | ◐ |
+| J.3 | API sweep — authz, validation, injection, duplicate handling, error sanitisation. **2026-08-19:** write-body DTOs + AI 503 sanitisation done (Batch J). Injection/CSV/Puppeteer/IDOR already in place. Remaining: CRM interface-DTOs, payment bodies, auth set-claims. | ◐ |
+| J.4 | **Backend DTO validation** — CV/cover-letter/user/`/ai/*`/contact/admin-ticket/template write bodies are class DTOs. Global ValidationPipe is no longer a no-op on them. Service allow-lists kept. Directly serves §45. | ☑ |
+| J.5 | Minimise sensitive logging — CVs carry names, addresses, phones, employment history. **2026-08-19:** welcome/verification logs no longer print raw email; AI provider errors not echoed. **Still open:** raw IP on REGISTERED/login audit rows (do not silently hash in the same batch). | ◐ |
 | J.6 | Uploaded document access control | ☐ |
 
 ---

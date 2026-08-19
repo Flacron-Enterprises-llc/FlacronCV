@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { Template, TemplateCategory, SubscriptionPlan } from '@flacroncv/shared-types';
 import { v4 as uuidv4 } from 'uuid';
+import { TEMPLATE_UPDATABLE_FIELDS } from './dto/template.dto';
 
 @Injectable()
 export class TemplatesService {
@@ -86,10 +87,13 @@ export class TemplatesService {
   }
 
   async update(id: string, data: Partial<Template>): Promise<Template> {
-    await this.firebaseAdmin.firestore.collection(this.collection).doc(id).update({
-      ...data,
-      updatedAt: new Date(),
-    });
+    // Named fields only — never spread the body. `usageCount`, `createdBy`,
+    // `id`, `rating`, and timestamps are not caller-writable.
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    for (const key of TEMPLATE_UPDATABLE_FIELDS) {
+      if (data[key] !== undefined) updateData[key] = data[key];
+    }
+    await this.firebaseAdmin.firestore.collection(this.collection).doc(id).update(updateData);
     return this.findById(id);
   }
 

@@ -79,6 +79,17 @@ describe('AIService', () => {
       expect(provider.generateText).toHaveBeenCalledTimes(4);
     });
 
+    it('does not echo the provider error into the client 503 message', async () => {
+      const provider = makeProvider({ generateText: jest.fn().mockRejectedValue(httpError(400)) });
+      const service = new AIService(provider as any, makeUsers() as any, {
+        assertNewConsumption: jest.fn().mockResolvedValue(undefined),
+      } as any);
+
+      await expect(service.generate('hi', {}, 'u1')).rejects.toMatchObject({
+        message: 'AI generation failed',
+      });
+    });
+
     it('DOES open after 3 genuine provider (5xx) failures', async () => {
       const provider = makeProvider({ generateText: jest.fn().mockRejectedValue(httpError(500)) });
       const service = new AIService(provider as any, makeUsers() as any, {

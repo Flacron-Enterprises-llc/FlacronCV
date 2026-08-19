@@ -1,7 +1,8 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { ContactService, ContactMessageInput } from './contact.service';
+import { ContactService } from './contact.service';
+import { ContactMessageDto } from './dto/contact-message.dto';
 
 // Public (unauthenticated) endpoint for the marketing contact form. A tighter
 // per-route rate limit sits on top of the global throttler to blunt spam/abuse.
@@ -13,7 +14,7 @@ export class ContactController {
   @Post()
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  async submit(@Body() data: ContactMessageInput) {
+  async submit(@Body() data: ContactMessageDto) {
     return this.contactService.submit(data);
   }
 }

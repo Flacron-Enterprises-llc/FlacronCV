@@ -156,8 +156,6 @@ export class AIService {
 
     const fullOptions: AIProviderOptions = this.clampOptions(options);
 
-    let lastError = '';
-
     try {
       for (const provider of this.providers) {
         if (this.isCircuitOpen(provider.name)) {
@@ -167,7 +165,6 @@ export class AIService {
 
         const available = await provider.isAvailable();
         if (!available) {
-          lastError = `${provider.name}: API key not configured`;
           this.logger.warn(`Skipping ${provider.name} — API key not configured (check OPENAI_API_KEY env var)`);
           continue;
         }
@@ -176,7 +173,6 @@ export class AIService {
           const result = await provider.generateText(prompt, fullOptions);
 
           if (!result.content?.trim()) {
-            lastError = `${provider.name}: returned empty content`;
             this.logger.warn(`${provider.name} returned empty content — treating as failure`);
             this.recordFailure(provider.name);
             continue;
@@ -189,18 +185,17 @@ export class AIService {
           this.logger.log(`Generated via ${provider.name} in ${result.latencyMs}ms (${result.content.length} chars)`);
           return result;
         } catch (error) {
-          lastError = `${provider.name}: ${(error as Error).message}`;
           // Only count genuine provider failures (5xx / network / timeout) toward
           // the breaker. A 4xx is caller-input error and must NOT open a shared
           // breaker that would deny AI to every other tenant.
           if (!this.isClientInputError(error)) {
             this.recordFailure(provider.name);
           }
-          this.logger.error(`${provider.name} failed: ${(error as Error).message}`);
+          this.logger.error(`${provider.name} failed`);
         }
       }
 
-      throw new ServiceUnavailableException(`AI generation failed — ${lastError || 'no providers available'}`);
+      throw new ServiceUnavailableException('AI generation failed');
     } finally {
       // Reserved but never produced a result → give the credit back.
       if (creditReserved && userId) {

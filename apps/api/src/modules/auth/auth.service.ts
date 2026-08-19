@@ -94,13 +94,13 @@ export class AuthService {
         // OAuth provider (Google/GitHub) — email already verified → welcome immediately
         await ref.update({ welcomeEmailSent: true });
         this.mailService.sendWelcomeEmail(email, user.displayName).catch((err) =>
-          this.logger.error(`Welcome email failed for ${email}`, err),
+          this.logger.error(`Welcome email failed for uid ${uid}`, err),
         );
       } else {
         // Email/password signup — send verification first, welcome comes after they verify
         await ref.update({ welcomeEmailSent: false });
         this.generateAndSendVerification(uid, email, user.displayName).catch((err) =>
-          this.logger.error(`Verification email failed for ${email}`, err),
+          this.logger.error(`Verification email failed for uid ${uid}`, err),
         );
       }
 
@@ -143,7 +143,7 @@ export class AuthService {
         if (docData?.welcomeEmailSent === false) {
           await ref.update({ welcomeEmailSent: true });
           this.mailService.sendWelcomeEmail(email, user.displayName).catch((err) =>
-            this.logger.error(`Welcome email failed for ${email}`, err),
+            this.logger.error(`Welcome email failed for uid ${uid}`, err),
           );
         }
       }

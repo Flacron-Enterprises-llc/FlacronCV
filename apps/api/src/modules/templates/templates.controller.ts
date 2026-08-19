@@ -8,6 +8,7 @@ import { CurrentUser, FirebaseUser } from '../../common/decorators/current-user.
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/audit-actions';
 import { TemplateCategory, SubscriptionPlan, Template } from '@flacroncv/shared-types';
+import { CreateTemplateDto, UpdateTemplateDto } from './dto/template.dto';
 
 @ApiTags('templates')
 @Controller('templates')
@@ -50,8 +51,8 @@ export class TemplatesController {
   @UseGuards(FirebaseAuthGuard, RolesGuard)
   @Roles('admin', 'super_admin')
   @ApiBearerAuth()
-  async create(@CurrentUser() user: FirebaseUser, @Body() data: Partial<Template>) {
-    const template = await this.templatesService.create(data, user.uid);
+  async create(@CurrentUser() user: FirebaseUser, @Body() data: CreateTemplateDto) {
+    const template = await this.templatesService.create(data as Partial<Template>, user.uid);
     await this.audit.logUserAction(
       AuditAction.TEMPLATE_CREATED,
       TemplatesController.actor(user),
@@ -68,12 +69,12 @@ export class TemplatesController {
   @ApiBearerAuth()
   async update(
     @Param('id') id: string,
-    @Body() data: Partial<Template>,
+    @Body() data: UpdateTemplateDto,
     @CurrentUser() user: FirebaseUser,
   ) {
     // Read first so the audit row can show a real before/after diff.
     const before = await this.templatesService.findById(id).catch(() => null);
-    const template = await this.templatesService.update(id, data);
+    const template = await this.templatesService.update(id, data as Partial<Template>);
     await this.audit.log({
       ...TemplatesController.actorEntry(user),
       action: AuditAction.TEMPLATE_UPDATED,

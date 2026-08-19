@@ -23,7 +23,7 @@ import { CurrentUser, FirebaseUser } from '../../common/decorators/current-user.
 import { AuditService } from '../audit/audit.service';
 import { PaymentService } from '../payment/payment.service';
 import { AuditAction } from '../audit/audit-actions';
-import { UpdateUserData } from '@flacroncv/shared-types';
+import { UpdatePreferencesDto, UpdateUserDto } from './dto/update-user.dto';
 
 @ApiTags('users')
 @Controller('users')
@@ -61,16 +61,16 @@ export class UsersController {
   }
 
   @Put('me')
-  async updateProfile(@CurrentUser() user: FirebaseUser, @Body() data: UpdateUserData) {
+  async updateProfile(@CurrentUser() user: FirebaseUser, @Body() data: UpdateUserDto) {
     return this.usersService.update(user.uid, data);
   }
 
   @Patch('me/preferences')
   async updatePreferences(
     @CurrentUser() user: FirebaseUser,
-    @Body() preferences: Record<string, unknown>,
+    @Body() preferences: UpdatePreferencesDto,
   ) {
-    return this.usersService.update(user.uid, { preferences: preferences as any });
+    return this.usersService.update(user.uid, { preferences });
   }
 
   @Get('me/usage')

@@ -15,7 +15,16 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CVService } from './cv.service';
 import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
 import { CurrentUser, FirebaseUser } from '../../common/decorators/current-user.decorator';
-import { CreateCVData, UpdateCVData, CVSection } from '@flacroncv/shared-types';
+import { CreateCvDto } from './dto/create-cv.dto';
+import { ImportCvDto } from './dto/import-cv.dto';
+import { UpdateCvDto } from './dto/update-cv.dto';
+import {
+  AddSectionDto,
+  CreateVersionDto,
+  ReorderSectionsDto,
+  UpdateSectionDto,
+} from './dto/section.dto';
+import { CVSection } from '@flacroncv/shared-types';
 
 @ApiTags('cvs')
 @Controller('cvs')
@@ -25,16 +34,13 @@ export class CVController {
   constructor(private readonly cvService: CVService) {}
 
   @Post()
-  async create(@CurrentUser() user: FirebaseUser, @Body() data: CreateCVData) {
+  async create(@CurrentUser() user: FirebaseUser, @Body() data: CreateCvDto) {
     return this.cvService.create(user.uid, data);
   }
 
   // Import an existing resume: AI parses the pasted text into a populated CV.
   @Post('import')
-  async importResume(
-    @CurrentUser() user: FirebaseUser,
-    @Body() data: { title?: string; resumeText: string },
-  ) {
+  async importResume(@CurrentUser() user: FirebaseUser, @Body() data: ImportCvDto) {
     return this.cvService.importFromResume(user.uid, data);
   }
 
@@ -56,7 +62,7 @@ export class CVController {
   async update(
     @CurrentUser() user: FirebaseUser,
     @Param('id') id: string,
-    @Body() data: UpdateCVData,
+    @Body() data: UpdateCvDto,
   ) {
     return this.cvService.update(id, user.uid, data);
   }
@@ -83,14 +89,7 @@ export class CVController {
   async addSection(
     @CurrentUser() user: FirebaseUser,
     @Param('id') id: string,
-    @Body() data: {
-      id?: string;
-      type: string;
-      title: string;
-      order: number;
-      isVisible?: boolean;
-      items?: any[];
-    },
+    @Body() data: AddSectionDto,
   ) {
     await this.cvService.findByIdOrThrow(id, user.uid);
     return this.cvService.addSection(id, data);
@@ -103,7 +102,7 @@ export class CVController {
   async reorderSections(
     @CurrentUser() user: FirebaseUser,
     @Param('id') id: string,
-    @Body() body: { sectionOrder: string[] },
+    @Body() body: ReorderSectionsDto,
   ) {
     await this.cvService.findByIdOrThrow(id, user.uid);
     await this.cvService.reorderSections(id, body.sectionOrder);
@@ -115,10 +114,10 @@ export class CVController {
     @CurrentUser() user: FirebaseUser,
     @Param('id') id: string,
     @Param('sectionId') sectionId: string,
-    @Body() data: Partial<CVSection>,
+    @Body() data: UpdateSectionDto,
   ) {
     await this.cvService.findByIdOrThrow(id, user.uid);
-    return this.cvService.updateSection(id, sectionId, data);
+    return this.cvService.updateSection(id, sectionId, data as Partial<CVSection>);
   }
 
   @Delete(':id/sections/:sectionId')
@@ -143,7 +142,7 @@ export class CVController {
   async createVersion(
     @CurrentUser() user: FirebaseUser,
     @Param('id') id: string,
-    @Body() body: { description: string },
+    @Body() body: CreateVersionDto,
   ) {
     return this.cvService.createVersion(id, user.uid, body.description);
   }

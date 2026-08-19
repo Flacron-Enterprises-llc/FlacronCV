@@ -112,7 +112,7 @@ export class CoverLetterService {
         if (salvaged) {
           this.logger.error(
             `Cover letter ${id} generated but the create flow failed afterwards; ` +
-              `keeping the generated content. Cause: ${(error as Error).message}`,
+              `keeping the generated content.`,
           );
           return salvaged;
         }
@@ -209,8 +209,8 @@ export class CoverLetterService {
 
     // Whitelist updatable fields (mirrors JobsService.UPDATABLE_FIELDS) so a raw
     // body cannot mass-assign immutable/ownership fields (userId, id, deletedAt,
-    // createdAt, aiGenerated…). The controller binds an interface, not a DTO, so
-    // the global ValidationPipe whitelist does not strip unknown keys here.
+    // createdAt, aiGenerated…). The DTO + pipe strip unknown keys first; this
+    // list is defence in depth if a new field is added to the DTO by mistake.
     const UPDATABLE_FIELDS: readonly (keyof UpdateCoverLetterData)[] = [
       'title',
       'recipientName',
