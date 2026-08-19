@@ -1,6 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import * as ImagePicker from 'expo-image-picker';
-import { Alert } from 'react-native';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/auth-store';
 import { User } from '../types/user.types';
@@ -19,7 +17,7 @@ export function useUpdateProfile() {
   const qc = useQueryClient();
   const { firebaseUser } = useAuthStore();
   return useMutation({
-    mutationFn: (data: Partial<User>) => api.patch<User>('/users/me', data),
+    mutationFn: (data: Partial<User>) => api.put<User>('/users/me', data),
     onSuccess: (updated) => {
       qc.setQueryData(['user', firebaseUser?.uid], updated);
     },
@@ -27,40 +25,15 @@ export function useUpdateProfile() {
 }
 
 export function useUploadProfilePhoto() {
-  const qc = useQueryClient();
-  const { firebaseUser } = useAuthStore();
-
+  // TODO(mobile-photo): Profile photo upload is disabled until a Storage path
+  // exists. Design (mirrors web): upload the image to Firebase Storage, then
+  // PUT /users/me { photoURL } with the resulting download URL. Do NOT invent
+  // POST /users/:uid/photo — that route does not exist on the API.
+  // When building: enable the settings avatar control and reintroduce
+  // ImagePicker + upload here.
   return useMutation({
     mutationFn: async () => {
-      const permResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permResult.granted) {
-        Alert.alert('Permission required', 'Please allow access to your photos.');
-        throw new Error('Permission denied');
-      }
-
-      const pickerResult = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (pickerResult.canceled || !pickerResult.assets[0]) {
-        throw new Error('Cancelled');
-      }
-
-      const asset = pickerResult.assets[0];
-      const formData = new FormData();
-      formData.append('photo', {
-        uri: asset.uri,
-        type: 'image/jpeg',
-        name: 'profile.jpg',
-      } as unknown as Blob);
-
-      return api.postForm<{ photoURL: string }>(`/users/${firebaseUser!.uid}/photo`, formData);
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['user', firebaseUser?.uid] });
+      throw new Error('Profile photo upload is not available in this build.');
     },
   });
 }

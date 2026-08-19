@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSupportTicket, useTicketMessages, useAddTicketMessage } from '../../../src/hooks/useSupport';
+import { useSupportTicket, useAddTicketMessage } from '../../../src/hooks/useSupport';
 import { TicketMessage } from '../../../src/types/support.types';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { formatDate } from '../../../src/lib/utils';
@@ -13,9 +13,10 @@ export default function TicketDetailScreen() {
   const router = useRouter();
   const { firebaseUser } = useAuthStore();
   const { data: ticket, isLoading } = useSupportTicket(id);
-  const { data: messages } = useTicketMessages(id);
   const addMessage = useAddTicketMessage(id!);
   const [messageText, setMessageText] = useState('');
+
+  const messages = ticket?.messages ?? [];
 
   const handleSend = async () => {
     if (!messageText.trim()) return;
@@ -61,7 +62,7 @@ export default function TicketDetailScreen() {
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
         <FlatList
-          data={messages ?? []}
+          data={messages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 16, flexGrow: 1 }}

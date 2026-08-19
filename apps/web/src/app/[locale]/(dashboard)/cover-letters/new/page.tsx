@@ -129,7 +129,8 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
       refreshUser();
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      refreshUser();
+      toast.error(error.message, { description: t('common.generate_failed_no_charge') });
     },
   });
 

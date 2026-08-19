@@ -459,6 +459,7 @@
     "delete_confirm_message": "Are you sure you want to delete this cover letter? This action cannot be undone. Deleting it does not restore a cover letter creation on your plan.",
     "delete_confirm_no_allowance": "You have no cover letter creations remaining. Deleting this cover letter will not let you create another on this plan.",
     "save_failed": "Failed to save cover letter",
+    "autosave_failed": "Couldn't save your changes. We'll keep retrying.",
     "ai_improved": "Cover letter improved with AI",
     "ai_improve": "AI Improve",
     "exported": "Exported as {format}",
@@ -1268,6 +1269,7 @@
   "common": {
     "loading": "Loading...",
     "error": "Something went wrong",
+    "generate_failed_no_charge": "No AI credit was used — you can safely try again.",
     "retry": "Try Again",
     "save": "Save",
     "cancel": "Cancel",
@@ -1876,6 +1878,7 @@
     "audit_log": "Audit Log",
     "app_settings": "App Settings",
     "nav_owner_badge": "Owner",
+    "chrome_badge": "CRM",
     "nav_back_to_app": "Back to App",
     "status_percent_change_vs_last_month": "{change}% vs last month",
     "active": "Active",
@@ -1969,7 +1972,7 @@
     "necessary_title": "Strictly Necessary",
     "necessary_desc": "Required for account authentication, security, fraud prevention, billing, and basic operation.",
     "preferences_title": "Preferences",
-    "preferences_desc": "Allows FlacronCV to remember settings such as language and theme.",
+    "preferences_desc": "Remembers language and theme on this device. If you turn Preferences off, your language will not be kept after you leave — that is expected, not a bug.",
     "analytics_title": "Analytics",
     "analytics_desc": "Allows FlacronCV to understand service usage and improve performance.",
     "aria_label": "Cookie consent"

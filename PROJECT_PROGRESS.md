@@ -767,20 +767,43 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   get type and length checks; extra keys are allowed. A nested item class with
   `forbidNonWhitelisted` would 400 existing autosaves that still carry legacy keys. Full union
   enforcement is deferred to a migration that first strips or maps those keys.
-- **⚠️ ADDED 2026-08-19 — Four mobile API calls that do not exist (do not fix here).** These
-  are live broken features in the shipping app, not DTO problems. Mapping for whoever fixes
-  mobile:
-  1. `PATCH /users/me` — `apps/mobile/src/hooks/useUser.ts` (`useUpdateProfile`). Correct:
-     `PUT /users/me` (profile) or `PATCH /users/me/preferences`.
-  2. `POST /cover-letters/:id/generate` — `apps/mobile/src/hooks/useCoverLetters.ts`. Correct:
-     `POST /cover-letters/:id/ai/generate`.
-  3. `POST /users/:uid/photo` — `apps/mobile/src/hooks/useUser.ts` (`useUploadProfilePhoto`).
-     No such route; web uploads to Firebase Storage then `PUT /users/me` `{ photoURL }`.
-  4. **Export URLs** — `apps/mobile/src/hooks/useExport.ts` posts
-     `POST /exports/cv/:id/:format` and `POST /exports/cover-letter/:id/pdf`. Correct API
-     routes are `POST /cvs/:id/export/pdf|docx` and `POST /cover-letters/:id/export/pdf|docx`.
-     Mobile export is a dead feature until those paths are aligned (client-side
-     `canExport` check is UX only).
+- **⚠️ ADDED 2026-08-19 — Mobile is NOT currently shippable (correct the “shipping app” wording).**
+  `apps/mobile/app.json` still has placeholder `"projectId": "your-eas-project-id"` and there is
+  **no** `eas.json`. Treat broken mobile API calls as **latent** (will bite the first real store
+  build), not live App Store / Play damage today. Equally: **do not ship mobile** without clearing
+  the **Mobile pre-launch gate** below. ⚠️ UNVERIFIED that no external pipeline builds past that
+  placeholder.
+- **⚠️ ADDED 2026-08-19 — Mobile sends `X-Device-Token` (abuse scoring).**
+  `apps/mobile/src/lib/api.ts` attaches `X-Device-Token` from SecureStore
+  (`getOrCreateDeviceToken`, 32 hex). `POST /auth/verify` feeds it into Batch G scoring the same
+  way as web. CORS does not apply to native; mobile signups **are** scored when verify runs
+  against a real API. Do not assume mobile bypasses the abuse engine.
+- **⚠️ UPDATED 2026-08-19 — Mobile API alignment (endpoint batch).** Fixed / disabled:
+  1. `PUT /users/me` (was `PATCH /users/me`) — `useUser.ts`
+  2. `POST /cover-letters/:id/ai/generate` (was `…/generate`) — `useCoverLetters.ts`
+  3. Photo UI **disabled**; TODO(mobile-photo): Storage upload then `PUT /users/me { photoURL }`
+     (mirrors web). Do not invent `POST /users/:uid/photo`.
+  4. Export → `POST /cvs/:id/export/pdf|docx` and `POST /cover-letters/:id/export/pdf`; map
+     `downloadUrl` → `url`; filename from signed-URL path segment, else `cv-{id}.{format}` /
+     `cover-letter-{id}.pdf`.
+  5. Support ticket messages from `GET /support/tickets/:id` `{ ticket, messages }` (removed
+     dead `GET …/messages`).
+  Dead traps removed: `auth-store.updateUser` (`PATCH /users/:uid`), `useSubscriptionStatus`
+  (`GET /users/:uid/subscription`).
+- **⚠️ ADDED 2026-08-19 — Mobile pre-launch gate (must clear before any store build).**
+  1. Profile `PUT /users/me` path ✓ (this batch)
+  2. Cover-letter AI generate path ✓ (this batch)
+  3. Profile photo: Storage + `PUT /users/me { photoURL }` still **open** (UI disabled)
+  4. Export paths + response shape ✓ (this batch)
+  5. Support ticket messages from ticket GET ✓ (this batch)
+  6. **Legal acceptance at register** — still **open**. Mobile has no next-intl; a modal would be
+     **English-only** unless next-intl is introduced (larger work). Operator will decide when
+     mobile is closer to shipping. Until then mobile signups skip `POST /legal/acceptances` and
+     are grandfathered. See also “Mobile legal acceptance gap” below.
+- **⚠️ ADDED 2026-08-19 — Four mobile API calls that do not exist — SUPERSEDED by alignment batch above.**
+  Kept for history: the old mapping listed PATCH `/users/me`, `…/generate`, photo POST, and
+  `/exports/…` URLs. Items 1–2 and 4–5 of the pre-launch gate are fixed; photo remains TODO;
+  legal remains held.
 - **Secrets rotation** — Firebase Admin private key, Stripe, Brevo, OpenAI keys were shared in chat/docs; rotate them.
   **2026-08-18:** AWS IAM user `flacronai-ses` access key was in a public `apps/api/.zip` on GitHub.
   Deleting the file does **not** revoke the key — deactivate it in IAM and rotate every other
@@ -841,14 +864,12 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   a FREE feature bullet claiming a PDF watermark the product does not have. Making it consume
   shared-types is the right fix but is larger than a micro-change — see the full audit in
   `ARCHITECTURE_MAP.md`.
-- **⚠️ ADDED 2026-08-19 — Mobile legal acceptance gap (verified).** Web Batch H gates
+- **⚠️ ADDED 2026-08-19 — Mobile legal acceptance gap (held — not this batch).** Web Batch H gates
   register with `LegalAcceptanceModal` + `POST /legal/acceptances`. Mobile does **not**:
-  `apps/mobile/app/(auth)/register.tsx` calls `useAuthStore().register` →
-  `createUserWithEmailAndPassword` + `POST /auth/verify` only
-  (`apps/mobile/src/store/auth-store.ts`). No modal, no acceptance write. Combined with
-  grandfathering (missing `legalAcceptances/{uid}` → no prompt), a mobile signup creates
-  an account that is never asked. Recorded; do not invent a mobile legal flow in an
-  analytics batch.
+  `apps/mobile/app/(auth)/register.tsx` → `POST /auth/verify` only. No modal, no acceptance write;
+  grandfathering then treats the account as predated. **Decision path:** mobile has no six-locale
+  pipeline; a modal would be **English-only**; introducing next-intl is a larger piece of work.
+  Operator decides when mobile is closer to shipping. Remains item 6 on the Mobile pre-launch gate.
 - **⚠️ ADDED 2026-08-19 — AI audit gap (open, do not fix here).** Cover-letter generate
   (`apps/api/src/modules/cover-letter/cover-letter.controller.ts:72–83` →
   `cover-letter.service.ts:279+`) and resume import (`apps/api/src/modules/cv/cv.controller.ts:42–45`
@@ -876,10 +897,115 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   2. Cover-letter list delete `Alert.alert` — `apps/mobile/app/(dashboard)/cover-letters/index.tsx`
   3. In-app warnings (legal §§18–21): AI / ATS / cover-letter / export notice — **web only**
      (2026-08-19 navy-chrome batch). Do not invent next-intl on mobile to close this.
+- **⚠️ ADDED 2026-08-19 — Batch M inherits: manual visual QA (do not guess from code).** From
+  Batch K gap report. Code review cannot certify these; operator eyeballs in a real browser:
+  1. Overflow / clip at **320 / 375 / 768 / 1024** on §35 surfaces (nav, sidebar, pricing cards,
+     hero, forms, buttons, billing usage cards, FAQ, footer, modals).
+  2. Plan comparison **mobile stacked cards** vs desktop table (`settings/billing`) — usable,
+     no sideways scroll needed.
+  3. Dark-mode contrast on pricing, CV/cover-letter editor chrome, tables, dropdowns, legal pages.
+  4. RTL visual QA (ar / ur) beyond `dir=` on html.
+  5. Stripe Checkout on a phone-sized viewport.
+  6. Cover-letter autosave failure → persistent toast + automatic retry (not silent loss).
+- **⚠️ ADDED 2026-08-19 — Client §38 vs Preferences consent (trade-off, not a bug).** Rejecting
+  Preferences **deletes** `flacroncv_locale` (and theme / sidebar keys). Browser language
+  persistence across sessions is **only** for users who accept Preferences. That is correct
+  consent behaviour. §38 is **satisfied only for preference-cookie acceptors**. Signed-in
+  Settings → language still persists as **account data** via `PATCH /users/me/preferences`
+  (not a preference cookie). Cookie-centre copy states the trade-off
+  (`cookie_consent.preferences_desc`). Tell the client; do not bypass consent to “fix” §38.
+- **⚠️ ADDED 2026-08-19 — Client §39 navy chrome is light-mode only (open question).** Public
+  `Navbar` / `Footer` / shared `TopBar` use Tailwind `chrome` (`#1e3a5f`) in **light mode only**;
+  dark mode keeps near-black. Deliberate (navy-chrome batch), not an oversight. Whether the
+  client wants navy in dark mode is **his call** — do not invent dark-mode navy without approval.
 
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-19 — **Full-width navy TopBar (dashboard / admin / CRM) + usage Unlimited labels.**
+  Web only. No dependency changes. Auth/billing/data-shape untouched. Dark-mode navy
+  **not** invented (§39 still open).
+
+  **Chrome restructure.** Shells are `flex h-screen flex-col` → full-width `TopBar` →
+  `flex min-h-0 flex-1 overflow-hidden` → sidebar | scrolling `main`. Removes the white
+  sidebar logo strip beside navy TopBar. Mobile drawer + overlay use `top-16` so the navy
+  bar stays visible. Collapse toggle stays in the dashboard sidebar body (header shape
+  unchanged on collapse). Shared `TopBar` takes `area`: logo `variant="on-dark"` links to
+  `/dashboard` | `/admin` | `/crm`; admin shows `admin.title`; CRM shows `crm.chrome_badge`
+  plus `crm.nav_owner_badge` for `super_admin`. Logo opaque baked-in rectangle still
+  present on navy — standing §8 brand request; **no code workaround**. Orange accent next
+  to the mark is **brand ink in the PNG**, not a UI status dot — do not re-investigate.
+
+  **Usage cards.** Dashboard Exports/CVs when unlimited: `{count} ·` +
+  `billing.features.unlimited` (existing wording family). No invented numeric cap.
+
+  **Files:** `TopBar`, `DashboardShell`, `AdminShell`, `CRMShell`, `Sidebar`,
+  `AdminSidebar`, `CRMSidebar`, `dashboard/page.tsx`, `crm.chrome_badge` × 6,
+  `ARCHITECTURE_MAP.md` §4.
+
+  **QA:** web lint 0 errors (pre-existing `<img>` warnings) · web `tsc --noEmit` ✓ ·
+  web **305/305** · api lint ✓ · api `tsc --noEmit` ✓ · api **523/523** · all seven
+  i18n/contrast gates green. **Scroll and RTL not browser-verified in this session.**
+
+- 2026-08-19 — **Mobile API alignment (endpoint batch) + pre-launch gate.** Mobile only.
+  No dependency changes. Auth/billing/data-shape untouched. Legal modal **held**.
+
+  **MC1.** `useUpdateProfile` → `PUT /users/me` (was `PATCH /users/me`).
+  **MC2.** Cover-letter generate → `POST /cover-letters/:id/ai/generate`.
+  **MC3(b).** Photo UI disabled (settings avatar no longer uploads). TODO(mobile-photo):
+  Storage then `PUT /users/me { photoURL }` mirroring web — do not invent
+  `POST /users/:uid/photo`.
+  **MC4.** Export URLs → `/cvs/:id/export/{pdf|docx}` and
+  `/cover-letters/:id/export/pdf`. Map `downloadUrl` → `url`; unwrap Nest
+  `{ data }` envelope. **Filename:** last path segment of the signed URL when it
+  ends in `.pdf`/`.docx` (server uses `exports/{uid}/{uuid}.ext`); else
+  `cv-{id}.{format}` / `cover-letter-{id}.pdf`.
+  **MC5.** Support messages from `GET /support/tickets/:id` `{ ticket, messages }`;
+  removed dead `GET …/messages` and `useTicketMessages`.
+  **Cleanup.** Removed `auth-store.updateUser` and `useSubscriptionStatus` (dead
+  routes).
+
+  **Docs:** §8 — mobile **not shippable** (placeholder EAS id, no eas.json);
+  Mobile pre-launch gate (6 items); X-Device-Token scoring note; legal modal
+  English-only / next-intl decision path; superseded “shipping app” dead-call note.
+
+  **QA:** `pnpm --filter web lint` 0 errors (pre-existing `<img>` warnings) ·
+  web `tsc --noEmit` ✓ · web **305/305** · api lint ✓ · api `tsc --noEmit` ✓ ·
+  **api 523/523** · `pnpm --filter flacroncv-mobile lint` ✓. All seven
+  i18n/contrast gates green. Mobile `tsc` still has pre-existing errors outside
+  this batch (onboarding/Skeleton/utils; settings `badge` union). No new web
+  `t()` strings.
+
+- 2026-08-19 — **Batch K — UX polish (§35–42 / K.1–K.6).** Web only. No dependency changes.
+  Auth/billing/data-shape untouched. Restyles of working shells and dark-mode navy **out of
+  scope** (operator-approved).
+
+  **K-MC2 (priority) — §40 credit-not-used reassurance.** Shared
+  `common.generate_failed_no_charge` × 6 locales (same key name as the existing
+  cover-letter pattern; no second invented key). Wired on AI **catch / onError**
+  paths that reserve then refund: ATS, LinkedIn, interview-prep, resume import,
+  CV-summary local fallback toast, cover-letter AI Improve, regenerate-paragraph,
+  generate-job-description. Cover-letter generate panel keeps
+  `coverLetters.generate_failed_no_charge` (credit + no draft). Parse failures
+  after a successful response do **not** get the line (credit was consumed).
+
+  **K-MC1 — plan comparison mobile layout.** Billing comparison: stacked per-plan cards below
+  `md`; existing table from `md` up. No horizontal-scroll table on phones.
+
+  **K-MC3 — §38 honesty in cookie centre.** `cookie_consent.preferences_desc` states that
+  rejecting Preferences means language is not remembered across visits (expected). Trade-off
+  recorded in §8 for the client.
+
+  **K-MC4 — cover-letter autosave retry.** Same `retryTick` + capped backoff (4s→30s) as CV
+  editor; persistent toast `coverLetters.autosave_failed`.
+
+  **Docs:** §8 Batch M visual-QA checklist; §38 consent trade-off; §39 navy light-only open
+  question. `CLIENT_REQUIREMENTS.md` Batch K statuses.
+
+  **QA:** `pnpm --filter web lint` 0 errors (pre-existing `<img>` warnings only) ·
+  web `tsc --noEmit` ✓ · web **305/305** · api lint ✓ · api `tsc --noEmit` ✓ ·
+  **api 523/523**. All seven i18n/contrast gates green.
 
 - 2026-08-19 — **HOTFIX — CORS allowedHeaders: X-Device-Token + Idempotency-Key.**
   Production outage: every browser call from `www.flacroncv.com` → `api.flacroncv.com`

@@ -637,14 +637,64 @@ export default function BillingPage(): React.JSX.Element | null {
         </div>
       </Card>
 
-      {/* Feature Comparison */}
+      {/* Feature Comparison — table on md+, stacked plan cards on small screens
+          (client §35 / K.3: no horizontal-scroll pricing table on mobile). */}
       <Card padding="none">
         <div className="p-6 pb-0">
           <h3 className="text-lg font-semibold text-stone-900 dark:text-white">
             {t('comparison.title')}
           </h3>
         </div>
-        <div className="mt-4 overflow-x-auto">
+
+        {/* Mobile: one card per plan, feature rows underneath — no sideways scroll. */}
+        <div className="mt-4 space-y-4 px-4 pb-6 md:hidden">
+          {plans.map((plan) => (
+            <div
+              key={plan.key}
+              className="rounded-xl border border-stone-200 p-4 dark:border-stone-700"
+            >
+              <div className="mb-3 border-b border-stone-100 pb-3 dark:border-stone-700/50">
+                <p className="font-semibold text-stone-900 dark:text-white">
+                  {PLAN_CONFIGS[plan.key].name}
+                </p>
+                <p className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">
+                  {plan.price}
+                  {plan.key !== SubscriptionPlan.FREE && intervalSuffix}
+                </p>
+              </div>
+              <ul className="space-y-2.5">
+                {comparisonFeatures.map((feature) => {
+                  const value = feature.cell(plan.key);
+                  return (
+                    <li
+                      key={feature.label}
+                      className="flex items-center justify-between gap-3 text-sm"
+                    >
+                      <span className="text-stone-600 dark:text-stone-400">{feature.label}</span>
+                      {typeof value === 'boolean' ? (
+                        value ? (
+                          <Check className="h-5 w-5 shrink-0 text-emerald-500" aria-hidden />
+                        ) : (
+                          <X
+                            className="h-5 w-5 shrink-0 text-stone-300 dark:text-stone-600"
+                            aria-hidden
+                          />
+                        )
+                      ) : (
+                        <span className="shrink-0 font-medium text-stone-900 dark:text-white">
+                          {value}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop / tablet landscape: full comparison table. */}
+        <div className="mt-4 hidden overflow-x-auto md:block">
           <table className="w-full">
             <thead>
               <tr className="border-b border-stone-200 dark:border-stone-700">

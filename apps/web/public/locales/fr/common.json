@@ -459,6 +459,7 @@
     "delete_confirm_message": "Êtes-vous sûr de vouloir supprimer cette lettre de motivation ? Cette action est irréversible. La supprimer ne restaure pas une création de lettre de motivation sur votre formule.",
     "delete_confirm_no_allowance": "Il ne vous reste aucune création de lettre de motivation. Supprimer cette lettre ne vous permettra pas d'en créer une autre avec cette formule.",
     "save_failed": "Échec de la sauvegarde de la lettre de motivation",
+    "autosave_failed": "Impossible d'enregistrer vos modifications. Nous continuerons à réessayer.",
     "ai_improved": "Lettre de motivation améliorée par l'IA",
     "ai_improve": "Amélioration IA",
     "exported": "Exporté en {format}",
@@ -1268,6 +1269,7 @@
   "common": {
     "loading": "Chargement...",
     "error": "Une erreur s'est produite",
+    "generate_failed_no_charge": "Aucun crédit IA n'a été utilisé : vous pouvez réessayer en toute sécurité.",
     "retry": "Réessayer",
     "save": "Enregistrer",
     "cancel": "Annuler",
@@ -1882,6 +1884,7 @@
     "analytics": "Analytique",
     "app_settings": "Paramètres de l'application",
     "nav_owner_badge": "Propriétaire",
+    "chrome_badge": "CRM",
     "nav_back_to_app": "Retour à l'application",
     "status_percent_change_vs_last_month": "{change}% vs le mois dernier",
     "active": "Actif",
@@ -1969,7 +1972,7 @@
     "necessary_title": "Strictement nécessaires",
     "necessary_desc": "Nécessaires à l’authentification du compte, à la sécurité, à la prévention de la fraude, à la facturation et au fonctionnement de base.",
     "preferences_title": "Préférences",
-    "preferences_desc": "Permet à FlacronCV de mémoriser des paramètres tels que la langue et le thème.",
+    "preferences_desc": "Mémorise la langue et le thème sur cet appareil. Si vous désactivez Préférences, votre langue ne sera pas conservée après votre départ — c'est normal, pas un bug.",
     "analytics_title": "Mesure d’audience",
     "analytics_desc": "Permet à FlacronCV de comprendre l’utilisation du service et d’améliorer les performances.",
     "aria_label": "Consentement aux cookies"

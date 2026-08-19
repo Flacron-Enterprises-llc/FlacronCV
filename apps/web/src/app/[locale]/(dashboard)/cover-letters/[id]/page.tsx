@@ -90,6 +90,9 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
   } = useCoverLetterStore();
 
   const saveTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const saveErrorToastRef = useRef<string | number | undefined>(undefined);
+  // Bumped on each autosave failure to re-arm the save effect (same pattern as CV editor).
+  const [retryTick, setRetryTick] = useState(0);
   const detailsAutoOpened = useRef(false);
 
   // Open "Letter details" once, on first load, when the letter is not addressed
@@ -189,7 +192,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
 
-  // Auto-save with 2-second debounce
+  // Auto-save with 2-second debounce; after a failure, capped exponential backoff.
   const autoSave = useCallback(async () => {
     if (!coverLetter || !isDirty) return;
 
@@ -210,21 +213,35 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
 
       await api.put(`/cover-letters/${coverLetterId}`, updateData);
       setLastSavedAt(new Date());
+
+      if (saveErrorToastRef.current !== undefined) {
+        toast.dismiss(saveErrorToastRef.current);
+        saveErrorToastRef.current = undefined;
+      }
+      setRetryTick(0);
     } catch (error) {
       console.error('Auto-save failed:', error);
-      toast.error(t('coverLetters.save_failed'));
+
+      if (saveErrorToastRef.current === undefined) {
+        saveErrorToastRef.current = toast.error(t('coverLetters.autosave_failed'), {
+          duration: Infinity,
+        });
+      }
+      // Re-arm the effect: isDirty stays true on failure but neither dep would
+      // otherwise change, so without this the "keep retrying" promise is false.
+      setRetryTick((n) => n + 1);
     } finally {
       setSaving(false);
     }
   }, [coverLetter, isDirty, coverLetterId, setSaving, setLastSavedAt, t]);
 
   useEffect(() => {
-    if (isDirty) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(autoSave, 2000);
-    }
+    if (!isDirty) return;
+    clearTimeout(saveTimerRef.current);
+    const delay = retryTick === 0 ? 2000 : Math.min(2000 * 2 ** retryTick, 30_000);
+    saveTimerRef.current = setTimeout(autoSave, delay);
     return () => clearTimeout(saveTimerRef.current);
-  }, [isDirty, autoSave]);
+  }, [isDirty, autoSave, retryTick]);
 
   // Manual save
   const handleManualSave = () => {
@@ -305,7 +322,8 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
       refreshUser();
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      refreshUser();
+      toast.error(error.message, { description: t('common.generate_failed_no_charge') });
     },
   });
 
@@ -330,7 +348,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     onError: (error: Error) => {
       // A failed generation refunds its credit server-side; re-read the balance.
       refreshUser();
-      toast.error(error.message);
+      toast.error(error.message, { description: t('common.generate_failed_no_charge') });
     },
   });
 

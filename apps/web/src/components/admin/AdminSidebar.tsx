@@ -13,7 +13,6 @@ import {
   ArrowLeft,
   X,
 } from 'lucide-react';
-import Logo from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
 interface AdminSidebarProps {
@@ -77,26 +76,20 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
 
   return (
     <>
-      {/* Mobile overlay */}
       {open && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onClose} />
+        <div className="fixed inset-x-0 bottom-0 top-16 z-40 bg-black/50 lg:hidden" onClick={onClose} />
       )}
 
-      {/* Sidebar — the closed-state transform must flip with the writing
-          direction, or the drawer stays partially on-screen in RTL. */}
       <aside
         className={cn(
-          'fixed inset-y-0 start-0 z-50 flex w-64 flex-col border-e border-stone-200 bg-white transition-transform lg:static lg:translate-x-0 dark:border-stone-700 dark:bg-stone-900',
+          'fixed bottom-0 start-0 top-16 z-50 flex w-64 flex-col border-e border-stone-200 bg-white transition-transform lg:static lg:top-auto lg:translate-x-0 dark:border-stone-700 dark:bg-stone-900',
           open ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full lg:rtl:translate-x-0',
         )}
       >
-        {/* Logo */}
-        <div className="flex h-16 items-center justify-between border-b border-stone-200 px-4 dark:border-stone-700">
-          <Link href="/admin" className="flex items-center">
-            <Logo className="h-8" />
-          </Link>
+        {/* Mobile close only — area badge lives in TopBar. */}
+        <div className="flex items-center justify-end border-b border-stone-200 px-3 py-2 lg:hidden dark:border-stone-700">
           <button
-            className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 lg:hidden dark:hover:bg-stone-800"
+            className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800"
             onClick={onClose}
             aria-label={tCommon('close_menu')}
           >
@@ -104,19 +97,12 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
           </button>
         </div>
 
-        {/* Admin badge */}
-        <div className="mx-3 mt-3 rounded-lg bg-stone-100 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-stone-500 dark:bg-stone-800 dark:text-stone-400">
-          {t('title')}
-        </div>
-
-        {/* Nav */}
         <nav aria-label={tCommon('main_navigation')} className="flex-1 space-y-1 overflow-y-auto p-3">
           {navItems.map((item) => (
             <NavLink key={item.href} {...item} />
           ))}
         </nav>
 
-        {/* Back to Dashboard */}
         <div className="border-t border-stone-200 p-3 dark:border-stone-700">
           <Link
             href="/dashboard"

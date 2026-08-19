@@ -31,7 +31,6 @@ interface AuthState {
   resetPassword: (email: string) => Promise<void>;
   resendVerification: () => Promise<void>;
   syncUser: () => Promise<void>;
-  updateUser: (data: Partial<User>) => Promise<void>;
   setError: (error: string | null) => void;
   clearError: () => void;
 }
@@ -176,14 +175,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // Firebase auth still valid even if backend sync fails
     }
-  },
-
-  updateUser: async (data) => {
-    const { user } = get();
-    if (!user) return;
-
-    const updated = await api.patch<User>(`/users/${user.uid}`, data);
-    set({ user: updated });
   },
 
   setError: (error) => set({ error }),

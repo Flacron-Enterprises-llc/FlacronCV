@@ -100,7 +100,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
         const levelText = experienceLevel.replace('_', ' ');
         const fallback = `${levelText.charAt(0).toUpperCase() + levelText.slice(1)} ${profession} with expertise in ${skills.length > 0 ? skills.join(', ') : 'various technologies'}. ${careerGoal ? careerGoal + '.' : 'Passionate about delivering high-quality results and continuous professional growth.'}`;
         setGeneratedSummary(fallback);
-        toast.info(t('generated_locally'));
+        toast.info(t('generated_locally'), { description: tCommon('generate_failed_no_charge') });
       }
     } finally {
       setIsGenerating(false);

@@ -459,6 +459,7 @@
     "delete_confirm_message": "¿Estás seguro de que deseas eliminar esta carta de presentación? Esta acción no se puede deshacer. Eliminarla no restaura una creación de carta de presentación en tu plan.",
     "delete_confirm_no_allowance": "No te quedan creaciones de cartas de presentación. Eliminar esta carta no te permitirá crear otra en este plan.",
     "save_failed": "Error al guardar la carta de presentación",
+    "autosave_failed": "No se pudieron guardar tus cambios. Seguiremos reintentándolo.",
     "ai_improved": "Carta de presentación mejorada con IA",
     "ai_improve": "Mejora con IA",
     "exported": "Exportado como {format}",
@@ -1268,6 +1269,7 @@
   "common": {
     "loading": "Cargando...",
     "error": "Algo salió mal",
+    "generate_failed_no_charge": "No se usó ningún crédito de IA: puedes volver a intentarlo sin problema.",
     "retry": "Intentar de nuevo",
     "save": "Guardar",
     "cancel": "Cancelar",
@@ -1882,6 +1884,7 @@
     "analytics": "Analíticas",
     "app_settings": "Configuración de la app",
     "nav_owner_badge": "Propietario",
+    "chrome_badge": "CRM",
     "nav_back_to_app": "Volver a la app",
     "status_percent_change_vs_last_month": "{change}% frente al mes anterior",
     "active": "Activo",
@@ -1969,7 +1972,7 @@
     "necessary_title": "Estrictamente necesarias",
     "necessary_desc": "Necesarias para la autenticación de la cuenta, la seguridad, la prevención del fraude, la facturación y el funcionamiento básico.",
     "preferences_title": "Preferencias",
-    "preferences_desc": "Permite que FlacronCV recuerde ajustes como el idioma y el tema.",
+    "preferences_desc": "Recuerda el idioma y el tema en este dispositivo. Si desactivas Preferencias, tu idioma no se guardará al salir: es el comportamiento esperado, no un error.",
     "analytics_title": "Analítica",
     "analytics_desc": "Permite que FlacronCV entienda el uso del servicio y mejore el rendimiento.",
     "aria_label": "Consentimiento de cookies"

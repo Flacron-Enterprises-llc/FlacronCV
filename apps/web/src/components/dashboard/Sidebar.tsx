@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/routing';
-import { useAuth } from '@/providers/AuthProvider';
 import {
   LayoutDashboard,
   FileText,
@@ -16,7 +15,6 @@ import {
   ChevronsLeft,
   X,
 } from 'lucide-react';
-import Logo from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
@@ -33,7 +31,6 @@ export default function Sidebar({ open, onClose, collapsed = false, onToggleColl
   const t = useTranslations('dashboard');
   const tCommon = useTranslations('common');
   const pathname = usePathname();
-  const { user } = useAuth();
 
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: t('title') },
@@ -89,75 +86,62 @@ export default function Sidebar({ open, onClose, collapsed = false, onToggleColl
 
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Overlay starts below the navy TopBar so the header stays visible. */}
       {open && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onClose} />
+        <div className="fixed inset-x-0 bottom-0 top-16 z-40 bg-black/50 lg:hidden" onClick={onClose} />
       )}
 
-      {/* Sidebar — the closed-state transform must flip with the writing
-          direction, or the drawer stays partially on-screen in RTL. */}
+      {/* Sidebar sits under the full-width TopBar (`top-16` on mobile). The
+          closed-state transform must flip with writing direction. */}
       <aside
         className={cn(
-          'fixed inset-y-0 start-0 z-50 flex w-64 flex-col border-e border-stone-200 bg-white transition-[transform,width] duration-200 lg:static lg:translate-x-0 dark:border-stone-700 dark:bg-stone-900',
+          'fixed bottom-0 start-0 top-16 z-50 flex w-64 flex-col border-e border-stone-200 bg-white transition-[transform,width] duration-200 lg:static lg:top-auto lg:translate-x-0 dark:border-stone-700 dark:bg-stone-900',
           open ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full lg:rtl:translate-x-0',
           // Rail width applies only from `lg` up; the mobile drawer stays 16rem.
           collapsed ? 'lg:w-[72px]' : 'lg:w-64',
         )}
       >
-        {/* Logo + controls */}
+        {/* Collapse (desktop) + close (mobile). Logo lives in TopBar. */}
         <div
           className={cn(
-            'flex h-16 items-center justify-between border-b border-stone-200 px-4 dark:border-stone-700',
-            collapsed && 'lg:justify-center lg:px-2',
+            'flex items-center justify-end border-b border-stone-200 px-3 py-2 dark:border-stone-700',
+            collapsed ? 'lg:justify-center lg:px-2' : 'lg:justify-start',
           )}
         >
-          <Link
-            href="/dashboard"
-            className={cn('flex items-center', collapsed && 'lg:hidden')}
-          >
-            <Logo className="h-8" />
-          </Link>
-
-          <div className="flex items-center gap-1">
-            {/* Desktop rail toggle */}
-            {onToggleCollapse && (
-              <button
-                type="button"
-                onClick={onToggleCollapse}
-                aria-label={collapsed ? tCommon('expand_sidebar') : tCommon('collapse_sidebar')}
-                aria-expanded={!collapsed}
-                title={collapsed ? tCommon('expand_sidebar') : tCommon('collapse_sidebar')}
-                className="hidden rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 lg:flex dark:hover:bg-stone-800 dark:hover:text-stone-300"
-              >
-                <ChevronsLeft
-                  className={cn(
-                    'h-5 w-5 transition-transform',
-                    collapsed ? 'rotate-180 rtl:rotate-0' : 'rtl:rotate-180',
-                  )}
-                />
-              </button>
-            )}
-
-            {/* Mobile drawer close */}
+          {onToggleCollapse && (
             <button
               type="button"
-              className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 lg:hidden dark:hover:bg-stone-800"
-              onClick={onClose}
-              aria-label={tCommon('close_menu')}
+              onClick={onToggleCollapse}
+              aria-label={collapsed ? tCommon('expand_sidebar') : tCommon('collapse_sidebar')}
+              aria-expanded={!collapsed}
+              title={collapsed ? tCommon('expand_sidebar') : tCommon('collapse_sidebar')}
+              className="hidden rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 lg:flex dark:hover:bg-stone-800 dark:hover:text-stone-300"
             >
-              <X className="h-5 w-5" />
+              <ChevronsLeft
+                className={cn(
+                  'h-5 w-5 transition-transform',
+                  collapsed ? 'rotate-180 rtl:rotate-0' : 'rtl:rotate-180',
+                )}
+              />
             </button>
-          </div>
+          )}
+
+          <button
+            type="button"
+            className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 lg:hidden dark:hover:bg-stone-800"
+            onClick={onClose}
+            aria-label={tCommon('close_menu')}
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        {/* Nav */}
         <nav aria-label={tCommon('main_navigation')} className="flex-1 space-y-1 overflow-y-auto p-3">
           {navItems.map((item) => (
             <NavLink key={item.href} {...item} />
           ))}
         </nav>
 
-        {/* Bottom nav */}
         <div className="border-t border-stone-200 p-3 dark:border-stone-700">
           {bottomItems.map((item) => (
             <NavLink key={item.href} {...item} />

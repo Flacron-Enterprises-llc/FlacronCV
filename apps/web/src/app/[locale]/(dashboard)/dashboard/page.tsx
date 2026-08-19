@@ -52,6 +52,7 @@ function StatSkeleton() {
 export default function DashboardPage(): React.JSX.Element | null {
   const t = useTranslations('dashboard');
   const tPricing = useTranslations('pricing');
+  const tBilling = useTranslations('billing');
   const { user, degraded, refreshUser } = useAuth();
 
   const plan = (user?.subscription?.plan as SubscriptionPlan) || SubscriptionPlan.FREE;
@@ -92,7 +93,8 @@ export default function DashboardPage(): React.JSX.Element | null {
           // narrow card breaks the value instead of clipping it.
           value:
             planLimits.cvs === 'unlimited'
-              ? `${usage.cvsCreated || 0}`
+              ? // Same Unlimited wording as billing.features.unlimited — count stays real.
+                `${usage.cvsCreated || 0} · ${tBilling('features.unlimited')}`
               : `${usage.cvsCreated || 0} / ${planLimits.cvs}`,
           bar: planLimits.cvs === 'unlimited' ? null : { used: usage.cvsCreated || 0, limit: planLimits.cvs as number },
           icon: FileText,
@@ -109,7 +111,7 @@ export default function DashboardPage(): React.JSX.Element | null {
           label: t('exports'),
           value:
             planLimits.exports === 'unlimited'
-              ? `${usage.exportsThisMonth || 0}`
+              ? `${usage.exportsThisMonth || 0} · ${tBilling('features.unlimited')}`
               : `${usage.exportsThisMonth || 0} / ${planLimits.exports}`,
           bar:
             planLimits.exports === 'unlimited'

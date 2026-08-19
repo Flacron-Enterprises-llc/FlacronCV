@@ -94,7 +94,7 @@ export default function ImportResumeModal({ open, onClose, title }: ImportResume
       router.push(`/cv/${cv.id}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
-      toast.error(message || t('error'));
+      toast.error(message || t('error'), { description: tCommon('generate_failed_no_charge') });
       setIsImporting(false);
     }
   };

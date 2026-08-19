@@ -11,8 +11,9 @@ import { useRouter } from '@/i18n/routing';
  * The admin chrome. This was `(admin)/layout.tsx` verbatim until 2026-08-18; it
  * moved here so the layout could become a server component and export
  * `robots: { index: false, follow: false }`, which a `'use client'` file cannot
- * do. Nothing below changed in that move — in particular the sign-in redirect
- * and the admin/super_admin role gate are byte-identical.
+ * do. Sign-in redirect and the admin/super_admin role gate are unchanged.
+ *
+ * Layout matches DashboardShell: full-width navy TopBar, sidebar below.
  */
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const { user, loading, placeholderAccount } = useAuth();
@@ -43,14 +44,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="flex h-screen bg-stone-50 dark:bg-black">
-      {/* Sidebar */}
-      <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className="flex h-screen flex-col bg-stone-50 dark:bg-black">
+      <TopBar area="admin" onMenuClick={() => setSidebarOpen(true)} />
 
-      {/* Main content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <TopBar onMenuClick={() => setSidebarOpen(true)} />
-        <main id="main-content" className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">{children}</main>
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <main id="main-content" className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          {children}
+        </main>
       </div>
     </div>
   );

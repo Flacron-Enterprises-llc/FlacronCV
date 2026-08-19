@@ -4,7 +4,7 @@ import React from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../../src/store/auth-store';
-import { useCurrentUser, useUploadProfilePhoto } from '../../../src/hooks/useUser';
+import { useCurrentUser } from '../../../src/hooks/useUser';
 import { getInitials } from '../../../src/lib/utils';
 import { SubscriptionPlan } from '../../../src/types/enums';
 import { PLAN_CONFIGS } from '../../../src/types/subscription.types';
@@ -13,7 +13,6 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { user: authUser, logout } = useAuthStore();
   const { data: user } = useCurrentUser();
-  const uploadPhoto = useUploadProfilePhoto();
 
   const currentUser = user ?? authUser;
   const plan = currentUser?.subscription?.plan ?? SubscriptionPlan.FREE;
@@ -26,6 +25,9 @@ export default function SettingsScreen() {
     ]);
   };
 
+  // TODO(mobile-photo): Avatar was a press target for POST /users/:uid/photo
+  // (dead route). Re-enable when useUploadProfilePhoto implements Storage +
+  // PUT /users/me { photoURL } — see TODO in useUser.ts.
   const MENU_SECTIONS = [
     {
       title: 'Account',
@@ -57,16 +59,13 @@ export default function SettingsScreen() {
         {/* Profile Header */}
         <View className="bg-white px-5 pt-6 pb-6 border-b border-stone-100">
           <View className="flex-row items-center">
-            <TouchableOpacity onPress={() => uploadPhoto.mutate()} className="relative">
+            <View className="relative">
               <View className="w-16 h-16 rounded-full bg-brand-100 items-center justify-center">
                 <Text className="text-brand-700 text-xl font-black">
                   {getInitials(currentUser?.displayName ?? 'U')}
                 </Text>
               </View>
-              <View className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-brand-500 items-center justify-center border-2 border-white">
-                <Ionicons name="camera" size={10} color="#fff" />
-              </View>
-            </TouchableOpacity>
+            </View>
             <View className="ml-4 flex-1">
               <Text className="text-lg font-black text-stone-900">{currentUser?.displayName ?? 'User'}</Text>
               <Text className="text-stone-500 text-sm">{currentUser?.email}</Text>

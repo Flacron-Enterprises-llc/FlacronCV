@@ -4,22 +4,37 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 import { Menu, Sun, Moon, LogOut, User as UserIcon } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
-import { useRouter } from '@/i18n/routing';
+import { Link, useRouter } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
 import LanguageSwitcher from '@/components/shared/LanguageSwitcher';
+import Logo from '@/components/ui/Logo';
+
+export type TopBarArea = 'dashboard' | 'admin' | 'crm';
 
 interface TopBarProps {
   onMenuClick: () => void;
+  /**
+   * Which shell owns this header. Drives the logo home link and the admin/CRM
+   * area badge so a shared TopBar still tells staff which surface they are on.
+   */
+  area?: TopBarArea;
 }
 
-export default function TopBar({ onMenuClick }: TopBarProps) {
+const AREA_HOME: Record<TopBarArea, '/dashboard' | '/admin' | '/crm'> = {
+  dashboard: '/dashboard',
+  admin: '/admin',
+  crm: '/crm',
+};
+
+export default function TopBar({ onMenuClick, area = 'dashboard' }: TopBarProps) {
   const { user, logout } = useAuth();
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
   const router = useRouter();
   const t = useTranslations();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
+  const isSuperAdmin = user?.role === 'super_admin';
 
   // Get display name with fallbacks: displayName > firstName lastName > email
   const getDisplayName = () => {
@@ -64,22 +79,43 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
   };
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-white/10 bg-chrome px-4 dark:border-stone-700 dark:bg-stone-900">
-      <button
-        className="rounded-lg p-2 text-stone-300 hover:bg-white/10 lg:hidden dark:text-stone-400 dark:hover:bg-stone-800"
-        onClick={onMenuClick}
-        aria-label={t('common.open_menu')}
-      >
-        <Menu className="h-5 w-5" />
-      </button>
+    <header className="relative z-50 flex h-16 shrink-0 items-center justify-between border-b border-white/10 bg-chrome px-4 dark:border-stone-700 dark:bg-stone-900">
+      {/* Start: menu + logo (+ area badge). Logical start so RTL mirrors. */}
+      <div className="flex min-w-0 items-center gap-2">
+        <button
+          className="rounded-lg p-2 text-stone-300 hover:bg-white/10 lg:hidden dark:text-stone-400 dark:hover:bg-stone-800"
+          onClick={onMenuClick}
+          aria-label={t('common.open_menu')}
+        >
+          <Menu className="h-5 w-5" />
+        </button>
 
-      <div className="flex-1" />
+        <Link href={AREA_HOME[area]} className="flex min-w-0 items-center gap-2.5">
+          <Logo className="h-8" variant="on-dark" priority />
+          {area === 'admin' && (
+            <span className="hidden rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-stone-300 sm:inline">
+              {t('admin.title')}
+            </span>
+          )}
+          {area === 'crm' && (
+            <span className="hidden items-center gap-1.5 sm:inline-flex">
+              <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-stone-300">
+                {t('crm.chrome_badge')}
+              </span>
+              {isSuperAdmin && (
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-red-400">
+                  {t('crm.nav_owner_badge')}
+                </span>
+              )}
+            </span>
+          )}
+        </Link>
+      </div>
 
+      {/* End: existing controls. Logical end so RTL mirrors. */}
       <div className="flex items-center gap-2">
-        {/* Language switcher */}
         <LanguageSwitcher />
 
-        {/* Theme toggle */}
         <button
           className="rounded-lg p-2 text-stone-300 hover:bg-white/10 dark:text-stone-400 dark:hover:bg-stone-800"
           onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
@@ -88,7 +124,6 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
           {resolvedTheme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
 
-        {/* User dropdown */}
         <div className="relative" ref={dropdownRef}>
           <button
             ref={dropdownTriggerRef}
@@ -108,16 +143,19 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
 
           {dropdownOpen && (
             <div className="absolute end-0 mt-2 w-48 rounded-lg border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-800">
-              <div className="px-4 py-2 border-b border-stone-100 dark:border-stone-700">
+              <div className="border-b border-stone-100 px-4 py-2 dark:border-stone-700">
                 <p className="text-sm font-medium text-stone-900 dark:text-white">{displayName}</p>
                 {user?.profile?.headline ? (
-                  <p className="text-xs text-stone-500 truncate">{user.profile.headline}</p>
+                  <p className="truncate text-xs text-stone-500">{user.profile.headline}</p>
                 ) : (
-                  <p className="text-xs text-stone-500 truncate">{user?.email}</p>
+                  <p className="truncate text-xs text-stone-500">{user?.email}</p>
                 )}
               </div>
               <button
-                onClick={() => { router.push('/settings'); setDropdownOpen(false); }}
+                onClick={() => {
+                  router.push('/settings');
+                  setDropdownOpen(false);
+                }}
                 className="flex w-full items-center gap-2 px-4 py-2 text-sm text-stone-600 hover:bg-stone-50 dark:text-stone-400 dark:hover:bg-stone-700"
               >
                 <UserIcon className="h-4 w-4" /> {t('settings.nav.profile')}

@@ -64,7 +64,7 @@ export function useGenerateCoverLetter(id: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: GenerateCoverLetterData) =>
-      api.post<CoverLetter>(`/cover-letters/${id}/generate`, data),
+      api.post<CoverLetter>(`/cover-letters/${id}/ai/generate`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cover-letter', id] });
     },

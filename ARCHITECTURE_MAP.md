@@ -141,14 +141,20 @@ reads `privacy.s3_desc`. `terms` and `cookies_policy` locale namespaces were del
 
 **Chrome (light-mode headers/footers).** One Tailwind token, not a scale:
 `chrome: '#1e3a5f'` in `apps/web/tailwind.config.ts` — the Classic CV / cover-letter default.
-Applied to public `Navbar`, public `Footer`, and shared `TopBar` (dashboard/admin/CRM headers
-follow TopBar). **Light mode only.** Dark mode keeps today's near-black. Logo on those bars is
-always `Logo variant="on-dark"` (auto would put navy ink on navy). Body and links are
-`stone-300` (**7.72:1** on chrome); hover is `brand-400` (**5.08:1**); headings white
-(**11.50:1**); PoweredBy brand `stone-200` (**9.16:1**). Gate:
-`apps/web/src/lib/chrome-contrast.test.ts`. **Not** sidebars, auth panel, admin/CRM footers,
-or the dashboard copyright strip in `DashboardShell`. Both logo PNGs still have an opaque
-baked-in rectangle — standing request in `PROJECT_PROGRESS.md` §8.
+Applied to public `Navbar`, public `Footer`, and shared `TopBar`. **Light mode only.** Dark
+mode keeps today's near-black. Logo on those bars is always `Logo variant="on-dark"` (auto
+would put navy ink on navy). Body and links are `stone-300` (**7.72:1** on chrome); hover is
+`brand-400` (**5.08:1**); headings white (**11.50:1**); PoweredBy brand `stone-200`
+(**9.16:1**). Gate: `apps/web/src/lib/chrome-contrast.test.ts`.
+
+**App shells (dashboard / admin / CRM).** Full-width navy `TopBar` spans the viewport; the
+sidebar starts **below** it (mobile drawer `top-16`, overlay likewise). Shells are
+`flex h-screen flex-col` → TopBar → `flex min-h-0 flex-1 overflow-hidden` → sidebar | scrolling
+`main`. Collapse toggle lives in the dashboard sidebar body so the header never changes shape.
+`TopBar` takes `area` (`dashboard` | `admin` | `crm`): logo home link plus admin/CRM badges
+(CRM also shows Owner for `super_admin`). **Not** sidebars' body chrome, auth panel, admin/CRM
+footers, or the dashboard copyright strip in `DashboardShell`. Both logo PNGs still have an
+opaque baked-in rectangle — standing request in `PROJECT_PROGRESS.md` §8.
 
 ---
 
@@ -318,10 +324,12 @@ Still outside the wrap:
 | `apps/mobile/app/(dashboard)/index.tsx:102`, `settings/index.tsx:89`, `src/components/cv-builder/steps/SummaryStep.tsx:110` | Literal FREE-value fallbacks in usage display |
 
 The previous $239.88 / −33% vs $299.99 overcharge on screen **is closed** as long as the wrap
-stays. Latent only because the app does not currently ship — `app.json` still has the placeholder
+stays. **Not currently shippable** — `app.json` still has the placeholder
 `"projectId": "your-eas-project-id"` and there is no `eas.json`
-(⚠️ UNVERIFIED that no external pipeline builds it). Mobile still sends `{plan, interval}` and
-never a price id (`billing.tsx:29`).
+(⚠️ UNVERIFIED that no external pipeline builds it). See `PROJECT_PROGRESS.md` §8 Mobile
+pre-launch gate before any store build. Mobile still sends `{plan, interval}` and
+never a price id (`billing.tsx:29`). Mobile **does** send `X-Device-Token` on API calls
+(`src/lib/api.ts`) so registration verify is abuse-scored like web.
 
 ### Tier 2 — a second plan-limits table in the API, enforced nowhere
 

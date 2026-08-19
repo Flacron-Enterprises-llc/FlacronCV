@@ -107,7 +107,7 @@ export default function InterviewPrepModal({ open, onClose }: InterviewPrepModal
       refreshUser();
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
-      toast.error(message || t('error'));
+      toast.error(message || t('error'), { description: tCommon('generate_failed_no_charge') });
     } finally {
       setIsGenerating(false);
     }

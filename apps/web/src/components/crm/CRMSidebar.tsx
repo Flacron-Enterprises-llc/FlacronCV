@@ -18,7 +18,6 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import Logo from '@/components/ui/Logo';
 
 interface NavItem {
   href: string;
@@ -119,34 +118,22 @@ export default function CRMSidebar({ open, onClose }: CRMSidebarProps) {
 
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Overlay starts below the navy TopBar so the header stays visible. */}
       {open && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onClose} />
+        <div className="fixed inset-x-0 bottom-0 top-16 z-40 bg-black/50 lg:hidden" onClick={onClose} />
       )}
 
-      {/* Sidebar — off-canvas drawer on mobile, docked on lg. The closed-state
-          transform flips with writing direction so it hides fully in RTL. */}
+      {/* Sidebar under full-width TopBar. Closed-state transform flips in RTL. */}
       <aside
         className={cn(
-          'fixed inset-y-0 start-0 z-50 flex w-64 flex-shrink-0 flex-col border-e border-stone-200 bg-white transition-transform lg:static lg:translate-x-0 dark:border-stone-700 dark:bg-stone-900',
+          'fixed bottom-0 start-0 top-16 z-50 flex w-64 flex-shrink-0 flex-col border-e border-stone-200 bg-white transition-transform lg:static lg:top-auto lg:translate-x-0 dark:border-stone-700 dark:bg-stone-900',
           open ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full lg:rtl:translate-x-0',
         )}
       >
-        {/* Logo */}
-        <div className="flex h-16 items-center justify-between border-b border-stone-200 px-4 dark:border-stone-700">
-          <div className="flex items-center gap-2.5">
-            <Logo className="h-6" />
-            <div>
-              <span className="rounded-md bg-stone-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:bg-stone-800 dark:text-stone-400">
-                CRM
-              </span>
-              {isSuperAdmin && (
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-red-500">{t('nav_owner_badge')}</p>
-              )}
-            </div>
-          </div>
+        {/* Mobile close only — CRM / Owner badges live in TopBar. */}
+        <div className="flex items-center justify-end border-b border-stone-200 px-3 py-2 lg:hidden dark:border-stone-700">
           <button
-            className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 lg:hidden dark:hover:bg-stone-800"
+            className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800"
             onClick={onClose}
             aria-label={tCommon('close_menu')}
           >
@@ -154,7 +141,6 @@ export default function CRMSidebar({ open, onClose }: CRMSidebarProps) {
           </button>
         </div>
 
-        {/* Nav */}
         <nav aria-label={tCommon('main_navigation')} className="flex-1 space-y-5 overflow-y-auto p-3">
           <NavSection
             label="nav_section_business_crm"

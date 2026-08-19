@@ -412,12 +412,12 @@ error states, optimistic updates, responsive layout, and RTL.
 
 | ID | Task | Status |
 |---|---|---|
-| K.1 | Audit remaining gaps against Epic R rather than starting fresh | ☐ |
-| K.2 | ✅ Autosave with Saving/Saved — **built**, including retry with backoff | ☑ |
-| K.3 | Mobile sweep across all breakpoints; plan comparison table needs a dedicated mobile layout | ◐ |
-| K.4 | Dark mode across the entire app | ◐ |
-| K.5 | i18n QA — keys × 6 locales, seven CI gates (six i18n + chrome-contrast). Any new string must go through `t()`. | ◐ |
-| K.6 | Error copy per §40 ("...Your AI credit has not been used") — `ApiError` classification exists to build on | ◐ |
+| K.1 | Audit remaining gaps against Epic R rather than starting fresh | ☑ |
+| K.2 | ✅ Autosave with Saving/Saved — CV + cover letter (retry with backoff) | ☑ |
+| K.3 | Mobile: plan comparison dedicated stacked layout (table from `md` up). Broader breakpoint eyeball → Batch M visual QA in `PROJECT_PROGRESS` §8 | ☑ |
+| K.4 | Dark mode — app-wide `dark:` tokens exist; navy chrome stays light-only (client open question in §8). Full contrast eyeball → Batch M | ◐ |
+| K.5 | i18n QA — keys × 6 locales, seven CI gates. §38: language persistence is Preferences-consent-gated (honest copy in cookie centre; trade-off in §8) | ☑ |
+| K.6 | Error copy per §40 ("…Your AI credit has not been used") on AI failure paths | ☑ |
 
 ---
 
@@ -436,6 +436,10 @@ error states, optimistic updates, responsive layout, and RTL.
 
 ## BATCH M — Launch QA
 **Depends on:** everything. Client §58 journeys — new free user, returning user, Pro user, abuse tests.
+
+**Manual visual QA (inherited from Batch K — do not skip):** see `PROJECT_PROGRESS.md` §8
+“Batch M inherits: manual visual QA” — breakpoints, plan comparison mobile, dark contrast,
+RTL, Stripe Checkout mobile, cover-letter autosave retry.
 
 **Abuse tests:** multiple accounts same device · clear cookies · incognito · re-register new email ·
 rapid registration · simultaneous generation requests · direct API calls · direct API export ·

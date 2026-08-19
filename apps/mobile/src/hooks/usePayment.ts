@@ -1,7 +1,6 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { BillingInterval, SubscriptionPlan } from '../types/enums';
-import { useAuthStore } from '../store/auth-store';
 
 interface CheckoutSession {
   sessionId: string;
@@ -30,12 +29,5 @@ export function useCreatePortalSession() {
   });
 }
 
-export function useSubscriptionStatus() {
-  const { firebaseUser } = useAuthStore();
-  return useQuery({
-    queryKey: ['subscription', firebaseUser?.uid],
-    queryFn: () => api.get(`/users/${firebaseUser!.uid}/subscription`),
-    enabled: !!firebaseUser?.uid,
-    staleTime: 5 * 60 * 1000,
-  });
-}
+// Removed useSubscriptionStatus — it called GET /users/:uid/subscription, which
+// does not exist. Subscription lives on GET /users/me (useCurrentUser).

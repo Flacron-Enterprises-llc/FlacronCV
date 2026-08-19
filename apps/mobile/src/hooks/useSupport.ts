@@ -9,6 +9,14 @@ function useAuthReady() {
   return isInitialized && !!firebaseUser;
 }
 
+/** Unwrap Nest `{ success, data }` if present; otherwise return the bare body. */
+function unwrap<T>(raw: unknown): T {
+  if (raw && typeof raw === 'object' && 'data' in raw && (raw as { data: unknown }).data !== undefined) {
+    return (raw as { data: T }).data;
+  }
+  return raw as T;
+}
+
 export function useSupportTickets(page = 1) {
   const ready = useAuthReady();
   return useQuery({
@@ -19,21 +27,23 @@ export function useSupportTickets(page = 1) {
   });
 }
 
+/**
+ * GET /support/tickets/:id returns `{ ticket, messages }` — there is no
+ * separate `/messages` collection route for customers.
+ */
 export function useSupportTicket(id: string | null) {
   const ready = useAuthReady();
   return useQuery({
     queryKey: ['support-ticket', id],
-    queryFn: () => api.get<SupportTicket>(`/support/tickets/${id}`),
+    queryFn: async () => {
+      const raw = await api.get<unknown>(`/support/tickets/${id}`);
+      const body = unwrap<{ ticket: SupportTicket; messages: TicketMessage[] }>(raw);
+      return {
+        ...body.ticket,
+        messages: body.messages ?? body.ticket?.messages ?? [],
+      } as SupportTicket;
+    },
     enabled: ready && !!id,
-  });
-}
-
-export function useTicketMessages(ticketId: string | null) {
-  const ready = useAuthReady();
-  return useQuery({
-    queryKey: ['ticket-messages', ticketId],
-    queryFn: () => api.get<TicketMessage[]>(`/support/tickets/${ticketId}/messages`),
-    enabled: ready && !!ticketId,
     refetchInterval: 15000,
   });
 }
@@ -55,7 +65,7 @@ export function useAddTicketMessage(ticketId: string) {
     mutationFn: (content: string) =>
       api.post<TicketMessage>(`/support/tickets/${ticketId}/messages`, { content }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['ticket-messages', ticketId] });
+      qc.invalidateQueries({ queryKey: ['support-ticket', ticketId] });
     },
   });
 }

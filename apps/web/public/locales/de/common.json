@@ -459,6 +459,7 @@
     "delete_confirm_message": "Bist du sicher, dass du dieses Anschreiben löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden. Das Löschen stellt keine Anschreiben-Erstellung in deinem Tarif wieder her.",
     "delete_confirm_no_allowance": "Dir bleiben keine Anschreiben-Erstellungen. Das Löschen dieses Anschreibens lässt dich auf diesem Tarif kein weiteres erstellen.",
     "save_failed": "Anschreiben konnte nicht gespeichert werden",
+    "autosave_failed": "Ihre Änderungen konnten nicht gespeichert werden. Wir versuchen es weiter.",
     "ai_improved": "Anschreiben mit KI verbessert",
     "ai_improve": "KI-Verbesserung",
     "exported": "Als {format} exportiert",
@@ -1268,6 +1269,7 @@
   "common": {
     "loading": "Laden...",
     "error": "Etwas ist schiefgelaufen",
+    "generate_failed_no_charge": "Es wurde kein KI-Guthaben verbraucht – Sie können es bedenkenlos erneut versuchen.",
     "retry": "Erneut versuchen",
     "save": "Speichern",
     "cancel": "Abbrechen",
@@ -1883,6 +1885,7 @@
     "analytics": "Analysen",
     "app_settings": "App-Einstellungen",
     "nav_owner_badge": "Owner",
+    "chrome_badge": "CRM",
     "nav_back_to_app": "Zurück zur App",
     "status_percent_change_vs_last_month": "{change}% ggü. Vormonat",
     "active": "Aktiv",
@@ -1969,7 +1972,7 @@
     "necessary_title": "Unbedingt erforderlich",
     "necessary_desc": "Erforderlich für Kontoanmeldung, Sicherheit, Betrugsprävention, Abrechnung und den grundlegenden Betrieb.",
     "preferences_title": "Einstellungen",
-    "preferences_desc": "Ermöglicht FlacronCV, Einstellungen wie Sprache und Design zu speichern.",
+    "preferences_desc": "Speichert Sprache und Design auf diesem Gerät. Wenn Sie Einstellungen deaktivieren, bleibt Ihre Sprache nach dem Verlassen nicht erhalten — das ist beabsichtigt, kein Fehler.",
     "analytics_title": "Analyse",
     "analytics_desc": "Ermöglicht FlacronCV, die Nutzung des Dienstes zu verstehen und die Leistung zu verbessern.",
     "aria_label": "Cookie-Zustimmung"

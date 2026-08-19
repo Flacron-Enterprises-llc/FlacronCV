@@ -119,7 +119,7 @@ export default function ATSCheckModal({ open, onClose }: ATSCheckModalProps) {
       refreshUser();
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
-      toast.error(message || t('error'));
+      toast.error(message || t('error'), { description: tCommon('generate_failed_no_charge') });
     } finally {
       setIsAnalyzing(false);
     }

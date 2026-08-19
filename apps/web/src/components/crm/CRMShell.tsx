@@ -15,8 +15,9 @@ import { Loader2 } from 'lucide-react';
  * The CRM chrome. This was `(crm)/layout.tsx` verbatim until 2026-08-18; it
  * moved here so the layout could become a server component and export
  * `robots: { index: false, follow: false }`, which a `'use client'` file cannot
- * do. Nothing below changed in that move — in particular the sign-in redirect
- * and the admin/super_admin role gate are byte-identical.
+ * do. Sign-in redirect and the admin/super_admin role gate are unchanged.
+ *
+ * Layout matches DashboardShell: full-width navy TopBar, sidebar below.
  */
 export default function CRMShell({ children }: { children: React.ReactNode }) {
   const { user, loading, placeholderAccount } = useAuth();
@@ -25,7 +26,10 @@ export default function CRMShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) { router.push('/login'); return; }
+    if (!user) {
+      router.push('/login');
+      return;
+    }
     // See (admin)/layout.tsx: a placeholder account has a default role, not a
     // known one, so it must never be treated as "not an admin".
     if (placeholderAccount) return;
@@ -45,23 +49,14 @@ export default function CRMShell({ children }: { children: React.ReactNode }) {
   if (user.role !== 'admin' && user.role !== 'super_admin') return null;
 
   return (
-    <div className="flex h-screen bg-stone-50 dark:bg-black">
-      <CRMSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className="flex h-screen flex-col bg-stone-50 dark:bg-black">
+      <TopBar area="crm" onMenuClick={() => setSidebarOpen(true)} />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Shared TopBar, identical to (admin)/layout.tsx.
-            The CRM previously had a bespoke `lg:hidden` bar carrying only a
-            menu button and a hand-typed "FlacronCRM" wordmark — so on desktop
-            the CRM had NO header at all, leaving admins with no language
-            switcher, no theme toggle and no account menu anywhere in the
-            section, and a different header height and logo treatment from the
-            other two shells. TopBar is shell-agnostic and supplies all of it. */}
-        <TopBar onMenuClick={() => setSidebarOpen(true)} />
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <CRMSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-        <main id="main-content" className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <ErrorBoundary>
-            {children}
-          </ErrorBoundary>
+        <main id="main-content" className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </div>
     </div>
