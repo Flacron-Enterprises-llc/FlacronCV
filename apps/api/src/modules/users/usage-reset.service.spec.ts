@@ -36,7 +36,13 @@ describe('UsageResetService', () => {
         uid: `u${i}`,
         isActive: true,
         subscription: { plan },
-        usage: { aiCreditsUsed: 42, exportsThisMonth: 7, aiCreditsLimit: 1 },
+        usage: {
+          aiCreditsUsed: 42,
+          exportsThisMonth: 7,
+          aiCreditsLimit: 1,
+          cvsCreated: 8,
+          coverLettersCreated: 15,
+        },
       });
     }
   }
@@ -51,6 +57,8 @@ describe('UsageResetService', () => {
       const usage = doc.data()?.usage as Record<string, unknown>;
       expect(usage.aiCreditsUsed).toBe(0);
       expect(usage.exportsThisMonth).toBe(0);
+      expect(usage.cvsCreated).toBe(0);
+      expect(usage.coverLettersCreated).toBe(0);
       expect(usage.aiCreditsLimit).toBe(100); // Pro plan credits
       expect(usage.lastExportReset).toBeDefined();
     });
@@ -119,13 +127,25 @@ describe('UsageResetService', () => {
         uid: 'free-1',
         isActive: true,
         subscription: { plan: 'free' },
-        usage: { aiCreditsUsed: 4, exportsThisMonth: 1, aiCreditsLimit: 5 },
+        usage: {
+          aiCreditsUsed: 4,
+          exportsThisMonth: 1,
+          aiCreditsLimit: 5,
+          cvsCreated: 5,
+          coverLettersCreated: 1,
+        },
       });
       await firestore.collection('users').doc('pro-1').set({
         uid: 'pro-1',
         isActive: true,
         subscription: { plan: 'pro', status: 'past_due' },
-        usage: { aiCreditsUsed: 42, exportsThisMonth: 7, aiCreditsLimit: 1 },
+        usage: {
+          aiCreditsUsed: 42,
+          exportsThisMonth: 7,
+          aiCreditsLimit: 1,
+          cvsCreated: 8,
+          coverLettersCreated: 15,
+        },
       });
 
       const writtenIds: string[] = [];
@@ -148,11 +168,15 @@ describe('UsageResetService', () => {
       expect(freeUsage.aiCreditsUsed).toBe(4);
       expect(freeUsage.exportsThisMonth).toBe(1);
       expect(freeUsage.aiCreditsLimit).toBe(5);
+      expect(freeUsage.cvsCreated).toBe(5);
+      expect(freeUsage.coverLettersCreated).toBe(1);
       expect(freeUsage.lastExportReset).toBeUndefined();
       const pro = await firestore.collection('users').doc('pro-1').get();
       const proUsage = pro.data()?.usage as Record<string, unknown>;
       expect(proUsage.aiCreditsUsed).toBe(0);
       expect(proUsage.exportsThisMonth).toBe(0);
+      expect(proUsage.cvsCreated).toBe(0);
+      expect(proUsage.coverLettersCreated).toBe(0);
     });
 
     it('treats a missing subscription.plan as Free and does not write the doc', async () => {

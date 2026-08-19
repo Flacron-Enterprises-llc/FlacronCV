@@ -136,7 +136,7 @@
   "faq": {
     "title": "Häufig gestellte Fragen",
     "q1": "Ist FlacronCV wirklich kostenlos?",
-    "a1": "Ja! Der kostenlose Plan ermöglicht bis zu 5 Lebensläufe, 1 Anschreiben, 5 KI-Credits/Monat und 2 PDF-Exporte/Monat – keine Kreditkarte erforderlich. Upgrade auf Pro für 10 Lebensläufe, 20 Anschreiben, 100 KI-Credits, unbegrenzte Exporte und DOCX-Format.",
+    "a1": "Ja! Der kostenlose Plan ermöglicht bis zu 5 Lebensläufe, 1 Anschreiben, 5 KI-Credits und 2 PDF-Exporte – diese Kontingente werden nie zurückgesetzt, und keine Kreditkarte ist erforderlich. Upgrade auf Pro für 10 Lebensläufe/Monat, 20 Anschreiben/Monat, 100 KI-Credits/Monat, unbegrenzte Exporte und DOCX-Format.",
     "q2": "Welche Exportformate werden unterstützt?",
     "a2": "Alle Pläne unterstützen PDF-Export. Pro- und Enterprise-Pläne ermöglichen auch DOCX (Microsoft Word). Der kostenlose Plan umfasst 2 Exporte; Pro und Enterprise bieten unbegrenzte Exporte. TXT-Export ist derzeit nicht verfügbar.",
     "q3": "Wie funktioniert das KI-Schreiben?",
@@ -456,7 +456,8 @@
     "empty_title": "Noch keine Anschreiben",
     "empty_description": "Erstelle dein erstes Anschreiben, um zu beginnen",
     "delete_confirm_title": "Anschreiben löschen",
-    "delete_confirm_message": "Bist du sicher, dass du dieses Anschreiben löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "delete_confirm_message": "Bist du sicher, dass du dieses Anschreiben löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden. Das Löschen stellt keine Anschreiben-Erstellung in deinem Tarif wieder her.",
+    "delete_confirm_no_allowance": "Dir bleiben keine Anschreiben-Erstellungen. Das Löschen dieses Anschreibens lässt dich auf diesem Tarif kein weiteres erstellen.",
     "save_failed": "Anschreiben konnte nicht gespeichert werden",
     "ai_improved": "Anschreiben mit KI verbessert",
     "ai_improve": "KI-Verbesserung",
@@ -766,7 +767,7 @@
       "title": "Nutzung diesen Monat",
       "title_free": "Nutzung des kostenlosen Plans",
       "cvsCreated": "Erstellte Lebensläufe",
-      "coverLetters": "Anschreiben",
+      "coverLetters": "Erstellte Anschreiben",
       "aiCredits": "Genutzte KI-Credits",
       "exports": "Exporte",
       "remaining": "{count} übrig",
@@ -2000,7 +2001,8 @@
     "duplicated": "Lebenslauf dupliziert",
     "duplicate_failed": "Duplizieren des Lebenslaufs fehlgeschlagen. Bitte erneut versuchen.",
     "delete_confirm_title": "Lebenslauf löschen?",
-    "delete_confirm_message": "Diese Aktion kann nicht rückgängig gemacht werden. Der Lebenslauf wird dauerhaft gelöscht.",
+    "delete_confirm_message": "Diese Aktion kann nicht rückgängig gemacht werden. Der Lebenslauf wird dauerhaft gelöscht. Das Löschen stellt keine Lebenslauf-Erstellung in deinem Tarif wieder her.",
+    "delete_confirm_no_allowance": "Dir bleiben keine Lebenslauf-Erstellungen. Das Löschen dieses Lebenslaufs lässt dich auf diesem Tarif keinen weiteren erstellen.",
     "card_open": "{title} öffnen",
     "card_open_editor": "Editor öffnen",
     "card_updated": "Aktualisiert {date}",
@@ -2035,11 +2037,11 @@
       },
       "cvs": {
         "title": "Lebenslauf-Limit erreicht",
-        "description": "Du hast die in deinem Tarif enthaltene Anzahl an Lebensläufen erreicht. Führe ein Upgrade durch, um mehr zu erstellen, oder lösche einen, den du nicht mehr brauchst."
+        "description": "Du hast alle in deinem Tarif enthaltenen Lebenslauf-Erstellungen aufgebraucht. Führe ein Upgrade durch, um mehr zu erstellen. Das Löschen eines Lebenslaufs stellt keine Erstellung wieder her."
       },
       "cover_letters": {
         "title": "Anschreiben-Limit erreicht",
-        "description": "Du hast die in deinem Tarif enthaltene Anzahl an Anschreiben erreicht. Führe ein Upgrade durch, um mehr zu erstellen, oder lösche eines, das du nicht mehr brauchst."
+        "description": "Du hast alle in deinem Tarif enthaltenen Anschreiben-Erstellungen aufgebraucht. Führe ein Upgrade durch, um mehr zu erstellen. Das Löschen eines Anschreibens stellt keine Erstellung wieder her."
       }
     }
   },

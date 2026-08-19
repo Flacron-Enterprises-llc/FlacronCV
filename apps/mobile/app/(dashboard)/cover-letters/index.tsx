@@ -19,18 +19,22 @@ export default function CoverLettersScreen() {
   const coverLetters = data?.data ?? [];
 
   const handleDelete = (cl: CoverLetter) => {
-    Alert.alert('Delete Cover Letter', `Delete "${cl.title}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () =>
-          deleteCL.mutate(cl.id, {
-            onSuccess: () => Alert.alert('Deleted', `"${cl.title}" has been deleted.`),
-            onError: () => Alert.alert('Error', 'Failed to delete cover letter. Please try again.'),
-          }),
-      },
-    ]);
+    Alert.alert(
+      'Delete Cover Letter',
+      `Are you sure you want to delete "${cl.title}"? This cannot be undone. Deleting it does not restore a cover letter creation on your plan.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () =>
+            deleteCL.mutate(cl.id, {
+              onSuccess: () => Alert.alert('Deleted', `"${cl.title}" has been deleted.`),
+              onError: () => Alert.alert('Error', 'Failed to delete cover letter. Please try again.'),
+            }),
+        },
+      ],
+    );
   };
 
   const renderItem = ({ item }: { item: CoverLetter }) => (

@@ -407,11 +407,16 @@ fail in the browser while localhost keeps working.
 in `SupportService`, then leaked by the GDPR export reading the `messages` subcollection directly.
 If another module can read the same collection, filter at the read.
 
-**10. Deleting a CV or cover letter refunds the quota slot.** `cv.service.ts:523` and
-`cover-letter.service.ts:274` decrement on delete, deliberately — without it a FREE user who created
-and deleted their one cover letter could never write another. This makes `cvsCreated` /
-`coverLettersCreated` **concurrent-slot caps, not monthly allowances**: nothing resets them. See the
-HIGH finding in the 2026-08-18 change-log entry, blocked on client question Q-2.
+**10. Deleting a CV or cover letter does not restore the creation allowance.** Limits count
+**creations** in the cycle, not documents stored. User delete no longer decrements `cvsCreated` or
+`coverLettersCreated` (`cv.service.ts` / `cover-letter.service.ts`). Failed cover-letter
+**generation** still refunds via `rollbackFailedCreate` — that is not a user delete. Paid users:
+`UsageResetService` zeros those two counters on the monthly cron (Free is skipped — lifetime).
+Client 2026-08-19, verbatim: "Do not refund an allowance when a user deletes a document. Limits
+count CREATIONS during the cycle, not documents currently stored." Q-2 closed as (a′).
+
+**Intended Free consequence:** create 5 CVs, delete all 5, never another on Free. Same for the
+single cover letter.
 
 **11. Stripe secrets are whitespace-sensitive.** `STRIPE_WEBHOOK_SECRET` is `.trim()`ed in
 `configuration.ts:23` because a trailing space pasted into a hosting dashboard is invisible on screen

@@ -518,13 +518,9 @@ export class CVService {
       publicSlug: null,
       updatedAt: new Date(),
     });
-
-    // Give the slot back. `cvsCreated` is checked against the plan's `cvs` limit
-    // on every create, so without this it behaved as a LIFETIME cap rather than
-    // a concurrent one: a FREE user who made and deleted their allowance could
-    // never create another CV again, with an "upgrade" prompt as the only exit
-    // and no way to tell that deleting had not helped.
-    await this.usersService.incrementUsage(userId, 'cvsCreated', -1);
+    // Do not decrement `cvsCreated`. Limits count creations in the cycle, not
+    // documents stored. Deleting must not restore the allowance. Client 2026-08-19:
+    // "Do not refund an allowance when a user deletes a document."
   }
 
   async duplicate(id: string, userId: string): Promise<CV> {

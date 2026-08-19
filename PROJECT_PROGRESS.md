@@ -12,7 +12,7 @@
 > 4. Tick completed items here; log every change in the Change Log.
 > 5. Report Out-of-Scope / architectural items separately — do not implement without approval.
 
-Last updated: 2026-08-18
+Last updated: 2026-08-19
 
 > **Note on dates.** The header previously read `2026-07-29` while the two newest change-log
 > entries were dated `2026-07-30`; the header was stale, the entries were right. Corrected
@@ -801,6 +801,56 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-19 — **Usage counters: creation-based, not storage-based. Q-2 closed as (a′).**
+  **Do not commit.**
+
+  **Client instruction (verbatim):** "Do not refund an allowance when a user deletes a document.
+  Limits count CREATIONS during the cycle, not documents currently stored."
+
+  **What a Free user now experiences (client-instructed and intended):** create 5 CVs, delete all
+  5, and they can never create another on the Free plan. Same for the single cover letter.
+
+  Successful create/import/duplicate still consumes. Failed cover-letter **generation** still
+  refunds via `rollbackFailedCreate`. Exports and AI credits unchanged. No backfill — existing
+  counters stop decreasing on delete; nobody loses a document they have.
+
+  - **MC1.** `cv.service.ts` delete: removed `incrementUsage(..., 'cvsCreated', -1)`. Soft-delete,
+    public-slug revoke, `updatedAt` stay.
+  - **MC2.** `cover-letter.service.ts` delete: removed the matching decrement. **Kept** the
+    failed-create refund at `rollbackFailedCreate`.
+  - **MC3.** Tests: delete does not call `incrementUsage(..., -1)`; Free at `cvsCreated: 5`
+    deleting all 5 still cannot `create` (mutable counter); same for one cover letter; failed-AI
+    +1 then −1 kept; public-slug-on-delete kept.
+  - **MC4.** `UsageResetService` zeros `usage.cvsCreated` and `usage.coverLettersCreated` for
+    **paid** users only. Free skip (no write) unchanged.
+  - **MC5.** Copy × 6. **Priority:** `upgrade_modal.reasons.cvs.description` and
+    `.cover_letters.description` no longer tell anyone to "delete one you no longer need" — that
+    string does not survive in any locale. `faq.a1` cadence: Free never resets; Pro CVs/letters/AI
+    `/month`. `PLAN_CONFIGS` Pro `'10 CVs/month'` / `'20 Cover Letters/month'`; Career 25/50.
+    Billing comparison appends `/month` for paid CVs/letters only. `billing.usage.coverLetters` →
+    "Cover Letters Created". Guard: `apps/web/src/i18n/allowance-copy.test.ts`.
+  - **MC6.** Display already used stored `usage.cvsCreated` / `coverLettersCreated`. No
+    display-source change.
+  - **MC7.** List-delete dialogs: always "Deleting it does **not restore** a creation" (not
+    "deleting spends one"). Extra line when remaining === 0. Web CV list and cover-letter list
+    (`useAuth` + `PLAN_CONFIGS` added on cover letters). **Mobile:** the two `Alert.alert`
+    strings on `apps/mobile/app/(dashboard)/cvs/index.tsx` and `cover-letters/index.tsx` were
+    updated in English. **Mobile is not on the six-locale pipeline, so those two dialogs are
+    English-only by existing limitation, not by choice.** Not warned: editor section delete,
+    account delete, jobs/CRM.
+  - **MC8.** This entry; `ARCHITECTURE_MAP.md` §10 rewritten; `CLIENT_REQUIREMENTS.md` Q-2
+    closed, E.4 done, F.3 note that CVs/letters now reset for paid only.
+
+  **Not this batch:** `refundAiCredit`, export counters, Batch G, auth/billing data shape
+  beyond these usage fields.
+
+  **QA:** `pnpm --filter api lint` 0 errors · `pnpm --filter web lint` 0 errors
+  (pre-existing `<img>` warnings only) · api `tsc --noEmit` ✓ · web `tsc --noEmit` ✓
+  · api **470/470** · web **295/295** (vitest `--pool=threads --no-file-parallelism`;
+  first full run worker-timed-out on Batch H's `register-legal.test.tsx` — 3 tests,
+  unrelated; retry 3/3. All five i18n gates green; new `allowance-copy` gate green).
+  **Do not commit.**
 
 - 2026-08-18 — **Batch H — legal acceptance at signup (option A, grandfather existing users).**
   Client package §§ 7, 8, 10, 24. **Do not commit.** Web only. Do not touch Batch G's

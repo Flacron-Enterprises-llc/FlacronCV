@@ -136,7 +136,7 @@
   "faq": {
     "title": "Questions fréquemment posées",
     "q1": "FlacronCV est-il vraiment gratuit ?",
-    "a1": "Oui ! Le plan gratuit vous permet de créer jusqu'à 5 CV, 1 lettre de motivation, d'utiliser 5 crédits IA/mois et d'exporter jusqu'à 2 documents/mois en PDF — sans carte bancaire. Passez au Pro pour 10 CV, 20 lettres de motivation, 100 crédits IA, des exports illimités et le format DOCX.",
+    "a1": "Oui ! Le plan gratuit vous permet de créer jusqu'à 5 CV, 1 lettre de motivation, d'utiliser 5 crédits IA et d'exporter jusqu'à 2 documents en PDF — ces allocations ne se réinitialisent jamais, et aucune carte bancaire n'est requise. Passez au Pro pour 10 CV/mois, 20 lettres de motivation/mois, 100 crédits IA/mois, des exports illimités et le format DOCX.",
     "q2": "Quels formats d'export sont pris en charge ?",
     "a2": "Tous les plans supportent l'export PDF. Les plans Pro et Enterprise débloquent également le format DOCX (Microsoft Word). Le plan gratuit inclut 2 exports ; Pro et Enterprise offrent des exports illimités. L'export TXT n'est pas disponible actuellement.",
     "q3": "Comment fonctionne l'écriture par IA ?",
@@ -456,7 +456,8 @@
     "empty_title": "Aucune lettre de motivation",
     "empty_description": "Créez votre première lettre de motivation pour commencer",
     "delete_confirm_title": "Supprimer la lettre de motivation",
-    "delete_confirm_message": "Êtes-vous sûr de vouloir supprimer cette lettre de motivation ? Cette action est irréversible.",
+    "delete_confirm_message": "Êtes-vous sûr de vouloir supprimer cette lettre de motivation ? Cette action est irréversible. La supprimer ne restaure pas une création de lettre de motivation sur votre formule.",
+    "delete_confirm_no_allowance": "Il ne vous reste aucune création de lettre de motivation. Supprimer cette lettre ne vous permettra pas d'en créer une autre avec cette formule.",
     "save_failed": "Échec de la sauvegarde de la lettre de motivation",
     "ai_improved": "Lettre de motivation améliorée par l'IA",
     "ai_improve": "Amélioration IA",
@@ -766,7 +767,7 @@
       "title": "Utilisation ce mois-ci",
       "title_free": "Utilisation du plan gratuit",
       "cvsCreated": "CV créés",
-      "coverLetters": "Lettres de motivation",
+      "coverLetters": "Lettres de motivation créées",
       "aiCredits": "Crédits IA utilisés",
       "exports": "Exports",
       "remaining": "{count} restants",
@@ -2000,7 +2001,8 @@
     "duplicated": "CV dupliqué",
     "duplicate_failed": "Échec de la duplication du CV. Veuillez réessayer.",
     "delete_confirm_title": "Supprimer le CV ?",
-    "delete_confirm_message": "Cette action est irréversible. Le CV sera définitivement supprimé.",
+    "delete_confirm_message": "Cette action est irréversible. Le CV sera définitivement supprimé. Le supprimer ne restaure pas une création de CV sur votre formule.",
+    "delete_confirm_no_allowance": "Il ne vous reste aucune création de CV. Supprimer ce CV ne vous permettra pas d'en créer un autre avec cette formule.",
     "card_open": "Ouvrir {title}",
     "card_open_editor": "Ouvrir l'éditeur",
     "card_updated": "Mis à jour {date}",
@@ -2035,11 +2037,11 @@
       },
       "cvs": {
         "title": "Limite de CV atteinte",
-        "description": "Vous avez atteint le nombre de CV autorisé par votre formule. Passez à une formule supérieure pour en créer davantage, ou supprimez-en un dont vous n'avez plus besoin."
+        "description": "Vous avez utilisé toutes les créations de CV incluses dans votre formule. Passez à une formule supérieure pour en créer davantage. Supprimer un CV ne restaure pas une création."
       },
       "cover_letters": {
         "title": "Limite de lettres atteinte",
-        "description": "Vous avez atteint le nombre de lettres de motivation autorisé par votre formule. Passez à une formule supérieure pour en créer davantage, ou supprimez-en une dont vous n'avez plus besoin."
+        "description": "Vous avez utilisé toutes les créations de lettres de motivation incluses dans votre formule. Passez à une formule supérieure pour en créer davantage. Supprimer une lettre ne restaure pas une création."
       }
     }
   },

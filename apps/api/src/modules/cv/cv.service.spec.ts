@@ -224,4 +224,57 @@ describe('CVService template + layout tier enforcement', () => {
       expect(await service.findByPublicSlug('x-public')).toBeNull();
     });
   });
+
+  describe('delete does not restore a CV creation', () => {
+    it('does not call incrementUsage with -1 on user delete', async () => {
+      const { service, firestore } = makeService(SubscriptionPlan.FREE);
+      const usersService = (service as any).usersService;
+      await seedCV(firestore);
+      await service.delete('cv1', 'u1');
+      expect(usersService.incrementUsage).not.toHaveBeenCalledWith('u1', 'cvsCreated', -1);
+    });
+
+    it('blocks a Free user at 5 creations from creating again after deleting every stored CV', async () => {
+      let cvsCreated = 5;
+      const firestore = new InMemoryFirestore();
+      const usersService = {
+        findByIdOrThrow: jest.fn().mockImplementation(async () => ({
+          uid: 'u1',
+          email: 'u1@example.com',
+          photoURL: null,
+          profile: { website: '', linkedin: '', github: '' },
+          subscription: { plan: SubscriptionPlan.FREE, status: 'active' },
+          usage: { cvsCreated },
+        })),
+        incrementUsage: jest.fn(async (_uid: string, field: string, amount = 1) => {
+          if (field === 'cvsCreated') cvsCreated += amount;
+        }),
+      };
+      const service = new CVService(
+        { firestore } as any,
+        usersService as any,
+        { parseResume: jest.fn() } as any,
+        { assertNewConsumption: jest.fn().mockResolvedValue(undefined) } as any,
+      );
+
+      for (let i = 0; i < 5; i++) {
+        await firestore.collection('cvs').doc(`cv${i}`).set({
+          id: `cv${i}`,
+          userId: 'u1',
+          templateId: 'modern',
+          styling: { layout: 'classic', primaryColor: '#000000' },
+          sectionOrder: [],
+        });
+      }
+      for (let i = 0; i < 5; i++) {
+        await service.delete(`cv${i}`, 'u1');
+      }
+
+      expect(usersService.incrementUsage).not.toHaveBeenCalledWith('u1', 'cvsCreated', -1);
+      expect(cvsCreated).toBe(5);
+      await expect(service.create('u1', { title: 'Sixth', templateId: 'modern' })).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+  });
 });

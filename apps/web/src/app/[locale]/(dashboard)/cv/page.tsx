@@ -159,6 +159,11 @@ export default function CVListPage(): React.JSX.Element | null {
             <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
               {t('cv.delete_confirm_message')}
             </p>
+            {atLimit && (
+              <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
+                {t('cv.delete_confirm_no_allowance')}
+              </p>
+            )}
             <div className="mt-6 flex gap-3">
               <Button
                 variant="secondary"

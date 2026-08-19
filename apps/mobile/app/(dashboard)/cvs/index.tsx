@@ -29,7 +29,7 @@ export default function CVsScreen() {
   const handleDelete = (cv: CV) => {
     Alert.alert(
       'Delete CV',
-      `Are you sure you want to delete "${cv.title}"? This cannot be undone.`,
+      `Are you sure you want to delete "${cv.title}"? This cannot be undone. Deleting it does not restore a CV creation on your plan.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {

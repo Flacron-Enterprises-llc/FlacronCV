@@ -27,8 +27,9 @@ change-log entry for the pass. Two new documents accompany it:
 
 **Four items in this file were corrected against the code and are marked inline:** R-1/B-5/E.5 (yearly
 billing is enabled, not blocked), R-2/G.9 (the trial hole is closed — do not commission a backfill on
-the old premise), R-3 (five i18n gates, not four), R-4/F.3/Q-2 (the reset scope is narrower, and a new
-HIGH finding sits underneath it). Treat the record as authoritative on application code; infrastructure
+the old premise), R-3 (five i18n gates, not four), R-4/F.3 (Free skipped by the monthly reset).
+**Q-2 closed 2026-08-19 as (a′)** — monthly reset for paid CVs/letters, and delete does not restore
+the allowance. Treat the record as authoritative on application code; infrastructure
 now lives in `DEPLOYMENT_AND_OPS.md`.
 
 **What the record already proves is built** (do not re-scope these):
@@ -142,32 +143,27 @@ catch-up against the `system/usage_reset` marker), using an `onApplicationBootst
 there after a real race bug, **do not move it back**. Making Free one-time means changing **who** that
 service resets, not renaming a heading. Paid plans must keep resetting.
 
-**What it actually resets is only four fields** (`apps/api/src/modules/users/usage-reset.service.ts:96-102`):
-`usage.aiCreditsUsed`, `usage.exportsThisMonth`, `usage.aiCreditsLimit` (re-synced to the plan) and
-`usage.lastExportReset`. **`cvsCreated` and `coverLettersCreated` are NOT reset — by any job, for any
-plan.** So the Free/paid split only needs to cover **AI credits and exports**; CVs and cover letters
-are already not on a monthly cadence at all. They behave as **concurrent slots** — both counters are
-*decremented on delete* (`cv.service.ts:523`, `cover-letter.service.ts:274`), deliberately, because
-without it a FREE user who created and deleted their one cover letter could never write another.
+**What it actually resets (updated 2026-08-19):** for **paid** users, `UsageResetService` now writes
+`usage.aiCreditsUsed`, `usage.exportsThisMonth`, `usage.cvsCreated`, `usage.coverLettersCreated`,
+`usage.aiCreditsLimit` (re-synced to the plan) and `usage.lastExportReset`. Free docs are skipped
+entirely — no write — so consumed counters stay as they stand. Q-2 closed as (a′): monthly reset
+for paid CVs/letters, **and** delete does not restore the allowance.
 
-⚠️ **This is a new HIGH finding in its own right, blocked on Q-2** — logged in full, with every
-affected call site, in the 2026-08-18 entry of `PROJECT_PROGRESS.md` §9. A Pro subscriber paying
-monthly gets 10 CV *slots* for the life of the account, not 10 CVs per month, while the billing page
-already headlines those counters as "Usage This Month". That under-delivers to paying customers — the
-**inverse** of the abuse problem this list is focused on. **Not fixed:** the three possible answers to
-Q-2 are three different builds, and two are billing-adjacent.
+**Client instruction (verbatim, 2026-08-19):** "Do not refund an allowance when a user deletes a
+document. Limits count CREATIONS during the cycle, not documents currently stored."
 
-**One subtlety if you do split Free out:** line 99 is the only place outside the Stripe paths that
-repairs `usage.aiCreditsLimit`. Skipping Free users entirely means a user who downgrades keeps a stale
-higher limit unless the downgrade path (`payment.service.ts:622`, `:703`) is relied on for it.
+Deleting a CV or cover letter no longer decrements `cvsCreated` / `coverLettersCreated`. Failed
+cover-letter *generation* still refunds via `rollbackFailedCreate`; that is not a user delete.
 
 A `free_grants` table (old F.1) is **not being built** — option (b), 2026-08-18: a uid-keyed grant
 cannot survive a new email, monthly resets destroyed the consumption history a migration would need,
 and identity belongs in Batch G. **F.3 shipped 2026-08-18** — see the update below.
 
 **R-4 update 2026-08-18 — F.3 shipped.** Free is excluded from `UsageResetService` on stored
-`subscription.plan` (not `resolveEffectivePlan`). Paid plans still reset `aiCreditsUsed` /
-`exportsThisMonth`. `cvsCreated` / `coverLettersCreated` remain untouched for every plan — see Q-2.
+`subscription.plan` (not `resolveEffectivePlan`). Paid plans reset AI credits and exports.
+
+**R-4 / Q-2 update 2026-08-19.** Paid plans also reset `cvsCreated` and `coverLettersCreated` on
+the same cron. Free still never resets those counters. Delete does not restore them on any plan.
 
 **R-5 — §3 "Require verified email" reverses a deferred decision.**
 Server-side `emailVerified` enforcement was explicitly deferred: it must exempt the verify/resend
@@ -189,7 +185,7 @@ recently-fixed export path. Changes to shared-types affect it. It is absent from
 | ID | Question | Source |
 |---|---|---|
 | Q-1 | **Confirm the AI-credit definition we already publish.** *Reframed 2026-08-18 — a definition does exist, in shipped customer-facing copy.* `pricing.terms_credit_desc` (`apps/web/public/locales/en/common.json:122`, all six locales) defines one credit as one AI request across summary generation, cover-letter generation, ATS check, interview prep and LinkedIn optimisation, **not charged on failure** — and the code matches (`AIService.generate` reserves one credit per call and refunds on failure). So the ask is **confirm or amend the published definition**, not supply a new one. It is already a representation to customers. | §14 |
-| Q-2 | **Do Pro's 10 CVs / 20 cover letters reset monthly?** **Answered 2026-08-18: the client wants monthly reset.** Not implemented: those counters decrement on delete (`cv.service.ts:523`, `cover-letter.service.ts:274`) — they are storage slots. Monthly reset without changing that lets a Pro user create 10, delete 10, create 10 more = 20 in a month. **New question for the client:** (a′) monthly reset *and* stop refunding paid deletes, (b) keep slots and relabel the billing UI (no "this month"), or (c) a true lifetime cap. Do not ship (a) as originally described. | §20 |
+| Q-2 | **Do Pro's 10 CVs / 20 cover letters reset monthly?** **Closed 2026-08-19 as (a′).** Monthly reset for **paid** CVs/letters; delete does **not** restore the allowance on any plan. Verbatim: "Do not refund an allowance when a user deletes a document. Limits count CREATIONS during the cycle, not documents currently stored." Free: 5 CV creations and 1 cover-letter creation, never reset — create 5, delete all 5, never another on Free. Failed generation still refunds. | §20 |
 | Q-3 | **Career Accelerator ($49.99) — still wanted?** **Answered 2026-08-18: keep the code, hide it from every public surface, do not launch.** `customerFacingPlans()` / empty `stripePriceIdMonthly` is the hide rule. **Filling `stripePriceIdMonthly` auto-launches it** on pricing, billing, comparison, and JSON-LD. Do not fill it by accident. Admin CRM grant still works. | Codebase |
 | Q-4 | **Annual prices for each plan — confirm, rather than supply.** *Updated 2026-08-18.* Annual prices **are already asserted in config and on sale**: `YEARLY_BILLING_ENABLED = true` with Pro `299.99/yr` and Enterprise `999.99/yr`. Mobile now reads those figures from shared-types. ⚠️ **UNVERIFIED that those two Stripe ids really are `interval=year` in the deployed account — this is a launch blocker for marketing annual plans.** `apps/api/scripts/verify-yearly-prices.mjs` settles it and was not run here (it reaches Stripe). A month-interval price sitting in `stripePriceIdYearly` is exactly what caused the ~18× overcharge. Career Accelerator still has no annual price (ties to Q-3). See R-1. | §25 |
 | Q-5 | **Card required for the trial?** **Answered 2026-08-18: yes.** Stripe default; Pro 7-day trial. | §22 |
@@ -296,10 +292,10 @@ parent-company accounts, not FlacronCV-specific.
 
 | ID | Task | Status |
 |---|---|---|
-| E.1 | Audit every surface for plan data **not** read from `PLAN_CONFIGS`. Audit lives in `ARCHITECTURE_MAP.md` §8. **Batch E:** mobile wrap + billing comparison cells + dead `pricing.save` removed. Remaining: `crm-settings.planLimits` (unenforced), Tier 3 `?? 5` leftovers, English `features` literals, `faq.a1` cadence copy. | ◐ |
+| E.1 | Audit every surface for plan data **not** read from `PLAN_CONFIGS`. Audit lives in `ARCHITECTURE_MAP.md` §8. **Batch E:** mobile wrap + billing comparison cells + dead `pricing.save` removed. **2026-08-19:** Pro/Career `features` now `10 CVs/month` / `20 Cover Letters/month` (and Career 25/50); `faq.a1` cadence corrected × 6. Remaining: `crm-settings.planLimits` (unenforced), Tier 3 `?? 5` leftovers, other English `features` literals. | ◐ |
 | E.2 | Resolve Q-3 — **hide, keep code.** Public surfaces use `customerFacingPlans()`. JSON-LD offers filtered. CRM grant unchanged. Filling `stripePriceIdMonthly` is the launch pin. | ☑ |
 | E.3 | Q-1 answer → define and document the AI credit unit; surface cost before the action ("Improve with AI — Uses 1 AI Credit") and remaining after | ☐ |
-| E.4 | Q-2 answer → label reset cadence per plan ("10 CVs/month" vs "10 CVs") | ☐ |
+| E.4 | Q-2 answer → label reset cadence per plan ("10 CVs/month" vs "10 CVs"). **Done 2026-08-19.** `PLAN_CONFIGS` Pro/Career features; billing comparison appends `/month` for paid CVs/letters only; `faq.a1` × 6. Free stays lifetime-shaped (`5 CVs`, `1 Cover Letter`). | ☑ |
 | E.5 | Yearly toggle on web already live. **Batch E:** mobile reads shared-types annual prices; dead `pricing.save` deleted. **Q-4 remains a launch blocker** — `interval=year` UNVERIFIED; client must run `verify-yearly-prices.mjs`. | ◐ |
 | E.6 | Plan comparison: header/body already shared `plans`. **Batch E:** numeric cells from `PLAN_CONFIGS.limits`. Extra rows (PDF Export, ATS, …) **not** added this batch. | ◐ |
 | E.7 | Enterprise CTA “Choose Enterprise”; Pro keeps “Most Popular” + trial CTA. Server: no Enterprise trial. | ☑ |
@@ -336,7 +332,7 @@ counters left as they stood.
 |---|---|---|
 | F.1 | **Cancelled (option b).** No `free_grants` collection. Hashes wait for Batch G. | ⛔ |
 | F.2 | Same-uid already survives cookie/logout/incognito (`users/{uid}.usage`). New email = new uid = fresh zeros — that is Batch G identity, not a grant table. | ◐ |
-| F.3 | **Exclude Free from `UsageResetService`.** **Done 2026-08-18.** Stored `subscription.plan === FREE` (including missing plan) is skipped — no write. Paid plans still reset AI credits and exports. Bootstrap hook unchanged. `?? 5` now reads `PLAN_CONFIGS[FREE].limits.aiCredits`. Paywall: paid copy kept; `ai_credits_free` / `exports_free` added; FREE features dropped `/month`. CVs/letters still never reset (Q-2). | ☑ |
+| F.3 | **Exclude Free from `UsageResetService`.** **Done 2026-08-18.** Stored `subscription.plan === FREE` (including missing plan) is skipped — no write. **2026-08-19:** paid plans now also reset `cvsCreated` and `coverLettersCreated` on that same cron. Free CVs/letters still never reset. Delete does not restore the allowance on any plan (Q-2 = a′). Bootstrap hook unchanged. | ☑ |
 | F.4 | Billing page: Free users see **"Free Plan Usage"**; Pro/Enterprise keep "Usage This Month". Heading is keyed off `isFreePlan`, not cadence, so it stays honest before and after F.3. **Done 2026-08-18.** | ☑ |
 | F.5 | Low-allowance warning + exhausted state + upgrade prompt. **Done 2026-08-18** by extending the billing usage card (amber `usage.low` at ≥70% not exhausted; `billing.upgradeTo` when remaining === 0 and Free). Exhausted+upgrade on generate/export already lived in `UpgradeModal` (Epic R) — reused, not duplicated. | ☑ |
 | F.6 | Upgrade preserves CVs, cover letters, profile, applications, templates, job tracker, account. Never a new account. | ☐ |

@@ -272,14 +272,19 @@ export default function BillingPage(): React.JSX.Element | null {
   const formatLimit = (value: number | 'unlimited') =>
     value === 'unlimited' ? t('features.unlimited') : String(value);
 
+  const formatCreationLimit = (plan: SubscriptionPlan, value: number | 'unlimited') => {
+    if (value === 'unlimited') return t('features.unlimited');
+    return plan === SubscriptionPlan.FREE ? String(value) : `${value}${t('plans.perMonth')}`;
+  };
+
   const comparisonFeatures: { label: string; cell: (plan: SubscriptionPlan) => string | boolean }[] = [
     {
       label: t('features.cvs'),
-      cell: (plan) => formatLimit(PLAN_CONFIGS[plan].limits.cvs),
+      cell: (plan) => formatCreationLimit(plan, PLAN_CONFIGS[plan].limits.cvs),
     },
     {
       label: t('features.coverLetters'),
-      cell: (plan) => formatLimit(PLAN_CONFIGS[plan].limits.coverLetters),
+      cell: (plan) => formatCreationLimit(plan, PLAN_CONFIGS[plan].limits.coverLetters),
     },
     {
       label: t('features.aiCredits'),

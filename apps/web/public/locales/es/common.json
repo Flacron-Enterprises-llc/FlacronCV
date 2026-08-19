@@ -136,7 +136,7 @@
   "faq": {
     "title": "Preguntas frecuentes",
     "q1": "¿Es FlacronCV realmente gratis?",
-    "a1": "¡Sí! El plan gratuito te permite crear hasta 5 CVs, 1 carta de presentación, usar 5 créditos IA/mes y exportar hasta 2 documentos/mes en PDF — sin tarjeta de crédito. Actualiza a Pro para 10 CVs, 20 cartas de presentación, 100 créditos IA, exportaciones ilimitadas y formato DOCX.",
+    "a1": "¡Sí! El plan gratuito te permite crear hasta 5 CVs, 1 carta de presentación, usar 5 créditos IA y exportar hasta 2 documentos en PDF — esas asignaciones no se restablecen nunca, y no se requiere tarjeta de crédito. Actualiza a Pro para 10 CVs/mes, 20 cartas de presentación/mes, 100 créditos IA/mes, exportaciones ilimitadas y formato DOCX.",
     "q2": "¿Qué formatos de exportación son compatibles?",
     "a2": "Todos los planes admiten exportación en PDF. Los planes Pro y Enterprise también desbloquean el formato DOCX (Microsoft Word). El plan gratuito incluye 2 exportaciones; Pro y Enterprise ofrecen exportaciones ilimitadas. La exportación TXT no está disponible actualmente.",
     "q3": "¿Cómo funciona la escritura con IA?",
@@ -456,7 +456,8 @@
     "empty_title": "Aún no hay cartas de presentación",
     "empty_description": "Crea tu primera carta de presentación para empezar",
     "delete_confirm_title": "Eliminar carta de presentación",
-    "delete_confirm_message": "¿Estás seguro de que deseas eliminar esta carta de presentación? Esta acción no se puede deshacer.",
+    "delete_confirm_message": "¿Estás seguro de que deseas eliminar esta carta de presentación? Esta acción no se puede deshacer. Eliminarla no restaura una creación de carta de presentación en tu plan.",
+    "delete_confirm_no_allowance": "No te quedan creaciones de cartas de presentación. Eliminar esta carta no te permitirá crear otra en este plan.",
     "save_failed": "Error al guardar la carta de presentación",
     "ai_improved": "Carta de presentación mejorada con IA",
     "ai_improve": "Mejora con IA",
@@ -766,7 +767,7 @@
       "title": "Uso este mes",
       "title_free": "Uso del plan gratuito",
       "cvsCreated": "CVs creados",
-      "coverLetters": "Cartas de presentación",
+      "coverLetters": "Cartas de presentación creadas",
       "aiCredits": "Créditos IA usados",
       "exports": "Exportaciones",
       "remaining": "{count} restantes",
@@ -2000,7 +2001,8 @@
     "duplicated": "CV duplicado",
     "duplicate_failed": "Error al duplicar el CV. Inténtalo de nuevo.",
     "delete_confirm_title": "¿Eliminar CV?",
-    "delete_confirm_message": "Esta acción no se puede deshacer. El CV se eliminará permanentemente.",
+    "delete_confirm_message": "Esta acción no se puede deshacer. El CV se eliminará permanentemente. Eliminarlo no restaura una creación de CV en tu plan.",
+    "delete_confirm_no_allowance": "No te quedan creaciones de CV. Eliminar este CV no te permitirá crear otro en este plan.",
     "card_open": "Abrir {title}",
     "card_open_editor": "Abrir editor",
     "card_updated": "Actualizado {date}",
@@ -2035,11 +2037,11 @@
       },
       "cvs": {
         "title": "Límite de CV alcanzado",
-        "description": "Has alcanzado el número de CV que permite tu plan. Mejóralo para crear más, o elimina alguno que ya no necesites."
+        "description": "Has usado todas las creaciones de CV incluidas en tu plan. Mejóralo para crear más. Eliminar un CV no restaura una creación."
       },
       "cover_letters": {
         "title": "Límite de cartas alcanzado",
-        "description": "Has alcanzado el número de cartas de presentación que permite tu plan. Mejóralo para crear más, o elimina alguna que ya no necesites."
+        "description": "Has usado todas las creaciones de cartas de presentación incluidas en tu plan. Mejóralo para crear más. Eliminar una carta no restaura una creación."
       }
     }
   },

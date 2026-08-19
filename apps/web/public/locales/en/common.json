@@ -136,7 +136,7 @@
   "faq": {
     "title": "Frequently Asked Questions",
     "q1": "Is FlacronCV really free?",
-    "a1": "Yes! The Free plan lets you create up to 5 CVs, 1 cover letter, use 5 AI credits/month, and export up to 2 documents/month as PDF — no credit card required. Upgrade to Pro for 10 CVs, 20 cover letters, 100 AI credits, unlimited exports, and DOCX format.",
+    "a1": "Yes! The Free plan lets you create up to 5 CVs, 1 cover letter, use 5 AI credits, and export up to 2 documents as PDF — those allowances never reset, and no credit card is required. Upgrade to Pro for 10 CVs/month, 20 cover letters/month, 100 AI credits/month, unlimited exports, and DOCX format.",
     "q2": "What export formats are supported?",
     "a2": "All plans support PDF export. Pro and Enterprise plans also unlock DOCX (Microsoft Word) format. The Free plan includes 2 exports; Pro and Enterprise offer unlimited exports. TXT export is not currently available.",
     "q3": "How does the AI writing work?",
@@ -456,7 +456,8 @@
     "empty_title": "No cover letters yet",
     "empty_description": "Create your first cover letter to get started",
     "delete_confirm_title": "Delete Cover Letter",
-    "delete_confirm_message": "Are you sure you want to delete this cover letter? This action cannot be undone.",
+    "delete_confirm_message": "Are you sure you want to delete this cover letter? This action cannot be undone. Deleting it does not restore a cover letter creation on your plan.",
+    "delete_confirm_no_allowance": "You have no cover letter creations remaining. Deleting this cover letter will not let you create another on this plan.",
     "save_failed": "Failed to save cover letter",
     "ai_improved": "Cover letter improved with AI",
     "ai_improve": "AI Improve",
@@ -766,7 +767,7 @@
       "title": "Usage This Month",
       "title_free": "Free Plan Usage",
       "cvsCreated": "CVs Created",
-      "coverLetters": "Cover Letters",
+      "coverLetters": "Cover Letters Created",
       "aiCredits": "AI Credits Used",
       "exports": "Exports",
       "remaining": "{count} remaining",
@@ -2000,7 +2001,8 @@
     "duplicated": "CV duplicated",
     "duplicate_failed": "Failed to duplicate CV. Please try again.",
     "delete_confirm_title": "Delete CV?",
-    "delete_confirm_message": "This action cannot be undone. The CV will be permanently deleted.",
+    "delete_confirm_message": "This action cannot be undone. The CV will be permanently deleted. Deleting it does not restore a CV creation on your plan.",
+    "delete_confirm_no_allowance": "You have no CV creations remaining. Deleting this CV will not let you create another on this plan.",
     "card_open": "Open {title}",
     "card_open_editor": "Open Editor",
     "card_updated": "Updated {date}",
@@ -2035,11 +2037,11 @@
       },
       "cvs": {
         "title": "CV limit reached",
-        "description": "You've reached the number of CVs your plan allows. Upgrade to create more, or delete one you no longer need."
+        "description": "You've used every CV creation included in your plan. Upgrade to create more. Deleting a CV does not restore a creation."
       },
       "cover_letters": {
         "title": "Cover letter limit reached",
-        "description": "You've reached the number of cover letters your plan allows. Upgrade to create more, or delete one you no longer need."
+        "description": "You've used every cover letter creation included in your plan. Upgrade to create more. Deleting a cover letter does not restore a creation."
       }
     }
   },

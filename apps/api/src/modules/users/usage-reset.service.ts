@@ -63,8 +63,8 @@ export class UsageResetService implements OnApplicationBootstrap {
 
   /**
    * Runs at midnight on the 1st of every month.
-   * Resets aiCreditsUsed and exportsThisMonth for active **paid** users,
-   * and syncs aiCreditsLimit to the user's current plan.
+   * Resets aiCreditsUsed, exportsThisMonth, cvsCreated and coverLettersCreated
+   * for active **paid** users, and syncs aiCreditsLimit to the user's current plan.
    *
    * Free is a one-time allowance. Those docs are skipped entirely — no write —
    * so consumed counters stay as they stand. Catch-up uses this same method.
@@ -109,6 +109,8 @@ export class UsageResetService implements OnApplicationBootstrap {
         batch.update(doc.ref, {
           'usage.aiCreditsUsed': 0,
           'usage.exportsThisMonth': 0,
+          'usage.cvsCreated': 0,
+          'usage.coverLettersCreated': 0,
           'usage.aiCreditsLimit': newCreditsLimit,
           'usage.lastExportReset': now,
           updatedAt: now,

@@ -204,3 +204,50 @@ describe('CoverLetterService create+generate atomicity', () => {
     await expect(service.create('u1', aiPayload)).rejects.toThrow(/AI generation failed/);
   });
 });
+
+describe('CoverLetterService delete does not restore a creation', () => {
+  it('does not call incrementUsage with -1 on user delete', async () => {
+    const { service, firestore } = makeService(SubscriptionPlan.FREE);
+    const usersService = (service as any).usersService;
+    await seedCL(firestore);
+    await service.delete('cl1', 'u1');
+    expect(usersService.incrementUsage).not.toHaveBeenCalledWith('u1', 'coverLettersCreated', -1);
+  });
+
+  it('blocks a Free user at 1 creation from creating again after deleting the stored letter', async () => {
+    let coverLettersCreated = 1;
+    const firestore = new InMemoryFirestore();
+    const usersService = {
+      findByIdOrThrow: jest.fn().mockImplementation(async () => ({
+        uid: 'u1',
+        subscription: { plan: SubscriptionPlan.FREE, status: 'active' },
+        usage: { coverLettersCreated },
+      })),
+      incrementUsage: jest.fn(async (_uid: string, field: string, amount = 1) => {
+        if (field === 'coverLettersCreated') coverLettersCreated += amount;
+      }),
+    };
+    const service = new CoverLetterService(
+      { firestore } as any,
+      usersService as any,
+      {} as any,
+      {} as any,
+      { assertNewConsumption: jest.fn().mockResolvedValue(undefined) } as any,
+    );
+
+    await firestore.collection('cover_letters').doc('cl1').set({
+      id: 'cl1',
+      userId: 'u1',
+      templateId: 'modern',
+      styling: { fontFamily: 'Inter', fontSize: '16px', primaryColor: '#2563eb' },
+      deletedAt: null,
+    });
+    await service.delete('cl1', 'u1');
+
+    expect(usersService.incrementUsage).not.toHaveBeenCalledWith('u1', 'coverLettersCreated', -1);
+    expect(coverLettersCreated).toBe(1);
+    await expect(
+      service.create('u1', { title: 'Second', templateId: 'modern' } as any),
+    ).rejects.toThrow(ForbiddenException);
+  });
+});

@@ -270,11 +270,10 @@ export class CoverLetterService {
       deletedAt: new Date(),
       updatedAt: new Date(),
     });
-
-    // Return the slot — see the matching note in CVService.delete. This one bit
-    // hardest: the FREE plan allows a single cover letter, so deleting it left
-    // the user permanently unable to write another.
-    await this.usersService.incrementUsage(userId, 'coverLettersCreated', -1);
+    // Do not decrement `coverLettersCreated`. Limits count creations, not
+    // documents stored. A Free user who creates their one letter and deletes it
+    // cannot create another — client-instructed, 2026-08-19. Failed *generation*
+    // still refunds via rollbackFailedCreate; that is not a user delete.
   }
 
   async generateWithAI(

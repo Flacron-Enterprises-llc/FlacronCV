@@ -117,8 +117,8 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
       exports: 'unlimited',
     },
     features: [
-      '10 CVs',
-      '20 Cover Letters',
+      '10 CVs/month',
+      '20 Cover Letters/month',
       '100 AI Credits/month',
       'All templates',
       'Unlimited exports',
@@ -150,8 +150,8 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
       exports: 'unlimited',
     },
     features: [
-      '25 CVs',
-      '50 Cover Letters',
+      '25 CVs/month',
+      '50 Cover Letters/month',
       '250 AI Credits/month',
       'All Pro templates',
       'Unlimited exports',

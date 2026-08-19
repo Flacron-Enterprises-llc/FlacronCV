@@ -20,14 +20,20 @@ import {
   Loader2,
   AlertTriangle,
 } from 'lucide-react';
-import { CoverLetter } from '@flacroncv/shared-types';
+import { CoverLetter, PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
 import { formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useAuth } from '@/providers/AuthProvider';
 
 export default function CoverLettersPage(): React.JSX.Element | null {
   const t = useTranslations();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const letterLimit = PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)].limits.coverLetters;
+  const lettersCreated = user?.usage?.coverLettersCreated ?? 0;
+  const atLimit = letterLimit !== 'unlimited' && lettersCreated >= letterLimit;
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['cover-letters'],
@@ -122,6 +128,11 @@ export default function CoverLettersPage(): React.JSX.Element | null {
         <p className="text-sm text-stone-600 dark:text-stone-400">
           {t('coverLetters.delete_confirm_message')}
         </p>
+        {atLimit && (
+          <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
+            {t('coverLetters.delete_confirm_no_allowance')}
+          </p>
+        )}
         <div className="mt-6 flex justify-end gap-3">
           <Button variant="secondary" onClick={() => setDeleteId(null)}>
             {t('common.cancel')}
