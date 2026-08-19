@@ -128,4 +128,9 @@ export class CRMUsersController {
   resetUsage(@Param('id') id: string, @CurrentUser() actor: FirebaseUser) {
     return this.usersService.resetUsage(id, actor.uid, actor.email, actor.role);
   }
+
+  @Put(':id/release-free-grant')
+  releaseFreeGrant(@Param('id') id: string, @CurrentUser() actor: FirebaseUser) {
+    return this.usersService.releaseFreeGrant(id, actor.uid, actor.role);
+  }
 }

@@ -29,6 +29,10 @@ export interface EventPropMap {
   checkout_started: { plan: string; interval: string };
   plan_upgraded: { plan?: string };
   ai_generation: { feature: string };
+  abuse_grant_blocked: { reason?: string };
+  abuse_step_up: { reason?: string };
+  abuse_email_unverified: { reason?: string };
+  abuse_rate_limited: { reason?: string };
 }
 
 export type AnalyticsEventName = keyof EventPropMap;

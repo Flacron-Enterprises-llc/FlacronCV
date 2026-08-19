@@ -55,7 +55,15 @@ describe('CRMUsersService', () => {
     firestore = new InMemoryFirestore();
     firebase = makeFirebaseAdmin(firestore);
     audit = makeAudit();
-    service = new CRMUsersService(firebase, audit);
+    service = new CRMUsersService(firebase, audit, {
+      releaseFreeGrant: jest.fn().mockImplementation(async (uid: string) => {
+        const snap = await firestore.collection('users').doc(uid).get();
+        const data = snap.data() as Record<string, unknown>;
+        const abuse = { ...(data.abuse as object), grantStatus: 'granted' };
+        await firestore.collection('users').doc(uid).set({ ...data, abuse });
+        return { ...data, abuse };
+      }),
+    } as any);
   });
 
   // ─── listUsers ──────────────────────────────────────────────────────────────
@@ -270,5 +278,22 @@ describe('CRMUsersService', () => {
         service.resetUsage('sa-3', 'a', 'a@example.com', UserRole.ADMIN),
       ).rejects.toThrow(ForbiddenException);
     });
+  });
+
+  it('records who released a Free grant, when, and for which uid — never the email', async () => {
+    await seedUser(firestore, makeUser('blocked-uid', { abuse: { grantStatus: 'blocked' } }));
+    await service.releaseFreeGrant('blocked-uid', 'staff-1', UserRole.ADMIN);
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorId: 'staff-1',
+        actorEmail: '',
+        action: 'ABUSE_FREE_GRANT_RELEASED',
+        targetId: 'blocked-uid',
+        targetName: 'blocked-uid',
+        details: { from: 'blocked', to: 'granted' },
+      }),
+    );
+    const printed = JSON.stringify(audit.log.mock.calls);
+    expect(printed).not.toContain('blocked-uid@example.com');
   });
 });

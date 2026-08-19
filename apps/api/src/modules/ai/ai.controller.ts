@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { IsOptional, IsString, IsNotEmpty, MaxLength } from 'class-validator';
 import { AIService } from './ai.service';
@@ -9,6 +9,7 @@ import { CurrentUser, FirebaseUser } from '../../common/decorators/current-user.
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/audit-actions';
 import { AIProviderResponse } from './providers/ai-provider.interface';
+import { AbuseIdempotencyInterceptor } from '../../common/interceptors/abuse-idempotency.interceptor';
 
 /**
  * Body of POST /ai/regenerate-paragraph.
@@ -42,6 +43,7 @@ export class RegenerateParagraphDto {
 @ApiTags('ai')
 @Controller('ai')
 @UseGuards(FirebaseAuthGuard, FeatureFlagGuard)
+@UseInterceptors(AbuseIdempotencyInterceptor)
 @RequireFeature('aiEnabled')
 @ApiBearerAuth()
 export class AIController {

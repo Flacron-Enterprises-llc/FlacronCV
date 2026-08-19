@@ -18,8 +18,10 @@ import { CRMSettingsService } from './crm-settings.service';
 import { CRMSubscriptionsController } from './crm-subscriptions.controller';
 import { CRMSubscriptionsService } from './crm-subscriptions.service';
 import { AppConfigController } from './app-config.controller';
+import { AbuseModule } from '../abuse/abuse.module';
 
 @Module({
+  imports: [AbuseModule],
   controllers: [
     AppConfigController,
     CRMCustomersController,

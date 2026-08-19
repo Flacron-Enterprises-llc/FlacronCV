@@ -12,3 +12,4 @@ export * from './template.tiers';
 export * from './support.types';
 export * from './api.types';
 export * from './crm.types';
+export * from './legal-acceptance.types';

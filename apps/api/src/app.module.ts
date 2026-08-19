@@ -20,6 +20,7 @@ import { ContactModule } from './modules/contact/contact.module';
 import { CRMModule } from './modules/crm/crm.module';
 import { JobsModule } from './modules/jobs/jobs.module';
 import { LeadsModule } from './modules/leads/leads.module';
+import { LegalModule } from './modules/legal/legal.module';
 import configuration from './config/configuration';
 
 @Module({
@@ -57,6 +58,7 @@ import configuration from './config/configuration';
     CRMModule,
     JobsModule,
     LeadsModule,
+    LegalModule,
   ],
   providers: [
     {

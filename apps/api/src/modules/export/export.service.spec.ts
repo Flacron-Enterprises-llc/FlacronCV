@@ -12,7 +12,9 @@ function makeUsersService(user: unknown) {
 // template dir, so it is safe to construct with stub deps for a unit test.
 function makeService(user: unknown) {
   const usersService = makeUsersService(user);
-  const service = new ExportService({} as any, {} as any, {} as any, usersService);
+  const service = new ExportService({} as any, {} as any, {} as any, usersService, {
+    assertNewConsumption: jest.fn().mockResolvedValue(undefined),
+  } as any);
   return { service, usersService };
 }
 

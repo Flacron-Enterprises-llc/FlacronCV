@@ -10,11 +10,15 @@ import { auth } from '@/lib/firebase';
 import { getPostLoginRedirect } from '@/lib/post-auth-redirect';
 import { currentUserRole } from '@/lib/current-user-role';
 import { authErrorKey, isAccountExistsError, accountExistsEmail } from '@/lib/auth-errors';
+import { recordAcceptanceAfterSignup } from '@/lib/legal-acceptance';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import GoogleIcon from '@/components/shared/GoogleIcon';
+import LegalAcceptanceModal, { legalDocLinks } from '@/components/auth/LegalAcceptanceModal';
 import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
+
+type PendingSignup = 'password' | 'google' | null;
 
 function RegisterForm(): React.JSX.Element {
   const t = useTranslations('auth');
@@ -27,6 +31,9 @@ function RegisterForm(): React.JSX.Element {
   const [password, setPassword] = useState('');
   const [formLoading, setFormLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [legalOpen, setLegalOpen] = useState(false);
+  const [legalChecked, setLegalChecked] = useState(false);
+  const [pendingSignup, setPendingSignup] = useState<PendingSignup>(null);
   const redirectHandled = useRef(false);
 
   // Show Google auth error stored by a previous attempt (account-exists case)
@@ -50,15 +57,35 @@ function RegisterForm(): React.JSX.Element {
     }
   }, [user, loading, router, callbackUrl]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const closeLegal = () => {
+    setLegalOpen(false);
+    setLegalChecked(false);
+    setPendingSignup(null);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 8) {
       toast.error(t('password_min'));
       return;
     }
+    setPendingSignup('password');
+    setLegalChecked(false);
+    setLegalOpen(true);
+  };
+
+  const handleGoogle = () => {
+    if (googleLoading || formLoading) return;
+    setPendingSignup('google');
+    setLegalChecked(false);
+    setLegalOpen(true);
+  };
+
+  const completePasswordSignup = async () => {
     setFormLoading(true);
     try {
       await register(email, password, name);
+      await recordAcceptanceAfterSignup();
       track('sign_up', { method: 'password' });
       redirectHandled.current = true;
       router.push('/verify-email');
@@ -69,12 +96,12 @@ function RegisterForm(): React.JSX.Element {
     }
   };
 
-  const handleGoogle = async () => {
-    if (googleLoading) return;
+  const completeGoogleSignup = async () => {
     setGoogleLoading(true);
     try {
       await loginWithGoogle();
       if (auth?.currentUser) {
+        await recordAcceptanceAfterSignup();
         track('sign_up', { method: 'google' });
         redirectHandled.current = true;
         router.push(getPostLoginRedirect(callbackUrl, await currentUserRole()));
@@ -90,13 +117,23 @@ function RegisterForm(): React.JSX.Element {
     }
   };
 
+  const handleLegalAccept = async () => {
+    if (!legalChecked || !pendingSignup) return;
+    const method = pendingSignup;
+    closeLegal();
+    if (method === 'password') await completePasswordSignup();
+    else await completeGoogleSignup();
+  };
+
+  const signupBusy = formLoading || googleLoading;
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{t('register_title')}</h1>
       <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">{t('register_subtitle')}</p>
 
       <div className="mt-8">
-        <Button variant="secondary" onClick={handleGoogle} loading={googleLoading} disabled={googleLoading || formLoading} className="w-full">
+        <Button variant="secondary" onClick={handleGoogle} loading={googleLoading} disabled={signupBusy} className="w-full">
           <GoogleIcon />
           {t('google')}
         </Button>
@@ -122,12 +159,25 @@ function RegisterForm(): React.JSX.Element {
         </Button>
       </form>
 
+      <p className="mt-3 text-center text-xs text-stone-500 dark:text-stone-400">
+        {t.rich('legal_signup_line', legalDocLinks())}
+      </p>
+
       <p className="mt-6 text-center text-sm text-stone-600 dark:text-stone-400">
         {t('have_account')}{' '}
         <Link href="/login" className="font-semibold text-brand-600 hover:text-brand-700">
           {t('login_btn')}
         </Link>
       </p>
+
+      <LegalAcceptanceModal
+        isOpen={legalOpen}
+        checked={legalChecked}
+        onCheckedChange={setLegalChecked}
+        onAccept={() => void handleLegalAccept()}
+        onCancel={closeLegal}
+        accepting={signupBusy}
+      />
     </div>
   );
 }

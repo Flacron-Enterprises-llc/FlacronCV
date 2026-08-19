@@ -391,6 +391,17 @@ export interface AbuseRiskSettings {
   thresholds: AbuseRiskThresholds;
   networkBurstCount: number;
   networkBurstWindowHours: number;
+  /**
+   * Kill switch. When false or missing, scoring still runs (observe-only) and
+   * nothing is denied. Must be the explicit boolean `true` to enforce.
+   * Default false — a deploy must not start rejecting people.
+   */
+  enforcementEnabled: boolean;
+  /**
+   * Hours a `pending_step_up` account waits after email verify before the
+   * Free grant becomes eligible. Default 12. No second score.
+   */
+  stepUpCooldownHours: number;
 }
 
 export interface UpdateAppSettingsDto {

@@ -3,6 +3,7 @@ import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { UsersService } from '../users/users.service';
 import { AIService } from '../ai/ai.service';
 import { CVService } from '../cv/cv.service';
+import { AbuseService } from '../abuse/abuse.service';
 import {
   CoverLetter,
   CreateCoverLetterData,
@@ -27,9 +28,11 @@ export class CoverLetterService {
     private usersService: UsersService,
     private aiService: AIService,
     private cvService: CVService,
+    private abuse: AbuseService,
   ) {}
 
   async create(userId: string, data: CreateCoverLetterData): Promise<CoverLetter> {
+    await this.abuse.assertNewConsumption(userId, 'create');
     const user = await this.usersService.findByIdOrThrow(userId);
     const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
 
@@ -279,6 +282,7 @@ export class CoverLetterService {
     userId: string,
     data: GenerateCoverLetterData,
   ): Promise<CoverLetter> {
+    await this.abuse.assertNewConsumption(userId, 'ai');
     const cl = await this.findByIdOrThrow(id, userId);
 
     // Fall back to stored cover letter values when not provided in request

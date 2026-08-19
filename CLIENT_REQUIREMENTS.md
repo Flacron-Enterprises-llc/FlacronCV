@@ -371,12 +371,12 @@ counters left as they stood.
 
 | ID | Task | Status |
 |---|---|---|
-| H.1 | Legal acceptance modal — unchecked box, disabled CTA until ticked, three links, never pre-checked | ☐ |
-| H.2 | `legalAcceptances` collection with per-document versions, server-side | ☐ |
-| H.3 | Re-consent on material version change | ☐ |
-| H.4 | Signup page legal text with three clickable links | ☐ |
+| H.1 | Legal acceptance modal — unchecked box, disabled CTA until ticked, three links, never pre-checked | ☑ |
+| H.2 | `legalAcceptances` collection with per-document versions, server-side | ☑ |
+| H.3 | Re-consent on material version change. **Mechanism built** (`needsAcceptance`); versions **not** bumped this batch; missing record is grandfathered (`treatMissingAsStale` default off). Do not prompt existing users until a later, explicit version bump. | ◐ |
+| H.4 | Signup page legal text with three clickable links | ☑ |
 | H.5 | **Server-side `emailVerified` enforcement — see R-5.** Must exempt verify/resend endpoints and handle token-refresh lag. | ☐ |
-| H.6 | Account deletion UI exists; **the erasure cascade and purge job do not**. The Privacy Policy was already corrected to describe manual erasure on request. New policy text must not re-promise automated deletion unless it's built. **When H.6 is built it must include `users/{uid}.abuse`, `abuse_devices/{hash}`, and `abuse_networks/{hash}`.** Until then a manual erasure request has to cover those by hand. | ☐ |
+| H.6 | Account deletion UI exists; **the erasure cascade and purge job do not**. The Privacy Policy was already corrected to describe manual erasure on request. New policy text must not re-promise automated deletion unless it's built. **When H.6 is built it must include both deferred obligations (keep them in one list):** (1) `users/{uid}.abuse`, `abuse_devices/{hash}`, `abuse_networks/{hash}`, `abuse_idempotency/{uid:key}`, `abuse_rate/{uid:kind}`; (2) `legalAcceptances/{uid}`. Until then a manual erasure request has to cover **both** by hand. | ☐ |
 
 ---
 

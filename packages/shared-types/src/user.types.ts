@@ -36,6 +36,8 @@ export interface UserSubscription {
 
 export type RiskBand = 'allow' | 'verify' | 'deny';
 
+export type AbuseGrantStatus = 'eligible' | 'pending_step_up' | 'blocked' | 'granted';
+
 export type RiskSignalCode =
   | 'identity_received_free'
   | 'device_received_free'
@@ -58,6 +60,13 @@ export interface UserAbuse {
   riskBand: RiskBand;
   riskSignals: RiskSignalCode[];
   scoredAt: Date;
+  /**
+   * Free-grant state. Omitted while enforcement is off and on accounts
+   * scored before part 2. Missing is treated as eligible (grandfather).
+   */
+  grantStatus?: AbuseGrantStatus;
+  /** When `pending_step_up`, the grant becomes eligible at this instant. */
+  cooldownEndsAt?: Date | null;
 }
 
 export interface UserUsage {

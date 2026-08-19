@@ -1,5 +1,6 @@
 import { auth } from './firebase';
 import { getOrCreateDeviceToken } from './device-token';
+import { track } from './analytics';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
@@ -50,16 +51,18 @@ export class ApiError extends Error {
   readonly kind: ApiErrorKind;
   readonly status?: number;
   readonly retryable: boolean;
+  readonly code?: string;
 
   constructor(
     message: string,
-    opts: { kind: ApiErrorKind; status?: number; retryable?: boolean },
+    opts: { kind: ApiErrorKind; status?: number; retryable?: boolean; code?: string },
   ) {
     super(message);
     this.name = 'ApiError';
     this.kind = opts.kind;
     this.status = opts.status;
     this.retryable = opts.retryable ?? false;
+    this.code = opts.code;
   }
 }
 
@@ -81,6 +84,39 @@ function getDeviceHeaders(): Record<string, string> {
   return token ? { 'X-Device-Token': token } : {};
 }
 
+const inFlightIdempotency = new Map<string, string>();
+
+function isAiGeneratePath(endpoint: string, method?: string): boolean {
+  if (method && method !== 'POST') return false;
+  return endpoint.includes('/ai/') || /\/cover-letters\/[^/]+\/ai\/generate/.test(endpoint);
+}
+
+function idempotencyHeaders(endpoint: string, method: string | undefined, body: string | undefined): Record<string, string> {
+  if (!isAiGeneratePath(endpoint, method ?? 'POST')) return {};
+  const fingerprint = `${endpoint}:${body ?? ''}`;
+  const existing = inFlightIdempotency.get(fingerprint);
+  if (existing) return { 'Idempotency-Key': existing };
+  const key =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  inFlightIdempotency.set(fingerprint, key);
+  return { 'Idempotency-Key': key };
+}
+
+function trackAbuseCode(code: string | undefined, status: number): void {
+  if (!code) {
+    if (status === 429) track('abuse_rate_limited', { reason: 'http_429' });
+    return;
+  }
+  if (code === 'ABUSE_GRANT_BLOCKED') track('abuse_grant_blocked', { reason: code });
+  else if (code === 'ABUSE_STEP_UP') track('abuse_step_up', { reason: code });
+  else if (code === 'ABUSE_EMAIL_UNVERIFIED') track('abuse_email_unverified', { reason: code });
+  else if (code === 'ABUSE_NETWORK_CREATE_CAP' || code === 'ABUSE_UID_RATE_LIMIT') {
+    track('abuse_rate_limited', { reason: code });
+  }
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit & { timeoutMs?: number } = {},
@@ -88,6 +124,10 @@ async function request<T>(
   const { timeoutMs, ...init } = options;
   const authHeaders = await getAuthHeaders();
   const deviceHeaders = getDeviceHeaders();
+  const method = (init.method as string | undefined) ?? 'GET';
+  const bodyText = typeof init.body === 'string' ? init.body : undefined;
+  const idemHeaders = idempotencyHeaders(endpoint, method, bodyText);
+  const fingerprint = `${endpoint}:${bodyText ?? ''}`;
 
   let response: Response;
   try {
@@ -98,6 +138,7 @@ async function request<T>(
         'Content-Type': 'application/json',
         ...authHeaders,
         ...deviceHeaders,
+        ...idemHeaders,
         ...init.headers,
       },
     });
@@ -126,15 +167,19 @@ async function request<T>(
       });
     }
     throw error;
+  } finally {
+    inFlightIdempotency.delete(fingerprint);
   }
 
   if (!response.ok) {
-    const body = await response.json().catch(() => ({}) as { message?: string });
-    // A 5xx / 429 is worth retrying; a 4xx is the caller's own fault and is not.
-    throw new ApiError(body.message || `Request failed (HTTP ${response.status})`, {
+    const body = (await response.json().catch(() => ({}))) as { message?: string; code?: string };
+    const message = typeof body.message === 'string' ? body.message : `Request failed (HTTP ${response.status})`;
+    trackAbuseCode(body.code, response.status);
+    throw new ApiError(message, {
       kind: 'http',
       status: response.status,
       retryable: response.status >= 500 || response.status === 429,
+      code: typeof body.code === 'string' ? body.code : undefined,
     });
   }
 

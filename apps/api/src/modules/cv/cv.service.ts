@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nest
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { UsersService } from '../users/users.service';
 import { AIService } from '../ai/ai.service';
+import { AbuseService } from '../abuse/abuse.service';
 import {
   CV,
   CVSection,
@@ -30,6 +31,7 @@ export class CVService {
     private firebaseAdmin: FirebaseAdminService,
     private usersService: UsersService,
     private aiService: AIService,
+    private abuse: AbuseService,
   ) {}
 
   private getTemplateStyling(templateId: string): Omit<CVStyling, 'secondaryColor'> {
@@ -140,6 +142,7 @@ export class CVService {
   }
 
   async create(userId: string, data: CreateCVData): Promise<CV> {
+    await this.abuse.assertNewConsumption(userId, 'create');
     const user = await this.usersService.findByIdOrThrow(userId);
     const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
 
@@ -286,6 +289,7 @@ export class CVService {
   }
 
   async importFromResume(userId: string, data: { title?: string; resumeText: string }): Promise<CV> {
+    await this.abuse.assertNewConsumption(userId, 'create');
     const user = await this.usersService.findByIdOrThrow(userId);
     const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
     if (limits.cvs !== 'unlimited' && user.usage.cvsCreated >= limits.cvs) {

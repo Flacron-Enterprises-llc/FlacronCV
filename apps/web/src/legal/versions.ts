@@ -6,10 +6,11 @@ import { COOKIES } from './cookies';
 
 /**
  * Per-document versions for Batch H (acceptance modal / legalAcceptances).
- * Do not build the modal or the collection here.
  *
- * Privacy is recorded at the client package date but is NOT published from
- * this module — MC1 is blocked until the client names AWS SES and OpenAI in §4.
+ * Privacy is stamped at LEGAL_VERSION even though the live `/privacy-policy`
+ * body is still locale JSON (`liveSource: 'locale-json'`, status
+ * `pending-client-subprocessors`). Recorded version and published body will
+ * not match until B.1 lands — that is a deliberate gap, not a bug.
  */
 export const LEGAL_DOCUMENTS = {
   terms: TERMS,

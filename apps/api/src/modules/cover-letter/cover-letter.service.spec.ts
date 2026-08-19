@@ -16,7 +16,9 @@ function makeService(userPlan: SubscriptionPlan) {
   } as any;
   const aiService = {} as any;
   const cvService = {} as any;
-  const service = new CoverLetterService(firebaseAdmin, usersService, aiService, cvService);
+  const service = new CoverLetterService(firebaseAdmin, usersService, aiService, cvService, {
+    assertNewConsumption: jest.fn().mockResolvedValue(undefined),
+  } as any);
   return { service, firestore };
 }
 
@@ -109,6 +111,7 @@ describe('CoverLetterService create+generate atomicity', () => {
       usersService,
       aiService,
       {} as any,
+      { assertNewConsumption: jest.fn().mockResolvedValue(undefined) } as any,
     );
     return { service, firestore, usersService };
   }

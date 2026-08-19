@@ -36,7 +36,7 @@ Last updated: 2026-08-18
 ### Key paths
 - Web routes: `apps/web/src/app/[locale]/(public|auth|dashboard|admin|crm)/…`
 - Web state: `apps/web/src/store/*`; providers: `apps/web/src/providers/*`; API client: `apps/web/src/lib/api.ts`
-- API modules: `apps/api/src/modules/{auth,users,cv,cover-letter,ai,templates,export,payment,support,admin,audit,mail,crm,firebase}`
+- API modules: `apps/api/src/modules/{auth,users,cv,cover-letter,ai,templates,export,payment,support,admin,audit,mail,crm,firebase,legal}`
 - Plans/entitlements: `packages/shared-types/src/subscription.types.ts` (`PLAN_CONFIGS`)
 - Locales: `apps/web/public/locales/<loc>/common.json`
 - English legal bodies: `apps/web/src/legal/*.ts` (chrome still in `t()`)
@@ -755,12 +755,18 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   raw IP in the new scorer. **Do not silently “fix” the audit path in the same
   batch as signup scoring** — it is pre-existing; hashing historical audit IPs
   is J.5-adjacent.
-- **⚠️ ADDED 2026-08-18 — H.6 erasure must include Batch G collections.** When the
-  erasure cascade is built, delete or anonymise `users/{uid}.abuse` **and**
-  the lookup docs `abuse_devices/{deviceHash}` / `abuse_networks/{ipHash}`
-  (remove this uid from the device uid list; do not leave a dangling hash→uid
-  map). Until H.6 exists, a **manual** erasure request has to cover those by
-  hand. Soft-delete today does not.
+- **⚠️ ADDED 2026-08-18 — H.6 erasure: two deferred obligations (keep them together).**
+  When the erasure cascade is built it must delete or anonymise **both** of:
+  1. **Batch G abuse:** `users/{uid}.abuse` **and** the lookup docs
+     `abuse_devices/{deviceHash}` / `abuse_networks/{ipHash}` **and**
+     `abuse_idempotency/{uid:key}` / `abuse_rate/{uid:kind}`
+     (remove this uid from the device uid list; do not leave a dangling hash→uid
+     map).
+  2. **Batch H legal:** `legalAcceptances/{uid}` (doc-id delete; there is no
+     query). Email is stored on that document — delete the doc, do not log the
+     email on the way out.
+  Until H.6 exists, a **manual** erasure request has to cover **both** by hand.
+  Soft-delete today does not. Do not split this list across change-log entries.
 - **⚠️ ADDED 2026-08-18 — `crm-settings.planLimits`: a phantom entitlements control. DECISION NEEDED
   (delete or wire).** `DEFAULT_SETTINGS.planLimits` (`apps/api/src/modules/crm/crm-settings.service.ts:8-10`)
   defines a **second** set of plan limits — `free: {cvs 3, letters 2, credits 5, exports 2}`,
@@ -796,6 +802,105 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 9. Change log (append newest at top)
 
+- 2026-08-18 — **Batch H — legal acceptance at signup (option A, grandfather existing users).**
+  Client package §§ 7, 8, 10, 24. **Do not commit.** Web only. Do not touch Batch G's
+  gates. Modal **before** Firebase Auth for email/password **and** Google on
+  `/register`. Cancel leaves **nothing** — no Auth user (the option-B failure
+  mode has an explicit test). Login-page Google is unchanged (no modal).
+  **Collection:** `legalAcceptances/{uid}` — doc-id get/set, no where-query, no
+  composite index. Email is a stored field by client schema; **never logged**.
+  uid and email stamped from the verified token. POST `/legal/acceptances`
+  (FirebaseAuthGuard); GET `/legal/acceptances/me` returns `{ acceptance }` or
+  `null` (missing is not a 404 / not a lockout). GDPR export includes this
+  user's row only.
+  **Grandfather:** missing record → no prompt. `treatMissingAsStale` default
+  **off** and not flipped. Existing users sign in, open the dashboard, and use
+  existing documents (tested). DashboardShell has no legal gate.
+  **Write failure after Auth success:** retry in session
+  (`flacroncv_pending_legal_acceptance`); **never delete the account**; never
+  treat that crash as an existing/grandfathered user while the flag is set.
+  **Privacy version:** `privacyVersion` is stamped from `LEGAL_VERSION_MAP`
+  (`2026-08-16`) even though the live privacy **body** is still locale JSON
+  (B.1 blocked). Recorded version and published body will not match until B.1
+  — deliberate gap, not a bug.
+  **Re-consent:** `needsAcceptance()` compares stored versions to the map. Do
+  not bump versions this batch; do not show the modal to existing users.
+  **H.6:** `legalAcceptances/{uid}` is now the second deferred erasure
+  obligation, kept with Batch G's `users.abuse` + lookup collections in **§8
+  (one list)**.
+  **Not this batch:** B.12 in-app disclaimers; H.5 (already G part 2's
+  consumption gate); B.1 Privacy page; G gates; mobile register.
+  **QA:** `pnpm --filter api lint` 0 errors · `pnpm --filter web lint` 0 errors
+  (pre-existing `<img>` warnings only) · api `tsc --noEmit` ✓ · web `tsc --noEmit`
+  ✓ · api **466/466** · web **293/293** (vitest `--pool=threads --no-file-parallelism`;
+  all five i18n gates green).
+  **Do not commit.**
+
+- 2026-08-18 — **Batch G part 2 — Free-grant enforcement (kill switch default off).** Client
+  review §§ 3, 4, 5, 6, 10, 11, 12, 13, 23. **Do not commit.** Highest-risk batch: this
+  refuses the Free allowance, not the account. Ambiguous cases allow.
+  **G2-1 kill switch FIRST, alone:** `app_settings/main.abuse.enforcementEnabled`.
+  Default **false**. Missing/false = observe-only (part 1). Settings-read failure **fails
+  open**. Cache **15s**. Missing HMAC still cannot deny.
+  **G2-2 weights — do not restore part 1 numbers.** They were observe-only and would deny
+  a second person on a family PC (client §4). Test: same device, different verified
+  emails → **verify / pending_step_up, not deny**. Three housemates (one IP, three
+  devices) still **allow**. Empty UA is **not** bot.
+
+  | Signal | Part 1 (observe) | Part 2 (enforce) | Why |
+  |---|---|---|---|
+  | identity_received_free | 80 (deny alone) | **55** (verify) | Second person on a shared laptop must not be denied |
+  | multiple_accounts_device | 45, **stacked** with identity → 125 | **25**, **do not stack** with identity | Same fact counted twice auto-denied families |
+  | bot_activity | 50, empty UA fired | **20**, only curl/wget/python-requests; empty UA does **not** fire | Privacy browsers omit UA |
+  | repeat_create_delete | 40 | **25** | Plus multiple was 85 = deny |
+  | network_burst / ipAloneMax | 35 / clamp 39 | unchanged | Three-housemates must still pass |
+  | disposable_email | 25 | unchanged | Alone stays allow |
+  | vpn_datacenter | 0 | 0 | No dataset |
+
+  **G2-3 grant:** `grantStatus` eligible / pending_step_up / blocked / granted. Denied
+  users keep sign-in, email verification, dashboard, support, and can pay. Paid
+  entitlements ignore the grant block. Device `receivedFree` is **not** set on a
+  blocked grant. CRM **Release Free grant** + audit (`ABUSE_FREE_GRANT_RELEASED`:
+  actorId, time, target uid — never email/IP/token).
+  **G2-4 email:** new Free consumption only (create CV/letter, AI). Existing docs stay
+  readable, editable, **exportable**. `admin.auth.getUser` is source of truth for token
+  lag. Auth lookup failure fails open. Grandfather: usage already > 0 keeps those
+  files; must verify before **new** creates.
+  **G2-5 step-up:** 12h cooldown (`stepUpCooldownHours`) then auto `eligible`. No second
+  score.
+  **G2-6 rate limits:** **no tight throttle on `/auth/verify`**. New user creates per
+  hashed network **10/hour** (enforcement on only). Per-uid create 20 / AI 30 / export
+  20 per 15 min. 429 ≠ grant deny. Fail open on store errors.
+  **G2-7 idempotency:** `Idempotency-Key` on `POST /ai/*` and cover-letter
+  `:id/ai/generate` only. Firestore `abuse_idempotency/{uid:key}`, ~15 min. Invalid
+  key runs the work.
+  **G2-8 analytics:** `track()` codes only (`abuse_grant_blocked`, `abuse_step_up`,
+  `abuse_email_unverified`, `abuse_rate_limited`). Consent-gated. Never email/IP/token.
+  **G.5 App Check: still open. Do not install.** Console setup required.
+  **H.6 erasure** — see §8 (one list): Batch G collections **and** (as of Batch H)
+  `legalAcceptances/{uid}`.
+  **Operator watch — first week after flipping `enforcementEnabled` to true:**
+  1. Share of **new** registrations with `grantStatus=blocked` vs `pending_step_up` vs
+     `eligible`. A family PC should be step-up, not blocked.
+  2. Count of CRM **Release Free grant** actions. Many releases = the scorer is
+     catching real households.
+  3. Support tickets about not being able to create a CV / use Free after a normal
+     verified signup.
+  4. Structured logs `Free consumption denied uid=… code=…` (codes only).
+  **Flip it back to false immediately when this signal appears:** new accounts that
+  have a **different verified email**, a **browser UA** (not curl/wget/python-requests),
+  **no disposable domain**, and **no repeat create/delete**, whose firing signals are
+  only `identity_received_free` and/or `multiple_accounts_device`, landing in
+  **`blocked`** (deny ≥ 70) instead of **`pending_step_up`**. That is the family-PC /
+  §4 case. If `identity_received_free` alone is ever ≥ 70, the part-1 weight of 80
+  was restored — turn enforcement off and restore 55. A jump in staff Release
+  actions for those same accounts is the same signal in human form.
+  **QA:** `pnpm --filter api lint` 0 errors · `pnpm --filter web lint` 0 errors
+  (pre-existing `<img>` warnings only) · api `tsc --noEmit` ✓ · web `tsc --noEmit`
+  ✓ · api **451/451** · web **274/274** (vitest `--pool=threads --no-file-parallelism`;
+  all five i18n gates green).
+  **Do not commit.**
+
 - 2026-08-18 — **Batch G part 1 — abuse signals and risk scoring (no enforcement).**
   Client review §§ 3, 4, 5, 6, 10, 11, 12, 13, 23. **Do not commit.** Signup
   behaviour is unchanged: nothing denies, nothing blocks, Free allowance
@@ -824,8 +929,7 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   the Stripe list. Missing `ABUSE_HMAC_SECRET` fails **soft** (user created,
   scoring skipped, warning, no values).
   **Open, not fixed:** raw IP already in `audit_logs` via
-  `auth.controller.ts:32-36`. H.6 erasure must include `users.abuse` and the
-  lookup docs; until then a manual erasure request covers them by hand.
+  `auth.controller.ts:32-36`. H.6 erasure — see §8 (one list).
   **Bot protection:** Firebase App Check recommended for a later part; nothing
   installed.
   **G.5 / G.8 / G.10 / generation-export throttles:** not this part.

@@ -20,7 +20,9 @@ function makeService(userPlan: SubscriptionPlan, aiParse?: string) {
   const aiService = {
     parseResume: jest.fn().mockResolvedValue({ content: aiParse ?? '{}', provider: 'openai' }),
   } as any;
-  const service = new CVService(firebaseAdmin, usersService, aiService);
+  const service = new CVService(firebaseAdmin, usersService, aiService, {
+    assertNewConsumption: jest.fn().mockResolvedValue(undefined),
+  } as any);
   return { service, firestore, aiService };
 }
 
@@ -179,7 +181,9 @@ describe('CVService template + layout tier enforcement', () => {
         incrementUsage: jest.fn(),
       } as any;
       const aiService = { parseResume: jest.fn() } as any;
-      const limited = new CVService({ firestore } as any, usersService, aiService);
+      const limited = new CVService({ firestore } as any, usersService, aiService, {
+        assertNewConsumption: jest.fn().mockResolvedValue(undefined),
+      } as any);
       await expect(limited.importFromResume('u1', { resumeText: 'x' })).rejects.toThrow(ForbiddenException);
       expect(aiService.parseResume).not.toHaveBeenCalled(); // no AI credit spent when blocked
     });

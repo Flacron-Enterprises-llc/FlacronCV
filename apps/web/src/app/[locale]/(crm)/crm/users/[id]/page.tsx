@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { User, RiskSignalCode } from '@flacroncv/shared-types';
+import { User, RiskSignalCode, AbuseGrantStatus } from '@flacroncv/shared-types';
 import { Link } from '@/i18n/routing';
 import { toast } from 'sonner';
 import { PLAN_CONFIGS } from '@flacroncv/shared-types';
@@ -50,6 +50,8 @@ const ROLE_ICONS: Record<string, React.ElementType> = {
   admin: ShieldCheck,
   super_admin: Crown,
 };
+
+const GRANT_STATUSES: AbuseGrantStatus[] = ['eligible', 'pending_step_up', 'blocked', 'granted'];
 
 const RISK_SIGNAL_CODES: RiskSignalCode[] = [
   'identity_received_free',
@@ -122,6 +124,15 @@ export default function CRMUserDetailPage(): React.JSX.Element {
       qc.invalidateQueries({ queryKey: ['crm', 'users', uid] });
     },
     onError: () => toast.error(t('user_detail_toast_reset_usage_failed')),
+  });
+
+  const releaseGrantMutation = useMutation({
+    mutationFn: () => api.put(`/crm/users/${uid}/release-free-grant`),
+    onSuccess: () => {
+      toast.success(t('user_detail_toast_grant_released'));
+      qc.invalidateQueries({ queryKey: ['crm', 'users', uid] });
+    },
+    onError: () => toast.error(t('user_detail_toast_grant_release_failed')),
   });
 
   // Optimistic role/plan changes: the selected button highlights immediately
@@ -478,6 +489,26 @@ export default function CRMUserDetailPage(): React.JSX.Element {
                   <p className="text-xs text-stone-500">
                     {t('user_detail_risk_scored_at', { date: formatDateTime(user.abuse.scoredAt) })}
                   </p>
+                )}
+                {user.abuse.grantStatus && GRANT_STATUSES.includes(user.abuse.grantStatus) ? (
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-stone-600 dark:text-stone-400">{t('user_detail_grant_status')}</span>
+                    <span className="font-medium text-stone-800 dark:text-stone-200">
+                      {t(`user_detail_grant_status_${user.abuse.grantStatus}`)}
+                    </span>
+                  </div>
+                ) : null}
+                {(user.abuse.grantStatus === 'blocked' || user.abuse.grantStatus === 'pending_step_up') && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    loading={releaseGrantMutation.isPending}
+                    onClick={() => {
+                      if (confirm(t('user_detail_grant_release_confirm'))) releaseGrantMutation.mutate();
+                    }}
+                  >
+                    {t('user_detail_grant_release')}
+                  </Button>
                 )}
               </div>
             ) : (

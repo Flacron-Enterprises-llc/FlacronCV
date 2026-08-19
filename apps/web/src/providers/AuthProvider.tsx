@@ -30,6 +30,7 @@ export const GOOGLE_ERROR_KEY = 'flacroncv_google_error';
 
 import { api } from '@/lib/api';
 import { User } from '@flacroncv/shared-types';
+import { retryPendingLegalAcceptance } from '@/lib/legal-acceptance';
 
 interface AuthContextType {
   firebaseUser: FirebaseUser | null;
@@ -130,6 +131,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setPlaceholderAccount(false);
         retryAttempt.current = 0;
         clearRetry();
+        // Signup write may have failed after Auth succeeded — retry in this
+        // session. No-op for grandfathered users (no pending flag). Never
+        // signs out; never treats a failed write as "existing user, skip".
+        void retryPendingLegalAcceptance();
       } catch (error) {
         console.error('Failed to sync user with backend:', error);
         setDegraded(true);

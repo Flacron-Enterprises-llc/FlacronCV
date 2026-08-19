@@ -318,6 +318,49 @@ describe('UsersService', () => {
       expect(serialized).not.toContain('other@example.com');
     });
 
+    it('exports this user\'s legal acceptance and not another uid\'s row', async () => {
+      await firestore.collection('legalAcceptances').doc(OWNER).set({
+        userId: OWNER,
+        email: 'owner@example.com',
+        termsAccepted: true,
+        privacyAccepted: true,
+        disclaimerAccepted: true,
+        termsVersion: '2026-08-16',
+        privacyVersion: '2026-08-16',
+        disclaimerVersion: '2026-08-16',
+        acceptedAt: '2026-08-18T00:00:00.000Z',
+      });
+      await firestore.collection('legalAcceptances').doc(OTHER).set({
+        userId: OTHER,
+        email: 'other-legal@example.com',
+        termsAccepted: true,
+        privacyAccepted: true,
+        disclaimerAccepted: true,
+        termsVersion: '2026-08-16',
+        privacyVersion: '2026-08-16',
+        disclaimerVersion: '2026-08-16',
+        acceptedAt: '2026-08-18T00:00:00.000Z',
+      });
+
+      const data = await service.exportPersonalData(OWNER);
+      const serialized = JSON.stringify(data);
+
+      expect(data.legalAcceptance).toEqual(
+        expect.objectContaining({
+          userId: OWNER,
+          termsVersion: '2026-08-16',
+          privacyVersion: '2026-08-16',
+        }),
+      );
+      expect(serialized).not.toContain('other-legal@example.com');
+      expect(serialized).not.toContain(OTHER);
+    });
+
+    it('exports legalAcceptance as null when the grandfathered user has no record', async () => {
+      const data = await service.exportPersonalData(OWNER);
+      expect(data.legalAcceptance).toBeNull();
+    });
+
     it("exports this user's abuse fields and no other uid from the device lookup", async () => {
       await firestore.collection('users').doc(OWNER).update({
         'subscription.hasUsedTrial': true,

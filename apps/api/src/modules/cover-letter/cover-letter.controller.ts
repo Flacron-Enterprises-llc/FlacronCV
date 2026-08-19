@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   UseGuards,
+  UseInterceptors,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -17,6 +18,7 @@ import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
 import { FeatureFlagGuard, RequireFeature } from '../../common/guards/feature-flag.guard';
 import { CurrentUser, FirebaseUser } from '../../common/decorators/current-user.decorator';
 import { CreateCoverLetterData, UpdateCoverLetterData, GenerateCoverLetterData } from '@flacroncv/shared-types';
+import { AbuseIdempotencyInterceptor } from '../../common/interceptors/abuse-idempotency.interceptor';
 
 @ApiTags('cover-letters')
 @Controller('cover-letters')
@@ -70,6 +72,7 @@ export class CoverLetterController {
   // former, flipping the AI kill-switch off still let this endpoint spend
   // credits and call the provider.
   @RequireFeature('coverLettersEnabled', 'aiEnabled')
+  @UseInterceptors(AbuseIdempotencyInterceptor)
   async generateWithAI(
     @CurrentUser() user: FirebaseUser,
     @Param('id') id: string,

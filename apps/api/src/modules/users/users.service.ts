@@ -17,6 +17,7 @@ import {
   ProfileLinkField,
   isProfileLinkField,
   validateProfileLink,
+  LEGAL_ACCEPTANCES_COLLECTION,
 } from '@flacroncv/shared-types';
 
 /**
@@ -52,6 +53,8 @@ export interface PersonalDataExport {
   coverLetters: Record<string, unknown>[];
   jobApplications: Record<string, unknown>[];
   supportTickets: Record<string, unknown>[];
+  /** Own `legalAcceptances/{uid}` row, or null when grandfathered (no record). */
+  legalAcceptance: Record<string, unknown> | null;
 }
 
 @Injectable()
@@ -413,6 +416,18 @@ export class UsersService {
     'scoredAt',
   ] as const;
 
+  private static readonly EXPORTED_LEGAL_ACCEPTANCE_FIELDS = [
+    'userId',
+    'email',
+    'termsAccepted',
+    'privacyAccepted',
+    'disclaimerAccepted',
+    'termsVersion',
+    'privacyVersion',
+    'disclaimerVersion',
+    'acceptedAt',
+  ] as const;
+
   private static readonly EXPORTED_ACCOUNT_FIELDS = [
     'uid',
     'email',
@@ -601,11 +616,12 @@ export class UsersService {
     const user = await this.findByIdOrThrow(uid);
     const userRecord = UsersService.asRecord(user);
 
-    const [cvDocs, coverLetterDocs, jobDocs, ticketDocs] = await Promise.all([
+    const [cvDocs, coverLetterDocs, jobDocs, ticketDocs, legalSnap] = await Promise.all([
       this.readOwnedDocs(UsersService.OWNED_COLLECTIONS.cvs, uid),
       this.readOwnedDocs(UsersService.OWNED_COLLECTIONS.coverLetters, uid),
       this.readOwnedDocs(UsersService.OWNED_COLLECTIONS.jobApplications, uid),
       this.readOwnedDocs(UsersService.OWNED_COLLECTIONS.supportTickets, uid),
+      this.firebaseAdmin.firestore.collection(LEGAL_ACCEPTANCES_COLLECTION).doc(uid).get(),
     ]);
 
     // A CV's content lives in its `sections` subcollection, so a CV without its
@@ -672,6 +688,12 @@ export class UsersService {
         .map((row) => ({ ...UsersService.asRecord(row.data), id: row.id }))
         .sort(UsersService.byCreatedAtDesc),
       supportTickets: supportTickets.sort(UsersService.byCreatedAtDesc),
+      legalAcceptance: legalSnap.exists
+        ? UsersService.pick(
+            UsersService.asRecord(legalSnap.data()),
+            UsersService.EXPORTED_LEGAL_ACCEPTANCE_FIELDS,
+          )
+        : null,
     };
   }
 

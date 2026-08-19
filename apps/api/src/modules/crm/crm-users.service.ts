@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { CRMAuditService } from './crm-audit.service';
+import { AbuseService } from '../abuse/abuse.service';
 import {
   PlatformUserItem,
   PlatformUserListParams,
@@ -17,6 +18,7 @@ export class CRMUsersService {
   constructor(
     private firebase: FirebaseAdminService,
     private audit: CRMAuditService,
+    private abuse: AbuseService,
   ) {}
 
   // ─── Read ──────────────────────────────────────────────────────────────────
@@ -255,6 +257,27 @@ export class CRMUsersService {
       targetId: uid,
       targetName: user.email,
       details: {},
+    });
+    return this.getUserById(uid);
+  }
+
+  /**
+   * Staff override of an automated Free-grant denial / step-up. Audit names
+   * the actor and target uid only — never an email, IP, or device token.
+   */
+  async releaseFreeGrant(uid: string, actorId: string, actorRole: string): Promise<User> {
+    const user = await this.getUserById(uid);
+    this.assertCanManageTarget(actorRole, user.role);
+    const previous = user.abuse?.grantStatus ?? null;
+    await this.abuse.releaseFreeGrant(uid);
+    await this.audit.log({
+      actorId,
+      actorEmail: '',
+      action: 'ABUSE_FREE_GRANT_RELEASED',
+      targetType: 'user',
+      targetId: uid,
+      targetName: uid,
+      details: { from: previous, to: 'granted' },
     });
     return this.getUserById(uid);
   }

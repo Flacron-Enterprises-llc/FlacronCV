@@ -50,6 +50,7 @@ export const AuditAction = {
   ADMIN_USER_UPDATED: 'ADMIN_USER_UPDATED',
   ADMIN_TICKET_REPLIED: 'ADMIN_TICKET_REPLIED',
   ADMIN_TICKET_UPDATED: 'ADMIN_TICKET_UPDATED',
+  ABUSE_FREE_GRANT_RELEASED: 'ABUSE_FREE_GRANT_RELEASED',
 } as const;
 
 export type AuditActionValue = (typeof AuditAction)[keyof typeof AuditAction];

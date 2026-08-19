@@ -3,6 +3,7 @@ import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { CVService } from '../cv/cv.service';
 import { CoverLetterService } from '../cover-letter/cover-letter.service';
 import { UsersService } from '../users/users.service';
+import { AbuseService } from '../abuse/abuse.service';
 import { PLAN_CONFIGS, SubscriptionPlan, resolveEffectivePlan } from '@flacroncv/shared-types';
 import * as Handlebars from 'handlebars';
 import * as path from 'path';
@@ -36,11 +37,13 @@ export class ExportService {
     private cvService: CVService,
     private coverLetterService: CoverLetterService,
     private usersService: UsersService,
+    private abuse: AbuseService,
   ) {
     this.loadTemplates();
   }
 
   private async checkExportLimit(userId: string): Promise<void> {
+    await this.abuse.assertNewConsumption(userId, 'export');
     const user = await this.usersService.findByIdOrThrow(userId);
     const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
     if (limits.exports !== 'unlimited' && user.usage.exportsThisMonth >= limits.exports) {
@@ -72,6 +75,7 @@ export class ExportService {
     userId: string,
     format: 'pdf' | 'docx',
   ): Promise<{ allowed: boolean; reason?: 'docx_requires_paid' | 'limit_reached' }> {
+    await this.abuse.assertNewConsumption(userId, 'export');
     const user = await this.usersService.findByIdOrThrow(userId);
     const plan = resolveEffectivePlan(user.subscription);
     const limits = PLAN_CONFIGS[plan].limits;

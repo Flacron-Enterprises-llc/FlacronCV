@@ -2,6 +2,7 @@ import { Injectable, ServiceUnavailableException, Logger } from '@nestjs/common'
 import { OpenAIProvider } from './providers/openai.provider';
 import { IAIProvider, AIProviderOptions, AIProviderResponse } from './providers/ai-provider.interface';
 import { UsersService } from '../users/users.service';
+import { AbuseService } from '../abuse/abuse.service';
 
 interface CircuitBreakerState {
   failures: number;
@@ -63,6 +64,7 @@ export class AIService {
   constructor(
     private openaiProvider: OpenAIProvider,
     private usersService: UsersService,
+    private abuse: AbuseService,
   ) {
     this.providers = [this.openaiProvider];
     this.providers.forEach((p) => {
@@ -144,6 +146,7 @@ export class AIService {
     // failed generation still costs nothing.
     let creditReserved = false;
     if (userId) {
+      await this.abuse.assertNewConsumption(userId, 'ai');
       const ok = await this.usersService.reserveAiCredit(userId);
       if (!ok) {
         throw new ServiceUnavailableException('AI credits exhausted. Please upgrade your plan.');

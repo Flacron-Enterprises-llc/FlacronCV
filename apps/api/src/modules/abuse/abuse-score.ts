@@ -40,6 +40,13 @@ export function mergeAbuseSettings(raw: unknown): AbuseRiskSettings {
       typeof src.networkBurstWindowHours === 'number' && src.networkBurstWindowHours > 0
         ? src.networkBurstWindowHours
         : DEFAULT_ABUSE_SETTINGS.networkBurstWindowHours,
+    // Only the explicit boolean true turns enforcement on. Missing, false,
+    // "true", 1 — all fail open.
+    enforcementEnabled: src.enforcementEnabled === true,
+    stepUpCooldownHours:
+      typeof src.stepUpCooldownHours === 'number' && src.stepUpCooldownHours > 0
+        ? src.stepUpCooldownHours
+        : DEFAULT_ABUSE_SETTINGS.stepUpCooldownHours,
   };
 }
 
@@ -56,6 +63,10 @@ function bandFor(score: number, allowBelow: number, denyAt: number): RiskBand {
  * `identity_received_free` and `device_received_free` are the same underlying
  * fact on a new uid (the device lookup). Identity takes precedence so they
  * are not summed.
+ *
+ * `multiple_accounts_device` is the same household fact as identity on a
+ * shared laptop. It must not stack with `identity_received_free` or a second
+ * family member lands at 80 (deny). The signal is still recorded for CRM.
  *
  * vpnDatacenter stays weight 0 until a dataset exists — the flag may still
  * be passed but it will not move the score.
@@ -78,7 +89,10 @@ export function computeRiskScore(
 
   if (flags.multipleAccountsDevice) {
     signals.push('multiple_accounts_device');
-    score += weights.multipleAccountsDevice;
+    // Same underlying fact as identity on a shared device — do not stack.
+    if (!flags.identityReceivedFree) {
+      score += weights.multipleAccountsDevice;
+    }
   }
   if (flags.networkBurst) {
     signals.push('network_burst');

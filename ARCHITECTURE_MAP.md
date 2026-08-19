@@ -20,7 +20,7 @@ pnpm workspaces + turbo. Root scripts fan out via `turbo run <task>`.
 | Path | What it is | Notes |
 |---|---|---|
 | `apps/web` | Next.js 14 App Router frontend | next-intl (6 locales), Zustand+immer, React Query, Tailwind, TipTap, @dnd-kit, client-side export |
-| `apps/api` | NestJS 10 REST API | Global prefix `/api/v1`, port 4000, 17 feature modules |
+| `apps/api` | NestJS 10 REST API | Global prefix `/api/v1`, port 4000, 18 feature modules |
 | `apps/mobile` | React Native / Expo Router app | Own enums (3 plans). **Batch E:** `PLAN_CONFIGS` wraps `packages/shared-types` via a relative import (no new package.json dep). See §8 |
 | `packages/shared-types` | The contract between web and api | `PLAN_CONFIGS`, `PLAN_RANK`, `resolveEffectivePlan()`, `isPlanPurchasable()`, entity types. **The API resolves it from `dist/`, so it must be built before type-check or tests** |
 | `packages/tsconfig` | Shared TS base configs | |
@@ -80,7 +80,7 @@ access until the token expires (open MEDIUM in `AUDIT_OPEN_FINDINGS.md`).
 |---|---|---|---|
 | `firebase` | SDK initialisation, `firestore`/`auth`/`storage` handles | `FirebaseAdminService` | Firebase Admin |
 | `auth` | Register, login sync, email verification, password reset, token revocation | `AuthService` | Firebase Auth, `MailService`, `AbuseService` |
-| `abuse` | Device/IP hashing, registration risk score (record only — no deny) | `AbuseService` | Firestore `abuse_devices` / `abuse_networks`, `app_settings/main.abuse` |
+| `abuse` | Device/IP hashing, registration risk score, Free-grant enforcement behind `enforcementEnabled` (default **false**, fail open) | `AbuseService` | Firestore `abuse_devices` / `abuse_networks` / `abuse_idempotency` / `abuse_rate`, `app_settings/main.abuse` |
 | `users` | User docs, usage counters, monthly reset, GDPR export, soft delete | `UsersService`, `UsageResetService` | Firestore |
 | `cv` | CVs, sections, versions, public share slugs | `CVService` | Firestore |
 | `cover-letter` | Cover letters + AI improve | `CoverLetterService` | Firestore, `AIService` |
@@ -135,7 +135,7 @@ reads `privacy.s3_desc`. `terms` and `cookies_policy` locale namespaces were del
 
 | Collection | Shape (abridged) |
 |---|---|
-| `users` | `{ uid, email, displayName, photoURL, role, isActive, subscription{plan,status,stripeCustomerId,stripeSubscriptionId,currentPeriodEnd,trialStart,trialEnd,cancelAtPeriodEnd,hasUsedTrial}, usage{cvsCreated,coverLettersCreated,aiCreditsUsed,aiCreditsLimit,exportsThisMonth,lastExportReset}, abuse{deviceHash,ipHash,networkHash,riskScore,riskBand,riskSignals,scoredAt}, preferences{…}, createdAt, updatedAt, lastLoginAt, deletedAt }` |
+| `users` | `{ uid, email, displayName, photoURL, role, isActive, subscription{plan,status,stripeCustomerId,stripeSubscriptionId,currentPeriodEnd,trialStart,trialEnd,cancelAtPeriodEnd,hasUsedTrial}, usage{cvsCreated,coverLettersCreated,aiCreditsUsed,aiCreditsLimit,exportsThisMonth,lastExportReset}, abuse{deviceHash,ipHash,networkHash,riskScore,riskBand,riskSignals,scoredAt,grantStatus?,cooldownEndsAt?}, preferences{…}, createdAt, updatedAt, lastLoginAt, deletedAt }` |
 | `cvs` | Owner-scoped; soft-deleted via `deletedAt`; `isPublic` + `publicSlug` for sharing. Subcollections `sections`, `versions` |
 | `cover_letters` | Owner-scoped, soft-deleted, optional `linkedCVId` |
 | `job_applications` | Owner-scoped, 6 statuses wishlist→applied→interviewing→offer→rejected→accepted |
@@ -145,27 +145,38 @@ reads `privacy.s3_desc`. `terms` and `cookies_policy` locale namespaces were del
 | `payment_events` | Stripe webhook idempotency, TTL'd |
 | `audit_logs` | Actor, action, target, metadata |
 | `leads` | + `ConsentRecord` (consent text/version/date/source/ip) |
-| `app_settings/main` | CRM-editable app settings, incl. the **unenforced** `planLimits` — see §8. **`abuse` weights/thresholds are read by `AbuseService`** (code defaults if missing). CRM settings saves preserve `.abuse` so a full-doc set cannot wipe it. |
-| `abuse_devices/{deviceHash}` | Lookup: `uids[]` (capped), `uidCount`, `receivedFree`, `lastSeenAt`, `createdAt`. Doc-id get — no composite index. Soft-deleted uids stay (create/delete signal). |
-| `abuse_networks/{ipHash}` | Lookup: `recentAt[]` timestamps, **no uid list**. Doc-id get — no composite index. |
+| `app_settings/main` | CRM-editable app settings, incl. the **unenforced** `planLimits` — see §8. **`abuse` weights/thresholds/`enforcementEnabled` (default false)/`stepUpCooldownHours` (default 12) are read by `AbuseService`** (code defaults if missing). CRM settings saves preserve `.abuse` so a full-doc set cannot wipe the kill switch. |
+| `abuse_devices/{deviceHash}` | Lookup: `uids[]` (capped), `uidCount`, `receivedFree`, `lastSeenAt`, `createdAt`. Doc-id get — no composite index. Soft-deleted uids stay (create/delete signal). `receivedFree` is **not** set for a blocked grant. |
+| `abuse_networks/{ipHash}` | Lookup: `recentAt[]` timestamps, **no uid list**. Doc-id get — no composite index. Also used for the 10/hour create cap when enforcement is on. |
+| `abuse_idempotency/{uid:key}` | AI generate idempotency, ~15 min lifetime. Doc-id get — no composite index. |
+| `abuse_rate/{uid:kind}` | Per-uid create/ai/export hit timestamps, 15 min window. Doc-id get — no composite index. |
 | `system/usage_reset` | Single marker doc holding the last completed reset period (`YYYY-MM`) |
 | `crm_customers`, `crm_leads`, `crm_transactions`, `crm_activities`, `crm_audit_log` | CRM domain |
+| `legalAcceptances/{uid}` | Batch H. Doc-id get/set only — **no where-query, no composite index**. Fields: `userId`, `email` (stored, never logged), three booleans, `termsVersion` / `privacyVersion` / `disclaimerVersion`, `acceptedAt`. Overwrite on re-consent. Missing row = grandfathered (no prompt). |
 
-**`free_grants`: does not exist** (client chose option b). Batch G part 1 (2026-08-18) **did** add
-hashed `users.abuse`, `abuse_devices`, `abuse_networks`, and a registration risk score that is
-**recorded, not enforced**. Device identifier: 128-bit random token, HMAC-SHA256 with
-`ABUSE_HMAC_SECRET` before storage. **Honest limits:** it survives logout; it does **not**
-survive clearing cookies and localStorage together, incognito / a fresh profile, another
-browser, or another machine. No canvas fingerprint, no evercookie. A determined user with a
-new profile gets a new token.
-**Privacy §1.9** now matches the practice (hashed device identifiers, hashed IP/network
-identifiers, fraud-risk indicators). Do not publish the new Privacy page until AWS SES and
-OpenAI are named in client §4 (`LEGAL_VERSION_MAP.privacy` is still
-`pending-client-subprocessors`). `legalAcceptances` still does not exist (Batch H).
-**Erasure:** H.6 must include `users.abuse` and the two lookup collections; until then a
-manual erasure request covers them by hand.
+**`free_grants`: does not exist** (client chose option b). Batch G part 2 (2026-08-18) enforces
+the Free allowance behind `app_settings/main.abuse.enforcementEnabled` (**default false**,
+15s cache, fail open). Denied users keep the account, sign-in, email verification, dashboard,
+support, and checkout; paid entitlements skip the grant block. CRM **Release Free grant**
+writes `grantStatus=granted` and an audit row (`actorId`, time, target uid — no email).
+**G.5 App Check is still open** — not installed; console setup required.
+**Erasure:** H.6 must include **both** deferred obligations (canonical list in
+`PROJECT_PROGRESS.md` §8): Batch G `users.abuse` + `abuse_devices` /
+`abuse_networks` / `abuse_idempotency` / `abuse_rate`, **and** Batch H
+`legalAcceptances/{uid}`. Until then a manual erasure request covers them by hand.
 **GDPR export** (`GET /users/me/export`) includes this user's `abuse` snapshot (hashes, score,
-band, signal codes, `hasUsedTrial`) and must never include other uids from the device lookup.
+band, signal codes, grantStatus, `hasUsedTrial`) and must never include other uids from the device lookup.
+Device identifier (unchanged from part 1): 128-bit random token, HMAC-SHA256 with
+`ABUSE_HMAC_SECRET`. Survives logout; does **not** survive clearing cookies and localStorage
+together, incognito, another browser, or another machine.
+**Privacy §1.9** matches the hashing practice. Do not publish the new Privacy page until AWS SES and
+OpenAI are named in client §4. `legalAcceptances/{uid}` exists (Batch H). **`privacyVersion` is
+stamped from `LEGAL_VERSION_MAP` (`2026-08-16`) even though the published privacy body is still
+the old locale JSON** — recorded version and published body will not match until B.1; that is a
+deliberate gap, not a bug. Missing acceptance rows are grandfathered (`treatMissingAsStale`
+defaults off). The register modal runs **before** Firebase Auth (email/password and Google);
+login-page Google does not show it. Acceptance write failure after Auth success retries in
+session and must not delete the account.
 
 ---
 

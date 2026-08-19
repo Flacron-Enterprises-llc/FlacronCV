@@ -63,6 +63,8 @@ export class AuthService {
         namePending = true;
       }
 
+      await this.abuse.assertNetworkCreateAllowed(context.ipAddress);
+
       user = await this.usersService.create({
         uid,
         email,

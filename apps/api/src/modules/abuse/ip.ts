@@ -52,12 +52,11 @@ function expandIPv6(ip: string): string[] | null {
   return [...head, ...Array(missing).fill('0'), ...tail].map((h) => h.padStart(4, '0'));
 }
 
-const SCRIPTED_UA =
-  /^(?:-|unknown)?$|curl\/|wget\/|python-requests|go-http-client|scrapy|httpie\/|libwww-perl/i;
+const SCRIPTED_UA = /curl\/|wget\/|python-requests/i;
 
 export function looksLikeScriptedUserAgent(ua: string | undefined | null): boolean {
-  if (ua == null) return true;
+  if (ua == null) return false;
   const trimmed = ua.trim();
-  if (!trimmed) return true;
+  if (!trimmed) return false;
   return SCRIPTED_UA.test(trimmed);
 }

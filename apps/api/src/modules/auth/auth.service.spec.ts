@@ -35,7 +35,7 @@ describe('AuthService', () => {
     sendEmailVerificationEmail: jest.Mock;
   };
   let mockConfigService: { get: jest.Mock };
-  let mockAbuse: { recordRegistrationSignals: jest.Mock };
+  let mockAbuse: { recordRegistrationSignals: jest.Mock; assertNetworkCreateAllowed: jest.Mock };
 
   beforeEach(async () => {
     mockFirebaseAdmin = createMockFirebaseAdmin();
@@ -60,6 +60,7 @@ describe('AuthService', () => {
     mockAudit = makeMockAudit();
     mockAbuse = {
       recordRegistrationSignals: jest.fn().mockResolvedValue(undefined),
+      assertNetworkCreateAllowed: jest.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({

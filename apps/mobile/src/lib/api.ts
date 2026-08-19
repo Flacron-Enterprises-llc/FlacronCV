@@ -51,6 +51,19 @@ apiClient.interceptors.request.use(
     if (deviceToken) {
       config.headers['X-Device-Token'] = deviceToken;
     }
+    const method = (config.method ?? 'get').toLowerCase();
+    const url = config.url ?? '';
+    if (
+      method === 'post' &&
+      !config.headers['Idempotency-Key'] &&
+      (url.includes('/ai/') || /\/cover-letters\/[^/]+\/ai\/generate/.test(url))
+    ) {
+      const key =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      config.headers['Idempotency-Key'] = key;
+    }
     return config;
   },
   (error) => Promise.reject(error),

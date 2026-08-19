@@ -23,10 +23,17 @@ describe('networkIdentifier', () => {
 });
 
 describe('looksLikeScriptedUserAgent', () => {
-  it('flags empty and scripted agents', () => {
-    expect(looksLikeScriptedUserAgent(undefined)).toBe(true);
-    expect(looksLikeScriptedUserAgent('')).toBe(true);
+  it('does not flag empty or missing agents (privacy browsers omit UA)', () => {
+    expect(looksLikeScriptedUserAgent(undefined)).toBe(false);
+    expect(looksLikeScriptedUserAgent('')).toBe(false);
+    expect(looksLikeScriptedUserAgent('   ')).toBe(false);
+  });
+
+  it('flags curl, wget, and python-requests only', () => {
     expect(looksLikeScriptedUserAgent('curl/8.0')).toBe(true);
+    expect(looksLikeScriptedUserAgent('Wget/1.21')).toBe(true);
+    expect(looksLikeScriptedUserAgent('python-requests/2.31.0')).toBe(true);
+    expect(looksLikeScriptedUserAgent('go-http-client/1.1')).toBe(false);
   });
 
   it('does not flag an ordinary browser', () => {
