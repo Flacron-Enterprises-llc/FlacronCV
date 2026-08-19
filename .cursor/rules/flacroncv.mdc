@@ -11,8 +11,14 @@ Live production application with real users. Treat every change accordingly.
 2. Micro-changes only. One logical change, smallest possible diff. No opportunistic refactoring, renaming, reformatting, or dependency bumps.
 3. Propose before you edit. Name the files and why. Wait for approval.
 4. Update docs in the same change. Not done until PROJECT_PROGRESS.md (status + Change Log) and, if the shape of things moved, ARCHITECTURE_MAP.md are updated.
-5. Run pnpm lint, pnpm type-check, pnpm test before declaring done. Around 410 tests exist and CI runs them. Never leave the site broken between changes.
-6. Every new user-facing string goes through t(), in all six locales. Three CI gates enforce this: locale parity, no-hardcoded-English, and key resolution. Parity alone will not catch a key missing from every locale — that has shipped three times.
+5. Run pnpm lint, pnpm type-check, pnpm test before declaring done. Measured suite
+   sizes move; do not quote a frozen number. As of Batch J (2026-08-19): api **514**,
+   web **300**. CI runs them. Never leave the site broken between changes.
+6. Every new user-facing string goes through t(), in all six locales. **Seven** gates
+   enforce this: six under `apps/web/src/i18n/` (locale parity, key resolution,
+   no-hardcoded-English, untranslated, encoding, allowance-copy) plus
+   `apps/web/src/lib/chrome-contrast.test.ts`. Parity alone will not catch a key
+   missing from every locale — that has shipped three times.
 7. Never commit or print secrets. No keys, tokens, or connection strings in code, docs, comments, or terminal output. Never echo an env var value.
 8. Never touch auth, billing, or data shape without explicit approval. These are where a small mistake costs real money or real accounts.
 9. Do not weaken a guard to make a test pass. Guards in this repo exist because something broke. If a test fails, the code is wrong.

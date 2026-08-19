@@ -243,14 +243,16 @@ Legend: ✓ done · ◐ partial · ✗ missing · ⤵ deferred/decision-needed
 - ✗ CRM/marketing-automation lead flow + tags/segments + automated campaigns.
 - ◐ CRM module exists (`apps/*/crm` — customers/leads/revenue/segments admin) but no public capture or automation.
 
-### 5.4 Analytics / event tracking (◐ — layer built, GA4 wired, awaiting the client's measurement id)
-- ◐ **Provider-agnostic event layer built (D1)** + **GA4 adapter wired as the default provider (2026-07-20).** 7 funnel
-  events instrumented (sign_up/in, cv_created, cv_exported, cover_letter_created, checkout_started, plan_upgraded,
-  ai_generation) + page views + identify. Consent-gated by the cookie banner — **as of 2026-08-18 by the
-  Analytics category of the three-category consent record (`lib/consent.ts`), reconciled on every page load
-  so a grant from the old one-boolean banner cannot fire before the visitor re-decides.** **To go live the client sets
-  `NEXT_PUBLIC_GA4_MEASUREMENT_ID`** (until then GA4 no-ops safely). Broader event coverage (CTA clicks, template
-  selected, etc.) can be added by dropping `track()` calls at more sites — no wiring changes.
+### 5.4 Analytics / event tracking (◐ — Batch L catalog + call sites; awaiting measurement id)
+- ◐ **Provider-agnostic event layer (D1) + GA4 adapter + Batch L (§47–49).** Consent-gated by
+  the Analytics category of the three-category consent record (`lib/consent.ts`). Funnel events
+  include `signup_started` (signed-out register form only), `email_verified` (once per uid in
+  browser localStorage — not a server unique), `cv_creation_started`, `cv_created` (incl. import),
+  `cv_exported`, `cover_letter_created`, `checkout_started`, `plan_upgraded`, `ai_generation`
+  (`{ feature }` only — never tokens), `free_allowance_exhausted`, plus the four abuse codes.
+  Landing and upgrade-page views rely on `page()` — no named duplicates. **To go live the client
+  sets `NEXT_PUBLIC_GA4_MEASUREMENT_ID`** (until then GA4 no-ops safely). Gate:
+  `apps/web/src/lib/analytics.test.ts` proves nothing reaches `gtag` before Analytics consent.
 
 ### 5.5 Cross-cutting (client's extra asks)
 - ◐ **De-AI the design** — **foundational refresh done 2026-07-20** (design tokens: premium layered shadows, near-black
@@ -807,6 +809,21 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   a FREE feature bullet claiming a PDF watermark the product does not have. Making it consume
   shared-types is the right fix but is larger than a micro-change — see the full audit in
   `ARCHITECTURE_MAP.md`.
+- **⚠️ ADDED 2026-08-19 — Mobile legal acceptance gap (verified).** Web Batch H gates
+  register with `LegalAcceptanceModal` + `POST /legal/acceptances`. Mobile does **not**:
+  `apps/mobile/app/(auth)/register.tsx` calls `useAuthStore().register` →
+  `createUserWithEmailAndPassword` + `POST /auth/verify` only
+  (`apps/mobile/src/store/auth-store.ts`). No modal, no acceptance write. Combined with
+  grandfathering (missing `legalAcceptances/{uid}` → no prompt), a mobile signup creates
+  an account that is never asked. Recorded; do not invent a mobile legal flow in an
+  analytics batch.
+- **⚠️ ADDED 2026-08-19 — AI audit gap (open, do not fix here).** Cover-letter generate
+  (`apps/api/src/modules/cover-letter/cover-letter.controller.ts:72–83` →
+  `cover-letter.service.ts:279+`) and resume import (`apps/api/src/modules/cv/cv.controller.ts:42–45`
+  → `cv.service.ts:253–254` `parseResume`) consume AI credits but write **no** `withAudit`
+  row. `withAudit` lives only on `apps/api/src/modules/ai/ai.controller.ts:76–98` and runs
+  on success only. Tokens for those two paths are never recorded; GA4 `ai_generation` is
+  also not fired for them (Batch L).
 - **⚠️ ADDED 2026-08-18 — `PRICING_UPDATE.md` should be deleted.** It contains a Stripe **webhook
   signing secret in full** and a secret-key prefix in plaintext at the repo root (rotate as part of
   the secrets work above), documents the superseded price ids, and presents the exact
@@ -832,7 +849,52 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 9. Change log (append newest at top)
 
-- 2026-08-19 — **Batch J — backend validation + API security sweep (MC1–MC8).** **Do not commit.**
+- 2026-08-19 — **Batch L — analytics (§47–49 / L.2–L.5).** Web only. No Measurement
+  Protocol, no new dependencies, auth/billing/data-shape untouched. Tracker letter is
+  **L** (not K — K remains UX polish).
+
+  **MC1 — §47 missing client events.** Catalog + call sites: `signup_started` (after
+  auth settles, signed-out only — keeps the name, moves the fire so already-signed-in
+  redirects do not inflate the funnel), `email_verified` (once per uid via
+  `localStorage`; browser-local, not a server unique — documented), `cv_creation_started`
+  on `/cv/new` continue, `cv_created` with `source: 'import'` on resume import success,
+  `free_allowance_exhausted` when `UpgradeModal` opens. Landing / upgrade-page views
+  stay on `page()` — no named duplicates.
+
+  **MC2 — §48.** GA4 already receives only the four abuse codes from `lib/api.ts`.
+  Hashes, emails, and tokens are not event props. **First-party aggregate abuse
+  counters were considered and deferred:** they would need a new Firestore write path
+  and retention policy for counts that GA4 already approximates under consent, and the
+  kill switch is still off — shipping a second store before enforcement is on adds
+  PII-adjacent operational surface with no decision-maker. Revisit when enforcement
+  is flipped.
+
+  **MC3 — §49.** `ai_generation` wired on successful `/ai/*` UI paths (cv-summary,
+  ats-check, linkedin, interview-prep, generate-job-description, cover-letter,
+  regenerate-paragraph). Props are `{ feature }` only — **never `tokensUsed`**. What
+  §49 does **not** deliver: no dollar cost exists anywhere in the product; tokens are
+  recorded server-side for `/ai/*` via `withAudit` only; cover-letter generate and
+  resume import bypass `withAudit` so their tokens are never recorded (and no
+  `ai_generation` event fires for them); `withAudit` runs on success only so failed
+  calls are absent; retry rate is not recorded.
+
+  **MC4.** `apps/web/src/lib/analytics.test.ts` — proves `gtag` is not called before
+  Analytics consent (and not for `track` after revoke).
+
+  **MC5.** This entry; `CLIENT_REQUIREMENTS.md` L.2–L.5; `ARCHITECTURE_MAP.md` §7
+  seven gates; standing-rules test/gate counts; §5.4; §8 AI audit gap + mobile legal
+  gap. L.1 (`NEXT_PUBLIC_GA4_MEASUREMENT_ID`) remains client-owned.
+
+  **Record hygiene (same change):** standing rules 5–6 corrected; change-log
+  Batch B–J "Do not commit" → **Committed.** (they are on `main`); Batch B Privacy
+  §1.9 vs G hold marked satisfied.
+
+  **QA:** `pnpm --filter web lint` 0 errors (pre-existing `<img>` warnings only) ·
+  web `tsc --noEmit` ✓ · web **302/302** (vitest `--pool=threads --no-file-parallelism`;
+  +2 `analytics.test.ts`). All seven i18n/contrast gates green. No new user-facing
+  `t()` strings. API untouched this batch.
+
+- 2026-08-19 — **Batch J — backend validation + API security sweep (MC1–MC8).** **Committed.**
   API only. Auth/billing/data-shape untouched except write-body validation. Audit IP writes
   left alone (still §8 / J.5-adjacent). No secrets logged.
 
@@ -876,7 +938,7 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   and key resolution. No new user-facing `t()` strings.
 
 - 2026-08-19 — **Navy chrome + in-app warnings (legal §§18–21 / B.12 + header/footer navy).**
-  **Do not commit.** Web only. Mobile out — see §8 **Mobile localisation gap** (item 3).
+  **Committed.** Web only. Mobile out — see §8 **Mobile localisation gap** (item 3).
   Auth, billing, and data shape untouched. `/exports/record` unchanged.
 
   **MC2 — light-mode navy chrome.** One token, not a scale: `chrome: '#1e3a5f'` in
@@ -917,10 +979,10 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   · api **470/470** · web **300/300** (vitest `--pool=threads --no-file-parallelism`;
   +5 `chrome-contrast` vs the 295 of the usage-counters batch). All six i18n
   gates green (parity, untranslated, keys-resolve, no-hardcoded-english, encoding,
-  allowance-copy). **Do not commit.**
+  allowance-copy). **Committed.**
 
 - 2026-08-19 — **Usage counters: creation-based, not storage-based. Q-2 closed as (a′).**
-  **Do not commit.**
+  **Committed.**
 
   **Client instruction (verbatim):** "Do not refund an allowance when a user deletes a document.
   Limits count CREATIONS during the cycle, not documents currently stored."
@@ -965,10 +1027,10 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   · api **470/470** · web **295/295** (vitest `--pool=threads --no-file-parallelism`;
   first full run worker-timed-out on Batch H's `register-legal.test.tsx` — 3 tests,
   unrelated; retry 3/3. All five i18n gates green; new `allowance-copy` gate green).
-  **Do not commit.**
+  **Committed.**
 
 - 2026-08-18 — **Batch H — legal acceptance at signup (option A, grandfather existing users).**
-  Client package §§ 7, 8, 10, 24. **Do not commit.** Web only. Do not touch Batch G's
+  Client package §§ 7, 8, 10, 24. **Committed.** Web only. Do not touch Batch G's
   gates. Modal **before** Firebase Auth for email/password **and** Google on
   `/register`. Cancel leaves **nothing** — no Auth user (the option-B failure
   mode has an explicit test). Login-page Google is unchanged (no modal).
@@ -999,10 +1061,10 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   (pre-existing `<img>` warnings only) · api `tsc --noEmit` ✓ · web `tsc --noEmit`
   ✓ · api **466/466** · web **293/293** (vitest `--pool=threads --no-file-parallelism`;
   all five i18n gates green).
-  **Do not commit.**
+  **Committed.**
 
 - 2026-08-18 — **Batch G part 2 — Free-grant enforcement (kill switch default off).** Client
-  review §§ 3, 4, 5, 6, 10, 11, 12, 13, 23. **Do not commit.** Highest-risk batch: this
+  review §§ 3, 4, 5, 6, 10, 11, 12, 13, 23. **Committed.** Highest-risk batch: this
   refuses the Free allowance, not the account. Ambiguous cases allow.
   **G2-1 kill switch FIRST, alone:** `app_settings/main.abuse.enforcementEnabled`.
   Default **false**. Missing/false = observe-only (part 1). Settings-read failure **fails
@@ -1064,10 +1126,10 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   (pre-existing `<img>` warnings only) · api `tsc --noEmit` ✓ · web `tsc --noEmit`
   ✓ · api **451/451** · web **274/274** (vitest `--pool=threads --no-file-parallelism`;
   all five i18n gates green).
-  **Do not commit.**
+  **Committed.**
 
 - 2026-08-18 — **Batch G part 1 — abuse signals and risk scoring (no enforcement).**
-  Client review §§ 3, 4, 5, 6, 10, 11, 12, 13, 23. **Do not commit.** Signup
+  Client review §§ 3, 4, 5, 6, 10, 11, 12, 13, 23. **Committed.** Signup
   behaviour is unchanged: nothing denies, nothing blocks, Free allowance
   unchanged, existing users unaffected. No App Check / Turnstile / GeoIP
   dependency. No `apps/api/package.json` or lockfile change.
@@ -1104,7 +1166,7 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   `--pool=threads --no-file-parallelism`; all five i18n gates green).
 
 - 2026-08-18 — **Batch B — legal & contact (MC2–MC13 minus Privacy).** Client
-  package applied. **Do not commit.** Privacy `/privacy-policy` is **not**
+  package applied. **Committed.** Privacy `/privacy-policy` is **not**
   replaced — MC1 waits until the client names **AWS SES** and **OpenAI** in §4.
   `subprocessor-disclosure.spec.ts` still reads `privacy.s3_desc` in locale JSON.
   **QA: `pnpm lint` 0 errors (pre-existing `<img>` / mobile unused-var warnings
@@ -1131,11 +1193,10 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   deactivation (settings) from erasure on request to `privacy@`. Client §10 is
   weaker but not false. That clarity is lost when MC1 lands; raise with the
   client later.
-  **Recorded — Privacy §1.9 vs Batch G:** the new policy discloses hashed
-  device and IP identifiers that G has not built. Once G ships, the text is
-  accurate; until then it describes a practice we do not have. Sequencing is
-  deliberate — do not publish that section ahead of G, and do not treat G as
-  implied by this batch.
+  **Recorded — Privacy §1.9 vs Batch G:** ~~the new policy discloses hashed
+  device and IP identifiers that G has not built.~~ **Satisfied 2026-08-19.**
+  G parts 1 and 2 have shipped; the hashed device/IP disclosure matches the
+  live practice. Publishing Privacy still waits on B.1 (subprocessors).
   **Not built:** B.1 Privacy page; B.12 in-app AI/ATS/cover-letter/export
   disclaimers; Batch H acceptance modal / `legalAcceptances`.
   - **MC2.** `/terms-of-service` — client Terms, 30 sections, English module.
@@ -1157,7 +1218,7 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
     `englishDocumentAlternates()`. Privacy and contact unchanged (6 locales).
   - **MC12.** `LEGAL_VERSION_MAP` records `2026-08-16`. Privacy marked
     `pending-client-subprocessors` / live source locale JSON.
-- 2026-08-18 — **Batch E — plan configuration.** Client answers applied. **Do not commit.**
+- 2026-08-18 — **Batch E — plan configuration.** Client answers applied. **Committed.**
   **QA: `pnpm lint` 0 errors (pre-existing `<img>` / mobile unused-var warnings only) ·
   `pnpm type-check` ✓ · `pnpm test` ✓ — web 264/264 (vitest `--pool=threads`; forks pool
   timed out on this machine as before), api 387/387, all five i18n gates green.**

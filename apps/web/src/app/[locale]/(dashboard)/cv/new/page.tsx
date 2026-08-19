@@ -11,6 +11,7 @@ import Input from '@/components/ui/Input';
 import { cn } from '@/lib/utils';
 import { ArrowRight, Upload, FileText, LayoutTemplate, CheckCircle2, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { track } from '@/lib/analytics';
 import { CV_NEW_DRAFT_KEY as DRAFT_KEY } from './constants';
 import ImportResumeModal from '@/components/cv-builder/ImportResumeModal';
 
@@ -70,6 +71,7 @@ export default function NewCVPage(): React.JSX.Element | null {
     e.preventDefault();
 
     if (mode === 'import') {
+      track('cv_creation_started', { source: 'import' });
       setShowImport(true);
       return;
     }
@@ -77,6 +79,7 @@ export default function NewCVPage(): React.JSX.Element | null {
     if (mode === 'template') {
       // Straight to the gallery. The picker still needs a name, so an untouched
       // field falls back to the default the hint under the field spells out.
+      track('cv_creation_started', { source: 'template' });
       goToTemplatePicker(title.trim() || tCv('untitled_cv'));
       return;
     }
@@ -85,6 +88,7 @@ export default function NewCVPage(): React.JSX.Element | null {
       toast.error(tCv('new_title_required'));
       return;
     }
+    track('cv_creation_started', { source: 'scratch' });
     goToTemplatePicker(title.trim());
   };
 

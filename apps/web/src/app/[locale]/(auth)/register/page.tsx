@@ -35,6 +35,7 @@ function RegisterForm(): React.JSX.Element {
   const [legalChecked, setLegalChecked] = useState(false);
   const [pendingSignup, setPendingSignup] = useState<PendingSignup>(null);
   const redirectHandled = useRef(false);
+  const signupStarted = useRef(false);
 
   // Show Google auth error stored by a previous attempt (account-exists case)
   useEffect(() => {
@@ -51,10 +52,19 @@ function RegisterForm(): React.JSX.Element {
   }, [t]);
 
   useEffect(() => {
-    if (!loading && user && !redirectHandled.current) {
-      redirectHandled.current = true;
-      void currentUserRole().then((role) => router.push(getPostLoginRedirect(callbackUrl, role)));
+    if (loading) return;
+    // Already signed in → bounce; do not count as signup_started (would inflate
+    // the funnel denominator with people who never intended to register).
+    if (user) {
+      if (!redirectHandled.current) {
+        redirectHandled.current = true;
+        void currentUserRole().then((role) => router.push(getPostLoginRedirect(callbackUrl, role)));
+      }
+      return;
     }
+    if (signupStarted.current) return;
+    signupStarted.current = true;
+    track('signup_started');
   }, [user, loading, router, callbackUrl]);
 
   const closeLegal = () => {

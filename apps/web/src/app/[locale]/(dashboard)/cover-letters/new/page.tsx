@@ -125,6 +125,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
     onSuccess: (data) => {
       setJobDescription(data.content);
       toast.success(t('coverLetters.job_description_generated'));
+      track('ai_generation', { feature: 'generate-job-description' });
       refreshUser();
     },
     onError: (error: Error) => {
@@ -181,6 +182,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
     },
     onSuccess: (content) => {
       setDraft(content.trim());
+      track('ai_generation', { feature: 'cover-letter' });
       refreshUser();
     },
     onError: () => {

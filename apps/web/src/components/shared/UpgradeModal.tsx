@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import Modal from '@/components/ui/Modal';
@@ -7,6 +8,7 @@ import Button from '@/components/ui/Button';
 import { Sparkles, Check, Crown } from 'lucide-react';
 import { PLAN_CONFIGS, SubscriptionPlan } from '@flacroncv/shared-types';
 import { useAuth } from '@/providers/AuthProvider';
+import { track } from '@/lib/analytics';
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -26,6 +28,17 @@ export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }:
   const router = useRouter();
   const t = useTranslations('upgrade_modal');
   const { user, degraded, placeholderAccount } = useAuth();
+  const exhaustedTracked = useRef(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      exhaustedTracked.current = false;
+      return;
+    }
+    if (exhaustedTracked.current) return;
+    exhaustedTracked.current = true;
+    track('free_allowance_exhausted', { reason });
+  }, [isOpen, reason]);
 
   const Icon = REASON_ICON[reason];
 

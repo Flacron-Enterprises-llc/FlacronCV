@@ -7,6 +7,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
+import { track } from '@/lib/analytics';
 import Button from '@/components/ui/Button';
 import UpgradeModal from '@/components/shared/UpgradeModal';
 import InAppWarning from '@/components/shared/InAppWarning';
@@ -83,6 +84,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
         language,
       });
       setGeneratedSummary(result.content);
+      track('ai_generation', { feature: 'cv-summary' });
       refreshUser();
     } catch (error) {
       const message = (error as Error)?.message || '';

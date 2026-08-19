@@ -4,14 +4,25 @@
  * Design goals:
  *  - **Privacy-safe by default.** Nothing is sent until BOTH a provider is
  *    configured (`NEXT_PUBLIC_ANALYTICS_PROVIDER`) AND the user has granted
- *    consent (`setAnalyticsConsent(true)`, to be called by a future cookie
- *    banner). With the default `provider = 'none'` this module is a pure no-op.
+ *    Analytics consent (`setAnalyticsConsent(true)`, from the cookie banner via
+ *    `lib/consent.ts`). With the default `provider = 'none'` this module is a
+ *    pure no-op.
  *  - **Provider-agnostic.** Event tracking is expressed against a typed event
  *    catalog and dispatched to a pluggable {@link AnalyticsAdapter}. Swapping in
  *    GA4 / PostHog / Segment / etc. is a matter of writing one adapter and
  *    setting the env var — no call sites change.
  *  - **Typed events.** {@link track} only accepts known event names with their
  *    documented prop shapes, so instrumentation stays consistent.
+ *
+ * §48 abuse: GA4 receives only the four client codes (`abuse_grant_blocked`,
+ * `abuse_step_up`, `abuse_email_unverified`, `abuse_rate_limited`) with an
+ * opaque `reason` string. Device, IP, and network hashes, emails, and tokens
+ * must never be passed as event props.
+ *
+ * §49 AI: `ai_generation` sends `{ feature }` only — never `tokensUsed` or a
+ * dollar cost (none exists in the product). Server audit rows record tokens for
+ * `/ai/*` success paths via `withAudit` only; cover-letter generate and resume
+ * import bypass that path. Failed calls and retries are not events.
  *
  * To add a real provider: implement `AnalyticsAdapter`, register it in
  * `createAdapter()`, and set `NEXT_PUBLIC_ANALYTICS_PROVIDER` to its key.
@@ -23,12 +34,27 @@ export interface EventPropMap {
   sign_up: { method?: 'password' | 'google' };
   sign_in: { method?: 'password' | 'google' };
   sign_out: undefined;
+  /**
+   * Register form shown to a signed-out visitor (after auth settles).
+   * Not a page view — already-signed-in redirects are excluded.
+   */
+  signup_started: undefined;
+  /**
+   * First observation of a verified email for this uid in this browser
+   * (`localStorage`). Not a server unique; clearing storage can re-fire.
+   */
+  email_verified: undefined;
+  cv_creation_started: { source?: 'scratch' | 'import' | 'template' };
   cv_created: { templateId?: string; source?: 'blank' | 'import' | 'template' };
   cv_exported: { format: 'pdf' | 'docx'; templateId?: string };
   cover_letter_created: { withAI?: boolean };
   checkout_started: { plan: string; interval: string };
   plan_upgraded: { plan?: string };
+  /** Successful `/ai/*` call. Feature is the API route name; tokens are not sent. */
   ai_generation: { feature: string };
+  free_allowance_exhausted: {
+    reason: 'ai_credits' | 'exports' | 'templates' | 'cvs' | 'cover_letters';
+  };
   abuse_grant_blocked: { reason?: string };
   abuse_step_up: { reason?: string };
   abuse_email_unverified: { reason?: string };

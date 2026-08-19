@@ -9,7 +9,7 @@
 > confirmed by this pass. Runtime behaviour was never executed — this document was produced by a
 > read-only audit (no API boot, no dev server, no emulators, no cloud CLI).
 
-Created: 2026-08-18 · Verified against: branch `main`, working tree with 8 uncommitted tracked files
+Created: 2026-08-18 · Verified against: branch `main` (Batch L analytics uncommitted at last doc touch)
 
 ---
 
@@ -266,10 +266,9 @@ not a code defect — `pnpm test` succeeds, and a stuck run clears with
 4. `docker` — `main` only; passes the eight `NEXT_PUBLIC_*` as `--build-arg` and **fails fast if any is
    missing**. This is the standing guard against the Amplify inlining regression.
 
-### The i18n gates — there are FIVE, not four
+### The i18n + contrast gates — there are SEVEN
 
-Every older document in this repo says four (and before that, three). The fifth exists because
-the other four cannot see a corrupted character.
+Every older document in this repo says three, then four, then five. Count the files:
 
 | File | Rejects |
 |---|---|
@@ -278,13 +277,14 @@ the other four cannot see a corrupted character.
 | `apps/web/src/i18n/no-hardcoded-english.test.ts` | English JSX text and `placeholder`/`title`/`aria-label`/`alt` literals. Ratchets against a small reviewed allowlist |
 | `apps/web/src/i18n/locale-untranslated.test.ts` | **A key present in all six files whose non-English value is still the English sentence.** Copying English text into all six locales to satisfy parity fails this one in five locales at once |
 | `apps/web/src/i18n/locale-encoding.test.ts` | **A locale file that is not strict UTF-8, or a value containing HTML entities, `U+FFFD`, C1 controls, or known mojibake (`Ã©`, `â€™`, …).** Also asserts each locale's values contain at least one letter from its own alphabet (non-vacuity). **Does not catch missing diacritics** (`cree` vs `crée`) — that is a spelling problem a regex cannot honestly gate |
+| `apps/web/src/i18n/allowance-copy.test.ts` | Delete-does-not-restore / Free-never-resets copy regressions (Batch usage-counters) |
+| `apps/web/src/lib/chrome-contrast.test.ts` | WCAG AA contrast pairs on navy chrome `#1e3a5f` |
 
-Other notable specs: `plan-advertising.spec.ts` (advertised copy vs enforced limits, and the
+Other notable specs (not in the seven): `plan-advertising.spec.ts` (advertised copy vs enforced limits, and the
 `YEARLY_BILLING_ENABLED` ⇔ annual-ids invariant), `subprocessor-disclosure.spec.ts` (Privacy Policy
 must name the SDKs actually in `apps/api/package.json`, both directions),
 `subscription-entitlements.spec` (grace / delinquency / expired access),
-`apps/web/src/lib/chrome-contrast.test.ts` (WCAG AA pairs on `#1e3a5f`),
-`apps/web/src/i18n/allowance-copy.test.ts` (delete does not restore a creation).
+`apps/web/src/lib/analytics.test.ts` (nothing reaches `gtag` before Analytics consent).
 
 ---
 
@@ -408,9 +408,9 @@ pure Node and needs no Java.
 *previous day* anywhere west of UTC — so date-only values rendered and filtered one day early. Parse
 date-only strings at local noon, or compare as strings.
 
-**5. There are five i18n gates, not four** — see §7. The fifth (`locale-encoding.test.ts`) is
-the one that rejects mojibake, HTML entities, and a locale file that contains none of its own
-alphabet. It does not catch missing diacritics.
+**5. There are seven i18n + contrast gates, not five** — see §7. The six under
+`apps/web/src/i18n/` plus `lib/chrome-contrast.test.ts`. Older notes that say
+three / four / five are stale. Encoding still does not catch missing diacritics.
 
 **6. A raw HTTP 500 from this API tells you nothing about the cause.**
 `apps/api/src/common/filters/all-exceptions.filter.ts:30` maps every non-`HttpException` to

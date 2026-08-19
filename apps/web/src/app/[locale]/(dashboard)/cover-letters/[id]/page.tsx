@@ -8,6 +8,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { Link, useRouter } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import { api } from '@/lib/api';
+import { track } from '@/lib/analytics';
 import { useCoverLetterStore } from '@/store/cover-letter-store';
 import { CoverLetter, UpdateCoverLetterData, SubscriptionPlan, PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
 import Button from '@/components/ui/Button';
@@ -323,6 +324,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
       }),
     onSuccess: (data, vars) => {
       setParagraphDraft({ original: vars.paragraph, suggestion: data.content.trim() });
+      track('ai_generation', { feature: 'regenerate-paragraph' });
       refreshUser();
     },
     onError: (error: Error) => {

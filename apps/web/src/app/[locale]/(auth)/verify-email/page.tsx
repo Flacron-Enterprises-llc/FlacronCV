@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/providers/AuthProvider';
 import { useRouter } from '@/i18n/routing';
@@ -10,6 +10,7 @@ import { Mail, RefreshCw, LogOut, Loader2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { getPostLoginRedirect } from '@/lib/post-auth-redirect';
 import { currentUserRole } from '@/lib/current-user-role';
+import { track } from '@/lib/analytics';
 
 export default function VerifyEmailPage(): React.JSX.Element | null {
   const t = useTranslations('auth');
@@ -18,11 +19,26 @@ export default function VerifyEmailPage(): React.JSX.Element | null {
   const [resending, setResending] = useState(false);
   const [checking, setChecking] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const verifiedTracked = useRef(false);
 
   const checkVerification = useCallback(async (): Promise<boolean> => {
     if (!firebaseUser) return false;
     return refreshEmailVerified();
   }, [firebaseUser, refreshEmailVerified]);
+
+  /** Once per uid in this browser — not a server unique. See Batch L docs. */
+  const trackEmailVerifiedOnce = useCallback((uid: string) => {
+    if (verifiedTracked.current) return;
+    verifiedTracked.current = true;
+    const key = `flacroncv_email_verified_tracked:${uid}`;
+    try {
+      if (typeof window !== 'undefined' && window.localStorage.getItem(key) === '1') return;
+      window.localStorage.setItem(key, '1');
+    } catch {
+      /* storage unavailable — still emit once this mount via the ref */
+    }
+    track('email_verified');
+  }, []);
 
   useEffect(() => {
     // Wait for the auth state to settle before deciding where to send the
@@ -34,6 +50,7 @@ export default function VerifyEmailPage(): React.JSX.Element | null {
       return;
     }
     if (emailVerified) {
+      trackEmailVerifiedOnce(firebaseUser.uid);
       void currentUserRole().then((role) => router.push(getPostLoginRedirect(null, role)));
       return;
     }
@@ -43,7 +60,7 @@ export default function VerifyEmailPage(): React.JSX.Element | null {
       void checkVerification().catch(() => {});
     }, 4000);
     return () => clearInterval(interval);
-  }, [loading, firebaseUser, emailVerified, router, checkVerification]);
+  }, [loading, firebaseUser, emailVerified, router, checkVerification, trackEmailVerifiedOnce]);
 
   const handleResend = async () => {
     setResending(true);

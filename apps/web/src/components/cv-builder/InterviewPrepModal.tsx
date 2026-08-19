@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useCVStore } from '@/store/cv-store';
 import { useAuth } from '@/providers/AuthProvider';
 import { api } from '@/lib/api';
+import { track } from '@/lib/analytics';
 import { serializeCVToText } from '@/lib/serializeCV';
 import { extractJsonObject } from '@/lib/ai-json';
 import { useModalA11y } from '@/hooks/useModalA11y';
@@ -102,6 +103,7 @@ export default function InterviewPrepModal({ open, onClose }: InterviewPrepModal
         return;
       }
       setResult(parsed);
+      track('ai_generation', { feature: 'interview-prep' });
       refreshUser();
     } catch (error) {
       const message = error instanceof Error ? error.message : '';

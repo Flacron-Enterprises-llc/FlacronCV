@@ -46,9 +46,9 @@ now lives in `DEPLOYMENT_AND_OPS.md`.
 | §40–42 Errors / loading / autosave | ✅ Epic R (35 findings), `ApiError` classification, autosave retry with backoff |
 | §44 Document ownership | ✅ IDOR audit 2026-07-20 — 10 agents, 0 cross-user findings |
 | §43 Export entitlement | ✅ A8, server-authorised `POST /exports/record` |
-| §47 Analytics | ◐ GA4 adapter wired + consent-gated + 7 funnel events — needs only `NEXT_PUBLIC_GA4_MEASUREMENT_ID` |
+| §47 Analytics | ◐ Batch L catalog + call sites + consent gate test — needs `NEXT_PUBLIC_GA4_MEASUREMENT_ID` |
 | Legal pages | ◐ English bodies for terms, disclaimer, refund, cookies in `apps/web/src/legal/*.ts` (version `2026-08-16`). Routes kept: **`/privacy-policy`, `/terms-of-service`, `/cookie-policy`, `/contact-us`** — not the client's checklist `/privacy`, `/terms`, `/contact`. New: `/disclaimer`, `/refund-policy`. **Privacy still the locale-JSON policy** until the client names AWS SES and OpenAI in §4. Contact UI localised × 6. |
-| Cookie consent | ◐ banner exists (Accept/Decline) — needs the 3-button + preference-center upgrade |
+| Cookie consent | ☑ three categories + preference center (Batch C) — Marketing omitted (Q-12) |
 | §5 ATS-parseable export | ✅ text-layer PDF shipped 2026-07-30 (render mode 3), proven by stream inspection |
 
 ---
@@ -416,21 +416,21 @@ error states, optimistic updates, responsive layout, and RTL.
 | K.2 | ✅ Autosave with Saving/Saved — **built**, including retry with backoff | ☑ |
 | K.3 | Mobile sweep across all breakpoints; plan comparison table needs a dedicated mobile layout | ◐ |
 | K.4 | Dark mode across the entire app | ◐ |
-| K.5 | i18n QA — 1,814 keys × 6 locales, three CI gates. Any new string must go through `t()`. | ◐ |
+| K.5 | i18n QA — keys × 6 locales, seven CI gates (six i18n + chrome-contrast). Any new string must go through `t()`. | ◐ |
 | K.6 | Error copy per §40 ("...Your AI credit has not been used") — `ApiError` classification exists to build on | ◐ |
 
 ---
 
 ## BATCH L — Analytics
-**Depends on:** F, G, I. **Provider layer already built** — GA4 adapter, consent gate, 7 events.
+**Depends on:** F, G, I. **Provider layer already built** — GA4 adapter, consent gate; Batch L extends the catalog.
 
 | ID | Task | Status |
 |---|---|---|
 | L.1 | Set `NEXT_PUBLIC_GA4_MEASUREMENT_ID` — analytics no-ops safely until then | ☐ |
-| L.2 | Extend to the client's full §47 event list. Adding events is `track()` calls; no wiring changes. | ☐ |
-| L.3 | Abuse analytics per §48 | ☐ |
-| L.4 | AI cost analytics per §49 | ☐ |
-| L.5 | Verify consent gating still holds after the Batch C preference-center work | ☐ |
+| L.2 | Extend to the client's full §47 event list. Adding events is `track()` calls; no wiring changes. | ☑ |
+| L.3 | Abuse analytics per §48 | ☑ |
+| L.4 | AI cost analytics per §49 | ☑ |
+| L.5 | Verify consent gating still holds after the Batch C preference-center work | ☑ |
 
 ---
 
