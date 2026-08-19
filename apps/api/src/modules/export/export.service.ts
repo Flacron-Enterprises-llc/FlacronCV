@@ -1,10 +1,16 @@
 import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
+import { FieldValue } from 'firebase-admin/firestore';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { CVService } from '../cv/cv.service';
 import { CoverLetterService } from '../cover-letter/cover-letter.service';
 import { UsersService } from '../users/users.service';
 import { AbuseService } from '../abuse/abuse.service';
-import { PLAN_CONFIGS, SubscriptionPlan, resolveEffectivePlan } from '@flacroncv/shared-types';
+import {
+  PLAN_CONFIGS,
+  SubscriptionPlan,
+  resolveEffectivePlan,
+  type User,
+} from '@flacroncv/shared-types';
 import * as Handlebars from 'handlebars';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -66,31 +72,143 @@ export class ExportService {
    * Server-authorized gate for the CLIENT-SIDE export flow. Because the CV /
    * cover-letter file is rendered in the browser (html2canvas/jsPDF/docx), the
    * client calls this FIRST and only proceeds to generate when { allowed: true }.
-   * This is the single point where DOCX-is-paid and the monthly export quota are
-   * actually enforced, and the only place usage.exportsThisMonth is incremented
-   * for the real in-editor export UX. Returns a decision rather than throwing so
-   * the client can show the right paywall without parsing error strings.
+   *
+   * Charge is a transactional **reserve** (same class as {@link UsersService.reserveAiCredit}):
+   * limit check + `exportsThisMonth` increment + reservation doc in one commit.
+   * On render failure the client must call {@link refundClientExport} with the
+   * returned `reservationId`; on success, {@link confirmClientExport} (audit only).
+   * A bare check-then-increment would race under concurrency and leave failed
+   * renders charged with no refund identity.
    */
   async recordClientExport(
     userId: string,
     format: 'pdf' | 'docx',
-  ): Promise<{ allowed: boolean; reason?: 'docx_requires_paid' | 'limit_reached' }> {
+  ): Promise<{
+    allowed: boolean;
+    reason?: 'docx_requires_paid' | 'limit_reached';
+    reservationId?: string;
+  }> {
     await this.abuse.assertNewConsumption(userId, 'export');
-    const user = await this.usersService.findByIdOrThrow(userId);
-    const plan = resolveEffectivePlan(user.subscription);
-    const limits = PLAN_CONFIGS[plan].limits;
 
-    // DOCX is a paid-plan feature.
-    if (format === 'docx' && plan === SubscriptionPlan.FREE) {
-      return { allowed: false, reason: 'docx_requires_paid' };
+    const db = this.firebaseAdmin.firestore;
+    const userRef = db.collection('users').doc(userId);
+    const reservationId = uuidv4();
+    const reservationRef = db.collection('export_reservations').doc(reservationId);
+
+    type TxResult =
+      | { allowed: true; reservationId: string }
+      | { allowed: false; reason: 'docx_requires_paid' | 'limit_reached' };
+
+    const result: TxResult = await db.runTransaction(async (tx: any) => {
+      const snap = await tx.get(userRef);
+      if (!snap.exists) {
+        return { allowed: false, reason: 'limit_reached' };
+      }
+      const user = snap.data() as {
+        subscription?: User['subscription'];
+        usage?: { exportsThisMonth?: number };
+      };
+      const plan = resolveEffectivePlan(user.subscription as User['subscription']);
+      const limits = PLAN_CONFIGS[plan].limits;
+
+      if (format === 'docx' && plan === SubscriptionPlan.FREE) {
+        return { allowed: false, reason: 'docx_requires_paid' };
+      }
+      const used = user.usage?.exportsThisMonth ?? 0;
+      if (limits.exports !== 'unlimited' && used >= limits.exports) {
+        return { allowed: false, reason: 'limit_reached' };
+      }
+
+      tx.update(userRef, {
+        'usage.exportsThisMonth': FieldValue.increment(1),
+        updatedAt: new Date(),
+      });
+      tx.set(reservationRef, {
+        uid: userId,
+        format,
+        status: 'reserved',
+        createdAt: new Date(),
+      });
+      return { allowed: true, reservationId };
+    });
+
+    if (!result.allowed) {
+      return { allowed: false, reason: result.reason };
     }
-    // Monthly export quota (FREE = 2/month; paid plans = unlimited).
-    if (limits.exports !== 'unlimited' && user.usage.exportsThisMonth >= limits.exports) {
-      return { allowed: false, reason: 'limit_reached' };
+    return { allowed: true, reservationId: result.reservationId };
+  }
+
+  /**
+   * Idempotent refund for a failed client-side render. Requires the
+   * `reservationId` from {@link recordClientExport}. A second call, a retry, or
+   * an unknown id is a no-op — never decrements below zero, never refunds a
+   * reservation that was already refunded or confirmed (consumed).
+   */
+  async refundClientExport(
+    userId: string,
+    reservationId: string,
+  ): Promise<{ refunded: boolean }> {
+    if (!reservationId || typeof reservationId !== 'string') {
+      return { refunded: false };
     }
 
-    await this.usersService.incrementUsage(userId, 'exportsThisMonth');
-    return { allowed: true };
+    const db = this.firebaseAdmin.firestore;
+    const userRef = db.collection('users').doc(userId);
+    const reservationRef = db.collection('export_reservations').doc(reservationId);
+
+    const refunded: boolean = await db.runTransaction(async (tx: any) => {
+      const resSnap = await tx.get(reservationRef);
+      if (!resSnap.exists) return false;
+      const res = resSnap.data() as { uid?: string; status?: string };
+      if (res.uid !== userId) return false;
+      if (res.status !== 'reserved') return false; // already refunded or consumed
+
+      const userSnap = await tx.get(userRef);
+      if (!userSnap.exists) {
+        tx.update(reservationRef, { status: 'refunded', refundedAt: new Date() });
+        return true; // reservation closed; nothing to decrement
+      }
+      const used = (userSnap.data() as { usage?: { exportsThisMonth?: number } }).usage
+        ?.exportsThisMonth ?? 0;
+      if (used > 0) {
+        tx.update(userRef, {
+          'usage.exportsThisMonth': FieldValue.increment(-1),
+          updatedAt: new Date(),
+        });
+      }
+      tx.update(reservationRef, { status: 'refunded', refundedAt: new Date() });
+      return true;
+    });
+
+    return { refunded };
+  }
+
+  /**
+   * Mark a successful client-side export. Does **not** change usage (already
+   * reserved). Returns `confirmed` only on the reserved→consumed transition so
+   * the controller can write DOCUMENT_EXPORTED once; repeats are idempotent.
+   */
+  async confirmClientExport(
+    userId: string,
+    reservationId: string,
+  ): Promise<'confirmed' | 'already_consumed' | 'invalid'> {
+    if (!reservationId || typeof reservationId !== 'string') {
+      return 'invalid';
+    }
+
+    const db = this.firebaseAdmin.firestore;
+    const reservationRef = db.collection('export_reservations').doc(reservationId);
+
+    return db.runTransaction(async (tx: any) => {
+      const resSnap = await tx.get(reservationRef);
+      if (!resSnap.exists) return 'invalid';
+      const res = resSnap.data() as { uid?: string; status?: string };
+      if (res.uid !== userId) return 'invalid';
+      if (res.status === 'consumed') return 'already_consumed';
+      if (res.status !== 'reserved') return 'invalid'; // refunded or unknown
+      tx.update(reservationRef, { status: 'consumed', consumedAt: new Date() });
+      return 'confirmed';
+    });
   }
 
   private loadTemplates() {

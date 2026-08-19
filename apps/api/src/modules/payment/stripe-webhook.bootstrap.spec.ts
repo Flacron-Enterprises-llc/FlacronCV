@@ -9,6 +9,7 @@ import { PaymentService } from './payment.service';
 import { AllExceptionsFilter } from '../../common/filters/all-exceptions.filter';
 import { TransformInterceptor } from '../../common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from '../../common/interceptors/logging.interceptor';
+import { CORS_ALLOWED_HEADERS } from '../../cors-allowed-headers';
 
 /**
  * Reproduces main.ts's bootstrap EXACTLY, then posts a genuinely Stripe-signed
@@ -61,7 +62,7 @@ describe('full main.ts bootstrap — raw body survives the whole pipeline', () =
         callback(null, true),
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language'],
+      allowedHeaders: [...CORS_ALLOWED_HEADERS],
     });
     app.setGlobalPrefix('api/v1');
     app.useGlobalPipes(

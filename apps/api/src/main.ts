@@ -6,6 +6,7 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { CORS_ALLOWED_HEADERS } from './cors-allowed-headers';
 
 function validateEnv() {
   const required = [
@@ -98,7 +99,7 @@ async function bootstrap() {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language'],
+    allowedHeaders: [...CORS_ALLOWED_HEADERS],
   });
 
   app.setGlobalPrefix('api/v1');

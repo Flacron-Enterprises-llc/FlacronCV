@@ -62,21 +62,40 @@ export class ExportController {
     return result;
   }
 
-  // Server-authorized gate for the browser-generated export flow: enforces the
-  // DOCX paid-feature rule + monthly export quota and records usage. The client
-  // calls this before generating the file client-side.
+  /**
+   * Reserve one export against the acting user (DOCX-is-paid + quota). Does
+   * **not** write DOCUMENT_EXPORTED — that happens on {@link confirmExport}
+   * after the browser actually produces the file. Failed renders must call
+   * {@link refundExport} with the returned `reservationId`.
+   */
   @Post('exports/record')
   async recordExport(
     @CurrentUser() user: FirebaseUser,
     @Body() body: { format?: 'pdf' | 'docx'; type?: 'cv' | 'cover_letter'; documentId?: string },
   ) {
     const format = body?.format === 'docx' ? 'docx' : 'pdf';
-    const decision = await this.exportService.recordClientExport(user.uid, format);
-    // Only an ALLOWED export is a real export; a paywalled attempt is not one.
-    // This is the path virtually every export takes (the file itself is
-    // generated in the browser), so without it the audit trail would show
-    // almost no export activity at all.
-    if (decision.allowed) {
+    return this.exportService.recordClientExport(user.uid, format);
+  }
+
+  /**
+   * Client finished producing the file. Marks the reservation consumed and
+   * writes DOCUMENT_EXPORTED once. Idempotent for retries.
+   */
+  @Post('exports/confirm')
+  async confirmExport(
+    @CurrentUser() user: FirebaseUser,
+    @Body()
+    body: {
+      reservationId?: string;
+      format?: 'pdf' | 'docx';
+      type?: 'cv' | 'cover_letter';
+      documentId?: string;
+    },
+  ) {
+    const reservationId = typeof body?.reservationId === 'string' ? body.reservationId : '';
+    const outcome = await this.exportService.confirmClientExport(user.uid, reservationId);
+    if (outcome === 'confirmed') {
+      const format = body?.format === 'docx' ? 'docx' : 'pdf';
       await this.recordAudit(
         user,
         body?.type === 'cover_letter' ? 'cover_letter' : 'cv',
@@ -84,6 +103,20 @@ export class ExportController {
         format,
       );
     }
-    return decision;
+    return { ok: outcome === 'confirmed' || outcome === 'already_consumed', outcome };
+  }
+
+  /**
+   * Dedicated refund — never a flag on /exports/record. Idempotent: a double
+   * catch or retry with the same reservationId refunds at most once and never
+   * takes exportsThisMonth below zero.
+   */
+  @Post('exports/refund')
+  async refundExport(
+    @CurrentUser() user: FirebaseUser,
+    @Body() body: { reservationId?: string },
+  ) {
+    const reservationId = typeof body?.reservationId === 'string' ? body.reservationId : '';
+    return this.exportService.refundClientExport(user.uid, reservationId);
   }
 }

@@ -45,7 +45,7 @@ now lives in `DEPLOYMENT_AND_OPS.md`.
 | §28 Billing history + invoices | ✅ A3, native Stripe invoice list + PDF links |
 | §40–42 Errors / loading / autosave | ✅ Epic R (35 findings), `ApiError` classification, autosave retry with backoff |
 | §44 Document ownership | ✅ IDOR audit 2026-07-20 — 10 agents, 0 cross-user findings |
-| §43 Export entitlement | ✅ A8, server-authorised `POST /exports/record` |
+| §43 Export entitlement | ✅ A8 + 2026-08-19 reserve/confirm/refund — failed client render does not keep the charge |
 | §47 Analytics | ◐ Batch L catalog + call sites + consent gate test — needs `NEXT_PUBLIC_GA4_MEASUREMENT_ID` |
 | Legal pages | ◐ English bodies for terms, disclaimer, refund, cookies in `apps/web/src/legal/*.ts` (version `2026-08-16`). Routes kept: **`/privacy-policy`, `/terms-of-service`, `/cookie-policy`, `/contact-us`** — not the client's checklist `/privacy`, `/terms`, `/contact`. New: `/disclaimer`, `/refund-policy`. **Privacy still the locale-JSON policy** until the client names AWS SES and OpenAI in §4. Contact UI localised × 6. |
 | Cookie consent | ☑ three categories + preference center (Batch C) — Marketing omitted (Q-12) |
@@ -227,7 +227,7 @@ recently-fixed export path. Changes to shared-types affect it. It is absent from
 | B.9 | Legal document versioning (`2026-08-16`) across published English documents. Privacy recorded as pending. **No acceptance modal** (Batch H). | ☑ |
 | B.10 | **Subprocessor list must stay accurate** — `subprocessor-disclosure.spec.ts` (9 tests) ties the Privacy Policy to the SDKs in `apps/api/package.json`, both directions. New privacy text must name **AWS SES**, Firebase, Stripe, OpenAI or the test fails. **Unchanged — blocked with B.1.** | ☐ |
 | B.11 | Sweep for stale customer-facing addresses; standardise on `contact@flacroncv.com` | ☑ |
-| B.12 | In-app disclaimers: AI builder, ATS screens, cover letter, export review. **Done 2026-08-19 as product UI (×6), not a legal-document body.** Export is a **passive notice** (full client title+body, no second click) — a blocking gate would steal Free's 2-export lifetime on Cancel because `/exports/record` runs before the file is built. §18 support email omitted (already in footer / contact / legal docs). Mobile out — `PROJECT_PROGRESS.md` §8 Mobile localisation gap. | ☑ |
+| B.12 | In-app disclaimers: AI builder, ATS screens, cover letter, export review. **Done 2026-08-19 as product UI (×6), not a legal-document body.** Export is a **passive notice** (full client title+body, no second click) — kept passive as UX (client’s “consider showing”); the old Cancel-steals-quota risk is closed by reserve/refund (2026-08-19). §18 support email omitted (already in footer / contact / legal docs). Mobile out — `PROJECT_PROGRESS.md` §8 Mobile localisation gap. | ☑ |
 
 **Not in this batch:** the acceptance modal and its DB record — Batch G.
 

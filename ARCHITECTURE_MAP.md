@@ -85,7 +85,7 @@ access until the token expires (open MEDIUM in `AUDIT_OPEN_FINDINGS.md`).
 | `cv` | CVs, sections, versions, public share slugs | `CVService` | Firestore |
 | `cover-letter` | Cover letters + AI improve | `CoverLetterService` | Firestore, `AIService` |
 | `ai` | Summary, ATS check, interview prep, LinkedIn, import parsing | `AIService` (+ unregistered watsonx/anthropic providers) | OpenAI |
-| `export` | Export quota gate, server-side Puppeteer PDF path | `ExportService` | Puppeteer |
+| `export` | Export quota gate (client reserve/confirm/refund + server Puppeteer path) | `ExportService` | Puppeteer, `export_reservations` |
 | `payment` | Checkout, webhooks, plan lifecycle, invoices, portal | `PaymentService` | Stripe |
 | `templates` | Template catalogue + tier gating | `TemplatesService` | Firestore |
 | `jobs` | Job-application tracker | `JobsService` | Firestore |
@@ -171,6 +171,7 @@ baked-in rectangle — standing request in `PROJECT_PROGRESS.md` §8.
 | `abuse_networks/{ipHash}` | Lookup: `recentAt[]` timestamps, **no uid list**. Doc-id get — no composite index. Also used for the 10/hour create cap when enforcement is on. |
 | `abuse_idempotency/{uid:key}` | AI generate idempotency, ~15 min lifetime. Doc-id get — no composite index. |
 | `abuse_rate/{uid:kind}` | Per-uid create/ai/export hit timestamps, 15 min window. Doc-id get — no composite index. |
+| `export_reservations/{reservationId}` | Client-side export reserve/confirm/refund (`status`: reserved \| refunded \| consumed). Doc-id get; uid on the doc for ownership. No composite index. H.6 erasure obligation. |
 | `system/usage_reset` | Single marker doc holding the last completed reset period (`YYYY-MM`) |
 | `crm_customers`, `crm_leads`, `crm_transactions`, `crm_activities`, `crm_audit_log` | CRM domain |
 | `legalAcceptances/{uid}` | Batch H. Doc-id get/set only — **no where-query, no composite index**. Fields: `userId`, `email` (stored, never logged), three booleans, `termsVersion` / `privacyVersion` / `disclaimerVersion`, `acceptedAt`. Overwrite on re-consent. Missing row = grandfathered (no prompt). |
@@ -181,10 +182,11 @@ the Free allowance behind `app_settings/main.abuse.enforcementEnabled` (**defaul
 support, and checkout; paid entitlements skip the grant block. CRM **Release Free grant**
 writes `grantStatus=granted` and an audit row (`actorId`, time, target uid — no email).
 **G.5 App Check is still open** — not installed; console setup required.
-**Erasure:** H.6 must include **both** deferred obligations (canonical list in
+**Erasure:** H.6 must include **all** deferred obligations (canonical list in
 `PROJECT_PROGRESS.md` §8): Batch G `users.abuse` + `abuse_devices` /
-`abuse_networks` / `abuse_idempotency` / `abuse_rate`, **and** Batch H
-`legalAcceptances/{uid}`. Until then a manual erasure request covers them by hand.
+`abuse_networks` / `abuse_idempotency` / `abuse_rate`, Batch H
+`legalAcceptances/{uid}`, and `export_reservations` for that uid. Until then a
+manual erasure request covers them by hand.
 **GDPR export** (`GET /users/me/export`) includes this user's `abuse` snapshot (hashes, score,
 band, signal codes, grantStatus, `hasUsedTrial`) and must never include other uids from the device lookup.
 Device identifier (unchanged from part 1): 128-bit random token, HMAC-SHA256 with

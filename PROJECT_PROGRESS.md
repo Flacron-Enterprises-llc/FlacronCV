@@ -74,7 +74,7 @@ Last updated: 2026-08-19
   `api/v1` prefix so the load balancer can reach it (`apps/api/src/main.ts:143`).
   **`/api/v1/health` returning 404 is by design, not a bug.**
 
-**The four regressions from the 2026-08-16 firefight — guard against all of them.**
+**The regressions from the 2026-08-16 firefight — and one added 2026-08-19 — guard against all of them.**
 1. **`www` DNS pointed at a dead ALB** → `ERR_SSL_PROTOCOL_ERROR` for every visitor on the
    canonical hostname. Both apex and www must point at the **Amplify CloudFront** target.
 2. **Firebase env vars lacked the `NEXT_PUBLIC_` prefix in Amplify**, so `next build` inlined
@@ -87,10 +87,21 @@ Last updated: 2026-08-19
    an immutable SHA tag, so "force new deployment" faithfully re-pulled the *same old image*.
    Cost hours of misdiagnosis. The pipeline now prevents it.
 4. **CORS allowlist contained no production origin.** Origins are built from `FRONTEND_URL` +
-   `ADDITIONAL_ORIGINS` (`apps/api/src/main.ts:50`). **Both** production origins must be present,
+   `ADDITIONAL_ORIGINS` (`apps/api/src/main.ts`). **Both** production origins must be present,
    because the apex→www redirect means either can be the browser's `Origin`. Comma-separated,
    no spaces. An empty allowlist is a fatal boot error by design; an unlisted origin is denied by
    omitting the header rather than throwing, because throwing surfaced as a 500.
+5. **CORS `allowedHeaders` omitted client custom headers (2026-08-19 production outage).**
+   Batch G added `X-Device-Token` (every `api.ts` call) and later `Idempotency-Key` (AI
+   generate paths). `allowedHeaders` still listed only `Content-Type` / `Authorization` /
+   `Accept-Language`. The post-deploy preflight in `DEPLOYMENT_AND_OPS.md` tested **Origin**
+   (and method) only — it returned **204** while every real browser request was rejected at
+   preflight because `Access-Control-Request-Headers` included `x-device-token`. **A
+   verification command that cannot fail the way production fails is not a verification.**
+   Guard: explicit `CORS_ALLOWED_HEADERS` (`apps/api/src/cors-allowed-headers.ts`), client
+   catalog `CLIENT_CROSS_ORIGIN_HEADERS` (`apps/web/src/lib/api-cors-headers.ts`), parity
+   test `api-cors-headers.test.ts`, and the OPTIONS curl must send
+   `Access-Control-Request-Headers: authorization,content-type,x-device-token,idempotency-key`.
 
 **Open, handled outside the codebase — do not attempt to fix in code:**
 - 🔴 **Email verification 500** (`POST /api/v1/auth/send-verification`) — SES identity and sandbox
@@ -142,8 +153,12 @@ comment reasoning about "Render's proxy" — harmless, but it is stale.
   had **no declared index** → Firestore rejects them at runtime. Fixed across two passes (2026-07-19): `job_applications`
   (job tracker list), `crm_transactions` (customer purchase-history), and — caught by the adversarial self-review — the
   **`crm_activities` customer-timeline query, which had NO index at all (HIGH: failed unconditionally)**, plus all the
-  remaining multi-filter CRM combos. `firestore.indexes.json` now **37 indexes** (JSON-validated). **Needs
-  `firebase deploy --only firestore:indexes`.** (Full breakdown in the change log.)
+  remaining multi-filter CRM combos. `firestore.indexes.json` then **37 indexes** (JSON-validated).
+  ~~**Needs `firebase deploy --only firestore:indexes`.**~~ **Resolved 2026-08-19:** Firebase
+  console shows **38** composite indexes, all **Enabled**, including `crm_activities`
+  (customerId + createdAt), `job_applications` (userId + deletedAt + updatedAt), and
+  `crm_transactions` (customerId + date). Deployed earlier; the record was never updated.
+  (Full breakdown in the change log.)
 
 - [x] **API won't start (`Cannot find module dist/main`)** — `nest-cli.json` `deleteOutDir:true`
   conflicted with `tsconfig.json` `incremental:true`: deleting `dist/` while keeping the incremental
@@ -752,7 +767,7 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   get type and length checks; extra keys are allowed. A nested item class with
   `forbidNonWhitelisted` would 400 existing autosaves that still carry legacy keys. Full union
   enforcement is deferred to a migration that first strips or maps those keys.
-- **⚠️ ADDED 2026-08-19 — Three mobile API calls that do not exist (do not fix here).** These
+- **⚠️ ADDED 2026-08-19 — Four mobile API calls that do not exist (do not fix here).** These
   are live broken features in the shipping app, not DTO problems. Mapping for whoever fixes
   mobile:
   1. `PATCH /users/me` — `apps/mobile/src/hooks/useUser.ts` (`useUpdateProfile`). Correct:
@@ -761,6 +776,11 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
      `POST /cover-letters/:id/ai/generate`.
   3. `POST /users/:uid/photo` — `apps/mobile/src/hooks/useUser.ts` (`useUploadProfilePhoto`).
      No such route; web uploads to Firebase Storage then `PUT /users/me` `{ photoURL }`.
+  4. **Export URLs** — `apps/mobile/src/hooks/useExport.ts` posts
+     `POST /exports/cv/:id/:format` and `POST /exports/cover-letter/:id/pdf`. Correct API
+     routes are `POST /cvs/:id/export/pdf|docx` and `POST /cover-letters/:id/export/pdf|docx`.
+     Mobile export is a dead feature until those paths are aligned (client-side
+     `canExport` check is UX only).
 - **Secrets rotation** — Firebase Admin private key, Stripe, Brevo, OpenAI keys were shared in chat/docs; rotate them.
   **2026-08-18:** AWS IAM user `flacronai-ses` access key was in a public `apps/api/.zip` on GitHub.
   Deleting the file does **not** revoke the key — deactivate it in IAM and rotate every other
@@ -773,8 +793,8 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   raw IP in the new scorer. **Do not silently “fix” the audit path in the same
   batch as signup scoring** — it is pre-existing; hashing historical audit IPs
   is J.5-adjacent.
-- **⚠️ ADDED 2026-08-18 — H.6 erasure: two deferred obligations (keep them together).**
-  When the erasure cascade is built it must delete or anonymise **both** of:
+- **⚠️ ADDED 2026-08-18 — H.6 erasure: deferred obligations (keep them together).**
+  When the erasure cascade is built it must delete or anonymise **all** of:
   1. **Batch G abuse:** `users/{uid}.abuse` **and** the lookup docs
      `abuse_devices/{deviceHash}` / `abuse_networks/{ipHash}` **and**
      `abuse_idempotency/{uid:key}` / `abuse_rate/{uid:kind}`
@@ -783,8 +803,20 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   2. **Batch H legal:** `legalAcceptances/{uid}` (doc-id delete; there is no
      query). Email is stored on that document — delete the doc, do not log the
      email on the way out.
-  Until H.6 exists, a **manual** erasure request has to cover **both** by hand.
+  3. **Export reservations (2026-08-19):** `export_reservations/{reservationId}`
+     where `uid` matches — query-by-uid or TTL cleanup; docs hold no email.
+  Until H.6 exists, a **manual** erasure request has to cover **all** by hand.
   Soft-delete today does not. Do not split this list across change-log entries.
+- **⚠️ ADDED 2026-08-19 — Goodwill: Free export burned by a failed render (manual CRM).**
+  No automated backfill — failed renders before the reserve/refund fix are not
+  distinguishable from real exports in stored data (`DOCUMENT_EXPORTED` used to
+  fire on reserve). If support confirms a Free user lost an export to a failed
+  render: CRM → user detail → **Reset usage** (`POST` via
+  `CrmUsersService.resetUsage` / the existing Reset usage control) zeros
+  `usage.exportsThisMonth` (and AI counters). Prefer that full reset only when
+  the account is clearly Free and the complaint is credible; do not invent a
+  partial decrement UI. Record the ticket id in the CRM note. Paid / unlimited
+  export plans need no goodwill on this defect.
 - **⚠️ ADDED 2026-08-18 — `crm-settings.planLimits`: a phantom entitlements control. DECISION NEEDED
   (delete or wire).** `DEFAULT_SETTINGS.planLimits` (`apps/api/src/modules/crm/crm-settings.service.ts:8-10`)
   defines a **second** set of plan limits — `free: {cvs 3, letters 2, credits 5, exports 2}`,
@@ -848,6 +880,80 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-19 — **HOTFIX — CORS allowedHeaders: X-Device-Token + Idempotency-Key.**
+  Production outage: every browser call from `www.flacroncv.com` → `api.flacroncv.com`
+  failed preflight (`x-device-token` not in `Access-Control-Allow-Headers`). API `/health`
+  stayed ok. Root cause: Batch G added client headers; `main.ts` allowlist was never
+  extended. Fixing only the device token would have taken AI generate down next
+  (`Idempotency-Key`).
+
+  **MC1.** `CORS_ALLOWED_HEADERS` in `apps/api/src/cors-allowed-headers.ts` — explicit list
+  including both custom headers; `main.ts` spreads it. Do not reflect arbitrary headers.
+  **MC2.** `stripe-webhook.bootstrap.spec.ts` uses the same constant.
+  **MC3.** `CLIENT_CROSS_ORIGIN_HEADERS` in `apps/web/src/lib/api-cors-headers.ts`; `api.ts`
+  attaches headers only through that catalog; `api-cors-headers.test.ts` asserts the API
+  allowlist includes every client header (and that `api.ts` does not hardcode the names).
+  **MC4.** `DEPLOYMENT_AND_OPS.md` §5 preflight now sends `Access-Control-Request-Headers`;
+  `PROJECT_PROGRESS.md` §2A regression **#5** — origin-only 204 is not verification.
+
+  **Deploy:** API only. After ECS: run the strengthened OPTIONS curl (www + apex), then
+  hard-refresh the dashboard.
+
+  **QA:** `pnpm --filter api lint` 0 errors · `pnpm --filter web lint` 0 errors
+  (pre-existing `<img>` warnings only) · api `tsc --noEmit` ✓ · web `tsc --noEmit` ✓ ·
+  **api 523/523** · **web 305/305** (+3 `api-cors-headers`). All seven i18n/contrast
+  gates green. No new user-facing `t()` strings.
+
+- 2026-08-19 — **Export allowance: no charge on failed render (§15 parity / audit MEDIUM+LOWs).**
+  Web + API. Auth/billing plan shape untouched; `exportsThisMonth` semantics unchanged
+  (Free = lifetime 2 after F.3). No dependency changes.
+
+  **Defect:** `POST /exports/record` incremented before html2canvas/jsPDF/docx ran.
+  A failed render left Free users charged with nothing (half their lifetime allowance
+  per failure) and no refund. Same class as client §15 for AI credits; exports were
+  missed. Also why B.12’s export warning stayed passive.
+
+  **MC1 — transactional reserve.** `recordClientExport` now matches `reserveAiCredit`:
+  one Firestore transaction does DOCX/plan check, `exportsThisMonth` increment, and
+  writes `export_reservations/{reservationId}` (`status: reserved`). Returns
+  `{ allowed, reservationId }`. Concurrent Free reserves cannot overshoot (tested).
+
+  **Refund — dedicated `POST /exports/refund`.** Body `{ reservationId }` only — not a
+  flag on record. Idempotent: reserved→refunded once; unknown/foreign/already
+  refunded/consumed → `{ refunded: false }`; never decrements below zero (tested,
+  including double-fired catch with prior usage).
+
+  **Confirm — `POST /exports/confirm`.** Marks consumed; **DOCUMENT_EXPORTED moves
+  here** (after successful production). Chosen as contained: same module, ~one
+  endpoint, stops the audit trail from counting failed renders as exports.
+  Repeats are `already_consumed` (no second audit).
+
+  **MC2 — web.** `EditorToolbar` and cover-letter `[id]` export: reserve → render →
+  confirm; catch → refund then toast.
+
+  **Out of batch:** Puppeteer server paths (already charge after success); mobile
+  export URL mismatch (now the **4th** dead mobile route in §8); raster PDF
+  architecture; no automated goodwill backfill.
+
+  **Docs:** three audit findings marked FIXED; §8 mobile #4 + goodwill CRM
+  `resetUsage` procedure + `export_reservations` on H.6 erasure list;
+  `ARCHITECTURE_MAP` collection note; B.12 note unchanged (passive warning still
+  correct UX).
+
+  **QA:** `pnpm --filter api lint` 0 errors · `pnpm --filter web lint` 0 errors
+  (pre-existing `<img>` warnings only) · api `tsc --noEmit` ✓ · web `tsc --noEmit` ✓ ·
+  **api 523/523** (export suite 14; was 514) · **web 302/302**. All seven i18n/contrast
+  gates green. No new user-facing `t()` strings.
+
+- 2026-08-19 — **Firestore composite indexes — deploy confirmed (record only).** Operator verified
+  in the Firebase console: **38** composite indexes, all **Enabled**, including
+  `crm_activities` (customerId + createdAt), `job_applications` (userId + deletedAt + updatedAt),
+  and `crm_transactions` (customerId + date). The 2026-07-19 “ACTION REQUIRED: `firebase deploy
+  --only firestore:indexes`” notes (and the matching §4 / adversarial-review “still needs deploy”
+  lines) are marked **Resolved** in place — the indexes were already live; the record was never
+  updated. No application code. Repo `firestore.indexes.json` still lists 37; console has 38
+  (one extra may be console-only or a later add — not investigated here).
 
 - 2026-08-19 — **Batch L — analytics (§47–49 / L.2–L.5).** Web only. No Measurement
   Protocol, no new dependencies, auth/billing/data-shape untouched. Tracker letter is
@@ -927,7 +1033,7 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
   **Broken mobile routes recorded in §8, not fixed:** `PATCH /users/me`,
   `POST /cover-letters/:id/generate`, `POST /users/:uid/photo` — file + correct API path
-  each.
+  each. (Export URL mismatch added 2026-08-19 as item 4 in the same §8 list.)
 
   **MC8.** This entry; `CLIENT_REQUIREMENTS.md` J.4 ticked, J.3 narrowed, J.5 still ◐
   (IP family); `ARCHITECTURE_MAP.md` write-body DTO note.
@@ -2446,7 +2552,8 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
     priority": `users` role+plan, `crm_transactions` customerId+status, `crm_customers` status+source, `crm_leads`
     stage+assignedTo, `crm_audit_log` two-of-three combos, `subscriptions` two-of-three combos. Rather than wait for a
     prod error to name each one, added them all (with the required triples). **`firestore.indexes.json` now 37 indexes**
-    (was 23), JSON validated, no duplicates. **⚠️ still needs `firebase deploy --only firestore:indexes`.**
+    (was 23), JSON validated, no duplicates. ~~**⚠️ still needs `firebase deploy --only firestore:indexes`.**~~
+    **Resolved 2026-08-19** by console inspection — see change-log entry that day; 38 composites Enabled.
   - **[MED] GDPR consent-integrity: an unsubscribed lead could be silently resurrected.** `LeadsService.confirm` set
     status→SUBSCRIBED unconditionally, so a stale confirmation link could re-subscribe someone who had explicitly
     opted out. Fixed: `confirm` now refuses (and invalidates the token) if the lead is UNSUBSCRIBED, and `unsubscribe`
@@ -2480,11 +2587,14 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   stage/assignedTo, `crm_audit_log` action/actorId/targetType, `users` role/plan-alone, `subscriptions` plan/status/userId,
   `crm_transactions` status) so no realistic single-filter CRM list query lacks an index. File now **23 indexes** (no
   duplicates, JSON validated), all mirroring the existing `cvs`/`cover_letters` pattern. The `leads` (C1) queries are all
-  single-field equality → auto-indexed, so no entry is needed. **⚠️ ACTION REQUIRED:** run `firebase deploy --only
-  firestore:indexes` for these to take effect in production. **Remaining (self-documenting, low-priority):** rare MULTI-
-  filter combinations (e.g. `crm_users` role+plan together, `crm_transactions` customerId+status) still need their own
-  composite index if actually exercised — Firestore names the exact index in its error link when hit. A one-off
-  `firebase firestore:indexes` export would confirm nothing else drifted from the console.
+  single-field equality → auto-indexed, so no entry is needed. ~~**⚠️ ACTION REQUIRED:** run `firebase deploy --only
+  firestore:indexes` for these to take effect in production.~~ **Resolved 2026-08-19** by Firebase console
+  inspection: **38** composite indexes, all **Enabled**, including the three that would have failed
+  unconditionally (`crm_activities` customerId+createdAt, `job_applications` userId+deletedAt+updatedAt,
+  `crm_transactions` customerId+date). Deploy had already run; only the record was stale.
+  **Remaining (self-documenting, low-priority):** rare MULTI-filter combinations (e.g. `crm_users`
+  role+plan together, `crm_transactions` customerId+status) still need their own composite index if
+  actually exercised — Firestore names the exact index in its error link when hit.
 - 2026-07-19 — **Built Epic C2 (opt-in form) + C4 (double-opt-in email) → the lead funnel now works end-to-end on the C1
   backend.** **Frontend (C2):** `NewsletterSignup` in the footer (so it's on every public page) — an email field + a
   consent checkbox that is **never pre-checked** and keeps the submit **disabled until ticked** (GDPR), POSTing to the

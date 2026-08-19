@@ -127,11 +127,22 @@ Consequences:
 
 ### After every backend deploy — CORS preflight
 
+Origin alone is not enough. A 204 with `Access-Control-Allow-Origin` can still leave
+every real browser request blocked if a custom request header is missing from
+`Access-Control-Allow-Headers` (2026-08-19: `X-Device-Token` / `Idempotency-Key`).
+
 ```
-curl.exe -i -X OPTIONS https://api.flacroncv.com/api/v1/app-config -H "Origin: https://www.flacroncv.com" -H "Access-Control-Request-Method: GET"
+curl.exe -i -X OPTIONS https://api.flacroncv.com/api/v1/app-config ^
+  -H "Origin: https://www.flacroncv.com" ^
+  -H "Access-Control-Request-Method: GET" ^
+  -H "Access-Control-Request-Headers: authorization,content-type,x-device-token,idempotency-key"
 ```
 
-Expect **`204`** plus **`Access-Control-Allow-Origin: https://www.flacroncv.com`**.
+Expect **`204`** plus:
+
+- **`Access-Control-Allow-Origin: https://www.flacroncv.com`**
+- **`Access-Control-Allow-Headers`** containing at least `authorization`, `content-type`,
+  `x-device-token`, and `idempotency-key` (header names are case-insensitive)
 
 In PowerShell use **`curl.exe`**, not `curl` — the latter is an alias for `Invoke-WebRequest` and
 rejects `-H`.
@@ -139,10 +150,13 @@ rejects `-H`.
 Repeat with `-H "Origin: https://flacroncv.com"` (apex). Both must pass: the apex→www redirect means
 either can be the browser's `Origin`.
 
-**How CORS is built** (`apps/api/src/main.ts:50`): allowlist = `FRONTEND_URL` + comma-split
-`ADDITIONAL_ORIGINS` (**no spaces**), plus localhost outside production. An **empty allowlist is a
-fatal boot error** by design. An unlisted origin is denied by *omitting* the header rather than
-throwing, because throwing surfaced to the browser as a 500.
+**How CORS is built** (`apps/api/src/main.ts`): origin allowlist = `FRONTEND_URL` + comma-split
+`ADDITIONAL_ORIGINS` (**no spaces**), plus localhost outside production. Header allowlist =
+`CORS_ALLOWED_HEADERS` in `apps/api/src/cors-allowed-headers.ts` (explicit — never reflect
+arbitrary headers). An **empty origin allowlist is a fatal boot error** by design. An unlisted
+origin is denied by *omitting* the header rather than throwing, because throwing surfaced to the
+browser as a 500. Client header ↔ allowlist parity is gated by
+`apps/web/src/lib/api-cors-headers.test.ts`.
 
 ### Other checks
 
@@ -168,7 +182,7 @@ throwing, because throwing surfaced to the browser as a 500.
 
 ---
 
-## 7. The four regressions, and what now guards each
+## 7. The regressions, and what now guards each
 
 | # | Regression | Symptom | Guard |
 |---|---|---|---|
@@ -176,6 +190,7 @@ throwing, because throwing surfaced to the browser as a 500.
 | 2 | Firebase env vars lacked `NEXT_PUBLIC_` in Amplify | Sign-in failed in production with an **empty Network tab**; localhost fine | CI `docker` job build-arg check; `buildspec-web.yml` presence table + fail-fast; bundle verifier. §4 |
 | 3 | ECS ran a **month-old image** | Source far ahead of behaviour; "force new deployment" re-pulled the *same* immutable SHA tag. Hours of misdiagnosis | The pipeline registers a new task-definition revision per build. **Never hand-edit task definitions** |
 | 4 | CORS allowlist had **no production origin** | Browser calls blocked | §5 preflight check after every deploy, both origins |
+| 5 | CORS `allowedHeaders` omitted client custom headers (2026-08-19) | Preflight rejected `x-device-token` (then would have rejected `idempotency-key`); `/health` still ok; origin-only OPTIONS returned **204** | Explicit `CORS_ALLOWED_HEADERS`; client catalog + `api-cors-headers.test.ts`; §5 OPTIONS must include `Access-Control-Request-Headers` |
 
 ---
 
@@ -205,7 +220,7 @@ throwing, because throwing surfaced to the browser as a 500.
 | **Any 500 from the API** | `AllExceptionsFilter` maps every non-`HttpException` to a bare `"Internal server error"`, logging the real cause as **`Internal error details: …`** first (`apps/api/src/common/filters/all-exceptions.filter.ts:30`). **Read that log line before theorising.** A raw 500 does *not* imply an unhandled path |
 | Email verification 500 | Currently open, handled outside the codebase. The FROM address comes from `SES_FROM_EMAIL` and **defaults to `no-reply@flacronenterprises.com`** — the *parent* domain (`configuration.ts:40`). Verifying `flacroncv.com` in SES changes nothing unless that variable is also set on the task. Candidate causes: SES sandbox (`MessageRejected`), sending paused, credential-chain failure when the two AWS key vars are absent, or Firebase link generation (`auth.service.ts:247`, `:329-332`) — all indistinguishable from the status code alone |
 | Sign-in does nothing, empty Network tab | `NEXT_PUBLIC_FIREBASE_*` missing at **build** time. §4 |
-| Browser calls blocked | CORS allowlist missing one of the two production origins. §5 |
+| Browser calls blocked | CORS **origin** missing (regression 4) **or** custom **request header** missing from `allowedHeaders` (regression 5). §5 — OPTIONS must include `Access-Control-Request-Headers` |
 | Deployed behaviour doesn't match `main` | Stale image (regression 3), or CodeBuild running an **inline** buildspec (§3 guard 1), or building an older commit (§3 guard 2) |
 | ECS tasks die with `CannotPullContainerError` | An `imagedefinitions.json` naming an image that was never pushed. §3 guard 4 |
 | `pnpm build` exits 0 but emits nothing | The `tsbuildinfo` trap — see `ARCHITECTURE_MAP.md` §9 gotcha 1 |

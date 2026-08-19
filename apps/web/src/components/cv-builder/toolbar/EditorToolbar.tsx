@@ -51,17 +51,20 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
   const handleExport = async (format: 'pdf' | 'docx') => {
     if (!cv) return;
     setExporting(true);
+    let reservationId: string | undefined;
     try {
-      // Server-authorized: enforces DOCX-is-paid + the monthly export quota and
-      // records usage. The file itself is still generated client-side below.
-      const decision = await api.post<{ allowed: boolean; reason?: string }>(
-        '/exports/record',
-        { format, type: 'cv' },
-      );
+      // Reserve first (server enforces DOCX-is-paid + quota). Charge is held
+      // until confirm after a successful file, or refunded if render fails.
+      const decision = await api.post<{
+        allowed: boolean;
+        reason?: string;
+        reservationId?: string;
+      }>('/exports/record', { format, type: 'cv', documentId: cv.id });
       if (!decision.allowed) {
         setShowUpgrade(true);
         return;
       }
+      reservationId = decision.reservationId;
       if (format === 'pdf') {
         await exportToPDF(cv, sections, locale);
       } else {
@@ -76,10 +79,25 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
         };
         await exportToDocx(cv, sections, locale, labels);
       }
+      if (reservationId) {
+        await api.post('/exports/confirm', {
+          reservationId,
+          format,
+          type: 'cv',
+          documentId: cv.id,
+        });
+      }
       toast.success(t('export_success', { format: format.toUpperCase() }));
       track('cv_exported', { format });
     } catch (error) {
       console.error('Export error:', error);
+      if (reservationId) {
+        try {
+          await api.post('/exports/refund', { reservationId });
+        } catch {
+          /* refund best-effort — never mask the export failure */
+        }
+      }
       toast.error(t('export_failed'));
     } finally {
       setExporting(false);

@@ -381,25 +381,46 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
   const handleExport = async (format: 'pdf' | 'docx') => {
     setExportMenuOpen(false);
     if (!coverLetter) return;
+    let reservationId: string | undefined;
     try {
-      // Server-authorized: enforces DOCX-is-paid + the monthly export quota and
-      // records usage. The file itself is still generated client-side below.
-      const decision = await api.post<{ allowed: boolean; reason?: string }>(
-        '/exports/record',
-        { format, type: 'cover_letter' },
-      );
+      // Reserve first; confirm after a successful file, refund if render fails.
+      const decision = await api.post<{
+        allowed: boolean;
+        reason?: string;
+        reservationId?: string;
+      }>('/exports/record', {
+        format,
+        type: 'cover_letter',
+        documentId: coverLetter.id,
+      });
       if (!decision.allowed) {
         setUpgradeReason('exports');
         setShowUpgradeModal(true);
         return;
       }
+      reservationId = decision.reservationId;
       if (format === 'pdf') {
         await exportCoverLetterToPDF(coverLetter.title);
       } else {
         await exportCoverLetterToDocx(coverLetter);
       }
+      if (reservationId) {
+        await api.post('/exports/confirm', {
+          reservationId,
+          format,
+          type: 'cover_letter',
+          documentId: coverLetter.id,
+        });
+      }
       toast.success(t('coverLetters.exported', { format: format.toUpperCase() }));
     } catch {
+      if (reservationId) {
+        try {
+          await api.post('/exports/refund', { reservationId });
+        } catch {
+          /* refund best-effort */
+        }
+      }
       toast.error(t('coverLetters.export_failed'));
     }
   };

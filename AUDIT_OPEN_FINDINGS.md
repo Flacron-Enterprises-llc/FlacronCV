@@ -12,13 +12,13 @@ these 30 remain, ordered by severity.
 
 **Fix:** In both `CrmUsersService.updateUserRole` and `AuthService.setUserRole`, follow `setCustomUserClaims` with `await this.firebase.auth.revokeRefreshTokens(uid)` and have the guard verify with revocation checking, forcing the target's client to obtain a token carrying the new claim. Alternatively have `AuthProvider.syncUser` call `getIdToken(true)` when the Firestore role disagrees with the token claim, so UI and API agree.
 
-## [MEDIUM] Export quota is charged before the file is generated — a failed export still burns one of a free user's 2 monthly exports
+## [MEDIUM] ~~Export quota is charged before the file is generated — a failed export still burns one of a free user's 2 monthly exports~~ **FIXED 2026-08-19**
 
-**Where:** `apps/api/src/modules/export/export.service.ts:88`
+**Where:** `apps/api/src/modules/export/export.service.ts` (`recordClientExport`)
 
-**Impact:** One failed PDF render costs a free user 50% of their monthly export allowance and they get no file. Two failures and they cannot export at all until the next month, with no explanation connecting the two.
+**Was:** `/exports/record` incremented before client render; failed html2canvas/jsPDF left Free users charged with no file (lifetime 2 after F.3, not monthly).
 
-**Fix:** Split the gate from the charge: have `/exports/record` return an authorization (allowed + a short-lived token) without incrementing, and add a `/exports/commit` the client calls only after `exportToPDF`/`exportToDocx` resolves. Failing that, decrement in the toolbar's catch block via a compensating endpoint.
+**Fix:** Transactional reserve + `export_reservations/{id}`; `POST /exports/confirm` after successful production (DOCUMENT_EXPORTED moves here); dedicated `POST /exports/refund` on catch (idempotent, floor at 0). Same §15 principle as AI credits.
 
 ## [MEDIUM] Section titles cannot be edited anywhere — an added "Custom" section is permanently titled "Custom"
 
@@ -116,13 +116,9 @@ these 30 remain, ordered by severity.
 
 **Fix:** Make `verifyAndSync` create the user inside a Firestore transaction (or `.create()` and catch ALREADY_EXISTS) so only one caller takes the new-user branch and fires the verification email. On the client, de-duplicate concurrent `/auth/verify` calls in `AuthProvider` by sharing a single in-flight promise instead of letting `register` and `syncUser` both post.
 
-## [LOW] Export quota is spent before the browser generates the file, with no refund when generation fails
+## [LOW] ~~Export quota is spent before the browser generates the file, with no refund when generation fails~~ **FIXED 2026-08-19**
 
-**Where:** `apps/api/src/modules/export/export.service.ts:88`
-
-**Impact:** Users are charged export quota for documents they never received, and after two failures a free user is refused exports for the rest of the month with no way to appeal in-product.
-
-**Fix:** Add a compensating endpoint (e.g. `POST /exports/record/failed`) called from the client's catch block, or move the increment to a confirmation call made only after the file is successfully produced.
+Same defect as the MEDIUM above (duplicate finding). Reserve → confirm / refund.
 
 ## [LOW] Billing page shows the 'plan activated' success banner even when session verification failed
 
@@ -164,13 +160,9 @@ these 30 remain, ordered by severity.
 
 **Fix:** Add a date input (and, where the renderer reads them, issuer/proficiency) to the generic branch, or give certifications/projects/languages their own field sets the way experience and education have.
 
-## [LOW] Export quota is consumed before the file is generated — a failed client-side export burns one of the FREE plan's 2 monthly exports
+## [LOW] ~~Export quota is consumed before the file is generated — a failed client-side export burns one of the FREE plan's 2 monthly exports~~ **FIXED 2026-08-19**
 
-**Where:** `apps/web/src/app/[locale]/(dashboard)/cover-letters/[id]/page.tsx:377`
-
-**Impact:** A FREE user (limits.exports = 2/month) who hits a chunk-load failure, an offline blip after the record call, or any html2canvas error sees 'Export failed' and has silently lost half their monthly export allowance. Retrying costs the second one. There is no refund path and the counter only resets on the 1st of the month.
-
-**Fix:** Either record the export after the file is successfully produced, or add a compensating endpoint the client calls in the catch block to decrement `exportsThisMonth` when generation fails. Also distinguish 'quota consumed but render failed' from 'quota exhausted' in the toast.
+Same defect (cover-letter editor path). Reserve → confirm / refund on both CV toolbar and cover-letter editor.
 
 ## [LOW] 'AI Improve' on a letter with no job title or company spends a credit generating a letter about nothing
 

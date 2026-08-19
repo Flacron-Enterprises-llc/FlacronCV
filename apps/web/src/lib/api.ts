@@ -1,6 +1,7 @@
 import { auth } from './firebase';
 import { getOrCreateDeviceToken } from './device-token';
 import { track } from './analytics';
+import { CLIENT_CROSS_ORIGIN_HEADERS } from './api-cors-headers';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
@@ -73,7 +74,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 
   try {
     const token = await user.getIdToken();
-    return { Authorization: `Bearer ${token}` };
+    return { [CLIENT_CROSS_ORIGIN_HEADERS.authorization]: `Bearer ${token}` };
   } catch {
     return {};
   }
@@ -81,7 +82,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 
 function getDeviceHeaders(): Record<string, string> {
   const token = getOrCreateDeviceToken();
-  return token ? { 'X-Device-Token': token } : {};
+  return token ? { [CLIENT_CROSS_ORIGIN_HEADERS.deviceToken]: token } : {};
 }
 
 const inFlightIdempotency = new Map<string, string>();
@@ -95,13 +96,13 @@ function idempotencyHeaders(endpoint: string, method: string | undefined, body: 
   if (!isAiGeneratePath(endpoint, method ?? 'POST')) return {};
   const fingerprint = `${endpoint}:${body ?? ''}`;
   const existing = inFlightIdempotency.get(fingerprint);
-  if (existing) return { 'Idempotency-Key': existing };
+  if (existing) return { [CLIENT_CROSS_ORIGIN_HEADERS.idempotencyKey]: existing };
   const key =
     typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   inFlightIdempotency.set(fingerprint, key);
-  return { 'Idempotency-Key': key };
+  return { [CLIENT_CROSS_ORIGIN_HEADERS.idempotencyKey]: key };
 }
 
 function trackAbuseCode(code: string | undefined, status: number): void {
@@ -135,7 +136,7 @@ async function request<T>(
       signal: init.signal ?? AbortSignal.timeout(timeoutForEndpoint(endpoint, timeoutMs)),
       ...init,
       headers: {
-        'Content-Type': 'application/json',
+        [CLIENT_CROSS_ORIGIN_HEADERS.contentType]: 'application/json',
         ...authHeaders,
         ...deviceHeaders,
         ...idemHeaders,
