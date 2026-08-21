@@ -6,7 +6,7 @@ import { useRouter } from '@/i18n/routing';
 import { useTranslations, useLocale } from 'next-intl';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/providers/AuthProvider';
-import { api } from '@/lib/api';
+import { api, isAiCreditUnconfirmed } from '@/lib/api';
 import { serializeCVToText } from '@/lib/serializeCV';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -130,7 +130,13 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
     },
     onError: (error: Error) => {
       refreshUser();
-      toast.error(error.message, { description: t('common.generate_failed_no_charge') });
+      toast.error(error.message, {
+        description: t(
+          isAiCreditUnconfirmed(error)
+            ? 'common.generate_failed_charge_unconfirmed'
+            : 'common.generate_failed_no_charge',
+        ),
+      });
     },
   });
 
@@ -468,8 +474,8 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
           </Card>
         )}
 
-        {/* Failure + explicit retry. Nothing was created and the AI credit was
-            refunded server-side, so retrying starts cleanly. */}
+        {/* Failure + explicit retry. Description depends on whether the API
+            confirmed the reserved credit was returned. */}
         {generateMutation.isError && !generateMutation.isPending && (
           <Card role="alert" className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
@@ -482,7 +488,11 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
                   {generateMutation.error?.message}
                 </p>
                 <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
-                  {t('coverLetters.generate_failed_no_charge')}
+                  {t(
+                    isAiCreditUnconfirmed(generateMutation.error)
+                      ? 'coverLetters.generate_failed_charge_unconfirmed'
+                      : 'coverLetters.generate_failed_no_charge',
+                  )}
                 </p>
               </div>
               <Button

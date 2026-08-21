@@ -6,7 +6,7 @@ import { useCVStore } from '@/store/cv-store';
 import { useAuth } from '@/providers/AuthProvider';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { cn } from '@/lib/utils';
-import { api } from '@/lib/api';
+import { api, isAiCreditUnconfirmed } from '@/lib/api';
 import { track } from '@/lib/analytics';
 import Button from '@/components/ui/Button';
 import UpgradeModal from '@/components/shared/UpgradeModal';
@@ -40,6 +40,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
   const [keySkills, setKeySkills] = useState('');
   const [careerGoal, setCareerGoal] = useState('');
   const [generatedSummary, setGeneratedSummary] = useState('');
+  const [isLocalFallback, setIsLocalFallback] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
@@ -48,6 +49,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
   const handleClose = () => {
     onClose();
     setGeneratedSummary('');
+    setIsLocalFallback(false);
     setIsEditing(false);
     setProfession('');
     setKeySkills('');
@@ -84,6 +86,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
         language,
       });
       setGeneratedSummary(result.content);
+      setIsLocalFallback(false);
       track('ai_generation', { feature: 'cv-summary' });
       refreshUser();
     } catch (error) {
@@ -100,7 +103,14 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
         const levelText = experienceLevel.replace('_', ' ');
         const fallback = `${levelText.charAt(0).toUpperCase() + levelText.slice(1)} ${profession} with expertise in ${skills.length > 0 ? skills.join(', ') : 'various technologies'}. ${careerGoal ? careerGoal + '.' : 'Passionate about delivering high-quality results and continuous professional growth.'}`;
         setGeneratedSummary(fallback);
-        toast.info(t('generated_locally'), { description: tCommon('generate_failed_no_charge') });
+        setIsLocalFallback(true);
+        toast.info(t('generated_locally'), {
+          description: tCommon(
+            isAiCreditUnconfirmed(error)
+              ? 'generate_failed_charge_unconfirmed'
+              : 'generate_failed_no_charge',
+          ),
+        });
       }
     } finally {
       setIsGenerating(false);
@@ -127,6 +137,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
   const resetAndClose = () => {
     onClose();
     setGeneratedSummary('');
+    setIsLocalFallback(false);
     setIsEditing(false);
     setProfession('');
     setKeySkills('');
@@ -232,6 +243,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
           ) : (
             /* Generated Summary Result */
             <div className="space-y-3">
+              {isLocalFallback && <InAppWarning>{t('generated_locally')}</InAppWarning>}
               <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
                 {t('generated_summary')}
               </label>
@@ -240,13 +252,21 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
                   value={generatedSummary}
                   onChange={(e) => setGeneratedSummary(e.target.value)}
                   rows={5}
-                  className="w-full rounded-lg border border-brand-300 bg-white px-3 py-2 text-sm text-stone-900 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-stone-600 dark:bg-stone-800 dark:text-white"
+                  className={
+                    isLocalFallback
+                      ? 'w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200'
+                      : 'w-full rounded-lg border border-brand-300 bg-white px-3 py-2 text-sm text-stone-900 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-stone-600 dark:bg-stone-800 dark:text-white'
+                  }
                 />
               ) : (
                 <div
                   role="button"
                   tabIndex={0}
-                  className="cursor-pointer rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm leading-relaxed text-stone-700 hover:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-300"
+                  className={
+                    isLocalFallback
+                      ? 'cursor-pointer rounded-lg border border-amber-200/80 bg-amber-50 p-3 text-sm leading-relaxed text-amber-950 hover:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200'
+                      : 'cursor-pointer rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm leading-relaxed text-stone-700 hover:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-300'
+                  }
                   onClick={() => setIsEditing(true)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -298,7 +318,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
                 variant="ghost"
                 size="sm"
                 icon={<RefreshCw className="h-4 w-4" />}
-                onClick={() => { setGeneratedSummary(''); setIsEditing(false); }}
+                onClick={() => { setGeneratedSummary(''); setIsLocalFallback(false); setIsEditing(false); }}
               >
                 {t('regenerate')}
               </Button>
@@ -310,7 +330,7 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
                     icon={<PlusCircle className="h-4 w-4" />}
                     onClick={handleAppend}
                   >
-                    {t('add_to_cv')}
+                    {isLocalFallback ? t('add_basic_summary') : t('add_to_cv')}
                   </Button>
                 )}
                 <Button
@@ -319,7 +339,13 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
                   icon={<Replace className="h-4 w-4" />}
                   onClick={handleReplace}
                 >
-                  {existingSummary ? t('replace') : t('add_to_cv')}
+                  {existingSummary
+                    ? isLocalFallback
+                      ? t('replace_with_basic_summary')
+                      : t('replace')
+                    : isLocalFallback
+                      ? t('add_basic_summary')
+                      : t('add_to_cv')}
                 </Button>
               </div>
             </>

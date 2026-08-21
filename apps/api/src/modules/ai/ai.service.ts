@@ -135,6 +135,27 @@ export class AIService {
     return typeof status === 'number' && status >= 400 && status < 500;
   }
 
+  /**
+   * Give back a credit reserved by {@link generate} when no provider produced a
+   * result. Two retries after the first failure (three attempts total) so a
+   * brief Firestore blip does not strand the charge. The error log line is
+   * emitted once, after every attempt has failed — same text as before, so
+   * production greps stay valid.
+   */
+  private async refundReservedCredit(userId: string): Promise<boolean> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await this.usersService.refundAiCredit(userId);
+        return true;
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    this.logger.error(`Failed to refund AI credit for ${userId}: ${(lastError as Error).message}`);
+    return false;
+  }
+
   async generate(
     prompt: string,
     options: Partial<AIProviderOptions> = {},
@@ -143,7 +164,8 @@ export class AIService {
     // Atomically RESERVE a credit up front (transaction: check + increment in one
     // commit) so concurrent requests can't all pass a stale check and overshoot
     // the plan cap (TOCTOU). Refunded in `finally` if no provider succeeds, so a
-    // failed generation still costs nothing.
+    // failed generation still costs nothing. The 503 is thrown AFTER that refund
+    // so the exception can carry whether the credit was actually returned.
     let creditReserved = false;
     if (userId) {
       await this.abuse.assertNewConsumption(userId, 'ai');
@@ -155,6 +177,7 @@ export class AIService {
     }
 
     const fullOptions: AIProviderOptions = this.clampOptions(options);
+    let refundFailed = false;
 
     try {
       for (const provider of this.providers) {
@@ -194,18 +217,17 @@ export class AIService {
           this.logger.error(`${provider.name} failed`);
         }
       }
-
-      throw new ServiceUnavailableException('AI generation failed');
     } finally {
       // Reserved but never produced a result → give the credit back.
       if (creditReserved && userId) {
-        try {
-          await this.usersService.refundAiCredit(userId);
-        } catch (err) {
-          this.logger.error(`Failed to refund AI credit for ${userId}: ${(err as Error).message}`);
-        }
+        refundFailed = !(await this.refundReservedCredit(userId));
       }
     }
+
+    throw new ServiceUnavailableException({
+      message: 'AI generation failed',
+      code: refundFailed ? 'AI_CREDIT_NOT_REFUNDED' : 'AI_CREDIT_REFUNDED',
+    });
   }
 
   async generateCVSummary(

@@ -45,7 +45,11 @@ export class CVController {
   @Post('import')
   @RequireFeature('aiEnabled')
   async importResume(@CurrentUser() user: FirebaseUser, @Body() data: ImportCvDto) {
-    return this.cvService.importFromResume(user.uid, data);
+    return this.cvService.importFromResume(user.uid, data, {
+      uid: user.uid,
+      email: user.email,
+      role: (user as Record<string, unknown>).role as string,
+    });
   }
 
   @Get()

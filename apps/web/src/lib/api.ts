@@ -67,6 +67,11 @@ export class ApiError extends Error {
   }
 }
 
+/** True only when the API confirmed the reserved credit was not returned. */
+export function isAiCreditUnconfirmed(error: unknown): boolean {
+  return error instanceof ApiError && error.code === 'AI_CREDIT_NOT_REFUNDED';
+}
+
 async function getAuthHeaders(): Promise<Record<string, string>> {
   if (!auth) return {};
   const user = auth.currentUser;

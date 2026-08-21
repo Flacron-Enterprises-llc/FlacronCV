@@ -3,6 +3,9 @@ import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { UsersService } from '../users/users.service';
 import { AIService } from '../ai/ai.service';
 import { AbuseService } from '../abuse/abuse.service';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../audit/audit-actions';
+import { AIProviderResponse } from '../ai/providers/ai-provider.interface';
 import {
   CV,
   CVSection,
@@ -32,6 +35,7 @@ export class CVService {
     private usersService: UsersService,
     private aiService: AIService,
     private abuse: AbuseService,
+    private audit: AuditService,
   ) {}
 
   private getTemplateStyling(templateId: string): Omit<CVStyling, 'secondaryColor'> {
@@ -250,7 +254,25 @@ export class CVService {
    * output is swallowed — in that case the raw text is kept as the summary so the
    * user never loses their paste.
    */
-  private async parseResumeSafe(resumeText: string, userId: string) {
+  private async parseResumeSafe(
+    resumeText: string,
+    userId: string,
+  ): Promise<{
+    parsed: {
+      firstName: string;
+      lastName: string;
+      headline: string;
+      email: string;
+      phone: string;
+      city: string;
+      country: string;
+      summary: string;
+      experience: Record<string, unknown>[];
+      education: Record<string, unknown>[];
+      skills: string[];
+    };
+    ai: AIProviderResponse;
+  }> {
     const res = await this.aiService.parseResume(resumeText, userId);
     try {
       const cleaned = res.content.replace(/```json/gi, '').replace(/```/g, '').trim();
@@ -261,34 +283,44 @@ export class CVService {
       const json = first !== -1 && last > first ? cleaned.slice(first, last + 1) : cleaned;
       const obj = JSON.parse(json);
       return {
-        firstName: this.asStr(obj.firstName),
-        lastName: this.asStr(obj.lastName),
-        headline: this.asStr(obj.headline),
-        email: this.asStr(obj.email),
-        phone: this.asStr(obj.phone),
-        city: this.asStr(obj.city),
-        country: this.asStr(obj.country),
-        summary: this.asStr(obj.summary),
-        experience: (Array.isArray(obj.experience) ? obj.experience : []).slice(0, 20) as Record<string, unknown>[],
-        education: (Array.isArray(obj.education) ? obj.education : []).slice(0, 20) as Record<string, unknown>[],
-        skills: (Array.isArray(obj.skills) ? obj.skills : [])
-          .map((s: unknown) => this.asStr(s))
-          .filter(Boolean)
-          .slice(0, 50) as string[],
+        parsed: {
+          firstName: this.asStr(obj.firstName),
+          lastName: this.asStr(obj.lastName),
+          headline: this.asStr(obj.headline),
+          email: this.asStr(obj.email),
+          phone: this.asStr(obj.phone),
+          city: this.asStr(obj.city),
+          country: this.asStr(obj.country),
+          summary: this.asStr(obj.summary),
+          experience: (Array.isArray(obj.experience) ? obj.experience : []).slice(0, 20) as Record<string, unknown>[],
+          education: (Array.isArray(obj.education) ? obj.education : []).slice(0, 20) as Record<string, unknown>[],
+          skills: (Array.isArray(obj.skills) ? obj.skills : [])
+            .map((s: unknown) => this.asStr(s))
+            .filter(Boolean)
+            .slice(0, 50) as string[],
+        },
+        ai: res,
       };
     } catch {
       // Unparseable model output → keep the raw text as the summary (nothing lost).
       return {
-        firstName: '', lastName: '', headline: '', email: '', phone: '', city: '', country: '',
-        summary: resumeText.slice(0, 2000),
-        experience: [] as Record<string, unknown>[],
-        education: [] as Record<string, unknown>[],
-        skills: [] as string[],
+        parsed: {
+          firstName: '', lastName: '', headline: '', email: '', phone: '', city: '', country: '',
+          summary: resumeText.slice(0, 2000),
+          experience: [] as Record<string, unknown>[],
+          education: [] as Record<string, unknown>[],
+          skills: [] as string[],
+        },
+        ai: res,
       };
     }
   }
 
-  async importFromResume(userId: string, data: { title?: string; resumeText: string }): Promise<CV> {
+  async importFromResume(
+    userId: string,
+    data: { title?: string; resumeText: string },
+    actor: { uid: string; email?: string; role?: string } = { uid: userId },
+  ): Promise<CV> {
     await this.abuse.assertNewConsumption(userId, 'create');
     const user = await this.usersService.findByIdOrThrow(userId);
     const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
@@ -297,7 +329,23 @@ export class CVService {
     }
 
     // Parse first — if the AI call itself fails (credits/provider), no CV is created.
-    const parsed = await this.parseResumeSafe(data.resumeText, userId);
+    const { parsed, ai } = await this.parseResumeSafe(data.resumeText, userId);
+
+    await this.audit.logUserAction(
+      AuditAction.AI_GENERATION,
+      { uid: actor.uid, email: actor.email, role: actor.role },
+      'ai',
+      'resume-import',
+      {
+        metadata: {
+          feature: 'resume-import',
+          provider: ai.provider,
+          model: ai.model,
+          tokensUsed: ai.tokensUsed,
+          latencyMs: ai.latencyMs,
+        },
+      },
+    );
 
     const id = uuidv4();
     const now = new Date();

@@ -19,14 +19,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
+    let code: string | undefined;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exResponse = exception.getResponse();
-      message =
-        typeof exResponse === 'string'
-          ? exResponse
-          : (exResponse as Record<string, unknown>).message?.toString() || exception.message;
+      if (typeof exResponse === 'string') {
+        message = exResponse;
+      } else {
+        const body = exResponse as Record<string, unknown>;
+        message = body.message?.toString() || exception.message;
+        if (typeof body.code === 'string' && body.code.length > 0) {
+          code = body.code;
+        }
+      }
     } else if (exception instanceof Error) {
       // Log the real message internally but never expose raw internal errors to clients
       this.logger.error(`Internal error details: ${exception.message}`);
@@ -42,6 +48,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       success: false,
       statusCode: status,
       message,
+      ...(code ? { code } : {}),
       timestamp: new Date().toISOString(),
       path: request.url,
     });

@@ -4,6 +4,8 @@ import { UsersService } from '../users/users.service';
 import { AIService } from '../ai/ai.service';
 import { CVService } from '../cv/cv.service';
 import { AbuseService } from '../abuse/abuse.service';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../audit/audit-actions';
 import {
   CoverLetter,
   CreateCoverLetterData,
@@ -29,9 +31,14 @@ export class CoverLetterService {
     private aiService: AIService,
     private cvService: CVService,
     private abuse: AbuseService,
+    private audit: AuditService,
   ) {}
 
-  async create(userId: string, data: CreateCoverLetterData): Promise<CoverLetter> {
+  async create(
+    userId: string,
+    data: CreateCoverLetterData,
+    actor?: { uid: string; email?: string; role?: string },
+  ): Promise<CoverLetter> {
     await this.abuse.assertNewConsumption(userId, 'create');
     const user = await this.usersService.findByIdOrThrow(userId);
     const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
@@ -94,7 +101,7 @@ export class CoverLetterService {
       };
 
       try {
-        return await this.generateWithAI(id, userId, generateData);
+        return await this.generateWithAI(id, userId, generateData, actor ?? { uid: userId });
       } catch (error) {
         // "Create + generate" is one user action, so it must be atomic from the
         // user's point of view. Previously a failed/timed-out generation left the
@@ -280,6 +287,7 @@ export class CoverLetterService {
     id: string,
     userId: string,
     data: GenerateCoverLetterData,
+    actor: { uid: string; email?: string; role?: string } = { uid: userId },
   ): Promise<CoverLetter> {
     await this.abuse.assertNewConsumption(userId, 'ai');
     const cl = await this.findByIdOrThrow(id, userId);
@@ -373,6 +381,22 @@ export class CoverLetterService {
       tone,
       userId,
       data.language,
+    );
+
+    await this.audit.logUserAction(
+      AuditAction.AI_GENERATION,
+      { uid: actor.uid, email: actor.email, role: actor.role },
+      'ai',
+      'cover-letter-generate',
+      {
+        metadata: {
+          feature: 'cover-letter-generate',
+          provider: result.provider,
+          model: result.model,
+          tokensUsed: result.tokensUsed,
+          latencyMs: result.latencyMs,
+        },
+      },
     );
 
     await this.firebaseAdmin.firestore.collection(this.collection).doc(id).update({

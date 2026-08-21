@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useAuth } from '@/providers/AuthProvider';
-import { api } from '@/lib/api';
+import { api, isAiCreditUnconfirmed } from '@/lib/api';
 import { track } from '@/lib/analytics';
 import { extractResumeText, ResumeExtractError, RESUME_UPLOAD_ACCEPT } from '@/lib/extractResumeText';
 import Button from '@/components/ui/Button';
@@ -90,11 +90,18 @@ export default function ImportResumeModal({ open, onClose, title }: ImportResume
       sessionStorage.removeItem(DRAFT_KEY);
       refreshUser();
       track('cv_created', { source: 'import' });
+      track('ai_generation', { feature: 'resume-import' });
       toast.success(t('success'));
       router.push(`/cv/${cv.id}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
-      toast.error(message || t('error'), { description: tCommon('generate_failed_no_charge') });
+      toast.error(message || t('error'), {
+        description: tCommon(
+          isAiCreditUnconfirmed(error)
+            ? 'generate_failed_charge_unconfirmed'
+            : 'generate_failed_no_charge',
+        ),
+      });
       setIsImporting(false);
     }
   };

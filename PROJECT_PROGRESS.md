@@ -12,7 +12,7 @@
 > 4. Tick completed items here; log every change in the Change Log.
 > 5. Report Out-of-Scope / architectural items separately — do not implement without approval.
 
-Last updated: 2026-08-19
+Last updated: 2026-08-21
 
 > **Note on dates.** The header previously read `2026-07-29` while the two newest change-log
 > entries were dated `2026-07-30`; the header was stale, the entries were right. Corrected
@@ -870,13 +870,14 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   grandfathering then treats the account as predated. **Decision path:** mobile has no six-locale
   pipeline; a modal would be **English-only**; introducing next-intl is a larger piece of work.
   Operator decides when mobile is closer to shipping. Remains item 6 on the Mobile pre-launch gate.
-- **⚠️ ADDED 2026-08-19 — AI audit gap (open, do not fix here).** Cover-letter generate
-  (`apps/api/src/modules/cover-letter/cover-letter.controller.ts:72–83` →
-  `cover-letter.service.ts:279+`) and resume import (`apps/api/src/modules/cv/cv.controller.ts:42–45`
-  → `cv.service.ts:253–254` `parseResume`) consume AI credits but write **no** `withAudit`
-  row. `withAudit` lives only on `apps/api/src/modules/ai/ai.controller.ts:76–98` and runs
-  on success only. Tokens for those two paths are never recorded; GA4 `ai_generation` is
-  also not fired for them (Batch L).
+- **⚠️ UPDATED 2026-08-21 — AI audit is success-only by design.** `withAudit` on
+  `AIController` and the two previously-gapped paths (`generateWithAI`,
+  `importFromResume`) write `AI_GENERATION` only after the provider returns.
+  Failures are ERROR logs, not audit rows. **Known asymmetry:** if
+  `refundAiCredit` fails, `usage.aiCreditsUsed` still increments and no audit
+  row is written — `audit_logs` will under-count vs usage. Reconcile by
+  grepping `Failed to refund AI credit for`. GA4 `ai_generation` for cover-letter
+  generate and resume import is wired (MC4); still gated on Analytics consent.
 - **⚠️ ADDED 2026-08-18 — `PRICING_UPDATE.md` should be deleted.** It contains a Stripe **webhook
   signing secret in full** and a secret-key prefix in plaintext at the repo root (rotate as part of
   the secrets work above), documents the superseded price ids, and presents the exact
@@ -924,6 +925,73 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-21 — **MC4 — `ai_generation` for cover-letter generate and resume
+  import.** Web only. `track('ai_generation', { feature: 'cover-letter-generate' })`
+  on cover-letter `[id]` `aiMutation.onSuccess`; `track('ai_generation', {
+  feature: 'resume-import' })` alongside existing `cv_created` in
+  `ImportResumeModal`. Consent gate unchanged (`track()` already no-ops without
+  Analytics consent). Closes the AI batch (MC-A, MC-B, MC3, MC4). Follow-up:
+  hardcoded English title `"AI generation failed"`; localize the English
+  summary-fallback body.
+
+- 2026-08-21 — **MC3 — Audit `generateWithAI` and resume import.** API only.
+  `CoverLetterService` / `CVService` inject `AuditService`. After a successful
+  provider return they call `logUserAction` with the same shape as
+  `AIController.withAudit`: action `AI_GENERATION`, resource `ai`,
+  resourceId/feature `cover-letter-generate` | `resume-import`, metadata
+  `{ feature, provider, model, tokensUsed, latencyMs }`. Controllers pass
+  `{ uid, email, role }` so rows are not `unknown`. `parseResumeSafe` now
+  returns the AI telemetry next to the parsed fields; it is **not** on the
+  HTTP CV body. Create-with-AI is covered because audit lives inside
+  `generateWithAI`. **Deliberate:** success-only; failures stay on ERROR logs.
+  **Known asymmetry:** a failed refund increments usage with no audit row —
+  grep `Failed to refund AI credit for`. HTTP bodies unchanged. Web
+  `track('ai_generation')` for these paths is MC4.
+
+- 2026-08-21 — **MC-B — Local AI-summary fallback is labelled in the result
+  panel.** `AISummaryModal` only (plus six-locale keys). Fallback is unchanged
+  and still not written into the CV until Add/Replace. On that path only:
+  persistent `generated_locally` via existing `InAppWarning` (amber), amber
+  treatment on the result box, buttons `add_basic_summary` / 
+  `replace_with_basic_summary` ("Add basic summary" / "Replace with basic
+  summary"). Success path, toast, and summary text body untouched. No marker
+  in the stored summary. RTL: `generated_locally` already localized; panel is
+  full-width with no `text-left`. Follow-up: localize the English filler body.
+
+- 2026-08-21 — **MC-A3 — Client branches AI failure copy on refund `code`.** Web
+  only. New `t()` keys `common.generate_failed_charge_unconfirmed` and
+  `coverLetters.generate_failed_charge_unconfirmed` in all six locales (real
+  translations; support phrasing matches existing `Contact support` /
+  `Contacta con soporte` / `Contactez le support` / `Wenden Sie sich an den
+  Support` / `تواصل مع الدعم` / `سپورٹ سے رابطہ کریں`). Existing no-charge
+  strings unchanged. Nine call sites: `isAiCreditUnconfirmed` (ApiError.code
+  `=== 'AI_CREDIT_NOT_REFUNDED'`) → unconfirmed copy; missing/other code →
+  no-charge. AISummaryModal: description only; local-fallback title unchanged.
+  Hardcoded English title `"AI generation failed"` not touched (follow-up).
+
+- 2026-08-21 — **MC-A2 — `AllExceptionsFilter` forwards `code`.** Filter only.
+  When `HttpException.getResponse()` is an object with a non-empty string `code`,
+  the JSON body now includes it (`success`, `statusCode`, `message`, `code`,
+  `timestamp`, `path`). Absent `code` is omitted — not sent as `null`. AI 503s
+  from MC-A1 now reach the client as `AI_CREDIT_REFUNDED` /
+  `AI_CREDIT_NOT_REFUNDED`. Client still always shows
+  `generate_failed_no_charge` (MC-A3). **Noted behaviour change, not a fix:**
+  abuse `throwAbuse` already put `ABUSE_*` on the exception and the filter
+  dropped it; those 403/429/409 bodies now include `code` too. Web
+  `trackAbuseCode` (GA4 only) is the sole reader; no error handler, retry,
+  redirect, or step-up flow branches on `body.code`. Follow-up (not this
+  batch): hardcoded English title `"AI generation failed"`.
+
+- 2026-08-21 — **MC-A1 — AI failure 503 carries refund outcome.** API `ai.service.ts`
+  only (plus its spec). `generate()` refunds in `finally` **before** throwing, so
+  `ServiceUnavailableException` can carry `code: 'AI_CREDIT_REFUNDED' |
+  'AI_CREDIT_NOT_REFUNDED'` (message still `'AI generation failed'`). Refund is
+  attempted three times (initial + 2 retries); the production grep line
+  `Failed to refund AI credit for ${userId}: …` is unchanged and emitted once
+  after all attempts fail. HTTP JSON does **not** yet forward `code` (MC-A2).
+  Client still always shows `generate_failed_no_charge` (MC-A3). Follow-up
+  (not this batch): hardcoded English title `"AI generation failed"`.
 
 - 2026-08-21 — **MC-L3 — Maskable PWA icon in `site.webmanifest`.** Web only. Adds
   `/android-chrome-512x512-maskable.png` with `purpose: "maskable"`. Existing icons and

@@ -18,7 +18,7 @@ function makeService(userPlan: SubscriptionPlan) {
   const cvService = {} as any;
   const service = new CoverLetterService(firebaseAdmin, usersService, aiService, cvService, {
     assertNewConsumption: jest.fn().mockResolvedValue(undefined),
-  } as any);
+  } as any, { logUserAction: jest.fn().mockResolvedValue(undefined) } as any);
   return { service, firestore };
 }
 
@@ -106,14 +106,16 @@ describe('CoverLetterService create+generate atomicity', () => {
       incrementUsage: jest.fn().mockResolvedValue(undefined),
     } as any;
     const aiService = { generateCoverLetter: generate } as any;
+    const audit = { logUserAction: jest.fn().mockResolvedValue(undefined) };
     const service = new CoverLetterService(
       { firestore } as any,
       usersService,
       aiService,
       {} as any,
       { assertNewConsumption: jest.fn().mockResolvedValue(undefined) } as any,
+      audit as any,
     );
-    return { service, firestore, usersService };
+    return { service, firestore, usersService, audit };
   }
 
   const aiPayload = {
@@ -125,7 +127,7 @@ describe('CoverLetterService create+generate atomicity', () => {
 
   it('deletes the draft and refunds the quota when generation fails', async () => {
     const generate = jest.fn().mockRejectedValue(new Error('AI generation failed — timeout'));
-    const { service, firestore, usersService } = makeAIService(SubscriptionPlan.PRO, generate);
+    const { service, firestore, usersService, audit } = makeAIService(SubscriptionPlan.PRO, generate);
 
     await expect(service.create('u1', aiPayload)).rejects.toThrow(/AI generation failed/);
 
@@ -136,15 +138,21 @@ describe('CoverLetterService create+generate atomicity', () => {
     // The quota slot taken by the create is given back (+1 then -1).
     expect(usersService.incrementUsage).toHaveBeenCalledWith('u1', 'coverLettersCreated');
     expect(usersService.incrementUsage).toHaveBeenCalledWith('u1', 'coverLettersCreated', -1);
+    expect(audit.logUserAction).not.toHaveBeenCalled();
   });
 
   it('keeps the document and the quota when generation succeeds', async () => {
-    const generate = jest
-      .fn()
-      .mockResolvedValue({ content: 'Dear hiring manager…', provider: 'openai' });
-    const { service, firestore, usersService } = makeAIService(SubscriptionPlan.PRO, generate);
+    const generate = jest.fn().mockResolvedValue({
+      content: 'Dear hiring manager…',
+      provider: 'openai',
+      model: 'gpt-4o-mini',
+      tokensUsed: 42,
+      latencyMs: 10,
+    });
+    const { service, firestore, usersService, audit } = makeAIService(SubscriptionPlan.PRO, generate);
+    const actor = { uid: 'u1', email: 'a@b.com', role: 'user' };
 
-    const cl = await service.create('u1', aiPayload);
+    const cl = await service.create('u1', aiPayload, actor);
     // Stored as HTML, not as the model's raw prose: `content` is rendered
     // through dangerouslySetInnerHTML, where newlines are whitespace — so
     // storing it verbatim collapsed every multi-paragraph letter into one
@@ -156,6 +164,21 @@ describe('CoverLetterService create+generate atomicity', () => {
     expect(remaining.docs).toHaveLength(1);
     // Charged once, never refunded.
     expect(usersService.incrementUsage).toHaveBeenCalledTimes(1);
+    expect(audit.logUserAction).toHaveBeenCalledWith(
+      'AI_GENERATION',
+      actor,
+      'ai',
+      'cover-letter-generate',
+      {
+        metadata: {
+          feature: 'cover-letter-generate',
+          provider: 'openai',
+          model: 'gpt-4o-mini',
+          tokensUsed: 42,
+          latencyMs: 10,
+        },
+      },
+    );
   });
 
   it('keeps the letter when the model succeeded but a later step failed', async () => {
@@ -233,6 +256,7 @@ describe('CoverLetterService delete does not restore a creation', () => {
       {} as any,
       {} as any,
       { assertNewConsumption: jest.fn().mockResolvedValue(undefined) } as any,
+      { logUserAction: jest.fn().mockResolvedValue(undefined) } as any,
     );
 
     await firestore.collection('cover_letters').doc('cl1').set({

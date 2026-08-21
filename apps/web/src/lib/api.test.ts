@@ -14,7 +14,7 @@ vi.mock('./firebase', () => ({
 }));
 
 // Import api AFTER mocks are set up
-import { api, ApiError } from './api';
+import { api, ApiError, isAiCreditUnconfirmed } from './api';
 
 describe('api lib', () => {
   beforeEach(() => {
@@ -166,6 +166,42 @@ describe('api lib', () => {
       const clientErr = await api.get('/forbidden').catch((e) => e);
       expect(clientErr.message).toBe('Upgrade required');
       expect(clientErr.retryable).toBe(false);
+    });
+
+    it('exposes body.code and isAiCreditUnconfirmed only for a failed refund', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockReturnValue(
+        Promise.resolve({
+          ok: false,
+          status: 503,
+          headers: { get: () => null },
+          json: () =>
+            Promise.resolve({
+              message: 'AI generation failed',
+              code: 'AI_CREDIT_NOT_REFUNDED',
+            }),
+        } as unknown as Response),
+      );
+      const unconfirmed = await api.get('/ai/cover-letter').catch((e) => e);
+      expect(unconfirmed).toBeInstanceOf(ApiError);
+      expect(unconfirmed.code).toBe('AI_CREDIT_NOT_REFUNDED');
+      expect(isAiCreditUnconfirmed(unconfirmed)).toBe(true);
+
+      (global.fetch as ReturnType<typeof vi.fn>).mockReturnValue(
+        Promise.resolve({
+          ok: false,
+          status: 503,
+          headers: { get: () => null },
+          json: () =>
+            Promise.resolve({
+              message: 'AI generation failed',
+              code: 'AI_CREDIT_REFUNDED',
+            }),
+        } as unknown as Response),
+      );
+      const refunded = await api.get('/ai/cover-letter').catch((e) => e);
+      expect(refunded.code).toBe('AI_CREDIT_REFUNDED');
+      expect(isAiCreditUnconfirmed(refunded)).toBe(false);
+      expect(isAiCreditUnconfirmed(new Error('AI generation failed'))).toBe(false);
     });
 
     it('falls back to a status-bearing message when the body has none', async () => {

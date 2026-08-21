@@ -18,12 +18,18 @@ function makeService(userPlan: SubscriptionPlan, aiParse?: string) {
     incrementUsage: jest.fn().mockResolvedValue(undefined),
   } as any;
   const aiService = {
-    parseResume: jest.fn().mockResolvedValue({ content: aiParse ?? '{}', provider: 'openai' }),
+    parseResume: jest.fn().mockResolvedValue({
+      content: aiParse ?? '{}',
+      provider: 'openai',
+      model: 'gpt-4o-mini',
+      tokensUsed: 12,
+      latencyMs: 8,
+    }),
   } as any;
   const service = new CVService(firebaseAdmin, usersService, aiService, {
     assertNewConsumption: jest.fn().mockResolvedValue(undefined),
-  } as any);
-  return { service, firestore, aiService };
+  } as any, { logUserAction: jest.fn().mockResolvedValue(undefined) } as any);
+  return { service, firestore, aiService, audit: (service as any).audit };
 }
 
 async function seedTemplate(firestore: InMemoryFirestore, id: string, tier: string) {
@@ -142,9 +148,10 @@ describe('CVService template + layout tier enforcement', () => {
         education: [{ institution: 'MIT', degree: 'BSc', field: 'CS' }],
         skills: ['JavaScript', 'TypeScript'],
       });
-      const { service } = makeService(SubscriptionPlan.FREE, parsed);
+      const { service, audit } = makeService(SubscriptionPlan.FREE, parsed);
+      const actor = { uid: 'u1', email: 'jane@x.com', role: 'user' };
 
-      const cv = await service.importFromResume('u1', { resumeText: 'raw resume text', title: 'My CV' });
+      const cv = await service.importFromResume('u1', { resumeText: 'raw resume text', title: 'My CV' }, actor);
 
       expect(cv.personalInfo.firstName).toBe('Jane');
       expect(cv.personalInfo.summary).toBe('Experienced engineer.');
@@ -153,12 +160,34 @@ describe('CVService template + layout tier enforcement', () => {
       expect(exp?.items).toHaveLength(1);
       expect((exp?.items[0] as any).company).toBe('Acme');
       expect(sections.find((s) => s.type === 'skills')?.items).toHaveLength(2);
+      expect(audit.logUserAction).toHaveBeenCalledWith(
+        'AI_GENERATION',
+        actor,
+        'ai',
+        'resume-import',
+        {
+          metadata: {
+            feature: 'resume-import',
+            provider: 'openai',
+            model: 'gpt-4o-mini',
+            tokensUsed: 12,
+            latencyMs: 8,
+          },
+        },
+      );
     });
 
     it('keeps the raw text as the summary when the AI output is unparseable (no data lost)', async () => {
-      const { service } = makeService(SubscriptionPlan.FREE, 'not valid json');
+      const { service, audit } = makeService(SubscriptionPlan.FREE, 'not valid json');
       const cv = await service.importFromResume('u1', { resumeText: 'MY RAW RESUME TEXT' });
       expect(cv.personalInfo.summary).toContain('MY RAW RESUME TEXT');
+      expect(audit.logUserAction).toHaveBeenCalledWith(
+        'AI_GENERATION',
+        expect.objectContaining({ uid: 'u1' }),
+        'ai',
+        'resume-import',
+        expect.objectContaining({ metadata: expect.objectContaining({ feature: 'resume-import' }) }),
+      );
     });
 
     it('strips ```json fences from the AI output', async () => {
@@ -181,11 +210,13 @@ describe('CVService template + layout tier enforcement', () => {
         incrementUsage: jest.fn(),
       } as any;
       const aiService = { parseResume: jest.fn() } as any;
+      const audit = { logUserAction: jest.fn() };
       const limited = new CVService({ firestore } as any, usersService, aiService, {
         assertNewConsumption: jest.fn().mockResolvedValue(undefined),
-      } as any);
+      } as any, audit as any);
       await expect(limited.importFromResume('u1', { resumeText: 'x' })).rejects.toThrow(ForbiddenException);
       expect(aiService.parseResume).not.toHaveBeenCalled(); // no AI credit spent when blocked
+      expect(audit.logUserAction).not.toHaveBeenCalled();
     });
   });
 
@@ -255,6 +286,7 @@ describe('CVService template + layout tier enforcement', () => {
         usersService as any,
         { parseResume: jest.fn() } as any,
         { assertNewConsumption: jest.fn().mockResolvedValue(undefined) } as any,
+        { logUserAction: jest.fn().mockResolvedValue(undefined) } as any,
       );
 
       for (let i = 0; i < 5; i++) {

@@ -4,7 +4,7 @@ import { useState, useId } from 'react';
 import { useTranslations } from 'next-intl';
 import { useCVStore } from '@/store/cv-store';
 import { useAuth } from '@/providers/AuthProvider';
-import { api } from '@/lib/api';
+import { api, isAiCreditUnconfirmed } from '@/lib/api';
 import { track } from '@/lib/analytics';
 import { serializeCVToText } from '@/lib/serializeCV';
 import { extractJsonObject } from '@/lib/ai-json';
@@ -107,7 +107,13 @@ export default function InterviewPrepModal({ open, onClose }: InterviewPrepModal
       refreshUser();
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
-      toast.error(message || t('error'), { description: tCommon('generate_failed_no_charge') });
+      toast.error(message || t('error'), {
+        description: tCommon(
+          isAiCreditUnconfirmed(error)
+            ? 'generate_failed_charge_unconfirmed'
+            : 'generate_failed_no_charge',
+        ),
+      });
     } finally {
       setIsGenerating(false);
     }

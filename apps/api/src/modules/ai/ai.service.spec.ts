@@ -1,4 +1,4 @@
-import { ServiceUnavailableException } from '@nestjs/common';
+import { Logger, ServiceUnavailableException } from '@nestjs/common';
 import { AIService } from './ai.service';
 
 function makeProvider(overrides: Record<string, unknown> = {}) {
@@ -137,9 +137,51 @@ describe('AIService', () => {
         assertNewConsumption: jest.fn().mockResolvedValue(undefined),
       } as any);
 
-      await expect(service.generate('hi', {}, 'u1')).rejects.toThrow(ServiceUnavailableException);
+      const err = await service.generate('hi', {}, 'u1').catch((e) => e);
+      expect(err).toBeInstanceOf(ServiceUnavailableException);
+      expect(err.getResponse()).toMatchObject({
+        message: 'AI generation failed',
+        code: 'AI_CREDIT_REFUNDED',
+      });
       expect(users.reserveAiCredit).toHaveBeenCalledWith('u1');
-      expect(users.refundAiCredit).toHaveBeenCalledWith('u1');
+      expect(users.refundAiCredit).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries the refund twice and still reports REFUNDED if a later attempt succeeds', async () => {
+      const provider = makeProvider({ generateText: jest.fn().mockRejectedValue(httpError(500)) });
+      const users = makeUsers();
+      users.refundAiCredit
+        .mockRejectedValueOnce(new Error('unavailable'))
+        .mockRejectedValueOnce(new Error('unavailable'))
+        .mockResolvedValueOnce(undefined);
+      const service = new AIService(provider as any, users as any, {
+        assertNewConsumption: jest.fn().mockResolvedValue(undefined),
+      } as any);
+
+      const err = await service.generate('hi', {}, 'u1').catch((e) => e);
+      expect(err.getResponse()).toMatchObject({ code: 'AI_CREDIT_REFUNDED' });
+      expect(users.refundAiCredit).toHaveBeenCalledTimes(3);
+    });
+
+    it('reports NOT_REFUNDED after three failed attempts and logs the grep line once', async () => {
+      const provider = makeProvider({ generateText: jest.fn().mockRejectedValue(httpError(500)) });
+      const users = makeUsers();
+      users.refundAiCredit.mockRejectedValue(new Error('firestore unavailable'));
+      const service = new AIService(provider as any, users as any, {
+        assertNewConsumption: jest.fn().mockResolvedValue(undefined),
+      } as any);
+      const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      try {
+        const err = await service.generate('hi', {}, 'u1').catch((e) => e);
+        expect(err.getResponse()).toMatchObject({
+          message: 'AI generation failed',
+          code: 'AI_CREDIT_NOT_REFUNDED',
+        });
+        expect(users.refundAiCredit).toHaveBeenCalledTimes(3);
+        expect(errorSpy).toHaveBeenCalledWith('Failed to refund AI credit for u1: firestore unavailable');
+      } finally {
+        errorSpy.mockRestore();
+      }
     });
   });
 });

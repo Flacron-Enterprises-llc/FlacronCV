@@ -7,7 +7,7 @@ import { useParams } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { Link, useRouter } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
-import { api } from '@/lib/api';
+import { api, isAiCreditUnconfirmed } from '@/lib/api';
 import { track } from '@/lib/analytics';
 import { useCoverLetterStore } from '@/store/cover-letter-store';
 import { CoverLetter, UpdateCoverLetterData, SubscriptionPlan, PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
@@ -319,11 +319,18 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
         editor.commands.setContent(data.content);
       }
       toast.success(t('coverLetters.ai_improved'));
+      track('ai_generation', { feature: 'cover-letter-generate' });
       refreshUser();
     },
     onError: (error: Error) => {
       refreshUser();
-      toast.error(error.message, { description: t('common.generate_failed_no_charge') });
+      toast.error(error.message, {
+        description: t(
+          isAiCreditUnconfirmed(error)
+            ? 'common.generate_failed_charge_unconfirmed'
+            : 'common.generate_failed_no_charge',
+        ),
+      });
     },
   });
 
@@ -346,9 +353,15 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
       refreshUser();
     },
     onError: (error: Error) => {
-      // A failed generation refunds its credit server-side; re-read the balance.
+      // Re-read the balance; a failed refund is told via the description, not assumed.
       refreshUser();
-      toast.error(error.message, { description: t('common.generate_failed_no_charge') });
+      toast.error(error.message, {
+        description: t(
+          isAiCreditUnconfirmed(error)
+            ? 'common.generate_failed_charge_unconfirmed'
+            : 'common.generate_failed_no_charge',
+        ),
+      });
     },
   });
 

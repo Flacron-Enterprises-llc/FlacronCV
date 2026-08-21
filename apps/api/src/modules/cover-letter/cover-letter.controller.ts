@@ -35,7 +35,11 @@ export class CoverLetterController {
   @Post()
   @RequireFeature('coverLettersEnabled')
   async create(@CurrentUser() user: FirebaseUser, @Body() data: CreateCoverLetterDto) {
-    return this.coverLetterService.create(user.uid, data);
+    return this.coverLetterService.create(user.uid, data, {
+      uid: user.uid,
+      email: user.email,
+      role: (user as Record<string, unknown>).role as string,
+    });
   }
 
   @Get()
@@ -80,6 +84,10 @@ export class CoverLetterController {
     @Param('id') id: string,
     @Body() data: GenerateCoverLetterDto,
   ) {
-    return this.coverLetterService.generateWithAI(id, user.uid, data);
+    return this.coverLetterService.generateWithAI(id, user.uid, data, {
+      uid: user.uid,
+      email: user.email,
+      role: (user as Record<string, unknown>).role as string,
+    });
   }
 }

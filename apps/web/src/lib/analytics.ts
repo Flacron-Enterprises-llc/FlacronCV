@@ -20,9 +20,9 @@
  * must never be passed as event props.
  *
  * §49 AI: `ai_generation` sends `{ feature }` only — never `tokensUsed` or a
- * dollar cost (none exists in the product). Server audit rows record tokens for
- * `/ai/*` success paths via `withAudit` only; cover-letter generate and resume
- * import bypass that path. Failed calls and retries are not events.
+ * dollar cost (none exists in the product). Server audit rows record tokens on
+ * `/ai/*` via `withAudit`, plus `cover-letter-generate` and `resume-import`.
+ * Failed calls and retries are not events.
  *
  * To add a real provider: implement `AnalyticsAdapter`, register it in
  * `createAdapter()`, and set `NEXT_PUBLIC_ANALYTICS_PROVIDER` to its key.
