@@ -82,9 +82,9 @@ access until the token expires (open MEDIUM in `AUDIT_OPEN_FINDINGS.md`).
 | `auth` | Register, login sync, email verification, password reset, token revocation | `AuthService` | Firebase Auth, `MailService`, `AbuseService` |
 | `abuse` | Device/IP hashing, registration risk score, Free-grant enforcement behind `enforcementEnabled` (default **false**, fail open) | `AbuseService` | Firestore `abuse_devices` / `abuse_networks` / `abuse_idempotency` / `abuse_rate`, `app_settings/main.abuse` |
 | `users` | User docs, usage counters, monthly reset, GDPR export, soft delete | `UsersService`, `UsageResetService` | Firestore |
-| `cv` | CVs, sections, versions, public share slugs | `CVService` | Firestore |
+| `cv` | CVs, sections, versions, public share slugs; `POST /cvs/import` gated by CRM `aiEnabled` | `CVService` | Firestore, `AIService` |
 | `cover-letter` | Cover letters + AI improve | `CoverLetterService` | Firestore, `AIService` |
-| `ai` | Summary, ATS check, interview prep, LinkedIn, import parsing | `AIService` (+ unregistered watsonx/anthropic providers) | OpenAI |
+| `ai` | Summary, ATS check, interview prep, LinkedIn, import parsing; class-level `aiEnabled` | `AIService` (+ unregistered watsonx/anthropic providers) | OpenAI |
 | `export` | Export quota gate (client reserve/confirm/refund + server Puppeteer path) | `ExportService` | Puppeteer, `export_reservations` |
 | `payment` | Checkout, webhooks, plan lifecycle, invoices, portal | `PaymentService` | Stripe |
 | `templates` | Template catalogue + tier gating | `TemplatesService` | Firestore |
@@ -139,13 +139,15 @@ is still served for RTL chrome. **Privacy is still the locale namespace `privacy
 the client names AWS SES and OpenAI in the new §4 — `subprocessor-disclosure.spec.ts` still
 reads `privacy.s3_desc`. `terms` and `cookies_policy` locale namespaces were deleted.
 
-**Chrome (light-mode headers/footers).** One Tailwind token, not a scale:
+**Chrome (headers/footers).** One Tailwind token, not a scale:
 `chrome: '#1e3a5f'` in `apps/web/tailwind.config.ts` — the Classic CV / cover-letter default.
-Applied to public `Navbar`, public `Footer`, and shared `TopBar`. **Light mode only.** Dark
-mode keeps today's near-black. Logo on those bars is always `Logo variant="on-dark"` (auto
-would put navy ink on navy). Body and links are `stone-300` (**7.72:1** on chrome); hover is
-`brand-400` (**5.08:1**); headings white (**11.50:1**); PoweredBy brand `stone-200`
-(**9.16:1**). Gate: `apps/web/src/lib/chrome-contrast.test.ts`.
+Applied to public `Navbar`, public `Footer`, and shared `TopBar` in **light and dark**. Dark:
+Navbar keeps translucency (`bg-chrome/70` + blur); Footer / TopBar / mobile nav panel are solid
+chrome. Page-facing edges use `border-white/15`; mobile panel top (navy-on-navy) uses
+`border-white/10`. Logo on those bars is always `Logo variant="on-dark"`. Body and links are
+`stone-300` (**7.72:1** on chrome); hover is `brand-400` (**5.08:1**); headings white
+(**11.50:1**); PoweredBy brand `stone-200` (**9.16:1**). Gate:
+`apps/web/src/lib/chrome-contrast.test.ts` (includes dark fill vs `stone-950` page).
 
 **App shells (dashboard / admin / CRM).** Full-width navy `TopBar` spans the viewport; the
 sidebar starts **below** it (mobile drawer `top-16`, overlay likewise). Shells are

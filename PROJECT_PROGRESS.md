@@ -914,14 +914,42 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   Settings → language still persists as **account data** via `PATCH /users/me/preferences`
   (not a preference cookie). Cookie-centre copy states the trade-off
   (`cookie_consent.preferences_desc`). Tell the client; do not bypass consent to “fix” §38.
-- **⚠️ ADDED 2026-08-19 — Client §39 navy chrome is light-mode only (open question).** Public
-  `Navbar` / `Footer` / shared `TopBar` use Tailwind `chrome` (`#1e3a5f`) in **light mode only**;
-  dark mode keeps near-black. Deliberate (navy-chrome batch), not an oversight. Whether the
-  client wants navy in dark mode is **his call** — do not invent dark-mode navy without approval.
+- **✅ UPDATED 2026-08-21 — Client §39 navy chrome in dark mode (closed).** Public
+  `Navbar` / `Footer` / shared `TopBar` use Tailwind `chrome` (`#1e3a5f`) in **light and
+  dark**. Dark fills: Navbar `bg-chrome/70` + blur (translucency kept); Footer, TopBar, and
+  mobile nav panel solid `bg-chrome`. Page-facing edges `border-white/15`; navy-on-navy mobile
+  panel top `border-white/10`. Client chose Option A (brand navy), not elevated charcoal.
+  Logo stays `variant="on-dark"`. Manifest `theme_color` unchanged (`#ea580c`).
 
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-21 — **MC-L3 — Maskable PWA icon in `site.webmanifest`.** Web only. Adds
+  `/android-chrome-512x512-maskable.png` with `purpose: "maskable"`. Existing icons and
+  `theme_color` / `background_color` / names unchanged.
+
+- 2026-08-21 — **MC-L2 — Organization JSON-LD logo → `/logo-schema.png`.** Web only.
+  Replaces `flacronCvlight.png` (white ink, invisible on Google’s white cards) with the
+  512×512 square FC mark on opaque white. Plain URL string kept (no ImageObject). Legacy
+  `flacronCv*` files not deleted.
+
+- 2026-08-21 — **Dark-mode chrome = brand navy (Option A).** Web only. Token hex unchanged
+  (`chrome: '#1e3a5f'`). Dark overrides: Navbar `dark:bg-chrome/70` + blur + `dark:border-white/15`;
+  mobile panel `dark:bg-chrome` + `dark:border-white/10`; Footer/TopBar solid `dark:bg-chrome` +
+  page-facing `dark:border-white/15`. Internal footer dividers untouched. `chrome-contrast.test.ts`
+  covers dark fill vs page + dark link colours. §39 closed. Logo / manifest / light mode unchanged.
+
+- 2026-08-21 — **MC-L1 — Logo intrinsic size for horizontal lockups.** Web only.
+  `Logo.tsx`: `width`/`height` **1712×265** for both `logo-ink-*` assets (was
+  1070×807 for the old stacked mark). Comments updated; no `h-*` / binary
+  changes. Call sites still height-based + `w-auto`.
+
+- 2026-08-20 — **MC2 — Gate `POST /cvs/import` with `aiEnabled`.** API only.
+  `CVController` now uses `FeatureFlagGuard` (other CV routes still unflagged —
+  guard no-ops when no `@RequireFeature`). Import alone gets
+  `@RequireFeature('aiEnabled')`, same flag as `AIController`. CRM AI kill-switch
+  now stops resume import from calling OpenAI. Auth/billing/data-shape untouched.
 
 - 2026-08-19 — **Full-width navy TopBar (dashboard / admin / CRM) + usage Unlimited labels.**
   Web only. No dependency changes. Auth/billing/data-shape untouched. Dark-mode navy

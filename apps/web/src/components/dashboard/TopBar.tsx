@@ -79,7 +79,7 @@ export default function TopBar({ onMenuClick, area = 'dashboard' }: TopBarProps)
   };
 
   return (
-    <header className="relative z-50 flex h-16 shrink-0 items-center justify-between border-b border-white/10 bg-chrome px-4 dark:border-stone-700 dark:bg-stone-900">
+    <header className="relative z-50 flex h-16 shrink-0 items-center justify-between border-b border-white/10 bg-chrome px-4 dark:border-white/15 dark:bg-chrome">
       {/* Start: menu + logo (+ area badge). Logical start so RTL mirrors. */}
       <div className="flex min-w-0 items-center gap-2">
         <button

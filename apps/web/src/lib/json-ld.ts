@@ -22,8 +22,9 @@ export function organizationAndWebsite(locale: string) {
         '@id': `${SITE_URL}/#organization`,
         name: 'FlacronCV',
         url: SITE_URL,
-        // Light-background lockup: search engines render this on a white surface.
-        logo: `${SITE_URL}/flacronCvlight.png`,
+        // Square colour mark for Google Organization cards (white background).
+        // Full lockups are too wide; white-ink assets vanish on white cards.
+        logo: `${SITE_URL}/logo-schema.png`,
       },
       {
         '@type': 'WebSite',

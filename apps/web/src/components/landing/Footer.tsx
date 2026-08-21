@@ -29,7 +29,7 @@ export default function Footer() {
   const linkClass = 'text-sm text-stone-300 hover:text-brand-400 dark:text-stone-400 dark:hover:text-brand-400 transition-colors';
 
   return (
-    <footer className="border-t border-chrome bg-chrome dark:border-stone-800 dark:bg-stone-900">
+    <footer className="border-t border-chrome bg-chrome dark:border-white/15 dark:bg-chrome">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         {/* Newsletter opt-in (Epic C2) */}
         <div className="mb-10 border-b border-white/10 pb-10 dark:border-stone-800">

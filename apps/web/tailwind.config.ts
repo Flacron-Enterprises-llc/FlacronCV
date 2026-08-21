@@ -22,7 +22,8 @@ const config: Config = {
           950: '#431407',
         },
         // One chrome token, not a scale. Same navy as the Classic CV / cover-
-        // letter default (`#1e3a5f`). Header/footer in light mode only.
+        // letter default (`#1e3a5f`). Header/footer in light and dark (dark
+        // surfaces override via `dark:bg-chrome` / `dark:bg-chrome/70`).
         chrome: '#1e3a5f',
       },
       fontFamily: {

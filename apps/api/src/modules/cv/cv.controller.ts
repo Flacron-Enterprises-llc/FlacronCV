@@ -14,6 +14,7 @@ import {
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CVService } from './cv.service';
 import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
+import { FeatureFlagGuard, RequireFeature } from '../../common/guards/feature-flag.guard';
 import { CurrentUser, FirebaseUser } from '../../common/decorators/current-user.decorator';
 import { CreateCvDto } from './dto/create-cv.dto';
 import { ImportCvDto } from './dto/import-cv.dto';
@@ -28,7 +29,7 @@ import { CVSection } from '@flacroncv/shared-types';
 
 @ApiTags('cvs')
 @Controller('cvs')
-@UseGuards(FirebaseAuthGuard)
+@UseGuards(FirebaseAuthGuard, FeatureFlagGuard)
 @ApiBearerAuth()
 export class CVController {
   constructor(private readonly cvService: CVService) {}
@@ -39,7 +40,10 @@ export class CVController {
   }
 
   // Import an existing resume: AI parses the pasted text into a populated CV.
+  // Same kill-switch as AIController — without this, CRM aiEnabled=false still
+  // left import calling OpenAI and spending credits.
   @Post('import')
+  @RequireFeature('aiEnabled')
   async importResume(@CurrentUser() user: FirebaseUser, @Body() data: ImportCvDto) {
     return this.cvService.importFromResume(user.uid, data);
   }

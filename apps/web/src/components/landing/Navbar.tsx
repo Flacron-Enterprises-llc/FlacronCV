@@ -71,13 +71,13 @@ export default function Navbar() {
       : 'rounded-lg px-3 py-2 text-sm font-medium text-stone-300 hover:bg-white/10 dark:text-stone-400 dark:hover:bg-stone-800';
 
   return (
-    <nav className="fixed top-0 z-50 w-full border-b border-white/10 bg-chrome dark:border-stone-800/80 dark:bg-stone-950/70 dark:backdrop-blur-lg">
+    <nav className="fixed top-0 z-50 w-full border-b border-white/10 bg-chrome dark:border-white/15 dark:bg-chrome/70 dark:backdrop-blur-lg">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center">
           {/* h-12 in an h-16 bar: the brand assets have generous internal padding,
               so a smaller height renders the wordmark almost illegibly.
-              on-dark: this bar is navy in light mode and near-black in dark.
+              on-dark: this bar is navy in light and dark (translucent + blur in dark).
               The lockup still has a baked-in opaque black rectangle — standing
               asset request, see PROJECT_PROGRESS.md. */}
           <Logo variant="on-dark" className="h-12" priority />
@@ -155,7 +155,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="border-t border-white/10 bg-chrome px-4 py-4 md:hidden dark:border-stone-700 dark:bg-black">
+        <div className="border-t border-white/10 bg-chrome px-4 py-4 md:hidden dark:border-white/10 dark:bg-chrome">
           <div className="flex flex-col gap-1">
             <a
               href="/#features"
