@@ -187,7 +187,7 @@ recently-fixed export path. Changes to shared-types affect it. It is absent from
 | Q-1 | **Confirm the AI-credit definition we already publish.** *Reframed 2026-08-18 — a definition does exist, in shipped customer-facing copy.* `pricing.terms_credit_desc` (`apps/web/public/locales/en/common.json:122`, all six locales) defines one credit as one AI request across summary generation, cover-letter generation, ATS check, interview prep and LinkedIn optimisation, **not charged on failure** — and the code matches (`AIService.generate` reserves one credit per call and refunds on failure). So the ask is **confirm or amend the published definition**, not supply a new one. It is already a representation to customers. | §14 |
 | Q-2 | **Do Pro's 10 CVs / 20 cover letters reset monthly?** **Closed 2026-08-19 as (a′).** Monthly reset for **paid** CVs/letters; delete does **not** restore the allowance on any plan. Verbatim: "Do not refund an allowance when a user deletes a document. Limits count CREATIONS during the cycle, not documents currently stored." Free: 5 CV creations and 1 cover-letter creation, never reset — create 5, delete all 5, never another on Free. Failed generation still refunds. | §20 |
 | Q-3 | **Career Accelerator ($49.99) — still wanted?** **Answered 2026-08-18: keep the code, hide it from every public surface, do not launch.** `customerFacingPlans()` / empty `stripePriceIdMonthly` is the hide rule. **Filling `stripePriceIdMonthly` auto-launches it** on pricing, billing, comparison, and JSON-LD. Do not fill it by accident. Admin CRM grant still works. | Codebase |
-| Q-4 | **Annual prices for each plan — confirm, rather than supply.** *Updated 2026-08-18.* Annual prices **are already asserted in config and on sale**: `YEARLY_BILLING_ENABLED = true` with Pro `299.99/yr` and Enterprise `999.99/yr`. Mobile now reads those figures from shared-types. ⚠️ **UNVERIFIED that those two Stripe ids really are `interval=year` in the deployed account — this is a launch blocker for marketing annual plans.** `apps/api/scripts/verify-yearly-prices.mjs` settles it and was not run here (it reaches Stripe). A month-interval price sitting in `stripePriceIdYearly` is exactly what caused the ~18× overcharge. Career Accelerator still has no annual price (ties to Q-3). See R-1. | §25 |
+| Q-4 | **Annual prices for each plan — confirm, rather than supply.** *Updated 2026-08-21.* Annual prices **are already asserted in config and on sale**: `YEARLY_BILLING_ENABLED = true` with Pro `299.99/yr` and Enterprise `999.99/yr`. ⚠️ **UNVERIFIED that the ids in the deployed Stripe account are `interval=year`.** Confirm on the Price object: `recurring.interval === year`, `unit_amount` matching 299.99 / 999.99 USD, `active === true`, id retrieves. `verify-yearly-prices.mjs` does that for **test** keys only (refuses `sk_live_`). **Live ids belong in the four `STRIPE_*_PRICE_ID` env vars, never in compiled `PLAN_CONFIGS`.** The script's old "copy into subscription.types.ts" hint is the **wrong** path (MC1). Career Accelerator still has no annual price (Q-3). See R-1. | §25 |
 | Q-5 | **Card required for the trial?** **Answered 2026-08-18: yes.** Stripe default; Pro 7-day trial. | §22 |
 | Q-6 | **Does Enterprise get a trial?** **Answered 2026-08-18: no.** Server skips `trial_period_days` for Enterprise even on a first-time subscriber. CTA is “Choose Enterprise”, straight to checkout. | §22 |
 | Q-7 | **Public LinkedIn URL.** The supplied link is an admin dashboard — visitors hit a login wall. | Socials |
@@ -387,7 +387,7 @@ counters left as they stood.
 | I.4 | In-app cancellation (currently Stripe portal). No dark patterns; state access-until-period-end, features lost, document retention. | ☐ |
 | I.5 | Reactivate a cancelled subscription | ☐ |
 | I.6 | ✅ Billing history + invoice download — **already done** (A3), verify only | ☑ |
-| I.7 | Checkout legal block — auto-renewal + clickable Terms, Refund Policy, Privacy | ☐ |
+| I.7 | Checkout legal block — auto-renewal + clickable Terms, Refund Policy, Privacy | ☑ |
 | I.8 | Failed payment handling. **A dunning banner already exists** (A7c) for delinquent statuses. | ◐ |
 
 ---
@@ -415,7 +415,7 @@ error states, optimistic updates, responsive layout, and RTL.
 | K.1 | Audit remaining gaps against Epic R rather than starting fresh | ☑ |
 | K.2 | ✅ Autosave with Saving/Saved — CV + cover letter (retry with backoff) | ☑ |
 | K.3 | Mobile: plan comparison dedicated stacked layout (table from `md` up). Broader breakpoint eyeball → Batch M visual QA in `PROJECT_PROGRESS` §8 | ☑ |
-| K.4 | Dark mode — app-wide `dark:` tokens exist; navy chrome stays light-only (client open question in §8). Full contrast eyeball → Batch M | ◐ |
+| K.4 | Dark mode — app-wide `dark:` tokens exist; navy chrome in light **and** dark (Option A, closed 2026-08-21 in §8). Full contrast eyeball → Batch M | ☑ |
 | K.5 | i18n QA — keys × 6 locales, seven CI gates. §38: language persistence is Preferences-consent-gated (honest copy in cookie centre; trade-off in §8) | ☑ |
 | K.6 | Error copy per §40 ("…Your AI credit has not been used") on AI failure paths | ☑ |
 

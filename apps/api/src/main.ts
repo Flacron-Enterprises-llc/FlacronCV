@@ -7,6 +7,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { CORS_ALLOWED_HEADERS } from './cors-allowed-headers';
+import { assertLiveStripePricesConfigured } from './config/stripe-live-prices';
 
 function validateEnv() {
   const required = [
@@ -21,6 +22,8 @@ function validateEnv() {
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
+  // Live keys must not fall back to compiled PLAN_CONFIGS test-account price ids.
+  assertLiveStripePricesConfigured(process.env.STRIPE_SECRET_KEY);
 }
 
 /**

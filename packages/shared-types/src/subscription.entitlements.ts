@@ -42,6 +42,7 @@ export const ACCESS_ENDING_STATUSES: readonly SubscriptionStatus[] = [
 export interface EntitlementSubscription {
   plan?: SubscriptionPlan | null;
   status?: SubscriptionStatus | null;
+  cancelAtPeriodEnd?: boolean | null;
   currentPeriodEnd?:
     | Date
     | string
@@ -49,6 +50,15 @@ export interface EntitlementSubscription {
     | { toDate?: () => Date; seconds?: number }
     | null;
 }
+
+/**
+ * Extra minutes of paid access after `currentPeriodEnd` when
+ * `cancelAtPeriodEnd` is set. Stripe's period-end timestamp and our clock can
+ * disagree by a few minutes; wrongly cutting a still-paying customer is worse
+ * than a few extra minutes of Pro. 15 minutes covers typical skew without
+ * leaving a dropped `customer.subscription.deleted` webhook as free Pro.
+ */
+export const CANCEL_AT_PERIOD_END_GRACE_MS = 15 * 60 * 1000;
 
 /**
  * Coerce the many runtime shapes `currentPeriodEnd` can take — a JS Date, a
@@ -83,15 +93,20 @@ function coerceDate(value: EntitlementSubscription['currentPeriodEnd']): Date | 
  * Resolve the plan a subscription is *actually entitled to right now*.
  *
  * A paid plan (pro/enterprise) whose status is delinquent (past_due / unpaid /
- * incomplete) keeps its paid entitlements only until the end of the period it
- * has already paid for (`currentPeriodEnd`). Once that date passes — or if it
- * cannot be determined — the effective plan falls back to FREE. Active and
- * trialing subscriptions always resolve to their stored plan.
+ * incomplete) or CANCELED keeps its paid entitlements only until the end of the
+ * period it has already paid for (`currentPeriodEnd`). Once that date passes —
+ * or if it cannot be determined — the effective plan falls back to FREE.
+ *
+ * Cancel-at-period-end is different: Stripe leaves `status: active` until
+ * `customer.subscription.deleted` lands. If that webhook is dropped, the stored
+ * plan stays Pro forever. When `cancelAtPeriodEnd` is set and
+ * `currentPeriodEnd` plus {@link CANCEL_AT_PERIOD_END_GRACE_MS} has passed,
+ * this resolver returns FREE even while status is still active. The billing
+ * page still shows the *stored* plan until the reconcile job heals the doc.
  *
  * This is the single source of truth for entitlement gating: callers should use
  * `PLAN_CONFIGS[resolveEffectivePlan(subscription)]` rather than reading
- * `subscription.plan` directly, so that a delinquent account cannot keep paid
- * access after its grace period.
+ * `subscription.plan` directly.
  *
  * @param subscription the user's subscription (or the standalone Subscription doc).
  * @param now injectable clock, for testing; defaults to the current time.
@@ -108,10 +123,20 @@ export function resolveEffectivePlan(
   const status = subscription?.status;
   if (status != null && ACCESS_ENDING_STATUSES.includes(status)) {
     const periodEnd = coerceDate(subscription?.currentPeriodEnd);
-    // Grace until period end: honour paid access through the already-paid
-    // period, then downgrade. Unknown or expired period end downgrades now
-    // (fail safe toward not granting unpaid access).
+    // Honour paid access through the already-paid period, then downgrade.
+    // Unknown or expired period end downgrades now (fail safe toward not
+    // granting unpaid access).
     if (periodEnd == null || now.getTime() > periodEnd.getTime()) {
+      return SubscriptionPlan.FREE;
+    }
+  }
+
+  if (subscription?.cancelAtPeriodEnd) {
+    const periodEnd = coerceDate(subscription?.currentPeriodEnd);
+    if (
+      periodEnd == null ||
+      now.getTime() > periodEnd.getTime() + CANCEL_AT_PERIOD_END_GRACE_MS
+    ) {
       return SubscriptionPlan.FREE;
     }
   }

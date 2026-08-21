@@ -194,7 +194,9 @@ Legend: ✓ done · ◐ partial · ✗ missing · ⤵ deferred/decision-needed
   by cancel or `revokeToFree()`. **Batch G part 1 added `subscription.hasUsedTrial` as
   defence-in-depth** (never cleared; consulted *in addition to* the Stripe list). No production
   backfill was run. Residual: a stored customer id that no longer resolves in Stripe; a new email
-  (that is the device/identity problem, not this flag).
+  (that is the device/identity problem, not this flag). **MC5 (2026-08-21):** billing Pro CTA
+  waits on `GET /payments/trial-eligibility` (heals the flag, never creates a customer);
+  checkout with `expectTrial` refuses a paid session on mismatch (`TRIAL_NOT_ELIGIBLE`).
 - ✓ **Trial system** — **BUILT 2026-07-20, Pro-only as of Batch E 2026-08-18.** Stripe
   `trial_period_days` on **Pro** checkout for a first-time subscriber (anti-abuse via Stripe
   history). **Enterprise never receives a trial** — server skips `trial_period_days` even for a
@@ -751,11 +753,11 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 8. Out-of-scope / architectural recommendations (do NOT implement without approval)
 
-- **Export architecture** — CV/cover-letter PDF export is a **client-side raster image**
-  (html2canvas→jsPDF), so exported PDFs are **not ATS-parseable**. (Entitlement bypass part FIXED in A8 via the
-  server-authorized `/exports/record` gate; the **non-ATS raster-PDF** problem remains.) A working backend
-  Puppeteer text-PDF path exists but is unused. Switching the UI to it would fix ATS-parseability too, but is a
-  larger change — revisit with client approval. (Contradicts the product's "ATS-optimized" promise.)
+- **Export architecture** — CV/cover-letter PDF export is still **client-side** (html2canvas→jsPDF
+  **image** plus an **invisible text layer** for ATS parsers — shipped 2026-07-30,
+  `addInvisibleTextLayer` in `export-cv.ts`). Entitlement bypass part FIXED in A8 via the
+  server-authorized `/exports/record` gate. A working backend Puppeteer text-PDF path exists but is
+  unused; switching the UI to it is a larger change — revisit with client approval.
 - **Save-state / Undo-Redo (CV)** — edits-during-autosave and undo/redo have latent data-loss bugs;
   minimal fixes exist but touch the save-state model.
 - **Backend DTO validation — CLOSED 2026-08-19 (Batch J).** Class DTOs now sit on CV,
@@ -878,6 +880,14 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   row is written — `audit_logs` will under-count vs usage. Reconcile by
   grepping `Failed to refund AI credit for`. GA4 `ai_generation` for cover-letter
   generate and resume import is wired (MC4); still gated on Analytics consent.
+- **⚠️ ADDED 2026-08-21 — `RENDER_DEPLOYMENT.md` is a dead path; line 165 is the wrong webhook URL.**
+  The file describes a Render.com Blueprint deploy from a `render.yaml` that does not exist.
+  Production is AWS (Amplify + ECS), recorded in §2A and `DEPLOYMENT_AND_OPS.md`.
+  `RENDER_DEPLOYMENT.md:165` still names `https://flacroncv-api.onrender.com/api/v1/payments/webhook`
+  — wrong path on a host that is not ours. The live Stripe endpoint is
+  `/api/v1/webhooks/stripe`. A **STALE** banner was added at the top of that file in MC8 so
+  nobody follows it; the body was not rewritten as if Render were still a deploy option.
+  Same family as `PRICING_UPDATE.md` below: leftover docs that mislead.
 - **⚠️ ADDED 2026-08-18 — `PRICING_UPDATE.md` should be deleted.** It contains a Stripe **webhook
   signing secret in full** and a secret-key prefix in plaintext at the repo root (rotate as part of
   the secrets work above), documents the superseded price ids, and presents the exact
@@ -925,6 +935,94 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-21 — **MC9 — cancel-at-period-end reconcile job.** API. Separate
+  `CancelAtPeriodEndReconcileService` in the payment module (not
+  `UsageResetService`): cron every 15 minutes plus `onApplicationBootstrap`
+  catch-up. Query `subscription.cancelAtPeriodEnd == true` only; period-end
+  + MC8 grace filtered in memory (no composite index). Stripe retrieve before
+  any write; skip `active`/`trialing` (`still-active`), any retrieve error
+  (`retrieve-failed`), missing id (`no-subscription-id`). Skip logs are those
+  codes plus Firestore uid — never email or subscription id. Downgrade reuses
+  `PaymentService.applyDeletedSubscriptionWrite` (the extracted
+  `customer.subscription.deleted` write). Spec pins: NEVER writes Free when
+  Stripe reports active or trialing. Ships with MC8 — do not push A alone.
+
+- 2026-08-21 — **MC8 — cancel-at-period-end expires in `resolveEffectivePlan`.**
+  Shared-types. `cancelAtPeriodEnd` plus a past `currentPeriodEnd` now resolves
+  to Free even while Stripe status is still `active` (the pairing a dropped
+  `customer.subscription.deleted` webhook leaves behind). Grace window is
+  **15 minutes** (`CANCEL_AT_PERIOD_END_GRACE_MS`): wrongly cutting a payer by
+  clock skew is worse than a few extra minutes of Pro. Billing still shows the
+  *stored* plan until MC9 heals the doc. Specs in
+  `subscription-entitlements.spec.ts`. Also: `RENDER_DEPLOYMENT.md` marked
+  STALE (wrong webhook URL at line 165); noted in §8. **Ships with MC9.**
+
+- 2026-08-21 — **MC6 — Stripe listen path in docs.** README `stripe listen`
+  forwarded to `/api/v1/payments/webhook` (not mounted). Corrected to
+  `/api/v1/webhooks/stripe`. `DEPLOYMENT_AND_OPS.md` already named that
+  path; listen command spelled out so it no longer defers to the README
+  line that was wrong. `RENDER_DEPLOYMENT.md` still has the old path
+  (not this change).
+
+- 2026-08-21 — **MC5 — trial CTA cannot silently become a paid checkout.**
+  API + web. Shared `stripeHistoryAllowsTrial` used by
+  `GET /payments/trial-eligibility` (billing mount only; no Stripe customer
+  created; fail closed on list/retrieve error; heals `hasUsedTrial`) and
+  `createCheckoutSession`. Pro button is disabled with `checking_trial`
+  until the GET returns; Enterprise/Career Accelerator do not wait.
+  Trial CTA sends `expectTrial: true`; mismatch → 400 `TRIAL_NOT_ELIGIBLE`,
+  no session, flag set; client toasts `trial_not_eligible` (six locales),
+  never the server English. Paid Upgrade omits the flag and proceeds.
+
+- 2026-08-21 — **MC4 — billing checkout legal block (I.7).** Web.
+  `pricing.terms_renewal_desc` (six locales) drops “each month”: “Paid
+  plans renew automatically at the price shown, until you cancel.” Public
+  pricing already rendered that key; billing now shows it under the
+  upgrade CTAs plus `billing.checkout_legal` (`t.rich`) with clickable
+  Terms / Refund Policy / Privacy via existing `/terms-of-service`,
+  `/refund-policy`, `/privacy-policy` (`legalDocLinks` gained `refund`).
+  I.7 ticked.
+
+- 2026-08-21 — **MC3 — trial disclosure names the card.** Web copy only.
+  `billing.trial_disclosure` (six locales) now: days free first, card saved
+  now and charged `{price}/{interval}` when the trial ends unless cancelled,
+  then “Today: $0.” Same `{days}` `{price}` `{interval}` placeholders; billing
+  page already interpolates them. RTL (ar/ur) included.
+
+- 2026-08-21 — **MC2 — billing trial CTA reads `hasUsedTrial`.** Web only.
+  `trialEligible` now requires `!stripeSubscriptionId` **and**
+  `!hasUsedTrial`, matching the Firestore half of
+  `PaymentService.createCheckoutSession`. A cancelled Pro user with the
+  flag set sees `upgradeTo` Pro, not `start_trial`. Stripe history is
+  still server-only (residual: flag false + prior subs — checkout
+  still proceeds, without a trial).
+
+- 2026-08-21 — **MC1 — live Stripe key refuses compiled price fallbacks.**
+  API. `assertLiveStripePricesConfigured` in `validateEnv`: `sk_live_`
+  will not boot until all four `STRIPE_*_PRICE_ID` env vars are set
+  (message names them and says the API will not start). `resolvePriceId`
+  ignores `PLAN_CONFIGS` ids when the secret is live (env only). Compiled
+  `price_1U0xN…` fallbacks stay — they are the `isPlanPurchasable` "for
+  sale" pin; emptying them hides Pro/Enterprise. Live ids never go in
+  shared-types. `verify-yearly-prices.mjs` READY text no longer says
+  copy ids into `subscription.types.ts`. Tests use `sk_live_x` /
+  `sk_test_x` only.
+
+- 2026-08-21 — **MC — `ABUSE_IDEMPOTENCY_CONFLICT` → `abuse_rate_limited`.**
+  Web only. `trackAbuseCode` now maps the sixth `ABUSE_*` code (HTTP 409,
+  in-flight duplicate) onto the existing §48 event
+  `abuse_rate_limited` with `reason: 'ABUSE_IDEMPOTENCY_CONFLICT'`.
+  **Deliberate compromise, not a match** — not a cap; this is the
+  "please wait" bucket. Split by `reason` for true cap counts. No fifth
+  event, no UI copy, 409 stays non-retryable, consent unchanged.
+
+- 2026-08-21 — **Docs: §8 export ATS.** Client PDF is html2canvas→jsPDF
+  **plus** `addInvisibleTextLayer` (shipped 2026-07-30); §8 no longer
+  calls exports non-ATS-parseable. Puppeteer path still unused.
+
+- 2026-08-21 — **Docs: K.4 navy chrome.** `CLIENT_REQUIREMENTS.md` K.4
+  still said navy was light-only; aligned with shipped Option A and §8.
 
 - 2026-08-21 — **MC4 — `ai_generation` for cover-letter generate and resume
   import.** Web only. `track('ai_generation', { feature: 'cover-letter-generate' })`

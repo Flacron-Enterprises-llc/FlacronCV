@@ -11,7 +11,7 @@ const LINK_CLASS =
 
 const NEW_TAB = { target: '_blank' as const, rel: 'noopener noreferrer' };
 
-/** Three legal links as next-intl rich tags. Open in a new tab so the form is not lost. */
+/** Legal routes as next-intl rich tags. Open in a new tab so the form is not lost. */
 export function legalDocLinks(className: string = LINK_CLASS) {
   return {
     terms: (chunks: ReactNode) => (
@@ -26,6 +26,11 @@ export function legalDocLinks(className: string = LINK_CLASS) {
     ),
     disclaimer: (chunks: ReactNode) => (
       <Link href="/disclaimer" className={className} {...NEW_TAB}>
+        {chunks}
+      </Link>
+    ),
+    refund: (chunks: ReactNode) => (
+      <Link href="/refund-policy" className={className} {...NEW_TAB}>
         {chunks}
       </Link>
     ),

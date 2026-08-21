@@ -118,7 +118,14 @@ function trackAbuseCode(code: string | undefined, status: number): void {
   if (code === 'ABUSE_GRANT_BLOCKED') track('abuse_grant_blocked', { reason: code });
   else if (code === 'ABUSE_STEP_UP') track('abuse_step_up', { reason: code });
   else if (code === 'ABUSE_EMAIL_UNVERIFIED') track('abuse_email_unverified', { reason: code });
-  else if (code === 'ABUSE_NETWORK_CREATE_CAP' || code === 'ABUSE_UID_RATE_LIMIT') {
+  else if (
+    code === 'ABUSE_NETWORK_CREATE_CAP' ||
+    code === 'ABUSE_UID_RATE_LIMIT' ||
+    // Catalog compromise, not a match: in-flight duplicate (409), not a cap.
+    // This is the existing "please wait" event — split abuse_rate_limited by
+    // reason to get true cap counts.
+    code === 'ABUSE_IDEMPOTENCY_CONFLICT'
+  ) {
     track('abuse_rate_limited', { reason: code });
   }
 }

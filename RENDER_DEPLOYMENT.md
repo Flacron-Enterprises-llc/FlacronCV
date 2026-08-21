@@ -1,5 +1,13 @@
 # Render Deployment Guide
 
+> **STALE — do not follow.** This file describes a Render.com Blueprint path that
+> is not how FlacronCV is deployed. Production is AWS (Amplify + ECS); see
+> `DEPLOYMENT_AND_OPS.md` and `PROJECT_PROGRESS.md` §2A. The Stripe webhook URL
+> below (`/api/v1/payments/webhook` on a Render hostname) is the **wrong
+> path** on a **dead host**. The live listen/webhook path is
+> `/api/v1/webhooks/stripe`. Left in place so git history stays intact; do not
+> treat any URL or env list here as current.
+
 This guide will help you deploy both the **Backend API** and **Frontend Web App** to Render.
 
 ## Prerequisites

@@ -6,6 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/audit-actions';
 import Stripe from 'stripe';
 import { SubscriptionPlan, SubscriptionStatus, BillingInterval, PLAN_CONFIGS, BillingInvoice, TRIAL_PERIOD_DAYS, YEARLY_BILLING_ENABLED } from '@flacroncv/shared-types';
+import { isLiveStripeSecretKey } from '../../config/stripe-live-prices';
 
 @Injectable()
 export class PaymentService {
@@ -137,6 +138,11 @@ export class PaymentService {
     const config = PLAN_CONFIGS[plan];
     const fromConfig = yearly ? config?.stripePriceIdYearly : config?.stripePriceIdMonthly;
 
+    const secretKey = this.configService.get<string>('stripe.secretKey');
+    if (isLiveStripeSecretKey(secretKey)) {
+      return (fromEnv || '').trim() || null;
+    }
+
     return (fromEnv || fromConfig || '').trim() || null;
   }
 
@@ -153,11 +159,86 @@ export class PaymentService {
       : BillingInterval.MONTH;
   }
 
+  /**
+   * Firestore half of Pro trial eligibility. Stripe history is checked
+   * separately — this alone must never show a trial CTA (MC2 residual).
+   */
+  private firestoreAllowsProTrial(sub: { stripeSubscriptionId?: string | null; hasUsedTrial?: boolean } | undefined): boolean {
+    return (
+      TRIAL_PERIOD_DAYS > 0 &&
+      !sub?.stripeSubscriptionId &&
+      !sub?.hasUsedTrial
+    );
+  }
+
+  /**
+   * Stripe history half. Lists `status=all` on the given customer, heals
+   * `hasUsedTrial` when any prior subscription exists, fails closed on error.
+   * Shared by GET /payments/trial-eligibility and createCheckoutSession so
+   * the two cannot drift.
+   */
+  private async stripeHistoryAllowsTrial(
+    userId: string,
+    customerId: string,
+    alreadyHasUsedTrial: boolean,
+  ): Promise<boolean> {
+    try {
+      const prior = await this.stripe.subscriptions.list({
+        customer: customerId,
+        status: 'all',
+        limit: 1,
+      });
+      if (prior.data.length > 0) {
+        if (!alreadyHasUsedTrial) {
+          await this.usersService.updateSubscription(userId, { hasUsedTrial: true });
+        }
+        return false;
+      }
+      return true;
+    } catch (err) {
+      this.logger.warn(`Trial eligibility check failed for ${userId}: ${(err as Error).message}`);
+      return false;
+    }
+  }
+
+  /**
+   * Whether the billing Pro CTA may offer a trial.
+   *
+   * Does **not** create a Stripe customer — page-load must not write to Stripe.
+   * No stored (or live) customer means no history we can see, so Firestore
+   * decides. A Stripe retrieve/list failure fails closed (`eligible: false`).
+   */
+  async getTrialEligibility(userId: string): Promise<{ eligible: boolean }> {
+    const user = await this.usersService.findByIdOrThrow(userId);
+    if (!this.firestoreAllowsProTrial(user.subscription)) {
+      return { eligible: false };
+    }
+
+    let customerId: string | null;
+    try {
+      customerId = await this.liveCustomerId(user.subscription?.stripeCustomerId);
+    } catch (err) {
+      this.logger.warn(`Trial eligibility customer lookup failed for ${userId}: ${(err as Error).message}`);
+      return { eligible: false };
+    }
+    if (!customerId) {
+      return { eligible: true };
+    }
+
+    const eligible = await this.stripeHistoryAllowsTrial(
+      userId,
+      customerId,
+      !!user.subscription?.hasUsedTrial,
+    );
+    return { eligible };
+  }
+
   async createCheckoutSession(
     userId: string,
     selection: { plan: SubscriptionPlan; interval?: string },
     successUrl?: string,
     cancelUrl?: string,
+    expectTrial?: boolean,
   ) {
     const interval = this.normalizeInterval(selection?.interval);
 
@@ -212,26 +293,25 @@ export class PaymentService {
     // (`subscriptions.list` status=all, fail closed). `hasUsedTrial` is
     // defence-in-depth for residual cases (stale customer id, etc.) and is
     // never cleared. It does not replace the Stripe check.
+    //
+    // Same helper as GET /payments/trial-eligibility. `expectTrial` is the
+    // client's declaration: trial CTA sends true; paid Upgrade omits it.
+    // Mismatch → 400, no session (never a silent paid conversion).
     const trialOfferedOnPlan = selection.plan === SubscriptionPlan.PRO && TRIAL_PERIOD_DAYS > 0;
     let isFirstTimeSubscriber =
-      trialOfferedOnPlan &&
-      !user.subscription.stripeSubscriptionId &&
-      !user.subscription.hasUsedTrial;
+      trialOfferedOnPlan && this.firestoreAllowsProTrial(user.subscription);
     if (isFirstTimeSubscriber) {
-      try {
-        const prior = await this.stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 1 });
-        if (prior.data.length > 0) {
-          isFirstTimeSubscriber = false;
-          if (!user.subscription.hasUsedTrial) {
-            await this.usersService.updateSubscription(userId, { hasUsedTrial: true });
-          }
-        }
-      } catch (err) {
-        // Fail closed: if we cannot prove this is a first subscription, do not
-        // give away a trial.
-        this.logger.warn(`Trial eligibility check failed for ${userId}: ${(err as Error).message}`);
-        isFirstTimeSubscriber = false;
-      }
+      isFirstTimeSubscriber = await this.stripeHistoryAllowsTrial(
+        userId,
+        customerId,
+        !!user.subscription?.hasUsedTrial,
+      );
+    }
+    if (expectTrial === true && !isFirstTimeSubscriber) {
+      throw new BadRequestException({
+        message: 'A free trial is not available on this account.',
+        code: 'TRIAL_NOT_ELIGIBLE',
+      });
     }
     const subscriptionData = isFirstTimeSubscriber
       ? { trial_period_days: TRIAL_PERIOD_DAYS }
@@ -636,6 +716,24 @@ export class PaymentService {
     const userId = await this.findUserByCustomerId(subscription.customer as string);
     if (!userId) return;
 
+    await this.applyDeletedSubscriptionWrite(
+      userId,
+      subscription.id,
+      subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : new Date(),
+    );
+  }
+
+  /**
+   * The Firestore write `customer.subscription.deleted` performs. Shared with
+   * the cancel-at-period-end reconcile job so a dropped webhook and the job
+   * cannot diverge. Do not add a third downgrade path. Do not call
+   * {@link revokeToFree} from the job — that cancels in Stripe.
+   */
+  async applyDeletedSubscriptionWrite(
+    userId: string,
+    stripeSubscriptionId: string | null | undefined,
+    canceledAt: Date = new Date(),
+  ): Promise<void> {
     await this.usersService.updateSubscription(userId, {
       plan: SubscriptionPlan.FREE,
       status: SubscriptionStatus.CANCELED,
@@ -646,17 +744,46 @@ export class PaymentService {
     const freeLimit = PLAN_CONFIGS[SubscriptionPlan.FREE].limits;
     await this.usersService.updateUsage(userId, { aiCreditsLimit: freeLimit.aiCredits });
 
-    await this.syncSubscriptionRecord(subscription.id, {
+    await this.syncSubscriptionRecord(stripeSubscriptionId, {
       status: SubscriptionStatus.CANCELED,
       cancelAtPeriodEnd: false,
-      canceledAt: subscription.canceled_at
-        ? new Date(subscription.canceled_at * 1000)
-        : new Date(),
+      canceledAt,
     });
     this.logger.log(`Subscription deleted for user ${userId}, downgraded to free`);
     await this.audit.logSystemAction(AuditAction.SUBSCRIPTION_CANCELLED, 'subscription', userId, {
-      metadata: { stripeSubscriptionId: subscription.id },
+      metadata: { stripeSubscriptionId: stripeSubscriptionId ?? null },
     });
+  }
+
+  /**
+   * Stripe view of a subscription for the cancel-at-period-end job.
+   *
+   * `still-paid` — Stripe still considers them entitled (`active` / `trialing`).
+   * The job must not write Free.
+   * `ended` — canceled / missing / any other status; the deleted-handler write
+   * is safe.
+   * `retrieve-failed` — network, auth, or unknown error. Fail closed: no write.
+   * `resource_missing` is `ended`, not a retrieve failure — Stripe is saying
+   * the object is gone.
+   */
+  async inspectStripeSubscriptionForReconcile(
+    stripeSubscriptionId: string,
+  ): Promise<'still-paid' | 'ended' | 'retrieve-failed'> {
+    if (!this.stripe) {
+      return 'retrieve-failed';
+    }
+    try {
+      const sub = await this.stripe.subscriptions.retrieve(stripeSubscriptionId);
+      if (sub.status === 'active' || sub.status === 'trialing') {
+        return 'still-paid';
+      }
+      return 'ended';
+    } catch (err) {
+      if (PaymentService.isMissingResource(err)) {
+        return 'ended';
+      }
+      return 'retrieve-failed';
+    }
   }
 
   private async handleChargeRefunded(charge: Stripe.Charge) {

@@ -1,16 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // vi.hoisted runs before vi.mock hoisting, so the variable is available in the factory
-const { mockCurrentUser } = vi.hoisted(() => {
+const { mockCurrentUser, mockTrack } = vi.hoisted(() => {
   const mockCurrentUser: { currentUser: { getIdToken: () => Promise<string> } | null } = {
     currentUser: null,
   };
-  return { mockCurrentUser };
+  return { mockCurrentUser, mockTrack: vi.fn() };
 });
 
 // Mock the firebase module that api.ts depends on
 vi.mock('./firebase', () => ({
   auth: mockCurrentUser,
+}));
+
+vi.mock('./analytics', () => ({
+  track: mockTrack,
 }));
 
 // Import api AFTER mocks are set up
@@ -19,6 +23,7 @@ import { api, ApiError, isAiCreditUnconfirmed } from './api';
 describe('api lib', () => {
   beforeEach(() => {
     mockCurrentUser.currentUser = null;
+    mockTrack.mockReset();
     vi.stubGlobal('fetch', vi.fn());
   });
 
@@ -202,6 +207,29 @@ describe('api lib', () => {
       expect(refunded.code).toBe('AI_CREDIT_REFUNDED');
       expect(isAiCreditUnconfirmed(refunded)).toBe(false);
       expect(isAiCreditUnconfirmed(new Error('AI generation failed'))).toBe(false);
+    });
+
+    it('maps ABUSE_IDEMPOTENCY_CONFLICT onto abuse_rate_limited (catalog compromise)', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockReturnValue(
+        Promise.resolve({
+          ok: false,
+          status: 409,
+          headers: { get: () => null },
+          json: () =>
+            Promise.resolve({
+              message: 'This request is already in progress. Please wait and try again.',
+              code: 'ABUSE_IDEMPOTENCY_CONFLICT',
+            }),
+        } as unknown as Response),
+      );
+      const conflict = await api.post('/ai/cover-letter', {}).catch((e) => e);
+      expect(conflict).toBeInstanceOf(ApiError);
+      expect(conflict.status).toBe(409);
+      expect(conflict.retryable).toBe(false);
+      expect(conflict.code).toBe('ABUSE_IDEMPOTENCY_CONFLICT');
+      expect(mockTrack).toHaveBeenCalledWith('abuse_rate_limited', {
+        reason: 'ABUSE_IDEMPOTENCY_CONFLICT',
+      });
     });
 
     it('falls back to a status-bearing message when the body has none', async () => {

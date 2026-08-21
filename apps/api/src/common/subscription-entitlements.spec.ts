@@ -1,5 +1,6 @@
 import {
   resolveEffectivePlan,
+  CANCEL_AT_PERIOD_END_GRACE_MS,
   DELINQUENT_STATUSES,
   SubscriptionPlan,
   SubscriptionStatus,
@@ -216,6 +217,95 @@ describe('resolveEffectivePlan', () => {
       expect(
         resolveEffectivePlan(
           { plan: SubscriptionPlan.PRO, status: SubscriptionStatus.CANCELED, currentPeriodEnd: FUTURE },
+          NOW,
+        ),
+      ).toBe(SubscriptionPlan.PRO);
+    });
+  });
+
+  describe('cancelAtPeriodEnd (active until Stripe deletes; dropped webhook)', () => {
+    it('active PRO with cancelAtPeriodEnd still inside the paid period → PRO', () => {
+      expect(
+        resolveEffectivePlan(
+          {
+            plan: SubscriptionPlan.PRO,
+            status: SubscriptionStatus.ACTIVE,
+            cancelAtPeriodEnd: true,
+            currentPeriodEnd: FUTURE,
+          },
+          NOW,
+        ),
+      ).toBe(SubscriptionPlan.PRO);
+    });
+
+    it('active PRO with cancelAtPeriodEnd, period just ended, still inside the 15-minute grace → PRO', () => {
+      const justEnded = new Date(NOW.getTime() - 60 * 1000); // 1 minute ago
+      expect(
+        resolveEffectivePlan(
+          {
+            plan: SubscriptionPlan.PRO,
+            status: SubscriptionStatus.ACTIVE,
+            cancelAtPeriodEnd: true,
+            currentPeriodEnd: justEnded,
+          },
+          NOW,
+        ),
+      ).toBe(SubscriptionPlan.PRO);
+    });
+
+    it('active PRO with cancelAtPeriodEnd, exactly at periodEnd + grace → still PRO (boundary inclusive)', () => {
+      const atGraceEdge = new Date(NOW.getTime() - CANCEL_AT_PERIOD_END_GRACE_MS);
+      expect(
+        resolveEffectivePlan(
+          {
+            plan: SubscriptionPlan.PRO,
+            status: SubscriptionStatus.ACTIVE,
+            cancelAtPeriodEnd: true,
+            currentPeriodEnd: atGraceEdge,
+          },
+          NOW,
+        ),
+      ).toBe(SubscriptionPlan.PRO);
+    });
+
+    it('active PRO with cancelAtPeriodEnd, past periodEnd + grace → FREE', () => {
+      const pastGrace = new Date(NOW.getTime() - CANCEL_AT_PERIOD_END_GRACE_MS - 1);
+      expect(
+        resolveEffectivePlan(
+          {
+            plan: SubscriptionPlan.PRO,
+            status: SubscriptionStatus.ACTIVE,
+            cancelAtPeriodEnd: true,
+            currentPeriodEnd: pastGrace,
+          },
+          NOW,
+        ),
+      ).toBe(SubscriptionPlan.FREE);
+    });
+
+    it('active PRO with cancelAtPeriodEnd and unknown period end → FREE (fail safe)', () => {
+      expect(
+        resolveEffectivePlan(
+          {
+            plan: SubscriptionPlan.PRO,
+            status: SubscriptionStatus.ACTIVE,
+            cancelAtPeriodEnd: true,
+            currentPeriodEnd: null,
+          },
+          NOW,
+        ),
+      ).toBe(SubscriptionPlan.FREE);
+    });
+
+    it('active PRO without cancelAtPeriodEnd keeps PRO even if stored period end is stale', () => {
+      expect(
+        resolveEffectivePlan(
+          {
+            plan: SubscriptionPlan.PRO,
+            status: SubscriptionStatus.ACTIVE,
+            cancelAtPeriodEnd: false,
+            currentPeriodEnd: PAST,
+          },
           NOW,
         ),
       ).toBe(SubscriptionPlan.PRO);

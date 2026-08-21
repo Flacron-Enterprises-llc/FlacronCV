@@ -25,14 +25,31 @@ export class PaymentController {
   @Post('create-checkout-session')
   async createCheckout(
     @CurrentUser() user: FirebaseUser,
-    @Body() body: { plan: SubscriptionPlan; interval?: string; successUrl?: string; cancelUrl?: string },
+    @Body()
+    body: {
+      plan: SubscriptionPlan;
+      interval?: string;
+      successUrl?: string;
+      cancelUrl?: string;
+      expectTrial?: boolean;
+    },
   ) {
     return this.paymentService.createCheckoutSession(
       user.uid,
       { plan: body.plan, interval: body.interval },
       body.successUrl,
       body.cancelUrl,
+      body.expectTrial === true,
     );
+  }
+
+  /**
+   * Billing-page Pro CTA only. Does not create a Stripe customer.
+   * Fail-closed: the client must not label a trial until this returns eligible.
+   */
+  @Get('trial-eligibility')
+  async getTrialEligibility(@CurrentUser() user: FirebaseUser) {
+    return this.paymentService.getTrialEligibility(user.uid);
   }
 
   @Post('verify-session')

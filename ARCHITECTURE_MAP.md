@@ -86,7 +86,7 @@ access until the token expires (open MEDIUM in `AUDIT_OPEN_FINDINGS.md`).
 | `cover-letter` | Cover letters + AI improve | `CoverLetterService` | Firestore, `AIService` |
 | `ai` | Summary, ATS check, interview prep, LinkedIn, import parsing; class-level `aiEnabled` | `AIService` (+ unregistered watsonx/anthropic providers) | OpenAI |
 | `export` | Export quota gate (client reserve/confirm/refund + server Puppeteer path) | `ExportService` | Puppeteer, `export_reservations` |
-| `payment` | Checkout, webhooks, plan lifecycle, invoices, portal | `PaymentService` | Stripe |
+| `payment` | Checkout, webhooks, plan lifecycle, invoices, portal, Pro trial eligibility GET, cancel-at-period-end reconcile | `PaymentService`, `CancelAtPeriodEndReconcileService` | Stripe, Firestore |
 | `templates` | Template catalogue + tier gating | `TemplatesService` | Firestore |
 | `jobs` | Job-application tracker | `JobsService` | Firestore |
 | `support` | Tickets, messages, internal notes | `SupportService` | Firestore |
@@ -228,7 +228,7 @@ session and must not delete the account.
 | `OPENAI_API_KEY` | AI features | **required** |
 | `STRIPE_SECRET_KEY` | Stripe API | **required** |
 | `STRIPE_WEBHOOK_SECRET` | Webhook signature verification (trimmed in code — a stray space silently breaks the HMAC) | **required** |
-| `STRIPE_PRO_MONTHLY_PRICE_ID` / `STRIPE_PRO_YEARLY_PRICE_ID` / `STRIPE_ENTERPRISE_MONTHLY_PRICE_ID` / `STRIPE_ENTERPRISE_YEARLY_PRICE_ID` | Override the compiled-in price ids; **env wins over `PLAN_CONFIGS`** | optional |
+| `STRIPE_PRO_MONTHLY_PRICE_ID` / `STRIPE_PRO_YEARLY_PRICE_ID` / `STRIPE_ENTERPRISE_MONTHLY_PRICE_ID` / `STRIPE_ENTERPRISE_YEARLY_PRICE_ID` | Price ids. **Env wins over `PLAN_CONFIGS`.** Optional for `sk_test_`. **Required at API boot when `STRIPE_SECRET_KEY` is live** (`assertLiveStripePricesConfigured`) — compiled fallbacks are the test account and must not be charged. Live ids stay in env, never in `subscription.types.ts`. | optional (`sk_test_`); **required** (`sk_live_`) |
 | `AWS_REGION` | SES region (default `us-east-1`) | optional |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | **Omit on AWS** to use the task IAM role | optional |
 | `SES_FROM_EMAIL` | **FROM address. Defaults to `no-reply@flacronenterprises.com` — the parent domain** | should be set |
@@ -476,3 +476,39 @@ the job. `SITE_URL` in `apps/web/src/lib/seo.ts` is the single fallback; it now 
 host on the deploy platform, and because it is `NEXT_PUBLIC_*` that requires a **rebuild**, not a
 redeploy. The Dockerfile/ECS path fails the build if it is missing; Amplify (the live frontend)
 has no equivalent guard.
+
+**14. A non-empty `PLAN_CONFIGS.stripePriceIdMonthly` means the plan is for sale.**
+`isPlanPurchasable()` / `customerFacingPlans()` hide a paid plan when that field is empty
+(Career Accelerator is the example). Emptying the compiled Pro/Enterprise fallbacks to
+"remove test ids" hides them on public pricing, in-app billing, comparison, and JSON-LD.
+Those strings are **test-account fallbacks** for `sk_test_` only. A live
+`STRIPE_SECRET_KEY` must set the four `STRIPE_*_PRICE_ID` env vars (`assertLiveStripePricesConfigured`
+in `apps/api/src/config/stripe-live-prices.ts`); `resolvePriceId` then **ignores** compiled
+ids. Live price ids belong in env, **never** in `subscription.types.ts`. The
+`verify-yearly-prices.mjs` "copy into stripePriceIdYearly" hint is the **wrong** path —
+that is how a later account switch 500s checkout with "No such price". Confirm live yearly
+ids by Stripe Price `recurring.interval === year`, `unit_amount` matching $299.99 / $999.99
+USD, `active === true`, and the id retrieving at all.
+
+**15. The Pro trial label is decided on the server, not from Firestore flags.**
+`GET /payments/trial-eligibility` (billing mount only) lists Stripe history and
+heals `hasUsedTrial`. It must **not** create a customer. Checkout sends
+`expectTrial: true` only from the trial CTA; mismatch is `400` /
+`TRIAL_NOT_ELIGIBLE` and creates **no** session. Do not show `start_trial`
+from `!stripeSubscriptionId && !hasUsedTrial` alone — that was the silent
+paid-conversion bug.
+
+**16. Cancel-at-period-end is still `status: active` until Stripe deletes.**
+`customer.subscription.updated` writes `cancelAtPeriodEnd` and keeps the stored
+plan Pro. `customer.subscription.deleted` is what writes Free. A dropped
+deleted webhook left Pro entitlements forever. `resolveEffectivePlan` now
+returns Free when `cancelAtPeriodEnd` is set and `currentPeriodEnd` plus a
+**15-minute** grace has passed (`CANCEL_AT_PERIOD_END_GRACE_MS`). The billing
+page still reads the stored plan; `CancelAtPeriodEndReconcileService` heals
+that doc every **15 minutes** (and on boot) by Stripe-retrieving the expired
+subset and reusing `applyDeletedSubscriptionWrite`. Skip if Stripe is still
+`active`/`trialing`, if retrieve fails, or if there is no subscription id —
+logged as `still-active` / `retrieve-failed` / `no-subscription-id` (uid only;
+never email or subscription id). Query is `cancelAtPeriodEnd == true` only; no
+composite index. Do not treat a stale `currentPeriodEnd` on an *uncancelled*
+active sub as expired. Do not push the entitlement change without this job.

@@ -208,8 +208,9 @@ browser as a 500. Client header ↔ allowlist parity is gated by
 - `STRIPE_WEBHOOK_SECRET` is `.trim()`ed in `apps/api/src/config/configuration.ts:23` because a
   trailing space or stray carriage return is invisible in a dashboard field but changes the HMAC key,
   and the resulting signature mismatch gives no hint that the secret is malformed.
-- Stripe webhook path is `POST /api/v1/webhooks/stripe`. `stripe listen` forwarding for local testing
-  is documented in `README.md`.
+- Stripe webhook path is `POST /api/v1/webhooks/stripe`. Local forwarding:
+  `stripe listen --forward-to localhost:4000/api/v1/webhooks/stripe`
+  (`/api/v1/payments/webhook` is not a route; a bootstrap spec 404s it).
 
 ---
 

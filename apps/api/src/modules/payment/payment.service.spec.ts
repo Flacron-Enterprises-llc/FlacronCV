@@ -161,6 +161,53 @@ describe('PaymentService', () => {
       );
     });
 
+    it('does not fall back to PLAN_CONFIGS when the secret is live', () => {
+      const cfg = makeConfig();
+      cfg.get = jest.fn((key: string) => {
+        if (key === 'stripe.secretKey') return 'sk_live_x';
+        if (key === 'stripe.prices') return {};
+        return '';
+      });
+      const liveService = new PaymentService(
+        cfg,
+        makeFirebaseAdmin(firestore),
+        usersService,
+        audit as any,
+      );
+      const resolve = (liveService as never as {
+        resolvePriceId(p: SubscriptionPlan, i: string): string | null;
+      }).resolvePriceId.bind(liveService);
+
+      expect(resolve(SubscriptionPlan.PRO, 'month')).toBeNull();
+      expect(resolve(SubscriptionPlan.PRO, 'year')).toBeNull();
+    });
+
+    it('uses env prices under a live secret', () => {
+      const cfg = makeConfig({
+        proMonthly: 'price_live_pro_month',
+        proYearly: 'price_live_pro_year',
+      });
+      cfg.get = jest.fn((key: string) => {
+        if (key === 'stripe.secretKey') return 'sk_live_x';
+        if (key === 'stripe.prices') {
+          return { proMonthly: 'price_live_pro_month', proYearly: 'price_live_pro_year' };
+        }
+        return '';
+      });
+      const liveService = new PaymentService(
+        cfg,
+        makeFirebaseAdmin(firestore),
+        usersService,
+        audit as any,
+      );
+      const resolve = (liveService as never as {
+        resolvePriceId(p: SubscriptionPlan, i: string): string | null;
+      }).resolvePriceId.bind(liveService);
+
+      expect(resolve(SubscriptionPlan.PRO, 'month')).toBe('price_live_pro_month');
+      expect(resolve(SubscriptionPlan.PRO, 'year')).toBe('price_live_pro_year');
+    });
+
     /**
      * The two clients spell the interval differently — the web page uses
      * 'monthly'/'yearly', the mobile app sends the BillingInterval enum
@@ -861,6 +908,128 @@ describe('PaymentService', () => {
       expect(create).toHaveBeenCalledWith(
         expect.not.objectContaining({ subscription_data: expect.anything() }),
       );
+    });
+
+    it('refuses checkout when expectTrial is set but Stripe history exists (no session)', async () => {
+      await seedUser(firestore, 'u-mismatch', {
+        subscription: { plan: SubscriptionPlan.FREE, stripeCustomerId: 'cus_mm', stripeSubscriptionId: null },
+      });
+      const create = jest.fn();
+      (service as any).stripe = {
+        customers: liveCustomers(),
+        checkout: { sessions: { create } },
+        subscriptions: { list: jest.fn().mockResolvedValue({ data: [{ id: 'sub_old', status: 'canceled' }] }) },
+      };
+
+      try {
+        await service.createCheckoutSession(
+          'u-mismatch',
+          { plan: SubscriptionPlan.PRO },
+          'http://ok',
+          'http://cancel',
+          true,
+        );
+        throw new Error('expected TRIAL_NOT_ELIGIBLE');
+      } catch (err) {
+        expect(err).toBeInstanceOf(BadRequestException);
+        expect((err as BadRequestException).getResponse()).toEqual(
+          expect.objectContaining({ code: 'TRIAL_NOT_ELIGIBLE' }),
+        );
+      }
+      expect(create).not.toHaveBeenCalled();
+      expect(usersService.updateSubscription).toHaveBeenCalledWith(
+        'u-mismatch',
+        expect.objectContaining({ hasUsedTrial: true }),
+      );
+    });
+
+    it('still creates a paid session when expectTrial is omitted and history exists', async () => {
+      await seedUser(firestore, 'u-paid-ok', {
+        subscription: { plan: SubscriptionPlan.FREE, stripeCustomerId: 'cus_paid', stripeSubscriptionId: null },
+      });
+      const create = jest.fn().mockResolvedValue({ id: 'cs_paid', url: 'https://stripe.test/cs' });
+      (service as any).stripe = {
+        customers: liveCustomers(),
+        checkout: { sessions: { create } },
+        subscriptions: { list: jest.fn().mockResolvedValue({ data: [{ id: 'sub_old' }] }) },
+      };
+
+      await service.createCheckoutSession(
+        'u-paid-ok',
+        { plan: SubscriptionPlan.PRO },
+        'http://ok',
+        'http://cancel',
+      );
+
+      expect(create).toHaveBeenCalledWith(
+        expect.not.objectContaining({ subscription_data: expect.anything() }),
+      );
+    });
+  });
+
+  describe('getTrialEligibility', () => {
+    it('does not create a Stripe customer when none is stored', async () => {
+      await seedUser(firestore, 'u-elig-new', {
+        subscription: { plan: SubscriptionPlan.FREE, stripeCustomerId: null, stripeSubscriptionId: null },
+      });
+      const createCustomer = jest.fn();
+      const list = jest.fn();
+      (service as any).stripe = {
+        customers: { ...liveCustomers(), create: createCustomer },
+        subscriptions: { list },
+      };
+
+      await expect(service.getTrialEligibility('u-elig-new')).resolves.toEqual({ eligible: true });
+      expect(createCustomer).not.toHaveBeenCalled();
+      expect(list).not.toHaveBeenCalled();
+    });
+
+    it('returns false and heals hasUsedTrial when Stripe has prior subscriptions', async () => {
+      await seedUser(firestore, 'u-elig-hist', {
+        subscription: { plan: SubscriptionPlan.FREE, stripeCustomerId: 'cus_h', stripeSubscriptionId: null },
+      });
+      const createCustomer = jest.fn();
+      (service as any).stripe = {
+        customers: { ...liveCustomers(), create: createCustomer },
+        subscriptions: { list: jest.fn().mockResolvedValue({ data: [{ id: 'sub_old' }] }) },
+      };
+
+      await expect(service.getTrialEligibility('u-elig-hist')).resolves.toEqual({ eligible: false });
+      expect(createCustomer).not.toHaveBeenCalled();
+      expect(usersService.updateSubscription).toHaveBeenCalledWith(
+        'u-elig-hist',
+        expect.objectContaining({ hasUsedTrial: true }),
+      );
+    });
+
+    it('fails closed when Stripe list throws', async () => {
+      await seedUser(firestore, 'u-elig-err', {
+        subscription: { plan: SubscriptionPlan.FREE, stripeCustomerId: 'cus_e' },
+      });
+      (service as any).stripe = {
+        customers: liveCustomers(),
+        subscriptions: { list: jest.fn().mockRejectedValue(new Error('stripe down')) },
+      };
+
+      await expect(service.getTrialEligibility('u-elig-err')).resolves.toEqual({ eligible: false });
+    });
+
+    it('returns false when hasUsedTrial is already set (no Stripe list)', async () => {
+      await seedUser(firestore, 'u-elig-flag', {
+        subscription: {
+          plan: SubscriptionPlan.FREE,
+          stripeCustomerId: 'cus_f',
+          hasUsedTrial: true,
+        },
+      });
+      const list = jest.fn();
+      (service as any).stripe = {
+        customers: liveCustomers(),
+        subscriptions: { list },
+      };
+
+      await expect(service.getTrialEligibility('u-elig-flag')).resolves.toEqual({ eligible: false });
+      expect(list).not.toHaveBeenCalled();
     });
   });
 

@@ -19,6 +19,14 @@
  * opaque `reason` string. Device, IP, and network hashes, emails, and tokens
  * must never be passed as event props.
  *
+ * `abuse_rate_limited` reasons: `ABUSE_NETWORK_CREATE_CAP`,
+ * `ABUSE_UID_RATE_LIMIT`, `http_429` (cap / throttle hits) — and
+ * `ABUSE_IDEMPOTENCY_CONFLICT` as a **deliberate compromise**, not a
+ * semantic match. That code is a duplicate in-flight request (HTTP 409),
+ * not a cap being hit; it lives here only because this is the existing
+ * "please wait" event (no fifth catalog name). Split `abuse_rate_limited`
+ * by `reason` for true cap counts.
+ *
  * §49 AI: `ai_generation` sends `{ feature }` only — never `tokensUsed` or a
  * dollar cost (none exists in the product). Server audit rows record tokens on
  * `/ai/*` via `withAudit`, plus `cover-letter-generate` and `resume-import`.
@@ -58,6 +66,11 @@ export interface EventPropMap {
   abuse_grant_blocked: { reason?: string };
   abuse_step_up: { reason?: string };
   abuse_email_unverified: { reason?: string };
+  /**
+   * Cap hits (`ABUSE_NETWORK_CREATE_CAP`, `ABUSE_UID_RATE_LIMIT`, `http_429`)
+   * plus `ABUSE_IDEMPOTENCY_CONFLICT` (compromise — duplicate in-flight, not
+   * a cap). Split by `reason` for true rate-limit counts.
+   */
   abuse_rate_limited: { reason?: string };
 }
 

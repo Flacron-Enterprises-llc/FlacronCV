@@ -229,7 +229,7 @@ plan is never activated — which looks like a broken upgrade.
 stripe login
 
 # 2. Forward webhooks to the local API (leave running)
-stripe listen --forward-to localhost:4000/api/v1/payments/webhook
+stripe listen --forward-to localhost:4000/api/v1/webhooks/stripe
 
 # 3. Copy the whsec_… it prints into apps/api/.env as STRIPE_WEBHOOK_SECRET,
 #    then restart the API. Signature verification will now pass.

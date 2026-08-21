@@ -100,11 +100,13 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
     priceMonthly: 29.99,
     // $299.99/year against $359.88 billed monthly — a saving of $59.89 (17%).
     priceYearly: 299.99,
-    // These are FALLBACKS. STRIPE_PRO_MONTHLY_PRICE_ID / _YEARLY_ in the API's
-    // env win when set — see PaymentService.resolvePriceId. A price id belongs
-    // to one Stripe account, so it cannot be a constant shared across
-    // environments; the previous values here (…AWDS7HwRCx…) were left behind by
-    // an account switch and made every checkout fail with "No such price".
+    // These are FALLBACKS for `sk_test_` only. A live secret must set
+    // STRIPE_PRO_*_PRICE_ID in env — see PaymentService.resolvePriceId and
+    // assertLiveStripePricesConfigured. Do not put live ids here (next account
+    // switch repeats "No such price"). Do not empty them either: a non-empty
+    // stripePriceIdMonthly is the customer-facing "for sale" pin
+    // (isPlanPurchasable / customerFacingPlans). Emptying it hides the plan
+    // on pricing, billing, comparison, and JSON-LD.
     stripePriceIdMonthly: 'price_1U0xNhKFLhrvSzkgWFAU2LuD',
     // Verified interval=year, $299.99 USD, active in acct_1HUAchKFLhrvSzkg —
     // see scripts/verify-yearly-prices.mjs.
@@ -206,7 +208,10 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
 // offers together, with no further code change. Do not fill it by accident.
 // Admin CRM grant still lists every plan regardless of this rule.
 
-/** True when `plan` has a real Stripe monthly price and can be checked out. */
+/** True when `plan` has a real Stripe monthly price and can be checked out.
+ *  A non-empty `stripePriceIdMonthly` is the "for sale" flag. Emptying the
+ *  compiled fallbacks to "clean up" test ids hides the plan on every customer
+ *  surface. Live charges must still come from env, not these strings. */
 export function isPlanPurchasable(plan: SubscriptionPlan): boolean {
   return !!PLAN_CONFIGS[plan].stripePriceIdMonthly;
 }
@@ -261,8 +266,10 @@ export function yearlySavingsPercent(plan: SubscriptionPlan): number {
  * page, and `PaymentService.allowedCheckoutPriceIds()`, so the UI and the
  * server can never disagree about whether annual plans are for sale.
  *
- * Before changing an annual price id, re-run:
+ * Before changing an annual price id used in **test** fallbacks, re-run
  *     node apps/api/scripts/verify-yearly-prices.mjs
+ * (test secret only). **Live** yearly ids go in STRIPE_PRO_YEARLY_PRICE_ID /
+ * STRIPE_ENTERPRISE_YEARLY_PRICE_ID, not in this file.
  *
  * A price id does not encode its billing interval, so a MONTH-interval price
  * sits in `stripePriceIdYearly` perfectly happily and bills twelve times too

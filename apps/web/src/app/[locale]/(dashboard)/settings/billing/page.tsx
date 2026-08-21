@@ -5,8 +5,8 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams, usePathname } from 'next/navigation';
 import { useAuth } from '@/providers/AuthProvider';
-import { api } from '@/lib/api';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { api, ApiError } from '@/lib/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   User,
   SubscriptionPlan,
@@ -37,9 +37,12 @@ import {
 import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
 import { toDate } from '@/lib/format-date';
+import { legalDocLinks } from '@/components/auth/LegalAcceptanceModal';
 
 export default function BillingPage(): React.JSX.Element | null {
   const t = useTranslations('billing');
+  const tPricing = useTranslations('pricing');
+  const queryClient = useQueryClient();
   const { user, refreshUser } = useAuth();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -67,6 +70,20 @@ export default function BillingPage(): React.JSX.Element | null {
   const currentPlan = user?.subscription?.plan || SubscriptionPlan.FREE;
   const currentPlanConfig = PLAN_CONFIGS[currentPlan];
   const isFreePlan = currentPlan === SubscriptionPlan.FREE;
+
+  // Server is the source of truth for the Pro trial label. Fail closed: never
+  // show Start trial from Firestore flags alone (MC2 residual / MC5).
+  const {
+    data: trialEligibility,
+    isLoading: trialEligibilityLoading,
+    refetch: refetchTrialEligibility,
+  } = useQuery({
+    queryKey: ['trial-eligibility'],
+    queryFn: () => api.get<{ eligible: boolean }>('/payments/trial-eligibility'),
+    enabled: !!user && isFreePlan,
+  });
+  const trialEligible = trialEligibility?.eligible === true;
+  const proAwaitingEligibility = isFreePlan && trialEligibilityLoading;
 
   // Fetch usage stats
   const { data: usage } = useQuery({
@@ -110,7 +127,15 @@ export default function BillingPage(): React.JSX.Element | null {
 
   // Create checkout session mutation
   const checkoutMutation = useMutation({
-    mutationFn: ({ plan, interval }: { plan: SubscriptionPlan; interval: 'monthly' | 'yearly' }) => {
+    mutationFn: ({
+      plan,
+      interval,
+      expectTrial,
+    }: {
+      plan: SubscriptionPlan;
+      interval: 'monthly' | 'yearly';
+      expectTrial?: boolean;
+    }) => {
       // A plan with no configured Stripe price (e.g. Career Accelerator until
       // the client sets it) is not purchasable. This stays a client-side check
       // so the user gets "coming soon" rather than a round-trip and an error.
@@ -125,6 +150,7 @@ export default function BillingPage(): React.JSX.Element | null {
         interval,
         successUrl: `${window.location.origin}/${locale}/settings/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${window.location.origin}/${locale}/settings/billing?canceled=true`,
+        ...(expectTrial ? { expectTrial: true } : {}),
       });
     },
     onSuccess: (data, variables) => {
@@ -132,6 +158,13 @@ export default function BillingPage(): React.JSX.Element | null {
       window.location.href = data.url;
     },
     onError: (error: Error) => {
+      if (error instanceof ApiError && error.code === 'TRIAL_NOT_ELIGIBLE') {
+        toast.error(t('trial_not_eligible'));
+        queryClient.setQueryData(['trial-eligibility'], { eligible: false });
+        void refreshUser();
+        void refetchTrialEligibility();
+        return;
+      }
       toast.error(error.message || t('checkoutError'));
     },
   });
@@ -252,13 +285,14 @@ export default function BillingPage(): React.JSX.Element | null {
   // launch pin. Do not fill it by accident.
   const careerPurchasable = isPlanPurchasable(SubscriptionPlan.CAREER_ACCELERATOR);
 
-  // A never-subscribed user is eligible for the Pro free trial (mirrors the
-  // backend). Enterprise never gets a trial — it goes straight to checkout.
-  const trialEligible = TRIAL_PERIOD_DAYS > 0 && !user?.subscription?.stripeSubscriptionId;
+  // Label comes only from GET /payments/trial-eligibility. Until that returns
+  // eligible: true, this is Upgrade (or a loading CTA) — never Start trial.
   const isTrialing = user?.subscription?.status === 'trialing';
-  const proCta = trialEligible
-    ? t('start_trial', { days: TRIAL_PERIOD_DAYS })
-    : t('upgradeTo', { plan: 'Pro' });
+  const proCta = proAwaitingEligibility
+    ? t('checking_trial')
+    : trialEligible
+      ? t('start_trial', { days: TRIAL_PERIOD_DAYS })
+      : t('upgradeTo', { plan: 'Pro' });
   const enterpriseCta = t('choose_enterprise');
   const trialDisclosure =
     trialEligible
@@ -453,8 +487,15 @@ export default function BillingPage(): React.JSX.Element | null {
             </ul>
             <Button
               className="w-full"
-              onClick={() => checkoutMutation.mutate({ plan: SubscriptionPlan.PRO, interval: billingInterval })}
-              loading={checkoutMutation.isPending}
+              onClick={() =>
+                checkoutMutation.mutate({
+                  plan: SubscriptionPlan.PRO,
+                  interval: billingInterval,
+                  ...(trialEligible ? { expectTrial: true } : {}),
+                })
+              }
+              loading={checkoutMutation.isPending || proAwaitingEligibility}
+              disabled={proAwaitingEligibility}
               icon={<Zap className="h-4 w-4" />}
             >
               {proCta}
@@ -544,6 +585,14 @@ export default function BillingPage(): React.JSX.Element | null {
             </Button>
           </Card>
         </div>
+        {/* I.7 — at the checkout CTAs, not on Stripe's hosted page. One
+            block for all three cards so we do not repeat it per plan. */}
+        <p className="mt-6 text-center text-xs leading-5 text-stone-500 dark:text-stone-400">
+          {tPricing('terms_renewal_desc')}
+        </p>
+        <p className="mt-2 text-center text-xs leading-5 text-stone-500 dark:text-stone-400">
+          {t.rich('checkout_legal', legalDocLinks())}
+        </p>
         </>
       )}
 

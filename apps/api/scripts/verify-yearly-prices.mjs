@@ -94,10 +94,10 @@ for (const [plan, { env: envKey, advertised }] of Object.entries(EXPECTED)) {
 }
 
 if (ready) {
-  console.log('READY. To enable annual billing:');
-  console.log('  1. Copy these ids into stripePriceIdYearly in packages/shared-types/src/subscription.types.ts');
-  console.log('  2. Set YEARLY_BILLING_ENABLED = true in the same file');
-  console.log('  3. pnpm --filter @flacroncv/shared-types build && pnpm --filter api test\n');
+  console.log('READY for annual billing in THIS Stripe account.');
+  console.log('  Live ids belong in the four STRIPE_*_PRICE_ID env vars on the API.');
+  console.log('  Do NOT copy them into packages/shared-types PLAN_CONFIGS — those');
+  console.log('  compiled fallbacks are the test account; a live secret must not use them.\n');
 } else {
   console.log('NOT READY — annual billing must stay disabled.');
   console.log('Create a recurring price with interval = "year" for each plan in the Stripe');
