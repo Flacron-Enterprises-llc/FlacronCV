@@ -12,7 +12,7 @@
 > 4. Tick completed items here; log every change in the Change Log.
 > 5. Report Out-of-Scope / architectural items separately — do not implement without approval.
 
-Last updated: 2026-08-21
+Last updated: 2026-08-22
 
 > **Note on dates.** The header previously read `2026-07-29` while the two newest change-log
 > entries were dated `2026-07-30`; the header was stale, the entries were right. Corrected
@@ -40,6 +40,7 @@ Last updated: 2026-08-21
 - Plans/entitlements: `packages/shared-types/src/subscription.types.ts` (`PLAN_CONFIGS`)
 - Locales: `apps/web/public/locales/<loc>/common.json`
 - English legal bodies: `apps/web/src/legal/*.ts` (chrome still in `t()`)
+- Launch QA: `QA_LAUNCH_CHECKLIST.md` (Phase 1 before live Stripe)
 
 ---
 
@@ -51,6 +52,8 @@ Last updated: 2026-08-21
 - ⚠️ Uses the **real (production) Firebase project `flacron-cv`** for local dev — the client
   chose this. A dedicated dev/emulator project is still the recommended long-term setup.
 - To run: `cd apps/api && pnpm dev` and `cd apps/web && pnpm dev`.
+- Stripe webhooks on localhost: `stripe listen --forward-to localhost:4000/api/v1/webhooks/stripe`.
+  `/api/v1/payments/webhook` is not a route. Required for `QA_LAUNCH_CHECKLIST.md` Phase 1.
 
 ---
 
@@ -279,8 +282,13 @@ Legend: ✓ done · ◐ partial · ✗ missing · ⤵ deferred/decision-needed
   (`logo-ink-dark.png` on light / `logo-ink-light.png` on dark). **Standing client request — do not
   re-discover:** both PNGs still have an **opaque baked-in rectangle** (on-dark is a black box).
   Needed from the brand owner: **transparent SVG exports at matched proportions**. See §8.
-- ◐ **SEO** — homepage has metadata/OG/JSON-LD; **every page** needs proper metadata, canonical,
-  sitemap.xml, robots, structured data, per-locale hreflang. Full SEO audit required.
+- ✅ **SEO** — Batch D shipped (canonical www, sitemap, robots, `pageMetadata`,
+  hreflang, Organization/WebSite/SoftwareApplication/FAQ/BreadcrumbList, private
+  `noindex`). 2026-08-22 leftovers: FAQ JSON-LD Free cadence aligned with
+  `faq.a1`; `/testimonials` omitted from the sitemap until real quotes exist;
+  nav/footer `#features`/`#pricing` are locale-prefixed. Homepage
+  `generateMetadata` is still English-only (hand-rolled; localisation is a
+  separate change). Apex→www is still **302**, not 301 (CDN).
 - ◐ Security / accessibility / mobile responsiveness — improved on reviewed sections; remaining pages pending.
 - ✗ Admin controls / analytics dashboards / enterprise capabilities — partial admin exists; verify vs PDF.
 
@@ -935,6 +943,38 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-22 — **Export-limit error cadence.** API.
+  `exportLimitReachedMessage` in `export.service.ts`: Free is `(2)` with no
+  `/month`; paid numeric caps keep `/month`. The client reserve path already
+  returned `limit_reached` without cadence; this is the Puppeteer/server
+  `ForbiddenException`. Spec added. **Not the same bug:** CV / cover-letter /
+  AI wall strings have no `/month`. Stale `FEATURES_COMPLETE.md:66` and
+  `AUDIT_OPEN_FINDINGS.md:83` marked next to the FAQ dual-copy note in
+  `ARCHITECTURE_MAP.md` §8 Tier 4.
+
+- 2026-08-22 — **SEO leftovers MC1–MC3 (not a new SEO batch).** Web only.
+  **MC1** — `faqPage()` Free cadence: no `/month` on Free AI/exports; “never
+  reset”; Pro CVs/letters/credits keep `/month`. Guarded in `json-ld.test.ts`.
+  FAQ is said twice (`faq.a1`/`a2` locale JSON vs this schema) — noted in
+  `json-ld.ts` and `ARCHITECTURE_MAP.md` §8 Tier 4 so the next cadence edit
+  cannot miss one copy the way Batch E did. **MC2** — `/testimonials` dropped
+  from `sitemap.ts` (page stays empty; no placeholders). **MC3** — Navbar and
+  Footer Features/Pricing use next-intl `Link href="/#…"` so the locale is
+  kept. **§1** SEO status was stale (still said every page needs metadata);
+  Batch D already shipped that. Homepage `generateMetadata` localisation is
+  still a separate change. Not done: apex 302→301 (CDN);
+  `export.service.ts` still says `(N/month)` on the export-limit error for
+  every plan, including Free.
+
+- 2026-08-21 — **Batch M Part 3 — `QA_LAUNCH_CHECKLIST.md`.** Operator
+  checklist only (no product code). Three phases in one file: Phase 1 must
+  pass before live Stripe (auth, billing states, Checkout, portal, Free
+  limits, export refund, AI no-charge copy); Phase 2 core product with
+  grouped palettes/TOCs; Phase 3 admin/CRM plus the Batch K visual list.
+  Setup requires `stripe listen --forward-to localhost:4000/api/v1/webhooks/stripe`.
+  Lines that need listen are marked `{LISTEN}`. Failure/edge states sit on
+  the same line as the control.
 
 - 2026-08-21 — **MC9 — cancel-at-period-end reconcile job.** API. Separate
   `CancelAtPeriodEndReconcileService` in the payment module (not

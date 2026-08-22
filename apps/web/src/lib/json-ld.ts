@@ -89,6 +89,11 @@ function countPhrase(value: number | 'unlimited', singular: string, plural: stri
  * FAQ on the page is translated. Plan quantities are interpolated from
  * PLAN_CONFIGS so this cannot drift from the paywall the way a restated
  * "5 CVs" can.
+ *
+ * The FAQ is said twice: `faq.a1`/`faq.a2` in locale JSON (humans) and this
+ * block (crawlers). Cadence wording must match both — Batch E corrected the
+ * visible copy and this schema kept Free `/month`. If you change one, change
+ * the other.
  */
 export function faqPage() {
   const free = PLAN_CONFIGS[SubscriptionPlan.FREE].limits;
@@ -104,7 +109,7 @@ export function faqPage() {
         name: 'Is FlacronCV really free?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `Yes! The Free plan lets you create up to ${countPhrase(free.cvs, 'CV', 'CVs')}, ${countPhrase(free.coverLetters, 'cover letter', 'cover letters')}, use ${countPhrase(free.aiCredits, 'AI credit', 'AI credits')}/month, and export up to ${countPhrase(free.exports, 'document', 'documents')}/month as PDF — no credit card required. Upgrade to Pro for ${countPhrase(pro.cvs, 'CV', 'CVs')}, ${countPhrase(pro.coverLetters, 'cover letter', 'cover letters')}, ${countPhrase(pro.aiCredits, 'AI credit', 'AI credits')}, ${countPhrase(pro.exports, 'export', 'exports')}, and DOCX format.`,
+          text: `Yes! The Free plan lets you create up to ${countPhrase(free.cvs, 'CV', 'CVs')}, ${countPhrase(free.coverLetters, 'cover letter', 'cover letters')}, use ${countPhrase(free.aiCredits, 'AI credit', 'AI credits')}, and export up to ${countPhrase(free.exports, 'document', 'documents')} as PDF — those allowances never reset, and no credit card is required. Upgrade to Pro for ${countPhrase(pro.cvs, 'CV', 'CVs')}/month, ${countPhrase(pro.coverLetters, 'cover letter', 'cover letters')}/month, ${countPhrase(pro.aiCredits, 'AI credit', 'AI credits')}/month, ${countPhrase(pro.exports, 'export', 'exports')}, and DOCX format.`,
         },
       },
       {
@@ -112,7 +117,7 @@ export function faqPage() {
         name: 'What export formats are supported?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `All plans support PDF export. Pro and Enterprise plans also unlock DOCX (Microsoft Word) format. The Free plan includes ${countPhrase(free.exports, 'export', 'exports')}/month; Pro offers ${countPhrase(pro.exports, 'export', 'exports')} and Enterprise offers ${countPhrase(enterprise.exports, 'export', 'exports')}.`,
+          text: `All plans support PDF export. Pro and Enterprise plans also unlock DOCX (Microsoft Word) format. The Free plan includes ${countPhrase(free.exports, 'export', 'exports')}; Pro offers ${countPhrase(pro.exports, 'export', 'exports')} and Enterprise offers ${countPhrase(enterprise.exports, 'export', 'exports')}.`,
         },
       },
       {

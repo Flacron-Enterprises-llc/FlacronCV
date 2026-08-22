@@ -14,6 +14,10 @@ describe('sitemap', () => {
     );
   });
 
+  it('omits /testimonials until real quotes exist', () => {
+    expect(urls.some((u) => u.includes('/testimonials'))).toBe(false);
+  });
+
   it('lists English legal bodies once, canonicalised to en, with en + x-default only', () => {
     for (const path of ['/terms-of-service', '/cookie-policy', '/disclaimer', '/refund-policy']) {
       const matches = entries.filter((e) => e.url.endsWith(path));

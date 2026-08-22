@@ -82,6 +82,11 @@ these 30 remain, ordered by severity.
 
 **Impact:** The DOCX-export paywall — a headline Pro/Enterprise differentiator listed in every plan's feature bullets — and the free plan's 2-exports/month cap can both be bypassed by anyone willing to open devtools. Free accounts get unlimited PDF and DOCX exports, removing a primary reason to upgrade.
 
+> **Cadence in the sentence above is stale (2026-08-22).** Free exports never
+> reset; they are not `/month`. Leave the rest of this finding as written —
+> it is a historical enforcement note. Cadence truth: `PLAN_CONFIGS` /
+> `ARCHITECTURE_MAP.md` §8 Tier 4.
+
 **Fix:** Make the server the producer for gated formats: route DOCX through the existing server-side `exportCVToDocx` / `exportCoverLetterToDocx` (which already call `checkDocxAccess`) rather than generating it in the browser, and keep client-side generation for the free PDF path only. If client-side DOCX must stay, the honest position is that DOCX cannot be paywalled and the quota is advisory — say so in the code comment rather than claiming enforcement.
 
 ## [LOW] /admin and /crm strand the user on an unbreakable spinner whenever the account sync never succeeds

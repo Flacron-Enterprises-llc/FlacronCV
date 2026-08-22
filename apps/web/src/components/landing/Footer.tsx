@@ -59,22 +59,22 @@ export default function Footer() {
             </h3>
             <ul className="mt-3 space-y-2">
               <li>
-                <a
+                <Link
                   href="/#features"
                   onClick={(e) => handleSectionLink(e, 'features')}
                   className={linkClass}
                 >
                   {t('nav.features')}
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/#pricing"
                   onClick={(e) => handleSectionLink(e, 'pricing')}
                   className={linkClass}
                 >
                   {t('nav.pricing')}
-                </a>
+                </Link>
               </li>
               <li>
                 <Link href="/templates" className={linkClass}>

@@ -67,6 +67,10 @@
 - **Pro Plan:** Unlimited
 - **Enterprise Plan:** Unlimited
 
+> **STALE (2026-08-22).** Do not copy cadence from this list. Free AI credits
+> never reset (not `/month`). Pro is 100/month, Enterprise 500/month — neither
+> is unlimited. Truth: `PLAN_CONFIGS` and `ARCHITECTURE_MAP.md` §8 Tier 4.
+
 **AI Operations that use credits:**
 - Cover letter generation with AI
 - Cover letter AI improve

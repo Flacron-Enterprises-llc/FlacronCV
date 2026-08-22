@@ -16,6 +16,15 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 
+/** Cadence follows the plan: Free never resets, paid numeric caps are monthly. */
+export function exportLimitReachedMessage(
+  plan: SubscriptionPlan,
+  limit: number,
+): string {
+  const cadence = plan === SubscriptionPlan.FREE ? '' : '/month';
+  return `Export limit reached for your plan (${limit}${cadence}). Please upgrade.`;
+}
+
 // Simple semaphore to cap concurrent Puppeteer processes
 class Semaphore {
   private queue: Array<() => void> = [];
@@ -51,11 +60,10 @@ export class ExportService {
   private async checkExportLimit(userId: string): Promise<void> {
     await this.abuse.assertNewConsumption(userId, 'export');
     const user = await this.usersService.findByIdOrThrow(userId);
-    const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
+    const plan = resolveEffectivePlan(user.subscription);
+    const limits = PLAN_CONFIGS[plan].limits;
     if (limits.exports !== 'unlimited' && user.usage.exportsThisMonth >= limits.exports) {
-      throw new ForbiddenException(
-        `Export limit reached for your plan (${limits.exports}/month). Please upgrade.`,
-      );
+      throw new ForbiddenException(exportLimitReachedMessage(plan, limits.exports));
     }
   }
 

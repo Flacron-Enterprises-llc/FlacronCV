@@ -21,9 +21,14 @@ describe('faqPage', () => {
     expect(answers).toContain(
       `${free.coverLetters} ${free.coverLetters === 1 ? 'cover letter' : 'cover letters'}`,
     );
-    expect(answers).toContain(`${free.aiCredits} AI credits/month`);
-    expect(answers).toContain(`${pro.cvs} CVs`);
-    expect(answers).toContain(`${pro.coverLetters} cover letters`);
+    expect(answers).toContain(`${free.aiCredits} AI credits`);
+    expect(answers).not.toContain(`${free.aiCredits} AI credits/month`);
+    expect(answers).not.toContain(`${free.exports} documents/month`);
+    expect(answers).not.toContain(`${free.exports} exports/month`);
+    expect(answers).toContain('those allowances never reset');
+    expect(answers).toContain(`${pro.cvs} CVs/month`);
+    expect(answers).toContain(`${pro.coverLetters} cover letters/month`);
+    expect(answers).toContain(`${pro.aiCredits} AI credits/month`);
   });
 
   it('does not restate a limit as a numeric literal in the builder source', () => {

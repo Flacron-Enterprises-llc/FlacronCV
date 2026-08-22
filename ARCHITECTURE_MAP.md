@@ -370,12 +370,18 @@ The five CV-builder modals are the mild case — each already caps against
 
 - `apps/web/src/lib/json-ld.ts` `softwareApplication()` offers — **Batch E:** iterates
   `customerFacingPlans()`, so Career Accelerator is omitted while unpurchasable.
-- `apps/web/src/lib/json-ld.ts` `faqPage()` — **was** hardcoded Free/Pro limits in
-  `[locale]/page.tsx`; now interpolates `PLAN_CONFIGS`. Guarded by
-  `apps/web/src/lib/json-ld.test.ts`. The **visible** FAQ copy at
-  `en/common.json` `faq.a1` still restates the same numbers (and still says
-  Free exports `/month`) and is **not** covered by that guard. `faq.a2` dropped
-  `/month` on Free exports in Batch E.
+- `apps/web/src/lib/json-ld.ts` `faqPage()` — interpolates `PLAN_CONFIGS`.
+  Guarded by `apps/web/src/lib/json-ld.test.ts`. **The FAQ is said twice:**
+  locale JSON `faq.a1`/`faq.a2` (humans) and this schema (crawlers). Cadence
+  must match both — Batch E corrected the visible copy and the schema kept
+  Free `/month` until 2026-08-22. Change one, check the other.
+  `faq.a1` still restates the numbers (not covered by the interpolation guard).
+  **Also stale (not Google-facing; will mislead anyone who reads them for the
+  truth):** `FEATURES_COMPLETE.md:66` still says Free “5 AI credits/month”
+  (Free never resets; Pro is 100, not unlimited); `AUDIT_OPEN_FINDINGS.md:83`
+  still says “2-exports/month cap”. Cadence truth is `PLAN_CONFIGS` + `faq.a1`.
+  The server export-limit error is `exportLimitReachedMessage` in
+  `apps/api/src/modules/export/export.service.ts` (Free has no `/month`).
 - `packages/shared-types/src/subscription.types.ts` `features` are **English string
   literals** rendered on the public pricing page, billing upgrade cards and the paywall modal. Open
   MEDIUM in `AUDIT_OPEN_FINDINGS.md:63`; the one place "goes through `PLAN_CONFIGS`" and "is

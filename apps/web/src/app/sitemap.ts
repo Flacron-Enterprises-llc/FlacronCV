@@ -12,12 +12,14 @@ import { SITE_URL, LOCALES, DEFAULT_LOCALE } from '@/lib/seo';
 //     /ar/… for RTL, but the sitemap must not advertise five translations that
 //     do not exist. One loc (the en URL) with hreflang en + x-default only.
 // Privacy stays localized until MC1 (client must name AWS SES and OpenAI).
+// /testimonials is a real route (honest empty state) but is not listed here
+// until there are real, verifiable quotes — a thin URL in the sitemap is a
+// quality signal. Do not fill the page with placeholders to justify a loc.
 const LOCALIZED_PATHS = [
   '',
   '/templates',
   '/about-us',
   '/contact-us',
-  '/testimonials',
   '/privacy-policy',
 ];
 

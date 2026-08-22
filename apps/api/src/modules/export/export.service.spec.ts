@@ -1,6 +1,6 @@
-import { ExportService } from './export.service';
+import { ExportService, exportLimitReachedMessage } from './export.service';
 import { InMemoryFirestore } from '../firebase/in-memory-firestore';
-import { SubscriptionPlan, SubscriptionStatus } from '@flacroncv/shared-types';
+import { PLAN_CONFIGS, SubscriptionPlan, SubscriptionStatus } from '@flacroncv/shared-types';
 
 function makeFirebaseAdmin(firestore: InMemoryFirestore) {
   return { firestore } as any;
@@ -170,6 +170,22 @@ describe('ExportService client export reserve / refund / confirm', () => {
       expect(await service.confirmClientExport('uid', reservationId!)).toBe('confirmed');
       expect(await service.refundClientExport('uid', reservationId!)).toEqual({ refunded: false });
       expect(await used(firestore, 'uid')).toBe(1);
+    });
+  });
+
+  describe('exportLimitReachedMessage', () => {
+    it('Free copy does not promise a monthly reset', () => {
+      const free = PLAN_CONFIGS[SubscriptionPlan.FREE].limits.exports as number;
+      expect(exportLimitReachedMessage(SubscriptionPlan.FREE, free)).toBe(
+        `Export limit reached for your plan (${free}). Please upgrade.`,
+      );
+      expect(exportLimitReachedMessage(SubscriptionPlan.FREE, free)).not.toContain('/month');
+    });
+
+    it('paid numeric copy keeps monthly cadence', () => {
+      expect(exportLimitReachedMessage(SubscriptionPlan.PRO, 10)).toBe(
+        'Export limit reached for your plan (10/month). Please upgrade.',
+      );
     });
   });
 
