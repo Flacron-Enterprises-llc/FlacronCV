@@ -10,7 +10,11 @@ describe('footer AI CV Builder link', () => {
     // href would become /es/en/ai-cv-builder. locale="en" is the supported
     // switch and is what this assertion pins.
     expect(src).toMatch(/href="\/ai-cv-builder"/);
+    expect(src).toMatch(/href="\/ai-cover-letter-generator"/);
+    expect(src).toMatch(/href="\/ats-cv-checker"/);
     expect(src).toMatch(/locale="en"/);
     expect(src).not.toMatch(/href="\/en\/ai-cv-builder"/);
+    expect(src).not.toMatch(/href="\/en\/ai-cover-letter-generator"/);
+    expect(src).not.toMatch(/href="\/en\/ats-cv-checker"/);
   });
 });

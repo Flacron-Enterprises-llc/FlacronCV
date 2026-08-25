@@ -69,7 +69,7 @@
     "ai_writing": "AI Writing Assistant",
     "ai_writing_desc": "AI writes compelling bullet points, summaries, and cover letters for your target role.",
     "templates": "Professional Templates",
-    "templates_desc": "16 professionally designed CV and cover-letter templates.",
+    "templates_desc": "Browse CV and cover letter templates. Have a look before you sign up.",
     "multilingual": "Multilingual Support",
     "multilingual_desc": "Build your CV and cover letter in any of 6 languages, including right-to-left Arabic and Urdu.",
     "export": "Multiple Export Formats",
@@ -181,7 +181,9 @@
     "powered_by_engine": "Flacron Engine",
     "disclaimer": "AI, ATS & Employment Disclaimer",
     "refund": "Refund Policy",
-    "ai_cv_builder": "AI CV Builder"
+    "ai_cv_builder": "AI CV Builder",
+    "ai_cover_letter": "AI Cover Letter Generator",
+    "ai_ats_check": "ATS CV Checker"
   },
   "auth": {
     "login_title": "Welcome Back",
@@ -269,7 +271,7 @@
     "create_cover_letter_desc": "Generate with AI or write your own",
     "templates_desc": "Browse professional templates",
     "upgrade_title": "Get more out of FlacronCV",
-    "upgrade_desc": "Go Pro for 10 CVs, 20 cover letters, 100 monthly AI credits, unlimited exports, and every template.",
+    "upgrade_desc": "Go Pro for 10 CVs/month, 20 cover letters/month, 100 AI credits/month, unlimited exports, and Pro templates.",
     "upgrade_cta": "Upgrade to Pro",
     "degraded_title": "Account information is temporarily unavailable",
     "degraded_desc": "We could not load your account details right now. Your documents are safe — please try again in a moment.",
@@ -1322,7 +1324,7 @@
   },
   "public_templates": {
     "title": "Browse Professional Templates",
-    "subtitle": "Browse our 16 CV and cover letter templates. No login required to look around.",
+    "subtitle": "Browse CV and cover letter templates. Have a look before you sign up.",
     "use_template": "Use Template",
     "login_to_use": "Sign In to Use",
     "buy_template": "Upgrade to Use",
@@ -2025,6 +2027,12 @@
     "plan_includes": "The {plan} plan includes:",
     "upgrade_now": "Upgrade now",
     "maybe_later": "Maybe later",
+    "template_reach": {
+      "free": "Free templates only",
+      "pro": "Pro templates",
+      "career_accelerator": "All Pro templates",
+      "enterprise": "All templates"
+    },
     "reasons": {
       "ai_credits": {
         "title": "You're out of AI credits",
@@ -2044,7 +2052,7 @@
       },
       "templates": {
         "title": "This template needs a paid plan",
-        "description": "This design is part of our premium set. Upgrade to unlock every template for your CVs and cover letters."
+        "description": "Upgrade to unlock {reach} for your CVs and cover letters."
       },
       "cvs": {
         "title": "CV limit reached",

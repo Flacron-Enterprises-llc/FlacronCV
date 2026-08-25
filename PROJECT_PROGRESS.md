@@ -40,7 +40,7 @@ Last updated: 2026-08-25
 - Plans/entitlements: `packages/shared-types/src/subscription.types.ts` (`PLAN_CONFIGS`)
 - Locales: `apps/web/public/locales/<loc>/common.json`
 - English legal bodies: `apps/web/src/legal/*.ts` (chrome still in `t()`)
-- English landing copy: `apps/web/src/content/ai-cv-builder.ts` (`englishDocument`, no LegalDocumentView)
+- English landing copy: `apps/web/src/content/ai-cv-builder.ts`, `apps/web/src/content/ai-cover-letter-generator.ts`, `apps/web/src/content/ats-cv-checker.ts` (`englishDocument`, no LegalDocumentView); `apps/web/src/content/public-templates.ts` (unique body on `/en/templates` only, not a new path)
 - Launch QA: `QA_LAUNCH_CHECKLIST.md` (Phase 1 before live Stripe)
 
 ---
@@ -762,6 +762,31 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 8. Out-of-scope / architectural recommendations (do NOT implement without approval)
 
+- **⚠️ ADDED 2026-08-26 — Sold, not code-gated (client decision).** Do not
+  strip these without the operator. They appear on paid `features[]` / the
+  billing comparison and nothing in the API treats them differently.
+  - **Priority support** — every paid plan’s `features[]`, and the comparison
+    table ticks `plan !== FREE`. There is no support-queue, SLA, or ticket
+    priority field. May be a human process rather than a product entitlement.
+  - **Career Accelerator “All AI career tools (ATS, Interview Prep, LinkedIn)”**
+    — those routes are credit-gated for every plan (`ai.controller.ts`), not
+    CA-exclusive. The line sells uniqueness the server does not enforce.
+- **⚠️ ADDED 2026-08-25 — Known restatements of plan/catalogue facts.** Do not
+  edit these in a drive-by; a limit change must update the source first, then
+  every restatement. Template oversell on Pro/CA (`limits.templates` as `'all'`)
+  was closed 2026-08-26; `limits.templates` is now the max reachable plan.
+  - `faq.a1` × 6 — Free and Pro allowance numbers + cadence. Source of truth:
+    `PLAN_CONFIGS.limits` and paid-vs-Free reset in `usage-reset.service.ts`.
+    Homepage JSON-LD `faqPage()` interpolates `limits`; the visible FAQ does not.
+  - `faq.a2` × 6 — “2 exports”, Pro/Enterprise unlimited, DOCX. Source:
+    `PLAN_CONFIGS.limits.exports`; DOCX is not in `limits` (gated in
+    `export.service.ts` as paid-only). JSON-LD interpolates export counts only.
+  - `terms.ts` §6 Free-plan bullets (`5 CVs`, `1 Cover Letter`, `5 AI Credits`,
+    `2 Exports`). Source: `PLAN_CONFIGS[FREE].limits`. Legal body, not `t()`.
+  - `features.multilingual_desc` × 6 and `about.story_desc` × 6 — “6 languages”.
+    Source: the locale set (`LOCALES` / `apps/web/public/locales/`).
+  - `faq.a6` × 6 (and JSON-LD language answer) — names the six locales; also
+    claims Portuguese, Italian, and Chinese “coming soon” (not in code).
 - **⚠️ ADDED 2026-08-25 — Aspirational / outcome copy still live, awaiting
   client decision.** Do not rewrite these without approval. Same class as
   §19 (interviews, offers, employment) but softer phrasing. Fixed 2026-08-25:
@@ -937,6 +962,12 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   the 64px bar (the stacked mark's taglines vanish at navbar height). Until those files exist,
   Navbar and Footer stay on-dark on navy and the rectangle remains. This is a standing request to
   the client, not a one-off changelog note.
+  **⚠️ UPDATED 2026-08-25 — Favicon is the third surface blocked by the same missing asset.**
+  Tab icons were regenerated from `logo-schema.png` (512×512 FC on white) so 16/32px show a
+  legible mark instead of a black field with an orange fragment. That still ships an **opaque
+  white square** on dark browser chrome. The brand owner still needs to supply a **square FC
+  mark with a transparent background, designed to hold together at 16px**. Until then three
+  surfaces share one gap: **navy header, footer, favicon**.
 - **⚠️ ADDED 2026-08-19 — Mobile localisation gap (one list).** `apps/mobile` is not on the
   six-locale pipeline (no next-intl). English-only by existing limitation, not by choice:
   1. CV list delete `Alert.alert` — `apps/mobile/app/(dashboard)/cvs/index.tsx`
@@ -970,6 +1001,67 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-26 — **`/en/ats-cv-checker`.** Web only. Same English-document SEO as
+  `/en/ai-cv-builder` (not LegalDocumentView). Unique copy in
+  `apps/web/src/content/ats-cv-checker.ts` (21 keys). Limits section sits
+  second; mid is 3 cards; how is one paragraph; Pricing only (no FAQ, no
+  `faqPage()` JSON-LD). Related strip to CV builder (`locale="en"`) and
+  `/templates`. Footer Product label `footer.ai_ats_check` × 6,
+  `locale="en"`. Sitemap one loc, hreflang `en` + `x-default`. Copy shipped
+  as supplied; §19 flags in the review note, not rewritten here.
+
+- 2026-08-26 — **Upgrade-modal template sentence.** Web. Description interpolates
+  `{reach}` from `limits.templates` of the plan the modal is selling (today
+  Pro), via `upgrade_modal.template_reach.*` × 6. No hardcoded “every
+  template” / plan name in that sentence. English reach labels pinned to
+  `templateFeatureLine`.
+
+- 2026-08-26 — **Pro/CA template oversell (MC1–MC2).** Shared-types + api
+  spec + billing comparison + `dashboard.upgrade_desc` × 6. `limits.templates`
+  is now the max reachable `SubscriptionPlan` (not `'all'`). Pro pricing /
+  upgrade / mobile cards derive “Pro templates”; comparison “All Templates”
+  ticks Enterprise only. `plan-advertising.spec.ts` asserts `planMeetsTier`,
+  the DOCX gate, and reset cadence. Contained compile change — `PlanLimits` is
+  not stored on user docs. Features generator still held. Priority support and
+  CA AI-tools uniqueness recorded in §8, not removed.
+
+- 2026-08-25 — **`dashboard.upgrade_desc` Pro cadence.** Web locales only.
+  All three Pro numeric caps now read `/month` (CVs, cover letters, AI
+  credits), matching `PLAN_CONFIGS[PRO].limits` + paid monthly reset. Known
+  restatements (`faq.a1`/`a2`, `terms.ts` §6, language counts) recorded in
+  §8, not edited.
+
+- 2026-08-25 — **Templates close_title + homepage `templates_desc`.** Web
+  only. `/en/templates` close is “document you can send” (not “finished”).
+  Homepage `features.templates_desc` × 6 no longer hardcodes “16 templates”;
+  same invitation wording as `public_templates.subtitle`. Remaining restated
+  catalogue/plan counts listed in the review note, not edited here.
+
+- 2026-08-25 — **`/templates` English unique body + subtitle count.** Web
+  only. No new path. Mid (3 cards), close (3 steps), and a related strip to
+  both English landings (`locale="en"`) render when `locale === 'en'` from
+  `apps/web/src/content/public-templates.ts` (19 keys). Other locales keep
+  the gallery. Not `englishDocument`; sitemap/hreflang unchanged. No
+  ItemList or FAQ JSON-LD. `public_templates.subtitle` × 6 no longer
+  hardcodes “16 templates”.
+
+- 2026-08-25 — **`/en/ai-cover-letter-generator`.** Web only. Same English-document
+  SEO as `/en/ai-cv-builder` (not LegalDocumentView). Unique copy in
+  `apps/web/src/content/ai-cover-letter-generator.ts` (24 keys). Mid is 3 cards,
+  close is 3 steps, Pricing only (no FAQ, no `faqPage()` JSON-LD). Reciprocal
+  related strip both ways, `locale="en"`. Footer Product label
+  `footer.ai_cover_letter` × 6. Sitemap one loc, hreflang `en` + `x-default`.
+  `close_title` is “letter you can send” (not “finished”); CTA band uses
+  `cta_title`, not a second H1.
+
+- 2026-08-25 — **Favicon regen from `logo-schema.png`.** Web public assets only.
+  Replaced black-background favicon/apple-touch/android-chrome set with crops
+  from the 512×512 white FC mark (~8% edge pad; maskable ~20%). Symptom fix:
+  tab shows a legible FC instead of an orange fragment. Still an opaque white
+  square on dark browser chrome — transparent 16px-capable mark remains a §8
+  brand ask (header, footer, favicon). No package.json dependency; one-shot
+  system Pillow. Metadata/`site.webmanifest` paths unchanged.
 
 - 2026-08-25 — **MC1–MC2 outcome-claim leftovers.** Web: hero floating card
   `mockup_interview_calls` is no longer “3 interview calls”; label/value are

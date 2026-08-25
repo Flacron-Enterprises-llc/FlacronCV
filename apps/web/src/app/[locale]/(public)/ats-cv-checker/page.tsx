@@ -6,25 +6,15 @@ import JsonLd from '@/components/seo/JsonLd';
 import { pageBreadcrumbs } from '@/lib/json-ld';
 import Button from '@/components/ui/Button';
 import Pricing from '@/components/landing/Pricing';
-import FAQ from '@/components/landing/FAQ';
-import { AI_CV_BUILDER, AI_CV_BUILDER_PATH } from '@/content/ai-cv-builder';
-import {
-  FileText,
-  List,
-  Mail,
-  Target,
-  LayoutTemplate,
-  Sparkles,
-  Download,
-  ArrowRight,
-} from 'lucide-react';
+import { ATS_CV_CHECKER, ATS_CV_CHECKER_PATH } from '@/content/ats-cv-checker';
+import { Percent, List, Pencil, ArrowRight } from 'lucide-react';
 
 export async function generateMetadata(): Promise<Metadata> {
   return pageMetadata({
     locale: 'en',
-    path: AI_CV_BUILDER_PATH,
-    title: AI_CV_BUILDER.title,
-    description: AI_CV_BUILDER.subtitle,
+    path: ATS_CV_CHECKER_PATH,
+    title: ATS_CV_CHECKER.title,
+    description: ATS_CV_CHECKER.subtitle,
     englishDocument: true,
   });
 }
@@ -51,15 +41,13 @@ function CopyCard({
   );
 }
 
-export default async function AiCvBuilderPage() {
+export default async function AtsCvCheckerPage() {
   const tNav = await getTranslations();
-  const copy = AI_CV_BUILDER;
+  const copy = ATS_CV_CHECKER;
 
   return (
     <>
-      <JsonLd
-        data={pageBreadcrumbs('en', tNav('nav.home'), copy.title, AI_CV_BUILDER_PATH)}
-      />
+      <JsonLd data={pageBreadcrumbs('en', tNav('nav.home'), copy.title, ATS_CV_CHECKER_PATH)} />
 
       <section className="border-b border-stone-200 bg-gradient-to-b from-brand-50 to-white dark:border-stone-800 dark:from-stone-900 dark:to-black">
         <div className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 lg:px-8">
@@ -79,35 +67,34 @@ export default async function AiCvBuilderPage() {
         </div>
       </section>
 
+      <section className="border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-black">
+        <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
+          <h2 className="mb-4 text-center text-2xl font-bold text-stone-900 dark:text-white">
+            {copy.limit_title}
+          </h2>
+          <p className="text-center text-stone-600 dark:text-stone-400">{copy.limit_desc}</p>
+        </div>
+      </section>
+
       <section className="border-b border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950">
         <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
           <h2 className="mb-2 text-center text-2xl font-bold text-stone-900 dark:text-white">
             {copy.mid_title}
           </h2>
-          <p className="mb-10 text-center text-stone-500 dark:text-stone-400">
-            {copy.mid_subtitle}
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <CopyCard icon={FileText} title={copy.mid1_title} desc={copy.mid1_desc} />
+          <p className="mb-10 text-center text-stone-500 dark:text-stone-400">{copy.mid_subtitle}</p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <CopyCard icon={Percent} title={copy.mid1_title} desc={copy.mid1_desc} />
             <CopyCard icon={List} title={copy.mid2_title} desc={copy.mid2_desc} />
-            <CopyCard icon={Mail} title={copy.mid3_title} desc={copy.mid3_desc} />
-            <CopyCard icon={Target} title={copy.mid4_title} desc={copy.mid4_desc} />
+            <CopyCard icon={Pencil} title={copy.mid3_title} desc={copy.mid3_desc} />
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
-        <h2 className="mb-2 text-center text-2xl font-bold text-stone-900 dark:text-white">
-          {copy.close_title}
+      <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
+        <h2 className="mb-4 text-center text-2xl font-bold text-stone-900 dark:text-white">
+          {copy.how_title}
         </h2>
-        <p className="mb-10 text-center text-stone-500 dark:text-stone-400">
-          {copy.close_subtitle}
-        </p>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <CopyCard icon={LayoutTemplate} title={copy.close1_title} desc={copy.close1_desc} />
-          <CopyCard icon={Sparkles} title={copy.close2_title} desc={copy.close2_desc} />
-          <CopyCard icon={Download} title={copy.close3_title} desc={copy.close3_desc} />
-        </div>
+        <p className="text-center text-stone-600 dark:text-stone-400">{copy.how_desc}</p>
       </section>
 
       <section className="border-t border-stone-200 bg-gradient-to-br from-brand-600 to-brand-700 dark:border-stone-800">
@@ -130,20 +117,25 @@ export default async function AiCvBuilderPage() {
       <section className="border-b border-stone-200 bg-white py-12 dark:border-stone-800 dark:bg-stone-950">
         <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
           <p className="text-stone-600 dark:text-stone-400">{copy.related_title}</p>
-          <div className="mt-4">
+          <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-8">
             <Link
-              href="/ai-cover-letter-generator"
+              href="/ai-cv-builder"
               locale="en"
               className="text-sm font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
             >
-              {copy.related_cta}
+              {copy.related_cv_cta}
+            </Link>
+            <Link
+              href="/templates"
+              className="text-sm font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+            >
+              {copy.related_templates_cta}
             </Link>
           </div>
         </div>
       </section>
 
       <Pricing />
-      <FAQ />
     </>
   );
 }

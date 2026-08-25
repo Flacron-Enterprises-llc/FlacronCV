@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useMemo } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import { useQuery } from '@tanstack/react-query';
@@ -28,6 +28,10 @@ import {
   Eye,
   Search,
   X,
+  FileText,
+  Pencil,
+  Mail,
+  Download,
 } from 'lucide-react';
 import {
   Template,
@@ -38,6 +42,7 @@ import {
   type CVLayout,
 } from '@flacroncv/shared-types';
 import { Link } from '@/i18n/routing';
+import { PUBLIC_TEMPLATES_EN } from '@/content/public-templates';
 
 /* ─── Constants ─── */
 
@@ -180,10 +185,33 @@ function SkeletonCard() {
   );
 }
 
+function CopyCard({
+  icon: Icon,
+  title,
+  desc,
+}: {
+  icon: React.ElementType;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <div className="flex gap-4 rounded-xl border border-stone-200 bg-white p-6 dark:border-stone-800 dark:bg-stone-900">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950 dark:text-brand-400">
+        <Icon className="h-5 w-5" aria-hidden="true" />
+      </div>
+      <div>
+        <h3 className="font-semibold text-stone-900 dark:text-white">{title}</h3>
+        <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">{desc}</p>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main page ─── */
 
 export default function PublicTemplatesPage(): React.JSX.Element | null {
   const t = useTranslations();
+  const locale = useLocale();
   const router = useRouter();
   const { user } = useAuth();
 
@@ -293,6 +321,64 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
           </p>
         </div>
       </section>
+
+      {locale === 'en' && (
+        <>
+          <section className="border-b border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950">
+            <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+              <h2 className="mb-2 text-center text-2xl font-bold text-stone-900 dark:text-white">
+                {PUBLIC_TEMPLATES_EN.mid_title}
+              </h2>
+              <p className="mb-10 text-center text-stone-500 dark:text-stone-400">
+                {PUBLIC_TEMPLATES_EN.mid_subtitle}
+              </p>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <CopyCard
+                  icon={FileText}
+                  title={PUBLIC_TEMPLATES_EN.mid1_title}
+                  desc={PUBLIC_TEMPLATES_EN.mid1_desc}
+                />
+                <CopyCard
+                  icon={Pencil}
+                  title={PUBLIC_TEMPLATES_EN.mid2_title}
+                  desc={PUBLIC_TEMPLATES_EN.mid2_desc}
+                />
+                <CopyCard
+                  icon={Mail}
+                  title={PUBLIC_TEMPLATES_EN.mid3_title}
+                  desc={PUBLIC_TEMPLATES_EN.mid3_desc}
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+            <h2 className="mb-2 text-center text-2xl font-bold text-stone-900 dark:text-white">
+              {PUBLIC_TEMPLATES_EN.close_title}
+            </h2>
+            <p className="mb-10 text-center text-stone-500 dark:text-stone-400">
+              {PUBLIC_TEMPLATES_EN.close_subtitle}
+            </p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <CopyCard
+                icon={LayoutTemplate}
+                title={PUBLIC_TEMPLATES_EN.close1_title}
+                desc={PUBLIC_TEMPLATES_EN.close1_desc}
+              />
+              <CopyCard
+                icon={Sparkles}
+                title={PUBLIC_TEMPLATES_EN.close2_title}
+                desc={PUBLIC_TEMPLATES_EN.close2_desc}
+              />
+              <CopyCard
+                icon={Download}
+                title={PUBLIC_TEMPLATES_EN.close3_title}
+                desc={PUBLIC_TEMPLATES_EN.close3_desc}
+              />
+            </div>
+          </section>
+        </>
+      )}
 
       {/* Content */}
       <section className="mx-auto max-w-7xl space-y-6 px-4 py-10 sm:px-6 lg:px-8">
@@ -608,6 +694,30 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
           </div>
         </div>
       </section>
+
+      {locale === 'en' && (
+        <section className="border-b border-stone-200 bg-white py-12 dark:border-stone-800 dark:bg-stone-950">
+          <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
+            <p className="text-stone-600 dark:text-stone-400">{PUBLIC_TEMPLATES_EN.related_title}</p>
+            <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-8">
+              <Link
+                href="/ai-cv-builder"
+                locale="en"
+                className="text-sm font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+              >
+                {PUBLIC_TEMPLATES_EN.related_cv_cta}
+              </Link>
+              <Link
+                href="/ai-cover-letter-generator"
+                locale="en"
+                className="text-sm font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+              >
+                {PUBLIC_TEMPLATES_EN.related_letter_cta}
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Full-screen preview modal — uses real template renderer */}
       {previewTemplate && (

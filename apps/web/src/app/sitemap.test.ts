@@ -25,6 +25,8 @@ describe('sitemap', () => {
       '/disclaimer',
       '/refund-policy',
       '/ai-cv-builder',
+      '/ai-cover-letter-generator',
+      '/ats-cv-checker',
     ]) {
       const matches = entries.filter((e) => e.url.endsWith(path));
       expect(matches).toHaveLength(1);

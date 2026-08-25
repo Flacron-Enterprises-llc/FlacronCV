@@ -6,20 +6,29 @@ import {
   YEARLY_BILLING_ENABLED,
   yearlySavings,
   yearlySavingsPercent,
+  planMeetsTier,
+  CV_TEMPLATE_TIER,
+  COVER_LETTER_TEMPLATE_TIER,
+  templateFeatureLine,
 } from '@flacroncv/shared-types';
 
 /**
- * The client asked us to guarantee that "usage limits shown publicly exactly
- * match the limits enforced in the backend".
+ * Advertising must match ENFORCEMENT, not another claim.
  *
- * Each plan's marketing `features` list is hand-written prose while `limits` is
- * what the server actually enforces, so the two can silently drift — a plan's
- * cap could be raised in `limits` and the pricing page would keep advertising
- * the old number (or worse, the reverse: advertise more than we grant). These
- * tests parse the numbers back out of the advertised copy and assert they agree
- * with the enforced values, so any future edit to one without the other fails
- * CI instead of shipping.
+ * `features[]` vs `limits[]` used to compare two handwritten lists, so Pro
+ * could say "All templates" while `limits.templates` said `'all'` and
+ * `planMeetsTier` still refused Enterprise-tier catalogue ids. This file
+ * asserts against the gates that actually run:
+ *   - templates: `planMeetsTier` + `CV_TEMPLATE_TIER` / `COVER_LETTER_TEMPLATE_TIER`
+ *   - DOCX: `plan === FREE` in `export.service.ts` `recordClientExport`
+ *   - cadence: Free is skipped in `usage-reset.service.ts`; paid numeric caps reset
+ *
+ * Quantity lines still compare to `limits.*` because those fields are what
+ * `cv.service` / `cover-letter.service` / `export.service` / AI credit checks
+ * read. That is the enforced cap, not a second slogan.
  */
+
+const PLANS = Object.values(SubscriptionPlan);
 
 /** Pull the leading number out of a feature line, or 'unlimited'. */
 function advertised(features: string[], noun: RegExp): number | 'unlimited' | null {
@@ -30,43 +39,120 @@ function advertised(features: string[], noun: RegExp): number | 'unlimited' | nu
   return m ? Number(m[1].replace(/,/g, '')) : null;
 }
 
-describe('advertised plan features match enforced limits', () => {
-  const plans = Object.values(SubscriptionPlan);
+function templateLine(plan: SubscriptionPlan): string | undefined {
+  return PLAN_CONFIGS[plan].features.find((f) => /templates/i.test(f));
+}
 
-  it.each(plans)('%s — CV allowance', (plan) => {
+function allowanceLine(plan: SubscriptionPlan, noun: RegExp): string | undefined {
+  return PLAN_CONFIGS[plan].features.find((f) => noun.test(f));
+}
+
+describe('advertised template access matches planMeetsTier', () => {
+  it.each(PLANS)('%s — limits.templates is the plan’s own max reachable tier', (plan) => {
+    expect(PLAN_CONFIGS[plan].limits.templates).toBe(plan);
+  });
+
+  it.each(PLANS)('%s — every built-in CV template', (plan) => {
+    const max = PLAN_CONFIGS[plan].limits.templates;
+    for (const [id, required] of Object.entries(CV_TEMPLATE_TIER)) {
+      expect({ id, advertised: planMeetsTier(max, required) }).toEqual({
+        id,
+        advertised: planMeetsTier(plan, required),
+      });
+    }
+  });
+
+  it.each(PLANS)('%s — every built-in cover-letter template', (plan) => {
+    const max = PLAN_CONFIGS[plan].limits.templates;
+    for (const [id, required] of Object.entries(COVER_LETTER_TEMPLATE_TIER)) {
+      expect({ id, advertised: planMeetsTier(max, required) }).toEqual({
+        id,
+        advertised: planMeetsTier(plan, required),
+      });
+    }
+  });
+
+  it.each(PLANS)('%s — pricing-card template line is derived from that tier', (plan) => {
+    expect(templateLine(plan)).toBe(templateFeatureLine(PLAN_CONFIGS[plan].limits.templates));
+  });
+
+  it('Pro and Career Accelerator are not sold Enterprise-tier templates', () => {
+    for (const plan of [SubscriptionPlan.PRO, SubscriptionPlan.CAREER_ACCELERATOR]) {
+      expect(planMeetsTier(plan, SubscriptionPlan.ENTERPRISE)).toBe(false);
+      expect(PLAN_CONFIGS[plan].features.join(' ')).not.toMatch(/all templates/i);
+      for (const [id, required] of Object.entries(CV_TEMPLATE_TIER)) {
+        if (required === SubscriptionPlan.ENTERPRISE) {
+          expect({ id, granted: planMeetsTier(PLAN_CONFIGS[plan].limits.templates, required) }).toEqual(
+            { id, granted: false },
+          );
+        }
+      }
+      for (const [id, required] of Object.entries(COVER_LETTER_TEMPLATE_TIER)) {
+        if (required === SubscriptionPlan.ENTERPRISE) {
+          expect({ id, granted: planMeetsTier(PLAN_CONFIGS[plan].limits.templates, required) }).toEqual(
+            { id, granted: false },
+          );
+        }
+      }
+    }
+  });
+});
+
+describe('advertised quantities match enforced caps', () => {
+  it.each(PLANS)('%s — CV allowance', (plan) => {
     expect(advertised(PLAN_CONFIGS[plan].features, /\bCVs?\b/i)).toBe(PLAN_CONFIGS[plan].limits.cvs);
   });
 
-  it.each(plans)('%s — cover-letter allowance', (plan) => {
+  it.each(PLANS)('%s — cover-letter allowance', (plan) => {
     expect(advertised(PLAN_CONFIGS[plan].features, /cover letters?/i)).toBe(
       PLAN_CONFIGS[plan].limits.coverLetters,
     );
   });
 
-  it.each(plans)('%s — AI credit allowance', (plan) => {
+  it.each(PLANS)('%s — AI credit allowance', (plan) => {
     expect(advertised(PLAN_CONFIGS[plan].features, /AI credits?/i)).toBe(
       PLAN_CONFIGS[plan].limits.aiCredits,
     );
   });
 
-  it.each(plans)('%s — export allowance', (plan) => {
+  it.each(PLANS)('%s — export allowance', (plan) => {
     expect(advertised(PLAN_CONFIGS[plan].features, /exports?/i)).toBe(
       PLAN_CONFIGS[plan].limits.exports,
     );
   });
+});
 
-  it.each(plans)('%s — template access', (plan) => {
-    const line = PLAN_CONFIGS[plan].features.find((f) => /templates/i.test(f));
-    expect(line).toBeDefined();
-    // "Free templates only" ⇔ free_only; anything else must be the 'all' tier.
-    const advertisesFreeOnly = /free templates only/i.test(line!);
-    expect(advertisesFreeOnly).toBe(PLAN_CONFIGS[plan].limits.templates === 'free_only');
+describe('DOCX advertising matches the export gate', () => {
+  // Same predicate as `export.service.ts` recordClientExport: Free is refused
+  // with `docx_requires_paid`; every other plan is allowed.
+  it.each(PLANS)('%s', (plan) => {
+    const advertisesDocx = /DOCX/i.test(PLAN_CONFIGS[plan].features.join(' '));
+    const docxAllowed = plan !== SubscriptionPlan.FREE;
+    expect(advertisesDocx).toBe(docxAllowed);
   });
+});
 
-  it('only a paid plan advertises DOCX export', () => {
-    for (const plan of plans) {
-      if (/DOCX/i.test(PLAN_CONFIGS[plan].features.join(' '))) {
-        expect(plan).not.toBe(SubscriptionPlan.FREE);
+describe('cadence advertising matches usage-reset', () => {
+  // Free docs are skipped entirely in `usage-reset.service.ts`. Paid numeric
+  // caps (CVs, cover letters, AI credits, exports) reset on the 1st.
+  const monthlyNouns: { noun: RegExp; cap: (plan: SubscriptionPlan) => number | 'unlimited' }[] = [
+    { noun: /\bCVs?\b/i, cap: (p) => PLAN_CONFIGS[p].limits.cvs },
+    { noun: /cover letters?/i, cap: (p) => PLAN_CONFIGS[p].limits.coverLetters },
+    { noun: /AI credits?/i, cap: (p) => PLAN_CONFIGS[p].limits.aiCredits },
+    { noun: /exports?/i, cap: (p) => PLAN_CONFIGS[p].limits.exports },
+  ];
+
+  it.each(PLANS)('%s', (plan) => {
+    for (const { noun, cap } of monthlyNouns) {
+      const line = allowanceLine(plan, noun);
+      expect(line).toBeDefined();
+      const limit = cap(plan);
+      if (plan === SubscriptionPlan.FREE) {
+        expect(line).not.toMatch(/\/month/i);
+      } else if (limit === 'unlimited') {
+        expect(line).not.toMatch(/\/month/i);
+      } else {
+        expect(line).toMatch(/\/month/i);
       }
     }
   });

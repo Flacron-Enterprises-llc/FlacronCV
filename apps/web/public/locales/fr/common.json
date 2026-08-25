@@ -69,7 +69,7 @@
     "ai_writing": "Assistant d'écriture IA",
     "ai_writing_desc": "L'IA rédige des points clés percutants, des résumés et des lettres de motivation pour votre poste cible.",
     "templates": "Modèles professionnels",
-    "templates_desc": "16 modèles de CV et de lettre de motivation au design professionnel.",
+    "templates_desc": "Parcourez les modèles de CV et de lettre de motivation. Jetez-y un œil avant de vous inscrire.",
     "multilingual": "Support multilingue",
     "multilingual_desc": "Rédigez votre CV et votre lettre de motivation dans 6 langues, dont l'arabe et l'ourdou de droite à gauche.",
     "export": "Formats d'export multiples",
@@ -181,7 +181,9 @@
     "powered_by_engine": "Flacron Engine",
     "disclaimer": "Avertissement IA, ATS et emploi",
     "refund": "Politique de remboursement",
-    "ai_cv_builder": "Créateur de CV par IA"
+    "ai_cv_builder": "Créateur de CV par IA",
+    "ai_cover_letter": "Générateur de lettres de motivation par IA",
+    "ai_ats_check": "Vérificateur ATS de CV"
   },
   "auth": {
     "login_title": "Bon retour",
@@ -269,7 +271,7 @@
     "create_cover_letter_desc": "Générez avec l’IA ou rédigez vous-même",
     "templates_desc": "Parcourez les modèles professionnels",
     "upgrade_title": "Tirez le meilleur de FlacronCV",
-    "upgrade_desc": "Passez à Pro : 10 CV, 20 lettres de motivation, 100 crédits IA par mois, exports illimités et tous les modèles.",
+    "upgrade_desc": "Passez à Pro : 10 CV/mois, 20 lettres de motivation/mois, 100 crédits IA/mois, exports illimités et les modèles Pro.",
     "upgrade_cta": "Passer à Pro",
     "degraded_title": "Les informations de votre compte sont temporairement indisponibles",
     "degraded_desc": "Impossible de charger les données de votre compte pour le moment. Vos documents sont en sécurité — réessayez dans un instant.",
@@ -1322,7 +1324,7 @@
   },
   "public_templates": {
     "title": "Parcourir les modèles professionnels",
-    "subtitle": "Parcourez nos 16 modèles de CV et de lettre de motivation. Aucune connexion requise pour les consulter.",
+    "subtitle": "Parcourez les modèles de CV et de lettre de motivation. Jetez-y un œil avant de vous inscrire.",
     "use_template": "Utiliser le modèle",
     "login_to_use": "Se connecter pour utiliser",
     "buy_template": "Mettre à niveau pour utiliser",
@@ -2025,6 +2027,12 @@
     "plan_includes": "La formule {plan} comprend :",
     "upgrade_now": "Passer à la formule supérieure",
     "maybe_later": "Plus tard",
+    "template_reach": {
+      "free": "les modèles gratuits uniquement",
+      "pro": "les modèles Pro",
+      "career_accelerator": "tous les modèles Pro",
+      "enterprise": "tous les modèles"
+    },
     "reasons": {
       "ai_credits": {
         "title": "Vous n'avez plus de crédits IA",
@@ -2044,7 +2052,7 @@
       },
       "templates": {
         "title": "Ce modèle nécessite une formule payante",
-        "description": "Ce design fait partie de notre sélection premium. Passez à une formule supérieure pour débloquer tous les modèles de CV et de lettres."
+        "description": "Passez à une formule supérieure pour débloquer {reach} pour vos CV et lettres de motivation."
       },
       "cvs": {
         "title": "Limite de CV atteinte",

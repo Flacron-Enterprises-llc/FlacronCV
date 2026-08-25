@@ -6,25 +6,18 @@ import JsonLd from '@/components/seo/JsonLd';
 import { pageBreadcrumbs } from '@/lib/json-ld';
 import Button from '@/components/ui/Button';
 import Pricing from '@/components/landing/Pricing';
-import FAQ from '@/components/landing/FAQ';
-import { AI_CV_BUILDER, AI_CV_BUILDER_PATH } from '@/content/ai-cv-builder';
 import {
-  FileText,
-  List,
-  Mail,
-  Target,
-  LayoutTemplate,
-  Sparkles,
-  Download,
-  ArrowRight,
-} from 'lucide-react';
+  AI_COVER_LETTER_GENERATOR,
+  AI_COVER_LETTER_GENERATOR_PATH,
+} from '@/content/ai-cover-letter-generator';
+import { FileText, Link2, Pencil, Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
 
 export async function generateMetadata(): Promise<Metadata> {
   return pageMetadata({
     locale: 'en',
-    path: AI_CV_BUILDER_PATH,
-    title: AI_CV_BUILDER.title,
-    description: AI_CV_BUILDER.subtitle,
+    path: AI_COVER_LETTER_GENERATOR_PATH,
+    title: AI_COVER_LETTER_GENERATOR.title,
+    description: AI_COVER_LETTER_GENERATOR.subtitle,
     englishDocument: true,
   });
 }
@@ -51,14 +44,14 @@ function CopyCard({
   );
 }
 
-export default async function AiCvBuilderPage() {
+export default async function AiCoverLetterGeneratorPage() {
   const tNav = await getTranslations();
-  const copy = AI_CV_BUILDER;
+  const copy = AI_COVER_LETTER_GENERATOR;
 
   return (
     <>
       <JsonLd
-        data={pageBreadcrumbs('en', tNav('nav.home'), copy.title, AI_CV_BUILDER_PATH)}
+        data={pageBreadcrumbs('en', tNav('nav.home'), copy.title, AI_COVER_LETTER_GENERATOR_PATH)}
       />
 
       <section className="border-b border-stone-200 bg-gradient-to-b from-brand-50 to-white dark:border-stone-800 dark:from-stone-900 dark:to-black">
@@ -84,14 +77,11 @@ export default async function AiCvBuilderPage() {
           <h2 className="mb-2 text-center text-2xl font-bold text-stone-900 dark:text-white">
             {copy.mid_title}
           </h2>
-          <p className="mb-10 text-center text-stone-500 dark:text-stone-400">
-            {copy.mid_subtitle}
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <p className="mb-10 text-center text-stone-500 dark:text-stone-400">{copy.mid_subtitle}</p>
+          <div className="grid gap-4 sm:grid-cols-3">
             <CopyCard icon={FileText} title={copy.mid1_title} desc={copy.mid1_desc} />
-            <CopyCard icon={List} title={copy.mid2_title} desc={copy.mid2_desc} />
-            <CopyCard icon={Mail} title={copy.mid3_title} desc={copy.mid3_desc} />
-            <CopyCard icon={Target} title={copy.mid4_title} desc={copy.mid4_desc} />
+            <CopyCard icon={Link2} title={copy.mid2_title} desc={copy.mid2_desc} />
+            <CopyCard icon={Pencil} title={copy.mid3_title} desc={copy.mid3_desc} />
           </div>
         </div>
       </section>
@@ -100,13 +90,11 @@ export default async function AiCvBuilderPage() {
         <h2 className="mb-2 text-center text-2xl font-bold text-stone-900 dark:text-white">
           {copy.close_title}
         </h2>
-        <p className="mb-10 text-center text-stone-500 dark:text-stone-400">
-          {copy.close_subtitle}
-        </p>
+        <p className="mb-10 text-center text-stone-500 dark:text-stone-400">{copy.close_subtitle}</p>
         <div className="grid gap-4 sm:grid-cols-3">
-          <CopyCard icon={LayoutTemplate} title={copy.close1_title} desc={copy.close1_desc} />
+          <CopyCard icon={FileText} title={copy.close1_title} desc={copy.close1_desc} />
           <CopyCard icon={Sparkles} title={copy.close2_title} desc={copy.close2_desc} />
-          <CopyCard icon={Download} title={copy.close3_title} desc={copy.close3_desc} />
+          <CopyCard icon={CheckCircle2} title={copy.close3_title} desc={copy.close3_desc} />
         </div>
       </section>
 
@@ -132,7 +120,7 @@ export default async function AiCvBuilderPage() {
           <p className="text-stone-600 dark:text-stone-400">{copy.related_title}</p>
           <div className="mt-4">
             <Link
-              href="/ai-cover-letter-generator"
+              href="/ai-cv-builder"
               locale="en"
               className="text-sm font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
             >
@@ -143,7 +131,6 @@ export default async function AiCvBuilderPage() {
       </section>
 
       <Pricing />
-      <FAQ />
     </>
   );
 }

@@ -42,4 +42,6 @@ export const AI_CV_BUILDER = {
   close3_desc:
     'Download as PDF or Word. Check names, dates and employment history are accurate before you send it to an employer.',
   cta_title: 'Start building your CV',
+  related_title: 'Applying for a specific role?',
+  related_cta: 'Generate a cover letter from your CV',
 } as const;

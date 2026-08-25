@@ -121,7 +121,7 @@ the route group — the groups only control layout and client-side redirects.
 
 | Group | Routes | Access |
 |---|---|---|
-| `(public)` | `/`, `about-us`, `contact-us`, `templates`, `testimonials`, `confirm`, `privacy-policy`, `terms-of-service`, `cookie-policy`, `disclaimer`, `refund-policy`, `ai-cv-builder` | Public |
+| `(public)` | `/`, `about-us`, `contact-us`, `templates`, `testimonials`, `confirm`, `privacy-policy`, `terms-of-service`, `cookie-policy`, `disclaimer`, `refund-policy`, `ai-cv-builder`, `ai-cover-letter-generator`, `ats-cv-checker` | Public |
 | `(auth)` | `login`, `register`, `forgot-password`, `verify-email` | Public; redirects away when signed in |
 | `(dashboard)` | `dashboard`, `cv` (+`new`, `pick-template`, `[id]`), `cover-letters` (+`new`, `[id]`), `jobs`, `support`, `settings` (+`billing`) | Signed-in |
 | `(admin)` | `users`, `subscriptions`, `templates`, `tickets`, `audit-logs` | `admin` / `super_admin` claim |
@@ -139,7 +139,16 @@ is still served for RTL chrome. **`/ai-cv-builder` is the same SEO shape** (one 
 hreflang `en` + `x-default`) but is not a legal document: copy lives in
 `apps/web/src/content/ai-cv-builder.ts` and the page does not use `LegalDocumentView`.
 The footer Product link forces `locale="en"` so a translated chrome session is not sent
-to mixed English-body / localised Pricing. **Privacy is still the locale namespace `privacy`** until
+to mixed English-body / localised Pricing. **`/ai-cover-letter-generator` is the same
+shape** (`apps/web/src/content/ai-cover-letter-generator.ts`); Pricing only, no FAQ;
+reciprocal related strip with `/ai-cv-builder`. **`/ats-cv-checker` is the same
+shape** (`apps/web/src/content/ats-cv-checker.ts`); Pricing only, no FAQ; limits
+section after the hero; related strip to `/ai-cv-builder` (`locale="en"`) and
+`/templates` (localised, no forced locale). **`/templates` stays one localised
+gallery** (six sitemap locs, full hreflang). Unique mid/close/related copy in
+`apps/web/src/content/public-templates.ts` renders only when `locale === 'en'` —
+not `englishDocument`, not a second path. No ItemList or FAQ JSON-LD on this
+URL. **Privacy is still the locale namespace `privacy`** until
 the client names AWS SES and OpenAI in the new §4 — `subprocessor-disclosure.spec.ts` still
 reads `privacy.s3_desc`. `terms` and `cookies_policy` locale namespaces were deleted.
 
@@ -306,8 +315,11 @@ must name the SDKs actually in `apps/api/package.json`, both directions),
 
 `PLAN_CONFIGS` in `packages/shared-types/src/subscription.types.ts` is the intended single source of
 truth for prices, CV / cover-letter / AI-credit / export limits, and Stripe price ids.
-`plan-advertising.spec.ts` guards **only** `PLAN_CONFIGS.features` against `PLAN_CONFIGS.limits`,
-inside shared-types. It never reads `apps/mobile`, the CRM settings defaults, the locale JSON, or any
+`limits.templates` is the **max reachable `SubscriptionPlan`** (not `'free_only' | 'all'`).
+`plan-advertising.spec.ts` asserts advertised template access against `planMeetsTier` and the
+built-in catalogue maps, DOCX against the Free export gate, and `/month` against usage-reset
+(Free skipped). Quantity lines still match `limits.*` because those fields are what the services
+enforce. It never reads `apps/mobile`, the CRM settings defaults, the locale JSON, or any
 component. Everything below sits outside that guard.
 
 ### Tier 1 — a second source of truth for prices and Stripe ids (`apps/mobile`)

@@ -52,6 +52,13 @@ export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }:
   const copyKey =
     isStoredFree && (reason === 'ai_credits' || reason === 'exports') ? `${reason}_free` : reason;
 
+  // Today this modal always sells Pro. Keep one binding so a later
+  // Free→Enterprise (or Pro→Enterprise) transition cannot update the
+  // benefit list and leave the template sentence advertising a different plan.
+  const offeredPlan = SubscriptionPlan.PRO;
+  const offeredConfig = PLAN_CONFIGS[offeredPlan];
+  const templateReach = t(`template_reach.${offeredConfig.limits.templates}`);
+
   // The benefit list is read from PLAN_CONFIGS, not hand-written.
   //
   // It previously claimed "Unlimited AI Credits" and "Unlimited CVs & Cover
@@ -59,7 +66,7 @@ export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }:
   // was promising more than the plan delivers at the exact moment the user
   // decides to pay. Reading the real config makes that impossible, and the
   // advertised-vs-enforced test in the API suite keeps the config itself honest.
-  const proFeatures = PLAN_CONFIGS[SubscriptionPlan.PRO].features;
+  const offeredFeatures = offeredConfig.features;
 
   const handleUpgrade = () => {
     onClose();
@@ -78,16 +85,16 @@ export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }:
 
         {/* Description */}
         <p className="text-center text-sm text-stone-600 dark:text-stone-400">
-          {t(`reasons.${copyKey}.description`)}
+          {t(`reasons.${copyKey}.description`, { reach: templateReach })}
         </p>
 
-        {/* What the Pro plan actually includes */}
+        {/* What the offered plan actually includes */}
         <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/50">
           <h4 className="mb-3 font-semibold text-stone-900 dark:text-white">
-            {t('plan_includes', { plan: PLAN_CONFIGS[SubscriptionPlan.PRO].name })}
+            {t('plan_includes', { plan: offeredConfig.name })}
           </h4>
           <ul className="space-y-2 text-sm text-stone-600 dark:text-stone-400">
-            {proFeatures.map((feature) => (
+            {offeredFeatures.map((feature) => (
               <li key={feature} className="flex items-start gap-2">
                 <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
                 <span className="min-w-0">{feature}</span>

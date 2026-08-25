@@ -69,7 +69,7 @@
     "ai_writing": "KI-Schreibassistent",
     "ai_writing_desc": "KI schreibt überzeugende Stichpunkte, Zusammenfassungen und Anschreiben für deine Zielstelle.",
     "templates": "Professionelle Vorlagen",
-    "templates_desc": "16 professionell gestaltete Lebenslauf- und Anschreiben-Vorlagen.",
+    "templates_desc": "Durchstöbere Lebenslauf- und Anschreiben-Vorlagen. Schau sie dir an, bevor du dich registrierst.",
     "multilingual": "Mehrsprachige Unterstützung",
     "multilingual_desc": "Erstelle Lebenslauf und Anschreiben in 6 Sprachen, inklusive Arabisch und Urdu von rechts nach links.",
     "export": "Mehrere Exportformate",
@@ -181,7 +181,9 @@
     "powered_by_engine": "Flacron Engine",
     "disclaimer": "KI-, ATS- und Beschäftigungshinweis",
     "refund": "Rückerstattungsrichtlinie",
-    "ai_cv_builder": "KI-Lebenslauf-Ersteller"
+    "ai_cv_builder": "KI-Lebenslauf-Ersteller",
+    "ai_cover_letter": "KI-Anschreiben-Generator",
+    "ai_ats_check": "ATS-Lebenslauf-Prüfung"
   },
   "auth": {
     "login_title": "Willkommen zurück",
@@ -269,7 +271,7 @@
     "create_cover_letter_desc": "Mit KI generieren oder selbst schreiben",
     "templates_desc": "Professionelle Vorlagen durchstöbern",
     "upgrade_title": "Hol mehr aus FlacronCV heraus",
-    "upgrade_desc": "Mit Pro: 10 Lebensläufe, 20 Anschreiben, 100 KI-Credits pro Monat, unbegrenzte Exporte und alle Vorlagen.",
+    "upgrade_desc": "Mit Pro: 10 Lebensläufe/Monat, 20 Anschreiben/Monat, 100 KI-Credits/Monat, unbegrenzte Exporte und Pro-Vorlagen.",
     "upgrade_cta": "Auf Pro upgraden",
     "degraded_title": "Kontoinformationen vorübergehend nicht verfügbar",
     "degraded_desc": "Deine Kontodaten konnten gerade nicht geladen werden. Deine Dokumente sind sicher — versuche es gleich noch einmal.",
@@ -1322,7 +1324,7 @@
   },
   "public_templates": {
     "title": "Professionelle Vorlagen durchsuchen",
-    "subtitle": "Durchstöbere unsere 16 Lebenslauf- und Anschreiben-Vorlagen. Zum Ansehen ist keine Anmeldung nötig.",
+    "subtitle": "Durchstöbere Lebenslauf- und Anschreiben-Vorlagen. Schau sie dir an, bevor du dich registrierst.",
     "use_template": "Vorlage verwenden",
     "login_to_use": "Zum Verwenden anmelden",
     "buy_template": "Für die Nutzung upgraden",
@@ -2025,6 +2027,12 @@
     "plan_includes": "Der {plan}-Tarif umfasst:",
     "upgrade_now": "Jetzt upgraden",
     "maybe_later": "Vielleicht später",
+    "template_reach": {
+      "free": "nur Gratis-Vorlagen",
+      "pro": "Pro-Vorlagen",
+      "career_accelerator": "alle Pro-Vorlagen",
+      "enterprise": "alle Vorlagen"
+    },
     "reasons": {
       "ai_credits": {
         "title": "Deine KI-Guthaben sind aufgebraucht",
@@ -2044,7 +2052,7 @@
       },
       "templates": {
         "title": "Diese Vorlage erfordert einen bezahlten Tarif",
-        "description": "Dieses Design gehört zu unseren Premium-Vorlagen. Mit einem Upgrade schaltest du alle Vorlagen für Lebensläufe und Anschreiben frei."
+        "description": "Mit einem Upgrade schaltest du {reach} für Lebensläufe und Anschreiben frei."
       },
       "cvs": {
         "title": "Lebenslauf-Limit erreicht",

@@ -326,7 +326,8 @@ export default function BillingPage(): React.JSX.Element | null {
     },
     {
       label: t('features.templates'),
-      cell: (plan) => PLAN_CONFIGS[plan].limits.templates === 'all',
+      cell: (plan) =>
+        PLAN_CONFIGS[plan].limits.templates === SubscriptionPlan.ENTERPRISE,
     },
     {
       label: t('features.unlimitedExports'),

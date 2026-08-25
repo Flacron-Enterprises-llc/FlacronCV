@@ -90,6 +90,16 @@ export default function Footer() {
                   {t('footer.ai_cv_builder')}
                 </Link>
               </li>
+              <li>
+                <Link href="/ai-cover-letter-generator" locale="en" className={linkClass}>
+                  {t('footer.ai_cover_letter')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/ats-cv-checker" locale="en" className={linkClass}>
+                  {t('footer.ai_ats_check')}
+                </Link>
+              </li>
             </ul>
           </div>
 

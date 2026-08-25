@@ -69,7 +69,7 @@
     "ai_writing": "Asistente de escritura IA",
     "ai_writing_desc": "La IA redacta puntos clave convincentes, resúmenes y cartas de presentación para tu puesto objetivo.",
     "templates": "Plantillas profesionales",
-    "templates_desc": "16 plantillas de CV y carta de presentación con diseño profesional.",
+    "templates_desc": "Explora plantillas de CV y carta de presentación. Échales un vistazo antes de registrarte.",
     "multilingual": "Soporte multilingüe",
     "multilingual_desc": "Crea tu CV y tu carta de presentación en 6 idiomas, incluidos árabe y urdu de derecha a izquierda.",
     "export": "Múltiples formatos de exportación",
@@ -181,7 +181,9 @@
     "powered_by_engine": "Flacron Engine",
     "disclaimer": "Descargo de responsabilidad sobre IA, ATS y empleo",
     "refund": "Política de reembolso",
-    "ai_cv_builder": "Creador de CV con IA"
+    "ai_cv_builder": "Creador de CV con IA",
+    "ai_cover_letter": "Generador de cartas de presentación con IA",
+    "ai_ats_check": "Comprobador ATS de CV"
   },
   "auth": {
     "login_title": "Bienvenido de nuevo",
@@ -269,7 +271,7 @@
     "create_cover_letter_desc": "Genera con IA o escribe la tuya",
     "templates_desc": "Explora plantillas profesionales",
     "upgrade_title": "Saca más partido a FlacronCV",
-    "upgrade_desc": "Pásate a Pro: 10 CVs, 20 cartas de presentación, 100 créditos de IA al mes, exportaciones ilimitadas y todas las plantillas.",
+    "upgrade_desc": "Pásate a Pro: 10 CVs/mes, 20 cartas de presentación/mes, 100 créditos de IA/mes, exportaciones ilimitadas y plantillas Pro.",
     "upgrade_cta": "Mejorar a Pro",
     "degraded_title": "La información de tu cuenta no está disponible temporalmente",
     "degraded_desc": "No pudimos cargar los datos de tu cuenta en este momento. Tus documentos están a salvo — inténtalo de nuevo en un momento.",
@@ -1322,7 +1324,7 @@
   },
   "public_templates": {
     "title": "Explorar plantillas profesionales",
-    "subtitle": "Explora nuestras 16 plantillas de CV y carta de presentación. No necesitas iniciar sesión para verlas.",
+    "subtitle": "Explora plantillas de CV y carta de presentación. Échales un vistazo antes de registrarte.",
     "use_template": "Usar plantilla",
     "login_to_use": "Inicia sesión para usar",
     "buy_template": "Actualiza para usar",
@@ -2025,6 +2027,12 @@
     "plan_includes": "El plan {plan} incluye:",
     "upgrade_now": "Mejorar ahora",
     "maybe_later": "Quizá más tarde",
+    "template_reach": {
+      "free": "solo plantillas gratuitas",
+      "pro": "plantillas Pro",
+      "career_accelerator": "todas las plantillas Pro",
+      "enterprise": "todas las plantillas"
+    },
     "reasons": {
       "ai_credits": {
         "title": "Te has quedado sin créditos de IA",
@@ -2044,7 +2052,7 @@
       },
       "templates": {
         "title": "Esta plantilla requiere un plan de pago",
-        "description": "Este diseño forma parte de nuestro conjunto premium. Mejora tu plan para desbloquear todas las plantillas de CV y cartas de presentación."
+        "description": "Mejora tu plan para desbloquear {reach} en tus CVs y cartas de presentación."
       },
       "cvs": {
         "title": "Límite de CV alcanzado",

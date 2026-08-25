@@ -30,6 +30,8 @@ const ENGLISH_DOCUMENT_PATHS = [
   '/disclaimer',
   '/refund-policy',
   '/ai-cv-builder',
+  '/ai-cover-letter-generator',
+  '/ats-cv-checker',
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

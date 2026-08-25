@@ -68,8 +68,36 @@ export interface PlanLimits {
   cvs: number | 'unlimited';
   coverLetters: number | 'unlimited';
   aiCredits: number;
-  templates: 'free_only' | 'all';
+  /**
+   * Highest template tier this plan may select. Same rank as
+   * `planMeetsTier(plan, required)`. Not a boolean — Pro is not Enterprise.
+   * Not persisted on user docs; changing this type is a compile break, not a
+   * Firestore migration.
+   */
+  templates: SubscriptionPlan;
   exports: number | 'unlimited';
+}
+
+/**
+ * English pricing-card line for `limits.templates`. Cards are not a `t()`
+ * surface. Keep this the only place the template bullet is worded so Pro
+ * cannot say "All templates" while `planMeetsTier` refuses Enterprise-tier.
+ */
+export function templateFeatureLine(maxTier: SubscriptionPlan): string {
+  switch (maxTier) {
+    case SubscriptionPlan.FREE:
+      return 'Free templates only';
+    case SubscriptionPlan.PRO:
+      return 'Pro templates';
+    case SubscriptionPlan.CAREER_ACCELERATOR:
+      return 'All Pro templates';
+    case SubscriptionPlan.ENTERPRISE:
+      return 'All templates';
+    default: {
+      const _exhaustive: never = maxTier;
+      return _exhaustive;
+    }
+  }
 }
 
 export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
@@ -83,14 +111,14 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
       cvs: 5,
       coverLetters: 1,
       aiCredits: 5,
-      templates: 'free_only',
+      templates: SubscriptionPlan.FREE,
       exports: 2,
     },
     features: [
       '5 CVs',
       '1 Cover Letter',
       '5 AI Credits',
-      'Free templates only',
+      templateFeatureLine(SubscriptionPlan.FREE),
       '2 exports',
       'PDF export',
     ],
@@ -115,14 +143,14 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
       cvs: 10,
       coverLetters: 20,
       aiCredits: 100,
-      templates: 'all',
+      templates: SubscriptionPlan.PRO,
       exports: 'unlimited',
     },
     features: [
       '10 CVs/month',
       '20 Cover Letters/month',
       '100 AI Credits/month',
-      'All templates',
+      templateFeatureLine(SubscriptionPlan.PRO),
       'Unlimited exports',
       'PDF & DOCX export',
       'Priority support',
@@ -148,14 +176,14 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
       cvs: 25,
       coverLetters: 50,
       aiCredits: 250,
-      templates: 'all',
+      templates: SubscriptionPlan.CAREER_ACCELERATOR,
       exports: 'unlimited',
     },
     features: [
       '25 CVs/month',
       '50 Cover Letters/month',
       '250 AI Credits/month',
-      'All Pro templates',
+      templateFeatureLine(SubscriptionPlan.CAREER_ACCELERATOR),
       'Unlimited exports',
       'PDF & DOCX export',
       'All AI career tools (ATS, Interview Prep, LinkedIn)',
@@ -175,14 +203,14 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
       cvs: 'unlimited',
       coverLetters: 'unlimited',
       aiCredits: 500,
-      templates: 'all',
+      templates: SubscriptionPlan.ENTERPRISE,
       exports: 'unlimited',
     },
     features: [
       'Unlimited CVs',
       'Unlimited Cover Letters',
       '500 AI Credits/month',
-      'All templates',
+      templateFeatureLine(SubscriptionPlan.ENTERPRISE),
       'Unlimited exports',
       'PDF & DOCX export',
       'Priority support',
