@@ -44,13 +44,13 @@
     "mockup_education": "تعلیم",
     "mockup_ats_score": "ATS اسکور",
     "mockup_ai_suggestions": "AI تجاویز",
-    "mockup_this_week": "اس ہفتے",
-    "mockup_interview_calls": "{count} انٹرویو کالز 🎉",
+    "mockup_this_week": "آخری بار محفوظ",
+    "mockup_interview_calls": "ابھی",
     "mockup_ai_assist": "AI معاون",
     "mockup_export": "برآمد کریں",
     "mockup_sections_count": "{count} سیکشنز",
     "mockup_words_count": "{count} الفاظ",
-    "mockup_ats_ready": "ATS کے لیے تیار"
+    "mockup_ats_ready": "واضح ڈھانچہ"
   },
   "how_it_works": {
     "title": "3 مراحل میں اپنا CV تیار کریں",
@@ -76,7 +76,7 @@
     "export_desc": "ہر بار مکمل فارمیٹنگ کے ساتھ PDF یا DOCX کے طور پر ڈاؤن لوڈ کریں۔",
     "drag_drop": "ڈریگ اور ڈراپ بلڈر",
     "drag_drop_desc": "سادہ ڈریگ اینڈ ڈراپ سے CV کے سیکشنز فوری طور پر ترتیب دیں۔",
-    "ats": "ATS آپٹیمائزیشن",
+    "ats": "ATS چیک",
     "ats_desc": "جاب ڈسکرپشن کے مقابلے میں اپنے CV کو اسکور کریں اور کمزور جگہوں کو فوری ٹھیک کریں۔",
     "ats_score": "ATS اسکور چیکر",
     "ats_score_desc": "جاب پوسٹنگ پیسٹ کریں اور درخواست سے پہلے اپنا میچ اسکور حاصل کریں۔",
@@ -180,7 +180,8 @@
     "powered_by": "پاورڈ بائی",
     "powered_by_engine": "Flacron Engine",
     "disclaimer": "AI، ATS اور روزگار سے متعلق دستبرداری",
-    "refund": "رقم واپسی کی پالیسی"
+    "refund": "رقم واپسی کی پالیسی",
+    "ai_cv_builder": "AI سے CV بنانے والا"
   },
   "auth": {
     "login_title": "واپس خوش آمدید",

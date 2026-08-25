@@ -8,9 +8,10 @@ import { SITE_URL, LOCALES, DEFAULT_LOCALE } from '@/lib/seo';
 // Two sitemap shapes:
 //   LOCALIZED_PATHS — chrome and body are translated (or, for privacy, still
 //     the locale-JSON policy). Six locale locs + full hreflang + x-default.
-//   ENGLISH_DOCUMENT_PATHS — English legal bodies. Chrome is still served at
-//     /ar/… for RTL, but the sitemap must not advertise five translations that
-//     do not exist. One loc (the en URL) with hreflang en + x-default only.
+//   ENGLISH_DOCUMENT_PATHS — English bodies (legal + English-only landings).
+//     Chrome is still served at /ar/… for RTL, but the sitemap must not
+//     advertise five translations that do not exist. One loc (the en URL)
+//     with hreflang en + x-default only.
 // Privacy stays localized until MC1 (client must name AWS SES and OpenAI).
 // /testimonials is a real route (honest empty state) but is not listed here
 // until there are real, verifiable quotes — a thin URL in the sitemap is a
@@ -28,6 +29,7 @@ const ENGLISH_DOCUMENT_PATHS = [
   '/cookie-policy',
   '/disclaimer',
   '/refund-policy',
+  '/ai-cv-builder',
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

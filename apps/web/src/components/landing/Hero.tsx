@@ -13,7 +13,6 @@ import {
   GripVertical,
   Plus,
   Zap,
-  Star,
   TrendingUp,
   User,
   Briefcase,
@@ -364,15 +363,19 @@ export default function Hero() {
             </div>
           </FloatingCard>
 
-          {/* Floating stat: interviews */}
+          {/* Floating stat: last saved (document state, not an outcome).
+              Key names are stale: mockup_this_week → "Last saved",
+              mockup_interview_calls → "Just now". Renamed in values only
+              (2026-08-25) to avoid a six-locale key rename for two strings
+              used solely here. */}
           <FloatingCard className="-bottom-5 left-10 hidden sm:block">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white">
-                <Star className="h-4 w-4 fill-current" />
+                <Save className="h-4 w-4" />
               </div>
               <div>
                 <p className="text-[10px] font-medium text-stone-500 dark:text-stone-400">{t('hero.mockup_this_week')}</p>
-                <p className="text-[13px] font-bold text-stone-900 dark:text-white">{t('hero.mockup_interview_calls', { count: 3 })}</p>
+                <p className="text-[13px] font-bold text-stone-900 dark:text-white">{t('hero.mockup_interview_calls')}</p>
               </div>
             </div>
           </FloatingCard>

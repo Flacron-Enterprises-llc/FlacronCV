@@ -44,13 +44,13 @@
     "mockup_education": "التعليم",
     "mockup_ats_score": "درجة ATS",
     "mockup_ai_suggestions": "اقتراحات الذكاء الاصطناعي",
-    "mockup_this_week": "هذا الأسبوع",
-    "mockup_interview_calls": "{count} مقابلات 🎉",
+    "mockup_this_week": "آخر حفظ",
+    "mockup_interview_calls": "الآن",
     "mockup_ai_assist": "مساعد الذكاء الاصطناعي",
     "mockup_export": "تصدير",
     "mockup_sections_count": "{count} أقسام",
     "mockup_words_count": "{count} كلمة",
-    "mockup_ats_ready": "جاهز لأنظمة ATS"
+    "mockup_ats_ready": "بنية واضحة"
   },
   "how_it_works": {
     "title": "احصل على سيرتك الذاتية جاهزة في 3 خطوات",
@@ -76,7 +76,7 @@
     "export_desc": "نزّل بصيغة PDF أو DOCX بتنسيق مثالي في كل مرة.",
     "drag_drop": "منشئ بالسحب والإفلات",
     "drag_drop_desc": "رتب أقسام سيرتك الذاتية فورًا بالسحب والإفلات البسيط.",
-    "ats": "تحسين ATS",
+    "ats": "فحص ATS",
     "ats_desc": "قيّم سيرتك الذاتية مقابل وصف الوظيفة وأصلح النقاط الضعيفة فورًا.",
     "ats_score": "فاحص نقاط ATS",
     "ats_score_desc": "الصق إعلان الوظيفة واحصل على نقاط التطابق قبل التقديم.",
@@ -180,7 +180,8 @@
     "powered_by": "مدعوم بواسطة",
     "powered_by_engine": "Flacron Engine",
     "disclaimer": "إخلاء المسؤولية عن الذكاء الاصطناعي وATS والتوظيف",
-    "refund": "سياسة الاسترداد"
+    "refund": "سياسة الاسترداد",
+    "ai_cv_builder": "منشئ السيرة الذاتية بالذكاء الاصطناعي"
   },
   "auth": {
     "login_title": "مرحبًا بعودتك",

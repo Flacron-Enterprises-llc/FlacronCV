@@ -179,7 +179,7 @@ export class MailService {
       const html = layout(
         `Welcome to FlacronCV, ${firstName}!`,
         [
-          `<p style="margin:0 0 8px;color:#44403c">Your account is ready. Build an ATS-optimized CV and tailored cover letters in minutes.</p>`,
+          `<p style="margin:0 0 8px;color:#44403c">Your account is ready. Pick a template, let AI draft your summary and experience, and export to PDF or Word when it reads the way you want.</p>`,
           button(dashboardUrl, 'Go to your dashboard'),
         ].join('\n'),
       );

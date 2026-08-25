@@ -12,7 +12,7 @@
 > 4. Tick completed items here; log every change in the Change Log.
 > 5. Report Out-of-Scope / architectural items separately — do not implement without approval.
 
-Last updated: 2026-08-22
+Last updated: 2026-08-25
 
 > **Note on dates.** The header previously read `2026-07-29` while the two newest change-log
 > entries were dated `2026-07-30`; the header was stale, the entries were right. Corrected
@@ -40,6 +40,7 @@ Last updated: 2026-08-22
 - Plans/entitlements: `packages/shared-types/src/subscription.types.ts` (`PLAN_CONFIGS`)
 - Locales: `apps/web/public/locales/<loc>/common.json`
 - English legal bodies: `apps/web/src/legal/*.ts` (chrome still in `t()`)
+- English landing copy: `apps/web/src/content/ai-cv-builder.ts` (`englishDocument`, no LegalDocumentView)
 - Launch QA: `QA_LAUNCH_CHECKLIST.md` (Phase 1 before live Stripe)
 
 ---
@@ -761,6 +762,32 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 8. Out-of-scope / architectural recommendations (do NOT implement without approval)
 
+- **⚠️ ADDED 2026-08-25 — Aspirational / outcome copy still live, awaiting
+  client decision.** Do not rewrite these without approval. Same class as
+  §19 (interviews, offers, employment) but softer phrasing. Fixed 2026-08-25:
+  `hero.mockup_interview_calls` (fabricated interview count) and mobile
+  onboarding “10,000+” / “gets you hired”. **Still open (en key; ×6 unless
+  noted):**
+  - `hero.title` / `hero.title_highlight` — “Your Dream Job Starts Here”
+    (`en/common.json:19`, `:26`)
+  - `hero.trusted` — “Build a job-ready CV in minutes” (`:23`)
+  - `how_it_works.subtitle` — “From blank page to job-ready in minutes” (`:57`)
+  - `features.title` — “Everything You Need to Land Your Dream Job” (`:67`)
+  - `templates.cta_title` — “Ready to build your perfect CV?” (`:1334`)
+  - `about.hero_desc` — “stand out and land their dream job” (`:1350`)
+  - `about.mission_desc` — “CVs that get noticed” (`:1352`)
+  - `testimonials_page.subtitle` — “As our users land interviews and offers”
+    (`:1463`)
+  - Homepage title / OG / Twitter — “Build Your Perfect CV with AI”
+    (`apps/web/src/app/[locale]/page.tsx:20`, `:34`, `:51`) — English-only meta
+  - Mobile empty-CV state — “land your dream job”
+    (`apps/mobile/app/(dashboard)/cvs/index.tsx:155`)
+- **⚠️ ADDED 2026-08-25 — `terms.ts:46` still lists “ATS optimization” as a
+  product feature.** Marketing copy no longer claims a CV is ATS-optimized or
+  ATS-ready (homepage meta, layout fallback, welcome email, hero mockup,
+  Features card). The English terms body is now the only remaining on-site
+  occurrence of that claim. Amending it is a legal-document change — client
+  decision, not a copy pass.
 - **Export architecture** — CV/cover-letter PDF export is still **client-side** (html2canvas→jsPDF
   **image** plus an **invisible text layer** for ATS parsers — shipped 2026-07-30,
   `addInvisibleTextLayer` in `export-cv.ts`). Entitlement bypass part FIXED in A8 via the
@@ -943,6 +970,42 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-25 — **MC1–MC2 outcome-claim leftovers.** Web: hero floating card
+  `mockup_interview_calls` is no longer “3 interview calls”; label/value are
+  last-saved / just now (document state, ×6). Key names left stale on purpose —
+  call-site comment in `Hero.tsx` explains. Mobile onboarding: removed
+  unverified “Trusted by 10,000+ professionals”; subtitle no longer “gets you
+  hired”. Remaining Dream Job / get noticed / land-the-job copy listed in §8
+  for the client. `terms.ts:46` unchanged.
+
+- 2026-08-25 — **Drop “ATS-optimized” / “ATS ready” / Features “ATS
+  Optimization” (scope C).** Web + welcome email. Homepage meta / OG /
+  Twitter, root-layout fallback, and keywords no longer claim optimisation.
+  `hero.mockup_ats_ready` × 6 is now layout (“Clear structure” / translations).
+  `features.ats` × 6 renamed to the in-app tool (“ATS check” / translations).
+  Welcome email in `mail.service.ts` matches the landing draft/export wording.
+  Contact category and `terms.ts:46` untouched; terms logged in §8 for the
+  client. Same-class outcome promises reported in the review note, not edited.
+
+- 2026-08-25 — **`/en/ai-cv-builder` copy: drop ATS-Ready and single-column.**
+  Web only. Title no longer claims an ATS-ready document (§19 / same class as
+  the watermark). Mid4 no longer says every template is single-column (Sidebar,
+  Compact, Slate-Gold are not) and now states that interpretation by any one
+  ATS is outside our control. Subtitle and hero had neither claim — left as
+  written.
+
+- 2026-08-25 — **First search-intent landing: `/en/ai-cv-builder`.** Web only.
+  English-only via the legal SEO mechanism (`pageMetadata({ englishDocument:
+  true })`, `ENGLISH_DOCUMENT_PATHS`) — not `LegalDocumentView`, no
+  controlling-version notice. 24 unique strings in
+  `apps/web/src/content/ai-cv-builder.ts`. Three unique sections, then a CTA,
+  then homepage Pricing + FAQ as conversion only. HowItWorks not reused.
+  Footer Product link uses next-intl `<Link href="/ai-cv-builder" locale="en">`
+  so a `/es` visitor is not sent to mixed English-body / Spanish-pricing.
+  Footer label is `t('footer.ai_cv_builder')` × 6. Sitemap: one loc, hreflang
+  `en` + `x-default`. Copy shipped as supplied; §19 flags in the review note,
+  not rewritten here.
 
 - 2026-08-22 — **Export-limit error cadence.** API.
   `exportLimitReachedMessage` in `export.service.ts`: Free is `(2)` with no

@@ -81,6 +81,15 @@ export default function Footer() {
                   {t('nav.templates')}
                 </Link>
               </li>
+              <li>
+                {/* locale="en" is required: this page is an English document.
+                    A bare href="/ai-cv-builder" would keep /es and mix English
+                    unique copy with Spanish Pricing/FAQ. Putting /en/ in href
+                    would double-prefix (/es/en/…). next-intl Link accepts locale. */}
+                <Link href="/ai-cv-builder" locale="en" className={linkClass}>
+                  {t('footer.ai_cv_builder')}
+                </Link>
+              </li>
             </ul>
           </div>
 

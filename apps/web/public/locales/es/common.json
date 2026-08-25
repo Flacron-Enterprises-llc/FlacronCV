@@ -44,13 +44,13 @@
     "mockup_education": "Formación",
     "mockup_ats_score": "Puntuación ATS",
     "mockup_ai_suggestions": "Sugerencias de IA",
-    "mockup_this_week": "Esta semana",
-    "mockup_interview_calls": "{count} entrevistas 🎉",
+    "mockup_this_week": "Último guardado",
+    "mockup_interview_calls": "Ahora mismo",
     "mockup_ai_assist": "Asistente IA",
     "mockup_export": "Exportar",
     "mockup_sections_count": "{count} secciones",
     "mockup_words_count": "{count} palabras",
-    "mockup_ats_ready": "Listo para ATS"
+    "mockup_ats_ready": "Estructura clara"
   },
   "how_it_works": {
     "title": "Tu CV listo en 3 pasos",
@@ -76,7 +76,7 @@
     "export_desc": "Descarga en PDF o DOCX, perfectamente formateado cada vez.",
     "drag_drop": "Constructor de arrastrar y soltar",
     "drag_drop_desc": "Reorganiza las secciones de tu CV al instante con un simple arrastrar y soltar.",
-    "ats": "Optimización ATS",
+    "ats": "Comprobación ATS",
     "ats_desc": "Puntúa tu CV frente a descripciones de puestos y corrige los puntos débiles al instante.",
     "ats_score": "Verificador de puntuación ATS",
     "ats_score_desc": "Pega una oferta de trabajo y obtén tu puntuación de coincidencia antes de postular.",
@@ -180,7 +180,8 @@
     "powered_by": "Desarrollado por",
     "powered_by_engine": "Flacron Engine",
     "disclaimer": "Descargo de responsabilidad sobre IA, ATS y empleo",
-    "refund": "Política de reembolso"
+    "refund": "Política de reembolso",
+    "ai_cv_builder": "Creador de CV con IA"
   },
   "auth": {
     "login_title": "Bienvenido de nuevo",

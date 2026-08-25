@@ -46,9 +46,10 @@ export function localizedAlternates(path: string, locale: string): Metadata['alt
 }
 
 /**
- * Canonical + hreflang for English-only legal bodies. Chrome is still served
- * at `/ar/terms-of-service` (RTL), but the document itself is English, so the
- * canonical and hreflang must not advertise five translations that do not exist.
+ * Canonical + hreflang for English-only documents (legal bodies and landings
+ * that ship via the same flag). Chrome is still served at `/ar/…` (RTL), but
+ * the document itself is English, so the canonical and hreflang must not
+ * advertise five translations that do not exist.
  */
 export function englishDocumentAlternates(path: string): Metadata['alternates'] {
   const enUrl = `${SITE_URL}/${DEFAULT_LOCALE}${path}`;
@@ -72,7 +73,7 @@ export function pageMetadata(opts: {
   title: string;
   description: string;
   robots?: Metadata['robots'];
-  /** English-only legal body: canonical and hreflang are the `en` URL only. */
+  /** English-only document: canonical and hreflang are the `en` URL only. */
   englishDocument?: boolean;
 }): Metadata {
   const { locale, path, title, description, robots, englishDocument } = opts;

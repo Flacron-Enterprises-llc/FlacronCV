@@ -26,8 +26,7 @@ const slides = [
     icon: '📄',
     title: 'Build a\nStandout CV',
     subtitle:
-      'Choose from professionally designed templates and craft a resume that gets you hired.',
-    badge: 'Trusted by 10,000+ professionals',
+      'Choose from professionally designed templates. Every line is yours to edit.',
   },
   {
     id: '2',
@@ -220,7 +219,8 @@ export default function OnboardingScreen() {
                   transform: [{ translateY: slideAnim }],
                 }}
               >
-                {/* Badge */}
+                {/* Badge — omitted when empty (slide 1 had an unverified count) */}
+                {item.badge ? (
                 <View
                   style={{
                     alignSelf: 'flex-start',
@@ -237,6 +237,7 @@ export default function OnboardingScreen() {
                     {item.badge}
                   </Text>
                 </View>
+                ) : null}
 
                 {/* Icon */}
                 <Text style={{ fontSize: 64, marginBottom: 20 }}>{item.icon}</Text>

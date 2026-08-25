@@ -44,13 +44,13 @@
     "mockup_education": "Ausbildung",
     "mockup_ats_score": "ATS-Score",
     "mockup_ai_suggestions": "KI-Vorschläge",
-    "mockup_this_week": "Diese Woche",
-    "mockup_interview_calls": "{count} Einladungen zum Gespräch 🎉",
+    "mockup_this_week": "Zuletzt gespeichert",
+    "mockup_interview_calls": "Gerade eben",
     "mockup_ai_assist": "KI-Assistent",
     "mockup_export": "Exportieren",
     "mockup_sections_count": "{count} Abschnitte",
     "mockup_words_count": "{count} Wörter",
-    "mockup_ats_ready": "ATS-tauglich"
+    "mockup_ats_ready": "Klare Struktur"
   },
   "how_it_works": {
     "title": "Deinen Lebenslauf in 3 Schritten fertig",
@@ -76,7 +76,7 @@
     "export_desc": "Als PDF oder DOCX herunterladen, jedes Mal perfekt formatiert.",
     "drag_drop": "Drag-&-Drop-Builder",
     "drag_drop_desc": "Abschnitte sofort per einfachem Drag-and-Drop neu anordnen.",
-    "ats": "ATS-Optimierung",
+    "ats": "ATS-Prüfung",
     "ats_desc": "Bewerte deinen Lebenslauf anhand von Stellenbeschreibungen und behebe Schwachstellen sofort.",
     "ats_score": "ATS-Score-Checker",
     "ats_score_desc": "Füge eine Stellenausschreibung ein und erhalte deinen Match-Score vor der Bewerbung.",
@@ -180,7 +180,8 @@
     "powered_by": "Bereitgestellt von",
     "powered_by_engine": "Flacron Engine",
     "disclaimer": "KI-, ATS- und Beschäftigungshinweis",
-    "refund": "Rückerstattungsrichtlinie"
+    "refund": "Rückerstattungsrichtlinie",
+    "ai_cv_builder": "KI-Lebenslauf-Ersteller"
   },
   "auth": {
     "login_title": "Willkommen zurück",

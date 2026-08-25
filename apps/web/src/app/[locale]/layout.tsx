@@ -32,13 +32,13 @@ export const metadata: Metadata = {
     template: '%s | FlacronCV',
   },
   description:
-    'Create ATS-optimized CVs and cover letters in minutes using AI. Professional templates, PDF & DOCX export, multilingual support. Free to start.',
+    'AI CV and cover-letter builder. Templates use standard headings and readable structure. How any one applicant tracking system interprets a CV is outside our control.',
   keywords: [
     'CV builder',
     'resume builder',
     'cover letter generator',
     'AI CV',
-    'ATS optimization',
+    'applicant tracking systems',
     'professional CV',
     'job application',
     'free resume builder',

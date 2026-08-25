@@ -19,13 +19,13 @@ export async function generateMetadata({
     // Bare title — the root layout template appends " | FlacronCV".
     title: 'Build Your Perfect CV with AI',
     description:
-      'Create ATS-optimized CVs and cover letters in minutes using AI. Professional templates, PDF & DOCX export, multilingual support. Free to start — no credit card required.',
+      'Draft a CV with AI from templates built so applicant tracking systems can read your details. Edit every line, export to PDF or Word. Free to start — no card required.',
     keywords: [
       'CV builder',
       'resume builder',
       'AI CV',
       'cover letter generator',
-      'ATS optimization',
+      'applicant tracking systems',
       'PDF resume',
       'free CV builder',
       'professional CV templates',
@@ -33,7 +33,7 @@ export async function generateMetadata({
     openGraph: {
       title: 'Build Your Perfect CV with AI | FlacronCV',
       description:
-        'Create ATS-optimized CVs and cover letters in minutes. Free templates, PDF & DOCX export, 6 languages supported.',
+        'AI-drafted CVs with templates built to be parsed cleanly. Edit every line, export to PDF or Word. Six languages.',
       type: 'website',
       url: `${SITE_URL}/${locale}`,
       siteName: 'FlacronCV',
@@ -50,7 +50,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: 'Build Your Perfect CV with AI | FlacronCV',
       description:
-        'Create ATS-optimized CVs and cover letters in minutes. Free to start.',
+        'Draft your CV with AI. Templates use clear structure so tracking systems can read the text. Free to start.',
       images: [`${SITE_URL}/og.png`],
     },
     alternates: localizedAlternates('', locale),

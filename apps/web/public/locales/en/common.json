@@ -44,13 +44,13 @@
     "mockup_education": "Education",
     "mockup_ats_score": "ATS score",
     "mockup_ai_suggestions": "AI suggestions",
-    "mockup_this_week": "This week",
-    "mockup_interview_calls": "{count} interview calls 🎉",
+    "mockup_this_week": "Last saved",
+    "mockup_interview_calls": "Just now",
     "mockup_ai_assist": "AI assist",
     "mockup_export": "Export",
     "mockup_sections_count": "{count} sections",
     "mockup_words_count": "{count} words",
-    "mockup_ats_ready": "ATS ready"
+    "mockup_ats_ready": "Clear structure"
   },
   "how_it_works": {
     "title": "Get Your CV Ready in 3 Steps",
@@ -76,7 +76,7 @@
     "export_desc": "Download as PDF or DOCX, perfectly formatted every time.",
     "drag_drop": "Drag & Drop Builder",
     "drag_drop_desc": "Rearrange CV sections instantly with a simple drag-and-drop.",
-    "ats": "ATS Optimization",
+    "ats": "ATS check",
     "ats_desc": "Score your CV against job descriptions and fix weak spots instantly.",
     "ats_score": "ATS Score Checker",
     "ats_score_desc": "Paste a job posting and get your match score before you apply.",
@@ -180,7 +180,8 @@
     "powered_by": "Powered by",
     "powered_by_engine": "Flacron Engine",
     "disclaimer": "AI, ATS & Employment Disclaimer",
-    "refund": "Refund Policy"
+    "refund": "Refund Policy",
+    "ai_cv_builder": "AI CV Builder"
   },
   "auth": {
     "login_title": "Welcome Back",

@@ -121,7 +121,7 @@ the route group — the groups only control layout and client-side redirects.
 
 | Group | Routes | Access |
 |---|---|---|
-| `(public)` | `/`, `about-us`, `contact-us`, `templates`, `testimonials`, `confirm`, `privacy-policy`, `terms-of-service`, `cookie-policy`, `disclaimer`, `refund-policy` | Public |
+| `(public)` | `/`, `about-us`, `contact-us`, `templates`, `testimonials`, `confirm`, `privacy-policy`, `terms-of-service`, `cookie-policy`, `disclaimer`, `refund-policy`, `ai-cv-builder` | Public |
 | `(auth)` | `login`, `register`, `forgot-password`, `verify-email` | Public; redirects away when signed in |
 | `(dashboard)` | `dashboard`, `cv` (+`new`, `pick-template`, `[id]`), `cover-letters` (+`new`, `[id]`), `jobs`, `support`, `settings` (+`billing`) | Signed-in |
 | `(admin)` | `users`, `subscriptions`, `templates`, `tickets`, `audit-logs` | `admin` / `super_admin` claim |
@@ -135,7 +135,11 @@ English bodies for terms, disclaimer, refund, and cookies live in `apps/web/src/
 (version `2026-08-16`) and render through `LegalDocumentView`. Chrome (Last updated, TOC,
 Back to top, footer labels) stays in `t()`. Canonical + hreflang for those four documents
 is the `en` URL only (`englishDocumentAlternates` in `lib/seo.ts`); `/ar/terms-of-service`
-is still served for RTL chrome. **Privacy is still the locale namespace `privacy`** until
+is still served for RTL chrome. **`/ai-cv-builder` is the same SEO shape** (one sitemap loc,
+hreflang `en` + `x-default`) but is not a legal document: copy lives in
+`apps/web/src/content/ai-cv-builder.ts` and the page does not use `LegalDocumentView`.
+The footer Product link forces `locale="en"` so a translated chrome session is not sent
+to mixed English-body / localised Pricing. **Privacy is still the locale namespace `privacy`** until
 the client names AWS SES and OpenAI in the new §4 — `subprocessor-disclosure.spec.ts` still
 reads `privacy.s3_desc`. `terms` and `cookies_policy` locale namespaces were deleted.
 
