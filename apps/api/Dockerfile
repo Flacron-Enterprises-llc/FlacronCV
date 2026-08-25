@@ -64,7 +64,8 @@ RUN pnpm --filter api build
 # ─────────────────────────────────────────────
 # Production runtime stage
 # ─────────────────────────────────────────────
-FROM node:20-bookworm-slim AS runner
+#FROM node:20-bookworm-slim AS runner
+FROM public.ecr.aws/docker/library/node:20-bookworm-slim AS runner
 
 ENV NODE_ENV="production"
 ENV PORT="4000"
