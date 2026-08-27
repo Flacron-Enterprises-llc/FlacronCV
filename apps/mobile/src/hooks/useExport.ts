@@ -7,10 +7,17 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 // and the call threw, i.e. mobile CV/cover-letter export was broken outright.
 // Nothing surfaced it because the app had no ESLint config wired up.
 import * as FileSystem from 'expo-file-system/legacy';
+import { router } from 'expo-router';
 import * as Sharing from 'expo-sharing';
+import axios from 'axios';
 import { Alert } from 'react-native';
 import { api } from '../lib/api';
 import { ExportResponse } from '../types/api.types';
+import {
+  exportLimitReachedMessage,
+  PAID_UPGRADES_ENABLED,
+  upgradeAlertButtons,
+} from '../config/paid-upgrades';
 
 /** API Puppeteer export body (before TransformInterceptor wrap). */
 type ServerExportBody = { downloadUrl: string; expiresAt: string | Date };
@@ -37,12 +44,62 @@ function filenameFromDownloadUrl(
   return fallback;
 }
 
+function nestErrorMessage(err: unknown): string {
+  if (!axios.isAxiosError(err)) return '';
+  const data = err.response?.data;
+  if (!data || typeof data !== 'object') return '';
+  const raw = (data as { message?: unknown }).message;
+  if (typeof raw === 'string') return raw;
+  if (Array.isArray(raw)) return raw.filter((x) => typeof x === 'string').join(' ');
+  return '';
+}
+
+function isLimitRejection(err: unknown): boolean {
+  if (!axios.isAxiosError(err) || err.response?.status !== 403) return false;
+  const message = nestErrorMessage(err);
+  return /export limit|limit reached/i.test(message);
+}
+
+function isDocxRejection(err: unknown): boolean {
+  if (!axios.isAxiosError(err) || err.response?.status !== 403) return false;
+  return /docx/i.test(nestErrorMessage(err));
+}
+
+function exportRequestFailureMessage(err: unknown): string {
+  if (axios.isAxiosError(err) && !err.response) {
+    return 'No connection. Check your network and try again.';
+  }
+  if (isLimitRejection(err)) {
+    return exportLimitReachedMessage();
+  }
+  if (isDocxRejection(err)) {
+    return PAID_UPGRADES_ENABLED
+      ? 'DOCX export requires a Pro plan or higher.'
+      : 'DOCX export is not included in your current plan.';
+  }
+  return 'Could not export. Please try again.';
+}
+
+function alertExportRequestError(err: unknown): void {
+  if (isLimitRejection(err)) {
+    Alert.alert(
+      'Export Limit Reached',
+      exportRequestFailureMessage(err),
+      upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+    );
+    return;
+  }
+  Alert.alert('Could not export', exportRequestFailureMessage(err));
+}
+
 function normalizeExportPayload(
   raw: unknown,
   fallbackFilename: string,
 ): ExportResponse {
-  // api.post returns axios `response.data`. Nest TransformInterceptor wraps as
-  // `{ success, data: T, timestamp }`; tolerate either the wrap or a bare body.
+  // Envelope unwrap now lives in `api.ts`. This stays dual-shape on purpose:
+  // central unwrap returns `{ downloadUrl, expiresAt }`, and the `.data` /
+  // `url` branches remain so a missed unwrap cannot silently drop the file.
+  // Do not "simplify" this back into a second envelope peel.
   const envelope = raw as { data?: ServerExportBody } & Partial<ServerExportBody> & Partial<ExportResponse>;
   const body: ServerExportBody | null =
     envelope?.downloadUrl
@@ -71,6 +128,42 @@ function normalizeExportPayload(
   };
 }
 
+async function downloadAndShare(
+  url: string,
+  filename: string,
+  dialogTitle: string,
+  mimeType: string,
+): Promise<void> {
+  const localUri = FileSystem.cacheDirectory + filename;
+  const downloadResult = await FileSystem.downloadAsync(url, localUri);
+
+  if (downloadResult.status !== 200) {
+    Alert.alert(
+      'Could not export',
+      'The file could not be downloaded. Please try again.',
+    );
+    return;
+  }
+
+  const canShare = await Sharing.isAvailableAsync();
+  if (canShare) {
+    await Sharing.shareAsync(downloadResult.uri, { mimeType, dialogTitle });
+    return;
+  }
+
+  Alert.alert(
+    'Download complete',
+    'Sharing is not available on this device. The file is saved in the app cache.',
+  );
+}
+
+function alertDownloadError(): void {
+  Alert.alert(
+    'Could not export',
+    'No connection. Check your network and try again.',
+  );
+}
+
 export function useExportCV() {
   const qc = useQueryClient();
   return useMutation({
@@ -89,27 +182,20 @@ export function useExportCV() {
       qc.invalidateQueries({ queryKey: ['cv', cvId] });
 
       try {
-        const filename = data.filename;
-        const localUri = FileSystem.cacheDirectory + filename;
-
-        const downloadResult = await FileSystem.downloadAsync(data.url, localUri);
-
-        if (downloadResult.status === 200) {
-          const canShare = await Sharing.isAvailableAsync();
-          if (canShare) {
-            await Sharing.shareAsync(downloadResult.uri, {
-              mimeType: filename.endsWith('.pdf')
-                ? 'application/pdf'
-                : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-              dialogTitle: 'Save or Share your CV',
-            });
-          } else {
-            Alert.alert('Success', 'File saved to device');
-          }
-        }
+        await downloadAndShare(
+          data.url,
+          data.filename,
+          'Save or Share your CV',
+          data.filename.endsWith('.pdf')
+            ? 'application/pdf'
+            : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        );
       } catch {
-        Alert.alert('Error', 'Failed to download file');
+        alertDownloadError();
       }
+    },
+    onError: (err) => {
+      alertExportRequestError(err);
     },
   });
 }
@@ -125,21 +211,18 @@ export function useExportCoverLetter() {
       qc.invalidateQueries({ queryKey: ['user'] });
 
       try {
-        const localUri = FileSystem.cacheDirectory + data.filename;
-        const downloadResult = await FileSystem.downloadAsync(data.url, localUri);
-
-        if (downloadResult.status === 200) {
-          const canShare = await Sharing.isAvailableAsync();
-          if (canShare) {
-            await Sharing.shareAsync(downloadResult.uri, {
-              mimeType: 'application/pdf',
-              dialogTitle: 'Save or Share your Cover Letter',
-            });
-          }
-        }
+        await downloadAndShare(
+          data.url,
+          data.filename,
+          'Save or Share your Cover Letter',
+          'application/pdf',
+        );
       } catch {
-        Alert.alert('Error', 'Failed to download file');
+        alertDownloadError();
       }
+    },
+    onError: (err) => {
+      alertExportRequestError(err);
     },
   });
 }

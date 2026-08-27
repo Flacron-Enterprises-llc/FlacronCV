@@ -2,9 +2,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import React from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -15,9 +16,22 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
-import { GoogleSignInButton, isGoogleSignInAvailable } from '../../src/components/auth/GoogleSignInButton';
+import {
+  GoogleSignInButton,
+  isGoogleSignInAvailable,
+  type GoogleSignInHandle,
+} from '../../src/components/auth/GoogleSignInButton';
+import {
+  LegalAcceptanceModal,
+  LegalSignupLine,
+} from '../../src/components/auth/LegalAcceptanceModal';
 import { Button } from '../../src/components/ui/Button';
 import { Input } from '../../src/components/ui/Input';
+import {
+  LEGAL_POST_FAILED_MESSAGE,
+  LEGAL_POST_FAILED_TITLE,
+  recordAcceptanceAfterSignup,
+} from '../../src/lib/legal-acceptance';
 import { useAuthStore } from '../../src/store/auth-store';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -37,7 +51,12 @@ const schema = z
 type FormData = z.infer<typeof schema>;
 
 export default function RegisterScreen() {
-  const { register, loginWithGoogle, isLoading, error, clearError } = useAuthStore();
+  const { register, loginWithGoogle, isLoading, error, clearError, setLegalGate } = useAuthStore();
+  const googleRef = useRef<GoogleSignInHandle>(null);
+  const pendingSignup = useRef<'password' | 'google' | null>(null);
+  const pendingForm = useRef<FormData | null>(null);
+  const [legalOpen, setLegalOpen] = useState(false);
+  const [legalChecked, setLegalChecked] = useState(false);
 
   const {
     control,
@@ -48,12 +67,58 @@ export default function RegisterScreen() {
     defaultValues: { displayName: '', email: '', password: '', confirmPassword: '' },
   });
 
-  const onSubmit = async (data: FormData) => {
+  const closeLegal = () => {
+    setLegalOpen(false);
+    setLegalChecked(false);
+    pendingSignup.current = null;
+    pendingForm.current = null;
+  };
+
+  const finishAcceptance = async () => {
+    const ok = await recordAcceptanceAfterSignup();
+    if (!ok) {
+      Alert.alert(LEGAL_POST_FAILED_TITLE, LEGAL_POST_FAILED_MESSAGE);
+    }
+  };
+
+  const handleGoogleToken = useCallback(async (token: string) => {
     clearError();
+    setLegalGate(true);
     try {
-      await register(data.email, data.password, data.displayName);
+      await loginWithGoogle(token);
+      await finishAcceptance();
+      setLegalGate(false);
     } catch {
-      // Error in store
+      // Error in store. If Auth already created the user, legalGate stays
+      // true and PENDING_LEGAL_CONSENT re-prompts on relaunch.
+    }
+  }, [clearError, loginWithGoogle, setLegalGate]);
+
+  const onSubmit = (data: FormData) => {
+    clearError();
+    pendingSignup.current = 'password';
+    pendingForm.current = data;
+    setLegalChecked(false);
+    setLegalOpen(true);
+  };
+
+  const handleLegalAccept = async () => {
+    if (!legalChecked || !pendingSignup.current) return;
+    const method = pendingSignup.current;
+    const form = pendingForm.current;
+    closeLegal();
+    if (method === 'password' && form) {
+      setLegalGate(true);
+      try {
+        await register(form.email, form.password, form.displayName);
+        await finishAcceptance();
+        setLegalGate(false);
+      } catch {
+        // Error in store. Consent flag + legalGate stay so a failed verify
+        // after Auth cannot dump them on the dashboard with no record.
+      }
+    } else if (method === 'google') {
+      await googleRef.current?.prompt();
     }
   };
 
@@ -101,8 +166,15 @@ export default function RegisterScreen() {
                 <>
                   <View style={{ marginBottom: 16 }}>
                     <GoogleSignInButton
+                      ref={googleRef}
                       label="Sign up with Google"
-                      onToken={(token) => loginWithGoogle(token).catch(() => {})}
+                      onPressOverride={() => {
+                        clearError();
+                        pendingSignup.current = 'google';
+                        setLegalChecked(false);
+                        setLegalOpen(true);
+                      }}
+                      onToken={(token) => void handleGoogleToken(token)}
                     />
                   </View>
                   <View className="flex-row items-center mb-5">
@@ -181,11 +253,7 @@ export default function RegisterScreen() {
                 )}
               />
 
-              <Text className="text-xs text-stone-400 mb-5 leading-4">
-                By creating an account you agree to our{' '}
-                <Text className="text-brand-500">Terms of Service</Text> and{' '}
-                <Text className="text-brand-500">Privacy Policy</Text>.
-              </Text>
+              <LegalSignupLine />
 
               <Button
                 variant="primary"
@@ -210,6 +278,14 @@ export default function RegisterScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <LegalAcceptanceModal
+        visible={legalOpen}
+        checked={legalChecked}
+        onCheckedChange={setLegalChecked}
+        onAccept={() => void handleLegalAccept()}
+        onCancel={closeLegal}
+        accepting={isLoading}
+      />
     </SafeAreaView>
   );
 }

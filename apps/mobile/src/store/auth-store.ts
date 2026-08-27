@@ -1,5 +1,6 @@
 import {
   createUserWithEmailAndPassword,
+  getAdditionalUserInfo,
   GoogleAuthProvider,
   sendEmailVerification,
   signInWithCredential,
@@ -8,9 +9,14 @@ import {
   updateProfile,
   User as FirebaseUser,
 } from '@firebase/auth';
+import axios from 'axios';
 import { create } from 'zustand';
 import { getFirebaseAuth } from '../lib/firebase';
 import { api } from '../lib/api';
+import {
+  fetchLegalAcceptanceRecord,
+  retryPendingLegalAcceptance,
+} from '../lib/legal-acceptance';
 import { secureStore } from '../lib/secure-store';
 import { User } from '../types/user.types';
 
@@ -21,16 +27,27 @@ interface AuthState {
   isInitialized: boolean;
   emailVerified: boolean;
   error: string | null;
+  /**
+   * Set when POST /auth/verify fails. Firebase session stays; legalGate is
+   * not touched. Screens must not treat a missing `user` as a new Free account.
+   */
+  userSyncError: string | null;
+  /** True while a new signup has not ticked the legal modal (any method). */
+  legalGate: boolean;
 
   // Actions
   initialize: () => () => void;
   login: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: (idToken: string) => Promise<void>;
+  loginWithGoogle: (
+    idToken: string,
+    opts?: { gateNewUser?: boolean },
+  ) => Promise<{ isNewUser: boolean; uid: string }>;
   register: (email: string, password: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   resendVerification: () => Promise<void>;
   syncUser: () => Promise<void>;
+  setLegalGate: (legalGate: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
 }
@@ -42,6 +59,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isInitialized: false,
   emailVerified: false,
   error: null,
+  userSyncError: null,
+  legalGate: false,
 
   initialize: () => {
     const unsubscribe = getFirebaseAuth().onAuthStateChanged(async (firebaseUser) => {
@@ -51,15 +70,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           await secureStore.setAuthToken(token);
           await secureStore.setUserId(firebaseUser.uid);
 
+          const consentUid = await secureStore.getPendingLegalConsent();
+          let consentGate = consentUid === firebaseUser.uid;
+          // Only when the device flag matches: a leftover uid on an already-
+          // accepted account must not lock them out. Do not GET on every cold
+          // start — { acceptance: null } is also grandfathered (L1).
+          if (consentGate) {
+            try {
+              const mine = await fetchLegalAcceptanceRecord();
+              if (mine?.acceptance != null) {
+                await secureStore.clearPendingLegalConsent();
+                consentGate = false;
+              }
+            } catch {
+              // Stay gated. Modal is the forward path.
+            }
+          }
+
           set({
             firebaseUser,
             emailVerified: firebaseUser.emailVerified,
+            // Spread-true only: in-memory legalGate during register() must not
+            // be cleared if onAuthStateChanged wins the race before the flag write.
+            ...(consentGate ? { legalGate: true } : {}),
           });
 
           // Sync user profile with backend
           await get().syncUser();
         } catch {
-          set({ firebaseUser: null, user: null });
+          set({ firebaseUser: null, user: null, userSyncError: null, legalGate: false });
         }
       } else {
         await secureStore.clearAll();
@@ -67,6 +106,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           firebaseUser: null,
           user: null,
           emailVerified: false,
+          userSyncError: null,
+          legalGate: false,
         });
       }
       set({ isInitialized: true });
@@ -88,13 +129,39 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  loginWithGoogle: async (idToken: string) => {
+  loginWithGoogle: async (idToken: string, opts) => {
     set({ isLoading: true, error: null });
     try {
+      // Block dashboard redirect until we know whether this is a new user.
+      // additionalUserInfo.isNewUser is only available AFTER signInWithCredential.
+      if (opts?.gateNewUser) set({ legalGate: true });
+
       const credential = GoogleAuthProvider.credential(idToken);
-      await signInWithCredential(getFirebaseAuth(), credential);
-      // onAuthStateChanged handles the rest
+      const result = await signInWithCredential(getFirebaseAuth(), credential);
+      const uid = result.user.uid;
+      const info = getAdditionalUserInfo(result);
+      // Fallback: if additionalUserInfo is missing, treat as new so they cannot slip through.
+      const isExplicitlyExisting = info?.isNewUser === false;
+      const consentUid = await secureStore.getPendingLegalConsent();
+      const stillNeedsConsent = consentUid === uid;
+
+      if (opts?.gateNewUser && isExplicitlyExisting && !stillNeedsConsent) {
+        set({ legalGate: false });
+        return { isNewUser: false, uid };
+      }
+
+      if (!isExplicitlyExisting || stillNeedsConsent) {
+        await secureStore.setPendingLegalConsent(uid);
+      }
+
+      if (opts?.gateNewUser) {
+        set({ legalGate: true });
+        return { isNewUser: true, uid };
+      }
+
+      return { isNewUser: !isExplicitlyExisting, uid };
     } catch (err: unknown) {
+      if (opts?.gateNewUser) set({ legalGate: false });
       const message = getFirebaseErrorMessage(err);
       set({ error: message });
       throw new Error(message);
@@ -107,6 +174,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const credential = await createUserWithEmailAndPassword(getFirebaseAuth(), email, password);
+      // Before any other await: a crash after Auth must still re-gate on relaunch.
+      await secureStore.setPendingLegalConsent(credential.user.uid);
+      set({ legalGate: true });
       await updateProfile(credential.user, { displayName });
       await sendEmailVerification(credential.user);
       const token = await credential.user.getIdToken();
@@ -127,11 +197,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await signOut(getFirebaseAuth());
       await secureStore.clearAll();
-      set({ firebaseUser: null, user: null, emailVerified: false });
+      set({ firebaseUser: null, user: null, emailVerified: false, userSyncError: null, legalGate: false });
     } catch {
       // Force cleanup even on error
       await secureStore.clearAll();
-      set({ firebaseUser: null, user: null, emailVerified: false });
+      set({ firebaseUser: null, user: null, emailVerified: false, userSyncError: null, legalGate: false });
     }
   },
 
@@ -171,12 +241,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await secureStore.setAuthToken(token);
 
       const user = await api.post<User>('/auth/verify');
-      set({ user });
-    } catch {
-      // Firebase auth still valid even if backend sync fails
+      set({ user, userSyncError: null });
+      await retryPendingLegalAcceptance();
+    } catch (err) {
+      // Do not rethrow: initialize() would clear firebaseUser and bounce
+      // to login. Do not touch legalGate. Keep any previously synced user.
+      const userSyncError =
+        axios.isAxiosError(err) && !err.response
+          ? 'No connection. Check your network and try again.'
+          : 'Could not load your account. Please try again.';
+      set({ userSyncError });
     }
   },
 
+  setLegalGate: (legalGate) => set({ legalGate }),
   setError: (error) => set({ error }),
   clearError: () => set({ error: null }),
 }));

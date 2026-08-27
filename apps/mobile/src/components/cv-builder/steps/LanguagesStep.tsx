@@ -24,6 +24,7 @@ type FormData = z.infer<typeof schema>;
 export function LanguagesStep({ onValidChange }: { onValidChange: (v: boolean) => void }) {
   const { sections, updateSection, addSection } = useCVStore();
   const [modalVisible, setModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState<LanguageItem | null>(null);
   const langSection = sections.find((s) => s.type === CVSectionType.LANGUAGES);
   const items = (langSection?.items ?? []) as LanguageItem[];
 
@@ -32,10 +33,35 @@ export function LanguagesStep({ onValidChange }: { onValidChange: (v: boolean) =
     defaultValues: { proficiency: 'Fluent' },
   });
 
+  const openAdd = () => {
+    reset({ proficiency: 'Fluent' });
+    setEditingItem(null);
+    setModalVisible(true);
+    onValidChange(true);
+  };
+
+  const openEdit = (item: LanguageItem) => {
+    reset({
+      name: item.name,
+      proficiency: item.proficiency,
+    });
+    setEditingItem(item);
+    setModalVisible(true);
+  };
+
   const onSubmit = (data: FormData) => {
-    const newItem: LanguageItem = { id: generateId(), name: data.name, proficiency: data.proficiency };
+    // Spread first so web-only keys (order, description, …) survive; form fields overlay so clears win.
+    const newItem: LanguageItem = {
+      ...(editingItem ?? {}),
+      id: editingItem?.id ?? generateId(),
+      name: data.name,
+      proficiency: data.proficiency,
+    };
     if (langSection) {
-      updateSection(langSection.id, { items: [...items, newItem] });
+      const updatedItems = editingItem
+        ? items.map((i) => (i.id === editingItem.id ? newItem : i))
+        : [...items, newItem];
+      updateSection(langSection.id, { items: updatedItems });
     } else {
       addSection({
         id: generateId(), type: CVSectionType.LANGUAGES, title: 'Languages',
@@ -44,7 +70,12 @@ export function LanguagesStep({ onValidChange }: { onValidChange: (v: boolean) =
       });
     }
     setModalVisible(false);
-    onValidChange(true);
+  };
+
+  const handleDelete = (itemId: string) => {
+    if (langSection) {
+      updateSection(langSection.id, { items: items.filter((i) => i.id !== itemId) });
+    }
   };
 
   const getProficiencyColor = (level: string) => {
@@ -68,18 +99,21 @@ export function LanguagesStep({ onValidChange }: { onValidChange: (v: boolean) =
               <Text className="text-sm font-medium" style={{ color: getProficiencyColor(item.proficiency) }}>
                 {item.name} · {item.proficiency}
               </Text>
-              <TouchableOpacity onPress={() => langSection && updateSection(langSection.id, { items: items.filter((i) => i.id !== item.id) })} className="ml-1.5">
+              <TouchableOpacity onPress={() => openEdit(item)} className="ml-1.5 p-0.5">
+                <Ionicons name="pencil-outline" size={14} color={getProficiencyColor(item.proficiency)} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleDelete(item.id)} className="ml-0.5">
                 <Ionicons name="close-circle" size={14} color={getProficiencyColor(item.proficiency)} />
               </TouchableOpacity>
             </View>
           ))}
         </View>
-        <Button variant="outline" onPress={() => { reset({ proficiency: 'Fluent' }); setModalVisible(true); }} icon={<Ionicons name="add" size={18} color="#374151" />} fullWidth>
+        <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color="#374151" />} fullWidth>
           Add Language
         </Button>
         <View className="h-8" />
       </ScrollView>
-      <Modal visible={modalVisible} onClose={() => setModalVisible(false)} title="Add Language">
+      <Modal visible={modalVisible} onClose={() => setModalVisible(false)} title={editingItem ? 'Edit Language' : 'Add Language'}>
         <Controller control={control} name="name" render={({ field }) => (
           <Input label="Language *" placeholder="English" value={field.value} onChangeText={field.onChange} error={errors.name?.message} />
         )} />
@@ -94,7 +128,7 @@ export function LanguagesStep({ onValidChange }: { onValidChange: (v: boolean) =
             ))}
           </View>
         )} />
-        <Button variant="primary" fullWidth onPress={handleSubmit(onSubmit)}>Add Language</Button>
+        <Button variant="primary" fullWidth onPress={handleSubmit(onSubmit)}>{editingItem ? 'Update' : 'Add Language'}</Button>
       </Modal>
     </View>
   );

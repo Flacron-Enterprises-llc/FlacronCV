@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -16,8 +17,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 import { GoogleSignInButton, isGoogleSignInAvailable } from '../../src/components/auth/GoogleSignInButton';
+import { LegalAcceptanceModal } from '../../src/components/auth/LegalAcceptanceModal';
 import { Button } from '../../src/components/ui/Button';
 import { Input } from '../../src/components/ui/Input';
+import {
+  LEGAL_POST_FAILED_MESSAGE,
+  LEGAL_POST_FAILED_TITLE,
+  recordAcceptanceAfterSignup,
+} from '../../src/lib/legal-acceptance';
 import { useAuthStore } from '../../src/store/auth-store';
 
 // Required for expo-auth-session redirect to work correctly
@@ -31,7 +38,11 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function LoginScreen() {
-  const { login, loginWithGoogle, isLoading, error, clearError } = useAuthStore();
+  const { login, loginWithGoogle, logout, isLoading, error, clearError, legalGate, setLegalGate } =
+    useAuthStore();
+  const [legalOpen, setLegalOpen] = useState(false);
+  const [legalChecked, setLegalChecked] = useState(false);
+  const [legalAccepting, setLegalAccepting] = useState(false);
 
   const {
     control,
@@ -42,6 +53,12 @@ export default function LoginScreen() {
     defaultValues: { email: '', password: '' },
   });
 
+  useEffect(() => {
+    if (legalGate) {
+      setLegalOpen(true);
+    }
+  }, [legalGate]);
+
   const onSubmit = async (data: FormData) => {
     clearError();
     try {
@@ -49,6 +66,45 @@ export default function LoginScreen() {
     } catch {
       // Error already set in store
     }
+  };
+
+  const handleGoogleToken = useCallback(
+    async (token: string) => {
+      clearError();
+      try {
+        const { isNewUser } = await loginWithGoogle(token, { gateNewUser: true });
+        if (isNewUser) {
+          setLegalChecked(false);
+          setLegalOpen(true);
+        }
+      } catch {
+        // Error in store
+      }
+    },
+    [clearError, loginWithGoogle],
+  );
+
+  const handleLegalAccept = async () => {
+    if (!legalChecked) return;
+    setLegalAccepting(true);
+    try {
+      const ok = await recordAcceptanceAfterSignup();
+      setLegalGate(false);
+      setLegalOpen(false);
+      if (!ok) {
+        Alert.alert(LEGAL_POST_FAILED_TITLE, LEGAL_POST_FAILED_MESSAGE);
+      }
+    } finally {
+      setLegalAccepting(false);
+    }
+  };
+
+  const handleLegalCancel = async () => {
+    setLegalOpen(false);
+    setLegalChecked(false);
+    // Sign out only — do not delete the Auth user. Consent uid stays so the
+    // next Google sign-in still shows this modal (isNewUser will be false).
+    await logout();
   };
 
   return (
@@ -157,7 +213,7 @@ export default function LoginScreen() {
                   </View>
                   <GoogleSignInButton
                     label="Continue with Google"
-                    onToken={(token) => loginWithGoogle(token).catch(() => {})}
+                    onToken={(token) => void handleGoogleToken(token)}
                   />
                 </>
               )}
@@ -175,6 +231,14 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <LegalAcceptanceModal
+        visible={legalOpen}
+        checked={legalChecked}
+        onCheckedChange={setLegalChecked}
+        onAccept={() => void handleLegalAccept()}
+        onCancel={() => void handleLegalCancel()}
+        accepting={legalAccepting}
+      />
     </SafeAreaView>
   );
 }

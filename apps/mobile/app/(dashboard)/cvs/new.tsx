@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TemplateCard } from '../../../src/components/templates/TemplateCard';
+import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../src/components/ui/Skeleton';
 import { Button } from '../../../src/components/ui/Button';
 import { useTemplates } from '../../../src/hooks/useTemplates';
@@ -11,31 +13,57 @@ import { useCreateCV } from '../../../src/hooks/useCVs';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { useCVStore } from '../../../src/store/cv-store';
 import { Template } from '../../../src/types/template.types';
-import { TemplateCategory, CVStatus, FontSize, Spacing, SubscriptionPlan } from '../../../src/types/enums';
-import { canAccessTemplate, canCreateCV } from '../../../src/lib/utils';
+import { TemplateCategory, CVStatus, FontSize, Spacing } from '../../../src/types/enums';
+import { canAccessTemplate, canCreateCV, effectivePlanForCopy } from '../../../src/lib/entitlements';
+import {
+  cvLimitReachedMessage,
+  lockedTemplateMessage,
+  lockedTemplateTitle,
+  PAID_UPGRADES_ENABLED,
+  upgradeAlertButtons,
+} from '../../../src/config/paid-upgrades';
+
+function loadFailureMessage(err: unknown): string {
+  if (axios.isAxiosError(err) && !err.response) {
+    return 'No connection. Check your network and try again.';
+  }
+  return 'Could not load templates. Please try again.';
+}
 
 export default function NewCVScreen() {
   const router = useRouter();
   const { template: queryTemplate } = useLocalSearchParams<{ template?: string }>();
   const { user } = useAuthStore();
   const { setCV, setSections } = useCVStore();
-  const { data: templates, isLoading } = useTemplates(TemplateCategory.CV);
+  const { data: templates, isLoading, error, refetch } = useTemplates(TemplateCategory.CV);
   const createCV = useCreateCV();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(queryTemplate ?? null);
   const [step, setStep] = useState<'template' | 'title'>('template');
   const [cvTitle, setCvTitle] = useState('My Professional CV');
 
-  const plan = user?.subscription?.plan ?? SubscriptionPlan.FREE;
+  const subscription = user?.subscription;
+
+  useEffect(() => {
+    if (PAID_UPGRADES_ENABLED || !queryTemplate || !templates) return;
+    const t = templates.find((x) => x.id === queryTemplate);
+    if (t && !canAccessTemplate(user?.subscription, t.tier)) {
+      setSelectedTemplateId(null);
+    }
+  }, [
+    queryTemplate,
+    templates,
+    user?.subscription?.plan,
+    user?.subscription?.status,
+    user?.subscription?.currentPeriodEnd,
+    user?.subscription?.cancelAtPeriodEnd,
+  ]);
 
   const handleSelectTemplate = (template: Template) => {
-    if (!canAccessTemplate(plan, template.tier)) {
+    if (!canAccessTemplate(subscription, template.tier)) {
       Alert.alert(
-        'Upgrade Required',
-        `The ${template.name} template requires a ${template.tier} plan.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => router.push('/(dashboard)/settings/billing') },
-        ],
+        lockedTemplateTitle(),
+        lockedTemplateMessage(template.name, template.tier),
+        upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
       );
       return;
     }
@@ -43,22 +71,36 @@ export default function NewCVScreen() {
   };
 
   const handleCreate = async () => {
-    if (!user) return;
+    if (!user?.usage) {
+      Alert.alert(
+        'Could not create CV',
+        'Could not load your usage. Please try again.',
+      );
+      return;
+    }
 
-    if (!canCreateCV(plan, user?.usage?.cvsCreated)) {
+    if (!canCreateCV(subscription, user.usage.cvsCreated)) {
       Alert.alert(
         'CV Limit Reached',
-        `Your ${plan} plan allows up to ${plan === SubscriptionPlan.FREE ? 5 : 10} CVs. Upgrade to create more.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => router.push('/(dashboard)/settings/billing') },
-        ],
+        cvLimitReachedMessage(effectivePlanForCopy(subscription)),
+        upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
       );
       return;
     }
 
     try {
       const selectedTemplate = templates?.find((t) => t.id === selectedTemplateId) ?? templates?.[0];
+      if (
+        !PAID_UPGRADES_ENABLED &&
+        selectedTemplate &&
+        !canAccessTemplate(subscription, selectedTemplate.tier)
+      ) {
+        Alert.alert(
+          lockedTemplateTitle(),
+          lockedTemplateMessage(selectedTemplate.name, selectedTemplate.tier),
+        );
+        return;
+      }
       const newCV = await createCV.mutateAsync({
         title: cvTitle,
         templateId: selectedTemplate?.id ?? 'modern',
@@ -103,13 +145,15 @@ export default function NewCVScreen() {
           </View>
         </View>
 
-        {isLoading ? (
+        {error ? (
+          <ErrorState message={loadFailureMessage(error)} onRetry={() => void refetch()} />
+        ) : isLoading || templates == null ? (
           <View className="p-5">
             {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
           </View>
         ) : (
           <FlatList
-            data={templates ?? []}
+            data={templates}
             numColumns={2}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ padding: 16 }}
@@ -120,7 +164,7 @@ export default function NewCVScreen() {
                 <TemplateCard
                   template={item}
                   isSelected={selectedTemplateId === item.id}
-                  isLocked={!canAccessTemplate(plan, item.tier)}
+                  isLocked={!canAccessTemplate(subscription, item.tier)}
                   onSelect={() => handleSelectTemplate(item)}
                 />
               </View>

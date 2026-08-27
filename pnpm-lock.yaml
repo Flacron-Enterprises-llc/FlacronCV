@@ -178,6 +178,9 @@ importers:
       expo-constants:
         specifier: ^18.0.13
         version: 18.0.13(expo@54.0.33)(react-native@0.81.5)
+      expo-crypto:
+        specifier: ~15.0.9
+        version: 15.0.9(expo@54.0.33)
       expo-file-system:
         specifier: ^19.0.21
         version: 19.0.21(expo@54.0.33)(react-native@0.81.5)
@@ -8924,7 +8927,7 @@ packages:
     dependencies:
       expo-application: 7.0.8(expo@54.0.33)
       expo-constants: 18.0.13(expo@54.0.33)(react-native@0.81.5)
-      expo-crypto: 15.0.8(expo@54.0.33)
+      expo-crypto: 15.0.9(expo@54.0.33)
       expo-linking: 8.0.11(expo@54.0.33)(react-native@0.81.5)(react@19.1.0)
       expo-web-browser: 15.0.10(expo@54.0.33)(react-native@0.81.5)
       invariant: 2.2.4
@@ -8959,8 +8962,8 @@ packages:
       - supports-color
     dev: false
 
-  /expo-crypto@15.0.8(expo@54.0.33):
-    resolution: {integrity: sha512-aF7A914TB66WIlTJvl5J6/itejfY78O7dq3ibvFltL9vnTALJ/7LYHvLT4fwmx9yUNS6ekLBtDGWivFWnj2Fcw==}
+  /expo-crypto@15.0.9(expo@54.0.33):
+    resolution: {integrity: sha512-SNWKa2fXx7v9gkp1h/7nqXY5XN7qgNDn3yRc2aO0gWGbeMbvob/haMxxsPFe9f51aqH5NjNCqHf2kvLhvAd8KQ==}
     peerDependencies:
       expo: '*'
     dependencies:

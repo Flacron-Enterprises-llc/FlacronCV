@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import axios from 'axios';
 import React from 'react';
 import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
+import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../src/components/ui/Skeleton';
 import { useSupportTickets } from '../../../src/hooks/useSupport';
 import { SupportTicket } from '../../../src/types/support.types';
@@ -18,11 +20,18 @@ const STATUS_COLORS: Record<TicketStatus, { bg: string; text: string }> = {
   [TicketStatus.CLOSED]: { bg: '#f3f4f6', text: '#6b7280' },
 };
 
+function loadFailureMessage(err: unknown): string {
+  if (axios.isAxiosError(err) && !err.response) {
+    return 'No connection. Check your network and try again.';
+  }
+  return 'Could not load tickets. Please try again.';
+}
+
 export default function SupportScreen() {
   const router = useRouter();
-  const { data, isLoading, refetch } = useSupportTickets();
+  const { data, isLoading, error, refetch } = useSupportTickets();
 
-  const tickets = data?.data ?? [];
+  const tickets = data ?? [];
 
   const renderTicket = ({ item }: { item: SupportTicket }) => {
     const statusColor = STATUS_COLORS[item.status];
@@ -49,7 +58,7 @@ export default function SupportScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-stone-50">
+    <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
       <View className="px-5 pt-4 pb-4 bg-white border-b border-stone-100">
         <View className="flex-row items-center justify-between">
           <Text className="text-xl font-black text-stone-900">Support</Text>
@@ -60,7 +69,9 @@ export default function SupportScreen() {
         </View>
       </View>
 
-      {isLoading ? (
+      {error ? (
+        <ErrorState message={loadFailureMessage(error)} onRetry={() => void refetch()} />
+      ) : isLoading ? (
         <View className="p-5">{[1, 2].map((i) => <SkeletonCard key={i} />)}</View>
       ) : tickets.length === 0 ? (
         <EmptyState

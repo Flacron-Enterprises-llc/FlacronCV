@@ -34,6 +34,7 @@ interface SkillsStepProps {
 export function SkillsStep({ onValidChange }: SkillsStepProps) {
   const { sections, updateSection, addSection } = useCVStore();
   const [modalVisible, setModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState<SkillItem | null>(null);
 
   const skillsSection = sections.find((s) => s.type === CVSectionType.SKILLS);
   const items = (skillsSection?.items ?? []) as SkillItem[];
@@ -45,20 +46,36 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
 
   const openAdd = () => {
     reset({ level: SkillLevel.INTERMEDIATE });
+    setEditingItem(null);
     setModalVisible(true);
     onValidChange(true);
   };
 
+  const openEdit = (item: SkillItem) => {
+    reset({
+      name: item.name,
+      level: item.level,
+      category: item.category ?? '',
+    });
+    setEditingItem(item);
+    setModalVisible(true);
+  };
+
   const onSubmit = (data: FormData) => {
+    // Spread first so web-only keys (order, …) survive; form fields overlay so clears win.
     const newItem: SkillItem = {
-      id: generateId(),
+      ...(editingItem ?? {}),
+      id: editingItem?.id ?? generateId(),
       name: data.name,
       level: data.level,
       category: data.category,
     };
 
     if (skillsSection) {
-      updateSection(skillsSection.id, { items: [...items, newItem] });
+      const updatedItems = editingItem
+        ? items.map((i) => (i.id === editingItem.id ? newItem : i))
+        : [...items, newItem];
+      updateSection(skillsSection.id, { items: updatedItems });
     } else {
       addSection({
         id: generateId(),
@@ -102,7 +119,10 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
                 <Text className="text-sm font-medium" style={{ color: getLevelColor(item.level) }}>
                   {item.name}
                 </Text>
-                <TouchableOpacity onPress={() => handleDelete(item.id)} className="ml-1.5">
+                <TouchableOpacity onPress={() => openEdit(item)} className="ml-1.5 p-0.5">
+                  <Ionicons name="pencil-outline" size={14} color={getLevelColor(item.level)} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDelete(item.id)} className="ml-0.5">
                   <Ionicons name="close-circle" size={14} color={getLevelColor(item.level)} />
                 </TouchableOpacity>
               </View>
@@ -124,7 +144,7 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
         <View className="h-8" />
       </ScrollView>
 
-      <Modal visible={modalVisible} onClose={() => setModalVisible(false)} title="Add Skill">
+      <Modal visible={modalVisible} onClose={() => setModalVisible(false)} title={editingItem ? 'Edit Skill' : 'Add Skill'}>
         <Controller
           control={control}
           name="name"
@@ -170,7 +190,7 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
         />
 
         <Button variant="primary" fullWidth onPress={handleSubmit(onSubmit)}>
-          Add Skill
+          {editingItem ? 'Update' : 'Add Skill'}
         </Button>
       </Modal>
     </View>

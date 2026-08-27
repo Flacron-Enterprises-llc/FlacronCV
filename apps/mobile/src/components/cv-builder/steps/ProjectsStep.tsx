@@ -61,6 +61,7 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
 
   const onSubmit = (data: FormData) => {
     const newItem: ProjectItem = {
+      ...(editingItem ?? {}),
       id: editingItem?.id ?? generateId(),
       name: data.name,
       description: data.description,

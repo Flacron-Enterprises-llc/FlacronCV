@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/auth-store';
 import { CoverLetter, GenerateCoverLetterData } from '../types/cover-letter.types';
-import { PaginatedResponse } from '../types/api.types';
+import { ListPage } from '../types/api.types';
 
 function useAuthReady() {
   const { firebaseUser, isInitialized } = useAuthStore();
@@ -13,7 +13,7 @@ export function useCoverLetterList(page = 1, limit = 20) {
   const ready = useAuthReady();
   return useQuery({
     queryKey: ['cover-letters', page, limit],
-    queryFn: () => api.get<PaginatedResponse<CoverLetter>>('/cover-letters', { page, limit }),
+    queryFn: () => api.get<ListPage<CoverLetter>>('/cover-letters', { page, limit }),
     enabled: ready,
     staleTime: 2 * 60 * 1000,
   });

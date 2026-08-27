@@ -12,7 +12,7 @@
 > 4. Tick completed items here; log every change in the Change Log.
 > 5. Report Out-of-Scope / architectural items separately — do not implement without approval.
 
-Last updated: 2026-08-25
+Last updated: 2026-08-27
 
 > **Note on dates.** The header previously read `2026-07-29` while the two newest change-log
 > entries were dated `2026-07-30`; the header was stale, the entries were right. Corrected
@@ -36,6 +36,7 @@ Last updated: 2026-08-25
 ### Key paths
 - Web routes: `apps/web/src/app/[locale]/(public|auth|dashboard|admin|crm)/…`
 - Web state: `apps/web/src/store/*`; providers: `apps/web/src/providers/*`; API client: `apps/web/src/lib/api.ts`
+- Mobile API client: `apps/mobile/src/lib/api.ts` (unwraps Nest `{ success, data }` like web; CV/CL lists are `{ items, page, limit, hasMore }`)
 - API modules: `apps/api/src/modules/{auth,users,cv,cover-letter,ai,templates,export,payment,support,admin,audit,mail,crm,firebase,legal}`
 - Plans/entitlements: `packages/shared-types/src/subscription.types.ts` (`PLAN_CONFIGS`)
 - Locales: `apps/web/public/locales/<loc>/common.json`
@@ -762,6 +763,28 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 8. Out-of-scope / architectural recommendations (do NOT implement without approval)
 
+- **⚠️ UPDATED 2026-08-27 — Mobile section item E4 covers all seven item
+  types.** Experience, education, projects, skills, certifications, languages,
+  and references rebuild an item by spreading the loaded object then overlaying
+  form fields, so keys the mobile form does not collect survive an edit
+  (`order` on all four; certification `expiryDate`/`url`; reference
+  `relationship`; web’s generic `description` on certs/languages/references).
+  Cleared form fields still win. Do not rebuild these items from form data
+  alone.
+
+- **⚠️ ADDED 2026-08-26 — Mobile date fields: three-way type lie (do not “fix”
+  the types in a drive-by).** Same defect class as the fabricated
+  `PaginatedResponse`. `packages/shared-types` declares `CV.createdAt` /
+  `updatedAt` (and the same pattern on cover letters, support tickets, user
+  `createdAt`/`updatedAt`, `usage.lastExportReset`,
+  `subscription.currentPeriodEnd`) as `Date`. `apps/mobile/src/types/cv.types.ts:143-144`
+  (and the parallel mobile types) declare them `string`. The wire is a
+  Firestore Timestamp JSON object (`{_seconds,_nanoseconds}` or `{seconds,nanoseconds}`).
+  All three disagree; TypeScript still type-checks. **D1 (2026-08-26):**
+  mobile `toDate` / `formatDate` parse those shapes defensively (same contract
+  as web `apps/web/src/lib/format-date.ts`). That is a parser, not a correct
+  type. Aligning shared-types + mobile types + an API serializer is a separate
+  approved change; do not treat the helper as closing the lie.
 - **⚠️ ADDED 2026-08-26 — Sold, not code-gated (client decision).** Do not
   strip these without the operator. They appear on paid `features[]` / the
   billing comparison and nothing in the API treats them differently.
@@ -830,8 +853,9 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   `forbidNonWhitelisted` would 400 existing autosaves that still carry legacy keys. Full union
   enforcement is deferred to a migration that first strips or maps those keys.
 - **⚠️ ADDED 2026-08-19 — Mobile is NOT currently shippable (correct the “shipping app” wording).**
-  `apps/mobile/app.json` still has placeholder `"projectId": "your-eas-project-id"` and there is
-  **no** `eas.json`. Treat broken mobile API calls as **latent** (will bite the first real store
+  `apps/mobile/app.json` still has placeholder `"projectId": "your-eas-project-id"`.
+  `eas.json` exists (B1, 2026-08-27) with development / preview / production
+  profiles. Treat broken mobile API calls as **latent** (will bite the first real store
   build), not live App Store / Play damage today. Equally: **do not ship mobile** without clearing
   the **Mobile pre-launch gate** below. ⚠️ UNVERIFIED that no external pipeline builds past that
   placeholder.
@@ -853,15 +877,25 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   Dead traps removed: `auth-store.updateUser` (`PATCH /users/:uid`), `useSubscriptionStatus`
   (`GET /users/:uid/subscription`).
 - **⚠️ ADDED 2026-08-19 — Mobile pre-launch gate (must clear before any store build).**
-  1. Profile `PUT /users/me` path ✓ (this batch)
+  1. Profile `PUT /users/me` path ✓ (this batch). **Q6 2026-08-26:** form no
+     longer hydrates `defaultValues` once while `/users/me` is empty; loading
+     / error gates; dirty-only PUT so empty strings cannot wipe stored fields.
   2. Cover-letter AI generate path ✓ (this batch)
   3. Profile photo: Storage + `PUT /users/me { photoURL }` still **open** (UI disabled)
   4. Export paths + response shape ✓ (this batch)
-  5. Support ticket messages from ticket GET ✓ (this batch)
-  6. **Legal acceptance at register** — still **open**. Mobile has no next-intl; a modal would be
-     **English-only** unless next-intl is introduced (larger work). Operator will decide when
-     mobile is closer to shipping. Until then mobile signups skip `POST /legal/acceptances` and
-     are grandfathered. See also “Mobile legal acceptance gap” below.
+  5. Support ticket messages from ticket GET ✓ (this batch). **Q4 2026-08-26:**
+     list/detail ErrorState on fetch fail; send keeps composer text until
+     success; no-connection vs rejected Alerts; bubble width cap; `edges={['top']}`.
+     **Q10 2026-08-27:** dashboard/settings/templates/billing distinguish fetch
+     failure from empty; `syncUser` sets `userSyncError` (no rethrow / no legalGate).
+  6. **Legal acceptance at register** — **done (L1, 2026-08-26; Q5 2026-08-26).**
+     English-only modal before Firebase; `POST /legal/acceptances`; Settings
+     Terms/Privacy/Disclaimer open the public `/en/` pages. Email register now
+     writes `PENDING_LEGAL_CONSENT` immediately after Auth create (same crash
+     coverage as Google-on-login). Leftover flag on an already-accepted uid is
+     ungated via `GET /legal/acceptances/me` (not a cold-start GET for everyone;
+     `treatMissingAsStale` stays false). Google-on-login gates **new** users
+     only. `clearAll()` still does not delete the consent flag (Cancel re-prompt).
 - **⚠️ ADDED 2026-08-19 — Four mobile API calls that do not exist — SUPERSEDED by alignment batch above.**
   Kept for history: the old mapping listed PATCH `/users/me`, `…/generate`, photo POST, and
   `/exports/…` URLs. Items 1–2 and 4–5 of the pre-launch gate are fixed; photo remains TODO;
@@ -926,12 +960,18 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   a FREE feature bullet claiming a PDF watermark the product does not have. Making it consume
   shared-types is the right fix but is larger than a micro-change — see the full audit in
   `ARCHITECTURE_MAP.md`.
-- **⚠️ ADDED 2026-08-19 — Mobile legal acceptance gap (held — not this batch).** Web Batch H gates
-  register with `LegalAcceptanceModal` + `POST /legal/acceptances`. Mobile does **not**:
-  `apps/mobile/app/(auth)/register.tsx` → `POST /auth/verify` only. No modal, no acceptance write;
-  grandfathering then treats the account as predated. **Decision path:** mobile has no six-locale
-  pipeline; a modal would be **English-only**; introducing next-intl is a larger piece of work.
-  Operator decides when mobile is closer to shipping. Remains item 6 on the Mobile pre-launch gate.
+- **⚠️ UPDATED 2026-08-26 — Mobile legal acceptance (L1).** Web Batch H gates
+  register with `LegalAcceptanceModal` + `POST /legal/acceptances`. Mobile now
+  matches that write (`apps/mobile/src/lib/legal-acceptance.ts`) with an
+  English-only modal (no next-intl). Settings Terms/Privacy/Disclaimer open
+  `EXPO_PUBLIC_APP_URL` + `/en/…` in `WebBrowser`. `treatMissingAsStale` stays
+  false — no retroactive prompts for accounts created before this change.
+- **⚠️ ADDED 2026-08-26 — Mobile records privacyVersion 2026-08-16 while Privacy
+  section 4 is still awaiting the client.** Same deliberate gap as web
+  (`LEGAL_VERSION_MAP.privacy` vs locale-JSON body / B.1). Revisit this stamp
+  when section 4 lands so the recorded version matches the published body.
+  Source copy: `apps/mobile/src/lib/legal-docs.ts` from
+  `apps/web/src/legal/types.ts`. Do not bump one without the other.
 - **⚠️ UPDATED 2026-08-21 — AI audit is success-only by design.** `withAudit` on
   `AIController` and the two previously-gapped paths (`generateWithAI`,
   `importFromResume`) write `AI_GENERATION` only after the provider returns.
@@ -1001,6 +1041,242 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-27 — **Mobile B2: preview/production EAS builds pin the public API
+  URL.** `eas.json` sets `EXPO_PUBLIC_API_URL` on preview and production only
+  (`https://api.flacroncv.com/api/v1`, matching Amplify). Development has no
+  override so Expo Go / a dev client still use `apps/mobile/.env` (LAN).
+  Release `api.ts` throws at startup if the resolved URL is localhost,
+  127.0.0.1, or RFC1918 — no silent fallback. `.env` / `.env.example`
+  untouched. Web/API untouched.
+
+- 2026-08-27 — **Mobile B1: splash asset wired; eas.json added.** Legacy
+  `splash.image` now `./assets/splash.png` (was the empty 200×200
+  `splash-icon.png`). `android.versionCode` 1 and `ios.buildNumber` `"1"`.
+  New `apps/mobile/eas.json`: development (dev client, internal), preview
+  (internal APK), production (AAB); `appVersionSource: local`. Package
+  names and EAS `projectId` unchanged — Play ID is a client decision;
+  projectId comes from `eas init`. Stripe / image-picker / permissions
+  untouched. Web/API untouched.
+
+- 2026-08-27 — **Mobile TC1: three tsc errors fixed; `pnpm type-check`
+  now includes apps/mobile.** Settings menu items share an optional `badge`
+  (union was rejecting `item.badge`). Personal Info autosave indexes
+  `PersonalInfo` by form keys instead of casting to `Record<string, string>`.
+  Skeleton `width` is `number | \`${number}%\`` (RN style, not `string`).
+  Full `tsc --noEmit` was 4 diagnostics in those 3 files — nothing else,
+  including the §8 date-type lie (mobile still declares `createdAt` as
+  `string`). Added `"type-check": "tsc --noEmit"` to `apps/mobile/package.json`
+  so turbo/CI run it. Behaviour unchanged. Web/API untouched.
+
+- 2026-08-27 — **Mobile Q12: dead AI hooks gone; ATS/JD payloads match DTOs;
+  stale npm lock removed.** Deleted `useImproveSection` /
+  `useSuggestSkills` / `useTranslateContent` / `useGenerateCoverLetterAI`
+  (all typed `AIGenerateRequest`, which no DTO accepts — same trap as E6 /
+  Q11a) and the mobile `AIGenerateRequest` type. `useATSCheck` and
+  `useGenerateJobDescription` now send `AtsCheckDto` /
+  `GenerateJobDescriptionDto` (no UI). Deleted `apps/mobile/package-lock.json`
+  (listed safe-area 5.6.2 vs real 5.7.0) and gitignored
+  `apps/mobile/package-lock.json`.
+  UpgradeModal / share / versions / photo stub / useTemplate / pending-template
+  kept with comments. Web/API/packages untouched. `useGenerateSummary` (E6)
+  unchanged.
+
+
+- 2026-08-27 — **Mobile Q7 + Q13: dead Settings rows gone; onboarding uses
+  the real bottom inset.** Notifications and Security were `onPress: () => {}`
+  with chevrons; no mobile screens exist (web has preference toggles / change
+  password on the same settings page). Rows removed. Header chevron now opens
+  Profile. Onboarding footer `paddingBottom` is `useSafeAreaInsets().bottom`
+  (T1/T2 mechanism); `SafeAreaView` is `edges={['top']}` so the inset is not
+  doubled. No-op CSS `transition: 'width'` on pagination dots removed; width
+  still jumps with the slide index. Web/API untouched.
+
+- 2026-08-27 — **Mobile Q15: client gates use `resolveEffectivePlan`.** One
+  helper in `apps/mobile/src/lib/entitlements.ts` re-exports the shared-types
+  function the API already uses. `canUseAI` / `canExport` / `canAccessTemplate`
+  / `canCreateCV` / `canCreateCoverLetter` take the subscription object, not
+  stored `subscription.plan`. AI also applies `min(stored aiCreditsLimit,
+  effective plan limit)` like `reserveAiCredit`. Billing/Settings/Dashboard
+  still display the stored plan (same as web). Web already resolved gates;
+  it does not apply the AI min(). Web/API untouched.
+
+- 2026-08-27 — **Mobile Q9: no fake CV completeness; Templates lock holds when
+  upgrades are on.** My CVs dropped the hardcoded 70% bar (neither web nor
+  `GET /cvs` defines completeness). Version/download line remains. Templates
+  tab: flag OFF still Alerts with no purchase route (S1); flag ON now matches
+  New CV (`upgradeAlertButtons` → billing) instead of `router.push` through
+  a locked tile. `canAccessTemplate` still uses stored `subscription.plan`,
+  not `resolveEffectivePlan` — same class as `canUseAI`/`canExport`; not
+  fixed here. Web/API untouched.
+
+- 2026-08-27 — **Mobile Q8: nested stacks hide the tab bar.** Tab roots still
+  show it (T1/T2 height untouched). Pushed screens (CV/CL editors, new CV/CL,
+  profile, billing, all support) set `tabBarStyle.display: 'none'`. Those
+  that used `edges={['top']}` because the bar ate the bottom inset now use
+  `['top','bottom']` so the gesture bar is the one inset. Q4 composer logic
+  unchanged. `CVWizard.tsx` not edited; its parent SafeAreaView gained the
+  bottom edge. Web/API untouched.
+
+- 2026-08-27 — **Mobile Q11a: cover letter generate no longer sends `recipientName`.**
+  `POST /cover-letters/:id/ai/generate` body is now `jobTitle`,
+  `jobDescription`, `companyName`, `tone: 'professional'` — the
+  `GenerateCoverLetterDto` allowlist. Extra `recipientName` was a 400 under
+  `forbidNonWhitelisted` before `reserveAiCredit`, so generate never reached
+  the model and never spent a credit. Tone picker / persist not in this
+  change. Create payload untouched. Web/API untouched.
+
+- 2026-08-27 — **Mobile Q10: failed fetches no longer look like empty accounts.**
+  Dashboard stats, recents, Settings/Billing usage, and Templates (plus
+  Choose Template) show `ErrorState` + retry on query failure instead of
+  `?? 0` / `?? 5` / empty lists. `syncUser` still does not rethrow (that
+  would bounce a signed-in user off the dashboard) and does not touch
+  `legalGate`; it sets `userSyncError` so screens can tell a missing
+  `user` from a new Free account. Partial dashboard failure blanks only
+  the failed section. Web/API untouched.
+
+- 2026-08-26 — **Mobile Q4: support screens keep the message and show errors.**
+  Ticket list fetch failure uses `ErrorState` (not “No support tickets”).
+  Send no longer clears the composer before `mutateAsync`; failure Alerts
+  with the CV/Q3 network-vs-rejected split and leaves the text. Create
+  ticket uses the same split. Message bubbles use `max-w-[83%]` plus
+  `style.maxWidth: '83%'` (`max-w-5/6` is not in the default scale).
+  Support SafeAreaViews are `edges={['top']}` so they do not double-inset
+  above the still-visible tab bar. Invalid NativeWind elsewhere reported,
+  not fixed. Web/API untouched.
+
+- 2026-08-26 — **Mobile Q3: export failures are visible.** `useExport` `onError`
+  surfaces 403 limit (S1-aware copy, no Upgrade when the flag is off), no
+  connection, DOCX-not-on-plan, and generic server failure. Non-200 download
+  and missing share sheet now Alert. Cover letter editor uses the same
+  `canExport` + `exportLimitReachedMessage` gate as the CV editor. Puppeteer
+  POST still increments usage before the client download — unrefunded on
+  download fail; not fixed here (API). Web/API untouched.
+
+- 2026-08-26 — **Mobile Q2: cover letter editor keeps work on failed save.**
+  Back no longer `handleSave().then(router.back())` after a swallowed catch.
+  Save returns boolean; failure Alerts `Could not save` with the CV network vs
+  rejected split and does not leave. `usePreventRemove` + the same Stay/Leave
+  copy as `cvs/[id]`. Hydrate Zustand once per letter id so a refetch cannot
+  clear `isDirty`. Export/AI/tone untouched. Web/API untouched.
+
+- 2026-08-26 — **Mobile Q5: email signup crash re-gates.** Email `register()`
+  writes `PENDING_LEGAL_CONSENT` immediately after Firebase create (Google-on-
+  login already did; Google-on-register new users now do too). `clearAll()`
+  still keeps the flag so Cancel re-prompts; a leftover flag on an uid that
+  already has `GET /legal/acceptances/me` `{ acceptance }` is cleared and not
+  gated. No cold-start GET for users without the flag (grandfathered null is
+  indistinguishable from a crash). Register screens ungate `legalGate` only
+  after a successful `finishAcceptance`, not in `finally`. Web/API untouched.
+
+- 2026-08-26 — **Mobile Q6: profile form cannot wipe stored fields.** Edit
+  Profile waited on `useForm` `defaultValues` from a still-undefined
+  `/users/me` fetch and never `reset()`. Empty-string nested profile keys
+  overwrite on the server (`users.service.ts` `Object.entries`); empty
+  first/last also rebuilds `displayName` to `''`. Screen now waits for the
+  user, `reset()`s once per uid, shows ErrorState on fetch failure, and PUT
+  sends only dirty fields (UpdateUserDto is fully optional). Save is not
+  on screen until hydrated; handler returns if not. Web/API untouched.
+
+- 2026-08-26 — **Mobile L1: legal acceptance at signup.** English-only modal
+  (unchecked, Accept disabled until ticked) before Firebase on email register
+  and Google-on-register; Google-on-login only when `getAdditionalUserInfo`
+  says new (or the check is missing). `POST /legal/acceptances` matches web's
+  six-field body; POST failure alerts and retries via SecureStore on
+  `syncUser` without deleting the Auth user. Register copy and Settings rows
+  cover Terms, Privacy, and Disclaimer via `EXPO_PUBLIC_APP_URL` + `/en/`
+  paths. `treatMissingAsStale` unchanged. Web/API untouched.
+
+- 2026-08-26 — **Mobile S1: one flag disables every paid-upgrade path.**
+  `PAID_UPGRADES_ENABLED` in `apps/mobile/src/config/paid-upgrades.ts` (platform
+  defaults all off; `EXPO_PUBLIC_PAID_UPGRADES_ENABLED` overrides). When off:
+  dashboard banner, plan cards, Stripe footer, Manage Billing, and Upgrade
+  alert buttons are hidden; limit alerts stay factual; billing remains
+  plan+usage. Checkout/portal code is kept for rollback. Web/API untouched.
+
+- 2026-08-26 — **Mobile E6: AI summary body matches GenerateCvSummaryDto.**
+  `SummaryStep` was posting `{ type, context: { name, headline } }`, which
+  ValidationPipe rejected (400) before `reserveAiCredit`. It now sends
+  `{ experience, skills, targetRole }` built from the Zustand store (unsaved
+  section items included), truncated to 20000 / 8000 / 200. Generate is
+  disabled when any of those strings is empty. Failure alerts distinguish
+  no connection, out of credits, and server rejected. Success writes
+  `personalInfo.summary` (marks dirty) and `syncUser()` so the remaining-
+  credits line refreshes. Other `useAI` hooks unwired. API/web untouched.
+
+- 2026-08-26 — **Mobile bottom-sheet Modal: definite height + bottom inset.**
+  Shared `Modal.tsx` sheet used NativeWind `max-h-5/6` / `max-h-2/3` (not in
+  the default scale) and a `flex-1` ScrollView inside a maxHeight-only parent,
+  so the sheet collapsed to handle + title. Sheet height is now a fraction of
+  `useWindowDimensions().height`; `paddingBottom` is `useSafeAreaInsets().bottom`
+  (42 on the gesture-nav device). Callers unchanged. Save/guard/tab bar/dates
+  not touched.
+
+- 2026-08-26 — **Mobile E7 + E5: expo-crypto ids and exit guards.** Direct
+  dep `expo-crypto@~15.0.9` (SDK 54 `bundledNativeModules.json`, not latest).
+  `generateId()` calls `randomUUID()` with no fallback. Editor uses
+  `usePreventRemove` (`beforeRemove`) so Android gesture Back, hardware Back,
+  and the in-app arrow share one Stay/Leave alert. Finish only leaves after
+  a successful save with `isDirty` false. Mid-save keystrokes: save returns
+  false and does not advance/exit.
+
+- 2026-08-26 — **Mobile E5 not started.** Static check of Group 2 found
+  `generateId()` depends on `globalThis.crypto.randomUUID` with no polyfill
+  and no `expo-crypto` import. A1 not established; E5 blocked. §8 note added
+  for skills/certs/languages/references E4-by-accident (no edit paths built).
+
+- 2026-08-26 — **Mobile E3/E4: section persistence + preserve web-only item keys.**
+  Wizard save (Continue/Finish) now POSTs new sections, PUTs existing, DELETEs
+  removed — same sequence as web `cv/[id]/page.tsx`. Client supplies section
+  `id` (UUID v4 via `crypto.randomUUID`, 36 chars; AddSectionDto MaxLength 80).
+  Partial failure: Alert, no advance, no markSaved; persistedSectionIds
+  unchanged. Experience/education/projects item rebuilds spread the loaded
+  object then overlay form fields (`highlights`, `order`, unknown keys kept;
+  cleared form fields win). Editor hydrates the store once per CV id so a
+  refetch cannot set isDirty false and skip the write.
+
+- 2026-08-26 — **Mobile E1/E2: legal CV PUT + visible save failure.** Wizard
+  `PUT /cvs/:id` now sends `{ title, personalInfo, styling, sectionOrder }`
+  (UpdateCvDto / web autosave subset), not the full CV document. Save failure
+  Alerts and does not advance the step; network vs rejected request are
+  separate messages. Empty catch removed. Section POST/PUT/DELETE not in this
+  gate.
+
+- 2026-08-26 — **Mobile T1 correction: tab bar height owned by RN.** Device
+  `DIAG_INSETS.bottom` is 42, not 0. Prior T1 set `safeAreaInsets.bottom: 0`
+  (height pinned at 49) then `tabBarStyle.paddingBottom: 42` inside that box
+  (7px content) — labels clipped, bar still in the gesture region. Removed
+  both overrides and the diagnostic log. Library now computes `49 + 42`.
+  Icon 22 / label 10/600 unchanged. T2 `edges={['top']}` left as-is.
+
+- 2026-08-26 — **Mobile T1/T2: tab bar clears system gesture bar.** Mobile
+  only. Removed `height: 60` and `paddingTop/Bottom: 6`. Tab bar
+  `paddingBottom` is `useSafeAreaInsets().bottom`; navigator
+  `safeAreaInsets.bottom` is zeroed so RN does not apply a second copy.
+  Icons 22px, labels 10/600; “Cover Letters” not renamed. Tab screens
+  `SafeAreaView` `edges={['top']}` (dashboard, CVs, cover letters,
+  templates, settings). D1/D2 date code untouched.
+
+- 2026-08-26 — **Mobile D1/D2: Firestore date parsing.** Mobile only. `toDate` /
+  `formatDate` in `apps/mobile/src/lib/utils.ts` mirror web
+  `format-date.ts` (Timestamp `{seconds}`/`{_seconds}`, live `.toDate()`,
+  ISO, epoch; never `"Invalid Date"` — em dash). Recent-documents sort uses
+  `toDate` and never NaN-compares; unparseable rows sort last. Billing
+  “Renews” row renders only when `toDate(currentPeriodEnd)` succeeds (no
+  “Renews —”). List/support screens already called `formatDate`; they pick up
+  D1 with no copy change. Type lie recorded in §8, types not edited. Tab bar
+  (T1/T2) not in this pass.
+
+- 2026-08-26 — **Mobile MC1: Nest envelope unwrap + list shape.** Mobile only.
+  `api.ts` now peels `{ success, data, timestamp }` (web’s rule). CV/CL list
+  hooks typed as `{ items, page, limit, hasMore }`; support list as an array.
+  Dashboard recents and list screens read `.items`. CV subtitle uses
+  `usage.cvsCreated` (“N CV creations on your plan”), not page length.
+  Dropped the local unwrap in `useSupport`; export `normalizeExportPayload`
+  stays dual-shape. **Why this survived:** `PaginatedResponse` (`data` +
+  `total`) was a fabricated shape no endpoint returns, so the compiler
+  type-checked `data.total` against a field that never existed. No vitest
+  (MC2 held). Manual verify against a running API.
 
 - 2026-08-26 — **`/en/ats-cv-checker`.** Web only. Same English-document SEO as
   `/en/ai-cv-builder` (not LegalDocumentView). Unique copy in

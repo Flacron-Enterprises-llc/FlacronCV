@@ -7,7 +7,7 @@ import { useAuthStore } from '../src/store/auth-store';
 const ONBOARDING_SEEN_KEY = 'flacroncv_onboarding_seen';
 
 export default function Index() {
-  const { firebaseUser, isInitialized } = useAuthStore();
+  const { firebaseUser, isInitialized, legalGate } = useAuthStore();
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
 
@@ -33,7 +33,7 @@ export default function Index() {
   }
 
   // Returning user — go to dashboard or login
-  if (firebaseUser) {
+  if (firebaseUser && !legalGate) {
     return <Redirect href="/(dashboard)" />;
   }
 

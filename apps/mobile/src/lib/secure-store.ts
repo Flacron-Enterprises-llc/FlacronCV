@@ -8,6 +8,13 @@ const KEYS = {
   // Survives logout on purpose — clearAll() must never delete this. A new
   // token on every sign-out would make the device identifier useless.
   DEVICE_TOKEN: 'flacroncv_device_token',
+  // L1 — not in clearAll. POST-retry uid (Auth succeeded, write failed).
+  PENDING_LEGAL_POST: 'flacroncv_pending_legal_post',
+  // Q5 — not in clearAll. Consent not yet given (new signup, any method).
+  // Kept across logout so Cancel on the legal modal still re-prompts the same
+  // uid. An accepted user with a leftover flag is ungated by GET
+  // /legal/acceptances/me in auth initialize — not by deleting this on sign-out.
+  PENDING_LEGAL_CONSENT: 'flacroncv_pending_legal_consent',
 } as const;
 
 const DEVICE_TOKEN_RE = /^[0-9a-f]{32}$/i;
@@ -55,16 +62,43 @@ export const secureStore = {
     await SecureStore.deleteItemAsync(KEYS.USER_ID);
   },
 
+  /** Unused; web-only hand-off. */
   async setPendingTemplate(templateId: string): Promise<void> {
     await SecureStore.setItemAsync(KEYS.PENDING_TEMPLATE, templateId);
   },
 
+  /** Unused; web-only hand-off. */
   async getPendingTemplate(): Promise<string | null> {
     return SecureStore.getItemAsync(KEYS.PENDING_TEMPLATE);
   },
 
+  /** Unused; web-only hand-off. */
   async deletePendingTemplate(): Promise<void> {
     await SecureStore.deleteItemAsync(KEYS.PENDING_TEMPLATE);
+  },
+
+  async setPendingLegalPost(uid: string): Promise<void> {
+    await SecureStore.setItemAsync(KEYS.PENDING_LEGAL_POST, uid);
+  },
+
+  async getPendingLegalPost(): Promise<string | null> {
+    return SecureStore.getItemAsync(KEYS.PENDING_LEGAL_POST);
+  },
+
+  async clearPendingLegalPost(): Promise<void> {
+    await SecureStore.deleteItemAsync(KEYS.PENDING_LEGAL_POST);
+  },
+
+  async setPendingLegalConsent(uid: string): Promise<void> {
+    await SecureStore.setItemAsync(KEYS.PENDING_LEGAL_CONSENT, uid);
+  },
+
+  async getPendingLegalConsent(): Promise<string | null> {
+    return SecureStore.getItemAsync(KEYS.PENDING_LEGAL_CONSENT);
+  },
+
+  async clearPendingLegalConsent(): Promise<void> {
+    await SecureStore.deleteItemAsync(KEYS.PENDING_LEGAL_CONSENT);
   },
 
   async getOrCreateDeviceToken(): Promise<string | null> {

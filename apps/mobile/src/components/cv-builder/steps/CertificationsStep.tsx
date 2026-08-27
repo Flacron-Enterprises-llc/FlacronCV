@@ -26,6 +26,7 @@ type FormData = z.infer<typeof schema>;
 export function CertificationsStep({ onValidChange }: { onValidChange: (v: boolean) => void }) {
   const { sections, updateSection, addSection } = useCVStore();
   const [modalVisible, setModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState<CertificationItem | null>(null);
   const certSection = sections.find((s) => s.type === CVSectionType.CERTIFICATIONS);
   const items = (certSection?.items ?? []) as CertificationItem[];
 
@@ -33,18 +34,39 @@ export function CertificationsStep({ onValidChange }: { onValidChange: (v: boole
     resolver: zodResolver(schema),
   });
 
+  const openAdd = () => {
+    reset({});
+    setEditingItem(null);
+    setModalVisible(true);
+    onValidChange(true);
+  };
+
+  const openEdit = (item: CertificationItem) => {
+    reset({
+      name: item.name,
+      issuer: item.issuer,
+      date: item.date,
+      credentialId: item.credentialId ?? '',
+    });
+    setEditingItem(item);
+    setModalVisible(true);
+  };
+
   const onSubmit = (data: FormData) => {
+    // Spread first so web-only keys (expiryDate, url, order, description, …) survive; form fields overlay so clears win.
     const newItem: CertificationItem = {
-      id: generateId(),
+      ...(editingItem ?? {}),
+      id: editingItem?.id ?? generateId(),
       name: data.name,
       issuer: data.issuer,
       date: data.date,
-      expiryDate: data.expiryDate,
       credentialId: data.credentialId,
-      url: data.url || undefined,
     };
     if (certSection) {
-      updateSection(certSection.id, { items: [...items, newItem] });
+      const updatedItems = editingItem
+        ? items.map((i) => (i.id === editingItem.id ? newItem : i))
+        : [...items, newItem];
+      updateSection(certSection.id, { items: updatedItems });
     } else {
       addSection({
         id: generateId(), type: CVSectionType.CERTIFICATIONS, title: 'Certifications',
@@ -53,7 +75,12 @@ export function CertificationsStep({ onValidChange }: { onValidChange: (v: boole
       });
     }
     setModalVisible(false);
-    onValidChange(true);
+  };
+
+  const handleDelete = (itemId: string) => {
+    if (certSection) {
+      updateSection(certSection.id, { items: items.filter((i) => i.id !== itemId) });
+    }
   };
 
   return (
@@ -69,18 +96,23 @@ export function CertificationsStep({ onValidChange }: { onValidChange: (v: boole
                 <Text className="text-stone-500 text-sm">{item.issuer}</Text>
                 <Text className="text-stone-400 text-xs mt-1">{item.date}</Text>
               </View>
-              <TouchableOpacity onPress={() => certSection && updateSection(certSection.id, { items: items.filter((i) => i.id !== item.id) })} className="p-1">
-                <Ionicons name="trash-outline" size={18} color="#ef4444" />
-              </TouchableOpacity>
+              <View className="flex-row gap-2 ml-2">
+                <TouchableOpacity onPress={() => openEdit(item)} className="p-1">
+                  <Ionicons name="pencil-outline" size={18} color="#78716c" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1">
+                  <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         ))}
-        <Button variant="outline" onPress={() => { reset({}); setModalVisible(true); }} icon={<Ionicons name="add" size={18} color="#374151" />} fullWidth>
+        <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color="#374151" />} fullWidth>
           Add Certification
         </Button>
         <View className="h-8" />
       </ScrollView>
-      <Modal visible={modalVisible} onClose={() => setModalVisible(false)} title="Add Certification">
+      <Modal visible={modalVisible} onClose={() => setModalVisible(false)} title={editingItem ? 'Edit Certification' : 'Add Certification'}>
         <Controller control={control} name="name" render={({ field }) => (
           <Input label="Certification Name *" placeholder="AWS Solutions Architect" value={field.value} onChangeText={field.onChange} error={errors.name?.message} />
         )} />
@@ -93,7 +125,7 @@ export function CertificationsStep({ onValidChange }: { onValidChange: (v: boole
         <Controller control={control} name="credentialId" render={({ field }) => (
           <Input label="Credential ID" placeholder="ABC123" value={field.value} onChangeText={field.onChange} />
         )} />
-        <Button variant="primary" fullWidth onPress={handleSubmit(onSubmit)}>Add Certification</Button>
+        <Button variant="primary" fullWidth onPress={handleSubmit(onSubmit)}>{editingItem ? 'Update' : 'Add Certification'}</Button>
       </Modal>
     </View>
   );

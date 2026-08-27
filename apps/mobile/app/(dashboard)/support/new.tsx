@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import axios from 'axios';
 import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -19,6 +20,13 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
+
+function requestFailureMessage(err: unknown): string {
+  if (axios.isAxiosError(err) && !err.response) {
+    return 'No connection. Check your network and try again.';
+  }
+  return 'Could not create the ticket. Please try again.';
+}
 
 const CATEGORIES = [
   { value: TicketCategory.BUG, label: 'Bug Report', icon: 'bug-outline' },
@@ -47,13 +55,13 @@ export default function NewTicketScreen() {
     try {
       await createTicket.mutateAsync(data);
       router.replace('/(dashboard)/support');
-    } catch {
-      Alert.alert('Error', 'Failed to create ticket. Please try again.');
+    } catch (err) {
+      Alert.alert('Could not create ticket', requestFailureMessage(err));
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
         <View className="flex-row items-center px-5 pt-4 pb-3 border-b border-stone-100">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">

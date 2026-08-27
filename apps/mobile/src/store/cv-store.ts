@@ -12,6 +12,8 @@ interface HistoryEntry {
 interface CVStoreState {
   cv: CV | null;
   sections: CVSection[];
+  /** IDs of sections that exist in the database (fetched or already POSTed). */
+  persistedSectionIds: string[];
   isDirty: boolean;
   isSaving: boolean;
   lastSavedAt: Date | null;
@@ -30,7 +32,14 @@ interface CVStoreState {
   reorderSections: (newOrder: string[]) => void;
   setIsSaving: (value: boolean) => void;
   setLastSavedAt: (date: Date) => void;
+  /**
+   * Set lastSavedAt, but only clear isDirty when the store still matches the
+   * save's snapshot — so edits made while the save was in flight aren't lost.
+   */
+  markSaved: (snapshotCv: CV | null, snapshotSections: CVSection[]) => void;
   markClean: () => void;
+  /** Called after a successful save to record which IDs now exist in the DB. */
+  markSectionsPersisted: (ids: string[]) => void;
   pushHistory: () => void;
   undo: () => void;
   redo: () => void;
@@ -41,6 +50,7 @@ interface CVStoreState {
 export const useCVStore = create<CVStoreState>((set, get) => ({
   cv: null,
   sections: [],
+  persistedSectionIds: [],
   isDirty: false,
   isSaving: false,
   lastSavedAt: null,
@@ -51,6 +61,7 @@ export const useCVStore = create<CVStoreState>((set, get) => ({
     set({
       cv: null,
       sections: [],
+      persistedSectionIds: [],
       isDirty: false,
       isSaving: false,
       lastSavedAt: null,
@@ -64,7 +75,10 @@ export const useCVStore = create<CVStoreState>((set, get) => ({
   },
 
   setSections: (sections) => {
-    set({ sections });
+    set({
+      sections,
+      persistedSectionIds: sections.map((s) => s.id),
+    });
   },
 
   updatePersonalInfo: (field, value) => {
@@ -103,16 +117,23 @@ export const useCVStore = create<CVStoreState>((set, get) => ({
   },
 
   addSection: (section) => {
-    const { sections } = get();
+    const { sections, cv } = get();
     get().pushHistory();
-    set({ sections: [...sections, section], isDirty: true });
+    set({
+      sections: [...sections, section],
+      cv: cv ? { ...cv, sectionOrder: [...cv.sectionOrder, section.id] } : cv,
+      isDirty: true,
+    });
   },
 
   removeSection: (sectionId) => {
-    const { sections } = get();
+    const { sections, cv } = get();
     get().pushHistory();
     set({
       sections: sections.filter((s) => s.id !== sectionId),
+      cv: cv
+        ? { ...cv, sectionOrder: cv.sectionOrder.filter((id) => id !== sectionId) }
+        : cv,
       isDirty: true,
     });
   },
@@ -136,7 +157,24 @@ export const useCVStore = create<CVStoreState>((set, get) => ({
 
   setIsSaving: (value) => set({ isSaving: value }),
   setLastSavedAt: (date) => set({ lastSavedAt: date }),
+  markSaved: (snapshotCv, snapshotSections) => {
+    const cur = get();
+    set({
+      lastSavedAt: new Date(),
+      isDirty: !(cur.cv === snapshotCv && cur.sections === snapshotSections),
+    });
+  },
   markClean: () => set({ isDirty: false }),
+  markSectionsPersisted: (ids) => {
+    const { persistedSectionIds, sections } = get();
+    const next = [...persistedSectionIds];
+    for (const id of ids) {
+      if (!next.includes(id)) next.push(id);
+    }
+    set({
+      persistedSectionIds: next.filter((id) => sections.some((s) => s.id === id)),
+    });
+  },
 
   pushHistory: () => {
     const { cv, sections, history, historyIndex } = get();

@@ -1,9 +1,64 @@
+import { randomUUID } from 'expo-crypto';
 import { SubscriptionPlan } from '../types/enums';
-import { PLAN_CONFIGS } from '../types/subscription.types';
 
-export function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+export {
+  resolveEffectivePlan,
+  effectivePlanForCopy,
+  canAccessTemplate,
+  canCreateCV,
+  canCreateCoverLetter,
+  canUseAI,
+  canExport,
+} from './entitlements';
+
+/**
+ * D1 — same input contract as apps/web/src/lib/format-date.ts `toDate`.
+ * Firestore Timestamps arrive as `{seconds}` / `{_seconds}` (or a live
+ * `.toDate()`); `new Date(thatObject)` is Invalid Date.
+ */
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+export function toDate(value: unknown): Date | null {
+  if (value == null) return null;
+  if (value instanceof Date) return isNaN(value.getTime()) ? null : value;
+  if (typeof value === 'number' || typeof value === 'string') {
+    if (typeof value === 'string' && DATE_ONLY.test(value)) {
+      const [y, m, d] = value.split('-').map(Number);
+      const local = new Date(y, m - 1, d);
+      return isNaN(local.getTime()) ? null : local;
+    }
+    if (value === '') return null;
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  if (typeof value === 'object') {
+    const o = value as Record<string, unknown>;
+    if (typeof o.toDate === 'function') {
+      const d = (o.toDate as () => Date)();
+      return d instanceof Date && !isNaN(d.getTime()) ? d : null;
+    }
+    const seconds =
+      typeof o.seconds === 'number'
+        ? o.seconds
+        : typeof o._seconds === 'number'
+          ? o._seconds
+          : null;
+    if (seconds != null) {
+      const d = new Date(seconds * 1000);
+      return isNaN(d.getTime()) ? null : d;
+    }
+  }
+  return null;
+}
+
+export function formatDate(value: unknown): string {
+  const d = toDate(value);
+  if (!d) return '—';
+  return d.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 export function formatCurrency(amount: number, currency = 'USD'): string {
@@ -22,54 +77,6 @@ export function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-export function canAccessTemplate(
-  userPlan: SubscriptionPlan,
-  templateTier: SubscriptionPlan,
-): boolean {
-  const hierarchy: Record<SubscriptionPlan, number> = {
-    [SubscriptionPlan.FREE]: 0,
-    [SubscriptionPlan.PRO]: 1,
-    [SubscriptionPlan.ENTERPRISE]: 2,
-  };
-  return hierarchy[userPlan] >= hierarchy[templateTier];
-}
-
-export function canCreateCV(
-  plan: SubscriptionPlan,
-  cvsCreated: number,
-): boolean {
-  const limit = PLAN_CONFIGS[plan].limits.cvs;
-  if (limit === 'unlimited') return true;
-  return cvsCreated < (limit as number);
-}
-
-export function canCreateCoverLetter(
-  plan: SubscriptionPlan,
-  clCreated: number,
-): boolean {
-  const limit = PLAN_CONFIGS[plan].limits.coverLetters;
-  if (limit === 'unlimited') return true;
-  return clCreated < (limit as number);
-}
-
-export function canUseAI(
-  plan: SubscriptionPlan,
-  aiCreditsUsed: number,
-): boolean {
-  const limit = PLAN_CONFIGS[plan].limits.aiCredits;
-  if (limit === 'unlimited') return true;
-  return aiCreditsUsed < (limit as number);
-}
-
-export function canExport(
-  plan: SubscriptionPlan,
-  exportsThisMonth: number,
-): boolean {
-  const limit = PLAN_CONFIGS[plan].limits.exports;
-  if (limit === 'unlimited') return true;
-  return exportsThisMonth < (limit as number);
-}
-
 export function planHasWatermark(plan: SubscriptionPlan): boolean {
   return plan === SubscriptionPlan.FREE;
 }
@@ -79,6 +86,7 @@ export function truncate(text: string, maxLength: number): string {
   return text.slice(0, maxLength - 3) + '...';
 }
 
+/** UUID v4 (36 chars). AddSectionDto.id MaxLength(80). Throws; no Math.random fallback. */
 export function generateId(): string {
-  return Math.random().toString(36).substring(2, 9);
+  return randomUUID();
 }

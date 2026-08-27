@@ -4,20 +4,12 @@ export interface ApiResponse<T> {
   statusCode: number;
 }
 
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
+/** CV and cover-letter list handlers (`GET /cvs`, `GET /cover-letters`). */
+export interface ListPage<T> {
+  items: T[];
   page: number;
   limit: number;
-  totalPages: number;
-}
-
-export interface AIGenerateRequest {
-  type: string;
-  context?: Record<string, unknown>;
-  prompt?: string;
-  language?: string;
-  tone?: string;
+  hasMore: boolean;
 }
 
 export interface AIResponse {

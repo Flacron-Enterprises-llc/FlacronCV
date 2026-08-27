@@ -21,7 +21,7 @@ pnpm workspaces + turbo. Root scripts fan out via `turbo run <task>`.
 |---|---|---|
 | `apps/web` | Next.js 14 App Router frontend | next-intl (6 locales), Zustand+immer, React Query, Tailwind, TipTap, @dnd-kit, client-side export |
 | `apps/api` | NestJS 10 REST API | Global prefix `/api/v1`, port 4000, 18 feature modules |
-| `apps/mobile` | React Native / Expo Router app | Own enums (3 plans). **Batch E:** `PLAN_CONFIGS` wraps `packages/shared-types` via a relative import (no new package.json dep). See §8 |
+| `apps/mobile` | React Native / Expo Router app | Own enums (3 plans). **Batch E:** `PLAN_CONFIGS` wraps `packages/shared-types` via a relative import (no new package.json dep). **`src/lib/api.ts` unwraps the Nest `{ success, data }` envelope** (same rule as web). See §8 |
 | `packages/shared-types` | The contract between web and api | `PLAN_CONFIGS`, `PLAN_RANK`, `resolveEffectivePlan()`, `isPlanPurchasable()`, entity types. **The API resolves it from `dist/`, so it must be built before type-check or tests** |
 | `packages/tsconfig` | Shared TS base configs | |
 | `functions/` | A separate Firebase Functions project | Own `package.json` + lockfile; the repo's only long-standing eslint config lived here (`functions/.eslintrc.js`) |
@@ -343,11 +343,147 @@ Still outside the wrap:
 
 The previous $239.88 / −33% vs $299.99 overcharge on screen **is closed** as long as the wrap
 stays. **Not currently shippable** — `app.json` still has the placeholder
-`"projectId": "your-eas-project-id"` and there is no `eas.json`
+`"projectId": "your-eas-project-id"` (`eas.json` exists as of B1, 2026-08-27)
 (⚠️ UNVERIFIED that no external pipeline builds it). See `PROJECT_PROGRESS.md` §8 Mobile
 pre-launch gate before any store build. Mobile still sends `{plan, interval}` and
 never a price id (`billing.tsx:29`). Mobile **does** send `X-Device-Token` on API calls
 (`src/lib/api.ts`) so registration verify is abuse-scored like web.
+
+**Envelope unwrap (2026-08-26).** `apps/mobile/src/lib/api.ts` peels Nest
+`{ success, data, timestamp }` the same way web does (`data.data !== undefined`
+then `data.data`, else the body). Before that, every hook was typed as the
+payload while runtime was the envelope. CV/cover-letter lists also used a
+fabricated `PaginatedResponse` (`{ data, total, page, limit, totalPages }`)
+that **no endpoint returns** — handlers return `{ items, page, limit, hasMore }`,
+and support tickets return a bare array. The compiler type-checked `data.total`
+against a field that never existed, which is why the defect survived. Lists now
+use `ListPage<T>`. Support list is `SupportTicket[]` (a `.data` peel on that
+array was accidentally correct before unwrap and would have emptied the list).
+Export `normalizeExportPayload` stays dual-shape on purpose.
+
+**Date parsing (D1, 2026-08-26).** `apps/mobile/src/lib/utils.ts` `toDate` /
+`formatDate` accept the same Firestore JSON shapes as web
+`apps/web/src/lib/format-date.ts`. The types still lie: shared-types `Date`,
+mobile `string`, wire Timestamp object — see `PROJECT_PROGRESS.md` §8. Parser
+only; no API serializer.
+
+**Cover letter editor (Q2, 2026-08-26).** `cover-letters/[id].tsx` hydrates
+Zustand once per letter id. Save returns success/failure (no swallowed catch).
+Exit: `usePreventRemove` (`beforeRemove`) for in-app back, Android gesture
+Back, and hardware Back — same Stay/Leave alert as the CV editor. Header back
+is `router.back()` so it hits that guard instead of auto-saving then leaving.
+
+**Mobile export (Q3, 2026-08-26).** Editors POST `/cvs/:id/export/{pdf|docx}`
+and `/cover-letters/:id/export/pdf` (Puppeteer, not the web html2canvas
+reserve/confirm/refund). `useExport` alerts on POST failure, non-200 download,
+and no share sheet. Cover letter export uses `canExport` like CV. Limit copy
+is `exportLimitReachedMessage()` (S1). Usage is incremented on the server
+before the signed URL is returned; a failed client download is not refunded.
+
+**CV editor persistence (E1–E5, E7, 2026-08-26).** Mobile `CVWizard` save matches
+web autosave: `PUT /cvs/:id` with `{ title, personalInfo, styling, sectionOrder }`,
+then POST/PUT/DELETE `/cvs/:id/sections`. Store tracks `persistedSectionIds`
+like web. Section ids from `expo-crypto` `randomUUID()` (`generateId`). Editor
+hydrates Zustand from React Query once per CV id. Exit: `usePreventRemove`
+(`beforeRemove`) on `cvs/[id]` for in-app back, Android gesture Back, and
+hardware Back — one Stay/Leave alert. Finish saves first and does not exit
+while `isDirty`.
+
+**CV AI summary (E6, 2026-08-26).** Mobile `SummaryStep` POSTs
+`{ experience, skills, targetRole }` to `/ai/cv-summary` (GenerateCvSummaryDto).
+Strings are built from the Zustand store (experience/skills sections +
+`personalInfo.headline`), truncated to DTO MaxLength. Empty required fields
+disable Generate; the unused improve / skills / ATS / translate hooks stay
+unwired.
+
+**Profile editor (Q6, 2026-08-26).** `settings/profile.tsx` hydrates from
+`GET /users/me` via `reset()` once per uid, not `useForm` `defaultValues` on
+first paint. The form is not shown until that hydrate; fetch failure is
+`ErrorState` (no empty saveable form). `PUT /users/me` sends only dirty
+fields (`UpdateUserDto` is fully optional). Empty string on a dirty nested
+key still clears that field on the server (intentional).
+
+**Mobile nested tab bar (Q8, 2026-08-27).** Tab roots keep the bar. Nested
+stack screens hide it (`tabBarStyle.display: 'none'`). T1/T2 height
+(`49 + insets.bottom`) is unchanged. Nested screens that had
+`edges={['top']}` while the bar was visible now use `['top','bottom']`
+so the home-indicator inset comes from SafeAreaView, not a second copy of
+the tab bar.
+
+**Mobile cover letter generate (Q11a, 2026-08-27).** Editor
+`POST /cover-letters/:id/ai/generate` sends only DTO fields (`jobTitle`,
+`jobDescription`, `companyName`, `tone`). `recipientName` is valid on
+create, not on generate (`forbidNonWhitelisted` 400). Tone remains
+hardcoded `professional` until a persist decision.
+
+**Mobile failed-fetch vs empty (Q10, 2026-08-27).** Dashboard / Settings /
+Billing / Templates treat React Query `error` (and `userSyncError`) as
+failure: `ErrorState` + refetch, never `?? 0` zeros or “No documents yet.”
+`syncUser` catch does not rethrow and does not change `legalGate`; it
+records `userSyncError`. A previously synced `user` is kept. Genuine empty
+lists still use the empty copy only when the query succeeded.
+
+**Mobile support screens (Q4, 2026-08-26).** Reachable from Settings → Help
+& Support only (`href: null` on the tab, bar still shows). List failure is
+`ErrorState`, not the empty copy. Send waits for success before clearing
+the composer and Alerts on failure (no-connection vs rejected, same wording
+as the CV editor). Bubbles cap width with `max-w-[83%]` and an inline
+`maxWidth: '83%'`. Nested support screens hide the tab bar (Q8); SafeAreaView
+is `edges={['top','bottom']}` so the composer clears the gesture bar, not a
+double tab-bar inset.
+
+**Mobile bottom sheet (2026-08-26).** `apps/mobile/src/components/ui/Modal.tsx`
+is a `justify-end` sheet. Height is a fraction of window height (not NativeWind
+`max-h-5/6`). Bottom padding is `useSafeAreaInsets().bottom`. ScrollView stays
+`flex-1` inside that bounded sheet.
+
+**Mobile section item edit (E4 / Q14, 2026-08-27).** All seven CV item
+types (experience, education, projects, skills, certifications, languages,
+references) rebuild with spread-then-overlay so keys the mobile form does
+not collect survive. `updateSection` marks `isDirty`; wizard save is
+unchanged.
+
+**Mobile Settings honesty (Q7, 2026-08-27).** Settings lists only destinations
+that exist: Profile, Billing/Plan & usage, Support, legal docs, Sign Out.
+Notifications and Security rows (empty handlers) were removed. The identity
+header opens Profile.
+
+**Mobile onboarding inset (Q13, 2026-08-27).** First-launch screen
+(`flacroncv_onboarding_seen` in AsyncStorage). Footer padding is
+`useSafeAreaInsets().bottom`; SafeAreaView is `edges={['top']}` so the
+gesture-bar inset is not applied twice. Pagination dots do not use CSS
+`transition`.
+
+**Mobile effective plan (Q15, 2026-08-27).** Gating helpers live in
+`apps/mobile/src/lib/entitlements.ts` and call shared-types
+`resolveEffectivePlan` (the same function the API uses). Stored
+`subscription.plan` is display-only on billing/settings/dashboard. AI
+credits also use `min(usage.aiCreditsLimit, effective plan limit)`.
+
+**Mobile CV list honesty (Q9, 2026-08-27).** My CVs cards do not show a
+completeness bar. The previous fill was a hardcoded 70% with no API or web
+definition. Cards still show title, headline, status, updated date, version,
+and download count.
+
+**Paid upgrades flag (S1, 2026-08-26; Q9 lock 2026-08-27).** One switch,
+`PAID_UPGRADES_ENABLED` in `apps/mobile/src/config/paid-upgrades.ts`. Defaults
+off on every `Platform.OS`. `EXPO_PUBLIC_PAID_UPGRADES_ENABLED` overrides for
+QA/rollback. When off: no Stripe Checkout, no prices, no Upgrade/Choose CTAs;
+billing stays as plan+usage only. Checkout/portal/PlanCard code is kept, not
+deleted. Web subscriptions are unchanged. Locked template tiles (Templates
+tab and New CV) never navigate through: flag OFF Alerts with no purchase
+route; flag ON Alerts with Upgrade → billing.
+
+**Legal acceptance (L1 + Q5, 2026-08-26).** Mobile register/login Google (new
+users) POST `/legal/acceptances` with the same body as web. Email register
+and new Google users persist `PENDING_LEGAL_CONSENT` in SecureStore (not in
+`clearAll`) so a crash before the POST re-opens the login modal. If that flag
+matches the signed-in uid **and** `GET /legal/acceptances/me` already has a
+row, the flag is cleared and they are not gated. Cold start without the flag
+does not call that GET (`treatMissingAsStale` remains false). Versions copied
+from `apps/web/src/legal/types.ts` into `apps/mobile/src/lib/legal-docs.ts`.
+Documents open via `WebBrowser` to `EXPO_PUBLIC_APP_URL` + `/en/` paths.
+Missing origin: no URL invented; alert instead.
 
 ### Tier 2 — a second plan-limits table in the API, enforced nowhere
 

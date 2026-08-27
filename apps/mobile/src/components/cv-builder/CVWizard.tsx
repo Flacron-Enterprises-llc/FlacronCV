@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import React, { useCallback, useRef, useState } from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
+import { api } from '../../lib/api';
 import { useCVStore } from '../../store/cv-store';
-import { useUpdateCV, useUpdateCVSection } from '../../hooks/useCVs';
 import { PersonalInfoStep } from './steps/PersonalInfoStep';
 import { SummaryStep } from './steps/SummaryStep';
 import { ExperienceStep } from './steps/ExperienceStep';
@@ -26,6 +28,14 @@ const STEPS = [
   { id: 'references', label: 'References', icon: 'people-outline' },
 ] as const;
 
+/** E2 — network (no response) vs rejected request. Do not treat them as one error. */
+function saveFailureMessage(err: unknown): string {
+  if (axios.isAxiosError(err) && !err.response) {
+    return 'No connection. Check your network and try again.';
+  }
+  return 'Could not save. Please try again.';
+}
+
 interface CVWizardProps {
   cvId: string;
   onFinish: () => void;
@@ -34,24 +44,78 @@ interface CVWizardProps {
 export function CVWizard({ cvId, onFinish }: CVWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [stepValid, setStepValid] = useState(false);
-  const { cv, sections, isDirty, setIsSaving, markClean, setLastSavedAt } = useCVStore();
-  const updateCV = useUpdateCV(cvId);
+  const queryClient = useQueryClient();
   const isSavingRef = useRef(false);
 
   const handleValidChange = useCallback((isValid: boolean) => {
     setStepValid(isValid);
   }, []);
 
-  const saveProgress = async () => {
-    if (!isDirty || !cv || isSavingRef.current) return;
+  const saveProgress = async (): Promise<boolean> => {
+    const {
+      cv, sections, isDirty, persistedSectionIds,
+      setIsSaving, markSaved, markSectionsPersisted,
+    } = useCVStore.getState();
+    if (!cv) return false;
+    if (!isDirty) return true;
+    if (isSavingRef.current) return false;
     isSavingRef.current = true;
     setIsSaving(true);
+
+    const snapshot = { cv, sections, persistedSectionIds };
+    const newSections = snapshot.sections.filter(
+      (s) => !snapshot.persistedSectionIds.includes(s.id),
+    );
+    const existingSections = snapshot.sections.filter(
+      (s) => snapshot.persistedSectionIds.includes(s.id),
+    );
+    const deletedIds = snapshot.persistedSectionIds.filter(
+      (id) => !snapshot.sections.some((s) => s.id === id),
+    );
+
     try {
-      await updateCV.mutateAsync(cv);
-      markClean();
-      setLastSavedAt(new Date());
-    } catch {
-      // Silent fail - don't interrupt user flow
+      // E1 — UpdateCvDto whitelist. Same subset as web cv/[id]/page.tsx autosave.
+      await api.put(`/cvs/${cvId}`, {
+        title: snapshot.cv.title,
+        personalInfo: snapshot.cv.personalInfo,
+        styling: snapshot.cv.styling,
+        sectionOrder: snapshot.cv.sectionOrder,
+      });
+
+      // E3 — same order as web: POST new, PUT existing, DELETE removed.
+      for (const section of newSections) {
+        await api.post(`/cvs/${cvId}/sections`, {
+          id: section.id,
+          type: section.type,
+          title: section.title,
+          order: section.order,
+          isVisible: section.isVisible,
+          items: section.items,
+        });
+      }
+      for (const section of existingSections) {
+        await api.put(`/cvs/${cvId}/sections/${section.id}`, {
+          title: section.title,
+          isVisible: section.isVisible,
+          items: section.items,
+          order: section.order,
+        });
+      }
+      for (const id of deletedIds) {
+        await api.delete(`/cvs/${cvId}/sections/${id}`);
+      }
+
+      markSectionsPersisted(snapshot.sections.map((s) => s.id));
+      markSaved(snapshot.cv, snapshot.sections);
+      // Cache only — a failed/slow GET must not block or look like a failed write.
+      void queryClient.invalidateQueries({ queryKey: ['cvs'] });
+      void queryClient.invalidateQueries({ queryKey: ['cv', cvId] });
+      void queryClient.invalidateQueries({ queryKey: ['cv-sections', cvId] });
+      // B7 — mid-save keystrokes leave isDirty true. Do not advance/Finish.
+      return !useCVStore.getState().isDirty;
+    } catch (err) {
+      Alert.alert('Could not save', saveFailureMessage(err));
+      return false;
     } finally {
       setIsSaving(false);
       isSavingRef.current = false;
@@ -59,11 +123,11 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
   };
 
   const handleNext = async () => {
+    const saved = await saveProgress();
+    if (!saved) return;
     if (currentStep < STEPS.length - 1) {
-      await saveProgress();
       setCurrentStep((s) => s + 1);
     } else {
-      await saveProgress();
       onFinish();
     }
   };

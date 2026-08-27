@@ -23,6 +23,10 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+function isFormField(key: string): key is keyof FormData {
+  return key in schema.shape;
+}
+
 interface PersonalInfoStepProps {
   onValidChange: (isValid: boolean) => void;
 }
@@ -61,11 +65,13 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
   // Autosave on field change
   const values = watch();
   useEffect(() => {
-    Object.entries(values).forEach(([key, value]) => {
-      if (value !== undefined && value !== (cv?.personalInfo as Record<string, string>)?.[key]) {
-        updatePersonalInfo(key, value as string);
+    for (const key of Object.keys(values)) {
+      if (!isFormField(key)) continue;
+      const value = values[key];
+      if (value !== undefined && value !== cv?.personalInfo[key]) {
+        updatePersonalInfo(key, value);
       }
-    });
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(values)]);
 

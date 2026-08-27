@@ -6,8 +6,10 @@ import {
   Pressable,
   ScrollView,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 interface ModalProps {
@@ -19,11 +21,18 @@ interface ModalProps {
 }
 
 export function Modal({ visible, onClose, title, children, size = 'md' }: ModalProps) {
-  const sizeClass =
-    size === 'sm' ? 'max-h-64' :
-    size === 'lg' ? 'max-h-5/6' :
-    size === 'full' ? 'flex-1' :
-    'max-h-2/3';
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+
+  // NativeWind max-h-2/3 and max-h-5/6 are not in the default scale, so they
+  // compiled to nothing. Even a real maxHeight would not expand this sheet:
+  // ScrollView flex-1 inside a maxHeight-only parent gets 0 height, so the
+  // sheet shrinks to handle + title. A definite height is the bound RN needs.
+  const sheetHeight =
+    size === 'sm' ? Math.min(256, windowHeight) :
+    size === 'full' ? windowHeight :
+    size === 'lg' ? windowHeight * 0.85 :
+    windowHeight * 0.67;
 
   return (
     <RNModal
@@ -41,7 +50,8 @@ export function Modal({ visible, onClose, title, children, size = 'md' }: ModalP
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <Pressable
-            className={['bg-white rounded-t-3xl', sizeClass].join(' ')}
+            className="bg-white rounded-t-3xl overflow-hidden"
+            style={{ height: sheetHeight, paddingBottom: insets.bottom }}
             onPress={() => {}}
           >
             {/* Handle */}

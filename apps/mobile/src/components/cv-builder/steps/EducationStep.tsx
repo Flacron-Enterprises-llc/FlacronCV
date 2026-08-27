@@ -65,6 +65,7 @@ export function EducationStep({ onValidChange }: EducationStepProps) {
 
   const onSubmit = (data: FormData) => {
     const newItem: EducationItem = {
+      ...(editingItem ?? {}),
       id: editingItem?.id ?? generateId(),
       institution: data.institution,
       degree: data.degree,

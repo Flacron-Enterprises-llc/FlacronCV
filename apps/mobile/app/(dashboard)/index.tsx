@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -11,45 +12,85 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RecentDocuments } from '../../src/components/dashboard/RecentDocuments';
 import { StatsCard } from '../../src/components/dashboard/StatsCard';
+import { ErrorState } from '../../src/components/ui/ErrorState';
 import { useAuthStore } from '../../src/store/auth-store';
 import { useCVList } from '../../src/hooks/useCVs';
 import { useCoverLetterList } from '../../src/hooks/useCoverLetters';
 import { useCurrentUser } from '../../src/hooks/useUser';
 import { SubscriptionPlan } from '../../src/types/enums';
 import { PLAN_CONFIGS } from '../../src/types/subscription.types';
+import { PAID_UPGRADES_ENABLED } from '../../src/config/paid-upgrades';
+
+function loadFailureMessage(err: unknown): string {
+  if (axios.isAxiosError(err) && !err.response) {
+    return 'No connection. Check your network and try again.';
+  }
+  return 'Could not load. Please try again.';
+}
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { user: authUser } = useAuthStore();
-  const { data: userData, refetch: refetchUser, isLoading: userLoading } = useCurrentUser();
-  const { data: cvsData, refetch: refetchCVs, isLoading: cvsLoading } = useCVList();
-  const { data: clData, refetch: refetchCLs, isLoading: clLoading } = useCoverLetterList();
+  const { user: authUser, syncUser, userSyncError } = useAuthStore();
+  const {
+    data: userData,
+    error: userError,
+    refetch: refetchUser,
+    isFetching: userFetching,
+    isPending: userPending,
+  } = useCurrentUser();
+  const {
+    data: cvsData,
+    error: cvsError,
+    refetch: refetchCVs,
+    isFetching: cvsFetching,
+    isPending: cvsPending,
+  } = useCVList();
+  const {
+    data: clData,
+    error: clError,
+    refetch: refetchCLs,
+    isFetching: clFetching,
+    isPending: clPending,
+  } = useCoverLetterList();
 
   const user = userData ?? authUser;
-  const isRefreshing = userLoading || cvsLoading || clLoading;
+  const usage = user?.usage;
+  const usageFailed = !usage && !!(userError || userSyncError);
+  const usageLoading = !usage && !usageFailed;
+
+  const cvsFailed = !!cvsError;
+  const coverLettersFailed = !!clError;
+  const recentsLoading =
+    (cvsPending && !cvsData && !cvsError) || (clPending && !clData && !clError);
 
   const onRefresh = () => {
-    refetchUser();
-    refetchCVs();
-    refetchCLs();
+    void syncUser();
+    void refetchUser();
+    void refetchCVs();
+    void refetchCLs();
   };
 
+  const plan = user?.subscription?.plan;
   const planBadge = {
     [SubscriptionPlan.FREE]: { label: 'Free Plan', color: '#6b7280', bg: '#f3f4f6' },
     [SubscriptionPlan.PRO]: { label: 'Pro Plan', color: '#d97706', bg: '#fef3c7' },
     [SubscriptionPlan.ENTERPRISE]: { label: 'Enterprise', color: '#7c3aed', bg: '#f3e8ff' },
   };
+  const badge = plan ? planBadge[plan] : null;
 
-  const plan = user?.subscription?.plan ?? SubscriptionPlan.FREE;
-  const badge = planBadge[plan] ?? planBadge[SubscriptionPlan.FREE];
+  const pullRefreshing =
+    (userFetching || cvsFetching || clFetching) &&
+    !userPending &&
+    !cvsPending &&
+    !clPending;
 
   return (
-    <SafeAreaView className="flex-1 bg-stone-50">
+    <SafeAreaView className="flex-1 bg-stone-50" edges={['top']}>
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f97316" />
+          <RefreshControl refreshing={pullRefreshing} onRefresh={onRefresh} tintColor="#f97316" />
         }
       >
         {/* Header */}
@@ -61,13 +102,15 @@ export default function DashboardScreen() {
                 {user?.displayName ?? user?.profile?.firstName ?? 'User'} 👋
               </Text>
             </View>
-            <View className="flex-row items-center gap-2">
-              <View className="px-3 py-1 rounded-full" style={{ backgroundColor: badge.bg }}>
-                <Text className="text-xs font-bold" style={{ color: badge.color }}>
-                  {badge.label}
-                </Text>
+            {badge ? (
+              <View className="flex-row items-center gap-2">
+                <View className="px-3 py-1 rounded-full" style={{ backgroundColor: badge.bg }}>
+                  <Text className="text-xs font-bold" style={{ color: badge.color }}>
+                    {badge.label}
+                  </Text>
+                </View>
               </View>
-            </View>
+            ) : null}
           </View>
         </View>
 
@@ -76,36 +119,53 @@ export default function DashboardScreen() {
           <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">
             Overview
           </Text>
-          <View className="flex-row gap-3 mb-3">
-            <StatsCard
-              label="CVs Created"
-              value={user?.usage?.cvsCreated ?? cvsData?.total ?? 0}
-              icon="document-text"
-              color="#f97316"
+          {usageFailed ? (
+            <ErrorState
+              message={userError ? loadFailureMessage(userError) : (userSyncError ?? 'Could not load. Please try again.')}
+              onRetry={() => {
+                void syncUser();
+                void refetchUser();
+              }}
             />
-            <StatsCard
-              label="Cover Letters"
-              value={user?.usage?.coverLettersCreated ?? clData?.total ?? 0}
-              icon="mail"
-              color="#3b82f6"
-            />
-          </View>
-          <View className="flex-row gap-3 mb-6">
-            <StatsCard
-              label="Downloads"
-              value={user?.usage?.exportsThisMonth ?? 0}
-              icon="download"
-              color="#22c55e"
-              subtitle="This month"
-            />
-            <StatsCard
-              label="AI Credits"
-              value={`${user?.usage?.aiCreditsUsed ?? 0}/${user?.usage?.aiCreditsLimit ?? 5}`}
-              icon="sparkles"
-              color="#8b5cf6"
-              subtitle="Used this month"
-            />
-          </View>
+          ) : usageLoading || !usage ? (
+            <View className="flex-row gap-3 mb-6">
+              <View className="flex-1 bg-white rounded-2xl border border-stone-100 p-4 h-28" />
+              <View className="flex-1 bg-white rounded-2xl border border-stone-100 p-4 h-28" />
+            </View>
+          ) : (
+            <>
+              <View className="flex-row gap-3 mb-3">
+                <StatsCard
+                  label="CVs Created"
+                  value={usage.cvsCreated}
+                  icon="document-text"
+                  color="#f97316"
+                />
+                <StatsCard
+                  label="Cover Letters"
+                  value={usage.coverLettersCreated}
+                  icon="mail"
+                  color="#3b82f6"
+                />
+              </View>
+              <View className="flex-row gap-3 mb-6">
+                <StatsCard
+                  label="Downloads"
+                  value={usage.exportsThisMonth}
+                  icon="download"
+                  color="#22c55e"
+                  subtitle="This month"
+                />
+                <StatsCard
+                  label="AI Credits"
+                  value={`${usage.aiCreditsUsed}/${usage.aiCreditsLimit}`}
+                  icon="sparkles"
+                  color="#8b5cf6"
+                  subtitle="Used this month"
+                />
+              </View>
+            </>
+          )}
         </View>
 
         {/* Quick Actions */}
@@ -149,14 +209,21 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           </View>
           <RecentDocuments
-            cvs={cvsData?.data?.slice(0, 3)}
-            coverLetters={clData?.data?.slice(0, 2)}
-            isLoading={cvsLoading || clLoading}
+            cvs={cvsFailed ? [] : cvsData?.items?.slice(0, 3)}
+            coverLetters={coverLettersFailed ? [] : clData?.items?.slice(0, 2)}
+            isLoading={recentsLoading}
+            cvsFailed={cvsFailed}
+            coverLettersFailed={coverLettersFailed}
+            errorMessage={loadFailureMessage(cvsError ?? clError)}
+            onRetry={() => {
+              void refetchCVs();
+              void refetchCLs();
+            }}
           />
         </View>
 
-        {/* Upgrade Banner (Free users) */}
-        {plan === SubscriptionPlan.FREE && (
+        {/* Upgrade Banner (Free users) — hidden when paid upgrades are off (S1). */}
+        {PAID_UPGRADES_ENABLED && plan === SubscriptionPlan.FREE && (
           <View className="mx-5 mb-8">
             <View className="bg-gradient-to-r from-brand-500 to-orange-600 rounded-2xl p-5 overflow-hidden" style={{ backgroundColor: '#f97316' }}>
               <View className="flex-row items-center justify-between">

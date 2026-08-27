@@ -14,6 +14,7 @@ import { SkeletonCard } from '../../../src/components/ui/Skeleton';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { useCVList, useDeleteCV, useDuplicateCV } from '../../../src/hooks/useCVs';
+import { useCurrentUser } from '../../../src/hooks/useUser';
 import { CV } from '../../../src/types/cv.types';
 import { formatDate } from '../../../src/lib/utils';
 import { CVStatus } from '../../../src/types/enums';
@@ -21,10 +22,12 @@ import { CVStatus } from '../../../src/types/enums';
 export default function CVsScreen() {
   const router = useRouter();
   const { data, isLoading, error, refetch } = useCVList();
+  const { data: user } = useCurrentUser();
   const deleteCV = useDeleteCV();
   const duplicateCV = useDuplicateCV();
 
-  const cvs = data?.data ?? [];
+  const cvs = data?.items ?? [];
+  const cvsCreated = user?.usage?.cvsCreated;
 
   const handleDelete = (cv: CV) => {
     Alert.alert(
@@ -109,11 +112,7 @@ export default function CVsScreen() {
         </View>
       </View>
 
-      {/* Progress bar */}
-      <View className="mt-3 h-1 bg-stone-100 rounded-full overflow-hidden">
-        <View className="h-full bg-brand-400 rounded-full" style={{ width: '70%' }} />
-      </View>
-      <Text className="text-xs text-stone-400 mt-1">
+      <Text className="text-xs text-stone-400 mt-3">
         v{item.version} · {item.downloadCount} downloads
       </Text>
     </TouchableOpacity>
@@ -124,7 +123,7 @@ export default function CVsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-stone-50">
+    <SafeAreaView className="flex-1 bg-stone-50" edges={['top']}>
       {/* Header */}
       <View className="px-5 pt-4 pb-4 bg-white border-b border-stone-100">
         <View className="flex-row items-center justify-between">
@@ -137,9 +136,9 @@ export default function CVsScreen() {
             <Text className="text-white font-bold ml-1">New CV</Text>
           </TouchableOpacity>
         </View>
-        {data && (
+        {typeof cvsCreated === 'number' && (
           <Text className="text-stone-400 text-sm mt-1">
-            {data.total} {data.total === 1 ? 'CV' : 'CVs'} created
+            {cvsCreated} CV {cvsCreated === 1 ? 'creation' : 'creations'} on your plan
           </Text>
         )}
       </View>

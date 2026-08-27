@@ -1,28 +1,49 @@
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PlanCard } from '../../../src/components/subscription/PlanCard';
-import { Button } from '../../../src/components/ui/Button';
+import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { useCreateCheckoutSession, useCreatePortalSession } from '../../../src/hooks/usePayment';
+import { useCurrentUser } from '../../../src/hooks/useUser';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { BillingInterval, SubscriptionPlan, SubscriptionStatus } from '../../../src/types/enums';
 import { PLAN_CONFIGS, yearlySavingsPercent } from '../../../src/types/subscription.types';
-import { formatDate } from '../../../src/lib/utils';
+import { formatDate, toDate } from '../../../src/lib/utils';
+import { PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
+
+function formatLimit(limit: number | 'unlimited'): string {
+  return limit === 'unlimited' ? '∞' : String(limit);
+}
+
+function loadFailureMessage(err: unknown): string {
+  if (axios.isAxiosError(err) && !err.response) {
+    return 'No connection. Check your network and try again.';
+  }
+  return 'Could not load usage. Please try again.';
+}
 
 export default function BillingScreen() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user: authUser, syncUser, userSyncError } = useAuthStore();
+  const { data: userData, error: userError, refetch } = useCurrentUser();
   const [interval, setInterval] = useState<BillingInterval>(BillingInterval.MONTH);
   const createCheckout = useCreateCheckoutSession();
   const createPortal = useCreatePortalSession();
 
-  const plan = user?.subscription?.plan ?? SubscriptionPlan.FREE;
-  const status = user?.subscription?.status ?? SubscriptionStatus.ACTIVE;
+  const user = userData ?? authUser;
+  const usage = user?.usage;
+  const usageFailed = !usage && !!(userError || userSyncError);
+  const usageLoading = !usage && !usageFailed;
+  const plan = user?.subscription?.plan;
+  const status = user?.subscription?.status;
   const periodEnd = user?.subscription?.currentPeriodEnd;
+  const limits = plan ? PLAN_CONFIGS[plan].limits : null;
 
   const handleSubscribe = async (targetPlan: SubscriptionPlan) => {
+    if (!PAID_UPGRADES_ENABLED) return;
     if (targetPlan === SubscriptionPlan.FREE) return;
 
     try {
@@ -40,6 +61,7 @@ export default function BillingScreen() {
   };
 
   const handleManageBilling = async () => {
+    if (!PAID_UPGRADES_ENABLED) return;
     try {
       const portal = await createPortal.mutateAsync();
       await Linking.openURL(portal.url);
@@ -57,14 +79,29 @@ export default function BillingScreen() {
           <Ionicons name="arrow-back" size={22} color="#374151" />
         </TouchableOpacity>
         <View>
-          <Text className="text-xl font-black text-stone-900">Billing & Plans</Text>
-          <Text className="text-stone-400 text-sm">Manage your subscription</Text>
+          <Text className="text-xl font-black text-stone-900">
+            {PAID_UPGRADES_ENABLED ? 'Billing & Plans' : 'Plan & usage'}
+          </Text>
+          <Text className="text-stone-400 text-sm">
+            {PAID_UPGRADES_ENABLED ? 'Manage your subscription' : 'Your current plan'}
+          </Text>
         </View>
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Current Plan Status */}
-        {plan !== SubscriptionPlan.FREE && (
+        {usageFailed ? (
+          <View className="mx-4 my-4 bg-white rounded-2xl border border-stone-100">
+            <ErrorState
+              message={userError ? loadFailureMessage(userError) : (userSyncError ?? 'Could not load usage. Please try again.')}
+              onRetry={() => {
+                void syncUser();
+                void refetch();
+              }}
+            />
+          </View>
+        ) : usageLoading ? (
+          <View className="mx-4 my-4 bg-white rounded-2xl border border-stone-100 p-4 h-32" />
+        ) : (PAID_UPGRADES_ENABLED ? plan !== SubscriptionPlan.FREE : true) && plan && limits && usage ? (
           <View className="mx-4 my-4 bg-white rounded-2xl border border-stone-100 p-4">
             <Text className="font-bold text-stone-800 mb-3">Current Plan</Text>
             <View className="flex-row items-center justify-between mb-2">
@@ -79,62 +116,101 @@ export default function BillingScreen() {
                 </Text>
               </View>
             </View>
-            {periodEnd && (
+            {toDate(periodEnd) && (
               <View className="flex-row items-center justify-between">
                 <Text className="text-stone-600">Renews</Text>
                 <Text className="font-semibold text-stone-900">{formatDate(periodEnd)}</Text>
               </View>
             )}
-            <TouchableOpacity
-              onPress={handleManageBilling}
-              disabled={createPortal.isPending}
-              className="mt-3 border border-stone-200 rounded-xl py-2.5 items-center"
-            >
-              <Text className="text-stone-700 font-semibold">Manage Billing</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Billing Interval Toggle */}
-        <View className="mx-4 mb-4">
-          <View className="bg-white rounded-2xl border border-stone-100 p-1 flex-row">
-            {[BillingInterval.MONTH, BillingInterval.YEAR].map((int) => (
+            {PAID_UPGRADES_ENABLED && (
               <TouchableOpacity
-                key={int}
-                onPress={() => setInterval(int)}
-                className={['flex-1 py-2.5 rounded-xl items-center flex-row justify-center gap-2', interval === int ? 'bg-brand-500' : ''].join(' ')}
+                onPress={handleManageBilling}
+                disabled={createPortal.isPending}
+                className="mt-3 border border-stone-200 rounded-xl py-2.5 items-center"
               >
-                <Text className={interval === int ? 'text-white font-bold' : 'text-stone-600 font-medium'}>
-                  {int === BillingInterval.MONTH ? 'Monthly' : 'Yearly'}
-                </Text>
-                {int === BillingInterval.YEAR && (
-                  <View className="bg-green-400 px-1.5 rounded-full">
-                    <Text className="text-white text-xs font-black">-{yearlyDiscount}%</Text>
-                  </View>
-                )}
+                <Text className="text-stone-700 font-semibold">Manage Billing</Text>
               </TouchableOpacity>
-            ))}
+            )}
+            {!PAID_UPGRADES_ENABLED && (
+              <View className="mt-3 pt-3 border-t border-stone-100">
+                <UsageRow label="CVs" used={usage.cvsCreated} limit={limits.cvs} />
+                <UsageRow label="Cover letters" used={usage.coverLettersCreated} limit={limits.coverLetters} />
+                <UsageRow
+                  label="AI credits"
+                  used={usage.aiCreditsUsed}
+                  limit={usage.aiCreditsLimit}
+                />
+                <UsageRow label="Exports this month" used={usage.exportsThisMonth} limit={limits.exports} last />
+              </View>
+            )}
           </View>
-        </View>
+        ) : null}
 
-        {/* Plan Cards */}
-        <View className="px-4 pb-8">
-          {Object.values(SubscriptionPlan).map((p) => (
-            <PlanCard
-              key={p}
-              config={PLAN_CONFIGS[p]}
-              interval={interval}
-              isCurrentPlan={plan === p}
-              isLoading={createCheckout.isPending}
-              onSelect={() => handleSubscribe(p)}
-            />
-          ))}
+        {PAID_UPGRADES_ENABLED && (
+          <>
+            {/* Billing Interval Toggle */}
+            <View className="mx-4 mb-4">
+              <View className="bg-white rounded-2xl border border-stone-100 p-1 flex-row">
+                {[BillingInterval.MONTH, BillingInterval.YEAR].map((int) => (
+                  <TouchableOpacity
+                    key={int}
+                    onPress={() => setInterval(int)}
+                    className={['flex-1 py-2.5 rounded-xl items-center flex-row justify-center gap-2', interval === int ? 'bg-brand-500' : ''].join(' ')}
+                  >
+                    <Text className={interval === int ? 'text-white font-bold' : 'text-stone-600 font-medium'}>
+                      {int === BillingInterval.MONTH ? 'Monthly' : 'Yearly'}
+                    </Text>
+                    {int === BillingInterval.YEAR && (
+                      <View className="bg-green-400 px-1.5 rounded-full">
+                        <Text className="text-white text-xs font-black">-{yearlyDiscount}%</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
 
-          <Text className="text-stone-400 text-xs text-center mt-4 leading-4">
-            All payments are securely processed by Stripe. You can cancel or change your plan at any time.
-          </Text>
-        </View>
+            {/* Plan Cards */}
+            <View className="px-4 pb-8">
+              {Object.values(SubscriptionPlan).map((p) => (
+                <PlanCard
+                  key={p}
+                  config={PLAN_CONFIGS[p]}
+                  interval={interval}
+                  isCurrentPlan={plan === p}
+                  isLoading={createCheckout.isPending}
+                  onSelect={() => handleSubscribe(p)}
+                />
+              ))}
+
+              <Text className="text-stone-400 text-xs text-center mt-4 leading-4">
+                All payments are securely processed by Stripe. You can cancel or change your plan at any time.
+              </Text>
+            </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function UsageRow({
+  label,
+  used,
+  limit,
+  last = false,
+}: {
+  label: string;
+  used: number;
+  limit: number | 'unlimited';
+  last?: boolean;
+}) {
+  return (
+    <View className={['flex-row items-center justify-between', last ? '' : 'mb-2'].join(' ')}>
+      <Text className="text-stone-600">{label}</Text>
+      <Text className="font-semibold text-stone-900">
+        {used} / {formatLimit(limit)}
+      </Text>
+    </View>
   );
 }

@@ -6,13 +6,12 @@ import {
   Dimensions,
   FlatList,
   Image,
-  Platform,
   StatusBar,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
@@ -50,6 +49,7 @@ const slides = [
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -149,7 +149,7 @@ export default function OnboardingScreen() {
         }}
       />
 
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         {/* Top: Logo */}
         <Animated.View
           style={{
@@ -274,7 +274,7 @@ export default function OnboardingScreen() {
         />
 
         {/* Bottom section */}
-        <View style={{ paddingHorizontal: 24, paddingBottom: Platform.OS === 'ios' ? 16 : 24 }}>
+        <View style={{ paddingHorizontal: 24, paddingBottom: insets.bottom }}>
           {/* Pagination dots */}
           <View
             style={{
@@ -294,7 +294,6 @@ export default function OnboardingScreen() {
                   borderRadius: 4,
                   backgroundColor:
                     i === currentIndex ? '#ffffff' : 'rgba(255,255,255,0.35)',
-                  transition: 'width 0.3s',
                 }}
               />
             ))}

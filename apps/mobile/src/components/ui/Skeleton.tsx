@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, View, ViewProps } from 'react-native';
 
 interface SkeletonProps extends ViewProps {
-  width?: number | string;
+  width?: number | `${number}%`;
   height?: number;
   rounded?: boolean;
   className?: string;

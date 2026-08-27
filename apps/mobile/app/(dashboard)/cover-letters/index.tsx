@@ -16,7 +16,7 @@ export default function CoverLettersScreen() {
   const { data, isLoading, error, refetch } = useCoverLetterList();
   const deleteCL = useDeleteCoverLetter();
 
-  const coverLetters = data?.data ?? [];
+  const coverLetters = data?.items ?? [];
 
   const handleDelete = (cl: CoverLetter) => {
     Alert.alert(
@@ -87,7 +87,7 @@ export default function CoverLettersScreen() {
   if (error) return <ErrorState message="Failed to load cover letters" onRetry={refetch} />;
 
   return (
-    <SafeAreaView className="flex-1 bg-stone-50">
+    <SafeAreaView className="flex-1 bg-stone-50" edges={['top']}>
       <View className="px-5 pt-4 pb-4 bg-white border-b border-stone-100">
         <View className="flex-row items-center justify-between">
           <Text className="text-xl font-black text-stone-900">Cover Letters</Text>

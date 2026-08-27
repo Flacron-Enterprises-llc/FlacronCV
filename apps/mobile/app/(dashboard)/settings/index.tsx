@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -6,17 +7,36 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { useCurrentUser } from '../../../src/hooks/useUser';
 import { getInitials } from '../../../src/lib/utils';
-import { SubscriptionPlan } from '../../../src/types/enums';
 import { PLAN_CONFIGS } from '../../../src/types/subscription.types';
+import { openLegalDocument } from '../../../src/lib/legal-acceptance';
+import { PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
+import { ErrorState } from '../../../src/components/ui/ErrorState';
+
+type SettingsMenuItem = {
+  icon: string;
+  label: string;
+  onPress: () => void;
+  badge?: string;
+};
+
+function loadFailureMessage(err: unknown): string {
+  if (axios.isAxiosError(err) && !err.response) {
+    return 'No connection. Check your network and try again.';
+  }
+  return 'Could not load usage. Please try again.';
+}
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user: authUser, logout } = useAuthStore();
-  const { data: user } = useCurrentUser();
+  const { user: authUser, logout, syncUser, userSyncError } = useAuthStore();
+  const { data: user, error: userError, refetch } = useCurrentUser();
 
   const currentUser = user ?? authUser;
-  const plan = currentUser?.subscription?.plan ?? SubscriptionPlan.FREE;
-  const planConfig = PLAN_CONFIGS[plan];
+  const usage = currentUser?.usage;
+  const usageFailed = !usage && !!(userError || userSyncError);
+  const usageLoading = !usage && !usageFailed;
+  const plan = currentUser?.subscription?.plan;
+  const planConfig = plan ? PLAN_CONFIGS[plan] : null;
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -28,37 +48,40 @@ export default function SettingsScreen() {
   // TODO(mobile-photo): Avatar was a press target for POST /users/:uid/photo
   // (dead route). Re-enable when useUploadProfilePhoto implements Storage +
   // PUT /users/me { photoURL } — see TODO in useUser.ts.
-  const MENU_SECTIONS = [
+  const MENU_SECTIONS: { title: string; items: SettingsMenuItem[] }[] = [
     {
       title: 'Account',
       items: [
         { icon: 'person-outline', label: 'Profile', onPress: () => router.push('/(dashboard)/settings/profile') },
-        { icon: 'notifications-outline', label: 'Notifications', onPress: () => {} },
-        { icon: 'shield-checkmark-outline', label: 'Security', onPress: () => {} },
       ],
     },
     {
       title: 'Subscription',
       items: [
-        { icon: 'card-outline', label: 'Billing & Plans', onPress: () => router.push('/(dashboard)/settings/billing'), badge: planConfig.plan.toUpperCase() },
+        { icon: 'card-outline', label: PAID_UPGRADES_ENABLED ? 'Billing & Plans' : 'Plan & usage', onPress: () => router.push('/(dashboard)/settings/billing'), badge: planConfig ? planConfig.plan.toUpperCase() : undefined },
       ],
     },
     {
       title: 'Support',
       items: [
         { icon: 'help-circle-outline', label: 'Help & Support', onPress: () => router.push('/(dashboard)/support') },
-        { icon: 'document-text-outline', label: 'Terms of Service', onPress: () => {} },
-        { icon: 'lock-closed-outline', label: 'Privacy Policy', onPress: () => {} },
+        { icon: 'document-text-outline', label: 'Terms of Service', onPress: () => void openLegalDocument('terms') },
+        { icon: 'lock-closed-outline', label: 'Privacy Policy', onPress: () => void openLegalDocument('privacy') },
+        { icon: 'alert-circle-outline', label: 'Disclaimer', onPress: () => void openLegalDocument('disclaimer') },
       ],
     },
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-stone-50">
+    <SafeAreaView className="flex-1 bg-stone-50" edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
         <View className="bg-white px-5 pt-6 pb-6 border-b border-stone-100">
-          <View className="flex-row items-center">
+            <TouchableOpacity
+              onPress={() => router.push('/(dashboard)/settings/profile')}
+              className="flex-row items-center"
+              activeOpacity={0.7}
+            >
             <View className="relative">
               <View className="w-16 h-16 rounded-full bg-brand-100 items-center justify-center">
                 <Text className="text-brand-700 text-xl font-black">
@@ -70,31 +93,50 @@ export default function SettingsScreen() {
               <Text className="text-lg font-black text-stone-900">{currentUser?.displayName ?? 'User'}</Text>
               <Text className="text-stone-500 text-sm">{currentUser?.email}</Text>
               <View className="flex-row items-center mt-1.5">
-                <View className="bg-brand-100 px-2.5 py-0.5 rounded-full">
-                  <Text className="text-brand-700 text-xs font-bold capitalize">{plan}</Text>
-                </View>
+                {plan ? (
+                  <View className="bg-brand-100 px-2.5 py-0.5 rounded-full">
+                    <Text className="text-brand-700 text-xs font-bold capitalize">{plan}</Text>
+                  </View>
+                ) : null}
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#d6d3d1" />
-          </View>
+            </TouchableOpacity>
         </View>
 
         {/* Usage Stats */}
         <View className="bg-white mx-4 my-4 rounded-2xl border border-stone-100 p-4">
           <Text className="font-bold text-stone-800 mb-3">Monthly Usage</Text>
-          <UsageBar
-            label="AI Credits"
-            used={currentUser?.usage?.aiCreditsUsed ?? 0}
-            limit={currentUser?.usage?.aiCreditsLimit ?? 5}
-            color="#8b5cf6"
-          />
-          <UsageBar
-            label="Exports"
-            used={currentUser?.usage?.exportsThisMonth ?? 0}
-            limit={typeof planConfig.limits.exports === 'number' ? planConfig.limits.exports : 999}
-            color="#f97316"
-            unlimited={planConfig.limits.exports === 'unlimited'}
-          />
+          {usageFailed ? (
+            <ErrorState
+              message={userError ? loadFailureMessage(userError) : (userSyncError ?? 'Could not load usage. Please try again.')}
+              onRetry={() => {
+                void syncUser();
+                void refetch();
+              }}
+            />
+          ) : usageLoading || !usage || !planConfig ? (
+            <View>
+              <View className="h-4 bg-stone-100 rounded mb-3" />
+              <View className="h-4 bg-stone-100 rounded" />
+            </View>
+          ) : (
+            <>
+              <UsageBar
+                label="AI Credits"
+                used={usage.aiCreditsUsed}
+                limit={usage.aiCreditsLimit}
+                color="#8b5cf6"
+              />
+              <UsageBar
+                label="Exports"
+                used={usage.exportsThisMonth}
+                limit={typeof planConfig.limits.exports === 'number' ? planConfig.limits.exports : 999}
+                color="#f97316"
+                unlimited={planConfig.limits.exports === 'unlimited'}
+              />
+            </>
+          )}
         </View>
 
         {/* Menu Sections */}

@@ -65,7 +65,9 @@ export function ExperienceStep({ onValidChange }: ExperienceStepProps) {
   };
 
   const onSubmit = (data: FormData) => {
+    // Spread first so web-only keys (highlights, order, …) survive; form fields overlay so clears win.
     const newItem: ExperienceItem = {
+      ...(editingItem ?? {}),
       id: editingItem?.id ?? generateId(),
       company: data.company,
       position: data.position,

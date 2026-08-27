@@ -11,8 +11,12 @@ import { Input } from '../../../src/components/ui/Input';
 import { useCreateCoverLetter } from '../../../src/hooks/useCoverLetters';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { useCoverLetterStore } from '../../../src/store/cover-letter-store';
-import { canCreateCoverLetter } from '../../../src/lib/utils';
-import { CoverLetterStatus, SubscriptionPlan } from '../../../src/types/enums';
+import { canCreateCoverLetter, effectivePlanForCopy } from '../../../src/lib/entitlements';
+import {
+  coverLetterLimitReachedMessage,
+  upgradeAlertButtons,
+} from '../../../src/config/paid-upgrades';
+import { CoverLetterStatus } from '../../../src/types/enums';
 
 const schema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -45,17 +49,20 @@ export default function NewCoverLetterScreen() {
   });
 
   const onSubmit = async (data: FormData) => {
-    const plan = user?.subscription?.plan ?? SubscriptionPlan.FREE;
-    const clCount = user?.usage?.coverLettersCreated ?? 0;
+    if (!user?.usage) {
+      Alert.alert(
+        'Could not create cover letter',
+        'Could not load your usage. Please try again.',
+      );
+      return;
+    }
+    const clCount = user.usage.coverLettersCreated;
 
-    if (!canCreateCoverLetter(plan, clCount)) {
+    if (!canCreateCoverLetter(user.subscription, clCount)) {
       Alert.alert(
         'Cover Letter Limit Reached',
-        'Upgrade your plan to create more cover letters.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => router.push('/(dashboard)/settings/billing') },
-        ],
+        coverLetterLimitReachedMessage(effectivePlanForCopy(user.subscription)),
+        upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
       );
       return;
     }

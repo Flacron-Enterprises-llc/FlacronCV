@@ -19,6 +19,7 @@ export function useTemplates(category?: TemplateCategory) {
   });
 }
 
+/** No UI yet; GET only. */
 export function useTemplate(id: string | null) {
   const ready = useAuthReady();
   return useQuery({

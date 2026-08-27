@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/auth-store';
 import { CV, CVSection } from '../types/cv.types';
-import { PaginatedResponse } from '../types/api.types';
+import { ListPage } from '../types/api.types';
 
 function useAuthReady() {
   const { firebaseUser, isInitialized } = useAuthStore();
@@ -13,7 +13,7 @@ export function useCVList(page = 1, limit = 20) {
   const ready = useAuthReady();
   return useQuery({
     queryKey: ['cvs', page, limit],
-    queryFn: () => api.get<PaginatedResponse<CV>>('/cvs', { page, limit }),
+    queryFn: () => api.get<ListPage<CV>>('/cvs', { page, limit }),
     enabled: ready,
     staleTime: 2 * 60 * 1000,
   });
@@ -111,6 +111,7 @@ export function useDeleteCVSection(cvId: string) {
   });
 }
 
+/** No UI yet; POST only. */
 export function useShareCV(cvId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -121,6 +122,7 @@ export function useShareCV(cvId: string) {
   });
 }
 
+/** No UI yet; GET only. */
 export function useCVVersions(cvId: string) {
   const ready = useAuthReady();
   return useQuery({

@@ -2,9 +2,9 @@ import { Redirect, Stack } from 'expo-router';
 import { useAuthStore } from '../../src/store/auth-store';
 
 export default function AuthLayout() {
-  const { firebaseUser, isInitialized } = useAuthStore();
+  const { firebaseUser, isInitialized, legalGate } = useAuthStore();
 
-  if (isInitialized && firebaseUser) {
+  if (isInitialized && firebaseUser && !legalGate) {
     return <Redirect href="/(dashboard)" />;
   }
 
