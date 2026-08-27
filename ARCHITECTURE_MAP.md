@@ -148,9 +148,12 @@ section after the hero; related strip to `/ai-cv-builder` (`locale="en"`) and
 gallery** (six sitemap locs, full hreflang). Unique mid/close/related copy in
 `apps/web/src/content/public-templates.ts` renders only when `locale === 'en'` —
 not `englishDocument`, not a second path. No ItemList or FAQ JSON-LD on this
-URL. **Privacy is still the locale namespace `privacy`** until
-the client names AWS SES and OpenAI in the new §4 — `subprocessor-disclosure.spec.ts` still
-reads `privacy.s3_desc`. `terms` and `cookies_policy` locale namespaces were deleted.
+URL. **Privacy is still the locale namespace `privacy`.** Live `privacy.s3_desc`
+(six locales) names Firebase (auth, database, file storage — **not** hosting), Stripe,
+Amazon Web Services (website and API hosting, and Amazon SES), and OpenAI. Hosting was
+moved off Firebase 2026-08-27 (W1). Google Analytics is not named — `NEXT_PUBLIC_GA4_MEASUREMENT_ID`
+is unset. `subprocessor-disclosure.spec.ts` still reads `privacy.s3_desc`. The client
+17-section Privacy is **not** published. `terms` and `cookies_policy` locale namespaces were deleted.
 
 **Chrome (headers/footers).** One Tailwind token, not a scale:
 `chrome: '#1e3a5f'` in `apps/web/tailwind.config.ts` — the Classic CV / cover-letter default.
@@ -213,8 +216,10 @@ band, signal codes, grantStatus, `hasUsedTrial`) and must never include other ui
 Device identifier (unchanged from part 1): 128-bit random token, HMAC-SHA256 with
 `ABUSE_HMAC_SECRET`. Survives logout; does **not** survive clearing cookies and localStorage
 together, incognito, another browser, or another machine.
-**Privacy §1.9** matches the hashing practice. Do not publish the new Privacy page until AWS SES and
-OpenAI are named in client §4. `legalAcceptances/{uid}` exists (Batch H). **`privacyVersion` is
+**Privacy §1.9** matches the hashing practice. The client 17-section Privacy page is still
+not published. Live locale-JSON `privacy.s3_desc` already names AWS SES and OpenAI; hosting
+is attributed to Amazon Web Services (website and API), not Firebase (W1, 2026-08-27).
+GA4 is not named until `NEXT_PUBLIC_GA4_MEASUREMENT_ID` is set. `legalAcceptances/{uid}` exists (Batch H). **`privacyVersion` is
 stamped from `LEGAL_VERSION_MAP` (`2026-08-16`) even though the published privacy body is still
 the old locale JSON** — recorded version and published body will not match until B.1; that is a
 deliberate gap, not a bug. Missing acceptance rows are grandfathered (`treatMissingAsStale`

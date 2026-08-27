@@ -64,6 +64,9 @@ Thumbs.db
 # Turbo
 .turbo/
 
+# Expo local cache — never commit
+apps/mobile/.expo/
+
 # Firebase
 firebase-debug.log
 firestore-debug.log

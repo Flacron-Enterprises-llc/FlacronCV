@@ -1505,7 +1505,7 @@
     "s2_security": "To detect and prevent fraud and security issues",
     "s2_legal": "To comply with legal obligations",
     "s3_title": "3. Data Sharing",
-    "s3_desc": "We do not sell your personal data to third parties. We share data only with the service providers needed to operate FlacronCV — Firebase (hosting, authentication, database, and file storage), Stripe (payment processing), Amazon Web Services (Amazon SES, which sends our transactional and notification email, on servers in the United States), and OpenAI (which processes the CV and cover-letter content you submit to power our AI features, on servers in the United States). All providers are bound by data-processing and confidentiality agreements.",
+    "s3_desc": "We do not sell your personal data to third parties. We share data only with the service providers needed to operate FlacronCV — Firebase (authentication, database, and file storage), Stripe (payment processing), Amazon Web Services (hosting for the website and the API, and Amazon SES, which sends our transactional and notification email, on servers in the United States), and OpenAI (which processes the CV and cover-letter content you submit to power our AI features, on servers in the United States). All providers are bound by data-processing and confidentiality agreements.",
     "s4_title": "4. Data Security",
     "s4_desc": "We protect your data using TLS encryption in transit and AES-256 encryption at rest. Access to your data is strictly controlled and audited.",
     "s5_title": "5. Your Rights (GDPR)",

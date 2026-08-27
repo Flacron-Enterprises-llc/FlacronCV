@@ -1042,6 +1042,13 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 9. Change log (append newest at top)
 
+- 2026-08-27 — **W1: live Privacy §3 hosting attribution.** `privacy.s3_desc` in
+  all six locales no longer lists hosting under Firebase. Amazon Web Services
+  now covers website and API hosting plus Amazon SES. Stripe, SES, OpenAI, and
+  the closing sentence are unchanged. Google Analytics not named (`NEXT_PUBLIC_GA4_MEASUREMENT_ID`
+  unset). `LEGAL_VERSION` / `LEGAL_VERSION_MAP` untouched. Cookie Policy and
+  client 17-section Privacy not published. AR and UR lines pending native review.
+
 - 2026-08-27 — **Mobile B2: preview/production EAS builds pin the public API
   URL.** `eas.json` sets `EXPO_PUBLIC_API_URL` on preview and production only
   (`https://api.flacroncv.com/api/v1`, matching Amplify). Development has no
