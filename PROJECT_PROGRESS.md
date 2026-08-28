@@ -842,16 +842,15 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   `addInvisibleTextLayer` in `export-cv.ts`). Entitlement bypass part FIXED in A8 via the
   server-authorized `/exports/record` gate. A working backend Puppeteer text-PDF path exists but is
   unused; switching the UI to it is a larger change — revisit with client approval.
-- **⚠️ ADDED 2026-08-28 — Settings `account.deleteDescription` is a live false
-  deletion claim.** Web Settings Danger Zone (`settings/page.tsx`) tells the
-  user “All your data will be permanently removed.” `DELETE /users/me` only
+- **⚠️ ADDED 2026-08-28 — Settings `account.deleteDescription` was a live false
+  deletion claim. CORRECTED same day.** Web Settings Danger Zone told the user
+  “All your data will be permanently removed.” `DELETE /users/me` only
   deactivates (`softDelete`: `isActive` false, Auth disabled, sessions
   revoked). CVs, letters, tickets, Storage, and `legalAcceptances` remain.
-  The confirm modal (`account.deleteModalDescription`) is honest; the
-  description above it is not. Same class of defect as the watermark and
-  ATS-guarantee overclaims. Do not “fix” by building H.6 in passing — correct
-  the `t()` string in all six locales. `/delete-account` (W3) describes the
-  real process; this settings blurb was left unchanged in that pass.
+  The confirm modal was already honest. The description now matches: deactivate
+  immediately; permanent erasure on request via `contact@flacroncv.com`. AR/UR
+  wording is unreviewed by a native reader. Same class of defect as the
+  watermark and ATS-guarantee overclaims. H.6 still not built.
 
 - **⚠️ ADDED 2026-08-28 — Mobile Puppeteer export charges at URL-mint; failed
   downloads are not refunded (no API-only fix).** Mobile hits
@@ -1073,6 +1072,14 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-28 — **Settings Danger Zone copy matches soft-delete.**
+  `account.deleteDescription` no longer claims all data is permanently removed.
+  It now describes deactivation now and erasure on request to
+  `contact@flacroncv.com`, consistent with `/delete-account` and the confirm
+  modal. All six locales. AR/UR unreviewed. `LEGAL_VERSION` not bumped.
+  `deleteModalDescription` unchanged. Also untracked committed
+  `apps/mobile/.expo/` cache (gitignore was already present).
 
 - 2026-08-28 — **W3: public `/delete-account` for Play Data safety.** English-only
   instructions page at `/en/delete-account`. Describes deactivation via Settings

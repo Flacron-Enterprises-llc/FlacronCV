@@ -698,7 +698,7 @@
       "passwordDescription": "Cambiar la contraseña de tu cuenta",
       "changePassword": "Cambiar contraseña",
       "dangerZone": "Zona de peligro",
-      "deleteDescription": "Una vez que elimines tu cuenta, no hay vuelta atrás. Todos tus datos serán eliminados permanentemente.",
+      "deleteDescription": "Esto desactiva tu cuenta de inmediato y no podrás volver a iniciar sesión. Para borrar de forma permanente tus CV y cartas guardados, escribe a contact@flacroncv.com.",
       "deleteAccount": "Eliminar cuenta",
       "deleteModalTitle": "Eliminar cuenta",
       "deleteModalDescription": "Esto desactiva tu cuenta de inmediato y cierra la sesión en todos los dispositivos. No podrás volver a iniciar sesión. Para que también se borren de forma permanente tus CV y cartas guardados, escribe a contact@flacroncv.com.",

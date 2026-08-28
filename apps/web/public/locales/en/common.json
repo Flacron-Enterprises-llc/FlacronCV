@@ -698,7 +698,7 @@
       "passwordDescription": "Change your account password",
       "changePassword": "Change Password",
       "dangerZone": "Danger Zone",
-      "deleteDescription": "Once you delete your account, there is no going back. All your data will be permanently removed.",
+      "deleteDescription": "This deactivates your account immediately and you will not be able to sign in again. To permanently erase stored CVs and cover letters, email contact@flacroncv.com.",
       "deleteAccount": "Delete Account",
       "deleteModalTitle": "Delete Account",
       "deleteModalDescription": "This deactivates your account immediately and signs you out of every device. You will not be able to sign in again. To have your stored CVs and cover letters permanently erased as well, email contact@flacroncv.com.",

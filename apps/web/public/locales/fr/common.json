@@ -698,7 +698,7 @@
       "passwordDescription": "Changer votre mot de passe",
       "changePassword": "Changer le mot de passe",
       "dangerZone": "Zone de danger",
-      "deleteDescription": "Une fois votre compte supprimé, il n'y a pas de retour en arrière. Toutes vos données seront définitivement supprimées.",
+      "deleteDescription": "Cela désactive immédiatement votre compte et vous ne pourrez plus vous reconnecter. Pour effacer définitivement vos CV et lettres enregistrés, écrivez à contact@flacroncv.com.",
       "deleteAccount": "Supprimer le compte",
       "deleteModalTitle": "Supprimer le compte",
       "deleteModalDescription": "Cela désactive immédiatement votre compte et vous déconnecte de tous vos appareils. Vous ne pourrez plus vous reconnecter. Pour que vos CV et lettres enregistrés soient également effacés définitivement, écrivez à contact@flacroncv.com.",
