@@ -605,6 +605,7 @@ Each becomes its own review→approve→implement→QA cycle. Ordered by suggest
 - [x] A7b: **AI-credit client soft-checks status-aware** — ✅ all 4 sites (`AISummaryModal.tsx`, `cover-letters/[id]`,
   `cover-letters/new` ×2) now cap the stored `aiCreditsLimit` by `PLAN_CONFIGS[resolveEffectivePlan(sub)].limits.aiCredits`
   (mirrors the backend `min()` cap), so a delinquent-past-grace user sees the upgrade modal instead of an API 403 toast.
+  **W2 2026-08-28:** cover-letter helpers no longer use `|| 5` (stored 0 was treated as 5). Modals already used `?? 5`.
 - [x] A7c: **DONE 2026-07-18** — dunning banner. New `DunningBanner` (rendered in the dashboard layout, so it shows on
   every dashboard page) appears when `subscription.status ∈ DELINQUENT_STATUSES` (past_due/unpaid/incomplete) with an
   "Update payment method" CTA → Stripe billing portal. New `dunning` i18n ×6. Closes the "delinquent user gets no
@@ -1041,6 +1042,20 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-28 — **W2: cover-letter AI gates treat stored limit 0 as 0.**
+  `ensureAICredits` / `handleAIImprove` used `aiCreditsLimit || 5`, so a stored
+  ceiling of 0 became 5 and the client could start a generate the server then
+  refused. Now `typeof stored === 'number' ? min(stored, planLimit) : planLimit`.
+  Modals already use `?? 5` (0 stays 0). Dashboard/billing display untouched.
+
+- 2026-08-28 — **Mobile B3: unused native modules and camera/mic permissions
+  removed.** Dropped `@stripe/stripe-react-native`, `expo-image-picker`,
+  `expo-media-library`, `expo-print`, `date-fns`, `@dataconnect/generated`.
+  Removed image-picker plugin plus iOS camera/photo usage strings and Android
+  CAMERA / RECORD_AUDIO. Storage permissions, file-system, sharing, and
+  webview kept. Generated Data Connect folder left on disk. `api.ts` release
+  guard and `eas.json` untouched.
 
 - 2026-08-27 — **W1: live Privacy §3 hosting attribution.** `privacy.s3_desc` in
   all six locales no longer lists hosting under Firebase. Amazon Web Services

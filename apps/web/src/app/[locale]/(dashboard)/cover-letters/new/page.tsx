@@ -93,10 +93,9 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
   /** True when the user still has AI credits; opens the paywall when not. */
   const ensureAICredits = (): boolean => {
     const aiCreditsUsed = user?.usage?.aiCreditsUsed || 0;
-    const aiCreditsLimit = Math.min(
-      user?.usage?.aiCreditsLimit || 5,
-      PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)].limits.aiCredits,
-    );
+    const planLimit = PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)].limits.aiCredits;
+    const stored = user?.usage?.aiCreditsLimit;
+    const aiCreditsLimit = typeof stored === 'number' ? Math.min(stored, planLimit) : planLimit;
     if (aiCreditsUsed >= aiCreditsLimit) {
       setShowUpgradeModal(true);
       return false;

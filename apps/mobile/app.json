@@ -18,11 +18,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.flacroncv.mobile",
-      "buildNumber": "1",
-      "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Allow FlacronCV to access your photos for profile picture.",
-        "NSCameraUsageDescription": "Allow FlacronCV to use your camera for profile picture."
-      }
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
@@ -33,9 +29,7 @@
       "versionCode": 1,
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ]
     },
     "web": {
@@ -45,12 +39,6 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "Allow FlacronCV to access your photos."
-        }
-      ],
       [
         "expo-build-properties",
         {

@@ -14,7 +14,14 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.flacroncv.com/api/v1"
+        "EXPO_PUBLIC_API_URL": "https://api.flacroncv.com/api/v1",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCnQ5tPl4E96VeqtYpuAhHiDX4jYlejFxY",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "flacron-cv.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "flacron-cv",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "flacron-cv.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "897261654848",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:897261654848",
+        "EXPO_PUBLIC_APP_URL": "https://flacroncv.com"
       }
     },
     "production": {
@@ -22,7 +29,14 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.flacroncv.com/api/v1"
+        "EXPO_PUBLIC_API_URL": "https://api.flacroncv.com/api/v1",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCnQ5tPl4E96VeqtYpuAhHiDX4jYlejFxY",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "flacron-cv.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "flacron-cv",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "flacron-cv.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "897261654848",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:897261654848",
+        "EXPO_PUBLIC_APP_URL": "https://flacroncv.com"
       }
     }
   }

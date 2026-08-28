@@ -258,10 +258,9 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
   /** True when the user still has AI credits; opens the paywall when not. */
   const ensureAICredits = (): boolean => {
     const aiCreditsUsed = user?.usage?.aiCreditsUsed || 0;
-    const aiCreditsLimit = Math.min(
-      user?.usage?.aiCreditsLimit || 5,
-      PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)].limits.aiCredits,
-    );
+    const planLimit = PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)].limits.aiCredits;
+    const stored = user?.usage?.aiCreditsLimit;
+    const aiCreditsLimit = typeof stored === 'number' ? Math.min(stored, planLimit) : planLimit;
     if (aiCreditsUsed >= aiCreditsLimit) {
       setUpgradeReason('ai_credits');
       setShowUpgradeModal(true);
@@ -274,10 +273,9 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
   // whole letter), confirm first when there is content to lose.
   const handleAIImprove = () => {
     const aiCreditsUsed = user?.usage?.aiCreditsUsed || 0;
-    const aiCreditsLimit = Math.min(
-      user?.usage?.aiCreditsLimit || 5,
-      PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)].limits.aiCredits,
-    );
+    const planLimit = PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)].limits.aiCredits;
+    const stored = user?.usage?.aiCreditsLimit;
+    const aiCreditsLimit = typeof stored === 'number' ? Math.min(stored, planLimit) : planLimit;
 
     if (aiCreditsUsed >= aiCreditsLimit) {
       setUpgradeReason('ai_credits');
