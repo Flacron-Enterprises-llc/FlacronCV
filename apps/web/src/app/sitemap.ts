@@ -32,6 +32,7 @@ const ENGLISH_DOCUMENT_PATHS = [
   '/ai-cv-builder',
   '/ai-cover-letter-generator',
   '/ats-cv-checker',
+  '/delete-account',
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

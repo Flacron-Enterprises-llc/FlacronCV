@@ -27,6 +27,7 @@ describe('sitemap', () => {
       '/ai-cv-builder',
       '/ai-cover-letter-generator',
       '/ats-cv-checker',
+      '/delete-account',
     ]) {
       const matches = entries.filter((e) => e.url.endsWith(path));
       expect(matches).toHaveLength(1);

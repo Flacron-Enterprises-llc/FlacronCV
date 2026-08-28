@@ -41,7 +41,7 @@ Last updated: 2026-08-27
 - Plans/entitlements: `packages/shared-types/src/subscription.types.ts` (`PLAN_CONFIGS`)
 - Locales: `apps/web/public/locales/<loc>/common.json`
 - English legal bodies: `apps/web/src/legal/*.ts` (chrome still in `t()`)
-- English landing copy: `apps/web/src/content/ai-cv-builder.ts`, `apps/web/src/content/ai-cover-letter-generator.ts`, `apps/web/src/content/ats-cv-checker.ts` (`englishDocument`, no LegalDocumentView); `apps/web/src/content/public-templates.ts` (unique body on `/en/templates` only, not a new path)
+- English landing copy: `apps/web/src/content/ai-cv-builder.ts`, `apps/web/src/content/ai-cover-letter-generator.ts`, `apps/web/src/content/ats-cv-checker.ts` (`englishDocument`, no LegalDocumentView); `apps/web/src/content/public-templates.ts` (unique body on `/en/templates` only, not a new path); Play delete-account URL: `apps/web/src/content/delete-account.ts` (`/delete-account`, English-only, not `LEGAL_VERSION_MAP`)
 - Launch QA: `QA_LAUNCH_CHECKLIST.md` (Phase 1 before live Stripe)
 
 ---
@@ -842,6 +842,37 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   `addInvisibleTextLayer` in `export-cv.ts`). Entitlement bypass part FIXED in A8 via the
   server-authorized `/exports/record` gate. A working backend Puppeteer text-PDF path exists but is
   unused; switching the UI to it is a larger change — revisit with client approval.
+- **⚠️ ADDED 2026-08-28 — Settings `account.deleteDescription` is a live false
+  deletion claim.** Web Settings Danger Zone (`settings/page.tsx`) tells the
+  user “All your data will be permanently removed.” `DELETE /users/me` only
+  deactivates (`softDelete`: `isActive` false, Auth disabled, sessions
+  revoked). CVs, letters, tickets, Storage, and `legalAcceptances` remain.
+  The confirm modal (`account.deleteModalDescription`) is honest; the
+  description above it is not. Same class of defect as the watermark and
+  ATS-guarantee overclaims. Do not “fix” by building H.6 in passing — correct
+  the `t()` string in all six locales. `/delete-account` (W3) describes the
+  real process; this settings blurb was left unchanged in that pass.
+
+- **⚠️ ADDED 2026-08-28 — Mobile Puppeteer export charges at URL-mint; failed
+  downloads are not refunded (no API-only fix).** Mobile hits
+  `POST /cvs/:id/export/{pdf|docx}` and `POST /cover-letters/:id/export/pdf`.
+  The server generates, uploads, mints a 1-hour signed Storage URL, then
+  increments `usage.exportsThisMonth` (`export.service.ts` ~290 / 402 / 538 /
+  636) **before** the JSON body is delivered and **before** the client
+  downloads. The signed URL is fetched from Storage, not the API, so the
+  server cannot observe a failed download (dropped connection, expired URL,
+  device storage). An API-only refund cannot be correct on this design.
+  Free is **2 lifetime** exports (not `/month`). Two failed downloads
+  permanently exhaust the allowance; a retry after a failed download charges
+  again. **TOCTOU:** `checkExportLimit` reads, Puppeteer runs for seconds,
+  increment happens later — two concurrent Free exports can both pass a cap
+  of 2. Web (html2canvas + `/exports/record` reserve/confirm/refund) and
+  mobile (Puppeteer + signed URL) are **two systems sharing one counter**.
+  The real fix is to stream the file through the API and charge on a
+  completed response, which needs a coordinated mobile client change — do
+  not change the live JSON POST in place. **Interim goodwill:** CRM → user
+  detail → **Reset usage** (Free only); same control as the 2026-08-19 web
+  failed-render note below. Paid / unlimited export plans are unaffected.
 - **Save-state / Undo-Redo (CV)** — edits-during-autosave and undo/redo have latent data-loss bugs;
   minimal fixes exist but touch the save-state model.
 - **Backend DTO validation — CLOSED 2026-08-19 (Batch J).** Class DTOs now sit on CV,
@@ -1042,6 +1073,26 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-28 — **W3: public `/delete-account` for Play Data safety.** English-only
+  instructions page at `/en/delete-account`. Describes deactivation via Settings
+  plus email to `contact@flacroncv.com` for erasure within 30 days — what the
+  API actually does. Own last-updated date (28 August 2026). Not in
+  `LEGAL_VERSION_MAP`; `LEGAL_VERSION` not bumped. Sitemap
+  `ENGLISH_DOCUMENT_PATHS` only; no footer link. Settings copy left unchanged
+  (false `deleteDescription` recorded in §8).
+
+- 2026-08-28 — **Mobile: Android package `com.flacroncv.mobile` for a new Play
+  listing.** The June 2025 draft used `com.Flacron.app` and a keystore nobody
+  has. Play reserves that name; the new listing uses the original package,
+  matching `ios.bundleIdentifier`. `versionCode` stays 1. `eas.json` and the
+  release guard untouched.
+
+- 2026-08-28 — **Docs: mobile Puppeteer export quota (no API change).** §8
+  records that the direct export route charges at signed-URL mint, cannot
+  see download failure, Free is 2 lifetime, retries double-charge, and
+  `checkExportLimit` is TOCTOU vs a later increment. Fix is stream-and-charge
+  on completed response (needs mobile). Goodwill: CRM Reset usage, Free only.
 
 - 2026-08-28 — **W2: cover-letter AI gates treat stored limit 0 as 0.**
   `ensureAICredits` / `handleAIImprove` used `aiCreditsLimit || 5`, so a stored

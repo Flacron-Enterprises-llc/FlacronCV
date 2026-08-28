@@ -3,7 +3,15 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import Logo from '@/components/ui/Logo';
-import { CONTROLLING_VERSION, type LegalBlock, type LegalDocument } from '@/legal/types';
+import { CONTROLLING_VERSION, type LegalBlock, type LegalSection } from '@/legal/types';
+
+/** Chrome-only shape — lastUpdated is a display string, not LEGAL_VERSION. */
+export type LegalDocumentViewDoc = {
+  title: string;
+  lastUpdated: string;
+  preamble: LegalBlock[];
+  sections: LegalSection[];
+};
 
 function Blocks({ blocks }: { blocks: LegalBlock[] }) {
   return (
@@ -33,7 +41,7 @@ function Blocks({ blocks }: { blocks: LegalBlock[] }) {
   );
 }
 
-export default function LegalDocumentView({ doc }: { doc: LegalDocument }) {
+export default function LegalDocumentView({ doc }: { doc: LegalDocumentViewDoc }) {
   const t = useTranslations();
 
   return (

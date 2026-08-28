@@ -121,7 +121,7 @@ the route group — the groups only control layout and client-side redirects.
 
 | Group | Routes | Access |
 |---|---|---|
-| `(public)` | `/`, `about-us`, `contact-us`, `templates`, `testimonials`, `confirm`, `privacy-policy`, `terms-of-service`, `cookie-policy`, `disclaimer`, `refund-policy`, `ai-cv-builder`, `ai-cover-letter-generator`, `ats-cv-checker` | Public |
+| `(public)` | `/`, `about-us`, `contact-us`, `templates`, `testimonials`, `confirm`, `privacy-policy`, `terms-of-service`, `cookie-policy`, `disclaimer`, `refund-policy`, `delete-account`, `ai-cv-builder`, `ai-cover-letter-generator`, `ats-cv-checker` | Public |
 | `(auth)` | `login`, `register`, `forgot-password`, `verify-email` | Public; redirects away when signed in |
 | `(dashboard)` | `dashboard`, `cv` (+`new`, `pick-template`, `[id]`), `cover-letters` (+`new`, `[id]`), `jobs`, `support`, `settings` (+`billing`) | Signed-in |
 | `(admin)` | `users`, `subscriptions`, `templates`, `tickets`, `audit-logs` | `admin` / `super_admin` claim |
@@ -131,7 +131,9 @@ the route group — the groups only control layout and client-side redirects.
 **Legal routes are `/privacy-policy`, `/terms-of-service`, `/cookie-policy`, `/disclaimer`,
 `/refund-policy`, plus `/contact-us`.** The client's checklist names `/privacy`, `/terms`,
 `/contact` — those slugs were **not** adopted; existing links and sitemap entries stay.
-English bodies for terms, disclaimer, refund, and cookies live in `apps/web/src/legal/*.ts`
+**`/delete-account`** is the Play Data-safety instructions page (English-only,
+`apps/web/src/content/delete-account.ts`). Not an accepted legal document: not in
+`LEGAL_VERSION_MAP`, not stamped `LEGAL_VERSION`. English bodies for terms, disclaimer, refund, and cookies live in `apps/web/src/legal/*.ts`
 (version `2026-08-16`) and render through `LegalDocumentView`. Chrome (Last updated, TOC,
 Back to top, footer labels) stays in `t()`. Canonical + hreflang for those four documents
 is the `en` URL only (`englishDocumentAlternates` in `lib/seo.ts`); `/ar/terms-of-service`
