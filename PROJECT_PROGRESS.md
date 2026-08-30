@@ -942,6 +942,19 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
      `syncUser` token refresh). Dashboard banner when `!emailVerified` uses the
      same two actions so the path is visible before the wall. No new API.
      Nest message still surfaces from Batch 4.
+- **⚠️ ADDED 2026-08-31 — Flacron Engine branding incomplete on API + legal title.**
+  Mobile user-facing copy no longer says “AI” for generate/credits/onboarding
+  (Flacron Engine / Credits / Engine credits). Still outstanding for full
+  product branding:
+  1. **API Nest messages** still return `AI credits exhausted. Please upgrade
+     your plan.` and `AI generation failed` (`ai.service.ts`). Mobile may
+     surface these via Nest pass-through / `/credit/i` mapping — client
+     fallbacks are rebranded, live server strings are not.
+  2. **Legal disclaimer title** on web remains `FlacronCV AI, ATS & Employment
+     Disclaimer`. Mobile link label kept matching that published title on
+     purpose; rename only with a coordinated web legal pass.
+  3. **Web app** AI marketing/i18n copy untouched (client has not asked yet).
+  Do not “fix” (1)–(2) in a mobile-only batch.
 - **⚠️ ADDED 2026-08-19 — Four mobile API calls that do not exist — SUPERSEDED by alignment batch above.**
   Kept for history: the old mapping listed PATCH `/users/me`, `…/generate`, photo POST, and
   `/exports/…` URLs. Items 1–2 and 4–5 of the pre-launch gate are fixed; photo remains TODO;
@@ -1087,6 +1100,14 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-31 — **Mobile Flacron Engine branding (display text only).** User-facing
+  AI copy → Flacron Engine / Credits / Engine credits / Generate|Regenerate /
+  Generated. PlanCard remaps shared feature lines at display time (shared-types
+  untouched). Legal disclaimer **link label** kept as “AI, ATS & Employment
+  Disclaimer” (matches published page); modal body uses
+  “Flacron Engine-generated”. §8: API Nest strings + web legal title still say
+  AI — outstanding for a later API/web pass. Internal names unchanged.
 
 - 2026-08-30 — **Mobile email-verify UI + dashboard effective plan.** Wall alert
   on `ABUSE_EMAIL_UNVERIFIED` (CV/CL create, duplicate, summary AI, CL AI):

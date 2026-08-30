@@ -155,7 +155,7 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
       user.usage?.aiCreditsUsed ?? 0,
       user.usage?.aiCreditsLimit,
     )) {
-      Alert.alert('AI Credits Exhausted', aiCreditsExhaustedMessage('summary'));
+      Alert.alert('Credits Exhausted', aiCreditsExhaustedMessage('summary'));
       return;
     }
     if (!canBuildBody) {
@@ -224,7 +224,7 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
             <Ionicons name="sparkles" size={18} color={colors.brand[600]} />
           )}
           <Text className="text-brand-600 font-semibold ml-2">
-            {generateSummary.isPending ? 'Generating...' : 'Generate with AI'}
+            {generateSummary.isPending ? 'Generating...' : 'Generate'}
           </Text>
         </TouchableOpacity>
 
@@ -232,7 +232,7 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
           <Text className="text-xs text-stone-400 text-center mt-2">{emptyReason}</Text>
         ) : user ? (
           <Text className="text-xs text-stone-400 text-center mt-2">
-            {(user.usage?.aiCreditsLimit ?? 0) - (user.usage?.aiCreditsUsed ?? 0)} AI credits remaining
+            {(user.usage?.aiCreditsLimit ?? 0) - (user.usage?.aiCreditsUsed ?? 0)} credits remaining
           </Text>
         ) : null}
 

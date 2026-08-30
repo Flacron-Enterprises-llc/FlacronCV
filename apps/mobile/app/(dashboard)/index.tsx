@@ -201,7 +201,7 @@ export default function DashboardScreen() {
                   subtitle="This month"
                 />
                 <StatsCard
-                  label="AI Credits"
+                  label="Credits"
                   value={`${usage.aiCreditsUsed}/${usage.aiCreditsLimit}`}
                   icon="sparkles"
                   subtitle="Used this month"
@@ -273,7 +273,7 @@ export default function DashboardScreen() {
                 <View className="flex-1">
                   <Text className="text-white font-bold text-lg">Upgrade to Pro</Text>
                   <Text className="text-brand-100 text-sm mt-0.5">
-                    {`Unlock ${PLAN_CONFIGS[SubscriptionPlan.PRO].limits.cvs} CVs, ${PLAN_CONFIGS[SubscriptionPlan.PRO].limits.aiCredits} AI credits & more`}
+                    {`Unlock ${PLAN_CONFIGS[SubscriptionPlan.PRO].limits.cvs} CVs, ${PLAN_CONFIGS[SubscriptionPlan.PRO].limits.aiCredits} Engine credits & more`}
                   </Text>
                 </View>
                 <Ionicons name="sparkles" size={36} color="rgba(255,255,255,0.6)" />

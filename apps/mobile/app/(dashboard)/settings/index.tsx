@@ -126,7 +126,7 @@ export default function SettingsScreen() {
           ) : (
             <>
               <UsageBar
-                label="AI Credits"
+                label="Credits"
                 used={usage.aiCreditsUsed}
                 limit={usage.aiCreditsLimit}
                 color={colors.brand[600]}

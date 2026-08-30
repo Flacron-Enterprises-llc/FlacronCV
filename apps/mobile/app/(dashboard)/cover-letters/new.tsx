@@ -118,7 +118,7 @@ export default function NewCoverLetterScreen() {
             <Input label="Hiring Manager Name" placeholder="Jane Smith (optional)" value={field.value} onChangeText={field.onChange} />
           )} />
           <Controller control={control} name="jobDescription" render={({ field }) => (
-            <Input label="Job Description (optional)" placeholder="Paste the job posting for better AI generation..." value={field.value} onChangeText={field.onChange} multiline numberOfLines={4} className="min-h-24" />
+            <Input label="Job Description (optional)" placeholder="Paste the job posting for a better Flacron Engine draft..." value={field.value} onChangeText={field.onChange} multiline numberOfLines={4} className="min-h-24" />
           )} />
 
           <Button variant="primary" fullWidth size="lg" loading={createCL.isPending} onPress={handleSubmit(onSubmit)}>

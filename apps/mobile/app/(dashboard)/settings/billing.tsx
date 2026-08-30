@@ -146,7 +146,7 @@ export default function BillingScreen() {
               <UsageRow label="CVs" used={usage.cvsCreated} limit={limits.cvs} />
               <UsageRow label="Cover letters" used={usage.coverLettersCreated} limit={limits.coverLetters} />
               <UsageRow
-                label="AI credits"
+                label="Credits"
                 used={usage.aiCreditsUsed}
                 limit={usage.aiCreditsLimit}
               />

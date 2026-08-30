@@ -56,7 +56,7 @@ function generateFailureMessage(err: unknown): string {
   if (/credit/i.test(message) || code.startsWith('ABUSE_')) {
     return message || aiCreditsExhaustedMessage('coverLetter');
   }
-  return requestFailureMessage(err, 'AI generation failed. Try again.');
+  return requestFailureMessage(err, 'Generation failed. Try again.');
 }
 
 export default function CoverLetterEditorScreen() {
@@ -140,7 +140,7 @@ export default function CoverLetterEditorScreen() {
       user?.usage?.aiCreditsUsed ?? 0,
       user?.usage?.aiCreditsLimit,
     )) {
-      Alert.alert('AI Credits Exhausted', aiCreditsExhaustedMessage('coverLetter'));
+      Alert.alert('Credits Exhausted', aiCreditsExhaustedMessage('coverLetter'));
       return;
     }
 
@@ -229,7 +229,7 @@ export default function CoverLetterEditorScreen() {
               <Ionicons name="sparkles" size={18} color={colors.brand[600]} />
             )}
             <Text className="text-brand-600 font-semibold ml-2">
-              {generateCL.isPending ? 'Generating...' : coverLetter?.content ? 'Regenerate with AI' : 'Generate with AI'}
+              {generateCL.isPending ? 'Generating...' : coverLetter?.content ? 'Regenerate' : 'Generate'}
             </Text>
           </TouchableOpacity>
 
@@ -239,7 +239,7 @@ export default function CoverLetterEditorScreen() {
               value={coverLetter?.content ?? ''}
               onChangeText={setContent}
               multiline
-              placeholder="Write your cover letter here, or use AI to generate one..."
+              placeholder="Write your cover letter here, or generate one with the Flacron Engine..."
               placeholderTextColor={colors.stone[400]}
               className="p-4 text-base text-stone-900 min-h-96"
               textAlignVertical="top"

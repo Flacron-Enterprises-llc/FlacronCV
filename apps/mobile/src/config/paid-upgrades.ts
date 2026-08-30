@@ -69,11 +69,11 @@ export function exportLimitReachedMessage(): string {
 
 export function aiCreditsExhaustedMessage(variant: 'summary' | 'coverLetter' | 'summaryHttp'): string {
   if (PAID_UPGRADES_ENABLED) {
-    if (variant === 'coverLetter') return 'Upgrade to get more AI credits.';
-    if (variant === 'summaryHttp') return 'You are out of AI credits. Upgrade your plan to get more.';
-    return 'Upgrade your plan to get more AI credits.';
+    if (variant === 'coverLetter') return 'Upgrade to get more Engine credits.';
+    if (variant === 'summaryHttp') return 'You are out of Engine credits. Upgrade your plan to get more.';
+    return 'Upgrade your plan to get more Engine credits.';
   }
-  return 'You have used all AI credits for this month.';
+  return 'You have used all Engine credits for this month.';
 }
 
 export function lockedTemplateTitle(): string {

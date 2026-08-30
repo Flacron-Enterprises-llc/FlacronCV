@@ -25,7 +25,7 @@ async function handleConfirmVerified(): Promise<void> {
   try {
     const verified = await useAuthStore.getState().confirmEmailVerified();
     if (verified) {
-      Alert.alert('Email verified', 'You can create documents and use AI now.');
+      Alert.alert('Email verified', 'You can create documents and use the Flacron Engine now.');
     } else {
       Alert.alert(
         'Not verified yet',

@@ -88,7 +88,7 @@ export default function CoverLettersScreen() {
         {item.aiGenerated && (
           <View className="flex-row items-center mt-2">
             <Ionicons name="sparkles" size={12} color={colors.brand[600]} />
-            <Text className="text-brand-600 text-xs ml-1">AI Generated</Text>
+            <Text className="text-brand-600 text-xs ml-1">Generated</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -128,7 +128,7 @@ export default function CoverLettersScreen() {
           <EmptyState
             icon="mail-outline"
             title="No cover letters yet"
-            description="Create tailored cover letters with AI assistance."
+            description="Create tailored cover letters with the Flacron Engine."
             actionLabel="Create Cover Letter"
             onAction={() => router.push('/(dashboard)/cover-letters/new')}
           />

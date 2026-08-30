@@ -68,7 +68,7 @@ export function LegalAcceptanceModal({
           I have read and agree to the FlacronCV <DocLink label="Terms of Service" kind="terms" />{' '}
           and <DocLink label="Privacy Policy" kind="privacy" />, and I acknowledge the{' '}
           <DocLink label="AI, ATS & Employment Disclaimer" kind="disclaimer" />. I understand that
-          AI-generated content may contain errors, ATS scores are estimates, and FlacronCV does not
+          Flacron Engine-generated content may contain errors, ATS scores are estimates, and FlacronCV does not
           guarantee interviews, job offers, employment, or other career outcomes.
         </Text>
       </View>

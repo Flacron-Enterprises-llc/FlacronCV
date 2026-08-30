@@ -30,10 +30,10 @@ const slides = [
   {
     id: '2',
     icon: '✨',
-    title: 'AI-Powered\nContent',
+    title: 'Flacron Engine\nContent',
     subtitle:
-      'Let our AI write compelling summaries, bullet points and cover letters tailored to your role.',
-    badge: 'Powered by advanced AI',
+      'Let the Flacron Engine write compelling summaries, bullet points and cover letters tailored to your role.',
+    badge: 'Powered by the Flacron Engine',
   },
   {
     id: '3',
