@@ -15,6 +15,8 @@ import { useCVStore } from '../../../src/store/cv-store';
 import { Template } from '../../../src/types/template.types';
 import { TemplateCategory, CVStatus, FontSize, Spacing } from '../../../src/types/enums';
 import { canAccessTemplate, canCreateCV, effectivePlanForCopy } from '../../../src/lib/entitlements';
+import { isLimitRejection, requestFailureMessage } from '../../../src/lib/api-errors';
+import { alertIfUnverifiedEmail } from '../../../src/lib/email-verification';
 import {
   cvLimitReachedMessage,
   lockedTemplateMessage,
@@ -126,8 +128,20 @@ export default function NewCVScreen() {
       setCV(newCV);
       setSections([]);
       router.replace(`/(dashboard)/cvs/${newCV.id}`);
-    } catch {
-      Alert.alert('Error', 'Failed to create CV. Please try again.');
+    } catch (err) {
+      if (alertIfUnverifiedEmail(err)) return;
+      if (isLimitRejection(err)) {
+        Alert.alert(
+          'CV Limit Reached',
+          cvLimitReachedMessage(effectivePlanForCopy(subscription)),
+          upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+        );
+        return;
+      }
+      Alert.alert(
+        'Could not create CV',
+        requestFailureMessage(err, 'Failed to create CV. Please try again.'),
+      );
     }
   };
 

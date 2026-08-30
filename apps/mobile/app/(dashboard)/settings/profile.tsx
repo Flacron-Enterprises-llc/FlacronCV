@@ -19,6 +19,7 @@ import { Button } from '../../../src/components/ui/Button';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { Input } from '../../../src/components/ui/Input';
 import { useCurrentUser, useUpdateProfile } from '../../../src/hooks/useUser';
+import { requestFailureMessage } from '../../../src/lib/api-errors';
 import { getInitials } from '../../../src/lib/utils';
 import { User } from '../../../src/types/user.types';
 import { colors } from '../../../src/theme/colors';
@@ -30,7 +31,8 @@ const schema = z.object({
   'profile.headline': z.string().optional(),
   'profile.bio': z.string().optional(),
   'profile.location': z.string().optional(),
-  'profile.website': z.string().url('Invalid URL').optional().or(z.literal('')),
+  // Profile website is a plain string on the API — do not require https://.
+  'profile.website': z.string().optional().or(z.literal('')),
   'profile.linkedin': z.string().optional(),
   'profile.github': z.string().optional(),
 });
@@ -139,8 +141,11 @@ export default function ProfileScreen() {
       await updateProfile.mutateAsync(payload as Partial<User>);
       Alert.alert('Success', 'Profile updated successfully!');
       router.back();
-    } catch {
-      Alert.alert('Error', 'Failed to update profile.');
+    } catch (err) {
+      Alert.alert(
+        'Could not save',
+        requestFailureMessage(err, 'Failed to update profile. Please try again.'),
+      );
     }
   };
 

@@ -17,6 +17,7 @@ import { useCVStore } from '../../../store/cv-store';
 import { useGenerateSummary } from '../../../hooks/useAI';
 import { useAuthStore } from '../../../store/auth-store';
 import { canUseAI } from '../../../lib/entitlements';
+import { alertIfUnverifiedEmail } from '../../../lib/email-verification';
 import { aiCreditsExhaustedMessage } from '../../../config/paid-upgrades';
 import { colors } from '../../../theme/colors';
 import { CV, CVSection, CVSectionItem, ExperienceItem, SkillItem } from '../../../types/cv.types';
@@ -172,6 +173,7 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
       await syncUser();
       await queryClient.invalidateQueries({ queryKey: ['user'] });
     } catch (err: unknown) {
+      if (alertIfUnverifiedEmail(err)) return;
       Alert.alert('Could not generate', generateFailureMessage(err));
     }
   };

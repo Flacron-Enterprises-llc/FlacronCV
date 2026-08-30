@@ -1,6 +1,6 @@
 import * as Google from 'expo-auth-session/providers/google';
 import React, { forwardRef, useEffect, useImperativeHandle } from 'react';
-import { Platform, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, Text, TouchableOpacity, View } from 'react-native';
 
 interface Props {
   label: string;
@@ -30,10 +30,20 @@ export const GoogleSignInButton = forwardRef<GoogleSignInHandle, Props>(
     }));
 
     useEffect(() => {
-      if (response?.type === 'success') {
-        const { id_token } = response.params;
-        onToken(id_token);
+      if (!response) return;
+      if (response.type === 'success') {
+        const idToken = response.params?.id_token;
+        if (typeof idToken === 'string' && idToken.length > 0) {
+          onToken(idToken);
+          return;
+        }
+        Alert.alert('Google Sign-In failed', 'No sign-in token was returned. Please try again.');
+        return;
       }
+      if (response.type === 'error') {
+        Alert.alert('Google Sign-In failed', 'Please try again.');
+      }
+      // 'dismiss' / 'cancel' — user backed out; stay silent.
     }, [response, onToken]);
 
     return (

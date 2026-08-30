@@ -20,6 +20,11 @@ import { useCurrentUser } from '../../src/hooks/useUser';
 import { SubscriptionPlan } from '../../src/types/enums';
 import { PLAN_CONFIGS } from '../../src/types/subscription.types';
 import { PAID_UPGRADES_ENABLED } from '../../src/config/paid-upgrades';
+import { effectivePlanForCopy } from '../../src/lib/entitlements';
+import {
+  confirmVerifiedEmail,
+  resendVerificationEmail,
+} from '../../src/lib/email-verification';
 import { colors } from '../../src/theme/colors';
 
 function loadFailureMessage(err: unknown): string {
@@ -31,7 +36,7 @@ function loadFailureMessage(err: unknown): string {
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { user: authUser, syncUser, userSyncError } = useAuthStore();
+  const { user: authUser, syncUser, userSyncError, emailVerified } = useAuthStore();
   const {
     data: userData,
     error: userError,
@@ -71,7 +76,7 @@ export default function DashboardScreen() {
     void refetchCLs();
   };
 
-  const plan = user?.subscription?.plan;
+  const plan = effectivePlanForCopy(user?.subscription);
   const planBadge = {
     [SubscriptionPlan.FREE]: {
       label: 'Free Plan',
@@ -89,7 +94,7 @@ export default function DashboardScreen() {
       bgClass: 'bg-brand-100',
     },
   };
-  const badge = plan ? planBadge[plan] : null;
+  const badge = planBadge[plan];
 
   const pullRefreshing =
     (userFetching || cvsFetching || clFetching) &&
@@ -119,17 +124,42 @@ export default function DashboardScreen() {
                 {user?.displayName ?? user?.profile?.firstName ?? 'User'} 👋
               </Text>
             </View>
-            {badge ? (
-              <View className="flex-row items-center gap-2">
-                <View className={`px-3 py-1 rounded-full ${badge.bgClass}`}>
-                  <Text className={`text-xs font-bold ${badge.textClass}`}>
-                    {badge.label}
-                  </Text>
-                </View>
+            <View className="flex-row items-center gap-2">
+              <View className={`px-3 py-1 rounded-full ${badge.bgClass}`}>
+                <Text className={`text-xs font-bold ${badge.textClass}`}>
+                  {badge.label}
+                </Text>
               </View>
-            ) : null}
+            </View>
           </View>
         </View>
+
+        {!emailVerified && (
+          <View
+            className="mx-4 mt-4 rounded-2xl border p-4"
+            style={{ borderColor: colors.warning.DEFAULT, backgroundColor: colors.warning.bg }}
+          >
+            <Text className="font-bold text-stone-900 mb-1">Verify your email</Text>
+            <Text className="text-stone-600 text-sm leading-5 mb-3">
+              Confirm your address to create new CVs and cover letters. Existing files stay
+              editable and exportable.
+            </Text>
+            <View className="flex-row gap-2">
+              <TouchableOpacity
+                onPress={() => void resendVerificationEmail()}
+                className="flex-1 rounded-xl bg-white border border-stone-200 py-2.5 items-center"
+              >
+                <Text className="text-stone-800 font-semibold text-sm">Resend email</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => void confirmVerifiedEmail()}
+                className="flex-1 rounded-xl bg-brand-600 py-2.5 items-center"
+              >
+                <Text className="text-white font-semibold text-sm">I've verified</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Stats Grid */}
         <View className="px-5 pt-5">
@@ -243,7 +273,7 @@ export default function DashboardScreen() {
                 <View className="flex-1">
                   <Text className="text-white font-bold text-lg">Upgrade to Pro</Text>
                   <Text className="text-brand-100 text-sm mt-0.5">
-                    Unlock unlimited CVs, 100 AI credits & more
+                    {`Unlock ${PLAN_CONFIGS[SubscriptionPlan.PRO].limits.cvs} CVs, ${PLAN_CONFIGS[SubscriptionPlan.PRO].limits.aiCredits} AI credits & more`}
                   </Text>
                 </View>
                 <Ionicons name="sparkles" size={36} color="rgba(255,255,255,0.6)" />

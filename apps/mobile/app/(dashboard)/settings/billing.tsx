@@ -11,6 +11,8 @@ import { useCurrentUser } from '../../../src/hooks/useUser';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { BillingInterval, SubscriptionPlan, SubscriptionStatus } from '../../../src/types/enums';
 import { PLAN_CONFIGS, yearlySavingsPercent } from '../../../src/types/subscription.types';
+import { requestFailureMessage } from '../../../src/lib/api-errors';
+import { effectivePlanForCopy } from '../../../src/lib/entitlements';
 import { formatDate, toDate } from '../../../src/lib/utils';
 import { PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
 import { colors } from '../../../src/theme/colors';
@@ -38,10 +40,14 @@ export default function BillingScreen() {
   const usage = user?.usage;
   const usageFailed = !usage && !!(userError || userSyncError);
   const usageLoading = !usage && !usageFailed;
-  const plan = user?.subscription?.plan;
+  // Gates use resolveEffectivePlan — display the same plan, not a stale stored Pro.
+  const plan = effectivePlanForCopy(user?.subscription);
   const status = user?.subscription?.status;
   const periodEnd = user?.subscription?.currentPeriodEnd;
-  const limits = plan ? PLAN_CONFIGS[plan].limits : null;
+  const cancelAtPeriodEnd = !!user?.subscription?.cancelAtPeriodEnd;
+  const limits = PLAN_CONFIGS[plan].limits;
+  const canManageBilling =
+    PAID_UPGRADES_ENABLED && !!user?.subscription?.stripeCustomerId;
 
   const handleSubscribe = async (targetPlan: SubscriptionPlan) => {
     if (!PAID_UPGRADES_ENABLED) return;
@@ -49,32 +55,32 @@ export default function BillingScreen() {
 
     try {
       const session = await createCheckout.mutateAsync({ plan: targetPlan, interval });
-      // Open Stripe checkout in browser
-      const canOpen = await Linking.canOpenURL(session.url);
-      if (canOpen) {
-        await Linking.openURL(session.url);
-      } else {
-        Alert.alert('Error', 'Cannot open payment page. Please try again.');
-      }
-    } catch {
-      Alert.alert('Error', 'Failed to create checkout session.');
+      await Linking.openURL(session.url);
+    } catch (err) {
+      Alert.alert(
+        'Checkout unavailable',
+        requestFailureMessage(err, 'Failed to create checkout session. Please try again.'),
+      );
     }
   };
 
   const handleManageBilling = async () => {
-    if (!PAID_UPGRADES_ENABLED) return;
+    if (!canManageBilling) return;
     try {
       const portal = await createPortal.mutateAsync();
       await Linking.openURL(portal.url);
-    } catch {
-      Alert.alert('Error', 'Failed to open billing portal.');
+    } catch (err) {
+      Alert.alert(
+        'Billing portal unavailable',
+        requestFailureMessage(err, 'Failed to open billing portal. Please try again.'),
+      );
     }
   };
 
   const yearlyDiscount = yearlySavingsPercent(SubscriptionPlan.PRO);
 
   return (
-    <SafeAreaView className="flex-1 bg-stone-50">
+    <SafeAreaView className="flex-1 bg-stone-50" edges={['top']}>
       <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
           <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
@@ -102,54 +108,55 @@ export default function BillingScreen() {
           </View>
         ) : usageLoading ? (
           <View className="mx-4 my-4 bg-white rounded-2xl border border-stone-100 p-4 h-32" />
-        ) : (PAID_UPGRADES_ENABLED ? plan !== SubscriptionPlan.FREE : true) && plan && limits && usage ? (
+        ) : usage ? (
           <View className="mx-4 my-4 bg-white rounded-2xl border border-stone-100 p-4">
             <Text className="font-bold text-stone-800 mb-3">Current Plan</Text>
             <View className="flex-row items-center justify-between mb-2">
               <Text className="text-stone-600">Plan</Text>
               <Text className="font-semibold text-stone-900 capitalize">{plan}</Text>
             </View>
-            <View className="flex-row items-center justify-between mb-2">
-              <Text className="text-stone-600">Status</Text>
-              <View className={['px-2 py-0.5 rounded-full', status === SubscriptionStatus.ACTIVE ? 'bg-success-bg' : 'bg-warning-bg'].join(' ')}>
-                <Text className={status === SubscriptionStatus.ACTIVE ? 'text-success font-medium text-sm' : 'text-warning font-medium text-sm'}>
-                  {status}
-                </Text>
+            {status ? (
+              <View className="flex-row items-center justify-between mb-2">
+                <Text className="text-stone-600">Status</Text>
+                <View className={['px-2 py-0.5 rounded-full', status === SubscriptionStatus.ACTIVE ? 'bg-success-bg' : 'bg-warning-bg'].join(' ')}>
+                  <Text className={status === SubscriptionStatus.ACTIVE ? 'text-success font-medium text-sm' : 'text-warning font-medium text-sm'}>
+                    {status}
+                  </Text>
+                </View>
               </View>
-            </View>
+            ) : null}
             {toDate(periodEnd) && (
               <View className="flex-row items-center justify-between">
-                <Text className="text-stone-600">Renews</Text>
+                <Text className="text-stone-600">{cancelAtPeriodEnd ? 'Ends' : 'Renews'}</Text>
                 <Text className="font-semibold text-stone-900">{formatDate(periodEnd)}</Text>
               </View>
             )}
-            {PAID_UPGRADES_ENABLED && (
+            {canManageBilling && (
               <TouchableOpacity
-                onPress={handleManageBilling}
+                onPress={() => void handleManageBilling()}
                 disabled={createPortal.isPending}
                 className="mt-3 border border-stone-200 rounded-xl py-2.5 items-center"
               >
-                <Text className="text-stone-700 font-semibold">Manage Billing</Text>
+                <Text className="text-stone-700 font-semibold">
+                  {createPortal.isPending ? 'Opening…' : 'Manage Billing'}
+                </Text>
               </TouchableOpacity>
             )}
-            {!PAID_UPGRADES_ENABLED && (
-              <View className="mt-3 pt-3 border-t border-stone-100">
-                <UsageRow label="CVs" used={usage.cvsCreated} limit={limits.cvs} />
-                <UsageRow label="Cover letters" used={usage.coverLettersCreated} limit={limits.coverLetters} />
-                <UsageRow
-                  label="AI credits"
-                  used={usage.aiCreditsUsed}
-                  limit={usage.aiCreditsLimit}
-                />
-                <UsageRow label="Exports this month" used={usage.exportsThisMonth} limit={limits.exports} last />
-              </View>
-            )}
+            <View className="mt-3 pt-3 border-t border-stone-100">
+              <UsageRow label="CVs" used={usage.cvsCreated} limit={limits.cvs} />
+              <UsageRow label="Cover letters" used={usage.coverLettersCreated} limit={limits.coverLetters} />
+              <UsageRow
+                label="AI credits"
+                used={usage.aiCreditsUsed}
+                limit={usage.aiCreditsLimit}
+              />
+              <UsageRow label="Exports this month" used={usage.exportsThisMonth} limit={limits.exports} last />
+            </View>
           </View>
         ) : null}
 
         {PAID_UPGRADES_ENABLED && (
           <>
-            {/* Billing Interval Toggle */}
             <View className="mx-4 mb-4">
               <View className="bg-white rounded-2xl border border-stone-100 p-1 flex-row">
                 {[BillingInterval.MONTH, BillingInterval.YEAR].map((int) => (
@@ -171,7 +178,6 @@ export default function BillingScreen() {
               </View>
             </View>
 
-            {/* Plan Cards */}
             <View className="px-4 pb-8">
               {Object.values(SubscriptionPlan).map((p) => (
                 <PlanCard
@@ -180,7 +186,7 @@ export default function BillingScreen() {
                   interval={interval}
                   isCurrentPlan={plan === p}
                   isLoading={createCheckout.isPending}
-                  onSelect={() => handleSubscribe(p)}
+                  onSelect={() => void handleSubscribe(p)}
                 />
               ))}
 

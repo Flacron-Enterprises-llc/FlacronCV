@@ -13,6 +13,7 @@ import axios from 'axios';
 import { Alert } from 'react-native';
 import { api } from '../lib/api';
 import { ExportResponse } from '../types/api.types';
+import { useAuthStore } from '../store/auth-store';
 import {
   exportLimitReachedMessage,
   PAID_UPGRADES_ENABLED,
@@ -180,6 +181,7 @@ export function useExportCV() {
     onSuccess: async (data, { cvId }) => {
       qc.invalidateQueries({ queryKey: ['user'] });
       qc.invalidateQueries({ queryKey: ['cv', cvId] });
+      await useAuthStore.getState().syncUser();
 
       try {
         await downloadAndShare(
@@ -209,6 +211,7 @@ export function useExportCoverLetter() {
     },
     onSuccess: async (data) => {
       qc.invalidateQueries({ queryKey: ['user'] });
+      await useAuthStore.getState().syncUser();
 
       try {
         await downloadAndShare(

@@ -14,8 +14,8 @@ import { TicketCategory, TicketPriority } from '../../../src/types/enums';
 import { colors } from '../../../src/theme/colors';
 
 const schema = z.object({
-  title: z.string().min(5, 'Title must be at least 5 characters'),
-  description: z.string().min(20, 'Description must be at least 20 characters'),
+  subject: z.string().min(5, 'Subject must be at least 5 characters'),
+  message: z.string().min(20, 'Message must be at least 20 characters'),
   category: z.nativeEnum(TicketCategory),
   priority: z.nativeEnum(TicketPriority),
 });
@@ -54,7 +54,12 @@ export default function NewTicketScreen() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      await createTicket.mutateAsync(data);
+      await createTicket.mutateAsync({
+        subject: data.subject,
+        message: data.message,
+        category: data.category,
+        priority: data.priority,
+      });
       router.replace('/(dashboard)/support');
     } catch (err) {
       Alert.alert('Could not create ticket', requestFailureMessage(err));
@@ -72,11 +77,11 @@ export default function NewTicketScreen() {
         </View>
 
         <ScrollView className="flex-1 px-5 pt-4" keyboardShouldPersistTaps="handled">
-          <Controller control={control} name="title" render={({ field }) => (
-            <Input label="Subject *" placeholder="Describe your issue briefly" value={field.value} onChangeText={field.onChange} error={errors.title?.message} />
+          <Controller control={control} name="subject" render={({ field }) => (
+            <Input label="Subject *" placeholder="Describe your issue briefly" value={field.value} onChangeText={field.onChange} error={errors.subject?.message} />
           )} />
-          <Controller control={control} name="description" render={({ field }) => (
-            <Input label="Description *" placeholder="Please provide as much detail as possible..." value={field.value} onChangeText={field.onChange} multiline numberOfLines={5} className="min-h-28" error={errors.description?.message} />
+          <Controller control={control} name="message" render={({ field }) => (
+            <Input label="Description *" placeholder="Please provide as much detail as possible..." value={field.value} onChangeText={field.onChange} multiline numberOfLines={5} className="min-h-28" error={errors.message?.message} />
           )} />
 
           <Text className="text-sm font-medium text-stone-700 mb-2">Category</Text>

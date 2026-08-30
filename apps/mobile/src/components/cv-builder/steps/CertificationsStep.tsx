@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { z } from 'zod';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
@@ -17,9 +17,7 @@ const schema = z.object({
   name: z.string().min(1, 'Certification name is required'),
   issuer: z.string().min(1, 'Issuer is required'),
   date: z.string().min(1, 'Date is required'),
-  expiryDate: z.string().optional(),
   credentialId: z.string().optional(),
-  url: z.string().url('Invalid URL').optional().or(z.literal('')),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -33,10 +31,11 @@ export function CertificationsStep({ onValidChange }: { onValidChange: (v: boole
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: { name: '', issuer: '', date: '', credentialId: '' },
   });
 
   const openAdd = () => {
-    reset({});
+    reset({ name: '', issuer: '', date: '', credentialId: '' });
     setEditingItem(null);
     setModalVisible(true);
     onValidChange(true);
@@ -79,35 +78,53 @@ export function CertificationsStep({ onValidChange }: { onValidChange: (v: boole
   };
 
   const handleDelete = (itemId: string) => {
-    if (certSection) {
-      updateSection(certSection.id, { items: items.filter((i) => i.id !== itemId) });
-    }
+    Alert.alert('Delete Certification', 'Remove this certification?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          if (certSection) {
+            updateSection(certSection.id, { items: items.filter((i) => i.id !== itemId) });
+          }
+        },
+      },
+    ]);
   };
 
   return (
     <View className="flex-1">
-      <ScrollView className="flex-1 px-5">
+      <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
         <Text className="text-lg font-semibold text-stone-900 mb-1">Certifications</Text>
         <Text className="text-stone-500 mb-5 text-sm">Add your professional certifications and licenses.</Text>
-        {items.map((item) => (
-          <View key={item.id} className="bg-white border border-stone-100 rounded-xl p-4 mb-3">
-            <View className="flex-row items-start justify-between">
-              <View className="flex-1">
-                <Text className="font-bold text-stone-900">{item.name}</Text>
-                <Text className="text-stone-500 text-sm">{item.issuer}</Text>
-                <Text className="text-stone-400 text-xs mt-1">{item.date}</Text>
-              </View>
-              <View className="flex-row gap-2 ml-2">
-                <TouchableOpacity onPress={() => openEdit(item)} className="p-1">
-                  <Ionicons name="pencil-outline" size={18} color={colors.stone[500]} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1">
-                  <Ionicons name="trash-outline" size={18} color={colors.error.DEFAULT} />
-                </TouchableOpacity>
+        {items.length === 0 ? (
+          <View className="items-center py-10">
+            <View className="w-16 h-16 rounded-full bg-stone-100 items-center justify-center mb-3">
+              <Ionicons name="ribbon-outline" size={28} color={colors.stone[400]} />
+            </View>
+            <Text className="text-stone-500 text-center mb-4">No certifications added yet.</Text>
+          </View>
+        ) : (
+          items.map((item) => (
+            <View key={item.id} className="bg-white border border-stone-100 rounded-xl p-4 mb-3">
+              <View className="flex-row items-start justify-between">
+                <View className="flex-1">
+                  <Text className="font-bold text-stone-900">{item.name}</Text>
+                  <Text className="text-stone-500 text-sm">{item.issuer}</Text>
+                  <Text className="text-stone-400 text-xs mt-1">{item.date}</Text>
+                </View>
+                <View className="flex-row gap-2 ml-2">
+                  <TouchableOpacity onPress={() => openEdit(item)} className="p-1">
+                    <Ionicons name="pencil-outline" size={18} color={colors.stone[500]} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1">
+                    <Ionicons name="trash-outline" size={18} color={colors.error.DEFAULT} />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
-        ))}
+          ))
+        )}
         <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color={colors.stone[700]} />} fullWidth>
           Add Certification
         </Button>

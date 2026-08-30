@@ -16,7 +16,8 @@ import { colors } from '../../../theme/colors';
 const schema = z.object({
   name: z.string().min(1, 'Project name is required'),
   description: z.string().optional(),
-  url: z.string().url('Invalid URL').optional().or(z.literal('')),
+  // Soft like Personal Info website — API stores a string, not a strict URL.
+  url: z.string().optional().or(z.literal('')),
   technologies: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
@@ -38,10 +39,25 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: {
+      name: '',
+      description: '',
+      url: '',
+      technologies: '',
+      startDate: '',
+      endDate: '',
+    },
   });
 
   const openAdd = () => {
-    reset({});
+    reset({
+      name: '',
+      description: '',
+      url: '',
+      technologies: '',
+      startDate: '',
+      endDate: '',
+    });
     setEditingItem(null);
     setModalVisible(true);
     onValidChange(true);
@@ -92,50 +108,67 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
     setModalVisible(false);
   };
 
+  const handleDelete = (itemId: string) => {
+    Alert.alert('Delete Project', 'Remove this project?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          if (projectsSection) {
+            updateSection(projectsSection.id, { items: items.filter((i) => i.id !== itemId) });
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <View className="flex-1">
-      <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Text className="text-lg font-semibold text-stone-900 mb-1">Projects</Text>
         <Text className="text-stone-500 mb-5 text-sm">
           Showcase your notable projects and side work.
         </Text>
 
-        {items.map((item) => (
-          <View key={item.id} className="bg-white border border-stone-100 rounded-xl p-4 mb-3">
-            <View className="flex-row items-start justify-between">
-              <View className="flex-1">
-                <Text className="font-bold text-stone-900">{item.name}</Text>
-                {item.description && (
-                  <Text className="text-stone-500 text-sm mt-1" numberOfLines={2}>{item.description}</Text>
-                )}
-                {item.technologies && item.technologies.length > 0 && (
-                  <View className="flex-row flex-wrap gap-1 mt-2">
-                    {item.technologies.map((tech, i) => (
-                      <View key={i} className="bg-stone-100 px-2 py-0.5 rounded">
-                        <Text className="text-stone-600 text-xs">{tech}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-              <View className="flex-row gap-2 ml-2">
-                <TouchableOpacity onPress={() => openEdit(item)} className="p-1">
-                  <Ionicons name="pencil-outline" size={18} color={colors.stone[500]} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (projectsSection) {
-                      updateSection(projectsSection.id, { items: items.filter((i) => i.id !== item.id) });
-                    }
-                  }}
-                  className="p-1"
-                >
-                  <Ionicons name="trash-outline" size={18} color={colors.error.DEFAULT} />
-                </TouchableOpacity>
+        {items.length === 0 ? (
+          <View className="items-center py-10">
+            <View className="w-16 h-16 rounded-full bg-stone-100 items-center justify-center mb-3">
+              <Ionicons name="construct-outline" size={28} color={colors.stone[400]} />
+            </View>
+            <Text className="text-stone-500 text-center mb-4">No projects added yet.</Text>
+          </View>
+        ) : (
+          items.map((item) => (
+            <View key={item.id} className="bg-white border border-stone-100 rounded-xl p-4 mb-3">
+              <View className="flex-row items-start justify-between">
+                <View className="flex-1">
+                  <Text className="font-bold text-stone-900">{item.name}</Text>
+                  {item.description && (
+                    <Text className="text-stone-500 text-sm mt-1" numberOfLines={2}>{item.description}</Text>
+                  )}
+                  {item.technologies && item.technologies.length > 0 && (
+                    <View className="flex-row flex-wrap gap-1 mt-2">
+                      {item.technologies.map((tech, i) => (
+                        <View key={i} className="bg-stone-100 px-2 py-0.5 rounded">
+                          <Text className="text-stone-600 text-xs">{tech}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+                <View className="flex-row gap-2 ml-2">
+                  <TouchableOpacity onPress={() => openEdit(item)} className="p-1">
+                    <Ionicons name="pencil-outline" size={18} color={colors.stone[500]} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1">
+                    <Ionicons name="trash-outline" size={18} color={colors.error.DEFAULT} />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
-        ))}
+          ))
+        )}
 
         <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color={colors.stone[700]} />} fullWidth>
           Add Project

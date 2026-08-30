@@ -19,8 +19,11 @@ const tierClasses: Record<SubscriptionPlan, { bg: string; text: string; label: s
   [SubscriptionPlan.ENTERPRISE]: { bg: 'bg-stone-100', text: 'text-chrome', label: 'Enterprise' },
 };
 
+const FALLBACK_TIER = { bg: 'bg-stone-100', text: 'text-stone-700', label: 'Pro' };
+
 export function TemplateCard({ template, isSelected, isLocked, onSelect, onPreview }: TemplateCardProps) {
-  const tier = tierClasses[template.tier];
+  // API may send tiers mobile enum omits (e.g. career_accelerator) — never crash the grid.
+  const tier = tierClasses[template.tier] ?? FALLBACK_TIER;
 
   return (
     <Pressable
@@ -83,7 +86,7 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
           </Text>
         )}
         <View className="flex-row gap-1 mt-2">
-          {template.colorSchemes.slice(0, 5).map((scheme, i) => (
+          {(template.colorSchemes ?? []).slice(0, 5).map((scheme, i) => (
             <View
               key={i}
               className="w-4 h-4 rounded-full border border-stone-200"

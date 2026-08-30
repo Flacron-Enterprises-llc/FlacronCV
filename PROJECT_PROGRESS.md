@@ -935,6 +935,13 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
      ungated via `GET /legal/acceptances/me` (not a cold-start GET for everyone;
      `treatMissingAsStale` stays false). Google-on-login gates **new** users
      only. `clearAll()` still does not delete the consent flag (Cancel re-prompt).
+  7. **Email verification UI — done (2026-08-30).** Wall alert on
+     `ABUSE_EMAIL_UNVERIFIED` (CV/CL create, CV duplicate, summary AI, CL AI)
+     with **Resend email** (`resendVerification` → `POST /auth/send-verification`)
+     and **I've verified** (`confirmEmailVerified`: Firebase `reload` +
+     `syncUser` token refresh). Dashboard banner when `!emailVerified` uses the
+     same two actions so the path is visible before the wall. No new API.
+     Nest message still surfaces from Batch 4.
 - **⚠️ ADDED 2026-08-19 — Four mobile API calls that do not exist — SUPERSEDED by alignment batch above.**
   Kept for history: the old mapping listed PATCH `/users/me`, `…/generate`, photo POST, and
   `/exports/…` URLs. Items 1–2 and 4–5 of the pre-launch gate are fixed; photo remains TODO;
@@ -1080,6 +1087,87 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-30 — **Mobile email-verify UI + dashboard effective plan.** Wall alert
+  on `ABUSE_EMAIL_UNVERIFIED` (CV/CL create, duplicate, summary AI, CL AI):
+  Resend (`resendVerification`) + I've verified (`confirmEmailVerified` =
+  Firebase reload + `syncUser`). Dashboard banner when `!emailVerified` with
+  the same actions. Plan badge uses `effectivePlanForCopy` (parity with
+  settings/billing). Helper `email-verification.ts` + `isEmailUnverifiedRejection`.
+
+- 2026-08-30 — **Mobile pre-QA batch 9: settings / billing.** Plan badge +
+  billing “Current Plan” / limits use `effectivePlanForCopy` (same as gates),
+  not a stale stored Pro. Usage rows always show on billing (including Free
+  when `PAID_UPGRADES` is on — were hidden). Cancel-at-period-end shows Ends
+  not Renews. Manage Billing only with `stripeCustomerId`. Checkout / portal /
+  profile save errors use `requestFailureMessage`. Profile website no longer
+  requires `z.url()`. Email-verify UI still deferred.
+
+- 2026-08-30 — **Mobile pre-QA batch 8: register / login edge cases.**
+  Email register no longer treats Nest `/auth/verify` failures as Firebase
+  Auth errors (was `getFirebaseErrorMessage` → opaque Axios text) and no
+  longer throws on verify-after-Auth — legal `finishAcceptance` can run so
+  users are not stuck gated with no POST. Failed Google signup with no Auth
+  user clears leftover `legalGate` (was blocking a later email login behind
+  the legal modal). Password Agree keeps the modal open with `legalAccepting`
+  (no double-submit / no close-before-register). Email-verify UI still deferred.
+
+- 2026-08-30 — **Mobile pre-QA batch 7: CV wizard steps.** Personal Info
+  `website` used `z.url()` which blocked Continue for values the API accepts
+  (plain host strings). Delete on Skills/Languages/Projects/Certifications/
+  References now confirms (matched Experience/Education). Add-modals clear
+  with explicit empty defaults (no leaked Edit values / undefined Inputs).
+  Projects URL validation softened like website. Empty states for Projects/
+  Certs/Languages/References. E1–E7 save path untouched.
+
+- 2026-08-30 — **Mobile pre-QA batch 6: onboarding honesty + Google errors +
+  list delete/load messages.** Onboarding slide 3 claimed a “live / shareable
+  link” (`useShareCV` has no UI) — copy now matches file export/share only.
+  GoogleSignInButton alerts on `error` / missing `id_token` (dismiss stays
+  silent). CV/CL delete and CV/CL/support list load failures use
+  `requestFailureMessage` (network vs Nest) instead of generic strings.
+  Email-verify UI still deferred (audit-first).
+
+- 2026-08-30 — **Mobile pre-QA batch 5: list refresh + reset/resend Nest errors +
+  CL subtitle / TemplateCard harden.** CV/CL/support lists used
+  `RefreshControl refreshing={false}` (no spinner) and empty states could not
+  pull-to-refresh — now `isRefetching` + ScrollView on empty. Cover letter row
+  omits empty `company · job` lines. TemplateCard falls back when `tier` is
+  unknown / `colorSchemes` missing. `resetPassword` + `resendVerification` use
+  Nest `requestFailureMessage` (were Firebase-helper / Axios default). §8 item 7:
+  email-verify UI deferred to a later batch (store ready, no screen yet).
+
+- 2026-08-30 — **Mobile pre-QA batch 4: create/generate error surfacing +
+  templates empty filter.** New `api-errors.ts` reads Nest `{ message, code }`.
+  CV/CL create show plan-limit alerts on 403 and pass through abuse copy
+  (e.g. `ABUSE_EMAIL_UNVERIFIED`) instead of generic fail. CL Generate errors
+  match SummaryStep credit / abuse handling. Templates filter with zero hits
+  shows EmptyState (+ “Show all”); unused Ionicons import removed.
+
+- 2026-08-30 — **Mobile pre-QA batch 3: Pro banner truth + usage sync.**
+  Dashboard Free upgrade line claimed “unlimited CVs”; Pro limit is 10 —
+  copy now reads from `PLAN_CONFIGS[PRO].limits`. After CV/CL create, CV
+  duplicate, export, and profile save: invalidate `['user']` + `syncUser`
+  so client gates / dashboard counts / settings header match the server
+  (same class as Batch 2 CL AI credits).
+
+- 2026-08-30 — **Mobile pre-QA batch 2: CL HTML↔plain, AI credits sync,
+  forgot-password errors, CV duplicate limit.** New `letter-html.ts` (lockstep
+  with API): hydrate/Generate strip HTML for TextInput; Save re-wraps via
+  `toLetterHtml`. After CL AI generate: `syncUser` + invalidate `['user']`.
+  Forgot-password surfaces auth-store `error` (was silent). CV duplicate gates
+  on `canCreateCV` + limit-message on 403 (same copy as create).
+
+- 2026-08-30 — **Mobile cover letter tone wiring.** Tone picker moved from
+  create form to editor (above Generate). Generate sends selected `tone`
+  instead of hardcoded `professional`. No API / persistence change (letter
+  has no tone field). Q2 save guards / Q11a payload untouched.
+
+- 2026-08-30 — **Mobile pre-QA batch 1: support create + cover letter save.**
+  Create ticket sent `{ title, description }` but CreateTicketDto requires
+  `{ subject, message }` (forbidNonWhitelisted → 400). Fixed payload, types,
+  list/detail to use `subject`. Cover letter Save sent the full document
+  (same class of bug as pre-E1 CV PUT); now whitelisted fields only.
 
 - 2026-08-30 — **Mobile V1 post-batch hex cleanup.** `cvs/new` back → stone-700,
   `primaryColor` fallback → brand-600. Root boot spinner → brand-600.

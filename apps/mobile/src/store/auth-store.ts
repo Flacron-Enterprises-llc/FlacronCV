@@ -18,6 +18,7 @@ import {
   retryPendingLegalAcceptance,
 } from '../lib/legal-acceptance';
 import { secureStore } from '../lib/secure-store';
+import { requestFailureMessage } from '../lib/api-errors';
 import { User } from '../types/user.types';
 
 interface AuthState {
@@ -46,6 +47,8 @@ interface AuthState {
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   resendVerification: () => Promise<void>;
+  /** Reload Firebase user + force token refresh / syncUser. Returns emailVerified. */
+  confirmEmailVerified: () => Promise<boolean>;
   syncUser: () => Promise<void>;
   setLegalGate: (legalGate: boolean) => void;
   setError: (error: string | null) => void;
@@ -182,8 +185,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const token = await credential.user.getIdToken();
       await secureStore.setAuthToken(token);
 
-      // Sync user with backend
-      await api.post('/auth/verify');
+      // Nest verify — not Firebase. Fail soft: Auth + consent flag already
+      // exist; the screen must still record legal and open the dashboard
+      // (userSyncError / retry). Throwing here skipped finishAcceptance.
+      try {
+        await api.post('/auth/verify');
+      } catch (verifyErr: unknown) {
+        const message = requestFailureMessage(
+          verifyErr,
+          'Could not load your account. Please try again.',
+        );
+        set({ error: message, userSyncError: message });
+      }
     } catch (err: unknown) {
       const message = getFirebaseErrorMessage(err);
       set({ error: message });
@@ -210,7 +223,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await api.post('/auth/reset-password', { email });
     } catch (err: unknown) {
-      const message = getFirebaseErrorMessage(err);
+      // API route — Nest message / network, not Firebase Auth codes.
+      const message = requestFailureMessage(err, 'Could not send reset email. Please try again.');
       set({ error: message });
       throw new Error(message);
     } finally {
@@ -223,12 +237,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await api.post('/auth/send-verification');
     } catch (err: unknown) {
-      const message = (err as Error).message;
+      const message = requestFailureMessage(err, 'Could not send verification email. Please try again.');
       set({ error: message });
-      throw err;
+      throw new Error(message);
     } finally {
       set({ isLoading: false });
     }
+  },
+
+  confirmEmailVerified: async () => {
+    const auth = getFirebaseAuth();
+    const current = auth.currentUser;
+    if (!current) return false;
+    await current.reload();
+    const refreshed = auth.currentUser;
+    const verified = refreshed?.emailVerified ?? false;
+    set({
+      emailVerified: verified,
+      firebaseUser: refreshed,
+    });
+    // Force ID token refresh so the next create/AI call carries email_verified.
+    await get().syncUser();
+    return verified;
   },
 
   syncUser: async () => {

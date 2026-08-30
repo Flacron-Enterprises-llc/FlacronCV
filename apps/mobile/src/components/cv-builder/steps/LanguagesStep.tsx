@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { z } from 'zod';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
@@ -31,11 +31,11 @@ export function LanguagesStep({ onValidChange }: { onValidChange: (v: boolean) =
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { proficiency: 'Fluent' },
+    defaultValues: { name: '', proficiency: 'Fluent' },
   });
 
   const openAdd = () => {
-    reset({ proficiency: 'Fluent' });
+    reset({ name: '', proficiency: 'Fluent' });
     setEditingItem(null);
     setModalVisible(true);
     onValidChange(true);
@@ -74,34 +74,50 @@ export function LanguagesStep({ onValidChange }: { onValidChange: (v: boolean) =
   };
 
   const handleDelete = (itemId: string) => {
-    if (langSection) {
-      updateSection(langSection.id, { items: items.filter((i) => i.id !== itemId) });
-    }
+    Alert.alert('Delete Language', 'Remove this language?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          if (langSection) {
+            updateSection(langSection.id, { items: items.filter((i) => i.id !== itemId) });
+          }
+        },
+      },
+    ]);
   };
 
   return (
     <View className="flex-1">
-      <ScrollView className="flex-1 px-5">
+      <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
         <Text className="text-lg font-semibold text-stone-900 mb-1">Languages</Text>
         <Text className="text-stone-500 mb-5 text-sm">List the languages you speak and your proficiency levels.</Text>
-        <View className="flex-row flex-wrap gap-2 mb-4">
-          {items.map((item) => (
-            <View
-              key={item.id}
-              className="flex-row items-center rounded-full px-3 py-1.5 border border-brand-600 bg-brand-50"
-            >
-              <Text className="text-sm font-medium text-brand-700">
-                {item.name} · {item.proficiency}
-              </Text>
-              <TouchableOpacity onPress={() => openEdit(item)} className="ml-1.5 p-0.5">
-                <Ionicons name="pencil-outline" size={14} color={colors.stone[500]} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleDelete(item.id)} className="ml-0.5">
-                <Ionicons name="close-circle" size={14} color={colors.error.DEFAULT} />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
+        {items.length === 0 ? (
+          <View className="items-center py-8">
+            <Ionicons name="language-outline" size={36} color={colors.stone[400]} />
+            <Text className="text-stone-500 text-center mt-2 mb-4">No languages added yet.</Text>
+          </View>
+        ) : (
+          <View className="flex-row flex-wrap gap-2 mb-4">
+            {items.map((item) => (
+              <View
+                key={item.id}
+                className="flex-row items-center rounded-full px-3 py-1.5 border border-brand-600 bg-brand-50"
+              >
+                <Text className="text-sm font-medium text-brand-700">
+                  {item.name} · {item.proficiency}
+                </Text>
+                <TouchableOpacity onPress={() => openEdit(item)} className="ml-1.5 p-0.5">
+                  <Ionicons name="pencil-outline" size={14} color={colors.stone[500]} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDelete(item.id)} className="ml-0.5">
+                  <Ionicons name="close-circle" size={14} color={colors.error.DEFAULT} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
         <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color={colors.stone[700]} />} fullWidth>
           Add Language
         </Button>

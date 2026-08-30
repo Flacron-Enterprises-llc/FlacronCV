@@ -33,8 +33,10 @@ export function useCreateCoverLetter() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: Partial<CoverLetter>) => api.post<CoverLetter>('/cover-letters', data),
-    onSuccess: () => {
+    onSuccess: async () => {
       qc.invalidateQueries({ queryKey: ['cover-letters'] });
+      qc.invalidateQueries({ queryKey: ['user'] });
+      await useAuthStore.getState().syncUser();
     },
   });
 }

@@ -42,11 +42,11 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { level: SkillLevel.INTERMEDIATE },
+    defaultValues: { name: '', level: SkillLevel.INTERMEDIATE, category: '' },
   });
 
   const openAdd = () => {
-    reset({ level: SkillLevel.INTERMEDIATE });
+    reset({ name: '', level: SkillLevel.INTERMEDIATE, category: '' });
     setEditingItem(null);
     setModalVisible(true);
     onValidChange(true);
@@ -93,9 +93,18 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
   };
 
   const handleDelete = (itemId: string) => {
-    if (skillsSection) {
-      updateSection(skillsSection.id, { items: items.filter((i) => i.id !== itemId) });
-    }
+    Alert.alert('Delete Skill', 'Remove this skill?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          if (skillsSection) {
+            updateSection(skillsSection.id, { items: items.filter((i) => i.id !== itemId) });
+          }
+        },
+      },
+    ]);
   };
 
   return (

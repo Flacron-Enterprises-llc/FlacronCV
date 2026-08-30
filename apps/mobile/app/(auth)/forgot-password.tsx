@@ -19,7 +19,7 @@ type FormData = z.infer<typeof schema>;
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
-  const { resetPassword, isLoading } = useAuthStore();
+  const { resetPassword, isLoading, error, clearError } = useAuthStore();
   const [sent, setSent] = useState(false);
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
@@ -27,11 +27,12 @@ export default function ForgotPasswordScreen() {
   });
 
   const onSubmit = async (data: FormData) => {
+    clearError();
     try {
       await resetPassword(data.email);
       setSent(true);
     } catch {
-      // Error handled in store
+      // Error set on auth store — shown below
     }
   };
 
@@ -66,6 +67,12 @@ export default function ForgotPasswordScreen() {
               <Text className="text-stone-500 mb-8 leading-5">
                 Enter your email address and we'll send you instructions to reset your password.
               </Text>
+
+              {error && (
+                <View className="mb-4 rounded-xl bg-error-bg px-4 py-3">
+                  <Text className="text-error text-sm">{error}</Text>
+                </View>
+              )}
 
               <Controller control={control} name="email" render={({ field }) => (
                 <Input label="Email Address" placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" value={field.value} onChangeText={field.onChange} error={errors.email?.message} />

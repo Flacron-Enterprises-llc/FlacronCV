@@ -1,10 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TemplateCard } from '../../../src/components/templates/TemplateCard';
+import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../src/components/ui/Skeleton';
 import { useTemplates } from '../../../src/hooks/useTemplates';
@@ -91,6 +91,18 @@ export default function TemplatesScreen() {
         <View className="p-5">
           {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
         </View>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon="layers-outline"
+          title={activeFilter === 'all' ? 'No templates' : `No ${activeFilter} templates`}
+          description={
+            activeFilter === 'all'
+              ? 'No templates are available right now.'
+              : 'Try another filter to see available designs.'
+          }
+          actionLabel={activeFilter === 'all' ? undefined : 'Show all'}
+          onAction={activeFilter === 'all' ? undefined : () => setActiveFilter('all')}
+        />
       ) : (
         <FlatList
           data={filtered}

@@ -18,8 +18,10 @@ export function useUpdateProfile() {
   const { firebaseUser } = useAuthStore();
   return useMutation({
     mutationFn: (data: Partial<User>) => api.put<User>('/users/me', data),
-    onSuccess: (updated) => {
+    onSuccess: async (updated) => {
       qc.setQueryData(['user', firebaseUser?.uid], updated);
+      // Auth store feeds settings header / dashboard name — keep it in sync.
+      await useAuthStore.getState().syncUser();
     },
   });
 }

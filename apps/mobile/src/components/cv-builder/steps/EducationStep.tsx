@@ -40,10 +40,29 @@ export function EducationStep({ onValidChange }: EducationStepProps) {
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: {
+      institution: '',
+      degree: '',
+      field: '',
+      location: '',
+      startDate: '',
+      endDate: '',
+      gpa: '',
+      description: '',
+    },
   });
 
   const openAdd = () => {
-    reset({});
+    reset({
+      institution: '',
+      degree: '',
+      field: '',
+      location: '',
+      startDate: '',
+      endDate: '',
+      gpa: '',
+      description: '',
+    });
     setEditingItem(null);
     setModalVisible(true);
     onValidChange(true);

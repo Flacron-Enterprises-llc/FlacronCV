@@ -6,6 +6,7 @@ import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { useCurrentUser } from '../../../src/hooks/useUser';
+import { effectivePlanForCopy } from '../../../src/lib/entitlements';
 import { getInitials } from '../../../src/lib/utils';
 import { PLAN_CONFIGS } from '../../../src/types/subscription.types';
 import { openLegalDocument } from '../../../src/lib/legal-acceptance';
@@ -36,8 +37,9 @@ export default function SettingsScreen() {
   const usage = currentUser?.usage;
   const usageFailed = !usage && !!(userError || userSyncError);
   const usageLoading = !usage && !usageFailed;
-  const plan = currentUser?.subscription?.plan;
-  const planConfig = plan ? PLAN_CONFIGS[plan] : null;
+  // Same effective plan the API / client gates use (not a stale stored Pro).
+  const plan = effectivePlanForCopy(currentUser?.subscription);
+  const planConfig = PLAN_CONFIGS[plan];
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [

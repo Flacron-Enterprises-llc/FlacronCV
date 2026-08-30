@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, usePreventRemove } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -16,6 +17,18 @@ import {
   upgradeAlertButtons,
 } from '../../../src/config/paid-upgrades';
 import { colors } from '../../../src/theme/colors';
+import { contentForEditor, toLetterHtml } from '../../../src/lib/letter-html';
+import { nestErrorCode, nestErrorMessage, requestFailureMessage } from '../../../src/lib/api-errors';
+import { alertIfUnverifiedEmail } from '../../../src/lib/email-verification';
+
+const TONE_OPTIONS = [
+  { value: 'professional', label: 'Professional', icon: 'business-outline' },
+  { value: 'friendly', label: 'Friendly', icon: 'happy-outline' },
+  { value: 'enthusiastic', label: 'Enthusiastic', icon: 'rocket-outline' },
+  { value: 'formal', label: 'Formal', icon: 'ribbon-outline' },
+] as const;
+
+type CoverLetterTone = (typeof TONE_OPTIONS)[number]['value'];
 
 /** Same copy as cvs/[id] — one Unsaved Changes dialog in the app. */
 function confirmUnsavedLeave(onLeave: () => void) {
@@ -33,25 +46,41 @@ function saveFailureMessage(err: unknown): string {
   return 'Could not save. Please try again.';
 }
 
+function generateFailureMessage(err: unknown): string {
+  const code = nestErrorCode(err);
+  const message = nestErrorMessage(err);
+
+  if (code === 'AI_CREDIT_NOT_REFUNDED') {
+    return 'Could not generate. A credit may have been used. Check your balance and try again.';
+  }
+  if (/credit/i.test(message) || code.startsWith('ABUSE_')) {
+    return message || aiCreditsExhaustedMessage('coverLetter');
+  }
+  return requestFailureMessage(err, 'AI generation failed. Try again.');
+}
+
 export default function CoverLetterEditorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const navigation = useNavigation();
-  const { user } = useAuthStore();
+  const { user, syncUser } = useAuthStore();
   const { coverLetter, setCoverLetter, setContent, isDirty, markClean } = useCoverLetterStore();
   const { data: cl, isLoading } = useCoverLetter(id);
   const updateCL = useUpdateCoverLetter(id!);
   const generateCL = useGenerateCoverLetter(id!);
   const exportCL = useExportCoverLetter();
+  const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const [hydratedId, setHydratedId] = useState<string | null>(null);
+  const [tone, setTone] = useState<CoverLetterTone>('professional');
 
   // Once per letter id. Re-applying React Query data called setCoverLetter,
   // which sets isDirty=false and would drop in-progress edits / skip the PUT.
+  // AI/web store HTML; TextInput needs plain text.
   useEffect(() => {
     if (!id || !cl) return;
     if (hydratedId === id) return;
-    setCoverLetter(cl);
+    setCoverLetter({ ...cl, content: contentForEditor(cl.content) });
     setHydratedId(id);
   }, [id, cl, hydratedId, setCoverLetter]);
 
@@ -65,7 +94,20 @@ export default function CoverLetterEditorScreen() {
     if (!isDirty) return true;
     setIsSaving(true);
     try {
-      await updateCL.mutateAsync(coverLetter);
+      // UpdateCoverLetterDto + forbidNonWhitelisted — never send the full document.
+      await updateCL.mutateAsync({
+        title: coverLetter.title,
+        templateId: coverLetter.templateId,
+        recipientName: coverLetter.recipientName,
+        recipientTitle: coverLetter.recipientTitle,
+        companyName: coverLetter.companyName,
+        companyAddress: coverLetter.companyAddress,
+        jobTitle: coverLetter.jobTitle,
+        jobDescription: coverLetter.jobDescription,
+        content: toLetterHtml(coverLetter.content),
+        styling: coverLetter.styling,
+        status: coverLetter.status,
+      });
       markClean();
       return true;
     } catch (err) {
@@ -107,11 +149,14 @@ export default function CoverLetterEditorScreen() {
         jobTitle: coverLetter.jobTitle ?? '',
         jobDescription: coverLetter.jobDescription ?? '',
         companyName: coverLetter.companyName ?? '',
-        tone: 'professional',
+        tone,
       });
-      setContent(updated.content);
-    } catch {
-      Alert.alert('Error', 'AI generation failed. Try again.');
+      setContent(contentForEditor(updated.content));
+      await syncUser();
+      await queryClient.invalidateQueries({ queryKey: ['user'] });
+    } catch (err) {
+      if (alertIfUnverifiedEmail(err)) return;
+      Alert.alert('Could not generate', generateFailureMessage(err));
     }
   };
 
@@ -157,6 +202,20 @@ export default function CoverLetterEditorScreen() {
             {coverLetter?.recipientName && (
               <Text className="text-brand-400 text-xs mt-0.5">Attn: {coverLetter.recipientName}</Text>
             )}
+          </View>
+
+          <Text className="text-sm font-medium text-stone-700 mb-2">Writing Tone</Text>
+          <View className="flex-row flex-wrap gap-2 mb-4">
+            {TONE_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                onPress={() => setTone(option.value)}
+                className={['flex-row items-center px-4 py-2.5 rounded-xl border', tone === option.value ? 'border-brand-600 bg-brand-50' : 'border-stone-200'].join(' ')}
+              >
+                <Ionicons name={option.icon as any} size={16} color={tone === option.value ? colors.brand[600] : colors.stone[500]} />
+                <Text className={['ml-2 font-medium', tone === option.value ? 'text-brand-700' : 'text-stone-600'].join(' ')}>{option.label}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
           <TouchableOpacity

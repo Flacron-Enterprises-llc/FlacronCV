@@ -43,8 +43,10 @@ export function useCreateCV() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: Partial<CV>) => api.post<CV>('/cvs', data),
-    onSuccess: () => {
+    onSuccess: async () => {
       qc.invalidateQueries({ queryKey: ['cvs'] });
+      qc.invalidateQueries({ queryKey: ['user'] });
+      await useAuthStore.getState().syncUser();
     },
   });
 }
@@ -74,8 +76,10 @@ export function useDuplicateCV() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.post<CV>(`/cvs/${id}/duplicate`),
-    onSuccess: () => {
+    onSuccess: async () => {
       qc.invalidateQueries({ queryKey: ['cvs'] });
+      qc.invalidateQueries({ queryKey: ['user'] });
+      await useAuthStore.getState().syncUser();
     },
   });
 }

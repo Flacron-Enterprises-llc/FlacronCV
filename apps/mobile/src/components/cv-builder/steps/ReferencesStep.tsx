@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { z } from 'zod';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
@@ -19,7 +19,6 @@ const schema = z.object({
   company: z.string().min(1, 'Company is required'),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
   phone: z.string().optional(),
-  relationship: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -33,10 +32,11 @@ export function ReferencesStep({ onValidChange }: { onValidChange: (v: boolean) 
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: { name: '', title: '', company: '', email: '', phone: '' },
   });
 
   const openAdd = () => {
-    reset({});
+    reset({ name: '', title: '', company: '', email: '', phone: '' });
     setEditingItem(null);
     setModalVisible(true);
     onValidChange(true);
@@ -81,35 +81,53 @@ export function ReferencesStep({ onValidChange }: { onValidChange: (v: boolean) 
   };
 
   const handleDelete = (itemId: string) => {
-    if (refSection) {
-      updateSection(refSection.id, { items: items.filter((i) => i.id !== itemId) });
-    }
+    Alert.alert('Delete Reference', 'Remove this reference?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          if (refSection) {
+            updateSection(refSection.id, { items: items.filter((i) => i.id !== itemId) });
+          }
+        },
+      },
+    ]);
   };
 
   return (
     <View className="flex-1">
-      <ScrollView className="flex-1 px-5">
+      <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
         <Text className="text-lg font-semibold text-stone-900 mb-1">References</Text>
         <Text className="text-stone-500 mb-5 text-sm">Add professional references who can vouch for your work.</Text>
-        {items.map((item) => (
-          <View key={item.id} className="bg-white border border-stone-100 rounded-xl p-4 mb-3">
-            <View className="flex-row items-start justify-between">
-              <View className="flex-1">
-                <Text className="font-bold text-stone-900">{item.name}</Text>
-                <Text className="text-stone-500 text-sm">{item.title} at {item.company}</Text>
-                {item.email && <Text className="text-stone-400 text-xs mt-0.5">{item.email}</Text>}
-              </View>
-              <View className="flex-row gap-2 ml-2">
-                <TouchableOpacity onPress={() => openEdit(item)} className="p-1">
-                  <Ionicons name="pencil-outline" size={18} color={colors.stone[500]} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1">
-                  <Ionicons name="trash-outline" size={18} color={colors.error.DEFAULT} />
-                </TouchableOpacity>
+        {items.length === 0 ? (
+          <View className="items-center py-10">
+            <View className="w-16 h-16 rounded-full bg-stone-100 items-center justify-center mb-3">
+              <Ionicons name="people-outline" size={28} color={colors.stone[400]} />
+            </View>
+            <Text className="text-stone-500 text-center mb-4">No references added yet.</Text>
+          </View>
+        ) : (
+          items.map((item) => (
+            <View key={item.id} className="bg-white border border-stone-100 rounded-xl p-4 mb-3">
+              <View className="flex-row items-start justify-between">
+                <View className="flex-1">
+                  <Text className="font-bold text-stone-900">{item.name}</Text>
+                  <Text className="text-stone-500 text-sm">{item.title} at {item.company}</Text>
+                  {item.email && <Text className="text-stone-400 text-xs mt-0.5">{item.email}</Text>}
+                </View>
+                <View className="flex-row gap-2 ml-2">
+                  <TouchableOpacity onPress={() => openEdit(item)} className="p-1">
+                    <Ionicons name="pencil-outline" size={18} color={colors.stone[500]} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1">
+                    <Ionicons name="trash-outline" size={18} color={colors.error.DEFAULT} />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
-        ))}
+          ))
+        )}
         <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color={colors.stone[700]} />} fullWidth>
           Add Reference
         </Button>

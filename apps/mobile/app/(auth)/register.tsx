@@ -32,6 +32,7 @@ import {
   LEGAL_POST_FAILED_TITLE,
   recordAcceptanceAfterSignup,
 } from '../../src/lib/legal-acceptance';
+import { getFirebaseAuth } from '../../src/lib/firebase';
 import { useAuthStore } from '../../src/store/auth-store';
 import { colors } from '../../src/theme/colors';
 
@@ -58,6 +59,7 @@ export default function RegisterScreen() {
   const pendingForm = useRef<FormData | null>(null);
   const [legalOpen, setLegalOpen] = useState(false);
   const [legalChecked, setLegalChecked] = useState(false);
+  const [legalAccepting, setLegalAccepting] = useState(false);
 
   const {
     control,
@@ -90,8 +92,14 @@ export default function RegisterScreen() {
       await finishAcceptance();
       setLegalGate(false);
     } catch {
-      // Error in store. If Auth already created the user, legalGate stays
-      // true and PENDING_LEGAL_CONSENT re-prompts on relaunch.
+      // They already agreed in the modal. If Auth exists, record legal;
+      // else clear leftover gate so email login is not stuck.
+      if (getFirebaseAuth().currentUser) {
+        await finishAcceptance();
+        setLegalGate(false);
+      } else {
+        setLegalGate(false);
+      }
     }
   }, [clearError, loginWithGoogle, setLegalGate]);
 
@@ -104,21 +112,37 @@ export default function RegisterScreen() {
   };
 
   const handleLegalAccept = async () => {
-    if (!legalChecked || !pendingSignup.current) return;
+    if (!legalChecked || !pendingSignup.current || legalAccepting) return;
     const method = pendingSignup.current;
     const form = pendingForm.current;
-    closeLegal();
+
     if (method === 'password' && form) {
+      setLegalAccepting(true);
       setLegalGate(true);
       try {
+        // register() fail-softs Nest verify so we still record legal below.
         await register(form.email, form.password, form.displayName);
         await finishAcceptance();
         setLegalGate(false);
+        closeLegal();
       } catch {
-        // Error in store. Consent flag + legalGate stay so a failed verify
-        // after Auth cannot dump them on the dashboard with no record.
+        // Firebase create/profile failed. If Auth user exists, still record
+        // legal (they already ticked). Else drop gate so login is not stuck.
+        if (getFirebaseAuth().currentUser) {
+          await finishAcceptance();
+          setLegalGate(false);
+        } else {
+          setLegalGate(false);
+        }
+        setLegalOpen(false);
+        setLegalChecked(false);
+        pendingSignup.current = null;
+        pendingForm.current = null;
+      } finally {
+        setLegalAccepting(false);
       }
     } else if (method === 'google') {
+      closeLegal();
       await googleRef.current?.prompt();
     }
   };
@@ -277,7 +301,7 @@ export default function RegisterScreen() {
         onCheckedChange={setLegalChecked}
         onAccept={() => void handleLegalAccept()}
         onCancel={closeLegal}
-        accepting={isLoading}
+        accepting={legalAccepting || isLoading}
       />
     </SafeAreaView>
   );

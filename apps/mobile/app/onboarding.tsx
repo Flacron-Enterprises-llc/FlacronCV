@@ -38,10 +38,10 @@ const slides = [
   {
     id: '3',
     icon: '🚀',
-    title: 'Export &\nShare Anywhere',
+    title: 'Export &\nTake It With You',
     subtitle:
-      'Download as PDF or DOCX in one tap, or share a live link. Your career, your way.',
-    badge: 'PDF · DOCX · Shareable link',
+      'Download as PDF or DOCX in one tap and share the file from your device. Your career, your way.',
+    badge: 'PDF · DOCX',
   },
 ];
 

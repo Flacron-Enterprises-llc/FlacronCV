@@ -16,7 +16,8 @@ const schema = z.object({
   address: z.string().optional(),
   city: z.string().optional(),
   country: z.string().optional(),
-  website: z.string().url('Invalid URL').optional().or(z.literal('')),
+  // PersonalInfoDto is a plain string — do not require https:// (blocks Continue).
+  website: z.string().optional().or(z.literal('')),
   linkedin: z.string().optional(),
   github: z.string().optional(),
 });

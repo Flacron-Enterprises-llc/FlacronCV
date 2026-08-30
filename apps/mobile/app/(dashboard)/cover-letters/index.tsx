@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Alert, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
@@ -9,12 +9,13 @@ import { SkeletonCard } from '../../../src/components/ui/Skeleton';
 import { useCoverLetterList, useDeleteCoverLetter } from '../../../src/hooks/useCoverLetters';
 import { CoverLetter } from '../../../src/types/cover-letter.types';
 import { formatDate } from '../../../src/lib/utils';
+import { requestFailureMessage } from '../../../src/lib/api-errors';
 import { colors } from '../../../src/theme/colors';
 import { CoverLetterStatus } from '../../../src/types/enums';
 
 export default function CoverLettersScreen() {
   const router = useRouter();
-  const { data, isLoading, error, refetch } = useCoverLetterList();
+  const { data, isLoading, error, refetch, isRefetching } = useCoverLetterList();
   const deleteCL = useDeleteCoverLetter();
 
   const coverLetters = data?.items ?? [];
@@ -31,61 +32,77 @@ export default function CoverLettersScreen() {
           onPress: () =>
             deleteCL.mutate(cl.id, {
               onSuccess: () => Alert.alert('Deleted', `"${cl.title}" has been deleted.`),
-              onError: () => Alert.alert('Error', 'Failed to delete cover letter. Please try again.'),
+              onError: (err) =>
+                Alert.alert(
+                  'Could not delete',
+                  requestFailureMessage(err, 'Failed to delete cover letter. Please try again.'),
+                ),
             }),
         },
       ],
     );
   };
 
-  const renderItem = ({ item }: { item: CoverLetter }) => (
-    <TouchableOpacity
-      onPress={() => router.push(`/(dashboard)/cover-letters/${item.id}`)}
-      className="bg-white border border-stone-100 rounded-2xl p-4 mb-3 shadow-sm"
-      activeOpacity={0.8}
-    >
-      <View className="flex-row items-start justify-between">
-        <View className="flex-row items-center flex-1">
-          <View className="w-12 h-12 rounded-xl bg-brand-50 items-center justify-center mr-3">
-            <Ionicons name="mail" size={22} color={colors.brand[600]} />
-          </View>
-          <View className="flex-1">
-            <Text className="font-bold text-stone-900 text-base" numberOfLines={1}>{item.title}</Text>
-            <Text className="text-stone-500 text-xs mt-0.5" numberOfLines={1}>
-              {item.companyName} · {item.jobTitle}
-            </Text>
-            <View className="flex-row items-center mt-1.5 gap-2">
-              <View className={['px-2 py-0.5 rounded-full', item.status === CoverLetterStatus.FINAL ? 'bg-success-bg' : 'bg-stone-100'].join(' ')}>
-                <Text className={['text-xs font-medium', item.status === CoverLetterStatus.FINAL ? 'text-success' : 'text-stone-500'].join(' ')}>
-                  {item.status}
+  const renderItem = ({ item }: { item: CoverLetter }) => {
+    const subtitle = [item.companyName, item.jobTitle].filter(Boolean).join(' · ');
+    return (
+      <TouchableOpacity
+        onPress={() => router.push(`/(dashboard)/cover-letters/${item.id}`)}
+        className="bg-white border border-stone-100 rounded-2xl p-4 mb-3 shadow-sm"
+        activeOpacity={0.8}
+      >
+        <View className="flex-row items-start justify-between">
+          <View className="flex-row items-center flex-1">
+            <View className="w-12 h-12 rounded-xl bg-brand-50 items-center justify-center mr-3">
+              <Ionicons name="mail" size={22} color={colors.brand[600]} />
+            </View>
+            <View className="flex-1">
+              <Text className="font-bold text-stone-900 text-base" numberOfLines={1}>{item.title}</Text>
+              {subtitle ? (
+                <Text className="text-stone-500 text-xs mt-0.5" numberOfLines={1}>
+                  {subtitle}
                 </Text>
+              ) : null}
+              <View className="flex-row items-center mt-1.5 gap-2">
+                <View className={['px-2 py-0.5 rounded-full', item.status === CoverLetterStatus.FINAL ? 'bg-success-bg' : 'bg-stone-100'].join(' ')}>
+                  <Text className={['text-xs font-medium', item.status === CoverLetterStatus.FINAL ? 'text-success' : 'text-stone-500'].join(' ')}>
+                    {item.status}
+                  </Text>
+                </View>
+                <Text className="text-xs text-stone-400">Updated {formatDate(item.updatedAt)}</Text>
               </View>
-              <Text className="text-xs text-stone-400">Updated {formatDate(item.updatedAt)}</Text>
             </View>
           </View>
+          <TouchableOpacity
+            onPress={() => handleDelete(item)}
+            disabled={deleteCL.isPending}
+            className="p-2 rounded-xl bg-stone-50 ml-2"
+          >
+            <Ionicons
+              name={deleteCL.isPending ? 'time-outline' : 'trash-outline'}
+              size={16}
+              color={colors.error.DEFAULT}
+            />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          onPress={() => handleDelete(item)}
-          disabled={deleteCL.isPending}
-          className="p-2 rounded-xl bg-stone-50 ml-2"
-        >
-          <Ionicons
-            name={deleteCL.isPending ? 'time-outline' : 'trash-outline'}
-            size={16}
-            color={colors.error.DEFAULT}
-          />
-        </TouchableOpacity>
-      </View>
-      {item.aiGenerated && (
-        <View className="flex-row items-center mt-2">
-          <Ionicons name="sparkles" size={12} color={colors.brand[600]} />
-          <Text className="text-brand-600 text-xs ml-1">AI Generated</Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
+        {item.aiGenerated && (
+          <View className="flex-row items-center mt-2">
+            <Ionicons name="sparkles" size={12} color={colors.brand[600]} />
+            <Text className="text-brand-600 text-xs ml-1">AI Generated</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
-  if (error) return <ErrorState message="Failed to load cover letters" onRetry={refetch} />;
+  if (error) {
+    return (
+      <ErrorState
+        message={requestFailureMessage(error, 'Failed to load cover letters')}
+        onRetry={refetch}
+      />
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top']}>
@@ -102,13 +119,20 @@ export default function CoverLettersScreen() {
       {isLoading ? (
         <View className="p-5">{[1, 2, 3].map((i) => <SkeletonCard key={i} />)}</View>
       ) : coverLetters.length === 0 ? (
-        <EmptyState
-          icon="mail-outline"
-          title="No cover letters yet"
-          description="Create tailored cover letters with AI assistance."
-          actionLabel="Create Cover Letter"
-          onAction={() => router.push('/(dashboard)/cover-letters/new')}
-        />
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brand[600]} />
+          }
+        >
+          <EmptyState
+            icon="mail-outline"
+            title="No cover letters yet"
+            description="Create tailored cover letters with AI assistance."
+            actionLabel="Create Cover Letter"
+            onAction={() => router.push('/(dashboard)/cover-letters/new')}
+          />
+        </ScrollView>
       ) : (
         <FlatList
           data={coverLetters}
@@ -116,7 +140,7 @@ export default function CoverLettersScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 20 }}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor={colors.brand[600]} />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brand[600]} />}
         />
       )}
     </SafeAreaView>

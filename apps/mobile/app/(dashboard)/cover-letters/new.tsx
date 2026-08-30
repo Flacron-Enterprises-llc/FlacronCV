@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +12,8 @@ import { useCreateCoverLetter } from '../../../src/hooks/useCoverLetters';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { useCoverLetterStore } from '../../../src/store/cover-letter-store';
 import { canCreateCoverLetter, effectivePlanForCopy } from '../../../src/lib/entitlements';
+import { isLimitRejection, requestFailureMessage } from '../../../src/lib/api-errors';
+import { alertIfUnverifiedEmail } from '../../../src/lib/email-verification';
 import {
   coverLetterLimitReachedMessage,
   upgradeAlertButtons,
@@ -26,17 +28,9 @@ const schema = z.object({
   recipientName: z.string().optional(),
   recipientTitle: z.string().optional(),
   jobDescription: z.string().optional(),
-  tone: z.enum(['professional', 'friendly', 'enthusiastic', 'formal']).default('professional'),
 });
 
 type FormData = z.infer<typeof schema>;
-
-const TONE_OPTIONS = [
-  { value: 'professional', label: 'Professional', icon: 'business-outline' },
-  { value: 'friendly', label: 'Friendly', icon: 'happy-outline' },
-  { value: 'enthusiastic', label: 'Enthusiastic', icon: 'rocket-outline' },
-  { value: 'formal', label: 'Formal', icon: 'ribbon-outline' },
-] as const;
 
 export default function NewCoverLetterScreen() {
   const router = useRouter();
@@ -46,7 +40,6 @@ export default function NewCoverLetterScreen() {
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { tone: 'professional' },
   });
 
   const onSubmit = async (data: FormData) => {
@@ -84,8 +77,20 @@ export default function NewCoverLetterScreen() {
       });
       setCoverLetter(cl);
       router.replace(`/(dashboard)/cover-letters/${cl.id}`);
-    } catch {
-      Alert.alert('Error', 'Failed to create cover letter.');
+    } catch (err) {
+      if (alertIfUnverifiedEmail(err)) return;
+      if (isLimitRejection(err)) {
+        Alert.alert(
+          'Cover Letter Limit Reached',
+          coverLetterLimitReachedMessage(effectivePlanForCopy(user.subscription)),
+          upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+        );
+        return;
+      }
+      Alert.alert(
+        'Could not create cover letter',
+        requestFailureMessage(err, 'Failed to create cover letter.'),
+      );
     }
   };
 
@@ -114,22 +119,6 @@ export default function NewCoverLetterScreen() {
           )} />
           <Controller control={control} name="jobDescription" render={({ field }) => (
             <Input label="Job Description (optional)" placeholder="Paste the job posting for better AI generation..." value={field.value} onChangeText={field.onChange} multiline numberOfLines={4} className="min-h-24" />
-          )} />
-
-          <Text className="text-sm font-medium text-stone-700 mb-2">Writing Tone</Text>
-          <Controller control={control} name="tone" render={({ field }) => (
-            <View className="flex-row flex-wrap gap-2 mb-6">
-              {TONE_OPTIONS.map((tone) => (
-                <TouchableOpacity
-                  key={tone.value}
-                  onPress={() => field.onChange(tone.value)}
-                  className={['flex-row items-center px-4 py-2.5 rounded-xl border', field.value === tone.value ? 'border-brand-600 bg-brand-50' : 'border-stone-200'].join(' ')}
-                >
-                  <Ionicons name={tone.icon as any} size={16} color={field.value === tone.value ? colors.brand[600] : colors.stone[500]} />
-                  <Text className={['ml-2 font-medium', field.value === tone.value ? 'text-brand-700' : 'text-stone-600'].join(' ')}>{tone.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
           )} />
 
           <Button variant="primary" fullWidth size="lg" loading={createCL.isPending} onPress={handleSubmit(onSubmit)}>

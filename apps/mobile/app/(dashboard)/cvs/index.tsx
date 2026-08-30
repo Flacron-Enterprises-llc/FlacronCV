@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Alert,
   FlatList,
   RefreshControl,
+  ScrollView,
   Text,
   TouchableOpacity,
   View,
@@ -17,12 +18,19 @@ import { useCVList, useDeleteCV, useDuplicateCV } from '../../../src/hooks/useCV
 import { useCurrentUser } from '../../../src/hooks/useUser';
 import { CV } from '../../../src/types/cv.types';
 import { formatDate } from '../../../src/lib/utils';
+import { canCreateCV, effectivePlanForCopy } from '../../../src/lib/entitlements';
+import { isLimitRejection, requestFailureMessage } from '../../../src/lib/api-errors';
+import { alertIfUnverifiedEmail } from '../../../src/lib/email-verification';
+import {
+  cvLimitReachedMessage,
+  upgradeAlertButtons,
+} from '../../../src/config/paid-upgrades';
 import { colors } from '../../../src/theme/colors';
 import { CVStatus } from '../../../src/types/enums';
 
 export default function CVsScreen() {
   const router = useRouter();
-  const { data, isLoading, error, refetch } = useCVList();
+  const { data, isLoading, error, refetch, isRefetching } = useCVList();
   const { data: user } = useCurrentUser();
   const deleteCV = useDeleteCV();
   const duplicateCV = useDuplicateCV();
@@ -42,7 +50,11 @@ export default function CVsScreen() {
           onPress: () =>
             deleteCV.mutate(cv.id, {
               onSuccess: () => Alert.alert('Deleted', `"${cv.title}" has been deleted.`),
-              onError: () => Alert.alert('Error', 'Failed to delete CV. Please try again.'),
+              onError: (err) =>
+                Alert.alert(
+                  'Could not delete',
+                  requestFailureMessage(err, 'Failed to delete CV. Please try again.'),
+                ),
             }),
         },
       ],
@@ -50,9 +62,33 @@ export default function CVsScreen() {
   };
 
   const handleDuplicate = (cv: CV) => {
+    const created = user?.usage?.cvsCreated;
+    if (typeof created === 'number' && !canCreateCV(user?.subscription, created)) {
+      Alert.alert(
+        'CV Limit Reached',
+        cvLimitReachedMessage(effectivePlanForCopy(user?.subscription)),
+        upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+      );
+      return;
+    }
+
     duplicateCV.mutate(cv.id, {
       onSuccess: () => Alert.alert('Duplicated', `"${cv.title} (Copy)" has been created.`),
-      onError: () => Alert.alert('Error', 'Failed to duplicate CV. Please try again.'),
+      onError: (err) => {
+        if (alertIfUnverifiedEmail(err)) return;
+        if (isLimitRejection(err)) {
+          Alert.alert(
+            'CV Limit Reached',
+            cvLimitReachedMessage(effectivePlanForCopy(user?.subscription)),
+            upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+          );
+          return;
+        }
+        Alert.alert(
+          'Could not duplicate',
+          requestFailureMessage(err, 'Failed to duplicate CV. Please try again.'),
+        );
+      },
     });
   };
 
@@ -120,7 +156,12 @@ export default function CVsScreen() {
   );
 
   if (error) {
-    return <ErrorState message="Failed to load CVs" onRetry={refetch} />;
+    return (
+      <ErrorState
+        message={requestFailureMessage(error, 'Failed to load CVs')}
+        onRetry={refetch}
+      />
+    );
   }
 
   return (
@@ -149,13 +190,20 @@ export default function CVsScreen() {
           {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
         </View>
       ) : cvs.length === 0 ? (
-        <EmptyState
-          icon="document-text-outline"
-          title="No CVs yet"
-          description="Create your first professional CV and land your dream job."
-          actionLabel="Create Your First CV"
-          onAction={() => router.push('/(dashboard)/cvs/new')}
-        />
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brand[600]} />
+          }
+        >
+          <EmptyState
+            icon="document-text-outline"
+            title="No CVs yet"
+            description="Create your first professional CV and land your dream job."
+            actionLabel="Create Your First CV"
+            onAction={() => router.push('/(dashboard)/cvs/new')}
+          />
+        </ScrollView>
       ) : (
         <FlatList
           data={cvs}
@@ -164,7 +212,7 @@ export default function CVsScreen() {
           contentContainerStyle={{ padding: 20 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={false} onRefresh={refetch} tintColor={colors.brand[600]} />
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brand[600]} />
           }
         />
       )}

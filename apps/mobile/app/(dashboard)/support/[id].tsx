@@ -96,7 +96,7 @@ export default function TicketDetailScreen() {
           <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
         </TouchableOpacity>
         <View className="flex-1">
-          <Text className="font-bold text-stone-900" numberOfLines={1}>{ticket.title}</Text>
+          <Text className="font-bold text-stone-900" numberOfLines={1}>{ticket.subject}</Text>
           <Text className="text-stone-400 text-xs capitalize">{ticket.status?.replace('_', ' ')}</Text>
         </View>
       </View>
@@ -111,7 +111,9 @@ export default function TicketDetailScreen() {
           inverted={false}
           ListHeaderComponent={
             <View className="bg-stone-50 rounded-xl p-3 mb-4">
-              <Text className="text-sm text-stone-600">{ticket.description}</Text>
+              <Text className="text-sm text-stone-600 capitalize">
+                {ticket.category.replace('_', ' ')}
+              </Text>
               <Text className="text-xs text-stone-400 mt-2">{formatDate(ticket.createdAt)}</Text>
             </View>
           }

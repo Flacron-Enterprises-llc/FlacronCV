@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Alert, FlatList, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { z } from 'zod';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
@@ -45,7 +45,15 @@ export function ExperienceStep({ onValidChange }: ExperienceStepProps) {
   const isCurrent = watch('isCurrent');
 
   const openAdd = () => {
-    reset({ isCurrent: false });
+    reset({
+      company: '',
+      position: '',
+      location: '',
+      startDate: '',
+      endDate: '',
+      isCurrent: false,
+      description: '',
+    });
     setEditingItem(null);
     setModalVisible(true);
     onValidChange(true); // experience is optional
