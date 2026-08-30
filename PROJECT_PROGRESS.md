@@ -842,6 +842,14 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   `addInvisibleTextLayer` in `export-cv.ts`). Entitlement bypass part FIXED in A8 via the
   server-authorized `/exports/record` gate. A working backend Puppeteer text-PDF path exists but is
   unused; switching the UI to it is a larger change — revisit with client approval.
+- **⚠️ ADDED 2026-08-30 — Mobile `tailwind.config.js` claimed Inter; expo-font
+  never loads it.** `fontFamily.sans: ['Inter', 'System']` was a lie — no
+  `useFonts` / font files, so iOS is San Francisco and Android is Roboto.
+  Config-that-does-nothing, same class as `crm-settings.planLimits`. Removed in
+  V1 batch 1. Do not add a font package to “fix” it. System fonts are the
+  actual UI. Token file: `apps/mobile/src/theme/colors.ts` (must stay in
+  lockstep with `tailwind.config.js`).
+
 - **⚠️ ADDED 2026-08-28 — Settings `account.deleteDescription` was a live false
   deletion claim. CORRECTED same day.** Web Settings Danger Zone told the user
   “All your data will be permanently removed.” `DELETE /users/me` only
@@ -1072,6 +1080,70 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-08-30 — **Mobile V1 post-batch hex cleanup.** `cvs/new` back → stone-700,
+  `primaryColor` fallback → brand-600. Root boot spinner → brand-600.
+  forgot-password uses `colors.stone[500]` (local STONE_500 removed). CV list
+  copy/trash → stone-500 / error. Q9 lock logic untouched.
+
+- 2026-08-30 — **Mobile V1 batch 9 (final): settings / billing / profile /
+  support.** Settings chevrons/icons/usage bars → stone + brand; Sign Out
+  error tokens. Billing status success/warning; interval brand-600. Profile
+  back/spinner tokens (Q6 hydration untouched). Support status map:
+  open→brand, in_progress→warning, waiting→stone-100/700, resolved→success,
+  closed→stone-200/500. Composer send brand-600. CL list AI pill → brand.
+  Completes V1 visual batches 1–9.
+
+- 2026-08-30 — **Mobile V1 batch 8: CV wizard + cover letter editors.** Wizard
+  Continue/progress/dots brand-600; Back stone. Step titles
+  `text-lg font-semibold`. List pencil/trash → stone-500 / error. Skill &
+  language chips brand selected / stone unselected (rainbow gone). Modal close
+  → stone-500; sheetHeight / insets untouched. CL new/[id] blue+purple → brand;
+  Export unified brand-600 with CV editor. No save/guard/AI logic edits.
+
+- 2026-08-30 — **Mobile V1 batch 7: lists + TemplateCard/PlanCard.** CV/CL
+  header CTAs `bg-brand-600`. Cover letter row icons brand (no blue on list).
+  Status pills hand-rolled → `success` / stone (Badge skipped — text colour
+  mismatch). TemplateCard tiers: Free stone, Pro brand, Enterprise chrome on
+  stone-100. PlanCard checks + Current Plan use tokens; Pro CTA brand-600.
+  No Card wrap. Q9 lock / no progress bar untouched. Wizard/settings/support
+  screens not edited.
+
+- 2026-08-30 — **Mobile V1 batch 6: shared UI components.** Button spinner →
+  `colors.white` / chrome. Input placeholder + eye → `colors.stone[400]`.
+  Badge: bg on `View` (was broken on `Text` + no-op style). EmptyState /
+  ErrorState / Skeleton icon & fill colours from tokens; `px-8 py-16` kept.
+  Card unchanged — recommend leave list markup, unify classes in batch 7.
+  Modal untouched. No screen files edited.
+
+- 2026-08-30 — **Mobile V1 batch 5: dashboard + tab tints.** Greeting
+  `font-bold`; plan chips stone / brand-100+700. Stats all `brand-50` /
+  `brand-600`. Quick actions all `bg-brand-600` (same geometry). Recents both
+  brand. Upgrade banner solid `bg-brand-600` (dead gradient classes removed).
+  Tab active/inactive/border from `colors.ts`. Height, insets, Q8 hide logic
+  untouched.
+
+- 2026-08-30 — **Mobile V1 batch 4: auth screens.** Login/register: FC mark
+  without orange tile; kept pale `brand-50`→white gradient; titles
+  `text-xl font-bold`. Shared `Button` primary is `brand-600`. Forgot-password
+  success well uses `success` tokens; back chevron stone-500. Legal checkbox
+  `brand-600`. Modal sizing / legalGate / copy untouched. Google G stays
+  `#4285F4`.
+
+- 2026-08-30 — **Mobile V1 batch 3: onboarding light canvas.** Replaced
+  full-bleed orange/black gradients with `bg-stone-50`. FC mark without a
+  coloured tile; wordmark `text-chrome`. Slide 1 uses Ionicons
+  `document-text` in `brand-50`. CTA is shared `Button` primary.
+  `paddingBottom: insets.bottom`, `edges={['top']}`, copy, and
+  `flacroncv_onboarding_seen` unchanged. `LinearGradient` removed from this
+  screen.
+
+- 2026-08-30 — **Mobile V1 batches 1–2: tokens + FC logo.** Added `chrome`,
+  `success`, `error`, `warning` to `apps/mobile/tailwind.config.js` (brand ramp
+  unchanged). `src/theme/colors.ts` mirrors them for RN props; no screen
+  imports it yet. Removed the unused Inter `fontFamily`. Onboarding, login,
+  and register now `require` `assets/icon.png` instead of `logo.png` (file
+  left on disk). Layout/containers unchanged.
 
 - 2026-08-28 — **Settings Danger Zone copy matches soft-delete.**
   `account.deleteDescription` no longer claims all data is permanently removed.

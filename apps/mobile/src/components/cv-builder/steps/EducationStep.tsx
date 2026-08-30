@@ -11,6 +11,7 @@ import { useCVStore } from '../../../store/cv-store';
 import { CVSectionType } from '../../../types/enums';
 import { EducationItem } from '../../../types/cv.types';
 import { generateId } from '../../../lib/utils';
+import { colors } from '../../../theme/colors';
 
 const schema = z.object({
   institution: z.string().min(1, 'Institution is required'),
@@ -117,7 +118,7 @@ export function EducationStep({ onValidChange }: EducationStepProps) {
   return (
     <View className="flex-1">
       <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-        <Text className="text-lg font-bold text-stone-900 mb-1">Education</Text>
+        <Text className="text-lg font-semibold text-stone-900 mb-1">Education</Text>
         <Text className="text-stone-500 mb-5 text-sm">
           Add your academic background and qualifications.
         </Text>
@@ -125,7 +126,7 @@ export function EducationStep({ onValidChange }: EducationStepProps) {
         {items.length === 0 ? (
           <View className="items-center py-10">
             <View className="w-16 h-16 rounded-full bg-stone-100 items-center justify-center mb-3">
-              <Ionicons name="school-outline" size={28} color="#a8a29e" />
+              <Ionicons name="school-outline" size={28} color={colors.stone[400]} />
             </View>
             <Text className="text-stone-500 text-center mb-4">No education added yet.</Text>
           </View>
@@ -143,10 +144,10 @@ export function EducationStep({ onValidChange }: EducationStepProps) {
                 </View>
                 <View className="flex-row gap-2 ml-2">
                   <TouchableOpacity onPress={() => openEdit(item)} className="p-1">
-                    <Ionicons name="pencil-outline" size={18} color="#78716c" />
+                    <Ionicons name="pencil-outline" size={18} color={colors.stone[500]} />
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1">
-                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                    <Ionicons name="trash-outline" size={18} color={colors.error.DEFAULT} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -154,7 +155,7 @@ export function EducationStep({ onValidChange }: EducationStepProps) {
           ))
         )}
 
-        <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color="#374151" />} fullWidth>
+        <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color={colors.stone[700]} />} fullWidth>
           Add Education
         </Button>
 

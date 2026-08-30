@@ -22,6 +22,7 @@ import {
   PAID_UPGRADES_ENABLED,
   upgradeAlertButtons,
 } from '../../../src/config/paid-upgrades';
+import { colors } from '../../../src/theme/colors';
 
 function loadFailureMessage(err: unknown): string {
   if (axios.isAxiosError(err) && !err.response) {
@@ -113,7 +114,7 @@ export default function NewCVScreen() {
           phone: '',
         },
         styling: {
-          primaryColor: selectedTemplate?.colorSchemes?.[0]?.primary ?? '#2563eb',
+          primaryColor: selectedTemplate?.colorSchemes?.[0]?.primary ?? colors.brand[600],
           fontFamily: selectedTemplate?.fontOptions?.[0] ?? 'Inter',
           fontSize: FontSize.MEDIUM,
           spacing: Spacing.NORMAL,
@@ -136,7 +137,7 @@ export default function NewCVScreen() {
         <View className="px-5 pt-4 pb-4 bg-white border-b border-stone-100">
           <View className="flex-row items-center">
             <TouchableOpacity onPress={() => router.back()} className="mr-3">
-              <Ionicons name="arrow-back" size={22} color="#374151" />
+              <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
             </TouchableOpacity>
             <View>
               <Text className="text-xl font-black text-stone-900">Choose Template</Text>
@@ -187,7 +188,7 @@ export default function NewCVScreen() {
     <SafeAreaView className="flex-1 bg-white">
       <View className="px-5 pt-4">
         <TouchableOpacity onPress={() => setStep('template')} className="flex-row items-center mb-6">
-          <Ionicons name="arrow-back" size={22} color="#374151" />
+          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
           <Text className="text-stone-700 ml-2 font-medium">Back to Templates</Text>
         </TouchableOpacity>
 

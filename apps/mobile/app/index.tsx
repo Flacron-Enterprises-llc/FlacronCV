@@ -3,6 +3,7 @@ import { Redirect } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuthStore } from '../src/store/auth-store';
+import { colors } from '../src/theme/colors';
 
 const ONBOARDING_SEEN_KEY = 'flacroncv_onboarding_seen';
 
@@ -22,7 +23,7 @@ export default function Index() {
   if (!isInitialized || !onboardingChecked) {
     return (
       <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#f97316" />
+        <ActivityIndicator size="large" color={colors.brand[600]} />
       </View>
     );
   }

@@ -11,6 +11,7 @@ import { useCVStore } from '../../../store/cv-store';
 import { CVSectionType, SkillLevel } from '../../../types/enums';
 import { SkillItem } from '../../../types/cv.types';
 import { generateId } from '../../../lib/utils';
+import { colors } from '../../../theme/colors';
 
 const schema = z.object({
   name: z.string().min(1, 'Skill name is required'),
@@ -21,10 +22,10 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 const SKILL_LEVELS = [
-  { value: SkillLevel.BEGINNER, label: 'Beginner', color: '#94a3b8' },
-  { value: SkillLevel.INTERMEDIATE, label: 'Intermediate', color: '#3b82f6' },
-  { value: SkillLevel.ADVANCED, label: 'Advanced', color: '#8b5cf6' },
-  { value: SkillLevel.EXPERT, label: 'Expert', color: '#f97316' },
+  { value: SkillLevel.BEGINNER, label: 'Beginner' },
+  { value: SkillLevel.INTERMEDIATE, label: 'Intermediate' },
+  { value: SkillLevel.ADVANCED, label: 'Advanced' },
+  { value: SkillLevel.EXPERT, label: 'Expert' },
 ];
 
 interface SkillsStepProps {
@@ -97,13 +98,10 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
     }
   };
 
-  const getLevelColor = (level: SkillLevel) =>
-    SKILL_LEVELS.find((l) => l.value === level)?.color ?? '#94a3b8';
-
   return (
     <View className="flex-1">
       <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-        <Text className="text-lg font-bold text-stone-900 mb-1">Skills</Text>
+        <Text className="text-lg font-semibold text-stone-900 mb-1">Skills</Text>
         <Text className="text-stone-500 mb-5 text-sm">
           Add your technical and soft skills with proficiency levels.
         </Text>
@@ -113,17 +111,16 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
             {items.map((item) => (
               <View
                 key={item.id}
-                className="flex-row items-center rounded-full px-3 py-1.5 border"
-                style={{ borderColor: getLevelColor(item.level), backgroundColor: getLevelColor(item.level) + '15' }}
+                className="flex-row items-center rounded-full px-3 py-1.5 border border-brand-600 bg-brand-50"
               >
-                <Text className="text-sm font-medium" style={{ color: getLevelColor(item.level) }}>
+                <Text className="text-sm font-medium text-brand-700">
                   {item.name}
                 </Text>
                 <TouchableOpacity onPress={() => openEdit(item)} className="ml-1.5 p-0.5">
-                  <Ionicons name="pencil-outline" size={14} color={getLevelColor(item.level)} />
+                  <Ionicons name="pencil-outline" size={14} color={colors.stone[500]} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => handleDelete(item.id)} className="ml-0.5">
-                  <Ionicons name="close-circle" size={14} color={getLevelColor(item.level)} />
+                  <Ionicons name="close-circle" size={14} color={colors.error.DEFAULT} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -132,12 +129,12 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
 
         {items.length === 0 && (
           <View className="items-center py-8">
-            <Ionicons name="code-slash-outline" size={36} color="#a8a29e" />
+            <Ionicons name="code-slash-outline" size={36} color={colors.stone[400]} />
             <Text className="text-stone-500 text-center mt-2 mb-4">No skills added yet.</Text>
           </View>
         )}
 
-        <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color="#374151" />} fullWidth>
+        <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color={colors.stone[700]} />} fullWidth>
           Add Skill
         </Button>
 
@@ -165,14 +162,17 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
                   onPress={() => field.onChange(level.value)}
                   className={[
                     'px-3 py-2 rounded-xl border',
-                    field.value === level.value ? 'border-2' : '',
+                    field.value === level.value
+                      ? 'border-brand-600 bg-brand-50'
+                      : 'border-stone-200 bg-white',
                   ].join(' ')}
-                  style={{
-                    borderColor: level.color,
-                    backgroundColor: field.value === level.value ? level.color + '20' : 'transparent',
-                  }}
                 >
-                  <Text className="text-sm font-medium" style={{ color: level.color }}>
+                  <Text
+                    className={[
+                      'text-sm font-medium',
+                      field.value === level.value ? 'text-brand-700' : 'text-stone-600',
+                    ].join(' ')}
+                  >
                     {level.label}
                   </Text>
                 </TouchableOpacity>

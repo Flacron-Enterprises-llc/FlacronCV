@@ -17,6 +17,7 @@ import {
   upgradeAlertButtons,
 } from '../../../src/config/paid-upgrades';
 import { CoverLetterStatus } from '../../../src/types/enums';
+import { colors } from '../../../src/theme/colors';
 
 const schema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -79,7 +80,7 @@ export default function NewCoverLetterScreen() {
         templateId: 'modern',
         status: CoverLetterStatus.DRAFT,
         aiGenerated: false,
-        styling: { fontFamily: 'Inter', fontSize: '14px', primaryColor: '#2563eb' },
+        styling: { fontFamily: 'Inter', fontSize: '14px', primaryColor: colors.brand[600] },
       });
       setCoverLetter(cl);
       router.replace(`/(dashboard)/cover-letters/${cl.id}`);
@@ -93,7 +94,7 @@ export default function NewCoverLetterScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
         <View className="flex-row items-center px-5 pt-4 pb-3 border-b border-stone-100">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <Ionicons name="arrow-back" size={22} color="#374151" />
+            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
           </TouchableOpacity>
           <Text className="text-xl font-black text-stone-900">New Cover Letter</Text>
         </View>
@@ -122,10 +123,10 @@ export default function NewCoverLetterScreen() {
                 <TouchableOpacity
                   key={tone.value}
                   onPress={() => field.onChange(tone.value)}
-                  className={['flex-row items-center px-4 py-2.5 rounded-xl border', field.value === tone.value ? 'border-blue-500 bg-blue-50' : 'border-stone-200'].join(' ')}
+                  className={['flex-row items-center px-4 py-2.5 rounded-xl border', field.value === tone.value ? 'border-brand-600 bg-brand-50' : 'border-stone-200'].join(' ')}
                 >
-                  <Ionicons name={tone.icon as any} size={16} color={field.value === tone.value ? '#3b82f6' : '#78716c'} />
-                  <Text className={['ml-2 font-medium', field.value === tone.value ? 'text-blue-600' : 'text-stone-600'].join(' ')}>{tone.label}</Text>
+                  <Ionicons name={tone.icon as any} size={16} color={field.value === tone.value ? colors.brand[600] : colors.stone[500]} />
+                  <Text className={['ml-2 font-medium', field.value === tone.value ? 'text-brand-700' : 'text-stone-600'].join(' ')}>{tone.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>

@@ -11,6 +11,7 @@ import { PLAN_CONFIGS } from '../../../src/types/subscription.types';
 import { openLegalDocument } from '../../../src/lib/legal-acceptance';
 import { PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
+import { colors } from '../../../src/theme/colors';
 
 type SettingsMenuItem = {
   icon: string;
@@ -100,7 +101,7 @@ export default function SettingsScreen() {
                 ) : null}
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#d6d3d1" />
+            <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} />
             </TouchableOpacity>
         </View>
 
@@ -126,13 +127,13 @@ export default function SettingsScreen() {
                 label="AI Credits"
                 used={usage.aiCreditsUsed}
                 limit={usage.aiCreditsLimit}
-                color="#8b5cf6"
+                color={colors.brand[600]}
               />
               <UsageBar
                 label="Exports"
                 used={usage.exportsThisMonth}
                 limit={typeof planConfig.limits.exports === 'number' ? planConfig.limits.exports : 999}
-                color="#f97316"
+                color={colors.brand[600]}
                 unlimited={planConfig.limits.exports === 'unlimited'}
               />
             </>
@@ -154,7 +155,7 @@ export default function SettingsScreen() {
                   activeOpacity={0.7}
                 >
                   <View className="w-8 h-8 rounded-xl bg-stone-100 items-center justify-center mr-3">
-                    <Ionicons name={item.icon as any} size={18} color="#78716c" />
+                    <Ionicons name={item.icon as any} size={18} color={colors.stone[500]} />
                   </View>
                   <Text className="flex-1 text-stone-800 font-medium">{item.label}</Text>
                   {item.badge && (
@@ -162,7 +163,7 @@ export default function SettingsScreen() {
                       <Text className="text-brand-600 text-xs font-bold">{item.badge}</Text>
                     </View>
                   )}
-                  <Ionicons name="chevron-forward" size={16} color="#d6d3d1" />
+                  <Ionicons name="chevron-forward" size={16} color={colors.stone[300]} />
                 </TouchableOpacity>
               ))}
             </View>
@@ -173,10 +174,10 @@ export default function SettingsScreen() {
         <View className="mx-4 mb-8">
           <TouchableOpacity
             onPress={handleLogout}
-            className="bg-red-50 border border-red-100 rounded-2xl p-4 flex-row items-center justify-center"
+            className="bg-error-bg border border-red-100 rounded-2xl p-4 flex-row items-center justify-center"
           >
-            <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-            <Text className="text-red-500 font-semibold ml-2">Sign Out</Text>
+            <Ionicons name="log-out-outline" size={20} color={colors.error.DEFAULT} />
+            <Text className="text-error font-semibold ml-2">Sign Out</Text>
           </TouchableOpacity>
           <Text className="text-center text-stone-300 text-xs mt-3">
             FlacronCV v1.0.0

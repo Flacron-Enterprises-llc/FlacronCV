@@ -20,6 +20,7 @@ import { useCurrentUser } from '../../src/hooks/useUser';
 import { SubscriptionPlan } from '../../src/types/enums';
 import { PLAN_CONFIGS } from '../../src/types/subscription.types';
 import { PAID_UPGRADES_ENABLED } from '../../src/config/paid-upgrades';
+import { colors } from '../../src/theme/colors';
 
 function loadFailureMessage(err: unknown): string {
   if (axios.isAxiosError(err) && !err.response) {
@@ -72,9 +73,21 @@ export default function DashboardScreen() {
 
   const plan = user?.subscription?.plan;
   const planBadge = {
-    [SubscriptionPlan.FREE]: { label: 'Free Plan', color: '#6b7280', bg: '#f3f4f6' },
-    [SubscriptionPlan.PRO]: { label: 'Pro Plan', color: '#d97706', bg: '#fef3c7' },
-    [SubscriptionPlan.ENTERPRISE]: { label: 'Enterprise', color: '#7c3aed', bg: '#f3e8ff' },
+    [SubscriptionPlan.FREE]: {
+      label: 'Free Plan',
+      textClass: 'text-stone-600',
+      bgClass: 'bg-stone-100',
+    },
+    [SubscriptionPlan.PRO]: {
+      label: 'Pro Plan',
+      textClass: 'text-brand-700',
+      bgClass: 'bg-brand-100',
+    },
+    [SubscriptionPlan.ENTERPRISE]: {
+      label: 'Enterprise',
+      textClass: 'text-brand-700',
+      bgClass: 'bg-brand-100',
+    },
   };
   const badge = plan ? planBadge[plan] : null;
 
@@ -90,7 +103,11 @@ export default function DashboardScreen() {
         className="flex-1"
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={pullRefreshing} onRefresh={onRefresh} tintColor="#f97316" />
+          <RefreshControl
+            refreshing={pullRefreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.brand[600]}
+          />
         }
       >
         {/* Header */}
@@ -98,14 +115,14 @@ export default function DashboardScreen() {
           <View className="flex-row items-center justify-between">
             <View className="flex-1">
               <Text className="text-stone-400 text-sm">Welcome back,</Text>
-              <Text className="text-xl font-black text-stone-900" numberOfLines={1}>
+              <Text className="text-xl font-bold text-stone-900" numberOfLines={1}>
                 {user?.displayName ?? user?.profile?.firstName ?? 'User'} 👋
               </Text>
             </View>
             {badge ? (
               <View className="flex-row items-center gap-2">
-                <View className="px-3 py-1 rounded-full" style={{ backgroundColor: badge.bg }}>
-                  <Text className="text-xs font-bold" style={{ color: badge.color }}>
+                <View className={`px-3 py-1 rounded-full ${badge.bgClass}`}>
+                  <Text className={`text-xs font-bold ${badge.textClass}`}>
                     {badge.label}
                   </Text>
                 </View>
@@ -139,13 +156,11 @@ export default function DashboardScreen() {
                   label="CVs Created"
                   value={usage.cvsCreated}
                   icon="document-text"
-                  color="#f97316"
                 />
                 <StatsCard
                   label="Cover Letters"
                   value={usage.coverLettersCreated}
                   icon="mail"
-                  color="#3b82f6"
                 />
               </View>
               <View className="flex-row gap-3 mb-6">
@@ -153,14 +168,12 @@ export default function DashboardScreen() {
                   label="Downloads"
                   value={usage.exportsThisMonth}
                   icon="download"
-                  color="#22c55e"
                   subtitle="This month"
                 />
                 <StatsCard
                   label="AI Credits"
                   value={`${usage.aiCreditsUsed}/${usage.aiCreditsLimit}`}
                   icon="sparkles"
-                  color="#8b5cf6"
                   subtitle="Used this month"
                 />
               </View>
@@ -168,7 +181,7 @@ export default function DashboardScreen() {
           )}
         </View>
 
-        {/* Quick Actions */}
+        {/* Quick Actions — all brand-600; same geometry as before */}
         <View className="px-5 mb-6">
           <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">
             Quick Actions
@@ -176,23 +189,23 @@ export default function DashboardScreen() {
           <View className="flex-row gap-3">
             <TouchableOpacity
               onPress={() => router.push('/(dashboard)/cvs/new')}
-              className="flex-1 bg-brand-500 rounded-2xl p-4 items-center"
+              className="flex-1 bg-brand-600 rounded-2xl p-4 items-center"
             >
-              <Ionicons name="add-circle" size={28} color="#fff" />
+              <Ionicons name="add-circle" size={28} color={colors.white} />
               <Text className="text-white font-bold mt-1.5 text-sm">New CV</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push('/(dashboard)/cover-letters/new')}
-              className="flex-1 bg-blue-500 rounded-2xl p-4 items-center"
+              className="flex-1 bg-brand-600 rounded-2xl p-4 items-center"
             >
-              <Ionicons name="mail" size={28} color="#fff" />
+              <Ionicons name="mail" size={28} color={colors.white} />
               <Text className="text-white font-bold mt-1.5 text-sm">Cover Letter</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push('/(dashboard)/templates')}
-              className="flex-1 bg-stone-800 rounded-2xl p-4 items-center"
+              className="flex-1 bg-brand-600 rounded-2xl p-4 items-center"
             >
-              <Ionicons name="layers" size={28} color="#fff" />
+              <Ionicons name="layers" size={28} color={colors.white} />
               <Text className="text-white font-bold mt-1.5 text-sm">Templates</Text>
             </TouchableOpacity>
           </View>
@@ -205,7 +218,7 @@ export default function DashboardScreen() {
               Recent Documents
             </Text>
             <TouchableOpacity onPress={() => router.push('/(dashboard)/cvs')}>
-              <Text className="text-brand-500 text-sm font-semibold">View all</Text>
+              <Text className="text-brand-600 text-sm font-semibold">View all</Text>
             </TouchableOpacity>
           </View>
           <RecentDocuments
@@ -225,11 +238,11 @@ export default function DashboardScreen() {
         {/* Upgrade Banner (Free users) — hidden when paid upgrades are off (S1). */}
         {PAID_UPGRADES_ENABLED && plan === SubscriptionPlan.FREE && (
           <View className="mx-5 mb-8">
-            <View className="bg-gradient-to-r from-brand-500 to-orange-600 rounded-2xl p-5 overflow-hidden" style={{ backgroundColor: '#f97316' }}>
+            <View className="bg-brand-600 rounded-2xl p-5 overflow-hidden">
               <View className="flex-row items-center justify-between">
                 <View className="flex-1">
-                  <Text className="text-white font-black text-lg">Upgrade to Pro</Text>
-                  <Text className="text-orange-100 text-sm mt-0.5">
+                  <Text className="text-white font-bold text-lg">Upgrade to Pro</Text>
+                  <Text className="text-brand-100 text-sm mt-0.5">
                     Unlock unlimited CVs, 100 AI credits & more
                   </Text>
                 </View>

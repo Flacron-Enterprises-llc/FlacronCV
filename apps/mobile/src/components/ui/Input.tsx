@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../theme/colors';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -41,14 +42,14 @@ export const Input = forwardRef<TextInput, InputProps>(
               'flex-1 py-3 text-base text-stone-900',
               className ?? '',
             ].join(' ')}
-            placeholderTextColor="#a8a29e"
+            placeholderTextColor={colors.stone[400]}
           />
           {isPassword ? (
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="ml-2">
               <Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={20}
-                color="#a8a29e"
+                color={colors.stone[400]}
               />
             </TouchableOpacity>
           ) : rightIcon ? (

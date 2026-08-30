@@ -13,6 +13,7 @@ import { BillingInterval, SubscriptionPlan, SubscriptionStatus } from '../../../
 import { PLAN_CONFIGS, yearlySavingsPercent } from '../../../src/types/subscription.types';
 import { formatDate, toDate } from '../../../src/lib/utils';
 import { PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
+import { colors } from '../../../src/theme/colors';
 
 function formatLimit(limit: number | 'unlimited'): string {
   return limit === 'unlimited' ? '∞' : String(limit);
@@ -76,7 +77,7 @@ export default function BillingScreen() {
     <SafeAreaView className="flex-1 bg-stone-50">
       <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
-          <Ionicons name="arrow-back" size={22} color="#374151" />
+          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
         </TouchableOpacity>
         <View>
           <Text className="text-xl font-black text-stone-900">
@@ -110,8 +111,8 @@ export default function BillingScreen() {
             </View>
             <View className="flex-row items-center justify-between mb-2">
               <Text className="text-stone-600">Status</Text>
-              <View className={['px-2 py-0.5 rounded-full', status === SubscriptionStatus.ACTIVE ? 'bg-green-100' : 'bg-amber-100'].join(' ')}>
-                <Text className={status === SubscriptionStatus.ACTIVE ? 'text-green-700 font-medium text-sm' : 'text-amber-700 font-medium text-sm'}>
+              <View className={['px-2 py-0.5 rounded-full', status === SubscriptionStatus.ACTIVE ? 'bg-success-bg' : 'bg-warning-bg'].join(' ')}>
+                <Text className={status === SubscriptionStatus.ACTIVE ? 'text-success font-medium text-sm' : 'text-warning font-medium text-sm'}>
                   {status}
                 </Text>
               </View>
@@ -155,13 +156,13 @@ export default function BillingScreen() {
                   <TouchableOpacity
                     key={int}
                     onPress={() => setInterval(int)}
-                    className={['flex-1 py-2.5 rounded-xl items-center flex-row justify-center gap-2', interval === int ? 'bg-brand-500' : ''].join(' ')}
+                    className={['flex-1 py-2.5 rounded-xl items-center flex-row justify-center gap-2', interval === int ? 'bg-brand-600' : ''].join(' ')}
                   >
                     <Text className={interval === int ? 'text-white font-bold' : 'text-stone-600 font-medium'}>
                       {int === BillingInterval.MONTH ? 'Monthly' : 'Yearly'}
                     </Text>
                     {int === BillingInterval.YEAR && (
-                      <View className="bg-green-400 px-1.5 rounded-full">
+                      <View className="bg-success px-1.5 rounded-full">
                         <Text className="text-white text-xs font-black">-{yearlyDiscount}%</Text>
                       </View>
                     )}

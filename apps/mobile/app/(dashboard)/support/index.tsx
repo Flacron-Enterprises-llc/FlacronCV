@@ -11,13 +11,14 @@ import { useSupportTickets } from '../../../src/hooks/useSupport';
 import { SupportTicket } from '../../../src/types/support.types';
 import { formatDate } from '../../../src/lib/utils';
 import { TicketStatus } from '../../../src/types/enums';
+import { colors } from '../../../src/theme/colors';
 
 const STATUS_COLORS: Record<TicketStatus, { bg: string; text: string }> = {
-  [TicketStatus.OPEN]: { bg: '#dbeafe', text: '#1d4ed8' },
-  [TicketStatus.IN_PROGRESS]: { bg: '#fef3c7', text: '#b45309' },
-  [TicketStatus.WAITING_ON_CUSTOMER]: { bg: '#f3e8ff', text: '#7c3aed' },
-  [TicketStatus.RESOLVED]: { bg: '#dcfce7', text: '#15803d' },
-  [TicketStatus.CLOSED]: { bg: '#f3f4f6', text: '#6b7280' },
+  [TicketStatus.OPEN]: { bg: colors.brand[100], text: colors.brand[700] },
+  [TicketStatus.IN_PROGRESS]: { bg: colors.warning.bg, text: colors.warning.DEFAULT },
+  [TicketStatus.WAITING_ON_CUSTOMER]: { bg: colors.stone[100], text: colors.stone[700] },
+  [TicketStatus.RESOLVED]: { bg: colors.success.bg, text: colors.success.DEFAULT },
+  [TicketStatus.CLOSED]: { bg: colors.stone[200], text: colors.stone[500] },
 };
 
 function loadFailureMessage(err: unknown): string {
@@ -62,8 +63,8 @@ export default function SupportScreen() {
       <View className="px-5 pt-4 pb-4 bg-white border-b border-stone-100">
         <View className="flex-row items-center justify-between">
           <Text className="text-xl font-black text-stone-900">Support</Text>
-          <TouchableOpacity onPress={() => router.push('/(dashboard)/support/new')} className="flex-row items-center bg-brand-500 px-4 py-2 rounded-xl">
-            <Ionicons name="add" size={18} color="#fff" />
+          <TouchableOpacity onPress={() => router.push('/(dashboard)/support/new')} className="flex-row items-center bg-brand-600 px-4 py-2 rounded-xl">
+            <Ionicons name="add" size={18} color={colors.white} />
             <Text className="text-white font-bold ml-1">New Ticket</Text>
           </TouchableOpacity>
         </View>
@@ -87,7 +88,7 @@ export default function SupportScreen() {
           renderItem={renderTicket}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 20 }}
-          refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor="#f97316" />}
+          refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor={colors.brand[600]} />}
         />
       )}
     </SafeAreaView>

@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { Button } from '../../src/components/ui/Button';
 import { Input } from '../../src/components/ui/Input';
 import { useAuthStore } from '../../src/store/auth-store';
+import { colors } from '../../src/theme/colors';
 
 const schema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -39,16 +40,19 @@ export default function ForgotPasswordScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
         <ScrollView className="flex-1 px-6" keyboardShouldPersistTaps="handled">
           <TouchableOpacity onPress={() => router.back()} className="mt-4 mb-8 flex-row items-center">
-            <Ionicons name="arrow-back" size={22} color="#374151" />
+            <Ionicons name="arrow-back" size={22} color={colors.stone[500]} />
             <Text className="text-stone-700 ml-2 font-medium">Back to Login</Text>
           </TouchableOpacity>
 
           {sent ? (
             <View className="items-center py-12">
-              <View className="w-20 h-20 rounded-full bg-green-100 items-center justify-center mb-4">
-                <Ionicons name="mail-open-outline" size={36} color="#22c55e" />
+              <View
+                className="mb-4 h-20 w-20 items-center justify-center rounded-full"
+                style={{ backgroundColor: colors.success.bg }}
+              >
+                <Ionicons name="mail-open-outline" size={36} color={colors.success.DEFAULT} />
               </View>
-              <Text className="text-2xl font-black text-stone-900 text-center mb-2">Check your email</Text>
+              <Text className="text-xl font-bold text-stone-900 text-center mb-2">Check your email</Text>
               <Text className="text-stone-500 text-center leading-5">
                 We've sent password reset instructions to your email address.
               </Text>
@@ -58,7 +62,7 @@ export default function ForgotPasswordScreen() {
             </View>
           ) : (
             <>
-              <Text className="text-2xl font-black text-stone-900 mb-2">Reset password</Text>
+              <Text className="text-xl font-bold text-stone-900 mb-2">Reset password</Text>
               <Text className="text-stone-500 mb-8 leading-5">
                 Enter your email address and we'll send you instructions to reset your password.
               </Text>

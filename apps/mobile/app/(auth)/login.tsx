@@ -25,6 +25,7 @@ import {
   LEGAL_POST_FAILED_TITLE,
   recordAcceptanceAfterSignup,
 } from '../../src/lib/legal-acceptance';
+import { colors } from '../../src/theme/colors';
 import { useAuthStore } from '../../src/store/auth-store';
 
 // Required for expo-auth-session redirect to work correctly
@@ -119,26 +120,18 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
-          <LinearGradient colors={['#fff7ed', '#ffffff']} className="px-6 pt-8 pb-10">
+          {/* Header — pale brand wash into white; mark sits alone (no orange tile) */}
+          <LinearGradient
+            colors={[colors.brand[50], '#ffffff']}
+            className="px-6 pt-8 pb-10"
+          >
             <View className="items-center mb-8">
-              <View
-                className="w-14 h-14 rounded-2xl bg-brand-500 items-center justify-center mb-4"
-                style={{
-                  shadowColor: '#f97316',
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 12,
-                  elevation: 6,
-                }}
-              >
-                <Image
-                  source={require('../../assets/logo.png')}
-                  style={{ width: 36, height: 36 }}
-                  resizeMode="contain"
-                />
-              </View>
-              <Text className="text-2xl font-black text-stone-900">Welcome back</Text>
+              <Image
+                source={require('../../assets/icon.png')}
+                style={{ width: 56, height: 56, borderRadius: 14, marginBottom: 16 }}
+                resizeMode="contain"
+              />
+              <Text className="text-xl font-bold text-stone-900">Welcome back</Text>
               <Text className="text-stone-500 mt-1">Sign in to your FlacronCV account</Text>
             </View>
           </LinearGradient>
@@ -187,7 +180,7 @@ export default function LoginScreen() {
 
               <Link href="/(auth)/forgot-password" asChild>
                 <TouchableOpacity className="mb-5">
-                  <Text className="text-brand-500 text-sm font-medium text-right">
+                  <Text className="text-brand-600 text-sm font-medium text-right">
                     Forgot password?
                   </Text>
                 </TouchableOpacity>
@@ -224,7 +217,7 @@ export default function LoginScreen() {
               <Text className="text-stone-500">Don't have an account? </Text>
               <Link href="/(auth)/register" asChild>
                 <TouchableOpacity>
-                  <Text className="text-brand-500 font-semibold">Sign up free</Text>
+                  <Text className="text-brand-600 font-semibold">Sign up free</Text>
                 </TouchableOpacity>
               </Link>
             </View>

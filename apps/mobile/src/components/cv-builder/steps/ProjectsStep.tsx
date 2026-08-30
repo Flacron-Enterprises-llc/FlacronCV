@@ -11,6 +11,7 @@ import { useCVStore } from '../../../store/cv-store';
 import { CVSectionType } from '../../../types/enums';
 import { ProjectItem } from '../../../types/cv.types';
 import { generateId } from '../../../lib/utils';
+import { colors } from '../../../theme/colors';
 
 const schema = z.object({
   name: z.string().min(1, 'Project name is required'),
@@ -94,7 +95,7 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
   return (
     <View className="flex-1">
       <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-        <Text className="text-lg font-bold text-stone-900 mb-1">Projects</Text>
+        <Text className="text-lg font-semibold text-stone-900 mb-1">Projects</Text>
         <Text className="text-stone-500 mb-5 text-sm">
           Showcase your notable projects and side work.
         </Text>
@@ -119,7 +120,7 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
               </View>
               <View className="flex-row gap-2 ml-2">
                 <TouchableOpacity onPress={() => openEdit(item)} className="p-1">
-                  <Ionicons name="pencil-outline" size={18} color="#78716c" />
+                  <Ionicons name="pencil-outline" size={18} color={colors.stone[500]} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => {
@@ -129,14 +130,14 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
                   }}
                   className="p-1"
                 >
-                  <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  <Ionicons name="trash-outline" size={18} color={colors.error.DEFAULT} />
                 </TouchableOpacity>
               </View>
             </View>
           </View>
         ))}
 
-        <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color="#374151" />} fullWidth>
+        <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color={colors.stone[700]} />} fullWidth>
           Add Project
         </Button>
         <View className="h-8" />

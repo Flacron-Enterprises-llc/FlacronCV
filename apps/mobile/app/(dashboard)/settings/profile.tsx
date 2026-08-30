@@ -21,6 +21,7 @@ import { Input } from '../../../src/components/ui/Input';
 import { useCurrentUser, useUpdateProfile } from '../../../src/hooks/useUser';
 import { getInitials } from '../../../src/lib/utils';
 import { User } from '../../../src/types/user.types';
+import { colors } from '../../../src/theme/colors';
 
 const schema = z.object({
   displayName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -148,7 +149,7 @@ export default function ProfileScreen() {
       <SafeAreaView className="flex-1 bg-white">
         <View className="flex-row items-center px-5 pt-4 pb-3 border-b border-stone-100">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <Ionicons name="arrow-back" size={22} color="#374151" />
+            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
           </TouchableOpacity>
           <Text className="text-xl font-black text-stone-900">Edit Profile</Text>
         </View>
@@ -160,7 +161,7 @@ export default function ProfileScreen() {
   if (!formReady) {
     return (
       <SafeAreaView className="flex-1 bg-white items-center justify-center">
-        <ActivityIndicator size="large" color="#f97316" />
+        <ActivityIndicator size="large" color={colors.brand[600]} />
         <Text className="text-stone-500 mt-3">Loading profile...</Text>
       </SafeAreaView>
     );
@@ -171,7 +172,7 @@ export default function ProfileScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
         <View className="flex-row items-center px-5 pt-4 pb-3 border-b border-stone-100">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <Ionicons name="arrow-back" size={22} color="#374151" />
+            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
           </TouchableOpacity>
           <Text className="text-xl font-black text-stone-900">Edit Profile</Text>
         </View>

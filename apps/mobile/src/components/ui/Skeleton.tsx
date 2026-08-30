@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, View, ViewProps } from 'react-native';
+import { colors } from '../../theme/colors';
 
 interface SkeletonProps extends ViewProps {
   width?: number | `${number}%`;
@@ -30,7 +31,7 @@ export function Skeleton({ width, height = 16, rounded = false, className, style
           opacity,
           height,
           width: width ?? '100%',
-          backgroundColor: '#e7e5e4',
+          backgroundColor: colors.stone[200],
           borderRadius: rounded ? 9999 : 8,
         },
         style,

@@ -12,6 +12,7 @@ import { useCVStore } from '../../../../src/store/cv-store';
 import { useAuthStore } from '../../../../src/store/auth-store';
 import { canExport } from '../../../../src/lib/entitlements';
 import { exportLimitReachedMessage, upgradeAlertButtons } from '../../../../src/config/paid-upgrades';
+import { colors } from '../../../../src/theme/colors';
 
 /** E5 — one prompt for in-app back, hardware Back, and Android gesture Back. */
 function confirmUnsavedLeave(onLeave: () => void) {
@@ -70,7 +71,7 @@ export default function CVEditorScreen() {
   if (cvLoading || sectionsLoading || hydratedId !== id) {
     return (
       <SafeAreaView className="flex-1 bg-white items-center justify-center">
-        <ActivityIndicator size="large" color="#f97316" />
+        <ActivityIndicator size="large" color={colors.brand[600]} />
         <Text className="text-stone-500 mt-3">Loading CV...</Text>
       </SafeAreaView>
     );
@@ -85,7 +86,7 @@ export default function CVEditorScreen() {
       {/* Top Bar */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-stone-100">
         <TouchableOpacity onPress={() => router.back()} className="flex-row items-center">
-          <Ionicons name="arrow-back" size={22} color="#374151" />
+          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
         </TouchableOpacity>
 
         <View className="flex-1 px-3">
@@ -103,14 +104,14 @@ export default function CVEditorScreen() {
             { text: 'DOCX', onPress: () => handleExport('docx') },
             { text: 'Cancel', style: 'cancel' },
           ])}
-          className="flex-row items-center bg-brand-500 px-3 py-2 rounded-xl"
+          className="flex-row items-center bg-brand-600 px-3 py-2 rounded-xl"
           disabled={exportCV.isPending}
         >
           {exportCV.isPending ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={colors.white} />
           ) : (
             <>
-              <Ionicons name="download-outline" size={16} color="#fff" />
+              <Ionicons name="download-outline" size={16} color={colors.white} />
               <Text className="text-white font-semibold ml-1 text-sm">Export</Text>
             </>
           )}

@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { colors } from '../../theme/colors';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
@@ -21,7 +22,7 @@ interface ButtonProps extends PressableProps {
 }
 
 const variantClasses: Record<Variant, string> = {
-  primary: 'bg-brand-500 active:bg-brand-600',
+  primary: 'bg-brand-600 active:bg-brand-700',
   secondary: 'bg-stone-800 active:bg-stone-700',
   outline: 'border border-stone-300 bg-transparent active:bg-stone-50',
   ghost: 'bg-transparent active:bg-stone-100',
@@ -78,7 +79,11 @@ export function Button({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'outline' || variant === 'ghost' ? '#374151' : '#fff'}
+          color={
+            variant === 'outline' || variant === 'ghost'
+              ? colors.chrome
+              : colors.white
+          }
         />
       ) : (
         <>

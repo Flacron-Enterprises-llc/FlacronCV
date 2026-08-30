@@ -17,6 +17,7 @@ import { useCVList, useDeleteCV, useDuplicateCV } from '../../../src/hooks/useCV
 import { useCurrentUser } from '../../../src/hooks/useUser';
 import { CV } from '../../../src/types/cv.types';
 import { formatDate } from '../../../src/lib/utils';
+import { colors } from '../../../src/theme/colors';
 import { CVStatus } from '../../../src/types/enums';
 
 export default function CVsScreen() {
@@ -64,7 +65,7 @@ export default function CVsScreen() {
       <View className="flex-row items-start justify-between">
         <View className="flex-row items-center flex-1">
           <View className="w-12 h-12 rounded-xl bg-brand-50 items-center justify-center mr-3">
-            <Ionicons name="document-text" size={22} color="#f97316" />
+            <Ionicons name="document-text" size={22} color={colors.brand[600]} />
           </View>
           <View className="flex-1">
             <Text className="font-bold text-stone-900 text-base" numberOfLines={1}>
@@ -74,8 +75,8 @@ export default function CVsScreen() {
               {item.personalInfo?.headline ?? 'No headline'}
             </Text>
             <View className="flex-row items-center mt-1.5 gap-2">
-              <View className={['px-2 py-0.5 rounded-full', item.status === CVStatus.PUBLISHED ? 'bg-green-100' : 'bg-stone-100'].join(' ')}>
-                <Text className={['text-xs font-medium', item.status === CVStatus.PUBLISHED ? 'text-green-700' : 'text-stone-500'].join(' ')}>
+              <View className={['px-2 py-0.5 rounded-full', item.status === CVStatus.PUBLISHED ? 'bg-success-bg' : 'bg-stone-100'].join(' ')}>
+                <Text className={['text-xs font-medium', item.status === CVStatus.PUBLISHED ? 'text-success' : 'text-stone-500'].join(' ')}>
                   {item.status}
                 </Text>
               </View>
@@ -95,7 +96,7 @@ export default function CVsScreen() {
             <Ionicons
               name={duplicateCV.isPending ? 'time-outline' : 'copy-outline'}
               size={16}
-              color="#78716c"
+              color={colors.stone[500]}
             />
           </TouchableOpacity>
           <TouchableOpacity
@@ -106,7 +107,7 @@ export default function CVsScreen() {
             <Ionicons
               name={deleteCV.isPending ? 'time-outline' : 'trash-outline'}
               size={16}
-              color="#ef4444"
+              color={colors.error.DEFAULT}
             />
           </TouchableOpacity>
         </View>
@@ -130,9 +131,9 @@ export default function CVsScreen() {
           <Text className="text-xl font-black text-stone-900">My CVs</Text>
           <TouchableOpacity
             onPress={() => router.push('/(dashboard)/cvs/new')}
-            className="flex-row items-center bg-brand-500 px-4 py-2 rounded-xl"
+            className="flex-row items-center bg-brand-600 px-4 py-2 rounded-xl"
           >
-            <Ionicons name="add" size={18} color="#fff" />
+            <Ionicons name="add" size={18} color={colors.white} />
             <Text className="text-white font-bold ml-1">New CV</Text>
           </TouchableOpacity>
         </View>
@@ -163,7 +164,7 @@ export default function CVsScreen() {
           contentContainerStyle={{ padding: 20 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={false} onRefresh={refetch} tintColor="#f97316" />
+            <RefreshControl refreshing={false} onRefresh={refetch} tintColor={colors.brand[600]} />
           }
         />
       )}

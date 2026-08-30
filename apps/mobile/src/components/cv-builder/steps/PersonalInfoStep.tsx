@@ -77,7 +77,7 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
 
   return (
     <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-      <Text className="text-lg font-bold text-stone-900 mb-1">Personal Information</Text>
+      <Text className="text-lg font-semibold text-stone-900 mb-1">Personal Information</Text>
       <Text className="text-stone-500 mb-5 text-sm">
         Add your basic contact details and professional headline.
       </Text>

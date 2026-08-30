@@ -11,6 +11,7 @@ import { useCVStore } from '../../../store/cv-store';
 import { CVSectionType } from '../../../types/enums';
 import { LanguageItem } from '../../../types/cv.types';
 import { generateId } from '../../../lib/utils';
+import { colors } from '../../../theme/colors';
 
 const PROFICIENCY_LEVELS = ['Native', 'Fluent', 'Advanced', 'Intermediate', 'Basic'];
 
@@ -78,37 +79,30 @@ export function LanguagesStep({ onValidChange }: { onValidChange: (v: boolean) =
     }
   };
 
-  const getProficiencyColor = (level: string) => {
-    switch (level) {
-      case 'Native': return '#f97316';
-      case 'Fluent': return '#22c55e';
-      case 'Advanced': return '#3b82f6';
-      case 'Intermediate': return '#8b5cf6';
-      default: return '#94a3b8';
-    }
-  };
-
   return (
     <View className="flex-1">
       <ScrollView className="flex-1 px-5">
-        <Text className="text-lg font-bold text-stone-900 mb-1">Languages</Text>
+        <Text className="text-lg font-semibold text-stone-900 mb-1">Languages</Text>
         <Text className="text-stone-500 mb-5 text-sm">List the languages you speak and your proficiency levels.</Text>
         <View className="flex-row flex-wrap gap-2 mb-4">
           {items.map((item) => (
-            <View key={item.id} className="flex-row items-center rounded-full px-3 py-1.5 border" style={{ borderColor: getProficiencyColor(item.proficiency), backgroundColor: getProficiencyColor(item.proficiency) + '15' }}>
-              <Text className="text-sm font-medium" style={{ color: getProficiencyColor(item.proficiency) }}>
+            <View
+              key={item.id}
+              className="flex-row items-center rounded-full px-3 py-1.5 border border-brand-600 bg-brand-50"
+            >
+              <Text className="text-sm font-medium text-brand-700">
                 {item.name} · {item.proficiency}
               </Text>
               <TouchableOpacity onPress={() => openEdit(item)} className="ml-1.5 p-0.5">
-                <Ionicons name="pencil-outline" size={14} color={getProficiencyColor(item.proficiency)} />
+                <Ionicons name="pencil-outline" size={14} color={colors.stone[500]} />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => handleDelete(item.id)} className="ml-0.5">
-                <Ionicons name="close-circle" size={14} color={getProficiencyColor(item.proficiency)} />
+                <Ionicons name="close-circle" size={14} color={colors.error.DEFAULT} />
               </TouchableOpacity>
             </View>
           ))}
         </View>
-        <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color="#374151" />} fullWidth>
+        <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color={colors.stone[700]} />} fullWidth>
           Add Language
         </Button>
         <View className="h-8" />
@@ -121,9 +115,19 @@ export function LanguagesStep({ onValidChange }: { onValidChange: (v: boolean) =
         <Controller control={control} name="proficiency" render={({ field }) => (
           <View className="flex-row flex-wrap gap-2 mb-4">
             {PROFICIENCY_LEVELS.map((level) => (
-              <TouchableOpacity key={level} onPress={() => field.onChange(level)}
-                className={['px-3 py-2 rounded-xl border', field.value === level ? 'border-brand-500 bg-brand-50' : 'border-stone-200'].join(' ')}>
-                <Text className={field.value === level ? 'text-brand-600 font-semibold' : 'text-stone-600'}>{level}</Text>
+              <TouchableOpacity
+                key={level}
+                onPress={() => field.onChange(level)}
+                className={[
+                  'px-3 py-2 rounded-xl border',
+                  field.value === level
+                    ? 'border-brand-600 bg-brand-50'
+                    : 'border-stone-200 bg-white',
+                ].join(' ')}
+              >
+                <Text className={field.value === level ? 'text-brand-700 font-semibold' : 'text-stone-600'}>
+                  {level}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>

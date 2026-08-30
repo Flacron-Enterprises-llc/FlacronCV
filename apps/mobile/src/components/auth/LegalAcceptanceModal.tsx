@@ -57,7 +57,7 @@ export function LegalAcceptanceModal({
           disabled={accepting}
           className={[
             'mt-0.5 h-5 w-5 rounded border items-center justify-center mr-3',
-            checked ? 'bg-brand-500 border-brand-500' : 'border-stone-300 bg-white',
+            checked ? 'bg-brand-600 border-brand-600' : 'border-stone-300 bg-white',
           ].join(' ')}
           accessibilityRole="checkbox"
           accessibilityState={{ checked }}

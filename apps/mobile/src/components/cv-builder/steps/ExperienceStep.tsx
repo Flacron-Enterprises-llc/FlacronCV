@@ -11,6 +11,7 @@ import { useCVStore } from '../../../store/cv-store';
 import { CVSectionType } from '../../../types/enums';
 import { ExperienceItem } from '../../../types/cv.types';
 import { generateId } from '../../../lib/utils';
+import { colors } from '../../../theme/colors';
 
 const schema = z.object({
   company: z.string().min(1, 'Company name is required'),
@@ -118,7 +119,7 @@ export function ExperienceStep({ onValidChange }: ExperienceStepProps) {
   return (
     <View className="flex-1">
       <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-        <Text className="text-lg font-bold text-stone-900 mb-1">Work Experience</Text>
+        <Text className="text-lg font-semibold text-stone-900 mb-1">Work Experience</Text>
         <Text className="text-stone-500 mb-5 text-sm">
           Add your work history, starting with the most recent position.
         </Text>
@@ -126,7 +127,7 @@ export function ExperienceStep({ onValidChange }: ExperienceStepProps) {
         {items.length === 0 ? (
           <View className="items-center py-10">
             <View className="w-16 h-16 rounded-full bg-stone-100 items-center justify-center mb-3">
-              <Ionicons name="briefcase-outline" size={28} color="#a8a29e" />
+              <Ionicons name="briefcase-outline" size={28} color={colors.stone[400]} />
             </View>
             <Text className="text-stone-500 text-center mb-4">
               No work experience added yet.
@@ -151,10 +152,10 @@ export function ExperienceStep({ onValidChange }: ExperienceStepProps) {
                 </View>
                 <View className="flex-row gap-2 ml-2">
                   <TouchableOpacity onPress={() => openEdit(item)} className="p-1">
-                    <Ionicons name="pencil-outline" size={18} color="#78716c" />
+                    <Ionicons name="pencil-outline" size={18} color={colors.stone[500]} />
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1">
-                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                    <Ionicons name="trash-outline" size={18} color={colors.error.DEFAULT} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -162,7 +163,7 @@ export function ExperienceStep({ onValidChange }: ExperienceStepProps) {
           ))
         )}
 
-        <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color="#374151" />} fullWidth>
+        <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color={colors.stone[700]} />} fullWidth>
           Add Experience
         </Button>
 
@@ -256,7 +257,7 @@ export function ExperienceStep({ onValidChange }: ExperienceStepProps) {
               <Switch
                 value={field.value}
                 onValueChange={field.onChange}
-                trackColor={{ true: '#f97316' }}
+                trackColor={{ true: colors.brand[600] }}
               />
             </View>
           )}

@@ -15,6 +15,7 @@ import {
   exportLimitReachedMessage,
   upgradeAlertButtons,
 } from '../../../src/config/paid-upgrades';
+import { colors } from '../../../src/theme/colors';
 
 /** Same copy as cvs/[id] — one Unsaved Changes dialog in the app. */
 function confirmUnsavedLeave(onLeave: () => void) {
@@ -117,7 +118,7 @@ export default function CoverLetterEditorScreen() {
   if (isLoading || hydratedId !== id) {
     return (
       <SafeAreaView className="flex-1 bg-white items-center justify-center">
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color={colors.brand[600]} />
       </SafeAreaView>
     );
   }
@@ -126,7 +127,7 @@ export default function CoverLetterEditorScreen() {
     <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-stone-100">
         <TouchableOpacity onPress={() => router.back()} className="flex-row items-center">
-          <Ionicons name="arrow-back" size={22} color="#374151" />
+          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
         </TouchableOpacity>
         <View className="flex-1 px-2">
           <Text className="font-bold text-stone-900 text-center" numberOfLines={1}>
@@ -138,37 +139,37 @@ export default function CoverLetterEditorScreen() {
         </View>
         <View className="flex-row gap-2">
           {isDirty && (
-            <TouchableOpacity onPress={() => void handleSave()} disabled={isSaving} className="bg-blue-500 px-3 py-1.5 rounded-xl">
-              {isSaving ? <ActivityIndicator size="small" color="#fff" /> : <Text className="text-white font-semibold text-sm">Save</Text>}
+            <TouchableOpacity onPress={() => void handleSave()} disabled={isSaving} className="bg-brand-600 px-3 py-1.5 rounded-xl">
+              {isSaving ? <ActivityIndicator size="small" color={colors.white} /> : <Text className="text-white font-semibold text-sm">Save</Text>}
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={handleExport} disabled={exportCL.isPending} className="bg-stone-800 px-3 py-1.5 rounded-xl">
-            {exportCL.isPending ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="download-outline" size={16} color="#fff" />}
+          <TouchableOpacity onPress={handleExport} disabled={exportCL.isPending} className="bg-brand-600 px-3 py-1.5 rounded-xl">
+            {exportCL.isPending ? <ActivityIndicator size="small" color={colors.white} /> : <Ionicons name="download-outline" size={16} color={colors.white} />}
           </TouchableOpacity>
         </View>
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
         <ScrollView className="flex-1 px-5 pt-4" keyboardShouldPersistTaps="handled">
-          <View className="bg-blue-50 rounded-xl p-3 mb-4">
-            <Text className="font-bold text-blue-900">{coverLetter?.jobTitle}</Text>
-            <Text className="text-blue-600 text-sm">{coverLetter?.companyName}</Text>
+          <View className="bg-brand-50 rounded-xl p-3 mb-4">
+            <Text className="font-bold text-brand-900">{coverLetter?.jobTitle}</Text>
+            <Text className="text-brand-700 text-sm">{coverLetter?.companyName}</Text>
             {coverLetter?.recipientName && (
-              <Text className="text-blue-400 text-xs mt-0.5">Attn: {coverLetter.recipientName}</Text>
+              <Text className="text-brand-400 text-xs mt-0.5">Attn: {coverLetter.recipientName}</Text>
             )}
           </View>
 
           <TouchableOpacity
             onPress={handleAIGenerate}
             disabled={generateCL.isPending}
-            className="flex-row items-center justify-center border border-purple-300 bg-purple-50 rounded-xl py-3 px-4 mb-4"
+            className="flex-row items-center justify-center border border-brand-300 bg-brand-50 rounded-xl py-3 px-4 mb-4"
           >
             {generateCL.isPending ? (
-              <ActivityIndicator size="small" color="#8b5cf6" />
+              <ActivityIndicator size="small" color={colors.brand[600]} />
             ) : (
-              <Ionicons name="sparkles" size={18} color="#8b5cf6" />
+              <Ionicons name="sparkles" size={18} color={colors.brand[600]} />
             )}
-            <Text className="text-purple-600 font-semibold ml-2">
+            <Text className="text-brand-600 font-semibold ml-2">
               {generateCL.isPending ? 'Generating...' : coverLetter?.content ? 'Regenerate with AI' : 'Generate with AI'}
             </Text>
           </TouchableOpacity>
@@ -180,7 +181,7 @@ export default function CoverLetterEditorScreen() {
               onChangeText={setContent}
               multiline
               placeholder="Write your cover letter here, or use AI to generate one..."
-              placeholderTextColor="#a8a29e"
+              placeholderTextColor={colors.stone[400]}
               className="p-4 text-base text-stone-900 min-h-96"
               textAlignVertical="top"
             />

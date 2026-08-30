@@ -6,6 +6,7 @@ import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 import { api } from '../../lib/api';
 import { useCVStore } from '../../store/cv-store';
+import { colors } from '../../theme/colors';
 import { PersonalInfoStep } from './steps/PersonalInfoStep';
 import { SummaryStep } from './steps/SummaryStep';
 import { ExperienceStep } from './steps/ExperienceStep';
@@ -170,7 +171,7 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
         {/* Progress bar */}
         <View className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
           <View
-            className="h-full bg-brand-500 rounded-full"
+            className="h-full bg-brand-600 rounded-full"
             style={{ width: `${progressPercent}%` }}
           />
         </View>
@@ -183,7 +184,7 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
             key={step.id}
             className={[
               'rounded-full',
-              index === currentStep ? 'w-4 h-1.5 bg-brand-500' :
+              index === currentStep ? 'w-4 h-1.5 bg-brand-600' :
               index < currentStep ? 'w-1.5 h-1.5 bg-brand-300' :
               'w-1.5 h-1.5 bg-stone-200',
             ].join(' ')}
@@ -208,7 +209,7 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
             onPress={handleBack}
             className="flex-row items-center px-5 py-3 rounded-xl border border-stone-200 bg-stone-50"
           >
-            <Ionicons name="chevron-back" size={18} color="#374151" />
+            <Ionicons name="chevron-back" size={18} color={colors.stone[700]} />
             <Text className="text-stone-700 font-semibold ml-1">Back</Text>
           </TouchableOpacity>
         )}
@@ -217,7 +218,7 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
           disabled={currentStep === 0 && !stepValid}
           className={[
             'flex-1 flex-row items-center justify-center py-3 rounded-xl',
-            currentStep === 0 && !stepValid ? 'bg-stone-200' : 'bg-brand-500',
+            currentStep === 0 && !stepValid ? 'bg-stone-200' : 'bg-brand-600',
           ].join(' ')}
         >
           <Text className={[
@@ -229,7 +230,7 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
           <Ionicons
             name={currentStep === STEPS.length - 1 ? 'checkmark' : 'chevron-forward'}
             size={18}
-            color={currentStep === 0 && !stepValid ? '#a8a29e' : '#fff'}
+            color={currentStep === 0 && !stepValid ? colors.stone[400] : colors.white}
             style={{ marginLeft: 4 }}
           />
         </TouchableOpacity>

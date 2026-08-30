@@ -3,6 +3,7 @@ import React from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 import { Template } from '../../types/template.types';
 import { SubscriptionPlan } from '../../types/enums';
+import { colors } from '../../theme/colors';
 
 interface TemplateCardProps {
   template: Template;
@@ -12,14 +13,14 @@ interface TemplateCardProps {
   onPreview?: () => void;
 }
 
-export function TemplateCard({ template, isSelected, isLocked, onSelect, onPreview }: TemplateCardProps) {
-  const tierColors: Record<SubscriptionPlan, { bg: string; text: string; label: string }> = {
-    [SubscriptionPlan.FREE]: { bg: '#f0fdf4', text: '#15803d', label: 'Free' },
-    [SubscriptionPlan.PRO]: { bg: '#fef3c7', text: '#b45309', label: 'Pro' },
-    [SubscriptionPlan.ENTERPRISE]: { bg: '#f3e8ff', text: '#7c3aed', label: 'Enterprise' },
-  };
+const tierClasses: Record<SubscriptionPlan, { bg: string; text: string; label: string }> = {
+  [SubscriptionPlan.FREE]: { bg: 'bg-stone-100', text: 'text-stone-700', label: 'Free' },
+  [SubscriptionPlan.PRO]: { bg: 'bg-brand-100', text: 'text-brand-700', label: 'Pro' },
+  [SubscriptionPlan.ENTERPRISE]: { bg: 'bg-stone-100', text: 'text-chrome', label: 'Enterprise' },
+};
 
-  const tier = tierColors[template.tier];
+export function TemplateCard({ template, isSelected, isLocked, onSelect, onPreview }: TemplateCardProps) {
+  const tier = tierClasses[template.tier];
 
   return (
     <Pressable
@@ -39,17 +40,14 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
           />
         ) : (
           <View className="items-center">
-            <Ionicons name="document-text-outline" size={48} color="#d6d3d1" />
+            <Ionicons name="document-text-outline" size={48} color={colors.stone[300]} />
             <Text className="text-stone-300 text-sm mt-2">{template.name}</Text>
           </View>
         )}
 
         {/* Tier Badge */}
-        <View
-          className="absolute top-2 left-2 px-2 py-0.5 rounded-full"
-          style={{ backgroundColor: tier.bg }}
-        >
-          <Text className="text-xs font-bold" style={{ color: tier.text }}>
+        <View className={['absolute top-2 left-2 px-2 py-0.5 rounded-full', tier.bg].join(' ')}>
+          <Text className={['text-xs font-bold', tier.text].join(' ')}>
             {tier.label}
           </Text>
         </View>
@@ -58,7 +56,7 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
         {isLocked && (
           <View className="absolute inset-0 bg-black/40 items-center justify-center">
             <View className="bg-white/90 rounded-full p-3">
-              <Ionicons name="lock-closed" size={24} color="#374151" />
+              <Ionicons name="lock-closed" size={24} color={colors.chrome} />
             </View>
           </View>
         )}
@@ -66,7 +64,7 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
         {/* Selected checkmark */}
         {isSelected && (
           <View className="absolute top-2 right-2 w-7 h-7 rounded-full bg-brand-500 items-center justify-center">
-            <Ionicons name="checkmark" size={16} color="#fff" />
+            <Ionicons name="checkmark" size={16} color={colors.white} />
           </View>
         )}
       </View>
@@ -76,7 +74,7 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
         <View className="flex-row items-center justify-between">
           <Text className="font-bold text-stone-800">{template.name}</Text>
           {template.isFeatured && (
-            <Ionicons name="star" size={14} color="#f97316" />
+            <Ionicons name="star" size={14} color={colors.brand[600]} />
           )}
         </View>
         {template.description && (

@@ -9,6 +9,7 @@ import { TicketMessage } from '../../../src/types/support.types';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { formatDate } from '../../../src/lib/utils';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
+import { colors } from '../../../src/theme/colors';
 
 function requestFailureMessage(err: unknown): string {
   if (axios.isAxiosError(err) && !err.response) {
@@ -50,7 +51,7 @@ export default function TicketDetailScreen() {
     return (
       <View className={['mb-3', isMe ? 'items-end' : 'items-start'].join(' ')}>
         <View
-          className={['max-w-[83%] px-4 py-3 rounded-2xl', isMe ? 'bg-brand-500 rounded-tr-sm' : 'bg-stone-100 rounded-tl-sm'].join(' ')}
+          className={['max-w-[83%] px-4 py-3 rounded-2xl', isMe ? 'bg-brand-600 rounded-tr-sm' : 'bg-stone-100 rounded-tl-sm'].join(' ')}
           style={{ maxWidth: '83%' }}
         >
           {!isMe && (
@@ -66,7 +67,7 @@ export default function TicketDetailScreen() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-white items-center justify-center" edges={['top', 'bottom']}>
-        <ActivityIndicator size="large" color="#f97316" />
+        <ActivityIndicator size="large" color={colors.brand[600]} />
       </SafeAreaView>
     );
   }
@@ -76,7 +77,7 @@ export default function TicketDetailScreen() {
       <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
         <View className="flex-row items-center px-4 py-3 border-b border-stone-100">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <Ionicons name="arrow-back" size={22} color="#374151" />
+            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
           </TouchableOpacity>
           <Text className="font-bold text-stone-900">Support</Text>
         </View>
@@ -92,7 +93,7 @@ export default function TicketDetailScreen() {
     <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-4 py-3 border-b border-stone-100">
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
-          <Ionicons name="arrow-back" size={22} color="#374151" />
+          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
         </TouchableOpacity>
         <View className="flex-1">
           <Text className="font-bold text-stone-900" numberOfLines={1}>{ticket.title}</Text>
@@ -122,7 +123,7 @@ export default function TicketDetailScreen() {
               value={messageText}
               onChangeText={setMessageText}
               placeholder="Type your message..."
-              placeholderTextColor="#a8a29e"
+              placeholderTextColor={colors.stone[400]}
               multiline
               className="text-stone-900 text-base"
             />
@@ -130,12 +131,12 @@ export default function TicketDetailScreen() {
           <TouchableOpacity
             onPress={() => void handleSend()}
             disabled={!messageText.trim() || addMessage.isPending}
-            className={['w-11 h-11 rounded-full items-center justify-center', messageText.trim() ? 'bg-brand-500' : 'bg-stone-200'].join(' ')}
+            className={['w-11 h-11 rounded-full items-center justify-center', messageText.trim() ? 'bg-brand-600' : 'bg-stone-200'].join(' ')}
           >
             {addMessage.isPending ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={colors.white} />
             ) : (
-              <Ionicons name="send" size={18} color={messageText.trim() ? '#fff' : '#a8a29e'} />
+              <Ionicons name="send" size={18} color={messageText.trim() ? colors.white : colors.stone[400]} />
             )}
           </TouchableOpacity>
         </View>

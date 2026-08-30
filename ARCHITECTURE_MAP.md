@@ -159,7 +159,9 @@ is unset. `subprocessor-disclosure.spec.ts` still reads `privacy.s3_desc`. The c
 
 **Chrome (headers/footers).** One Tailwind token, not a scale:
 `chrome: '#1e3a5f'` in `apps/web/tailwind.config.ts` — the Classic CV / cover-letter default.
-Applied to public `Navbar`, public `Footer`, and shared `TopBar` in **light and dark**. Dark:
+**Mobile (V1 2026-08-30):** the same `chrome` hex plus `success` / `error` /
+`warning` live in `apps/mobile/tailwind.config.js` and `apps/mobile/src/theme/colors.ts`
+(for Ionicons / ActivityIndicator). Screens are not fully wired yet. Applied to public `Navbar`, public `Footer`, and shared `TopBar` in **light and dark**. Dark:
 Navbar keeps translucency (`bg-chrome/70` + blur); Footer / TopBar / mobile nav panel are solid
 chrome. Page-facing edges use `border-white/15`; mobile panel top (navy-on-navy) uses
 `border-white/10`. Logo on those bars is always `Logo variant="on-dark"`. Body and links are

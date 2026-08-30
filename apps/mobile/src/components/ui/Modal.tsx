@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../theme/colors';
 
 interface ModalProps {
   visible: boolean;
@@ -63,7 +64,7 @@ export function Modal({ visible, onClose, title, children, size = 'md' }: ModalP
               <View className="flex-row items-center justify-between px-5 py-3 border-b border-stone-100">
                 <Text className="text-lg font-bold text-stone-900">{title}</Text>
                 <Pressable onPress={onClose} className="p-1">
-                  <Ionicons name="close" size={22} color="#78716c" />
+                  <Ionicons name="close" size={22} color={colors.stone[500]} />
                 </Pressable>
               </View>
             )}

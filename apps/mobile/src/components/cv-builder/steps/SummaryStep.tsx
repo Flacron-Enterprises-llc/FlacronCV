@@ -18,6 +18,7 @@ import { useGenerateSummary } from '../../../hooks/useAI';
 import { useAuthStore } from '../../../store/auth-store';
 import { canUseAI } from '../../../lib/entitlements';
 import { aiCreditsExhaustedMessage } from '../../../config/paid-upgrades';
+import { colors } from '../../../theme/colors';
 import { CV, CVSection, CVSectionItem, ExperienceItem, SkillItem } from '../../../types/cv.types';
 import { CVSectionType } from '../../../types/enums';
 
@@ -183,7 +184,7 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
       className="flex-1"
     >
       <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
-        <Text className="text-lg font-bold text-stone-900 mb-1">Professional Summary</Text>
+        <Text className="text-lg font-semibold text-stone-900 mb-1">Professional Summary</Text>
         <Text className="text-stone-500 mb-5 text-sm">
           Write a compelling summary that highlights your expertise and career goals.
         </Text>
@@ -195,7 +196,7 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
             multiline
             numberOfLines={8}
             placeholder="Results-driven software engineer with 5+ years of experience building scalable web applications..."
-            placeholderTextColor="#a8a29e"
+            placeholderTextColor={colors.stone[400]}
             className="p-4 text-base text-stone-900 min-h-48"
             textAlignVertical="top"
           />
@@ -216,9 +217,9 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
           }`}
         >
           {generateSummary.isPending ? (
-            <ActivityIndicator size="small" color="#f97316" />
+            <ActivityIndicator size="small" color={colors.brand[600]} />
           ) : (
-            <Ionicons name="sparkles" size={18} color="#f97316" />
+            <Ionicons name="sparkles" size={18} color={colors.brand[600]} />
           )}
           <Text className="text-brand-600 font-semibold ml-2">
             {generateSummary.isPending ? 'Generating...' : 'Generate with AI'}

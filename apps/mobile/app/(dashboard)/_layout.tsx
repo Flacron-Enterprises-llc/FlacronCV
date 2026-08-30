@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs, useSegments } from 'expo-router';
 import React from 'react';
 import { useAuthStore } from '../../src/store/auth-store';
+import { colors } from '../../src/theme/colors';
 
 const TAB_ROOTS = new Set(['index', 'cvs', 'cover-letters', 'templates', 'settings']);
 
@@ -28,13 +29,13 @@ export default function DashboardLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#f97316',
-        tabBarInactiveTintColor: '#a8a29e',
+        tabBarActiveTintColor: colors.brand[600],
+        tabBarInactiveTintColor: colors.stone[400],
         tabBarStyle: hideTabBar
           ? { display: 'none' }
           : {
-              backgroundColor: '#fff',
-              borderTopColor: '#f5f5f4',
+              backgroundColor: colors.white,
+              borderTopColor: colors.stone[100],
             },
         tabBarLabelStyle: {
           fontSize: 10,

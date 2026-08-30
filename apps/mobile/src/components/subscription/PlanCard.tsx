@@ -3,6 +3,7 @@ import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { PlanConfig } from '../../types/subscription.types';
 import { BillingInterval } from '../../types/enums';
+import { colors } from '../../theme/colors';
 
 interface PlanCardProps {
   config: PlanConfig;
@@ -44,8 +45,8 @@ export function PlanCard({
       <View className="flex-row items-center justify-between mb-3">
         <Text className="text-xl font-bold text-stone-900 capitalize">{config.plan}</Text>
         {isCurrentPlan && (
-          <View className="bg-green-100 px-3 py-1 rounded-full">
-            <Text className="text-green-700 text-xs font-semibold">Current Plan</Text>
+          <View className="bg-success-bg px-3 py-1 rounded-full">
+            <Text className="text-success text-xs font-semibold">Current Plan</Text>
           </View>
         )}
       </View>
@@ -75,7 +76,13 @@ export function PlanCard({
             <Ionicons
               name="checkmark-circle"
               size={16}
-              color={isPro ? '#f97316' : '#22c55e'}
+              color={
+                isPro
+                  ? colors.brand[600]
+                  : isEnterprise
+                    ? colors.chrome
+                    : colors.success.DEFAULT
+              }
             />
             <Text className="text-stone-700 ml-2 text-sm">{feature}</Text>
           </View>
@@ -88,7 +95,7 @@ export function PlanCard({
           disabled={isLoading}
           className={[
             'rounded-xl py-3 items-center',
-            isPro ? 'bg-brand-500' : 'bg-stone-800',
+            isPro ? 'bg-brand-600' : isEnterprise ? 'bg-chrome' : 'bg-stone-800',
             isLoading ? 'opacity-50' : '',
           ].join(' ')}
         >

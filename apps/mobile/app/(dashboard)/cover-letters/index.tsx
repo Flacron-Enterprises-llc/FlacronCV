@@ -9,6 +9,7 @@ import { SkeletonCard } from '../../../src/components/ui/Skeleton';
 import { useCoverLetterList, useDeleteCoverLetter } from '../../../src/hooks/useCoverLetters';
 import { CoverLetter } from '../../../src/types/cover-letter.types';
 import { formatDate } from '../../../src/lib/utils';
+import { colors } from '../../../src/theme/colors';
 import { CoverLetterStatus } from '../../../src/types/enums';
 
 export default function CoverLettersScreen() {
@@ -45,8 +46,8 @@ export default function CoverLettersScreen() {
     >
       <View className="flex-row items-start justify-between">
         <View className="flex-row items-center flex-1">
-          <View className="w-12 h-12 rounded-xl bg-blue-50 items-center justify-center mr-3">
-            <Ionicons name="mail" size={22} color="#3b82f6" />
+          <View className="w-12 h-12 rounded-xl bg-brand-50 items-center justify-center mr-3">
+            <Ionicons name="mail" size={22} color={colors.brand[600]} />
           </View>
           <View className="flex-1">
             <Text className="font-bold text-stone-900 text-base" numberOfLines={1}>{item.title}</Text>
@@ -54,8 +55,8 @@ export default function CoverLettersScreen() {
               {item.companyName} · {item.jobTitle}
             </Text>
             <View className="flex-row items-center mt-1.5 gap-2">
-              <View className={['px-2 py-0.5 rounded-full', item.status === CoverLetterStatus.FINAL ? 'bg-green-100' : 'bg-stone-100'].join(' ')}>
-                <Text className={['text-xs font-medium', item.status === CoverLetterStatus.FINAL ? 'text-green-700' : 'text-stone-500'].join(' ')}>
+              <View className={['px-2 py-0.5 rounded-full', item.status === CoverLetterStatus.FINAL ? 'bg-success-bg' : 'bg-stone-100'].join(' ')}>
+                <Text className={['text-xs font-medium', item.status === CoverLetterStatus.FINAL ? 'text-success' : 'text-stone-500'].join(' ')}>
                   {item.status}
                 </Text>
               </View>
@@ -71,14 +72,14 @@ export default function CoverLettersScreen() {
           <Ionicons
             name={deleteCL.isPending ? 'time-outline' : 'trash-outline'}
             size={16}
-            color="#ef4444"
+            color={colors.error.DEFAULT}
           />
         </TouchableOpacity>
       </View>
       {item.aiGenerated && (
         <View className="flex-row items-center mt-2">
-          <Ionicons name="sparkles" size={12} color="#8b5cf6" />
-          <Text className="text-purple-600 text-xs ml-1">AI Generated</Text>
+          <Ionicons name="sparkles" size={12} color={colors.brand[600]} />
+          <Text className="text-brand-600 text-xs ml-1">AI Generated</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -91,8 +92,8 @@ export default function CoverLettersScreen() {
       <View className="px-5 pt-4 pb-4 bg-white border-b border-stone-100">
         <View className="flex-row items-center justify-between">
           <Text className="text-xl font-black text-stone-900">Cover Letters</Text>
-          <TouchableOpacity onPress={() => router.push('/(dashboard)/cover-letters/new')} className="flex-row items-center bg-blue-500 px-4 py-2 rounded-xl">
-            <Ionicons name="add" size={18} color="#fff" />
+          <TouchableOpacity onPress={() => router.push('/(dashboard)/cover-letters/new')} className="flex-row items-center bg-brand-600 px-4 py-2 rounded-xl">
+            <Ionicons name="add" size={18} color={colors.white} />
             <Text className="text-white font-bold ml-1">New</Text>
           </TouchableOpacity>
         </View>
@@ -115,7 +116,7 @@ export default function CoverLettersScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 20 }}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor="#3b82f6" />}
+          refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor={colors.brand[600]} />}
         />
       )}
     </SafeAreaView>

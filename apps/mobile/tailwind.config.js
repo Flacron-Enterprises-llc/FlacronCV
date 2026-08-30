@@ -21,9 +21,10 @@ module.exports = {
           900: '#7c2d12',
           950: '#431407',
         },
-      },
-      fontFamily: {
-        sans: ['Inter', 'System'],
+        chrome: '#1e3a5f',
+        success: { DEFAULT: '#15803d', bg: '#f0fdf4' },
+        error: { DEFAULT: '#dc2626', bg: '#fef2f2' },
+        warning: { DEFAULT: '#b45309', bg: '#fef3c7' },
       },
     },
   },
