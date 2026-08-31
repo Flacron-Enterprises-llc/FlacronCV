@@ -1101,6 +1101,13 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 9. Change log (append newest at top)
 
+- 2026-08-31 — **Mobile client feedback: keyboard + lock copy.** Register/login:
+  Android `softwareKeyboardLayoutMode: resize`; KAV drops Android `height`
+  (conflicts with resize); ScrollView `paddingBottom` so confirm password can
+  scroll into view. Locked-template alert (S1 off): `{Tier} template` +
+  `{Name} is included on {Tier} plans. Your {plan} plan can use …`. No Upgrade
+  CTA. Adaptive icon asset pending client (safe-zone padding) — not replaced.
+
 - 2026-08-31 — **Mobile Flacron Engine branding (display text only).** User-facing
   AI copy → Flacron Engine / Credits / Engine credits / Generate|Regenerate /
   Generated. PlanCard remaps shared feature lines at display time (shared-types

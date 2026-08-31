@@ -62,10 +62,11 @@ export default function NewCVScreen() {
   ]);
 
   const handleSelectTemplate = (template: Template) => {
+    const plan = effectivePlanForCopy(subscription);
     if (!canAccessTemplate(subscription, template.tier)) {
       Alert.alert(
-        lockedTemplateTitle(),
-        lockedTemplateMessage(template.name, template.tier),
+        lockedTemplateTitle(template.tier),
+        lockedTemplateMessage(template.name, template.tier, plan),
         upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
       );
       return;
@@ -99,8 +100,12 @@ export default function NewCVScreen() {
         !canAccessTemplate(subscription, selectedTemplate.tier)
       ) {
         Alert.alert(
-          lockedTemplateTitle(),
-          lockedTemplateMessage(selectedTemplate.name, selectedTemplate.tier),
+          lockedTemplateTitle(selectedTemplate.tier),
+          lockedTemplateMessage(
+            selectedTemplate.name,
+            selectedTemplate.tier,
+            effectivePlanForCopy(subscription),
+          ),
         );
         return;
       }

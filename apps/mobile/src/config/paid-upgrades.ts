@@ -76,13 +76,30 @@ export function aiCreditsExhaustedMessage(variant: 'summary' | 'coverLetter' | '
   return 'You have used all Engine credits for this month.';
 }
 
-export function lockedTemplateTitle(): string {
-  return PAID_UPGRADES_ENABLED ? 'Upgrade Required' : 'Template unavailable';
+export function lockedTemplateTitle(requiredTier?: string): string {
+  if (PAID_UPGRADES_ENABLED) return 'Upgrade Required';
+  if (requiredTier) {
+    const label = requiredTier.charAt(0).toUpperCase() + requiredTier.slice(1);
+    return `${label} template`;
+  }
+  return 'Template unavailable';
 }
 
-export function lockedTemplateMessage(templateName: string, tier: string): string {
+function templatesIncludedPhrase(plan: SubscriptionPlan): string {
+  if (plan === SubscriptionPlan.ENTERPRISE) return 'all templates';
+  if (plan === SubscriptionPlan.PRO) return 'Free and Pro templates';
+  return 'Free templates';
+}
+
+export function lockedTemplateMessage(
+  templateName: string,
+  requiredTier: string,
+  currentPlan: SubscriptionPlan = SubscriptionPlan.FREE,
+): string {
   if (PAID_UPGRADES_ENABLED) {
-    return `The ${templateName} template requires a ${tier} plan.`;
+    return `The ${templateName} template requires a ${requiredTier} plan.`;
   }
-  return `The ${templateName} template is not included in your current plan.`;
+  const tierLabel = requiredTier.charAt(0).toUpperCase() + requiredTier.slice(1);
+  const planLabel = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
+  return `${templateName} is included on ${tierLabel} plans. Your ${planLabel} plan can use ${templatesIncludedPhrase(currentPlan)}.`;
 }

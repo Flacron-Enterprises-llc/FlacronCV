@@ -10,7 +10,7 @@ import { SkeletonCard } from '../../../src/components/ui/Skeleton';
 import { useTemplates } from '../../../src/hooks/useTemplates';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { SubscriptionPlan, TemplateCategory } from '../../../src/types/enums';
-import { canAccessTemplate } from '../../../src/lib/entitlements';
+import { canAccessTemplate, effectivePlanForCopy } from '../../../src/lib/entitlements';
 import {
   lockedTemplateMessage,
   lockedTemplateTitle,
@@ -45,17 +45,18 @@ export default function TemplatesScreen() {
   });
 
   const handleSelectTemplate = (template: Template) => {
+    const plan = effectivePlanForCopy(subscription);
     if (!canAccessTemplate(subscription, template.tier)) {
       if (!PAID_UPGRADES_ENABLED) {
         Alert.alert(
-          lockedTemplateTitle(),
-          lockedTemplateMessage(template.name, template.tier),
+          lockedTemplateTitle(template.tier),
+          lockedTemplateMessage(template.name, template.tier, plan),
         );
         return;
       }
       Alert.alert(
-        lockedTemplateTitle(),
-        lockedTemplateMessage(template.name, template.tier),
+        lockedTemplateTitle(template.tier),
+        lockedTemplateMessage(template.name, template.tier, plan),
         upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
       );
       return;
