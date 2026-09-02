@@ -85,7 +85,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     updateField,
     updateStyling,
     setSaving,
-    setLastSavedAt,
+    markSaved,
     reset,
   } = useCoverLetterStore();
 
@@ -194,25 +194,26 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
 
   // Auto-save with 2-second debounce; after a failure, capped exponential backoff.
   const autoSave = useCallback(async () => {
-    if (!coverLetter || !isDirty) return;
+    const snapshot = useCoverLetterStore.getState().coverLetter;
+    if (!snapshot || !useCoverLetterStore.getState().isDirty) return;
 
     setSaving(true);
     try {
       const updateData: UpdateCoverLetterData = {
-        title: coverLetter.title,
-        templateId: coverLetter.templateId,
-        recipientName: coverLetter.recipientName,
-        recipientTitle: coverLetter.recipientTitle,
-        companyName: coverLetter.companyName,
-        companyAddress: coverLetter.companyAddress,
-        jobTitle: coverLetter.jobTitle,
-        jobDescription: coverLetter.jobDescription,
-        content: coverLetter.content,
-        styling: coverLetter.styling,
+        title: snapshot.title,
+        templateId: snapshot.templateId,
+        recipientName: snapshot.recipientName,
+        recipientTitle: snapshot.recipientTitle,
+        companyName: snapshot.companyName,
+        companyAddress: snapshot.companyAddress,
+        jobTitle: snapshot.jobTitle,
+        jobDescription: snapshot.jobDescription,
+        content: snapshot.content,
+        styling: snapshot.styling,
       };
 
       await api.put(`/cover-letters/${coverLetterId}`, updateData);
-      setLastSavedAt(new Date());
+      markSaved(snapshot);
 
       if (saveErrorToastRef.current !== undefined) {
         toast.dismiss(saveErrorToastRef.current);
@@ -233,7 +234,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     } finally {
       setSaving(false);
     }
-  }, [coverLetter, isDirty, coverLetterId, setSaving, setLastSavedAt, t]);
+  }, [coverLetterId, setSaving, markSaved, t]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -241,7 +242,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     const delay = retryTick === 0 ? 2000 : Math.min(2000 * 2 ** retryTick, 30_000);
     saveTimerRef.current = setTimeout(autoSave, delay);
     return () => clearTimeout(saveTimerRef.current);
-  }, [isDirty, autoSave, retryTick]);
+  }, [isDirty, autoSave, retryTick, coverLetter]);
 
   // Manual save
   const handleManualSave = () => {

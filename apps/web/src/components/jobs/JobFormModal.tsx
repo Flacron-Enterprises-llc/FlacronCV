@@ -64,12 +64,12 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
   // Documents the user can attach to this application.
   const { data: cvsData } = useQuery({
     queryKey: ['cvs'],
-    queryFn: () => api.get<{ items: CV[] }>('/cvs'),
+    queryFn: () => api.get<{ items: CV[] }>('/cvs?limit=100'),
     enabled: open,
   });
   const { data: clData } = useQuery({
     queryKey: ['cover-letters'],
-    queryFn: () => api.get<{ items: CoverLetter[] }>('/cover-letters'),
+    queryFn: () => api.get<{ items: CoverLetter[] }>('/cover-letters?limit=100'),
     enabled: open,
   });
 

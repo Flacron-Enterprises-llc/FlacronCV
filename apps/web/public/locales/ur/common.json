@@ -380,6 +380,8 @@
     "photo_hint": "JPG، PNG یا WebP · زیادہ سے زیادہ 5 MB · آپ کے CV اوتار کے طور پر استعمال ہوتی ہے",
     "photo_invalid": "«.{ext}» فائلیں معاون نہیں ہیں۔ براہ کرم JPG، PNG یا WebP تصویر اپ لوڈ کریں۔",
     "photo_too_large": "یہ فائل بہت بڑی ہے ({size} MB)۔ زیادہ سے زیادہ سائز 5 MB ہے۔",
+    "photo_upload_failed": "تصویر اپ لوڈ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
+    "photo_unavailable": "تصویر اپ لوڈ اس وقت دستیاب نہیں۔ براہ کرم دوبارہ سائن ان کریں۔",
     "field_position": "عہدہ",
     "field_company": "کمپنی",
     "field_start_date": "آغاز کی تاریخ",

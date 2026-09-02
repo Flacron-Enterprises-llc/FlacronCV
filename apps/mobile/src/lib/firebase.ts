@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp, getApps, initializeApp, FirebaseApp } from '@firebase/app';
 import { Auth, getAuth, initializeAuth } from '@firebase/auth';
+import { FirebaseStorage, getStorage } from '@firebase/storage';
 // getReactNativePersistence exists in the RN build at runtime but not in the main TS typings.
 // Using require() so Metro resolves it from the react-native condition at bundle time.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -40,5 +41,14 @@ export function getFirebaseAuth(): Auth {
     _auth = getAuth(firebaseApp);
   }
   return _auth;
+}
+
+let _storage: FirebaseStorage | null = null;
+
+/** Same bucket as web avatar upload (`avatars/{uid}/…`). Lazy like Auth. */
+export function getFirebaseStorage(): FirebaseStorage {
+  if (_storage) return _storage;
+  _storage = getStorage(firebaseApp);
+  return _storage;
 }
 

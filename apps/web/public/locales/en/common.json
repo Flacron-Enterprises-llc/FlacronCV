@@ -380,6 +380,8 @@
     "photo_hint": "JPG, PNG or WebP · Max 5 MB · Used as your CV avatar",
     "photo_invalid": "“.{ext}” files aren’t supported. Please upload a JPG, PNG, or WebP image.",
     "photo_too_large": "That file is too large ({size} MB). The maximum size is 5 MB.",
+    "photo_upload_failed": "Could not upload the photo. Please try again.",
+    "photo_unavailable": "Photo upload is unavailable right now. Please sign in again.",
     "field_position": "Position",
     "field_company": "Company",
     "field_start_date": "Start date",

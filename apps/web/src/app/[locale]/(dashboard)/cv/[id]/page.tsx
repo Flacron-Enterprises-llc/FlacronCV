@@ -9,13 +9,14 @@ import { api } from '@/lib/api';
 import { Link } from '@/i18n/routing';
 import { cn } from '@/lib/utils';
 import { useCVStore } from '@/store/cv-store';
-import { CV, CVSection } from '@flacroncv/shared-types';
+import { CV, CVSection, PersonalInfo } from '@flacroncv/shared-types';
 import { toast } from 'sonner';
 import Button from '@/components/ui/Button';
 import CVEditor from '@/components/cv-builder/CVEditor';
 import LivePreview from '@/components/cv-builder/LivePreview';
 import EditorToolbar from '@/components/cv-builder/toolbar/EditorToolbar';
 import { Loader2, AlertTriangle, Pencil, Eye } from 'lucide-react';
+import { resolveCvPhotoForSave } from '@/lib/upload-cv-photo';
 
 /** Shape written to / read from localStorage for offline resilience. */
 interface CVBackup {
@@ -27,6 +28,13 @@ interface CVBackup {
 
 /** Returns the localStorage key for a given CV id. */
 const backupKey = (id: string) => `cv_backup_${id}`;
+
+/** Upload an inlined data URL so personalInfo.photoURL fits the 2048-char https cap. */
+async function resolvePersonalInfoPhoto(info: PersonalInfo): Promise<PersonalInfo> {
+  const photoURL = await resolveCvPhotoForSave(info.photoURL);
+  if (photoURL === info.photoURL) return info;
+  return { ...info, photoURL: photoURL ?? '' };
+}
 
 /**
  * Firestore Timestamps serialize to `{ _seconds, _nanoseconds }` (or
@@ -108,12 +116,20 @@ export default function CVBuilderPage(): React.JSX.Element | null {
         const deletedIds      = currentPersistedIds.filter((id) => !currentSections.some((s) => s.id === id));
 
         // Fire-and-forget — component is unmounting but the requests continue.
-        api.put(`/cvs/${cvId}`, {
-          title: currentCV.title,
-          personalInfo: currentCV.personalInfo,
-          styling: currentCV.styling,
-          sectionOrder: currentCV.sectionOrder,
-        }).catch(() => {});
+        void (async () => {
+          let personalInfo = currentCV.personalInfo;
+          try {
+            personalInfo = await resolvePersonalInfoPhoto(currentCV.personalInfo);
+          } catch {
+            return;
+          }
+          await api.put(`/cvs/${cvId}`, {
+            title: currentCV.title,
+            personalInfo,
+            styling: currentCV.styling,
+            sectionOrder: currentCV.sectionOrder,
+          }).catch(() => {});
+        })();
 
         for (const section of newSections) {
           api.post(`/cvs/${cvId}/sections`, {
@@ -287,10 +303,15 @@ export default function CVBuilderPage(): React.JSX.Element | null {
 
     setIsSaving(true);
     try {
+      const personalInfo = await resolvePersonalInfoPhoto(snapshot.cv.personalInfo);
+      if (personalInfo.photoURL !== snapshot.cv.personalInfo.photoURL) {
+        useCVStore.getState().updatePersonalInfo('photoURL', personalInfo.photoURL ?? '');
+      }
+
       // 1. Update the CV root (title, personalInfo, styling, sectionOrder)
       await api.put(`/cvs/${cvId}`, {
         title: snapshot.cv.title,
-        personalInfo: snapshot.cv.personalInfo,
+        personalInfo,
         styling: snapshot.cv.styling,
         sectionOrder: snapshot.cv.sectionOrder,
       });

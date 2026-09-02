@@ -43,8 +43,12 @@ export class CoverLetterController {
   }
 
   @Get()
-  async list(@CurrentUser() user: FirebaseUser, @Query('page') page?: number) {
-    return this.coverLetterService.listByUser(user.uid, page || 1);
+  async list(
+    @CurrentUser() user: FirebaseUser,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.coverLetterService.listByUser(user.uid, page || 1, limit || 10);
   }
 
   @Get(':id')

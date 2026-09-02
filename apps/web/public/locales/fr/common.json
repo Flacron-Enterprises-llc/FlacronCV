@@ -380,6 +380,8 @@
     "photo_hint": "JPG, PNG ou WebP · Max 5 Mo · Utilisée comme avatar de votre CV",
     "photo_invalid": "Les fichiers « .{ext} » ne sont pas pris en charge. Importez une image JPG, PNG ou WebP.",
     "photo_too_large": "Ce fichier est trop volumineux ({size} Mo). La taille maximale est de 5 Mo.",
+    "photo_upload_failed": "Impossible de téléverser la photo. Veuillez réessayer.",
+    "photo_unavailable": "Le téléversement de photo est indisponible pour le moment. Veuillez vous reconnecter.",
     "field_position": "Poste",
     "field_company": "Entreprise",
     "field_start_date": "Date de début",

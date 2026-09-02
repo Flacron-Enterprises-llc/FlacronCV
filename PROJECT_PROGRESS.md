@@ -12,7 +12,7 @@
 > 4. Tick completed items here; log every change in the Change Log.
 > 5. Report Out-of-Scope / architectural items separately — do not implement without approval.
 
-Last updated: 2026-08-27
+Last updated: 2026-09-02
 
 > **Note on dates.** The header previously read `2026-07-29` while the two newest change-log
 > entries were dated `2026-07-30`; the header was stale, the entries were right. Corrected
@@ -906,8 +906,9 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 - **⚠️ UPDATED 2026-08-19 — Mobile API alignment (endpoint batch).** Fixed / disabled:
   1. `PUT /users/me` (was `PATCH /users/me`) — `useUser.ts`
   2. `POST /cover-letters/:id/ai/generate` (was `…/generate`) — `useCoverLetters.ts`
-  3. Photo UI **disabled**; TODO(mobile-photo): Storage upload then `PUT /users/me { photoURL }`
-     (mirrors web). Do not invent `POST /users/:uid/photo`.
+  3. Photo UI: Storage upload to `avatars/{uid}/` then `PUT /users/me { photoURL }`
+     (mirrors web). Do not invent `POST /users/:uid/photo`. **Done 2026-09-01**
+     (library-only picker; camera/mic blocked in the plugin).
   4. Export → `POST /cvs/:id/export/pdf|docx` and `POST /cover-letters/:id/export/pdf`; map
      `downloadUrl` → `url`; filename from signed-URL path segment, else `cv-{id}.{format}` /
      `cover-letter-{id}.pdf`.
@@ -920,7 +921,11 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
      longer hydrates `defaultValues` once while `/users/me` is empty; loading
      / error gates; dirty-only PUT so empty strings cannot wipe stored fields.
   2. Cover-letter AI generate path ✓ (this batch)
-  3. Profile photo: Storage + `PUT /users/me { photoURL }` still **open** (UI disabled)
+  3. Profile photo: Storage + `PUT /users/me { photoURL }` **done (2026-09-01).**
+     Library-only (`expo-image-picker`: photos usage string; `cameraPermission`
+     and `microphonePermission` false). Upload `avatars/{uid}/{ts}.{ext}` then
+     Auth `updateProfile` + `PUT /users/me { photoURL }`. Remove clears Auth
+     and PUT `{ photoURL: null }` (Storage objects stay until H.6).
   4. Export paths + response shape ✓ (this batch)
   5. Support ticket messages from ticket GET ✓ (this batch). **Q4 2026-08-26:**
      list/detail ErrorState on fetch fail; send keeps composer text until
@@ -957,7 +962,7 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   Do not “fix” (1)–(2) in a mobile-only batch.
 - **⚠️ ADDED 2026-08-19 — Four mobile API calls that do not exist — SUPERSEDED by alignment batch above.**
   Kept for history: the old mapping listed PATCH `/users/me`, `…/generate`, photo POST, and
-  `/exports/…` URLs. Items 1–2 and 4–5 of the pre-launch gate are fixed; photo remains TODO;
+  `/exports/…` URLs. Items 1–5 of the pre-launch gate are fixed (photo 2026-09-01);
   legal remains held.
 - **Secrets rotation** — Firebase Admin private key, Stripe, Brevo, OpenAI keys were shared in chat/docs; rotate them.
   **2026-08-18:** AWS IAM user `flacronai-ses` access key was in a public `apps/api/.zip` on GitHub.
@@ -983,6 +988,9 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
      email on the way out.
   3. **Export reservations (2026-08-19):** `export_reservations/{reservationId}`
      where `uid` matches — query-by-uid or TTL cleanup; docs hold no email.
+  4. **Avatars (2026-09-01):** `avatars/{uid}/**` in Firebase Storage. Remove-photo
+     on web/mobile only clears Auth + `users/{uid}.photoURL`; objects remain
+     until this cascade runs.
   Until H.6 exists, a **manual** erasure request has to cover **all** by hand.
   Soft-delete today does not. Do not split this list across change-log entries.
 - **⚠️ ADDED 2026-08-19 — Goodwill: Free export burned by a failed render (manual CRM).**
@@ -1100,6 +1108,39 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-09-02 — **Web dropdowns send `?limit=100`.** Job form CV/letter
+  pickers and the new-letter CV dropdown were `GET /cvs` /
+  `GET /cover-letters` with no query, so they still defaulted to 10 after the
+  controller fix. Same query as the list pages. Frontend only.
+
+- 2026-09-02 — **Cover-letter list honours `limit`.** Controller only passed
+  `page`, so `GET /cover-letters?limit=100` always returned 10 (service already
+  clamps 1–100). Matches `GET /cvs`. Web list and mobile query params now
+  work. Callers that omit `limit` still default to 10 (job form, new-letter
+  CV picker). API only.
+
+- 2026-09-02 — **Web cover-letter dirty flag: snapshot markSaved.**
+  `setLastSavedAt` cleared `isDirty` on every successful autosave, so
+  keystrokes during the in-flight PUT were marked Saved and never retried.
+  Store now has CV-style `markSaved(snapshot)` (identity compare). No
+  localStorage backup in this step. API untouched.
+
+- 2026-09-02 — **Web CV photo: Storage https URL, not a data URL.** Editor
+  resized to a JPEG data URL that exceeded `PersonalInfoDto.photoURL`
+  `@MaxLength(2048)`, so every subsequent CV PUT 400'd. Upload now goes to
+  `avatars/{uid}/cv-{ts}.jpg` (same prefix as the profile avatar) and the
+  store keeps the download URL. Autosave/flush also rewrite leftover `data:`
+  URLs so a stuck editor can save again. API unchanged. H.6 already lists
+  `avatars/{uid}/**`.
+
+- 2026-09-01 — **Mobile profile photo (library only).** `expo-image-picker`
+  plugin: photos usage string; camera and microphone **false** (blocked on
+  Android, omitted on iOS). Upload matches web: Storage `avatars/{uid}/{ts}.{ext}`
+  then Auth `updateProfile` + `PUT /users/me { photoURL }`. Avatar renders on
+  settings header and Edit Profile; pick/remove live on Edit Profile. Remove
+  does not delete Storage objects — H.6 §8 now includes `avatars/{uid}/**`.
+  Pre-launch gate item 3 done. S1 / IAP untouched.
 
 - 2026-08-31 — **Mobile client feedback: keyboard + lock copy.** Register/login:
   Android `softwareKeyboardLayoutMode: resize`; KAV drops Android `height`

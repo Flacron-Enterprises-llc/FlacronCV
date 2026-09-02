@@ -15,12 +15,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
+import axios from 'axios';
+import * as ImagePicker from 'expo-image-picker';
+import { Avatar } from '../../../src/components/ui/Avatar';
 import { Button } from '../../../src/components/ui/Button';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { Input } from '../../../src/components/ui/Input';
-import { useCurrentUser, useUpdateProfile } from '../../../src/hooks/useUser';
+import {
+  useCurrentUser,
+  useRemoveProfilePhoto,
+  useUpdateProfile,
+  useUploadProfilePhoto,
+} from '../../../src/hooks/useUser';
 import { requestFailureMessage } from '../../../src/lib/api-errors';
-import { getInitials } from '../../../src/lib/utils';
 import { User } from '../../../src/types/user.types';
 import { colors } from '../../../src/theme/colors';
 
@@ -105,11 +112,24 @@ function payloadFromDirty(
   return payload;
 }
 
+function photoFailureMessage(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    return requestFailureMessage(err, 'Failed to update photo. Please try again.');
+  }
+  if (err instanceof Error && err.message) {
+    return err.message;
+  }
+  return requestFailureMessage(err, 'Failed to update photo. Please try again.');
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { data: user, isError, refetch } = useCurrentUser();
   const updateProfile = useUpdateProfile();
+  const uploadPhoto = useUploadProfilePhoto();
+  const removePhoto = useRemoveProfilePhoto();
   const [hydratedUid, setHydratedUid] = useState<string | null>(null);
+  const photoBusy = uploadPhoto.isPending || removePhoto.isPending;
 
   const { control, handleSubmit, reset, formState: { errors, dirtyFields } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -149,6 +169,53 @@ export default function ProfileScreen() {
     }
   };
 
+  const onPickPhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        'Photos unavailable',
+        'Allow photo library access in Settings to choose a profile photo.',
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: false,
+      quality: 0.85,
+    });
+    if (result.canceled) return;
+
+    const asset = result.assets[0];
+    if (!asset) return;
+
+    try {
+      await uploadPhoto.mutateAsync({
+        uri: asset.uri,
+        mimeType: asset.mimeType,
+        fileName: asset.fileName,
+        fileSize: asset.fileSize,
+      });
+    } catch (err) {
+      Alert.alert('Could not update photo', photoFailureMessage(err));
+    }
+  };
+
+  const onRemovePhoto = () => {
+    Alert.alert('Remove photo', 'Your profile will show initials instead.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => {
+          void removePhoto.mutateAsync().catch((err) => {
+            Alert.alert('Could not update photo', photoFailureMessage(err));
+          });
+        },
+      },
+    ]);
+  };
+
   if (!user && isError) {
     return (
       <SafeAreaView className="flex-1 bg-white">
@@ -184,11 +251,44 @@ export default function ProfileScreen() {
 
         <ScrollView className="flex-1 px-5 pt-4" keyboardShouldPersistTaps="handled">
           <View className="items-center mb-6">
-            <View className="w-20 h-20 rounded-full bg-brand-100 items-center justify-center">
-              <Text className="text-brand-700 text-2xl font-black">
-                {getInitials(user.displayName ?? 'U')}
-              </Text>
-            </View>
+            <TouchableOpacity
+              onPress={() => void onPickPhoto()}
+              disabled={photoBusy}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Change profile photo"
+            >
+              <View style={{ width: 80, height: 80 }}>
+                <Avatar
+                  photoURL={user.photoURL}
+                  name={user.displayName ?? 'U'}
+                  size={80}
+                  textClassName="text-brand-700 text-2xl font-black"
+                />
+                <View className="absolute inset-0 items-center justify-center">
+                  {photoBusy ? (
+                    <View className="w-20 h-20 rounded-full bg-black/40 items-center justify-center">
+                      <ActivityIndicator color="#fff" />
+                    </View>
+                  ) : null}
+                </View>
+                <View className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-brand-600 items-center justify-center border-2 border-white">
+                  <Ionicons name="images-outline" size={14} color="#fff" />
+                </View>
+              </View>
+            </TouchableOpacity>
+            <Text className="text-stone-500 text-sm mt-2">Tap to choose from your library</Text>
+            {user.photoURL ? (
+              <TouchableOpacity
+                onPress={onRemovePhoto}
+                disabled={photoBusy}
+                className="mt-2"
+                accessibilityRole="button"
+                accessibilityLabel="Remove profile photo"
+              >
+                <Text className="text-stone-600 text-sm font-medium">Remove photo</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
 
           <Controller control={control} name="displayName" render={({ field }) => (

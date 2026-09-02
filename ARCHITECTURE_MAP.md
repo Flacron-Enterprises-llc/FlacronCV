@@ -213,8 +213,8 @@ writes `grantStatus=granted` and an audit row (`actorId`, time, target uid — n
 **Erasure:** H.6 must include **all** deferred obligations (canonical list in
 `PROJECT_PROGRESS.md` §8): Batch G `users.abuse` + `abuse_devices` /
 `abuse_networks` / `abuse_idempotency` / `abuse_rate`, Batch H
-`legalAcceptances/{uid}`, and `export_reservations` for that uid. Until then a
-manual erasure request covers them by hand.
+`legalAcceptances/{uid}`, `export_reservations` for that uid, and Storage
+`avatars/{uid}/**`. Until then a manual erasure request covers them by hand.
 **GDPR export** (`GET /users/me/export`) includes this user's `abuse` snapshot (hashes, score,
 band, signal codes, grantStatus, `hasUsedTrial`) and must never include other uids from the device lookup.
 Device identifier (unchanged from part 1): 128-bit random token, HMAC-SHA256 with

@@ -85,7 +85,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
   // Fetch existing CVs for the dropdown
   const { data: cvsData } = useQuery({
     queryKey: ['cvs'],
-    queryFn: () => api.get<{ items: CV[] }>('/cvs'),
+    queryFn: () => api.get<{ items: CV[] }>('/cvs?limit=100'),
   });
 
   const cvs = cvsData?.items || [];

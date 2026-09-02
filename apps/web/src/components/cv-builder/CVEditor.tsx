@@ -37,10 +37,12 @@ import {
   X,
   Camera,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { CVSection, CVSectionType, CVSectionItem, SkillLevel } from '@flacroncv/shared-types';
 import { cn } from '@/lib/utils';
+import { uploadCvPhotoBlob } from '@/lib/upload-cv-photo';
 import AISummaryModal from './AISummaryModal';
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
@@ -53,6 +55,7 @@ export default function CVEditor() {
   const { cv, sections, updatePersonalInfo, updateStyling, reorderSections, pushHistory } = useCVStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
   const [showAISummary, setShowAISummary] = useState(false);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,6 +82,7 @@ export default function CVEditor() {
     }
 
     setPhotoError(null);
+    setPhotoUploading(true);
 
     const reader = new FileReader();
     reader.onload = (evt) => {
@@ -91,11 +95,41 @@ export default function CVEditor() {
         canvas.width  = Math.round(img.width  * ratio);
         canvas.height = Math.round(img.height * ratio);
         canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const resized = canvas.toDataURL('image/jpeg', 0.88);
-        updatePersonalInfo('photoURL', resized);
-        updateStyling('showPhoto', true);
+        canvas.toBlob(
+          (blob) => {
+            void (async () => {
+              try {
+                if (!blob) throw new Error('PHOTO_READ_FAILED');
+                const downloadURL = await uploadCvPhotoBlob(blob, 'jpg');
+                updatePersonalInfo('photoURL', downloadURL);
+                updateStyling('showPhoto', true);
+              } catch (err) {
+                const code = err instanceof Error ? err.message : '';
+                const msg = t(code === 'PHOTO_UNAVAILABLE' ? 'photo_unavailable' : 'photo_upload_failed');
+                setPhotoError(msg);
+                toast.error(msg);
+              } finally {
+                setPhotoUploading(false);
+              }
+            })();
+          },
+          'image/jpeg',
+          0.88,
+        );
+      };
+      img.onerror = () => {
+        const msg = t('photo_upload_failed');
+        setPhotoError(msg);
+        toast.error(msg);
+        setPhotoUploading(false);
       };
       img.src = dataUrl;
+    };
+    reader.onerror = () => {
+      const msg = t('photo_upload_failed');
+      setPhotoError(msg);
+      toast.error(msg);
+      setPhotoUploading(false);
     };
     reader.readAsDataURL(file);
   };
@@ -153,7 +187,8 @@ export default function CVEditor() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               aria-label={cv.personalInfo.photoURL ? t('photo_change') : t('photo_upload')}
-              className="group relative h-20 w-20 overflow-hidden rounded-full border-2 border-dashed border-stone-300 bg-stone-100 transition-colors hover:border-brand-400 hover:bg-stone-200 dark:border-stone-600 dark:bg-stone-700 dark:hover:border-brand-500"
+              disabled={photoUploading}
+              className="group relative h-20 w-20 overflow-hidden rounded-full border-2 border-dashed border-stone-300 bg-stone-100 transition-colors hover:border-brand-400 hover:bg-stone-200 disabled:opacity-60 dark:border-stone-600 dark:bg-stone-700 dark:hover:border-brand-500"
             >
               {cv.personalInfo.photoURL ? (
                 <>
@@ -168,8 +203,13 @@ export default function CVEditor() {
                   <Camera className="h-3.5 w-3.5 text-stone-400" />
                 </div>
               )}
+              {photoUploading ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                  <Loader2 className="h-6 w-6 animate-spin text-white" />
+                </div>
+              ) : null}
             </button>
-            {cv.personalInfo.photoURL && (
+            {cv.personalInfo.photoURL && !photoUploading && (
               <button
                 type="button"
                 onClick={removePhoto}
@@ -185,7 +225,8 @@ export default function CVEditor() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+              disabled={photoUploading}
+              className="text-sm font-medium text-brand-600 hover:text-brand-700 disabled:opacity-60 dark:text-brand-400 dark:hover:text-brand-300"
               data-testid="photo-upload-btn"
             >
               {cv.personalInfo.photoURL ? t('photo_change') : t('photo_upload')}

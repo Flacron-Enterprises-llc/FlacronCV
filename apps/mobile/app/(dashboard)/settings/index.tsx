@@ -7,10 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { useCurrentUser } from '../../../src/hooks/useUser';
 import { effectivePlanForCopy } from '../../../src/lib/entitlements';
-import { getInitials } from '../../../src/lib/utils';
 import { PLAN_CONFIGS } from '../../../src/types/subscription.types';
 import { openLegalDocument } from '../../../src/lib/legal-acceptance';
 import { PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
+import { Avatar } from '../../../src/components/ui/Avatar';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { colors } from '../../../src/theme/colors';
 
@@ -48,9 +48,6 @@ export default function SettingsScreen() {
     ]);
   };
 
-  // TODO(mobile-photo): Avatar was a press target for POST /users/:uid/photo
-  // (dead route). Re-enable when useUploadProfilePhoto implements Storage +
-  // PUT /users/me { photoURL } — see TODO in useUser.ts.
   const MENU_SECTIONS: { title: string; items: SettingsMenuItem[] }[] = [
     {
       title: 'Account',
@@ -85,13 +82,12 @@ export default function SettingsScreen() {
               className="flex-row items-center"
               activeOpacity={0.7}
             >
-            <View className="relative">
-              <View className="w-16 h-16 rounded-full bg-brand-100 items-center justify-center">
-                <Text className="text-brand-700 text-xl font-black">
-                  {getInitials(currentUser?.displayName ?? 'U')}
-                </Text>
-              </View>
-            </View>
+            <Avatar
+              photoURL={currentUser?.photoURL}
+              name={currentUser?.displayName ?? 'U'}
+              size={64}
+              textClassName="text-brand-700 text-xl font-black"
+            />
             <View className="ml-4 flex-1">
               <Text className="text-lg font-black text-stone-900">{currentUser?.displayName ?? 'User'}</Text>
               <Text className="text-stone-500 text-sm">{currentUser?.email}</Text>

@@ -380,6 +380,8 @@
     "photo_hint": "JPG, PNG oder WebP · Max. 5 MB · Wird als Lebenslauf-Avatar verwendet",
     "photo_invalid": "„.{ext}“-Dateien werden nicht unterstützt. Bitte lade ein JPG-, PNG- oder WebP-Bild hoch.",
     "photo_too_large": "Diese Datei ist zu groß ({size} MB). Die maximale Größe beträgt 5 MB.",
+    "photo_upload_failed": "Das Foto konnte nicht hochgeladen werden. Bitte erneut versuchen.",
+    "photo_unavailable": "Foto-Upload ist gerade nicht verfügbar. Bitte erneut anmelden.",
     "field_position": "Position",
     "field_company": "Unternehmen",
     "field_start_date": "Startdatum",
