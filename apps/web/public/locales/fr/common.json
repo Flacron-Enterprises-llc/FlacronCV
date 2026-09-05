@@ -824,6 +824,8 @@
     "activated_title": "Abonnement activé !",
     "activated_desc": "Votre offre a été mise à niveau. Profitez de vos nouvelles fonctionnalités et crédits.",
     "verifying_payment": "Confirmation de votre paiement…",
+    "verify_failed_title": "Paiement non confirmé",
+    "verify_failed_desc": "Nous n’avons pas pu confirmer cet achat. Votre offre n’a pas changé. Si un montant a été débité, ouvrez un ticket de support.",
     "coming_soon": "Bientôt disponible",
     "start_trial": "Commencer un essai gratuit de {days} jours",
     "trialEnds": "Votre essai gratuit se termine le {date}"
@@ -2038,7 +2040,7 @@
     "reasons": {
       "ai_credits": {
         "title": "Vous n'avez plus de crédits IA",
-        "description": "Vous avez utilisé tous les crédits IA de ce mois. Passez à une formule supérieure pour un quota mensuel plus élevé, ou attendez sa réinitialisation au début de votre prochain mois de facturation."
+        "description": "Vous avez utilisé tous les crédits IA de ce mois. Passez à une formule supérieure pour un quota mensuel plus élevé, ou attendez la réinitialisation le 1er du prochain mois calendaire (UTC)."
       },
       "ai_credits_free": {
         "title": "Vous n'avez plus de crédits IA",

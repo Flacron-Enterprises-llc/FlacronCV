@@ -824,6 +824,8 @@
     "activated_title": "¡Suscripción activada!",
     "activated_desc": "Tu plan se ha mejorado. Disfruta de tus nuevas funciones y créditos.",
     "verifying_payment": "Confirmando tu pago…",
+    "verify_failed_title": "Pago no confirmado",
+    "verify_failed_desc": "No pudimos confirmar esta compra. Tu plan no ha cambiado. Si se te cobró, abre un ticket de soporte.",
     "coming_soon": "Próximamente",
     "start_trial": "Comienza una prueba gratis de {days} días",
     "trialEnds": "Tu prueba gratis termina el {date}"
@@ -2038,7 +2040,7 @@
     "reasons": {
       "ai_credits": {
         "title": "Te has quedado sin créditos de IA",
-        "description": "Has usado todos los créditos de IA de este mes. Mejora tu plan para obtener una asignación mensual mayor, o espera a que se reinicie al comenzar tu próximo mes de facturación."
+        "description": "Has usado todos los créditos de IA de este mes. Mejora tu plan para obtener una asignación mensual mayor, o espera a que se reinicie el día 1 del próximo mes calendario (UTC)."
       },
       "ai_credits_free": {
         "title": "Te has quedado sin créditos de IA",

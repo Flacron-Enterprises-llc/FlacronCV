@@ -824,6 +824,8 @@
     "activated_title": "Abo aktiviert!",
     "activated_desc": "Dein Tarif wurde hochgestuft. Viel Freude mit den neuen Funktionen und Credits.",
     "verifying_payment": "Zahlung wird bestätigt…",
+    "verify_failed_title": "Zahlung nicht bestätigt",
+    "verify_failed_desc": "Wir konnten diesen Kauf nicht bestätigen. Dein Tarif hat sich nicht geändert. Falls dir etwas berechnet wurde, öffne ein Support-Ticket.",
     "coming_soon": "Demnächst",
     "start_trial": "{days}-tägige kostenlose Testphase starten",
     "trialEnds": "Ihre kostenlose Testphase endet am {date}"
@@ -2038,7 +2040,7 @@
     "reasons": {
       "ai_credits": {
         "title": "Deine KI-Guthaben sind aufgebraucht",
-        "description": "Du hast dein gesamtes KI-Guthaben für diesen Monat verbraucht. Mit einem Upgrade erhältst du ein größeres monatliches Kontingent, oder du wartest bis zum Beginn deines nächsten Abrechnungsmonats."
+        "description": "Du hast dein gesamtes KI-Guthaben für diesen Monat verbraucht. Mit einem Upgrade erhältst du ein größeres monatliches Kontingent, oder du wartest bis zur Zurücksetzung am 1. des nächsten Kalendermonats (UTC)."
       },
       "ai_credits_free": {
         "title": "Deine KI-Guthaben sind aufgebraucht",

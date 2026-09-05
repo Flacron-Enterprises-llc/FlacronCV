@@ -91,4 +91,25 @@ describe('allowance copy: delete does not restore a creation', () => {
     }
     expect(misses).toEqual([]);
   });
+
+  it('paid AI-credit copy names the UTC calendar 1st, not a billing month', () => {
+    const forbidden = [
+      'billing month',
+      'mes de facturación',
+      'mois de facturation',
+      'Abrechnungsmonat',
+      'شهر الفوترة',
+      'بلنگ ماہ',
+    ];
+    const hits: string[] = [];
+    for (const locale of LOCALES) {
+      const value = get(load(locale), 'upgrade_modal.reasons.ai_credits.description');
+      expect(typeof value).toBe('string');
+      expect(value).toMatch(/UTC/);
+      for (const phrase of forbidden) {
+        if (value.includes(phrase)) hits.push(`${locale}: ${phrase}`);
+      }
+    }
+    expect(hits).toEqual([]);
+  });
 });

@@ -824,6 +824,8 @@
     "activated_title": "Subscription activated!",
     "activated_desc": "Your plan has been upgraded. Enjoy your new features and credits.",
     "verifying_payment": "Confirming your payment…",
+    "verify_failed_title": "Payment not confirmed",
+    "verify_failed_desc": "We could not confirm this checkout. Your plan has not changed. If you were charged, open a support ticket.",
     "coming_soon": "Coming soon",
     "start_trial": "Start {days}-day free trial",
     "trialEnds": "Your free trial ends on {date}"
@@ -2038,7 +2040,7 @@
     "reasons": {
       "ai_credits": {
         "title": "You're out of AI credits",
-        "description": "You've used every AI credit in this month's allowance. Upgrade for a larger monthly allowance, or wait for it to reset at the start of your next billing month."
+        "description": "You've used every AI credit in this month's allowance. Upgrade for a larger monthly allowance, or wait for it to reset on the 1st of the next calendar month (UTC)."
       },
       "ai_credits_free": {
         "title": "You're out of AI credits",

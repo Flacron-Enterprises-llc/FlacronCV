@@ -764,6 +764,16 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 8. Out-of-scope / architectural recommendations (do NOT implement without approval)
 
+- **⚠️ ADDED 2026-09-05 — Android target API 36 ignores the portrait lock on
+  tablets and foldables.** Play required `targetSdkVersion` 36.
+  `apps/mobile/app.json` now sets `compileSdkVersion` / `targetSdkVersion` /
+  `buildToolsVersion` to 36 (`versionCode` 6). Expo `orientation: "portrait"`
+  is ignored on displays with smallest width ≥ 600dp (tablets, inner
+  foldables, desktop windowing). Phone portrait is unchanged. Those layouts
+  need attention when tablet support is built; do not treat the orientation
+  key as enforcement on large screens. Temporary Android opt-out exists until
+  API 37 — do not add it in a drive-by.
+
 - **⚠️ UPDATED 2026-08-27 — Mobile section item E4 covers all seven item
   types.** Experience, education, projects, skills, certifications, languages,
   and references rebuild an item by spreading the loaded object then overlaying
@@ -1108,6 +1118,25 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-09-05 — **Upgrade modal: paid credits reset on the UTC 1st, not a
+  billing month.** `upgrade_modal.reasons.ai_credits.description` now matches
+  `usage-reset.service.ts` (`EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT`, UTC period
+  marker). Free copy (`ai_credits_free`) already said credits do not reset.
+  Cron / legal / `LEGAL_VERSION` untouched. AR/UR unreviewed by a native
+  reader.
+
+- 2026-09-05 — **Web billing: no false “activated” after a failed verify.**
+  Stripe `?success=true` still starts the spinner; the green banner now
+  requires a successful `verify-session` with a paid plan. Failed or
+  missing session shows `verify_failed_*` instead of a 3s refresh that
+  always claimed success. API / cron / legal untouched. AR/UR unreviewed
+  by a native reader.
+
+- 2026-09-05 — **Android targets API 36 (Play requirement).**
+  `expo-build-properties`: compile/target 36, build-tools `36.0.0`.
+  `android.versionCode` 5 → 6. iOS `buildNumber` / `version` unchanged.
+  No package bumps. §8: portrait lock ignored on tablets/foldables.
 
 - 2026-09-02 — **Web dropdowns send `?limit=100`.** Job form CV/letter
   pickers and the new-letter CV dropdown were `GET /cvs` /

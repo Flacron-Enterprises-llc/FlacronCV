@@ -37,6 +37,7 @@ import {
 import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
 import { toDate } from '@/lib/format-date';
+import { shouldClaimCheckoutSuccess } from '@/lib/checkout-verify';
 import { legalDocLinks } from '@/components/auth/LegalAcceptanceModal';
 
 export default function BillingPage(): React.JSX.Element | null {
@@ -49,21 +50,52 @@ export default function BillingPage(): React.JSX.Element | null {
   const locale = pathname.split('/')[1] || 'en';
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'yearly'>('monthly');
   const [syncSuccess, setSyncSuccess] = useState(false);
+  const [syncFailed, setSyncFailed] = useState(false);
   const [verifying, setVerifying] = useState(searchParams.get('success') === 'true');
 
-  // After Stripe redirects back with ?success=true&session_id=..., verify immediately
+  // Stripe puts ?success=true on the return URL even when payment did not
+  // complete. Only a successful verify-session with a paid plan may show the
+  // activated banner. A failed verify used to wait 3s, refresh, and claim
+  // success without looking at the plan.
   useEffect(() => {
     if (searchParams.get('success') !== 'true') return;
     const sessionId = searchParams.get('session_id');
-    if (!sessionId) { setVerifying(false); return; }
+    if (!sessionId) {
+      setVerifying(false);
+      setSyncFailed(true);
+      return;
+    }
 
-    api.post('/payments/verify-session', { sessionId })
-      .then(() => refreshUser())
-      .then(() => { setSyncSuccess(true); setVerifying(false); track('plan_upgraded'); })
+    let cancelled = false;
+    api
+      .post<{ plan: SubscriptionPlan; status: string }>('/payments/verify-session', {
+        sessionId,
+      })
+      .then(async (res) => {
+        await refreshUser();
+        if (cancelled) return;
+        if (shouldClaimCheckoutSuccess(true, res?.plan)) {
+          setSyncSuccess(true);
+          setSyncFailed(false);
+          track('plan_upgraded');
+        } else {
+          setSyncSuccess(false);
+          setSyncFailed(true);
+        }
+        setVerifying(false);
+      })
       .catch(() => {
-        // Verification failed — fall back to a single refresh after 3s
-        setTimeout(() => refreshUser().then(() => { setSyncSuccess(true); setVerifying(false); }), 3000);
+        void refreshUser().finally(() => {
+          if (cancelled) return;
+          setSyncSuccess(false);
+          setSyncFailed(true);
+          setVerifying(false);
+        });
       });
+
+    return () => {
+      cancelled = true;
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -355,7 +387,17 @@ export default function BillingPage(): React.JSX.Element | null {
         </div>
       )}
 
-      {verifying && !syncSuccess && (
+      {syncFailed && !syncSuccess && (
+        <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-4 dark:border-red-800 dark:bg-red-900/20">
+          <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+          <div>
+            <p className="font-semibold text-red-800 dark:text-red-300">{t('verify_failed_title')}</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{t('verify_failed_desc')}</p>
+          </div>
+        </div>
+      )}
+
+      {verifying && !syncSuccess && !syncFailed && (
         <div className="flex items-center gap-3 rounded-xl border border-brand-200 bg-brand-50 px-5 py-4 dark:border-brand-800 dark:bg-brand-900/20">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
           <p className="font-medium text-brand-800 dark:text-brand-300">{t('verifying_payment')}</p>
