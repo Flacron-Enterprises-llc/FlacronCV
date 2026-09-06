@@ -22,7 +22,7 @@ pnpm workspaces + turbo. Root scripts fan out via `turbo run <task>`.
 | `apps/web` | Next.js 14 App Router frontend | next-intl (6 locales), Zustand+immer, React Query, Tailwind, TipTap, @dnd-kit, client-side export |
 | `apps/api` | NestJS 10 REST API | Global prefix `/api/v1`, port 4000, 18 feature modules |
 | `apps/mobile` | React Native / Expo Router app | Own enums (3 plans). **Batch E:** `PLAN_CONFIGS` wraps `packages/shared-types` via a relative import (no new package.json dep). **`src/lib/api.ts` unwraps the Nest `{ success, data }` envelope** (same rule as web). See §8 |
-| `packages/shared-types` | The contract between web and api | `PLAN_CONFIGS`, `PLAN_RANK`, `resolveEffectivePlan()`, `isPlanPurchasable()`, entity types. **The API resolves it from `dist/`, so it must be built before type-check or tests** |
+| `packages/shared-types` | The contract between web and api | `PLAN_CONFIGS`, `PLAN_RANK`, `resolveEffectivePlan()`, `hasLiveStorePurchase()`, `hasLiveStripeSubscription()`, `resolveBillingProvider()`, `isPlanPurchasable()`, entity types. **The API resolves it from `dist/`, so it must be built before type-check or tests** |
 | `packages/tsconfig` | Shared TS base configs | |
 | `functions/` | A separate Firebase Functions project | Own `package.json` + lockfile; the repo's only long-standing eslint config lived here (`functions/.eslintrc.js`) |
 | `dataconnect/` | Firebase Data Connect schema + connector | Generated SDKs (`dataconnect-generated`, `dataconnect-admin-generated`) are **unused by all three apps** — held for a decision, see `PROJECT_PROGRESS.md` §8 |
@@ -86,7 +86,7 @@ access until the token expires (open MEDIUM in `AUDIT_OPEN_FINDINGS.md`).
 | `cover-letter` | Cover letters + AI improve | `CoverLetterService` | Firestore, `AIService` |
 | `ai` | Summary, ATS check, interview prep, LinkedIn, import parsing; class-level `aiEnabled` | `AIService` (+ unregistered watsonx/anthropic providers) | OpenAI |
 | `export` | Export quota gate (client reserve/confirm/refund + server Puppeteer path) | `ExportService` | Puppeteer, `export_reservations` |
-| `payment` | Checkout, webhooks, plan lifecycle, invoices, portal, Pro trial eligibility GET, cancel-at-period-end reconcile | `PaymentService`, `CancelAtPeriodEndReconcileService` | Stripe, Firestore |
+| `payment` | Checkout, webhooks, plan lifecycle, invoices, portal, Pro trial eligibility GET, cancel-at-period-end reconcile, **IAP verify** (`POST /billing/mobile/verify`), **store webhooks** (`POST /webhooks/apple`, `POST /webhooks/google`) | `PaymentService`, `CancelAtPeriodEndReconcileService`, `MobileBillingService`, `StoreReceiptVerifier`, `StoreWebhookService` | Stripe, App Store Server API, Google Play Developer API, Firestore |
 | `templates` | Template catalogue + tier gating | `TemplatesService` | Firestore |
 | `jobs` | Job-application tracker | `JobsService` | Firestore |
 | `support` | Tickets, messages, internal notes | `SupportService` | Firestore |
@@ -186,14 +186,14 @@ opaque baked-in rectangle — standing request in `PROJECT_PROGRESS.md` §8.
 
 | Collection | Shape (abridged) |
 |---|---|
-| `users` | `{ uid, email, displayName, photoURL, role, isActive, subscription{plan,status,stripeCustomerId,stripeSubscriptionId,currentPeriodEnd,trialStart,trialEnd,cancelAtPeriodEnd,hasUsedTrial}, usage{cvsCreated,coverLettersCreated,aiCreditsUsed,aiCreditsLimit,exportsThisMonth,lastExportReset}, abuse{deviceHash,ipHash,networkHash,riskScore,riskBand,riskSignals,scoredAt,grantStatus?,cooldownEndsAt?}, preferences{…}, createdAt, updatedAt, lastLoginAt, deletedAt }` |
+| `users` | `{ uid, email, displayName, photoURL, role, isActive, subscription{plan,status,stripeCustomerId,stripeSubscriptionId,currentPeriodEnd,trialStart,trialEnd,cancelAtPeriodEnd,hasUsedTrial,provider?,originalTransactionId?,purchaseToken?}, usage{cvsCreated,coverLettersCreated,aiCreditsUsed,aiCreditsLimit,exportsThisMonth,lastExportReset}, abuse{deviceHash,ipHash,networkHash,riskScore,riskBand,riskSignals,scoredAt,grantStatus?,cooldownEndsAt?}, preferences{…}, createdAt, updatedAt, lastLoginAt, deletedAt }` |
 | `cvs` | Owner-scoped; soft-deleted via `deletedAt`; `isPublic` + `publicSlug` for sharing. Subcollections `sections`, `versions` |
 | `cover_letters` | Owner-scoped, soft-deleted, optional `linkedCVId` |
 | `job_applications` | Owner-scoped, 6 statuses wishlist→applied→interviewing→offer→rejected→accepted |
 | `support_tickets` | + `messages` subcollection; messages carry an `internal` flag that **must** be filtered from customer-facing reads |
 | `templates` | Catalogue + tier |
 | `subscriptions` | Subscription records |
-| `payment_events` | Stripe webhook idempotency, TTL'd |
+| `payment_events` | Stripe + IAP webhook idempotency (`evt_*` / `iap_apple_*` / `iap_google_*`), TTL'd |
 | `audit_logs` | Actor, action, target, metadata |
 | `leads` | + `ConsentRecord` (consent text/version/date/source/ip) |
 | `app_settings/main` | CRM-editable app settings, incl. the **unenforced** `planLimits` — see §8. **`abuse` weights/thresholds/`enforcementEnabled` (default false)/`stepUpCooldownHours` (default 12) are read by `AbuseService`** (code defaults if missing). CRM settings saves preserve `.abuse` so a full-doc set cannot wipe the kill switch. |
@@ -681,3 +681,31 @@ logged as `still-active` / `retrieve-failed` / `no-subscription-id` (uid only;
 never email or subscription id). Query is `cancelAtPeriodEnd == true` only; no
 composite index. Do not treat a stale `currentPeriodEnd` on an *uncancelled*
 active sub as expired. Do not push the entitlement change without this job.
+
+**17. Mobile IAP verify is store-authoritative and does not touch Stripe handlers.**
+`POST /api/v1/billing/mobile/verify` (`MobileBillingService`) requires a Firebase
+user. The client cannot name a plan — Apple/Google product ids map through env
+(`APPLE_*_PRODUCT_ID` / `GOOGLE_*_PRODUCT_ID`). **Live Stripe** (in-period Stripe
+sub, no live store purchase) is `409` and the store is not called. A lapsed
+Stripe id plus an in-period store purchase is allowed. Missing IAP credentials
+or product ids are `503`; the API still boots without them.
+
+**18. Store billing webhooks re-fetch store state; they never cancel Stripe.**
+`POST /api/v1/webhooks/apple` (ASSN V2 `signedPayload`) and
+`POST /api/v1/webhooks/google` (Pub/Sub RTDN). Entitlement comes from
+`StoreReceiptVerifier.inspectApple` / `inspectGoogle`, not from the notification
+type alone. Linked `originalTransactionId` / `purchaseToken` users are granted
+or revoked to Free **without** `stripe.subscriptions.cancel`. Live Stripe
+(no in-period store purchase) is skipped. Google push OIDC audience is
+`GOOGLE_RTDN_AUDIENCE`. Unknown purchases ack `200`. Idempotency keys live in
+`payment_events` as `iap_apple_{notificationUUID}` / `iap_google_{messageId}`.
+
+**19. Dual-subscribe Option A — read live period, not `provider`.**
+`hasLiveStorePurchase` / `hasLiveStripeSubscription` in
+`subscription.entitlements.ts`. `resolveEffectivePlan` returns Pro when stored
+plan is Free but a store id is still inside `currentPeriodEnd`. Stripe
+checkout is `409` and Stripe webhooks skip Firestore entitlement writes in
+that case; leftover Stripe subscriptions are still cancelled. Store refunds
+null `currentPeriodEnd` so the overlay cannot revive Pro. Stripe-only docs
+(no store ids) behave as before.
+

@@ -1,5 +1,9 @@
 import {
   resolveEffectivePlan,
+  resolveBillingProvider,
+  hasLiveStorePurchase,
+  hasLiveStripeSubscription,
+  BillingProvider,
   CANCEL_AT_PERIOD_END_GRACE_MS,
   DELINQUENT_STATUSES,
   SubscriptionPlan,
@@ -310,5 +314,114 @@ describe('resolveEffectivePlan', () => {
         ),
       ).toBe(SubscriptionPlan.PRO);
     });
+  });
+});
+
+describe('resolveBillingProvider', () => {
+  it('omitted provider → stripe (existing user docs)', () => {
+    expect(resolveBillingProvider({ plan: SubscriptionPlan.PRO })).toBe(BillingProvider.STRIPE);
+    expect(resolveBillingProvider({})).toBe(BillingProvider.STRIPE);
+    expect(resolveBillingProvider(null)).toBe(BillingProvider.STRIPE);
+    expect(resolveBillingProvider(undefined)).toBe(BillingProvider.STRIPE);
+  });
+
+  it('explicit stripe stays stripe', () => {
+    expect(resolveBillingProvider({ provider: BillingProvider.STRIPE })).toBe(
+      BillingProvider.STRIPE,
+    );
+  });
+
+  it('apple and google pass through', () => {
+    expect(resolveBillingProvider({ provider: BillingProvider.APPLE })).toBe(
+      BillingProvider.APPLE,
+    );
+    expect(resolveBillingProvider({ provider: BillingProvider.GOOGLE })).toBe(
+      BillingProvider.GOOGLE,
+    );
+  });
+
+  it('unknown or empty values fail safe to stripe', () => {
+    expect(resolveBillingProvider({ provider: 'paypal' })).toBe(BillingProvider.STRIPE);
+    expect(resolveBillingProvider({ provider: '' })).toBe(BillingProvider.STRIPE);
+    expect(resolveBillingProvider({ provider: null })).toBe(BillingProvider.STRIPE);
+  });
+
+  it('does not change resolveEffectivePlan (provider is billing-only)', () => {
+    expect(
+      resolveEffectivePlan(
+        {
+          plan: SubscriptionPlan.PRO,
+          status: SubscriptionStatus.ACTIVE,
+          provider: BillingProvider.APPLE,
+          currentPeriodEnd: FUTURE,
+        },
+        NOW,
+      ),
+    ).toBe(SubscriptionPlan.PRO);
+  });
+});
+
+describe('hasLiveStorePurchase / hasLiveStripeSubscription', () => {
+  it('store ids + future period are live even when provider is omitted', () => {
+    const sub = {
+      plan: SubscriptionPlan.FREE,
+      status: SubscriptionStatus.CANCELED,
+      originalTransactionId: 'orig-1',
+      currentPeriodEnd: FUTURE,
+    };
+    expect(hasLiveStorePurchase(sub, NOW)).toBe(true);
+    expect(hasLiveStripeSubscription(sub, NOW)).toBe(false);
+    expect(resolveEffectivePlan(sub, NOW)).toBe(SubscriptionPlan.PRO);
+  });
+
+  it('cleared period end after a store refund is not live', () => {
+    const sub = {
+      plan: SubscriptionPlan.FREE,
+      status: SubscriptionStatus.CANCELED,
+      originalTransactionId: 'orig-1',
+      currentPeriodEnd: null,
+    };
+    expect(hasLiveStorePurchase(sub, NOW)).toBe(false);
+    expect(resolveEffectivePlan(sub, NOW)).toBe(SubscriptionPlan.FREE);
+  });
+
+  it('past period end is not a live store purchase', () => {
+    expect(
+      hasLiveStorePurchase(
+        { originalTransactionId: 'orig-1', currentPeriodEnd: PAST, plan: SubscriptionPlan.FREE },
+        NOW,
+      ),
+    ).toBe(false);
+    expect(
+      resolveEffectivePlan(
+        { plan: SubscriptionPlan.FREE, originalTransactionId: 'orig-1', currentPeriodEnd: PAST },
+        NOW,
+      ),
+    ).toBe(SubscriptionPlan.FREE);
+  });
+
+  it('leftover stripeSubscriptionId does not count as live Stripe when the store period is open', () => {
+    const sub = {
+      plan: SubscriptionPlan.PRO,
+      status: SubscriptionStatus.ACTIVE,
+      stripeSubscriptionId: 'sub_lapsed',
+      originalTransactionId: 'orig-1',
+      currentPeriodEnd: FUTURE,
+    };
+    expect(hasLiveStorePurchase(sub, NOW)).toBe(true);
+    expect(hasLiveStripeSubscription(sub, NOW)).toBe(false);
+    expect(resolveEffectivePlan(sub, NOW)).toBe(SubscriptionPlan.PRO);
+  });
+
+  it('ordinary Stripe Pro (no store ids) is live Stripe', () => {
+    const sub = {
+      plan: SubscriptionPlan.PRO,
+      status: SubscriptionStatus.ACTIVE,
+      stripeSubscriptionId: 'sub_live',
+      currentPeriodEnd: FUTURE,
+    };
+    expect(hasLiveStorePurchase(sub, NOW)).toBe(false);
+    expect(hasLiveStripeSubscription(sub, NOW)).toBe(true);
+    expect(resolveEffectivePlan(sub, NOW)).toBe(SubscriptionPlan.PRO);
   });
 });

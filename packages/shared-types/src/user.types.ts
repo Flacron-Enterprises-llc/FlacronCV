@@ -1,4 +1,4 @@
-import { UserRole, SubscriptionPlan, SubscriptionStatus, Locale, Theme } from './enums';
+import { UserRole, SubscriptionPlan, SubscriptionStatus, BillingProvider, Locale, Theme } from './enums';
 
 export interface UserProfile {
   firstName: string;
@@ -32,6 +32,16 @@ export interface UserSubscription {
    * (treated as false). No production backfill.
    */
   hasUsedTrial?: boolean;
+  /**
+   * Who bills this plan. Existing docs omit it — resolveBillingProvider
+   * returns Stripe. No production backfill; Stripe handlers do not write this
+   * until IAP verify is live.
+   */
+  provider?: BillingProvider;
+  /** Apple StoreKit 2 original transaction id. Omit for Stripe. */
+  originalTransactionId?: string | null;
+  /** Google Play purchase token. Omit for Stripe. */
+  purchaseToken?: string | null;
 }
 
 export type RiskBand = 'allow' | 'verify' | 'deny';

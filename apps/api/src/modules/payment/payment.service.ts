@@ -1,11 +1,11 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { UsersService } from '../users/users.service';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/audit-actions';
 import Stripe from 'stripe';
-import { SubscriptionPlan, SubscriptionStatus, BillingInterval, PLAN_CONFIGS, BillingInvoice, TRIAL_PERIOD_DAYS, YEARLY_BILLING_ENABLED } from '@flacroncv/shared-types';
+import { SubscriptionPlan, SubscriptionStatus, BillingInterval, PLAN_CONFIGS, BillingInvoice, TRIAL_PERIOD_DAYS, YEARLY_BILLING_ENABLED, hasLiveStorePurchase, resolveEffectivePlan } from '@flacroncv/shared-types';
 import { isLiveStripeSecretKey } from '../../config/stripe-live-prices';
 
 @Injectable()
@@ -267,6 +267,10 @@ export class PaymentService {
 
     const user = await this.usersService.findByIdOrThrow(userId);
 
+    if (hasLiveStorePurchase(user.subscription)) {
+      throw new ConflictException('This account is billed by the App Store or Google Play');
+    }
+
     // Resolve BEFORE the trial check below, so a replacement customer is the
     // one whose subscription history that check reads.
     let customerId = await this.liveCustomerId(user.subscription?.stripeCustomerId);
@@ -394,6 +398,14 @@ export class PaymentService {
         `Rejected replay of session ${sessionId} for user ${userId}: subscription ${subscription.id} is '${subscription.status}'`,
       );
       throw new BadRequestException('This subscription is no longer active');
+    }
+
+    if (await this.skipStripeEntitlementWrite(userId)) {
+      const user = await this.usersService.findByIdOrThrow(userId);
+      return {
+        plan: resolveEffectivePlan(user.subscription),
+        status: user.subscription?.status ?? SubscriptionStatus.ACTIVE,
+      };
     }
 
     const plan = this.determinePlan(subscription.items.data[0].price.id);
@@ -565,6 +577,7 @@ export class PaymentService {
   private async handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     const userId = session.metadata?.firebaseUid;
     if (!userId) return;
+    if (await this.skipStripeEntitlementWrite(userId)) return;
 
     const subscription = await this.stripe.subscriptions.retrieve(session.subscription as string);
     const plan = this.determinePlan(subscription.items.data[0].price.id);
@@ -632,6 +645,7 @@ export class PaymentService {
     const sub = await this.stripe.subscriptions.retrieve(invoice.subscription as string);
     const userId = await this.findUserByCustomerId(invoice.customer as string);
     if (!userId) return;
+    if (await this.skipStripeEntitlementWrite(userId)) return;
 
     const plan = this.determinePlan(sub.items.data[0].price.id);
     const limits = PLAN_CONFIGS[plan].limits;
@@ -661,6 +675,7 @@ export class PaymentService {
   private async handlePaymentFailed(invoice: Stripe.Invoice) {
     const userId = await this.findUserByCustomerId(invoice.customer as string);
     if (!userId) return;
+    if (await this.skipStripeEntitlementWrite(userId)) return;
     await this.usersService.updateSubscription(userId, { status: SubscriptionStatus.PAST_DUE });
     await this.syncSubscriptionRecord(invoice.subscription as string, {
       status: SubscriptionStatus.PAST_DUE,
@@ -674,6 +689,7 @@ export class PaymentService {
   private async handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     const userId = await this.findUserByCustomerId(subscription.customer as string);
     if (!userId) return;
+    if (await this.skipStripeEntitlementWrite(userId)) return;
 
     const plan = this.determinePlan(subscription.items.data[0].price.id);
     // Map, never cast. Stripe has EIGHT subscription statuses; SubscriptionStatus
@@ -734,6 +750,8 @@ export class PaymentService {
     stripeSubscriptionId: string | null | undefined,
     canceledAt: Date = new Date(),
   ): Promise<void> {
+    if (await this.skipStripeEntitlementWrite(userId)) return;
+
     await this.usersService.updateSubscription(userId, {
       plan: SubscriptionPlan.FREE,
       status: SubscriptionStatus.CANCELED,
@@ -845,6 +863,13 @@ export class PaymentService {
       }
     }
 
+    if (hasLiveStorePurchase(user.subscription)) {
+      this.logger.warn(
+        `Stripe billing stopped for user ${userId} (reason: ${reason}) — store purchase kept`,
+      );
+      return;
+    }
+
     await this.usersService.updateSubscription(userId, {
       plan: SubscriptionPlan.FREE,
       status: SubscriptionStatus.CANCELED,
@@ -922,6 +947,23 @@ export class PaymentService {
         `Failed to sync subscription record ${subscriptionId}: ${(err as Error).message}`,
       );
     }
+  }
+
+  /**
+   * True when Firestore shows an in-period App Store / Play purchase.
+   * Stripe must not overwrite that grant. Does not read `provider`.
+   */
+  private async skipStripeEntitlementWrite(userId: string): Promise<boolean> {
+    try {
+      const user = await this.usersService.findByIdOrThrow(userId);
+      if (hasLiveStorePurchase(user.subscription)) {
+        this.logger.warn(`Skipping Stripe entitlement write for user ${userId} — live store purchase`);
+        return true;
+      }
+    } catch {
+      return false;
+    }
+    return false;
   }
 
   private async findUserByCustomerId(customerId: string): Promise<string | null> {

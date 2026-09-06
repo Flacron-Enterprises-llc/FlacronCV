@@ -23,6 +23,16 @@ export enum SubscriptionStatus {
   UNPAID = 'unpaid',
 }
 
+/**
+ * Who bills this subscription. Omitted on existing user docs — treat as
+ * {@link BillingProvider.STRIPE}. Do not backfill.
+ */
+export enum BillingProvider {
+  STRIPE = 'stripe',
+  APPLE = 'apple',
+  GOOGLE = 'google',
+}
+
 export enum CVStatus {
   DRAFT = 'draft',
   PUBLISHED = 'published',

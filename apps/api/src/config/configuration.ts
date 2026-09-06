@@ -29,6 +29,37 @@ export default () => ({
     },
   },
 
+  // Apple IAP + Google Play Billing. Optional at boot — Stripe must keep
+  // starting without these. POST /billing/mobile/verify fails closed (503)
+  // when they are missing. Never log the key material.
+  iap: {
+    apple: {
+      bundleId: process.env.APPLE_BUNDLE_ID?.trim(),
+      issuerId: process.env.APPLE_ISSUER_ID?.trim(),
+      keyId: process.env.APPLE_KEY_ID?.trim(),
+      privateKey: process.env.APPLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      products: {
+        proMonthly: process.env.APPLE_PRO_MONTHLY_PRODUCT_ID?.trim(),
+        proYearly: process.env.APPLE_PRO_YEARLY_PRODUCT_ID?.trim(),
+        enterpriseMonthly: process.env.APPLE_ENTERPRISE_MONTHLY_PRODUCT_ID?.trim(),
+        enterpriseYearly: process.env.APPLE_ENTERPRISE_YEARLY_PRODUCT_ID?.trim(),
+      },
+    },
+    google: {
+      packageName: process.env.GOOGLE_PLAY_PACKAGE_NAME?.trim(),
+      clientEmail: process.env.GOOGLE_PLAY_CLIENT_EMAIL?.trim(),
+      privateKey: process.env.GOOGLE_PLAY_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      rtdnAudience: process.env.GOOGLE_RTDN_AUDIENCE?.trim(),
+      rtdnServiceAccount: process.env.GOOGLE_RTDN_SERVICE_ACCOUNT?.trim(),
+      products: {
+        proMonthly: process.env.GOOGLE_PRO_MONTHLY_PRODUCT_ID?.trim(),
+        proYearly: process.env.GOOGLE_PRO_YEARLY_PRODUCT_ID?.trim(),
+        enterpriseMonthly: process.env.GOOGLE_ENTERPRISE_MONTHLY_PRODUCT_ID?.trim(),
+        enterpriseYearly: process.env.GOOGLE_ENTERPRISE_YEARLY_PRODUCT_ID?.trim(),
+      },
+    },
+  },
+
   // Transactional email — AWS SES (replaced Brevo). Templates are rendered in
   // MailService as inline HTML, so there are no provider-side template IDs.
   ses: {

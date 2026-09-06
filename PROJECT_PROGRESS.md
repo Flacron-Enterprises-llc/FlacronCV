@@ -12,7 +12,7 @@
 > 4. Tick completed items here; log every change in the Change Log.
 > 5. Report Out-of-Scope / architectural items separately — do not implement without approval.
 
-Last updated: 2026-09-02
+Last updated: 2026-09-06
 
 > **Note on dates.** The header previously read `2026-07-29` while the two newest change-log
 > entries were dated `2026-07-30`; the header was stale, the entries were right. Corrected
@@ -764,6 +764,28 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 8. Out-of-scope / architectural recommendations (do NOT implement without approval)
 
+- **⚠️ ADDED 2026-09-06 — IAP dual-subscribe (Option A).** Entitlements and
+  Stripe writes follow live store vs live Stripe state (`hasLiveStorePurchase` /
+  `hasLiveStripeSubscription`), not the `provider` label. A lapsed Stripe
+  record plus an in-period App Store / Play purchase stays Pro. Store refunds
+  clear `currentPeriodEnd` so Pro cannot resurrect. Existing Stripe-only users
+  are unchanged. S1 off. expo-iap still Stage 2.
+
+- **⚠️ ADDED 2026-09-06 — IAP Stage 1 piece 3 (store webhooks, no client).**
+  `POST /api/v1/webhooks/apple` (App Store Server Notifications V2) and
+  `POST /api/v1/webhooks/google` (Play RTDN / Pub/Sub push). Entitlement is
+  re-read from the store APIs; refunds write Free **without** cancelling
+  Stripe. Google push requires OIDC (`GOOGLE_RTDN_AUDIENCE`). Unlinked
+  purchases ack 200. Stripe checkout/portal/webhooks unchanged. S1 off.
+  expo-iap is still Stage 2. Do not backfill existing docs.
+
+- **⚠️ ADDED 2026-09-06 — IAP Stage 1 piece 2 (verify endpoint, no client).**
+  `POST /api/v1/billing/mobile/verify` is auth-gated. It talks to Apple/Google
+  only when dedicated IAP env vars are set; otherwise 503. Paid Stripe
+  accounts (including docs that omit `provider`) are rejected with 409 —
+  Stripe checkout/portal/webhooks are unchanged. Store webhooks and expo-iap
+  are not in this piece. S1 stays off. Do not backfill existing docs.
+
 - **⚠️ ADDED 2026-09-06 — Template preview URLs are seeded on create only.**
   `seedDefaults` writes `thumbnailURL` / `previewImages` for the ten CV
   catalog ids when the Firestore doc does not exist. Re-seed of an existing
@@ -1125,6 +1147,35 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-09-06 — **IAP dual-subscribe Option A.** `resolveEffectivePlan` restores
+  Pro when store ids are in period even if `plan` was written Free (stale
+  Stripe delete). Stripe checkout/webhooks skip entitlement writes when a
+  store purchase is live; they still cancel leftover Stripe subs. Does not
+  trust `provider`. Stripe-only subscribers unchanged.
+
+- 2026-09-06 — **IAP Stage 1 piece 3 — Apple ASSN V2 + Google RTDN.**
+  `POST /webhooks/apple` and `POST /webhooks/google`. Store state is
+  re-fetched; linked Apple/Google users are renewed or revoked to Free
+  without `stripe.subscriptions.cancel`. Stripe-billed accounts are skipped.
+  Google RTDN requires a Pub/Sub OIDC audience env var. Idempotency uses
+  `payment_events` with `iap_apple_` / `iap_google_` prefixes. No expo-iap,
+  S1 off, Stripe handlers untouched.
+
+- 2026-09-06 — **IAP Stage 1 piece 2 — POST /billing/mobile/verify.** Auth
+  required. Apple App Store Server API / Google Play subscriptions v2 verify
+  a receipt, map a configured product id to Pro/Enterprise, write
+  `provider` + store ids + plan. Paid Stripe users (omitted `provider`
+  included) get 409 and the store is not called. Stripe handlers untouched.
+  Missing IAP env → 503, API still boots. No expo-iap, no store webhooks, S1
+  off. Nothing user-visible.
+
+- 2026-09-06 — **IAP Stage 1 piece 1 — billing provider types only.**
+  `BillingProvider` (`stripe` | `apple` | `google`) plus optional
+  `originalTransactionId` / `purchaseToken` on `UserSubscription`.
+  `resolveBillingProvider` treats omitted/unknown as Stripe. No Firestore
+  writes, no Stripe handler changes, no verify endpoint yet. Existing
+  subscriber docs stay as they are (no backfill).
 
 - 2026-09-06 — **CV stills in seedDefaults (create only).** The ten CV
   catalog seeds include Storage `template-previews/cv/{id}/` URLs so a fresh

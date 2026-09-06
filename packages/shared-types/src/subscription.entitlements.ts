@@ -1,4 +1,4 @@
-import { SubscriptionPlan, SubscriptionStatus } from './enums';
+import { BillingProvider, SubscriptionPlan, SubscriptionStatus } from './enums';
 
 /**
  * Subscription statuses in which a paid plan is *delinquent* — the customer is
@@ -43,6 +43,10 @@ export interface EntitlementSubscription {
   plan?: SubscriptionPlan | null;
   status?: SubscriptionStatus | null;
   cancelAtPeriodEnd?: boolean | null;
+  provider?: BillingProvider | string | null;
+  originalTransactionId?: string | null;
+  purchaseToken?: string | null;
+  stripeSubscriptionId?: string | null;
   currentPeriodEnd?:
     | Date
     | string
@@ -104,6 +108,10 @@ function coerceDate(value: EntitlementSubscription['currentPeriodEnd']): Date | 
  * this resolver returns FREE even while status is still active. The billing
  * page still shows the *stored* plan until the reconcile job heals the doc.
  *
+ * If the stored plan is Free but an App Store / Play purchase is still inside
+ * `currentPeriodEnd`, this returns Pro. That is a Stripe-clobber recovery, not
+ * a second source of truth for `provider`.
+ *
  * This is the single source of truth for entitlement gating: callers should use
  * `PLAN_CONFIGS[resolveEffectivePlan(subscription)]` rather than reading
  * `subscription.plan` directly.
@@ -114,6 +122,25 @@ function coerceDate(value: EntitlementSubscription['currentPeriodEnd']): Date | 
 export function resolveEffectivePlan(
   subscription: EntitlementSubscription | null | undefined,
   now: Date = new Date(),
+): SubscriptionPlan {
+  const stored = resolveStoredPlan(subscription, now);
+  if (stored !== SubscriptionPlan.FREE) return stored;
+  // Store ids + an unexpired period beat a stale Free write (e.g. a lapsed
+  // Stripe deleted webhook). Do not use `provider` — that label goes stale.
+  // After a real store refund, currentPeriodEnd is cleared so this does not
+  // resurrect Pro. Unknown store tier falls back to Pro, not Enterprise.
+  if (hasLiveStorePurchase(subscription, now)) return SubscriptionPlan.PRO;
+  return SubscriptionPlan.FREE;
+}
+
+/**
+ * Paid plan implied by the stored `plan` / `status` / period fields only.
+ * Ignores Apple/Google ids so a leftover Stripe label cannot be confused
+ * with a live store purchase.
+ */
+function resolveStoredPlan(
+  subscription: EntitlementSubscription | null | undefined,
+  now: Date,
 ): SubscriptionPlan {
   const plan = subscription?.plan ?? SubscriptionPlan.FREE;
 
@@ -142,4 +169,58 @@ export function resolveEffectivePlan(
   }
 
   return plan;
+}
+
+/**
+ * Apple/Google purchase still in its paid window. Uses store ids + period end,
+ * not `provider`. A leftover Stripe customer id does not count.
+ */
+export function hasLiveStorePurchase(
+  subscription: EntitlementSubscription | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  const apple = typeof subscription?.originalTransactionId === 'string'
+    ? subscription.originalTransactionId.trim()
+    : '';
+  const google = typeof subscription?.purchaseToken === 'string'
+    ? subscription.purchaseToken.trim()
+    : '';
+  if (!apple && !google) return false;
+  const periodEnd = coerceDate(subscription?.currentPeriodEnd);
+  if (periodEnd == null) return false;
+  return now.getTime() <= periodEnd.getTime();
+}
+
+/**
+ * Stripe is the live bill. False when a store purchase is in period — leftover
+ * `stripeSubscriptionId` after an App Store buy must not look like Stripe Pro.
+ */
+export function hasLiveStripeSubscription(
+  subscription: EntitlementSubscription | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  const id =
+    typeof subscription?.stripeSubscriptionId === 'string'
+      ? subscription.stripeSubscriptionId.trim()
+      : '';
+  if (!id) return false;
+  if (hasLiveStorePurchase(subscription, now)) return false;
+  return resolveStoredPlan(subscription, now) !== SubscriptionPlan.FREE;
+}
+
+/**
+ * Who bills this subscription. Existing user docs omit `provider` — they are
+ * Stripe. Unknown or empty values also resolve to Stripe so a bad write cannot
+ * silently treat a Stripe customer as Apple or Google.
+ *
+ * Entitlements and dual-subscribe guards must use {@link hasLiveStorePurchase}
+ * / {@link hasLiveStripeSubscription}, not this label.
+ */
+export function resolveBillingProvider(
+  subscription: EntitlementSubscription | null | undefined,
+): BillingProvider {
+  const p = subscription?.provider;
+  if (p === BillingProvider.APPLE) return BillingProvider.APPLE;
+  if (p === BillingProvider.GOOGLE) return BillingProvider.GOOGLE;
+  return BillingProvider.STRIPE;
 }

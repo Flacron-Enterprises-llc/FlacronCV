@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { InMemoryFirestore } from '../firebase/in-memory-firestore';
 import { SubscriptionPlan, SubscriptionStatus, PLAN_CONFIGS, YEARLY_BILLING_ENABLED, TRIAL_PERIOD_DAYS } from '@flacroncv/shared-types';
@@ -93,6 +93,20 @@ describe('PaymentService', () => {
       await expect(
         service.createCheckoutSession('uid-1', { plan: SubscriptionPlan.PRO, interval: 'year' }),
       ).rejects.not.toThrow('Unsupported plan selection.');
+    });
+
+    it('rejects checkout when an App Store / Play purchase is still in period', async () => {
+      await seedUser(firestore, 'uid-iap', {
+        subscription: {
+          plan: SubscriptionPlan.PRO,
+          status: SubscriptionStatus.ACTIVE,
+          originalTransactionId: 'orig-1',
+          currentPeriodEnd: new Date('2026-10-15T00:00:00.000Z'),
+        },
+      });
+      await expect(
+        service.createCheckoutSession('uid-iap', { plan: SubscriptionPlan.PRO, interval: 'month' }),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('rejects a plan with no configured Stripe price', async () => {
@@ -864,6 +878,27 @@ describe('PaymentService', () => {
         'u-cancel',
         expect.objectContaining({ aiCreditsLimit: PLAN_CONFIGS[SubscriptionPlan.FREE].limits.aiCredits }),
       );
+    });
+
+    it('does not write Free on subscription.deleted when a store purchase is still in period', async () => {
+      await seedUser(firestore, 'u-iap', {
+        subscription: {
+          plan: SubscriptionPlan.PRO,
+          status: SubscriptionStatus.ACTIVE,
+          stripeCustomerId: 'cus_iap',
+          stripeSubscriptionId: 'sub_lapsed',
+          originalTransactionId: 'orig-1',
+          currentPeriodEnd: new Date('2026-10-15T00:00:00.000Z'),
+        },
+      });
+
+      await service.handleWebhookEvent({
+        id: 'evt_del_iap',
+        type: 'customer.subscription.deleted',
+        data: { object: { customer: 'cus_iap' } },
+      } as any);
+
+      expect(usersService.updateSubscription).not.toHaveBeenCalled();
     });
   });
 

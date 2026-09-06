@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import {
+  hasLiveStorePurchase,
   resolveEffectivePlan,
   SubscriptionPlan,
   type EntitlementSubscription,
@@ -17,6 +18,7 @@ export const CANCEL_AT_PERIOD_END_SKIP = {
   STILL_ACTIVE: 'still-active',
   RETRIEVE_FAILED: 'retrieve-failed',
   NO_SUBSCRIPTION_ID: 'no-subscription-id',
+  LIVE_STORE_PURCHASE: 'live-store-purchase',
 } as const;
 
 export type CancelAtPeriodEndSkipReason =
@@ -75,6 +77,11 @@ export class CancelAtPeriodEndReconcileService implements OnApplicationBootstrap
       for (const doc of snapshot.docs) {
         const data = doc.data() ?? {};
         const subscription = (data.subscription ?? {}) as ReconcileSubscription;
+
+        if (hasLiveStorePurchase(subscription, now)) {
+          this.logSkip(CANCEL_AT_PERIOD_END_SKIP.LIVE_STORE_PURCHASE, doc.id);
+          continue;
+        }
 
         if (resolveEffectivePlan(subscription, now) !== SubscriptionPlan.FREE) {
           continue;
