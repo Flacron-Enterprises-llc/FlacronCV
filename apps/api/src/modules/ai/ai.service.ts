@@ -171,7 +171,7 @@ export class AIService {
       await this.abuse.assertNewConsumption(userId, 'ai');
       const ok = await this.usersService.reserveAiCredit(userId);
       if (!ok) {
-        throw new ServiceUnavailableException('AI credits exhausted. Please upgrade your plan.');
+        throw new ServiceUnavailableException('Flacron Engine credits exhausted. Please upgrade your plan.');
       }
       creditReserved = true;
     }
@@ -225,7 +225,7 @@ export class AIService {
     }
 
     throw new ServiceUnavailableException({
-      message: 'AI generation failed',
+      message: 'Flacron Engine generation failed',
       code: refundFailed ? 'AI_CREDIT_NOT_REFUNDED' : 'AI_CREDIT_REFUNDED',
     });
   }

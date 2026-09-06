@@ -126,10 +126,10 @@ describe('CoverLetterService create+generate atomicity', () => {
   } as any;
 
   it('deletes the draft and refunds the quota when generation fails', async () => {
-    const generate = jest.fn().mockRejectedValue(new Error('AI generation failed — timeout'));
+    const generate = jest.fn().mockRejectedValue(new Error('Flacron Engine generation failed — timeout'));
     const { service, firestore, usersService, audit } = makeAIService(SubscriptionPlan.PRO, generate);
 
-    await expect(service.create('u1', aiPayload)).rejects.toThrow(/AI generation failed/);
+    await expect(service.create('u1', aiPayload)).rejects.toThrow(/Flacron Engine generation failed/);
 
     // No orphaned blank cover letter survives the failure.
     const remaining = await firestore.collection('cover_letters').get();
@@ -217,14 +217,14 @@ describe('CoverLetterService create+generate atomicity', () => {
   });
 
   it('surfaces the original AI error even if the rollback itself fails', async () => {
-    const generate = jest.fn().mockRejectedValue(new Error('AI generation failed — timeout'));
+    const generate = jest.fn().mockRejectedValue(new Error('Flacron Engine generation failed — timeout'));
     const { service, usersService } = makeAIService(SubscriptionPlan.PRO, generate);
     // A refund failure must not mask the error the user needs to see.
     usersService.incrementUsage.mockImplementation((_u: string, _f: string, amount?: number) =>
       amount === -1 ? Promise.reject(new Error('firestore down')) : Promise.resolve(undefined),
     );
 
-    await expect(service.create('u1', aiPayload)).rejects.toThrow(/AI generation failed/);
+    await expect(service.create('u1', aiPayload)).rejects.toThrow(/Flacron Engine generation failed/);
   });
 });
 

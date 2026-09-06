@@ -122,7 +122,7 @@
     "terms_credit_title": "Was als ein KI-Guthaben zählt",
     "terms_credit_desc": "Ein Guthaben = eine KI-Anfrage: eine erzeugte Zusammenfassung, ein Anschreiben, eine ATS-Prüfung, eine Interviewvorbereitung oder eine LinkedIn-Überarbeitung. Fehlgeschlagene Anfragen werden nicht berechnet.",
     "terms_rollover_title": "Guthaben wird nicht übertragen",
-    "terms_rollover_desc": "Ihr KI-Kontingent wird zu Beginn jedes Abrechnungsmonats zurückgesetzt. Nicht genutztes Guthaben verfällt.",
+    "terms_rollover_desc": "Bei kostenpflichtigen Plänen verfallen ungenutzte Credits, wenn das Kontingent am 1. jedes Kalendermonats (UTC) zurückgesetzt wird. Credits des Free-Plans werden nicht zurückgesetzt.",
     "terms_renewal_title": "Verlängerung",
     "terms_renewal_desc": "Bezahlte Tarife verlängern sich automatisch zum angezeigten Preis, bis Sie kündigen.",
     "terms_cancellation_title": "Kündigung",
@@ -136,7 +136,7 @@
   "faq": {
     "title": "Häufig gestellte Fragen",
     "q1": "Ist FlacronCV wirklich kostenlos?",
-    "a1": "Ja! Der kostenlose Plan ermöglicht bis zu 5 Lebensläufe, 1 Anschreiben, 5 KI-Credits und 2 PDF-Exporte – diese Kontingente werden nie zurückgesetzt, und keine Kreditkarte ist erforderlich. Upgrade auf Pro für 10 Lebensläufe/Monat, 20 Anschreiben/Monat, 100 KI-Credits/Monat, unbegrenzte Exporte und DOCX-Format.",
+    "a1": "Ja! Der kostenlose Plan ermöglicht bis zu 5 Lebensläufe, 1 Anschreiben, 5 KI-Credits und 2 PDF-Exporte – diese Kontingente werden nie zurückgesetzt, und keine Kreditkarte ist erforderlich. Upgrade auf Pro für 10 Lebensläufe, 20 Anschreiben, 100 KI-Credits, unbegrenzte Exporte und DOCX-Format — bezahlte Kontingente werden am 1. jedes Kalendermonats (UTC) zurückgesetzt.",
     "q2": "Welche Exportformate werden unterstützt?",
     "a2": "Alle Pläne unterstützen PDF-Export. Pro- und Enterprise-Pläne ermöglichen auch DOCX (Microsoft Word). Der kostenlose Plan umfasst 2 Exporte; Pro und Enterprise bieten unbegrenzte Exporte. TXT-Export ist derzeit nicht verfügbar.",
     "q3": "Wie funktioniert das KI-Schreiben?",

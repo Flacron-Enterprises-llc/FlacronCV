@@ -69,7 +69,7 @@ export default () => ({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     fromEmail: process.env.SES_FROM_EMAIL || 'no-reply@flacronenterprises.com',
-    fromName: process.env.SES_FROM_NAME || 'FlacronAI',
+    fromName: process.env.SES_FROM_NAME || 'FlacronCV',
     replyTo: process.env.SES_REPLY_TO || 'support@flacronenterprises.com',
     // Inbox that public contact-form submissions are delivered to.
     // Last hardcoded fallback is the customer-facing inbox, not SES_FROM_*.

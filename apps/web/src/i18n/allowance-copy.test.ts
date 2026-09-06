@@ -101,13 +101,21 @@ describe('allowance copy: delete does not restore a creation', () => {
       'شهر الفوترة',
       'بلنگ ماہ',
     ];
+    const keys = [
+      'upgrade_modal.reasons.ai_credits.description',
+      'pricing.terms_rollover_desc',
+      'faq.a1',
+    ] as const;
     const hits: string[] = [];
     for (const locale of LOCALES) {
-      const value = get(load(locale), 'upgrade_modal.reasons.ai_credits.description');
-      expect(typeof value).toBe('string');
-      expect(value).toMatch(/UTC/);
-      for (const phrase of forbidden) {
-        if (value.includes(phrase)) hits.push(`${locale}: ${phrase}`);
+      const json = load(locale);
+      for (const key of keys) {
+        const value = get(json, key);
+        expect(typeof value).toBe('string');
+        expect(value).toMatch(/UTC/);
+        for (const phrase of forbidden) {
+          if (value.includes(phrase)) hits.push(`${locale}:${key}: ${phrase}`);
+        }
       }
     }
     expect(hits).toEqual([]);

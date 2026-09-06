@@ -75,7 +75,7 @@ export class MailService {
 
   constructor(private config: ConfigService) {
     this.fromEmail = this.config.get<string>('ses.fromEmail') || 'no-reply@flacronenterprises.com';
-    this.fromName = this.config.get<string>('ses.fromName') || 'FlacronAI';
+    this.fromName = this.config.get<string>('ses.fromName') || 'FlacronCV';
     this.replyTo = this.config.get<string>('ses.replyTo') || this.fromEmail;
     this.contactTo = this.config.get<string>('ses.contactTo') || this.replyTo;
 
@@ -179,7 +179,7 @@ export class MailService {
       const html = layout(
         `Welcome to FlacronCV, ${firstName}!`,
         [
-          `<p style="margin:0 0 8px;color:#44403c">Your account is ready. Pick a template, let AI draft your summary and experience, and export to PDF or Word when it reads the way you want.</p>`,
+          `<p style="margin:0 0 8px;color:#44403c">Your account is ready. Pick a template, let the Flacron Engine draft your summary and experience, and export to PDF or Word when it reads the way you want.</p>`,
           button(dashboardUrl, 'Go to your dashboard'),
         ].join('\n'),
       );

@@ -122,7 +122,7 @@
     "terms_credit_title": "Qué cuenta como un crédito de IA",
     "terms_credit_desc": "Un crédito = una solicitud de IA: un resumen generado, una carta de presentación, un análisis ATS, una preparación de entrevista o una reescritura de LinkedIn. Una solicitud fallida no se cobra.",
     "terms_rollover_title": "Los créditos no se acumulan",
-    "terms_rollover_desc": "Tu asignación de IA se reinicia al comienzo de cada mes de facturación. Los créditos no utilizados no se transfieren.",
+    "terms_rollover_desc": "En los planes de pago, los créditos no usados caducan cuando la asignación se reinicia el día 1 de cada mes natural (UTC). Los créditos del plan Gratis no se reinician.",
     "terms_renewal_title": "Renovación",
     "terms_renewal_desc": "Los planes de pago se renuevan automáticamente al precio indicado, hasta que canceles.",
     "terms_cancellation_title": "Cancelación",
@@ -136,7 +136,7 @@
   "faq": {
     "title": "Preguntas frecuentes",
     "q1": "¿Es FlacronCV realmente gratis?",
-    "a1": "¡Sí! El plan gratuito te permite crear hasta 5 CVs, 1 carta de presentación, usar 5 créditos IA y exportar hasta 2 documentos en PDF — esas asignaciones no se restablecen nunca, y no se requiere tarjeta de crédito. Actualiza a Pro para 10 CVs/mes, 20 cartas de presentación/mes, 100 créditos IA/mes, exportaciones ilimitadas y formato DOCX.",
+    "a1": "¡Sí! El plan gratuito te permite crear hasta 5 CVs, 1 carta de presentación, usar 5 créditos IA y exportar hasta 2 documentos en PDF — esas asignaciones no se restablecen nunca, y no se requiere tarjeta de crédito. Actualiza a Pro para 10 CVs, 20 cartas de presentación, 100 créditos IA, exportaciones ilimitadas y formato DOCX: las asignaciones de pago se reinician el día 1 de cada mes natural (UTC).",
     "q2": "¿Qué formatos de exportación son compatibles?",
     "a2": "Todos los planes admiten exportación en PDF. Los planes Pro y Enterprise también desbloquean el formato DOCX (Microsoft Word). El plan gratuito incluye 2 exportaciones; Pro y Enterprise ofrecen exportaciones ilimitadas. La exportación TXT no está disponible actualmente.",
     "q3": "¿Cómo funciona la escritura con IA?",

@@ -181,7 +181,7 @@ describe('api lib', () => {
           headers: { get: () => null },
           json: () =>
             Promise.resolve({
-              message: 'AI generation failed',
+              message: 'Flacron Engine generation failed',
               code: 'AI_CREDIT_NOT_REFUNDED',
             }),
         } as unknown as Response),
@@ -198,7 +198,7 @@ describe('api lib', () => {
           headers: { get: () => null },
           json: () =>
             Promise.resolve({
-              message: 'AI generation failed',
+              message: 'Flacron Engine generation failed',
               code: 'AI_CREDIT_REFUNDED',
             }),
         } as unknown as Response),
@@ -206,7 +206,7 @@ describe('api lib', () => {
       const refunded = await api.get('/ai/cover-letter').catch((e) => e);
       expect(refunded.code).toBe('AI_CREDIT_REFUNDED');
       expect(isAiCreditUnconfirmed(refunded)).toBe(false);
-      expect(isAiCreditUnconfirmed(new Error('AI generation failed'))).toBe(false);
+      expect(isAiCreditUnconfirmed(new Error('Flacron Engine generation failed'))).toBe(false);
     });
 
     it('maps ABUSE_IDEMPOTENCY_CONFLICT onto abuse_rate_limited (catalog compromise)', async () => {

@@ -43,7 +43,7 @@ export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }:
   const Icon = REASON_ICON[reason];
 
   // Stored plan, not resolveEffectivePlan — a past_due Pro user must still see
-  // the paid copy (credits reset next billing month). The placeholder account
+  // the paid copy (credits reset on the UTC calendar 1st). The placeholder account
   // always claims Free; treating that as real would tell a paying customer
   // their allowance never renews whenever the API blips.
   const storedPlan = user?.subscription?.plan;

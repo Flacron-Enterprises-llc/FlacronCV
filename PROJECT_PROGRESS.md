@@ -998,10 +998,11 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   Mobile user-facing copy no longer says “AI” for generate/credits/onboarding
   (Flacron Engine / Credits / Engine credits). Still outstanding for full
   product branding:
-  1. **API Nest messages** still return `AI credits exhausted. Please upgrade
-     your plan.` and `AI generation failed` (`ai.service.ts`). Mobile may
-     surface these via Nest pass-through / `/credit/i` mapping — client
-     fallbacks are rebranded, live server strings are not.
+  1. **API Nest messages — done (2026-09-06).** `ai.service.ts` now returns
+     `Flacron Engine credits exhausted. Please upgrade your plan.` and
+     `Flacron Engine generation failed`. Welcome email and `SES_FROM_NAME`
+     fallback (`FlacronCV`) updated in the same change. Machine codes
+     `AI_CREDIT_*` unchanged.
   2. **Legal disclaimer title** on web remains `FlacronCV AI, ATS & Employment
      Disclaimer`. Mobile link label kept matching that published title on
      purpose; rename only with a coordinated web legal pass.
@@ -1155,6 +1156,24 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-09-06 — **Flacron Engine on three API customer strings.** Nest
+  messages are now `Flacron Engine credits exhausted. Please upgrade your
+  plan.` and `Flacron Engine generation failed`. Welcome email says “let
+  the Flacron Engine draft…”. `SES_FROM_NAME` code fallback is `FlacronCV`
+  (was `FlacronAI`); live task env may still override. Response codes
+  `AI_CREDIT_*`, CRM CSV, Swagger, logs, and `PLAN_CONFIGS.features`
+  untouched.
+
+- 2026-09-06 — **Paid-allowance cadence copy (UTC 1st).** `faq.a1` and
+  `pricing.terms_rollover_desc` in all six locales now match the monthly
+  cron (`EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT` UTC): paid unused credits
+  expire on the calendar 1st; Free never resets. `faqPage()` schema
+  matches. `faq.a5` still says “billing period” (Stripe cancellation —
+  correct). `pricing.terms_rollover_desc` is landing Pricing chrome, not
+  `apps/web/src/legal/terms.ts`, so `LEGAL_VERSION` was not bumped.
+  **AR and UR not reviewed by a native reader.** Guard extended in
+  `allowance-copy.test.ts`.
 
 - 2026-09-06 — **IAP Stage 2 — mobile purchase flow behind S1.** Installed
   `expo-iap` 5.5.0 (`expo install`) and the `expo-iap` config plugin (no

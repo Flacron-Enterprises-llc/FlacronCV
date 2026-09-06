@@ -91,8 +91,8 @@ function countPhrase(value: number | 'unlimited', singular: string, plural: stri
  * "5 CVs" can.
  *
  * The FAQ is said twice: `faq.a1`/`faq.a2` in locale JSON (humans) and this
- * block (crawlers). Cadence wording must match both — Batch E corrected the
- * visible copy and this schema kept Free `/month`. If you change one, change
+ * block (crawlers). Cadence wording must match both. Paid allowances reset
+ * on the UTC calendar 1st; Free never resets. If you change one, change
  * the other.
  */
 export function faqPage() {
@@ -109,7 +109,7 @@ export function faqPage() {
         name: 'Is FlacronCV really free?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `Yes! The Free plan lets you create up to ${countPhrase(free.cvs, 'CV', 'CVs')}, ${countPhrase(free.coverLetters, 'cover letter', 'cover letters')}, use ${countPhrase(free.aiCredits, 'AI credit', 'AI credits')}, and export up to ${countPhrase(free.exports, 'document', 'documents')} as PDF — those allowances never reset, and no credit card is required. Upgrade to Pro for ${countPhrase(pro.cvs, 'CV', 'CVs')}/month, ${countPhrase(pro.coverLetters, 'cover letter', 'cover letters')}/month, ${countPhrase(pro.aiCredits, 'AI credit', 'AI credits')}/month, ${countPhrase(pro.exports, 'export', 'exports')}, and DOCX format.`,
+          text: `Yes! The Free plan lets you create up to ${countPhrase(free.cvs, 'CV', 'CVs')}, ${countPhrase(free.coverLetters, 'cover letter', 'cover letters')}, use ${countPhrase(free.aiCredits, 'AI credit', 'AI credits')}, and export up to ${countPhrase(free.exports, 'document', 'documents')} as PDF — those allowances never reset, and no credit card is required. Upgrade to Pro for ${countPhrase(pro.cvs, 'CV', 'CVs')}, ${countPhrase(pro.coverLetters, 'cover letter', 'cover letters')}, ${countPhrase(pro.aiCredits, 'AI credit', 'AI credits')}, ${countPhrase(pro.exports, 'export', 'exports')}, and DOCX format — paid allowances reset on the 1st of each calendar month (UTC).`,
         },
       },
       {

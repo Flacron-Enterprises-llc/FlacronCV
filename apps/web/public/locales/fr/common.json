@@ -122,7 +122,7 @@
     "terms_credit_title": "Ce que représente un crédit IA",
     "terms_credit_desc": "Un crédit = une requête IA : un résumé généré, une lettre de motivation, une analyse ATS, une préparation d'entretien ou une réécriture LinkedIn. Une requête échouée n'est pas facturée.",
     "terms_rollover_title": "Les crédits ne se reportent pas",
-    "terms_rollover_desc": "Votre quota IA est réinitialisé au début de chaque mois de facturation. Les crédits inutilisés ne sont pas reportés.",
+    "terms_rollover_desc": "Sur les formules payantes, les crédits non utilisés expirent lorsque l'allocation se réinitialise le 1er de chaque mois civil (UTC). Les crédits de la formule Gratuite ne se réinitialisent pas.",
     "terms_renewal_title": "Renouvellement",
     "terms_renewal_desc": "Les formules payantes se renouvellent automatiquement au prix affiché, jusqu'à résiliation.",
     "terms_cancellation_title": "Résiliation",
@@ -136,7 +136,7 @@
   "faq": {
     "title": "Questions fréquemment posées",
     "q1": "FlacronCV est-il vraiment gratuit ?",
-    "a1": "Oui ! Le plan gratuit vous permet de créer jusqu'à 5 CV, 1 lettre de motivation, d'utiliser 5 crédits IA et d'exporter jusqu'à 2 documents en PDF — ces allocations ne se réinitialisent jamais, et aucune carte bancaire n'est requise. Passez au Pro pour 10 CV/mois, 20 lettres de motivation/mois, 100 crédits IA/mois, des exports illimités et le format DOCX.",
+    "a1": "Oui ! Le plan gratuit vous permet de créer jusqu'à 5 CV, 1 lettre de motivation, d'utiliser 5 crédits IA et d'exporter jusqu'à 2 documents en PDF — ces allocations ne se réinitialisent jamais, et aucune carte bancaire n'est requise. Passez au Pro pour 10 CV, 20 lettres de motivation, 100 crédits IA, des exports illimités et le format DOCX — les allocations payantes se réinitialisent le 1er de chaque mois civil (UTC).",
     "q2": "Quels formats d'export sont pris en charge ?",
     "a2": "Tous les plans supportent l'export PDF. Les plans Pro et Enterprise débloquent également le format DOCX (Microsoft Word). Le plan gratuit inclut 2 exports ; Pro et Enterprise offrent des exports illimités. L'export TXT n'est pas disponible actuellement.",
     "q3": "Comment fonctionne l'écriture par IA ?",

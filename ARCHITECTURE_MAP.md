@@ -256,7 +256,7 @@ session and must not delete the account.
 | `AWS_REGION` | SES region (default `us-east-1`) | optional |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | **Omit on AWS** to use the task IAM role | optional |
 | `SES_FROM_EMAIL` | **FROM address. Defaults to `no-reply@flacronenterprises.com` — the parent domain** | should be set |
-| `SES_FROM_NAME` | Display name (default `FlacronAI`) | optional |
+| `SES_FROM_NAME` | Display name (default `FlacronCV`) | optional |
 | `SES_REPLY_TO` | Reply-To | optional |
 | `CONTACT_EMAIL` | Contact-form destination inbox. Fallback chain: `CONTACT_EMAIL` → `SES_REPLY_TO` → `contact@flacroncv.com`. **Not** `SES_FROM_EMAIL` (transactional sender identity). | optional |
 | `ABUSE_HMAC_SECRET` | HMAC-SHA256 key for hashing device tokens and IPs before storage. If unset or blank, **signup still succeeds** and scoring is skipped (warning logged, no values). | optional (fail soft) |
@@ -541,8 +541,9 @@ The five CV-builder modals are the mild case — each already caps against
 - `apps/web/src/lib/json-ld.ts` `faqPage()` — interpolates `PLAN_CONFIGS`.
   Guarded by `apps/web/src/lib/json-ld.test.ts`. **The FAQ is said twice:**
   locale JSON `faq.a1`/`faq.a2` (humans) and this schema (crawlers). Cadence
-  must match both — Batch E corrected the visible copy and the schema kept
-  Free `/month` until 2026-08-22. Change one, check the other.
+  must match both — Batch E corrected Free (never `/month`); 2026-09-06
+  aligned paid copy to the UTC calendar 1st (`usage-reset.service.ts`), not
+  a Stripe billing month. Change one, check the other.
   `faq.a1` still restates the numbers (not covered by the interpolation guard).
   **Also stale (not Google-facing; will mislead anyone who reads them for the
   truth):** `FEATURES_COMPLETE.md:66` still says Free “5 AI credits/month”

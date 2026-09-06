@@ -86,7 +86,7 @@ describe('AIService', () => {
       } as any);
 
       await expect(service.generate('hi', {}, 'u1')).rejects.toMatchObject({
-        message: 'AI generation failed',
+        message: 'Flacron Engine generation failed',
       });
     });
 
@@ -112,7 +112,9 @@ describe('AIService', () => {
         assertNewConsumption: jest.fn().mockResolvedValue(undefined),
       } as any);
 
-      await expect(service.generate('hi', {}, 'u1')).rejects.toThrow(ServiceUnavailableException);
+      await expect(service.generate('hi', {}, 'u1')).rejects.toThrow(
+        'Flacron Engine credits exhausted. Please upgrade your plan.',
+      );
       expect(provider.generateText).not.toHaveBeenCalled();
       expect(users.refundAiCredit).not.toHaveBeenCalled();
     });
@@ -140,7 +142,7 @@ describe('AIService', () => {
       const err = await service.generate('hi', {}, 'u1').catch((e) => e);
       expect(err).toBeInstanceOf(ServiceUnavailableException);
       expect(err.getResponse()).toMatchObject({
-        message: 'AI generation failed',
+        message: 'Flacron Engine generation failed',
         code: 'AI_CREDIT_REFUNDED',
       });
       expect(users.reserveAiCredit).toHaveBeenCalledWith('u1');
@@ -174,7 +176,7 @@ describe('AIService', () => {
       try {
         const err = await service.generate('hi', {}, 'u1').catch((e) => e);
         expect(err.getResponse()).toMatchObject({
-          message: 'AI generation failed',
+          message: 'Flacron Engine generation failed',
           code: 'AI_CREDIT_NOT_REFUNDED',
         });
         expect(users.refundAiCredit).toHaveBeenCalledTimes(3);

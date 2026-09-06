@@ -20,7 +20,7 @@ describe('AllExceptionsFilter', () => {
     const { host, json, status } = mockHost();
     filter.catch(
       new ServiceUnavailableException({
-        message: 'AI generation failed',
+        message: 'Flacron Engine generation failed',
         code: 'AI_CREDIT_REFUNDED',
       }),
       host,
@@ -31,7 +31,7 @@ describe('AllExceptionsFilter', () => {
       expect.objectContaining({
         success: false,
         statusCode: 503,
-        message: 'AI generation failed',
+        message: 'Flacron Engine generation failed',
         code: 'AI_CREDIT_REFUNDED',
       }),
     );
@@ -41,7 +41,7 @@ describe('AllExceptionsFilter', () => {
     const { host, json } = mockHost();
     filter.catch(
       new ServiceUnavailableException({
-        message: 'AI generation failed',
+        message: 'Flacron Engine generation failed',
         code: 'AI_CREDIT_NOT_REFUNDED',
       }),
       host,
@@ -49,7 +49,7 @@ describe('AllExceptionsFilter', () => {
 
     expect(json).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: 'AI generation failed',
+        message: 'Flacron Engine generation failed',
         code: 'AI_CREDIT_NOT_REFUNDED',
       }),
     );
