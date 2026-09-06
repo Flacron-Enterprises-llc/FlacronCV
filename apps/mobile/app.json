@@ -23,7 +23,7 @@
         "ITSAppUsesNonExemptEncryption": false
       }
     },
-      "android": {
+    "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -63,7 +63,8 @@
             "deploymentTarget": "15.1"
           }
         }
-      ]
+      ],
+      "expo-iap"
     ],
     "scheme": "flacroncv",
     "extra": {

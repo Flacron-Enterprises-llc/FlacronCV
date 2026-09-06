@@ -1,5 +1,7 @@
 import {
   resolveEffectivePlan as sharedResolveEffectivePlan,
+  hasLiveStorePurchase,
+  hasLiveStripeSubscription,
   type EntitlementSubscription,
 } from '../../../../packages/shared-types/src/subscription.entitlements';
 import { PLAN_CONFIGS as SHARED_PLAN_CONFIGS } from '../../../../packages/shared-types/src/subscription.types';
@@ -8,6 +10,7 @@ import type { SubscriptionPlan as SharedPlan } from '../../../../packages/shared
 import { SubscriptionPlan } from '../types/enums';
 
 export type { EntitlementSubscription };
+export { hasLiveStorePurchase, hasLiveStripeSubscription };
 
 /**
  * Q15 — same function the API uses (`packages/shared-types` `resolveEffectivePlan`).

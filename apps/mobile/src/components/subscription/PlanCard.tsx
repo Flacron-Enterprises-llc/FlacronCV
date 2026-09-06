@@ -11,6 +11,8 @@ interface PlanCardProps {
   isCurrentPlan?: boolean;
   isLoading?: boolean;
   onSelect: () => void;
+  /** Store-formatted price when IAP products are loaded; catalog price otherwise. */
+  priceOverride?: string;
 }
 
 /** Mobile-only branding; shared-types / web feature lines stay unchanged. */
@@ -26,6 +28,7 @@ export function PlanCard({
   isCurrentPlan = false,
   isLoading = false,
   onSelect,
+  priceOverride,
 }: PlanCardProps) {
   const price =
     interval === BillingInterval.MONTH ? config.priceMonthly : config.priceYearly / 12;
@@ -61,6 +64,8 @@ export function PlanCard({
       <View className="flex-row items-end mb-4">
         {config.priceMonthly === 0 ? (
           <Text className="text-3xl font-black text-stone-900">Free</Text>
+        ) : priceOverride ? (
+          <Text className="text-3xl font-black text-stone-900">{priceOverride}</Text>
         ) : (
           <>
             <Text className="text-3xl font-black text-stone-900">
@@ -71,7 +76,7 @@ export function PlanCard({
         )}
       </View>
 
-      {interval === BillingInterval.YEAR && config.priceYearly > 0 && (
+      {interval === BillingInterval.YEAR && config.priceYearly > 0 && !priceOverride && (
         <Text className="text-xs text-stone-500 -mt-2 mb-3">
           Billed ${config.priceYearly.toFixed(2)}/year
         </Text>

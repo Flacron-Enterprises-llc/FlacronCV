@@ -26,6 +26,10 @@ export interface UserSubscription {
   stripeSubscriptionId: string | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
+  /** Omitted on Stripe-only docs. */
+  provider?: 'stripe' | 'apple' | 'google';
+  originalTransactionId?: string | null;
+  purchaseToken?: string | null;
 }
 
 export interface UserUsage {

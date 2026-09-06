@@ -29,5 +29,30 @@ export function useCreatePortalSession() {
   });
 }
 
+export interface MobileVerifyResult {
+  plan: SubscriptionPlan;
+  status: string;
+  provider: 'apple' | 'google';
+  currentPeriodEnd: string;
+}
+
+export type VerifyMobilePurchaseBody = {
+  provider: 'apple' | 'google';
+  signedTransactionInfo?: string;
+  transactionId?: string;
+  purchaseToken?: string;
+};
+
+/** POST /billing/mobile/verify — store receipt only. Does not touch Stripe. */
+export function verifyMobilePurchase(body: VerifyMobilePurchaseBody) {
+  return api.post<MobileVerifyResult>('/billing/mobile/verify', body);
+}
+
+export function useVerifyMobilePurchase() {
+  return useMutation({
+    mutationFn: verifyMobilePurchase,
+  });
+}
+
 // Removed useSubscriptionStatus — it called GET /users/:uid/subscription, which
 // does not exist. Subscription lives on GET /users/me (useCurrentUser).

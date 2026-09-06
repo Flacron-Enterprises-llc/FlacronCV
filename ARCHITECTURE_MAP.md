@@ -476,14 +476,19 @@ completeness bar. The previous fill was a hardcoded 70% with no API or web
 definition. Cards still show title, headline, status, updated date, version,
 and download count.
 
-**Paid upgrades flag (S1, 2026-08-26; Q9 lock 2026-08-27).** One switch,
-`PAID_UPGRADES_ENABLED` in `apps/mobile/src/config/paid-upgrades.ts`. Defaults
-off on every `Platform.OS`. `EXPO_PUBLIC_PAID_UPGRADES_ENABLED` overrides for
-QA/rollback. When off: no Stripe Checkout, no prices, no Upgrade/Choose CTAs;
-billing stays as plan+usage only. Checkout/portal/PlanCard code is kept, not
-deleted. Web subscriptions are unchanged. Locked template tiles (Templates
-tab and New CV) never navigate through: flag OFF Alerts with no purchase
-route; flag ON Alerts with Upgrade → billing.
+**Paid upgrades flag (S1, 2026-08-26; Q9 lock 2026-08-27; IAP Stage 2 2026-09-06).**
+One switch, `PAID_UPGRADES_ENABLED` in `apps/mobile/src/config/paid-upgrades.ts`.
+Defaults off on every `Platform.OS`. `EXPO_PUBLIC_PAID_UPGRADES_ENABLED`
+overrides for QA/rollback. When off: no paywall, no prices, no Upgrade/Choose
+CTAs; billing stays as plan+usage only. When on, **ios/android** use
+`expo-iap` (`StorePaywall` → `POST /billing/mobile/verify`); store
+subscribers manage in App Store / Play, not the Stripe portal. Expo web
+(if the flag is ever on there) still uses the existing Checkout/portal
+hooks. Checkout/portal/PlanCard code is kept. Web (Next.js) subscriptions
+are unchanged. Locked template tiles never navigate through: flag OFF
+Alerts with no purchase route; flag ON Alerts with Upgrade → billing.
+Product ids: `apps/mobile/src/config/iap-products.ts` (placeholders until
+the stores exist).
 
 **Legal acceptance (L1 + Q5, 2026-08-26).** Mobile register/login Google (new
 users) POST `/legal/acceptances` with the same body as web. Email register
@@ -708,4 +713,15 @@ checkout is `409` and Stripe webhooks skip Firestore entitlement writes in
 that case; leftover Stripe subscriptions are still cancelled. Store refunds
 null `currentPeriodEnd` so the overlay cannot revive Pro. Stripe-only docs
 (no store ids) behave as before.
+
+**20. The expo-iap plugin changes the binary even while S1 is off.** Adding
+`"expo-iap"` injects Android `com.android.vending.BILLING` and links Play
+Billing + StoreKit. There is no new runtime permission prompt and no
+paywall while `PAID_UPGRADES_ENABLED` is false (`StorePaywall` is
+lazy-required). A production AAB that includes the plugin will still show
+Play Billing to Play Console. iOS IAP capability is on the App ID, not an
+Info.plist usage string. Do not init the IAP connection at app root.
+Expo Go keeps working until the flag is on (then a development build is
+required). Product ids are placeholders in
+`apps/mobile/src/config/iap-products.ts` — swap there, not in screens.
 

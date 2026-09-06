@@ -764,12 +764,20 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 8. Out-of-scope / architectural recommendations (do NOT implement without approval)
 
+- **⚠️ ADDED 2026-09-06 — IAP Stage 2 (mobile client, S1 still off).**
+  `expo-iap` 5.5.0 + plugin (no IAPKit key, no Kotlin pin). Paywall, verify,
+  restore, pending/cancel/fail, and store manage-subscription live in
+  `StorePaywall` and are lazy-required only when S1 is on. Product ids are
+  placeholders in `apps/mobile/src/config/iap-products.ts`. Expo Go still
+  works while the flag is off. Web Stripe is unchanged. Do not flip S1
+  until a real store purchase verifies end to end.
+
 - **⚠️ ADDED 2026-09-06 — IAP dual-subscribe (Option A).** Entitlements and
   Stripe writes follow live store vs live Stripe state (`hasLiveStorePurchase` /
   `hasLiveStripeSubscription`), not the `provider` label. A lapsed Stripe
   record plus an in-period App Store / Play purchase stays Pro. Store refunds
   clear `currentPeriodEnd` so Pro cannot resurrect. Existing Stripe-only users
-  are unchanged. S1 off. expo-iap still Stage 2.
+  are unchanged. S1 off. Stage 2 client is behind that flag.
 
 - **⚠️ ADDED 2026-09-06 — IAP Stage 1 piece 3 (store webhooks, no client).**
   `POST /api/v1/webhooks/apple` (App Store Server Notifications V2) and
@@ -1147,6 +1155,16 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-09-06 — **IAP Stage 2 — mobile purchase flow behind S1.** Installed
+  `expo-iap` 5.5.0 (`expo install`) and the `expo-iap` config plugin (no
+  `iapkitApiKey`, no `kotlinVersion`). Paywall is Pro/Enterprise ×
+  monthly/yearly, purchase POSTs `/billing/mobile/verify`, restore is
+  required, cancel/fail/pending are handled, manage-subscription opens the
+  store not Stripe. Placeholder product ids live in
+  `apps/mobile/src/config/iap-products.ts`. S1 stays off — Expo Go still
+  works because `expo-iap` is lazy-required. Web Stripe untouched. Added
+  `expo-dev-client` so a pre-IAP EAS development APK exists.
 
 - 2026-09-06 — **IAP dual-subscribe Option A.** `resolveEffectivePlan` restores
   Pro when store ids are in period even if `plan` was written Free (stale

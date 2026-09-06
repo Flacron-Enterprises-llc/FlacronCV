@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PlanCard } from '../../../src/components/subscription/PlanCard';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
@@ -12,7 +12,12 @@ import { useAuthStore } from '../../../src/store/auth-store';
 import { BillingInterval, SubscriptionPlan, SubscriptionStatus } from '../../../src/types/enums';
 import { PLAN_CONFIGS, yearlySavingsPercent } from '../../../src/types/subscription.types';
 import { requestFailureMessage } from '../../../src/lib/api-errors';
-import { effectivePlanForCopy } from '../../../src/lib/entitlements';
+import {
+  effectivePlanForCopy,
+  hasLiveStorePurchase,
+  hasLiveStripeSubscription,
+} from '../../../src/lib/entitlements';
+import { skuForPlan } from '../../../src/config/iap-products';
 import { formatDate, toDate } from '../../../src/lib/utils';
 import { PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
 import { colors } from '../../../src/theme/colors';
@@ -26,6 +31,36 @@ function loadFailureMessage(err: unknown): string {
     return 'No connection. Check your network and try again.';
   }
   return 'Could not load usage. Please try again.';
+}
+
+const nativeStoreBilling =
+  PAID_UPGRADES_ENABLED && (Platform.OS === 'ios' || Platform.OS === 'android');
+
+function NativeStorePaywall({
+  interval,
+  currentPlan,
+  onEntitlementChanged,
+}: {
+  interval: BillingInterval;
+  currentPlan: SubscriptionPlan;
+  onEntitlementChanged: () => void;
+}) {
+  // Lazy so Expo Go does not evaluate expo-iap while S1 is off.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { StorePaywall } = require('../../../src/components/subscription/StorePaywall') as typeof import('../../../src/components/subscription/StorePaywall');
+  return (
+    <StorePaywall
+      interval={interval}
+      currentPlan={currentPlan}
+      onEntitlementChanged={onEntitlementChanged}
+    />
+  );
+}
+
+async function openNativeStoreSubscriptions(skuAndroid?: string | null) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { openStoreSubscriptionManagement } = require('../../../src/components/subscription/StorePaywall') as typeof import('../../../src/components/subscription/StorePaywall');
+  await openStoreSubscriptionManagement(skuAndroid);
 }
 
 export default function BillingScreen() {
@@ -46,8 +81,11 @@ export default function BillingScreen() {
   const periodEnd = user?.subscription?.currentPeriodEnd;
   const cancelAtPeriodEnd = !!user?.subscription?.cancelAtPeriodEnd;
   const limits = PLAN_CONFIGS[plan].limits;
-  const canManageBilling =
-    PAID_UPGRADES_ENABLED && !!user?.subscription?.stripeCustomerId;
+  const storeLive = hasLiveStorePurchase(user?.subscription);
+  const stripeLive = hasLiveStripeSubscription(user?.subscription);
+  const canManageStore = nativeStoreBilling && storeLive;
+  const canManageStripe =
+    PAID_UPGRADES_ENABLED && stripeLive && !!user?.subscription?.stripeCustomerId;
 
   const handleSubscribe = async (targetPlan: SubscriptionPlan) => {
     if (!PAID_UPGRADES_ENABLED) return;
@@ -65,7 +103,18 @@ export default function BillingScreen() {
   };
 
   const handleManageBilling = async () => {
-    if (!canManageBilling) return;
+    if (canManageStore) {
+      try {
+        await openNativeStoreSubscriptions(skuForPlan(plan, interval));
+      } catch (err) {
+        Alert.alert(
+          'Could not open subscriptions',
+          requestFailureMessage(err, 'Open your App Store or Google Play account to manage this subscription.'),
+        );
+      }
+      return;
+    }
+    if (!canManageStripe) return;
     try {
       const portal = await createPortal.mutateAsync();
       await Linking.openURL(portal.url);
@@ -131,14 +180,18 @@ export default function BillingScreen() {
                 <Text className="font-semibold text-stone-900">{formatDate(periodEnd)}</Text>
               </View>
             )}
-            {canManageBilling && (
+            {(canManageStore || canManageStripe) && (
               <TouchableOpacity
                 onPress={() => void handleManageBilling()}
                 disabled={createPortal.isPending}
                 className="mt-3 border border-stone-200 rounded-xl py-2.5 items-center"
               >
                 <Text className="text-stone-700 font-semibold">
-                  {createPortal.isPending ? 'Opening…' : 'Manage Billing'}
+                  {createPortal.isPending
+                    ? 'Opening…'
+                    : canManageStore
+                      ? 'Manage subscription'
+                      : 'Manage Billing'}
                 </Text>
               </TouchableOpacity>
             )}
@@ -179,20 +232,33 @@ export default function BillingScreen() {
             </View>
 
             <View className="px-4 pb-8">
-              {Object.values(SubscriptionPlan).map((p) => (
-                <PlanCard
-                  key={p}
-                  config={PLAN_CONFIGS[p]}
+              {nativeStoreBilling ? (
+                <NativeStorePaywall
                   interval={interval}
-                  isCurrentPlan={plan === p}
-                  isLoading={createCheckout.isPending}
-                  onSelect={() => void handleSubscribe(p)}
+                  currentPlan={plan}
+                  onEntitlementChanged={() => {
+                    void syncUser();
+                    void refetch();
+                  }}
                 />
-              ))}
+              ) : (
+                <>
+                  {Object.values(SubscriptionPlan).map((p) => (
+                    <PlanCard
+                      key={p}
+                      config={PLAN_CONFIGS[p]}
+                      interval={interval}
+                      isCurrentPlan={plan === p}
+                      isLoading={createCheckout.isPending}
+                      onSelect={() => void handleSubscribe(p)}
+                    />
+                  ))}
 
-              <Text className="text-stone-400 text-xs text-center mt-4 leading-4">
-                All payments are securely processed by Stripe. You can cancel or change your plan at any time.
-              </Text>
+                  <Text className="text-stone-400 text-xs text-center mt-4 leading-4">
+                    All payments are securely processed by Stripe. You can cancel or change your plan at any time.
+                  </Text>
+                </>
+              )}
             </View>
           </>
         )}
