@@ -1157,6 +1157,26 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 9. Change log (append newest at top)
 
+- 2026-09-06 — **Mobile Interview Prep.** Nested under the CV editor
+  (chatbubbles icon — not a sixth tab). Same CV + job-description pattern
+  as ATS Check. `POST /ai/interview-prep` body is exactly `InterviewPrepDto`
+  (`jobDescription`, optional `cvContent`, clamped). Credit / refund /
+  network alerts match SummaryStep (E6). Copy says Flacron Engine. S1, IAP,
+  tab bar, and Job Tracker untouched.
+
+- 2026-09-06 — **Mobile ATS Check.** Nested under the CV editor (analytics
+  icon in the header — not a sixth tab). Paste a job description, run the
+  check, show score + keyword gaps. `POST /ai/ats-check` body is exactly
+  `AtsCheckDto` (`cvContent`, `jobDescription`, clamped to 50000 / 20000).
+  Credit / refund / network alerts match SummaryStep (E6). Copy says
+  Flacron Engine. S1, IAP, tab bar, and Job Tracker untouched.
+
+- 2026-09-06 — **Mobile Job Tracker.** Hidden stack (not a sixth tab), same
+  pattern as Support. List with status filter + search; one scrollable
+  add/edit form. `PUT /jobs/:id` (the API has no PATCH). CV/letter pickers
+  use `limit=100`. Dates go through D1 `toDate` / `formatDate`. S1 and tab
+  bar geometry untouched.
+
 - 2026-09-06 — **Flacron Engine on three API customer strings.** Nest
   messages are now `Flacron Engine credits exhausted. Please upgrade your
   plan.` and `Flacron Engine generation failed`. Welcome email says “let

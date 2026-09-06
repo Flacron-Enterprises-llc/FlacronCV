@@ -78,6 +78,15 @@ export enum TemplateCategory {
   COVER_LETTER = 'cover_letter',
 }
 
+export enum JobStatus {
+  WISHLIST = 'wishlist',
+  APPLIED = 'applied',
+  INTERVIEWING = 'interviewing',
+  OFFER = 'offer',
+  REJECTED = 'rejected',
+  ACCEPTED = 'accepted',
+}
+
 export enum AIProvider {
   OPENAI = 'openai',
   WATSONX = 'watsonx',

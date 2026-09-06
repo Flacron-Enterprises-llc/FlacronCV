@@ -239,6 +239,20 @@ export default function DashboardScreen() {
               <Text className="text-white font-bold mt-1.5 text-sm">Templates</Text>
             </TouchableOpacity>
           </View>
+          <TouchableOpacity
+            onPress={() => router.push('./jobs')}
+            className="mt-3 bg-white rounded-2xl border border-stone-100 p-4 flex-row items-center"
+            activeOpacity={0.8}
+          >
+            <View className="w-10 h-10 rounded-xl bg-brand-50 items-center justify-center mr-3">
+              <Ionicons name="briefcase-outline" size={20} color={colors.brand[600]} />
+            </View>
+            <View className="flex-1">
+              <Text className="font-bold text-stone-900">Job Tracker</Text>
+              <Text className="text-stone-500 text-sm mt-0.5">Log applications after you apply</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} />
+          </TouchableOpacity>
         </View>
 
         {/* Recent Documents */}

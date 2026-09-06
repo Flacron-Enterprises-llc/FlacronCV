@@ -53,6 +53,7 @@ export default function SettingsScreen() {
       title: 'Account',
       items: [
         { icon: 'person-outline', label: 'Profile', onPress: () => router.push('/(dashboard)/settings/profile') },
+        { icon: 'briefcase-outline', label: 'Job Tracker', onPress: () => router.push('../jobs') },
       ],
     },
     {

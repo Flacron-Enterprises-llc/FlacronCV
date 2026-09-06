@@ -370,7 +370,9 @@ and support tickets return a bare array. The compiler type-checked `data.total`
 against a field that never existed, which is why the defect survived. Lists now
 use `ListPage<T>`. Support list is `SupportTicket[]` (a `.data` peel on that
 array was accidentally correct before unwrap and would have emptied the list).
-Export `normalizeExportPayload` stays dual-shape on purpose.
+**Jobs list is the same shape as support:** `GET /jobs` returns `JobApplication[]`,
+not a page. Mobile Job Tracker is a hidden stack (`href: null`, like Support)
+at `app/(dashboard)/jobs/` — not a sixth tab. Export `normalizeExportPayload` stays dual-shape on purpose.
 
 **Date parsing (D1, 2026-08-26).** `apps/mobile/src/lib/utils.ts` `toDate` /
 `formatDate` accept the same Firestore JSON shapes as web
@@ -404,8 +406,17 @@ while `isDirty`.
 `{ experience, skills, targetRole }` to `/ai/cv-summary` (GenerateCvSummaryDto).
 Strings are built from the Zustand store (experience/skills sections +
 `personalInfo.headline`), truncated to DTO MaxLength. Empty required fields
-disable Generate; the unused improve / skills / ATS / translate hooks stay
-unwired.
+disable Generate.
+
+**Mobile ATS Check (2026-09-06).** Nested screen `cvs/[id]/ats-check` from
+the CV editor header. Serializes the in-memory CV (unsaved edits included)
+via `serializeCVToText`. `useATSCheck` sends only `{ cvContent, jobDescription }`
+clamped to AtsCheckDto MaxLength.
+
+**Mobile Interview Prep (2026-09-06).** Nested screen `cvs/[id]/interview-prep`
+from the same editor header. `useInterviewPrep` sends only
+`{ jobDescription, cvContent }` (InterviewPrepDto). Improve / skills /
+translate hooks stay deleted (Q12).
 
 **Profile editor (Q6, 2026-08-26).** `settings/profile.tsx` hydrates from
 `GET /users/me` via `reset()` once per uid, not `useForm` `defaultValues` on

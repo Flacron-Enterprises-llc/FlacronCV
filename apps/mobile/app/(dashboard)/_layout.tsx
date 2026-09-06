@@ -6,12 +6,12 @@ import { colors } from '../../src/theme/colors';
 
 const TAB_ROOTS = new Set(['index', 'cvs', 'cover-letters', 'templates', 'settings']);
 
-/** Tab roots keep the bar. Pushed stack screens (wizard, editors, support, …) hide it. */
+/** Tab roots keep the bar. Pushed stack screens (wizard, editors, support, jobs, …) hide it. */
 function hideTabBarOnNested(segments: readonly string[]): boolean {
   const parts = segments.filter((s) => !s.startsWith('('));
   if (parts.length <= 1) return false;
   const tab = parts[0];
-  if (tab === 'support') return true;
+  if (tab === 'support' || tab === 'jobs') return true;
   const rest = parts.slice(1).filter((s) => s !== 'index');
   return TAB_ROOTS.has(tab) && rest.length > 0;
 }
@@ -88,9 +88,13 @@ export default function DashboardLayout() {
           ),
         }}
       />
-      {/* Support is accessible from within the app but not a top-level tab */}
+      {/* Support and Job Tracker are reachable in-app but not top-level tabs */}
       <Tabs.Screen
         name="support"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="jobs"
         options={{ href: null }}
       />
     </Tabs>

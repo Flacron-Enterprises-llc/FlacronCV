@@ -99,6 +99,20 @@ export default function CVEditorScreen() {
         </View>
 
         <TouchableOpacity
+          onPress={() => router.push('./ats-check')}
+          accessibilityLabel="ATS Check"
+          className="mr-1 p-2"
+        >
+          <Ionicons name="analytics-outline" size={22} color={colors.stone[700]} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => router.push('./interview-prep')}
+          accessibilityLabel="Interview Prep"
+          className="mr-2 p-2"
+        >
+          <Ionicons name="chatbubbles-outline" size={22} color={colors.stone[700]} />
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={() => Alert.alert('Export', 'Choose format:', [
             { text: 'PDF', onPress: () => handleExport('pdf') },
             { text: 'DOCX', onPress: () => handleExport('docx') },
