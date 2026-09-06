@@ -4,6 +4,18 @@ import { Template, TemplateCategory, SubscriptionPlan } from '@flacroncv/shared-
 import { v4 as uuidv4 } from 'uuid';
 import { TEMPLATE_UPDATABLE_FIELDS } from './dto/template.dto';
 
+const CV_PREVIEW_BUCKET = 'flacron-cv.firebasestorage.app';
+
+/** Public Storage URLs for a CV catalog still. Used on seed create only. */
+function cvPreviewStills(id: string): Pick<Template, 'thumbnailURL' | 'previewImages'> {
+  const fileUrl = (file: string) =>
+    `https://firebasestorage.googleapis.com/v0/b/${CV_PREVIEW_BUCKET}/o/${encodeURIComponent(`template-previews/cv/${id}/${file}`)}?alt=media`;
+  return {
+    thumbnailURL: fileUrl('thumb.webp'),
+    previewImages: [fileUrl('page.webp')],
+  };
+}
+
 @Injectable()
 export class TemplatesService {
   private readonly collection = 'templates';
@@ -113,6 +125,7 @@ export class TemplatesService {
         category: TemplateCategory.CV,
         tier: SubscriptionPlan.FREE,
         nameLocalized: { en: 'Modern', es: 'Moderno', fr: 'Moderne', de: 'Modern', ar: 'عصري', ur: 'جدید' },
+        ...cvPreviewStills('modern'),
       },
       {
         slug: 'classic',
@@ -121,6 +134,7 @@ export class TemplatesService {
         category: TemplateCategory.CV,
         tier: SubscriptionPlan.FREE,
         nameLocalized: { en: 'Classic', es: 'Clásico', fr: 'Classique', de: 'Klassisch', ar: 'كلاسيكي', ur: 'کلاسیکی' },
+        ...cvPreviewStills('classic'),
       },
       {
         slug: 'minimal',
@@ -129,6 +143,7 @@ export class TemplatesService {
         category: TemplateCategory.CV,
         tier: SubscriptionPlan.FREE,
         nameLocalized: { en: 'Minimal', es: 'Minimalista', fr: 'Minimaliste', de: 'Minimal', ar: 'بسيط', ur: 'کم سے کم' },
+        ...cvPreviewStills('minimal'),
       },
       {
         slug: 'professional',
@@ -137,6 +152,7 @@ export class TemplatesService {
         category: TemplateCategory.CV,
         tier: SubscriptionPlan.PRO,
         nameLocalized: { en: 'Professional', es: 'Profesional', fr: 'Professionnel', de: 'Professionell', ar: 'احترافي', ur: 'پیشہ ورانہ' },
+        ...cvPreviewStills('professional'),
       },
       {
         slug: 'creative',
@@ -145,6 +161,7 @@ export class TemplatesService {
         category: TemplateCategory.CV,
         tier: SubscriptionPlan.PRO,
         nameLocalized: { en: 'Creative', es: 'Creativo', fr: 'Créatif', de: 'Kreativ', ar: 'إبداعي', ur: 'تخلیقی' },
+        ...cvPreviewStills('creative'),
       },
       {
         slug: 'executive',
@@ -153,6 +170,7 @@ export class TemplatesService {
         category: TemplateCategory.CV,
         tier: SubscriptionPlan.PRO,
         nameLocalized: { en: 'Executive', es: 'Ejecutivo', fr: 'Exécutif', de: 'Führungskraft', ar: 'تنفيذي', ur: 'ایگزیکٹو' },
+        ...cvPreviewStills('executive'),
       },
       {
         slug: 'compact',
@@ -161,6 +179,7 @@ export class TemplatesService {
         category: TemplateCategory.CV,
         tier: SubscriptionPlan.FREE,
         nameLocalized: { en: 'Compact', es: 'Compacto', fr: 'Compact', de: 'Kompakt', ar: 'مضغوط', ur: 'مختصر' },
+        ...cvPreviewStills('compact'),
       },
       {
         slug: 'two-column',
@@ -169,6 +188,7 @@ export class TemplatesService {
         category: TemplateCategory.CV,
         tier: SubscriptionPlan.PRO,
         nameLocalized: { en: 'Two-Column', es: 'Dos Columnas', fr: 'Deux Colonnes', de: 'Zwei Spalten', ar: 'عمودين', ur: 'دو کالم' },
+        ...cvPreviewStills('two-column'),
       },
       {
         slug: 'academic',
@@ -177,6 +197,7 @@ export class TemplatesService {
         category: TemplateCategory.CV,
         tier: SubscriptionPlan.FREE,
         nameLocalized: { en: 'Academic', es: 'Académico', fr: 'Académique', de: 'Akademisch', ar: 'أكاديمي', ur: 'تعلیمی' },
+        ...cvPreviewStills('academic'),
       },
       {
         slug: 'bold',
@@ -185,6 +206,7 @@ export class TemplatesService {
         category: TemplateCategory.CV,
         tier: SubscriptionPlan.ENTERPRISE,
         nameLocalized: { en: 'Bold', es: 'Audaz', fr: 'Audacieux', de: 'Kühn', ar: 'جريء', ur: 'بولڈ' },
+        ...cvPreviewStills('bold'),
       },
       {
         slug: 'cl-classic',
@@ -245,7 +267,9 @@ export class TemplatesService {
         await this.create(tmpl, 'system');
       } else {
         // Re-seeding keeps the code-owned fields (tier/name/description/category/
-        // localization) in sync; usageCount/rating/createdBy are preserved.
+        // localization) in sync; usageCount/rating/createdBy and preview URLs
+        // are preserved. Stills are create-only — a live preview change is
+        // PUT /templates/:id, not a re-seed.
         await this.update(tmpl.slug, {
           name: tmpl.name,
           description: tmpl.description,

@@ -1,5 +1,5 @@
 {
   "root": true,
   "extends": "next/core-web-vitals",
-  "ignorePatterns": [".next/", "node_modules/", "coverage/", "playwright-report/", "test-results/"]
+  "ignorePatterns": [".next/", "node_modules/", "coverage/", "playwright-report/", "test-results/", "template-capture-output/", "scripts/template-capture/"]
 }

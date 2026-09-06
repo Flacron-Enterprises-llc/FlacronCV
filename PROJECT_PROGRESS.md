@@ -764,6 +764,13 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 8. Out-of-scope / architectural recommendations (do NOT implement without approval)
 
+- **⚠️ ADDED 2026-09-06 — Template preview URLs are seeded on create only.**
+  `seedDefaults` writes `thumbnailURL` / `previewImages` for the ten CV
+  catalog ids when the Firestore doc does not exist. Re-seed of an existing
+  doc updates name/tier/localization only — not stills. If a live template's
+  preview needs changing, `PUT /templates/:id`. Cover letters (`cl-*`) have
+  no stills yet.
+
 - **⚠️ ADDED 2026-09-05 — Android target API 36 ignores the portrait lock on
   tablets and foldables.** Play required `targetSdkVersion` 36.
   `apps/mobile/app.json` now sets `compileSdkVersion` / `targetSdkVersion` /
@@ -1118,6 +1125,20 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-09-06 — **CV stills in seedDefaults (create only).** The ten CV
+  catalog seeds include Storage `template-previews/cv/{id}/` URLs so a fresh
+  environment is not blank. Existing-doc re-seed does not write
+  `thumbnailURL` / `previewImages` (live PUTs stay). Cover letters untouched.
+  §8: change a live preview with `PUT /templates/:id`.
+
+- 2026-09-06 — **Local CV template stills (no upload).** Capture source lives
+  in `apps/web/scripts/template-capture/`; a gitignored copy is dropped into
+  App Router only while `pnpm --filter web capture-templates` runs, so Amplify
+  never ships `/template-capture`. Stills use `getTemplateStyling` per id
+  (photo on creative / two-column / bold). Sample CV companies are fictional
+  (store listings). Output: `apps/web/template-capture-output/` (gitignored).
+  No Storage, no Firestore, no `PUT /templates`. Cover letters untouched.
 
 - 2026-09-05 — **Upgrade modal: paid credits reset on the UTC 1st, not a
   billing month.** `upgrade_modal.reasons.ai_credits.description` now matches

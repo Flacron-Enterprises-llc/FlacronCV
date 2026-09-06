@@ -1,12 +1,24 @@
 /**
- * Realistic sample CV used exclusively for template preview rendering.
- * Never persisted — consumed only by TemplatePreviewModal.
+ * Realistic sample CV used for template preview rendering and local stills.
+ * Never persisted. Company / school names are fictional — these stills go
+ * into store listings.
  */
 
 import type { CV, CVSection, CVLayout } from '@flacroncv/shared-types';
 import { CVStatus, CVSectionType, SkillLevel, FontSize, Spacing } from '@flacroncv/shared-types';
+import { getTemplateStyling } from './cv-template-styling';
 
 const now = new Date();
+
+/** Geometric silhouette — not a real person, no file in `public/`. */
+const SAMPLE_PHOTO_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">' +
+  '<rect width="256" height="256" fill="#d6d3d1"/>' +
+  '<circle cx="128" cy="96" r="48" fill="#78716c"/>' +
+  '<path d="M32 256c12-72 52-112 96-112s84 40 96 112" fill="#78716c"/>' +
+  '</svg>';
+
+export const SAMPLE_PHOTO_DATA_URI = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(SAMPLE_PHOTO_SVG)}`;
 
 export function buildSampleCV(layout: CVLayout, accentColor: string): CV {
   return {
@@ -59,6 +71,18 @@ export function buildSampleCV(layout: CVLayout, accentColor: string): CV {
   };
 }
 
+/** Full catalog styling (fonts, spacing, photo) for a named template id. */
+export function buildSampleCVForTemplate(templateId: string): CV {
+  const styling = getTemplateStyling(templateId);
+  const cv = buildSampleCV(styling.layout, styling.primaryColor);
+  cv.templateId = templateId;
+  cv.styling = { ...cv.styling, ...styling };
+  if (styling.showPhoto) {
+    cv.personalInfo = { ...cv.personalInfo, photoURL: SAMPLE_PHOTO_DATA_URI };
+  }
+  return cv;
+}
+
 export const SAMPLE_SECTIONS: CVSection[] = [
   {
     id:        'exp',
@@ -71,7 +95,7 @@ export const SAMPLE_SECTIONS: CVSection[] = [
     items: [
       {
         id:          'e1',
-        company:     'Stripe',
+        company:     'Ledgerly',
         position:    'Senior Product Manager',
         location:    'San Francisco, CA',
         startDate:   '2021-03',
@@ -84,7 +108,7 @@ export const SAMPLE_SECTIONS: CVSection[] = [
       },
       {
         id:          'e2',
-        company:     'Airbnb',
+        company:     'Havenstay',
         position:    'Product Manager',
         location:    'San Francisco, CA',
         startDate:   '2018-06',
@@ -97,14 +121,14 @@ export const SAMPLE_SECTIONS: CVSection[] = [
       },
       {
         id:          'e3',
-        company:     'Google',
+        company:     'Northpeak',
         position:    'Associate Product Manager',
         location:    'Mountain View, CA',
         startDate:   '2016-09',
         endDate:     '2018-05',
         isCurrent:   false,
         description:
-          'Contributed to Google Maps local search features, coordinating cross-functional efforts across data science, legal, and marketing.',
+          'Contributed to Cartograph local search features, coordinating cross-functional efforts across data science, legal, and marketing.',
         highlights:  [],
         order:       2,
       },
@@ -121,10 +145,10 @@ export const SAMPLE_SECTIONS: CVSection[] = [
     items: [
       {
         id:          'ed1',
-        institution: 'Stanford University',
+        institution: 'Westbrook University',
         degree:      'M.S.',
         field:       'Computer Science',
-        location:    'Stanford, CA',
+        location:    'Westbrook, CA',
         startDate:   '2014-09',
         endDate:     '2016-06',
         gpa:         '3.9',
@@ -133,10 +157,10 @@ export const SAMPLE_SECTIONS: CVSection[] = [
       },
       {
         id:          'ed2',
-        institution: 'UC Berkeley',
+        institution: 'Harbor State University',
         degree:      'B.S.',
         field:       'Electrical Engineering & Computer Science',
-        location:    'Berkeley, CA',
+        location:    'Oakridge, CA',
         startDate:   '2010-09',
         endDate:     '2014-05',
         gpa:         '3.8',
@@ -173,8 +197,8 @@ export const SAMPLE_SECTIONS: CVSection[] = [
     createdAt: new Date(),
     updatedAt: new Date(),
     items: [
-      { id: 'c1', name: 'AWS Certified Cloud Practitioner', issuer: 'Amazon Web Services', date: '2023-04', expiryDate: null, credentialId: '', url: '', order: 0 },
-      { id: 'c2', name: 'Professional Scrum Master I',      issuer: 'Scrum.org',            date: '2020-11', expiryDate: null, credentialId: '', url: '', order: 1 },
+      { id: 'c1', name: 'Cloud Foundations Certificate', issuer: 'Nimbus Cloud', date: '2023-04', expiryDate: null, credentialId: '', url: '', order: 0 },
+      { id: 'c2', name: 'Agile Delivery Certificate',     issuer: 'Agile Guild',  date: '2020-11', expiryDate: null, credentialId: '', url: '', order: 1 },
     ] as any,
   },
   {

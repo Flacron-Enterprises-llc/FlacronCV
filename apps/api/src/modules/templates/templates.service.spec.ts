@@ -123,6 +123,42 @@ describe('TemplatesService', () => {
       const modern = await service.findById('modern');
       expect(modern.tier).toBe(SubscriptionPlan.FREE); // corrected to the code value
     });
+
+    it('puts CV still URLs on create, not on cover letters', async () => {
+      await service.seedDefaults();
+      const classic = await service.findById('classic');
+      expect(classic.thumbnailURL).toContain(
+        'template-previews%2Fcv%2Fclassic%2Fthumb.webp',
+      );
+      expect(classic.previewImages).toEqual([
+        expect.stringContaining('template-previews%2Fcv%2Fclassic%2Fpage.webp'),
+      ]);
+      const twoColumn = await service.findById('two-column');
+      expect(twoColumn.thumbnailURL).toContain(
+        'template-previews%2Fcv%2Ftwo-column%2Fthumb.webp',
+      );
+      const cl = await service.findById('cl-classic');
+      expect(cl.thumbnailURL).toBe('');
+      expect(cl.previewImages).toEqual([]);
+    });
+
+    it('does not overwrite thumbnailURL or previewImages on re-seed', async () => {
+      await service.create(
+        {
+          name: 'Modern',
+          slug: 'modern',
+          category: TemplateCategory.CV,
+          thumbnailURL: 'https://example.com/custom-thumb.webp',
+          previewImages: ['https://example.com/custom-page.webp'],
+        },
+        'system',
+      );
+      await service.seedDefaults();
+      const modern = await service.findById('modern');
+      expect(modern.thumbnailURL).toBe('https://example.com/custom-thumb.webp');
+      expect(modern.previewImages).toEqual(['https://example.com/custom-page.webp']);
+      expect(modern.tier).toBe(SubscriptionPlan.FREE);
+    });
   });
 
   describe('public reads (L1 — data minimization)', () => {

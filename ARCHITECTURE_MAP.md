@@ -128,6 +128,8 @@ the route group — the groups only control layout and client-side redirects.
 | `(crm)` | `customers`, `leads`, `revenue`, `subscriptions`, `users`, `platform`, `audit`, `settings` | `admin` / `super_admin` claim |
 | `[...rest]` | Localised 404 | Public |
 
+**Store stills.** Capture stays local-only: `pnpm --filter web capture-templates` copies `apps/web/scripts/template-capture/` into a gitignored `src/app/[locale]/(dev)/template-capture/` folder, then deletes the copy — Amplify never ships `/template-capture`. Hosted files live at Storage `template-previews/cv/{id}/thumb.webp` and `page.webp` (public read). `seedDefaults` sets those URLs **on create only**; a live change is `PUT /templates/:id`. Cover letters have no stills yet.
+
 **Legal routes are `/privacy-policy`, `/terms-of-service`, `/cookie-policy`, `/disclaimer`,
 `/refund-policy`, plus `/contact-us`.** The client's checklist names `/privacy`, `/terms`,
 `/contact` — those slugs were **not** adopted; existing links and sitemap entries stay.

@@ -89,3 +89,10 @@ nul
 # Playwright run artefacts — regenerated on every run, never committed.
 apps/web/playwright-report/
 apps/web/test-results/
+
+# Local-only CV template stills. The capture page is copied into src/app by
+# scripts/template-capture/run.mjs and deleted afterwards — never ship it.
+# `**/template-capture/` would also ignore the committed script source, so
+# only the App Router copy and the PNG output folder are ignored.
+apps/web/src/app/**/template-capture/
+apps/web/template-capture-output/
