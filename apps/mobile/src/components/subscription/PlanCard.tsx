@@ -15,13 +15,6 @@ interface PlanCardProps {
   priceOverride?: string;
 }
 
-/** Mobile-only branding; shared-types / web feature lines stay unchanged. */
-function displayPlanFeature(feature: string): string {
-  return feature
-    .replace(/\bAI Credits\b/g, 'Engine Credits')
-    .replace(/\bAll AI career tools\b/g, 'All Flacron Engine career tools');
-}
-
 export function PlanCard({
   config,
   interval,
@@ -96,7 +89,7 @@ export function PlanCard({
                     : colors.success.DEFAULT
               }
             />
-            <Text className="text-stone-700 ml-2 text-sm">{displayPlanFeature(feature)}</Text>
+            <Text className="text-stone-700 ml-2 text-sm">{feature}</Text>
           </View>
         ))}
       </View>

@@ -327,11 +327,13 @@ must name the SDKs actually in `apps/api/package.json`, both directions),
 `PLAN_CONFIGS` in `packages/shared-types/src/subscription.types.ts` is the intended single source of
 truth for prices, CV / cover-letter / AI-credit / export limits, and Stripe price ids.
 `limits.templates` is the **max reachable `SubscriptionPlan`** (not `'free_only' | 'all'`).
-`plan-advertising.spec.ts` asserts advertised template access against `planMeetsTier` and the
-built-in catalogue maps, DOCX against the Free export gate, and `/month` against usage-reset
-(Free skipped). Quantity lines still match `limits.*` because those fields are what the services
-enforce. It never reads `apps/mobile`, the CRM settings defaults, the locale JSON, or any
-component. Everything below sits outside that guard.
+Customer-facing `features[]` bullets say **Engine Credits** / Flacron Engine (2026-09-06);
+`limits.aiCredits` is still the field name. `plan-advertising.spec.ts` asserts advertised
+template access against `planMeetsTier` and the built-in catalogue maps, DOCX against the
+Free export gate, and `/month` against usage-reset (Free skipped). Quantity lines still
+match `limits.*` (credit lines via `/Engine credits?/i`). It never reads `apps/mobile`,
+the CRM settings defaults, the locale JSON, or any component. Everything below sits
+outside that guard.
 
 ### Tier 1 — a second source of truth for prices and Stripe ids (`apps/mobile`)
 
@@ -348,7 +350,7 @@ Still outside the wrap:
 |---|---|
 | `apps/mobile/src/types/enums.ts` | Three plans only — intentional |
 | `apps/mobile/app/(dashboard)/settings/billing.tsx` | Yearly toggle is not gated by `YEARLY_BILLING_ENABLED` (the flag is currently on, so the toggle is honest) |
-| `apps/mobile/app/(dashboard)/index.tsx` | Subtitle still restates “100 AI credits” |
+| `apps/mobile/app/(dashboard)/index.tsx` | Upgrade subtitle interpolates `PLAN_CONFIGS[PRO].limits` (“Engine credits”); not a restated “100 AI credits” |
 | `apps/mobile/src/lib/utils.ts:41, 50, 59, 68` | Gates read the wrapped table (now shared figures) |
 | `apps/mobile/app/(dashboard)/index.tsx:102`, `settings/index.tsx:89`, `src/components/cv-builder/steps/SummaryStep.tsx:110` | Literal FREE-value fallbacks in usage display |
 

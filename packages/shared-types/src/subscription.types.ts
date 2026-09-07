@@ -117,7 +117,7 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
     features: [
       '5 CVs',
       '1 Cover Letter',
-      '5 AI Credits',
+      '5 Engine Credits',
       templateFeatureLine(SubscriptionPlan.FREE),
       '2 exports',
       'PDF export',
@@ -149,7 +149,7 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
     features: [
       '10 CVs/month',
       '20 Cover Letters/month',
-      '100 AI Credits/month',
+      '100 Engine Credits/month',
       templateFeatureLine(SubscriptionPlan.PRO),
       'Unlimited exports',
       'PDF & DOCX export',
@@ -182,11 +182,11 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
     features: [
       '25 CVs/month',
       '50 Cover Letters/month',
-      '250 AI Credits/month',
+      '250 Engine Credits/month',
       templateFeatureLine(SubscriptionPlan.CAREER_ACCELERATOR),
       'Unlimited exports',
       'PDF & DOCX export',
-      'All AI career tools (ATS, Interview Prep, LinkedIn)',
+      'All Flacron Engine career tools (ATS, Interview Prep, LinkedIn)',
       'Priority support',
     ],
   },
@@ -209,7 +209,7 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
     features: [
       'Unlimited CVs',
       'Unlimited Cover Letters',
-      '500 AI Credits/month',
+      '500 Engine Credits/month',
       templateFeatureLine(SubscriptionPlan.ENTERPRISE),
       'Unlimited exports',
       'PDF & DOCX export',

@@ -764,6 +764,16 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 8. Out-of-scope / architectural recommendations (do NOT implement without approval)
 
+- **⚠️ ADDED 2026-09-06 — `terms.ts` still says “5 AI Credits” after the Engine
+  rebrand.** `LEGAL_VERSION` is `2026-08-16`. Customer UI (plan cards, JSON-LD
+  FAQ, visible `faq.a1` ×6, upgrade modal, ATS/interview/LinkedIn/import
+  subtitles, billing usage labels) now says Engine Credits. The accepted
+  English terms body (`apps/web/src/legal/terms.ts` §6 Free-plan bullets) was
+  left unchanged on purpose: amending accepted legal wording is a legal pass
+  (`LEGAL_VERSION` bump + re-acceptance), not a UI rebrand. Do not edit
+  `terms.ts` in a drive-by. **AR and UR Engine-credit strings are unreviewed
+  by a native reader.**
+
 - **⚠️ ADDED 2026-09-06 — IAP Stage 2 (mobile client, S1 still off).**
   `expo-iap` 5.5.0 + plugin (no IAPKit key, no Kotlin pin). Paywall, verify,
   restore, pending/cancel/fail, and store manage-subscription live in
@@ -839,7 +849,7 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   - **Priority support** — every paid plan’s `features[]`, and the comparison
     table ticks `plan !== FREE`. There is no support-queue, SLA, or ticket
     priority field. May be a human process rather than a product entitlement.
-  - **Career Accelerator “All AI career tools (ATS, Interview Prep, LinkedIn)”**
+  - **Career Accelerator “All Flacron Engine career tools (ATS, Interview Prep, LinkedIn)”**
     — those routes are credit-gated for every plan (`ai.controller.ts`), not
     CA-exclusive. The line sells uniqueness the server does not enforce.
 - **⚠️ ADDED 2026-08-25 — Known restatements of plan/catalogue facts.** Do not
@@ -1156,6 +1166,34 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-09-07 — **Engine Credits in visible FAQ + web UI (six locales).**
+  `faq.a1` matches JSON-LD (“Engine credits”; numbers unchanged). Related
+  allowance and in-app currency copy (upgrade modal, ATS/interview/LinkedIn/
+  import subtitles, billing/CRM labels, generate-failed charge lines,
+  `/en/ats-cv-checker` credit mentions) now say Engine credit(s). `faq.q3`/
+  `faq.a3`, `terms_credit_desc` (“AI request”), cover-letter AI writing
+  options, and `terms.ts` (`LEGAL_VERSION` 2026-08-16) untouched.
+  **AR and UR not reviewed by a native reader.** `AI_CREDIT_*`, S1, IAP
+  untouched.
+
+- 2026-09-06 — **Engine Credits on JSON-LD FAQ, CRM CSV, mobile subtitle.**
+  `faqPage()` interpolates “Engine credits” from `limits.aiCredits` (numbers
+  unchanged). CRM export headers are Engine Credits Used / Limit. Mobile
+  dashboard upgrade line already read Pro limits as Engine credits —
+  ARCHITECTURE_MAP stale “100 AI credits” note cleared. `terms.ts` not
+  edited (`LEGAL_VERSION` 2026-08-16); logged in §8 for a legal pass.
+  Visible `faq.a1` ×6 still says “AI credits”. `AI_CREDIT_*`, S1, IAP
+  untouched.
+
+- 2026-09-06 — **PLAN_CONFIGS.features: Engine wording.** Shared plan
+  bullets now say Engine Credits / Flacron Engine career tools (numbers
+  unchanged). Web pricing, billing, and UpgradeModal read those strings
+  directly. Advertising guard noun is `/Engine credits?/i` so it still
+  checks quantities against `limits.aiCredits`. Mobile
+  `displayPlanFeature` rewrite removed. `AI_CREDIT_*`, S1, IAP, limits
+  untouched. FAQ JSON-LD, legal terms, and CRM CSV headers still say
+  “AI credits” — they do not read `features[]`.
 
 - 2026-09-06 — **Mobile Interview Prep.** Nested under the CV editor
   (chatbubbles icon — not a sixth tab). Same CV + job-description pattern

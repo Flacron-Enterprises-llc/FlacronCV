@@ -109,8 +109,8 @@ describe('advertised quantities match enforced caps', () => {
     );
   });
 
-  it.each(PLANS)('%s — AI credit allowance', (plan) => {
-    expect(advertised(PLAN_CONFIGS[plan].features, /AI credits?/i)).toBe(
+  it.each(PLANS)('%s — Engine credit allowance', (plan) => {
+    expect(advertised(PLAN_CONFIGS[plan].features, /Engine credits?/i)).toBe(
       PLAN_CONFIGS[plan].limits.aiCredits,
     );
   });
@@ -134,11 +134,11 @@ describe('DOCX advertising matches the export gate', () => {
 
 describe('cadence advertising matches usage-reset', () => {
   // Free docs are skipped entirely in `usage-reset.service.ts`. Paid numeric
-  // caps (CVs, cover letters, AI credits, exports) reset on the 1st.
+  // caps (CVs, cover letters, Engine credits, exports) reset on the 1st.
   const monthlyNouns: { noun: RegExp; cap: (plan: SubscriptionPlan) => number | 'unlimited' }[] = [
     { noun: /\bCVs?\b/i, cap: (p) => PLAN_CONFIGS[p].limits.cvs },
     { noun: /cover letters?/i, cap: (p) => PLAN_CONFIGS[p].limits.coverLetters },
-    { noun: /AI credits?/i, cap: (p) => PLAN_CONFIGS[p].limits.aiCredits },
+    { noun: /Engine credits?/i, cap: (p) => PLAN_CONFIGS[p].limits.aiCredits },
     { noun: /exports?/i, cap: (p) => PLAN_CONFIGS[p].limits.exports },
   ];
 

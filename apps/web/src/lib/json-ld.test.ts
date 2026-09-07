@@ -21,14 +21,15 @@ describe('faqPage', () => {
     expect(answers).toContain(
       `${free.coverLetters} ${free.coverLetters === 1 ? 'cover letter' : 'cover letters'}`,
     );
-    expect(answers).toContain(`${free.aiCredits} AI credits`);
-    expect(answers).not.toContain(`${free.aiCredits} AI credits/month`);
+    expect(answers).toContain(`${free.aiCredits} Engine credits`);
+    expect(answers).not.toContain(`${free.aiCredits} Engine credits/month`);
+    expect(answers).not.toContain(`${free.aiCredits} AI credits`);
     expect(answers).not.toContain(`${free.exports} documents/month`);
     expect(answers).not.toContain(`${free.exports} exports/month`);
     expect(answers).toContain('those allowances never reset');
     expect(answers).toContain(`${pro.cvs} CVs`);
     expect(answers).toContain(`${pro.coverLetters} cover letters`);
-    expect(answers).toContain(`${pro.aiCredits} AI credits`);
+    expect(answers).toContain(`${pro.aiCredits} Engine credits`);
     expect(answers).toContain('paid allowances reset on the 1st of each calendar month (UTC)');
     expect(answers).not.toContain('billing month');
     expect(answers).not.toContain(`${pro.cvs} CVs/month`);

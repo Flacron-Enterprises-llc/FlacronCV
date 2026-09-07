@@ -58,7 +58,7 @@ export class CRMUsersController {
 
     const header = [
       'UID', 'Email', 'Display Name', 'Role', 'Plan', 'Plan Status',
-      'CVs Created', 'Cover Letters', 'AI Credits Used', 'AI Credits Limit',
+      'CVs Created', 'Cover Letters', 'Engine Credits Used', 'Engine Credits Limit',
       'Exports This Month', 'Is Active', 'Created At', 'Last Login',
     ].join(',');
 

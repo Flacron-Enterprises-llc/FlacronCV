@@ -109,7 +109,7 @@ export function faqPage() {
         name: 'Is FlacronCV really free?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `Yes! The Free plan lets you create up to ${countPhrase(free.cvs, 'CV', 'CVs')}, ${countPhrase(free.coverLetters, 'cover letter', 'cover letters')}, use ${countPhrase(free.aiCredits, 'AI credit', 'AI credits')}, and export up to ${countPhrase(free.exports, 'document', 'documents')} as PDF — those allowances never reset, and no credit card is required. Upgrade to Pro for ${countPhrase(pro.cvs, 'CV', 'CVs')}, ${countPhrase(pro.coverLetters, 'cover letter', 'cover letters')}, ${countPhrase(pro.aiCredits, 'AI credit', 'AI credits')}, ${countPhrase(pro.exports, 'export', 'exports')}, and DOCX format — paid allowances reset on the 1st of each calendar month (UTC).`,
+          text: `Yes! The Free plan lets you create up to ${countPhrase(free.cvs, 'CV', 'CVs')}, ${countPhrase(free.coverLetters, 'cover letter', 'cover letters')}, use ${countPhrase(free.aiCredits, 'Engine credit', 'Engine credits')}, and export up to ${countPhrase(free.exports, 'document', 'documents')} as PDF — those allowances never reset, and no credit card is required. Upgrade to Pro for ${countPhrase(pro.cvs, 'CV', 'CVs')}, ${countPhrase(pro.coverLetters, 'cover letter', 'cover letters')}, ${countPhrase(pro.aiCredits, 'Engine credit', 'Engine credits')}, ${countPhrase(pro.exports, 'export', 'exports')}, and DOCX format — paid allowances reset on the 1st of each calendar month (UTC).`,
         },
       },
       {
