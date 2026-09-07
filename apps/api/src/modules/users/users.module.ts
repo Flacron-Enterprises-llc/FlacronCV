@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { UsageResetService } from './usage-reset.service';
+import { PushService } from './push.service';
 import { PaymentModule } from '../payment/payment.module';
 
 /**
@@ -13,7 +14,7 @@ import { PaymentModule } from '../payment/payment.module';
 @Module({
   imports: [forwardRef(() => PaymentModule)],
   controllers: [UsersController],
-  providers: [UsersService, UsageResetService],
-  exports: [UsersService],
+  providers: [UsersService, UsageResetService, PushService],
+  exports: [UsersService, PushService],
 })
 export class UsersModule {}

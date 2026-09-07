@@ -17,6 +17,11 @@ export interface UserPreferences {
   emailNotifications: boolean;
   marketingEmails: boolean;
   defaultCVTemplate: string;
+  /**
+   * Remote push opt-in. Missing on accounts created before push plumbing
+   * (treated as false). Enforced server-side — a client toggle is UX only.
+   */
+  pushNotifications?: boolean;
 }
 
 export interface UserSubscription {
@@ -100,6 +105,12 @@ export interface User {
   usage: UserUsage;
   /** Present after a scored registration. Omitted on older accounts. */
   abuse?: UserAbuse | null;
+  /**
+   * Expo push tokens for this account's devices. Missing on older accounts
+   * (treated as []). Capped server-side. Not a subcollection — lives on the
+   * user document.
+   */
+  pushTokens?: string[];
   role: UserRole;
   createdAt: Date;
   updatedAt: Date;

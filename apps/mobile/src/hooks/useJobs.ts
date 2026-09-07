@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { api } from '../lib/api';
+import { reconcileJobReminders } from '../lib/job-reminders';
 import { useAuthStore } from '../store/auth-store';
 import { JobApplication, JobWritePayload } from '../types/job.types';
 
@@ -11,12 +13,20 @@ function useAuthReady() {
 /** GET /jobs returns the array (not a paginated { items } page). */
 export function useJobList() {
   const ready = useAuthReady();
-  return useQuery({
+  const pushOn = useAuthStore((s) => s.user?.preferences?.pushNotifications === true);
+  const query = useQuery({
     queryKey: ['jobs'],
     queryFn: () => api.get<JobApplication[]>('/jobs'),
     enabled: ready,
     staleTime: 30 * 1000,
   });
+
+  useEffect(() => {
+    if (!pushOn || !query.isSuccess || !query.data) return;
+    void reconcileJobReminders(query.data).catch(() => {});
+  }, [pushOn, query.isSuccess, query.data]);
+
+  return query;
 }
 
 export function useJob(id: string | null) {

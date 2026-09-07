@@ -34,7 +34,60 @@ describe('UsersService', () => {
         PLAN_CONFIGS[SubscriptionPlan.FREE].limits.aiCredits,
       );
       expect(user.isActive).toBe(true);
+      expect(user.pushTokens).toEqual([]);
+      expect(user.preferences.pushNotifications).toBe(false);
       expect(user.createdAt).toBeInstanceOf(Date);
+    });
+  });
+
+  describe('push tokens', () => {
+    const tokenA = 'ExponentPushToken[FlacronCVTestToken0001]';
+    const tokenB = 'ExponentPushToken[FlacronCVTestToken0002]';
+
+    it('registers, de-duplicates, and removes a token', async () => {
+      await service.create({ uid: 'pt-1', email: 'p@b.com', displayName: 'P', photoURL: null });
+      await service.addPushToken('pt-1', tokenA);
+      await service.addPushToken('pt-1', tokenA);
+      await service.addPushToken('pt-1', tokenB);
+
+      let user = await service.findByIdOrThrow('pt-1');
+      expect(user.pushTokens).toEqual([tokenB, tokenA]);
+
+      await service.removePushToken('pt-1', tokenB);
+      user = await service.findByIdOrThrow('pt-1');
+      expect(user.pushTokens).toEqual([tokenA]);
+    });
+
+    it('caps at MAX_PUSH_TOKENS and drops the oldest', async () => {
+      await service.create({ uid: 'pt-2', email: 'p2@b.com', displayName: 'P2', photoURL: null });
+      for (let i = 0; i < UsersService.MAX_PUSH_TOKENS + 1; i += 1) {
+        const n = String(i).padStart(4, '0');
+        await service.addPushToken('pt-2', `ExponentPushToken[FlacronCVCap${n}xxxx]`);
+      }
+      const user = await service.findByIdOrThrow('pt-2');
+      expect(user.pushTokens).toHaveLength(UsersService.MAX_PUSH_TOKENS);
+      expect(user.pushTokens![0]).toBe('ExponentPushToken[FlacronCVCap0010xxxx]');
+      expect(user.pushTokens).not.toContain('ExponentPushToken[FlacronCVCap0000xxxx]');
+    });
+
+    it('rejects a malformed token with 400', async () => {
+      await service.create({ uid: 'pt-3', email: 'p3@b.com', displayName: 'P3', photoURL: null });
+      await expect(service.addPushToken('pt-3', 'gcm-native-token')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('clears tokens on soft-delete', async () => {
+      const auth = {
+        revokeRefreshTokens: jest.fn().mockResolvedValue(undefined),
+        updateUser: jest.fn().mockResolvedValue(undefined),
+      };
+      const svc = new UsersService({ firestore, auth } as any);
+      await svc.create({ uid: 'pt-4', email: 'p4@b.com', displayName: 'P4', photoURL: null });
+      await svc.addPushToken('pt-4', tokenA);
+      await svc.softDelete('pt-4');
+      const doc = await firestore.collection('users').doc('pt-4').get();
+      expect(doc.data()!.pushTokens).toEqual([]);
     });
   });
 

@@ -8,7 +8,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "eslint . --ext .ts,.tsx",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -28,6 +29,7 @@
     "expo-image-picker": "~17.0.11",
     "expo-linear-gradient": "^15.0.8",
     "expo-linking": "^8.0.11",
+    "expo-notifications": "~0.32.17",
     "expo-router": "^6.0.23",
     "expo-secure-store": "^15.0.8",
     "expo-sharing": "^14.0.8",
@@ -55,7 +57,8 @@
     "eslint": "^8.57.0",
     "eslint-config-expo": "~8.0.0",
     "tailwindcss": "^3.4.3",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "vitest": "^4.0.18"
   },
   "private": true
 }

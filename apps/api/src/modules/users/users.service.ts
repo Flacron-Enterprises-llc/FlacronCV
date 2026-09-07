@@ -19,6 +19,7 @@ import {
   validateProfileLink,
   LEGAL_ACCEPTANCES_COLLECTION,
 } from '@flacroncv/shared-types';
+import { EXPO_PUSH_TOKEN_PATTERN } from './dto/push-token.dto';
 
 /**
  * The document handed back by `GET /users/me/export`.
@@ -100,8 +101,10 @@ export class UsersService {
         theme: Theme.SYSTEM,
         emailNotifications: true,
         marketingEmails: false,
+        pushNotifications: false,
         defaultCVTemplate: 'modern',
       },
+      pushTokens: [],
       subscription: {
         plan: SubscriptionPlan.FREE,
         status: SubscriptionStatus.ACTIVE,
@@ -246,6 +249,7 @@ export class UsersService {
         return value;
       case 'emailNotifications':
       case 'marketingEmails':
+      case 'pushNotifications':
         if (typeof value !== 'boolean') {
           throw new BadRequestException(`${key} must be a boolean.`);
         }
@@ -332,11 +336,42 @@ export class UsersService {
     });
   }
 
+  static readonly MAX_PUSH_TOKENS = 10;
+
+  async addPushToken(uid: string, token: string): Promise<void> {
+    const value = this.assertExpoPushToken(token);
+    const user = await this.findByIdOrThrow(uid);
+    const existing = (user.pushTokens ?? []).filter((t) => t !== value);
+    const pushTokens = [value, ...existing].slice(0, UsersService.MAX_PUSH_TOKENS);
+    await this.firebaseAdmin.firestore.collection(this.collection).doc(uid).update({
+      pushTokens,
+      updatedAt: new Date(),
+    });
+  }
+
+  async removePushToken(uid: string, token: string): Promise<void> {
+    const value = this.assertExpoPushToken(token);
+    const user = await this.findByIdOrThrow(uid);
+    const pushTokens = (user.pushTokens ?? []).filter((t) => t !== value);
+    await this.firebaseAdmin.firestore.collection(this.collection).doc(uid).update({
+      pushTokens,
+      updatedAt: new Date(),
+    });
+  }
+
+  private assertExpoPushToken(token: unknown): string {
+    if (typeof token !== 'string' || token.length > 200 || !EXPO_PUSH_TOKEN_PATTERN.test(token)) {
+      throw new BadRequestException('token must be an Expo push token.');
+    }
+    return token;
+  }
+
   async softDelete(uid: string): Promise<void> {
     await this.firebaseAdmin.firestore.collection(this.collection).doc(uid).update({
       isActive: false,
       deletedAt: new Date(),
       updatedAt: new Date(),
+      pushTokens: [],
     });
 
     // Terminate all sessions and block re-authentication so a soft-deleted
@@ -440,6 +475,7 @@ export class UsersService {
     'updatedAt',
     'lastLoginAt',
     'deletedAt',
+    'pushTokens',
   ] as const;
 
   private static readonly EXPORTED_PREFERENCE_FIELDS = [
@@ -447,6 +483,7 @@ export class UsersService {
     'theme',
     'emailNotifications',
     'marketingEmails',
+    'pushNotifications',
     'defaultCVTemplate',
   ] as const;
 

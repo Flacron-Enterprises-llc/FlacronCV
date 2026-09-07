@@ -1,18 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { useCurrentUser } from '../../../src/hooks/useUser';
 import { effectivePlanForCopy } from '../../../src/lib/entitlements';
 import { PLAN_CONFIGS } from '../../../src/types/subscription.types';
+import { JobApplication } from '../../../src/types/job.types';
 import { openLegalDocument } from '../../../src/lib/legal-acceptance';
 import { PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
 import { Avatar } from '../../../src/components/ui/Avatar';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { colors } from '../../../src/theme/colors';
+import { api } from '../../../src/lib/api';
+import { cancelAllJobReminders, reconcileJobReminders } from '../../../src/lib/job-reminders';
+import { disablePushNotifications, enablePushNotifications } from '../../../src/lib/push';
 
 type SettingsMenuItem = {
   icon: string;
@@ -30,8 +35,10 @@ function loadFailureMessage(err: unknown): string {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user: authUser, logout, syncUser, userSyncError } = useAuthStore();
   const { data: user, error: userError, refetch } = useCurrentUser();
+  const [pushBusy, setPushBusy] = useState(false);
 
   const currentUser = user ?? authUser;
   const usage = currentUser?.usage;
@@ -40,12 +47,50 @@ export default function SettingsScreen() {
   // Same effective plan the API / client gates use (not a stale stored Pro).
   const plan = effectivePlanForCopy(currentUser?.subscription);
   const planConfig = PLAN_CONFIGS[plan];
+  const pushOn = currentUser?.preferences?.pushNotifications === true;
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign Out', style: 'destructive', onPress: logout },
     ]);
+  };
+
+  const onTogglePush = async (next: boolean) => {
+    if (pushBusy) return;
+    setPushBusy(true);
+    try {
+      if (next) {
+        const ok = await enablePushNotifications();
+        if (!ok) {
+          Alert.alert(
+            'Notifications are off',
+            'You can enable them later from system Settings, or from here.',
+          );
+        } else {
+          try {
+            const jobs =
+              queryClient.getQueryData<JobApplication[]>(['jobs']) ??
+              (await queryClient.fetchQuery({
+                queryKey: ['jobs'],
+                queryFn: () => api.get<JobApplication[]>('/jobs'),
+              }));
+            if (jobs) await reconcileJobReminders(jobs);
+          } catch {
+            // Preference is on; the next successful GET /jobs will reconcile.
+          }
+        }
+      } else {
+        await disablePushNotifications();
+        await cancelAllJobReminders();
+      }
+      await syncUser();
+      void refetch();
+    } catch {
+      Alert.alert('Could not update notifications', 'Please try again.');
+    } finally {
+      setPushBusy(false);
+    }
   };
 
   const MENU_SECTIONS: { title: string; items: SettingsMenuItem[] }[] = [
@@ -137,6 +182,25 @@ export default function SettingsScreen() {
               />
             </>
           )}
+        </View>
+
+        <View className="bg-white mx-4 mb-4 rounded-2xl border border-stone-100 px-4 py-3 flex-row items-center">
+          <View className="w-8 h-8 rounded-xl bg-stone-100 items-center justify-center mr-3">
+            <Ionicons name="notifications-outline" size={18} color={colors.stone[500]} />
+          </View>
+          <View className="flex-1 mr-3">
+            <Text className="text-stone-800 font-medium">Notifications</Text>
+            <Text className="text-stone-500 text-xs mt-0.5">
+              Follow-up reminders and account alerts
+            </Text>
+          </View>
+          <Switch
+            value={pushOn}
+            disabled={pushBusy}
+            onValueChange={(v) => void onTogglePush(v)}
+            trackColor={{ true: colors.brand[600] }}
+            accessibilityLabel="Notifications"
+          />
         </View>
 
         {/* Menu Sections */}

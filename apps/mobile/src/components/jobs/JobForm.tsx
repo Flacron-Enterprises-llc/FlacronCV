@@ -19,6 +19,8 @@ import { useCoverLetterList } from '../../hooks/useCoverLetters';
 import { useCVList } from '../../hooks/useCVs';
 import { useCreateJob, useDeleteJob, useUpdateJob } from '../../hooks/useJobs';
 import { requestFailureMessage } from '../../lib/api-errors';
+import { cancelJobReminders, syncJobReminder } from '../../lib/job-reminders';
+import { maybeAskPushAfterFollowUpSave, type PushPromptResult } from '../../lib/push';
 import { toDate } from '../../lib/utils';
 import { colors } from '../../theme/colors';
 import { CoverLetter } from '../../types/cover-letter.types';
@@ -224,12 +226,39 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
     setSaving(true);
     try {
       const payload = toPayload(data, isEdit);
-      if (isEdit) {
-        await updateJob.mutateAsync(payload);
+      const saved = isEdit
+        ? await updateJob.mutateAsync(payload)
+        : await createJob.mutateAsync(payload);
+      const hasDates = !!(data.followUpDate.trim() || data.interviewDate.trim());
+
+      const afterSave = async (result: PushPromptResult) => {
+        try {
+          if (!hasDates) {
+            await cancelJobReminders(saved.id);
+          } else if (result !== 'declined') {
+            await syncJobReminder(saved, {
+              skipPreferenceCheck: result === 'granted',
+            });
+          }
+        } catch {
+          // Reminders must never fail the save.
+        }
+        router.back();
+      };
+
+      if (hasDates) {
+        maybeAskPushAfterFollowUpSave(
+          {
+            followUp: !!data.followUpDate.trim(),
+            interview: !!data.interviewDate.trim(),
+          },
+          (result) => {
+            void afterSave(result);
+          },
+        );
       } else {
-        await createJob.mutateAsync(payload);
+        await afterSave('already');
       }
-      router.back();
     } catch (err) {
       Alert.alert('Could not save', saveFailureMessage(err));
     } finally {
@@ -249,7 +278,9 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           style: 'destructive',
           onPress: () =>
             deleteJob.mutate(jobId, {
-              onSuccess: () => router.back(),
+              onSuccess: () => {
+                void cancelJobReminders(jobId).finally(() => router.back());
+              },
               onError: (err) =>
                 Alert.alert(
                   'Could not delete',

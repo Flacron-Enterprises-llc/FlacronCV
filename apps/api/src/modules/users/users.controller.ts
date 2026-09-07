@@ -24,6 +24,7 @@ import { AuditService } from '../audit/audit.service';
 import { PaymentService } from '../payment/payment.service';
 import { AuditAction } from '../audit/audit-actions';
 import { UpdatePreferencesDto, UpdateUserDto } from './dto/update-user.dto';
+import { PushTokenDto } from './dto/push-token.dto';
 
 @ApiTags('users')
 @Controller('users')
@@ -71,6 +72,22 @@ export class UsersController {
     @Body() preferences: UpdatePreferencesDto,
   ) {
     return this.usersService.update(user.uid, { preferences });
+  }
+
+  @Post('me/push-tokens')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @ApiOperation({ summary: "Register this device's Expo push token" })
+  async addPushToken(@CurrentUser() user: FirebaseUser, @Body() body: PushTokenDto) {
+    await this.usersService.addPushToken(user.uid, body.token);
+    return { registered: true };
+  }
+
+  @Delete('me/push-tokens')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Remove this device's Expo push token" })
+  async removePushToken(@CurrentUser() user: FirebaseUser, @Body() body: PushTokenDto) {
+    await this.usersService.removePushToken(user.uid, body.token);
   }
 
   @Get('me/usage')

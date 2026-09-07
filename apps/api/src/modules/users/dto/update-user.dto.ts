@@ -69,6 +69,10 @@ export class UserPreferencesDto implements Partial<UserPreferences> {
   marketingEmails?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  pushNotifications?: boolean;
+
+  @IsOptional()
   @IsString()
   @MaxLength(100)
   defaultCVTemplate?: string;

@@ -17,6 +17,7 @@ export interface UserPreferences {
   emailNotifications: boolean;
   marketingEmails: boolean;
   defaultCVTemplate?: string;
+  pushNotifications?: boolean;
 }
 
 export interface UserSubscription {
@@ -51,6 +52,7 @@ export interface User {
   preferences: UserPreferences;
   subscription: UserSubscription;
   usage: UserUsage;
+  pushTokens?: string[];
   role: UserRole;
   createdAt: string;
   updatedAt: string;

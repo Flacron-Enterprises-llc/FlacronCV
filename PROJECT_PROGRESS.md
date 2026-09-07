@@ -12,7 +12,7 @@
 > 4. Tick completed items here; log every change in the Change Log.
 > 5. Report Out-of-Scope / architectural items separately — do not implement without approval.
 
-Last updated: 2026-09-06
+Last updated: 2026-09-07
 
 > **Note on dates.** The header previously read `2026-07-29` while the two newest change-log
 > entries were dated `2026-07-30`; the header was stale, the entries were right. Corrected
@@ -1049,6 +1049,10 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   4. **Avatars (2026-09-01):** `avatars/{uid}/**` in Firebase Storage. Remove-photo
      on web/mobile only clears Auth + `users/{uid}.photoURL`; objects remain
      until this cascade runs.
+  5. **Push tokens (2026-09-07):** `users/{uid}.pushTokens`. Soft-delete now
+     clears the array so a deactivated account cannot be pinged; a full
+     erasure must still treat the field as personal data (GDPR export
+     already includes it).
   Until H.6 exists, a **manual** erasure request has to cover **all** by hand.
   Soft-delete today does not. Do not split this list across change-log entries.
 - **⚠️ ADDED 2026-08-19 — Goodwill: Free export burned by a failed render (manual CRM).**
@@ -1166,6 +1170,39 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-09-07 — **First-save reminder prompt: syncUser + dated copy.** Enable
+  now calls `syncUser` (same as Settings) so `preferences.pushNotifications`
+  is true in memory for list reconcile. Prompt body names follow-up,
+  interview, or both. Device testing still open. S1, IAP, API untouched.
+
+- 2026-09-07 — **Local Job Tracker reminders (Stage 2).** Follow-up fires
+  09:00 local that day; interview fires 09:00 that day unless the interview
+  clock is before 10:00, then 60 minutes before. Copy is hardcoded English
+  (`Follow-up today with {company}` / `Interview today at {HH:mm} with
+  {company}`; drop `with {company}` when empty). Dates are built from
+  Y/M/D (+ HH:mm) components — never `new Date("YYYY-MM-DD")`. Map in
+  AsyncStorage (`flacroncv_job_reminder_ids`) stores `{ id, at }` per slot
+  so date changes are detectable. `reconcileJobReminders` is idempotent
+  (schedule missing, cancel gone/changed, leave matching `at` alone) and
+  runs on Notifications toggle-on and on a successful `GET /jobs` while
+  the preference is on — no extra endpoints. First-save permission grant
+  schedules immediately (`skipPreferenceCheck`). Taps (warm listener +
+  cold `getLastNotificationResponseAsync`) open `/(dashboard)/jobs/{id}`.
+  Android date trigger uses channel `reminders`. No repeating triggers.
+  Expo Go still runs (local notifications). S1, IAP, API, Stage 1 token
+  plumbing untouched.
+
+- 2026-09-07 — **Push plumbing (Stage 1, send nothing).** `expo-notifications`
+  ~0.32.17; plugin in `app.json`. `POST`/`DELETE /users/me/push-tokens` store
+  Expo tokens on `users.pushTokens` (cap 10). `preferences.pushNotifications`
+  defaults false and is enforced in `PushService.sendToUser` — no product
+  event calls the helper. Mobile Settings switch; permission asked after the
+  first Job Tracker save with a follow-up date, not at launch. Expo Go still
+  runs (remote tokens skipped). GDPR export includes `pushTokens`;
+  soft-delete clears them. H.6 list updated. S1, IAP, web Stripe untouched.
+  `interviewDate` on `POST /jobs` already persisted in current source —
+  added a regression test.
 
 - 2026-09-07 — **Engine Credits in visible FAQ + web UI (six locales).**
   `faq.a1` matches JSON-LD (“Engine credits”; numbers unchanged). Related

@@ -9,7 +9,7 @@
 > confirmed by this pass. Runtime behaviour was never executed — this document was produced by a
 > read-only audit (no API boot, no dev server, no emulators, no cloud CLI).
 
-Created: 2026-08-18 · Verified against: branch `main` (Batch L analytics uncommitted at last doc touch)
+Created: 2026-08-18 · Last doc touch: 2026-09-07 (mobile Job Tracker local reminders)
 
 ---
 
@@ -81,7 +81,7 @@ access until the token expires (open MEDIUM in `AUDIT_OPEN_FINDINGS.md`).
 | `firebase` | SDK initialisation, `firestore`/`auth`/`storage` handles | `FirebaseAdminService` | Firebase Admin |
 | `auth` | Register, login sync, email verification, password reset, token revocation | `AuthService` | Firebase Auth, `MailService`, `AbuseService` |
 | `abuse` | Device/IP hashing, registration risk score, Free-grant enforcement behind `enforcementEnabled` (default **false**, fail open) | `AbuseService` | Firestore `abuse_devices` / `abuse_networks` / `abuse_idempotency` / `abuse_rate`, `app_settings/main.abuse` |
-| `users` | User docs, usage counters, monthly reset, GDPR export, soft delete | `UsersService`, `UsageResetService` | Firestore |
+| `users` | User docs, usage counters, monthly reset, GDPR export, soft delete, **push token register** | `UsersService`, `UsageResetService`, `PushService` (send helper; unused by product events) | Firestore, Expo Push Service (not called yet) |
 | `cv` | CVs, sections, versions, public share slugs; `POST /cvs/import` gated by CRM `aiEnabled` | `CVService` | Firestore, `AIService` |
 | `cover-letter` | Cover letters + AI improve | `CoverLetterService` | Firestore, `AIService` |
 | `ai` | Summary, ATS check, interview prep, LinkedIn, import parsing; class-level `aiEnabled` | `AIService` (+ unregistered watsonx/anthropic providers) | OpenAI |
@@ -186,7 +186,7 @@ opaque baked-in rectangle — standing request in `PROJECT_PROGRESS.md` §8.
 
 | Collection | Shape (abridged) |
 |---|---|
-| `users` | `{ uid, email, displayName, photoURL, role, isActive, subscription{plan,status,stripeCustomerId,stripeSubscriptionId,currentPeriodEnd,trialStart,trialEnd,cancelAtPeriodEnd,hasUsedTrial,provider?,originalTransactionId?,purchaseToken?}, usage{cvsCreated,coverLettersCreated,aiCreditsUsed,aiCreditsLimit,exportsThisMonth,lastExportReset}, abuse{deviceHash,ipHash,networkHash,riskScore,riskBand,riskSignals,scoredAt,grantStatus?,cooldownEndsAt?}, preferences{…}, createdAt, updatedAt, lastLoginAt, deletedAt }` |
+| `users` | `{ uid, email, displayName, photoURL, role, isActive, subscription{plan,status,stripeCustomerId,stripeSubscriptionId,currentPeriodEnd,trialStart,trialEnd,cancelAtPeriodEnd,hasUsedTrial,provider?,originalTransactionId?,purchaseToken?}, usage{cvsCreated,coverLettersCreated,aiCreditsUsed,aiCreditsLimit,exportsThisMonth,lastExportReset}, abuse{deviceHash,ipHash,networkHash,riskScore,riskBand,riskSignals,scoredAt,grantStatus?,cooldownEndsAt?}, preferences{…, pushNotifications?}, pushTokens?: string[], createdAt, updatedAt, lastLoginAt, deletedAt }` |
 | `cvs` | Owner-scoped; soft-deleted via `deletedAt`; `isPublic` + `publicSlug` for sharing. Subcollections `sections`, `versions` |
 | `cover_letters` | Owner-scoped, soft-deleted, optional `linkedCVId` |
 | `job_applications` | Owner-scoped, 6 statuses wishlist→applied→interviewing→offer→rejected→accepted |
@@ -215,8 +215,8 @@ writes `grantStatus=granted` and an audit row (`actorId`, time, target uid — n
 **Erasure:** H.6 must include **all** deferred obligations (canonical list in
 `PROJECT_PROGRESS.md` §8): Batch G `users.abuse` + `abuse_devices` /
 `abuse_networks` / `abuse_idempotency` / `abuse_rate`, Batch H
-`legalAcceptances/{uid}`, `export_reservations` for that uid, and Storage
-`avatars/{uid}/**`. Until then a manual erasure request covers them by hand.
+`legalAcceptances/{uid}`, `export_reservations` for that uid, Storage
+`avatars/{uid}/**`, and `users/{uid}.pushTokens`. Until then a manual erasure request covers them by hand.
 **GDPR export** (`GET /users/me/export`) includes this user's `abuse` snapshot (hashes, score,
 band, signal codes, grantStatus, `hasUsedTrial`) and must never include other uids from the device lookup.
 Device identifier (unchanged from part 1): 128-bit random token, HMAC-SHA256 with
@@ -277,8 +277,8 @@ session and must not delete the account.
 
 ## 7. Test topology and CI gates
 
-`pnpm test` → `turbo run test` → **`apps/api` (jest)** + **`apps/web` (vitest)**.
-`apps/mobile` defines no `test` and no `type-check` script, so it is covered by **lint only**.
+`pnpm test` → `turbo run test` → **`apps/api` (jest)** + **`apps/web` (vitest)** +
+**`apps/mobile` (vitest, `src/**/*.test.ts`)**. Mobile also has `type-check`.
 
 **Measured 2026-08-18 by running the suite: web `250` (16 files), api `384` (29 suites) —
 `634` total** (web was `233`/14 before this SEO batch added `seo.test.ts` and `json-ld.test.ts`). The frequently-quoted **"~410 tests"** (api 293 + web 117) dates from 2026-07-30 and
@@ -376,6 +376,29 @@ array was accidentally correct before unwrap and would have emptied the list).
 not a page. Mobile Job Tracker is a hidden stack (`href: null`, like Support)
 at `app/(dashboard)/jobs/` — not a sixth tab. Export `normalizeExportPayload` stays dual-shape on purpose.
 
+**Mobile push plumbing (2026-09-07).** `expo-notifications` ~0.32.17 (SDK 54).
+Config plugin in `app.json`. Token register is `POST /users/me/push-tokens` /
+`DELETE` with `{ token }` (Expo `ExponentPushToken[…]` only). Tokens live on
+`users/{uid}.pushTokens` (string[], cap 10). Opt-in is
+`preferences.pushNotifications` (default false, server-enforced).
+`PushService.sendToUser` exists and is **not** called from any product event.
+Permission is requested after the first Job Tracker save that includes a
+follow-up or interview date, not at launch. The prompt names follow-up,
+interview, or both. Enable then `syncUser` so the in-memory preference
+matches the server write. Expo Go still runs the app; **remote** push
+tokens are skipped there (`executionEnvironment === StoreClient`). Local
+notifications remain available in Expo Go. **Job Tracker local reminders
+(2026-09-07):** `apps/mobile/src/lib/job-reminders.ts` schedules one-shot
+date triggers (Android channel `reminders`). Follow-up 09:00 local; interview
+09:00 that day, or 60 minutes before if the interview clock is before 10:00.
+Map schema `{ [jobId]: { followUp?: { id, at }, interview?: { id, at } } }`
+in AsyncStorage key `flacroncv_job_reminder_ids`. `reconcileJobReminders`
+runs on Settings toggle-on and after a successful `GET /jobs` while
+`preferences.pushNotifications` is true (no extra network). Taps (warm
+`addNotificationResponseReceivedListener` and cold
+`getLastNotificationResponseAsync`) open `/(dashboard)/jobs/{id}`. FCM/APNs credentials are still
+client-only — Stage 0. S1 and IAP untouched.
+
 **Date parsing (D1, 2026-08-26).** `apps/mobile/src/lib/utils.ts` `toDate` /
 `formatDate` accept the same Firestore JSON shapes as web
 `apps/web/src/lib/format-date.ts`. The types still lie: shared-types `Date`,
@@ -467,10 +490,15 @@ references) rebuild with spread-then-overlay so keys the mobile form does
 not collect survive. `updateSection` marks `isDirty`; wizard save is
 unchanged.
 
-**Mobile Settings honesty (Q7, 2026-08-27).** Settings lists only destinations
-that exist: Profile, Billing/Plan & usage, Support, legal docs, Sign Out.
-Notifications and Security rows (empty handlers) were removed. The identity
-header opens Profile.
+**Mobile Settings honesty (Q7, 2026-08-27).** Settings lists destinations
+that exist: Profile, Job Tracker, Billing/Plan & usage, Support, legal docs,
+Sign Out. A Notifications **switch** (2026-09-07) writes
+`preferences.pushNotifications` and registers/unregisters
+`POST`/`DELETE /users/me/push-tokens`. Toggle-on also
+`reconcileJobReminders` from the `['jobs']` cache or the existing
+`GET /jobs`; toggle-off `cancelAllJobReminders`. Empty Notifications/Security rows
+were removed earlier; this switch is the real control. The identity header
+opens Profile.
 
 **Mobile onboarding inset (Q13, 2026-08-27).** First-launch screen
 (`flacroncv_onboarding_seen` in AsyncStorage). Footer padding is

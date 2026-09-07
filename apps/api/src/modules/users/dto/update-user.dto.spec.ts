@@ -26,9 +26,11 @@ describe('User write DTOs (ValidationPipe)', () => {
       theme: Theme.DARK,
       emailNotifications: true,
       marketingEmails: false,
+      pushNotifications: false,
     });
     expect(result.language).toBe(Locale.EN);
     expect(result.theme).toBe(Theme.DARK);
+    expect(result.pushNotifications).toBe(false);
   });
 
   it('rejects unknown top-level and nested keys', async () => {

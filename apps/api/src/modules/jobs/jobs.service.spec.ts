@@ -19,6 +19,18 @@ describe('JobsService', () => {
     expect(job.deletedAt).toBeNull();
   });
 
+  it('persists interviewDate and followUpDate on create', async () => {
+    const { service } = makeService();
+    const job = await service.create('u1', {
+      company: 'Acme',
+      position: 'Engineer',
+      interviewDate: '2026-09-12T14:30',
+      followUpDate: '2026-09-20',
+    });
+    expect(job.interviewDate).toBe('2026-09-12T14:30');
+    expect(job.followUpDate).toBe('2026-09-20');
+  });
+
   it('lists only the requesting user\'s non-deleted jobs', async () => {
     const { service } = makeService();
     await service.create('u1', { company: 'A', position: 'P1' });

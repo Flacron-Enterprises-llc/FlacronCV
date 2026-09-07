@@ -188,8 +188,8 @@ export const api = {
   patch: <T>(url: string, data?: unknown) =>
     apiClient.patch(url, data).then((r) => unwrapEnvelope<T>(r.data)),
 
-  delete: <T>(url: string) =>
-    apiClient.delete(url).then((r) => unwrapEnvelope<T>(r.data)),
+  delete: <T>(url: string, data?: unknown) =>
+    apiClient.delete(url, data !== undefined ? { data } : undefined).then((r) => unwrapEnvelope<T>(r.data)),
 
   postForm: <T>(url: string, formData: FormData) =>
     apiClient
