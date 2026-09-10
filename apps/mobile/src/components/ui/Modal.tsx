@@ -19,9 +19,10 @@ interface ModalProps {
   title?: string;
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'full';
+  closeDisabled?: boolean;
 }
 
-export function Modal({ visible, onClose, title, children, size = 'md' }: ModalProps) {
+export function Modal({ visible, onClose, title, children, size = 'md', closeDisabled = false }: ModalProps) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
 
@@ -40,12 +41,12 @@ export function Modal({ visible, onClose, title, children, size = 'md' }: ModalP
       visible={visible}
       transparent
       animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={closeDisabled ? () => {} : onClose}
       statusBarTranslucent
     >
       <Pressable
         className="flex-1 bg-black/50 justify-end"
-        onPress={onClose}
+        onPress={closeDisabled ? undefined : onClose}
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -63,7 +64,11 @@ export function Modal({ visible, onClose, title, children, size = 'md' }: ModalP
             {title && (
               <View className="flex-row items-center justify-between px-5 py-3 border-b border-stone-100">
                 <Text className="text-lg font-bold text-stone-900">{title}</Text>
-                <Pressable onPress={onClose} className="p-1">
+                <Pressable
+                  onPress={closeDisabled ? undefined : onClose}
+                  disabled={closeDisabled}
+                  className="p-1"
+                >
                   <Ionicons name="close" size={22} color={colors.stone[500]} />
                 </Pressable>
               </View>

@@ -50,7 +50,13 @@ export function LegalAcceptanceModal({
   accepting = false,
 }: LegalAcceptanceModalProps) {
   return (
-    <Modal visible={visible} onClose={onCancel} title="Terms and Privacy" size="lg">
+    <Modal
+      visible={visible}
+      onClose={onCancel}
+      title="Terms and Privacy"
+      size="lg"
+      closeDisabled={accepting}
+    >
       <View className="flex-row items-start">
         <Pressable
           onPress={() => onCheckedChange(!checked)}

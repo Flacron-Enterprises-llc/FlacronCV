@@ -6,6 +6,7 @@ import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { useCoverLetter, useUpdateCoverLetter, useGenerateCoverLetter } from '../../../src/hooks/useCoverLetters';
 import { useExportCoverLetter } from '../../../src/hooks/useExport';
 import { useCoverLetterStore } from '../../../src/store/cover-letter-store';
@@ -65,7 +66,7 @@ export default function CoverLetterEditorScreen() {
   const navigation = useNavigation();
   const { user, syncUser } = useAuthStore();
   const { coverLetter, setCoverLetter, setContent, isDirty, markClean } = useCoverLetterStore();
-  const { data: cl, isLoading } = useCoverLetter(id);
+  const { data: cl, isLoading, error, refetch } = useCoverLetter(id);
   const updateCL = useUpdateCoverLetter(id!);
   const generateCL = useGenerateCoverLetter(id!);
   const exportCL = useExportCoverLetter();
@@ -159,6 +160,23 @@ export default function CoverLetterEditorScreen() {
       Alert.alert('Could not generate', generateFailureMessage(err));
     }
   };
+
+  if (error) {
+    return (
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+        <View className="flex-row items-center px-4 py-3 border-b border-stone-100">
+          <TouchableOpacity onPress={() => router.back()} className="mr-3">
+            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+          </TouchableOpacity>
+          <Text className="font-bold text-stone-900">Cover Letter</Text>
+        </View>
+        <ErrorState
+          message={requestFailureMessage(error, 'Could not load this cover letter. Please try again.')}
+          onRetry={() => void refetch()}
+        />
+      </SafeAreaView>
+    );
+  }
 
   if (isLoading || hydratedId !== id) {
     return (

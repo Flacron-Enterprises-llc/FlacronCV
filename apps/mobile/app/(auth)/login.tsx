@@ -90,11 +90,12 @@ export default function LoginScreen() {
     setLegalAccepting(true);
     try {
       const ok = await recordAcceptanceAfterSignup();
-      setLegalGate(false);
-      setLegalOpen(false);
       if (!ok) {
         Alert.alert(LEGAL_POST_FAILED_TITLE, LEGAL_POST_FAILED_MESSAGE);
+        return;
       }
+      setLegalGate(false);
+      setLegalOpen(false);
     } finally {
       setLegalAccepting(false);
     }

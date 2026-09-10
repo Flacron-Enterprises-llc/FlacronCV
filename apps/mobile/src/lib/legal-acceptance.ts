@@ -41,15 +41,16 @@ export async function fetchLegalAcceptanceRecord(): Promise<{
 /**
  * After Firebase Auth has created/signed in the user. Pending flag first so a
  * mid-request crash still retries. Never deletes the Auth account.
+ * Consent stays until the POST succeeds so a failed write still re-gates.
  * Returns whether the write succeeded.
  */
 export async function recordAcceptanceAfterSignup(): Promise<boolean> {
   const uid = getFirebaseAuth().currentUser?.uid;
   if (uid) await secureStore.setPendingLegalPost(uid);
-  await secureStore.clearPendingLegalConsent();
   try {
     await submitLegalAcceptance();
     await secureStore.clearPendingLegalPost();
+    await secureStore.clearPendingLegalConsent();
     return true;
   } catch {
     return false;
@@ -70,6 +71,6 @@ export async function retryPendingLegalAcceptance(): Promise<void> {
   }
 }
 
-export const LEGAL_POST_FAILED_TITLE = 'Account created';
+export const LEGAL_POST_FAILED_TITLE = 'Could not save your agreement';
 export const LEGAL_POST_FAILED_MESSAGE =
-  'Your account was created, but we could not save your agreement to Terms, Privacy, and the Disclaimer. We will retry automatically. You can keep using the app.';
+  'We could not record your agreement to Terms, Privacy, and the Disclaimer. Check your connection and tap Agree and continue again.';

@@ -12,7 +12,7 @@
 > 4. Tick completed items here; log every change in the Change Log.
 > 5. Report Out-of-Scope / architectural items separately — do not implement without approval.
 
-Last updated: 2026-09-07
+Last updated: 2026-09-11
 
 > **Note on dates.** The header previously read `2026-07-29` while the two newest change-log
 > entries were dated `2026-07-30`; the header was stale, the entries were right. Corrected
@@ -1170,6 +1170,15 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-09-11 — **Mobile: three fail-closed holes (legal POST, CL load, legal
+  modal).** (1) `recordAcceptanceAfterSignup` no longer clears consent before
+  POST; login/register ungate `legalGate` only when the write succeeds. Failed
+  POST keeps the modal and does not say “Account created” / “keep using the
+  app.” (2) Cover letter editor shows Q10 `ErrorState` + retry when load
+  fails, instead of spinning because `hydratedId` never matches. (3) Legal
+  modal backdrop, X, and Android back honor `closeDisabled` while accepting.
+  Wizard order, serialize, S1, IAP, API untouched.
 
 - 2026-09-07 — **First-save reminder prompt: syncUser + dated copy.** Enable
   now calls `syncUser` (same as Settings) so `preferences.pushNotifications`

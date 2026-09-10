@@ -77,11 +77,16 @@ export default function RegisterScreen() {
     pendingForm.current = null;
   };
 
-  const finishAcceptance = async () => {
+  const completeLegalOrStayGated = async (): Promise<boolean> => {
     const ok = await recordAcceptanceAfterSignup();
-    if (!ok) {
-      Alert.alert(LEGAL_POST_FAILED_TITLE, LEGAL_POST_FAILED_MESSAGE);
+    if (ok) {
+      setLegalGate(false);
+      closeLegal();
+      return true;
     }
+    Alert.alert(LEGAL_POST_FAILED_TITLE, LEGAL_POST_FAILED_MESSAGE);
+    setLegalOpen(true);
+    return false;
   };
 
   const handleGoogleToken = useCallback(async (token: string) => {
@@ -89,14 +94,32 @@ export default function RegisterScreen() {
     setLegalGate(true);
     try {
       await loginWithGoogle(token);
-      await finishAcceptance();
-      setLegalGate(false);
+      const ok = await recordAcceptanceAfterSignup();
+      if (ok) {
+        setLegalGate(false);
+        setLegalOpen(false);
+        setLegalChecked(false);
+        pendingSignup.current = null;
+        pendingForm.current = null;
+      } else {
+        Alert.alert(LEGAL_POST_FAILED_TITLE, LEGAL_POST_FAILED_MESSAGE);
+        setLegalOpen(true);
+      }
     } catch {
       // They already agreed in the modal. If Auth exists, record legal;
       // else clear leftover gate so email login is not stuck.
       if (getFirebaseAuth().currentUser) {
-        await finishAcceptance();
-        setLegalGate(false);
+        const ok = await recordAcceptanceAfterSignup();
+        if (ok) {
+          setLegalGate(false);
+          setLegalOpen(false);
+          setLegalChecked(false);
+          pendingSignup.current = null;
+          pendingForm.current = null;
+        } else {
+          Alert.alert(LEGAL_POST_FAILED_TITLE, LEGAL_POST_FAILED_MESSAGE);
+          setLegalOpen(true);
+        }
       } else {
         setLegalGate(false);
       }
@@ -112,7 +135,20 @@ export default function RegisterScreen() {
   };
 
   const handleLegalAccept = async () => {
-    if (!legalChecked || !pendingSignup.current || legalAccepting) return;
+    if (!legalChecked || legalAccepting) return;
+
+    // Auth already exists (Google POST retry, or leftover session). Record only.
+    if (getFirebaseAuth().currentUser) {
+      setLegalAccepting(true);
+      try {
+        await completeLegalOrStayGated();
+      } finally {
+        setLegalAccepting(false);
+      }
+      return;
+    }
+
+    if (!pendingSignup.current) return;
     const method = pendingSignup.current;
     const form = pendingForm.current;
 
@@ -122,27 +158,21 @@ export default function RegisterScreen() {
       try {
         // register() fail-softs Nest verify so we still record legal below.
         await register(form.email, form.password, form.displayName);
-        await finishAcceptance();
-        setLegalGate(false);
-        closeLegal();
+        await completeLegalOrStayGated();
       } catch {
         // Firebase create/profile failed. If Auth user exists, still record
         // legal (they already ticked). Else drop gate so login is not stuck.
         if (getFirebaseAuth().currentUser) {
-          await finishAcceptance();
-          setLegalGate(false);
+          await completeLegalOrStayGated();
         } else {
           setLegalGate(false);
+          closeLegal();
         }
-        setLegalOpen(false);
-        setLegalChecked(false);
-        pendingSignup.current = null;
-        pendingForm.current = null;
       } finally {
         setLegalAccepting(false);
       }
     } else if (method === 'google') {
-      closeLegal();
+      setLegalOpen(false);
       await googleRef.current?.prompt();
     }
   };

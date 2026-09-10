@@ -9,7 +9,7 @@
 > confirmed by this pass. Runtime behaviour was never executed — this document was produced by a
 > read-only audit (no API boot, no dev server, no emulators, no cloud CLI).
 
-Created: 2026-08-18 · Last doc touch: 2026-09-07 (mobile Job Tracker local reminders)
+Created: 2026-08-18 · Last doc touch: 2026-09-11 (mobile legal fail-open, CL load error, legal modal dismiss)
 
 ---
 
@@ -531,16 +531,20 @@ Alerts with no purchase route; flag ON Alerts with Upgrade → billing.
 Product ids: `apps/mobile/src/config/iap-products.ts` (placeholders until
 the stores exist).
 
-**Legal acceptance (L1 + Q5, 2026-08-26).** Mobile register/login Google (new
-users) POST `/legal/acceptances` with the same body as web. Email register
-and new Google users persist `PENDING_LEGAL_CONSENT` in SecureStore (not in
-`clearAll`) so a crash before the POST re-opens the login modal. If that flag
-matches the signed-in uid **and** `GET /legal/acceptances/me` already has a
-row, the flag is cleared and they are not gated. Cold start without the flag
-does not call that GET (`treatMissingAsStale` remains false). Versions copied
-from `apps/web/src/legal/types.ts` into `apps/mobile/src/lib/legal-docs.ts`.
-Documents open via `WebBrowser` to `EXPO_PUBLIC_APP_URL` + `/en/` paths.
-Missing origin: no URL invented; alert instead.
+**Legal acceptance (L1 + Q5, 2026-08-26; fail-open closed 2026-09-11).** Mobile
+register/login Google (new users) POST `/legal/acceptances` with the same body
+as web. Email register and new Google users persist `PENDING_LEGAL_CONSENT` in
+SecureStore (not in `clearAll`) so a crash before the POST re-opens the login
+modal. Consent is not cleared until the POST succeeds. A failed POST keeps
+`legalGate` and the modal — login/register ungate only on a successful write.
+If that flag matches the signed-in uid **and** `GET /legal/acceptances/me`
+already has a row, the flag is cleared and they are not gated. Cold start
+without the flag does not call that GET (`treatMissingAsStale` remains false).
+Versions copied from `apps/web/src/legal/types.ts` into
+`apps/mobile/src/lib/legal-docs.ts`. Documents open via `WebBrowser` to
+`EXPO_PUBLIC_APP_URL` + `/en/` paths. Missing origin: no URL invented; alert
+instead. While Accept is in flight, Modal backdrop, X, and Android back are
+disabled (`closeDisabled`), same as Cancel.
 
 ### Tier 2 — a second plan-limits table in the API, enforced nowhere
 
