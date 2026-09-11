@@ -764,6 +764,21 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 8. Out-of-scope / architectural recommendations (do NOT implement without approval)
 
+- **⚠️ ADDED 2026-09-11 — Role changes revoke refresh tokens; the live ID
+  token still works until expiry.** CRM `updateUserRole` and
+  `AuthService.setUserRole` now call `revokeRefreshTokens` after
+  `setCustomUserClaims` (same helper as delete / suspend / sign-out-everywhere).
+  A demoted admin cannot mint a **new** ID token with `role: admin`. The token
+  already in the browser remains valid for up to ~1h because
+  `FirebaseAuthGuard` does **not** pass `checkRevoked` to `verifyIdToken`.
+  That lookup is every authenticated request, including CV autosave, and
+  web has no 401 handler — enabling it later would 401 the chrome into
+  error toasts while `currentUser` still looks signed in. Do not flip
+  `checkRevoked` without a web 401 → sign-out (or force-refresh) path.
+  Residual: a demoted admin with the tab still open keeps admin API access
+  until that ID token expires. This is the original window, not a leftover
+  scrap.
+
 - **⚠️ ADDED 2026-09-06 — `terms.ts` still says “5 AI Credits” after the Engine
   rebrand.** `LEGAL_VERSION` is `2026-08-16`. Customer UI (plan cards, JSON-LD
   FAQ, visible `faq.a1` ×6, upgrade modal, ATS/interview/LinkedIn/import
@@ -1170,6 +1185,28 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-09-11 — **API: role change revokes refresh tokens.** CRM
+  `updateUserRole` and `AuthService.setUserRole` call `revokeRefreshTokens`
+  after `setCustomUserClaims`. Stops a demoted admin minting a new admin
+  token. The current ID token still works until expiry (~1h) —
+  `checkRevoked` was deliberately not enabled (latency on every
+  authenticated request; web has no 401 handler). Recorded in §8. Guard,
+  mobile, S1, IAP, web untouched.
+
+- 2026-09-11 — **Web: api.ts transport copy, template locale, cosmetics.** (20)
+  Timeout/offline/network/HTTP-fallback toasts go through `useApiErrorMessage`
+  (`auth.errors.*` in all six locales). `api.ts` still throws English
+  `.message` as the transport fallback; display is the hook. API body.message
+  is unchanged. (23) Public templates + pick-template use `nameLocalized` for
+  display and search (`localizedTemplateField` / `templateSearchHaystack`).
+  Seed has no `descriptionLocalized` — descriptions stay English until the
+  API seed is filled. Admin template list stays English. Navbar + footer
+  link `/testimonials`. CV personal-info form collects address, postalCode,
+  github; preview/DOCX contact lines include them. CV list error has Retry
+  (`dashboard.stats_retry`). PoweredBy URL and social icons remain blocked
+  (no Engine URL; LinkedIn is an admin login wall; lucide has no brand
+  marks). (25)(26) reported, not built. API, mobile, S1, IAP untouched.
 
 - 2026-09-11 — **Web: verify coalesce, CL final, staff sync timeout, portal
   locale, CRM limits display-only, i18n bullets/meta/dates.** (24) Concurrent

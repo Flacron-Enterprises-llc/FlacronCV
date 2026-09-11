@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { useFormatDate } from '@/lib/use-format-date';
 import { toDate } from '@/lib/format-date';
 import { toast } from 'sonner';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -79,6 +80,7 @@ interface AdminTicketDetailPageProps {
 export default function AdminTicketDetailPage({ params }: AdminTicketDetailPageProps) {
   const formatDate = useFormatDate();
   const t = useTranslations('admin');
+  const formatApiError = useApiErrorMessage();
   const ts = useTranslations('support');
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -103,7 +105,7 @@ export default function AdminTicketDetailPage({ params }: AdminTicketDetailPageP
       toast.success(t('reply_sent'));
       queryClient.invalidateQueries({ queryKey: ['admin', 'ticket', params.id] });
     },
-    onError: (err: Error) => toast.error(err.message || t('reply_failed')),
+    onError: (err: Error) => toast.error(formatApiError(err, t('reply_failed'))),
   });
 
   const noteMutation = useMutation({
@@ -114,7 +116,7 @@ export default function AdminTicketDetailPage({ params }: AdminTicketDetailPageP
       toast.success(t('internal_note_added'));
       queryClient.invalidateQueries({ queryKey: ['admin', 'ticket', params.id, 'notes'] });
     },
-    onError: (err: Error) => toast.error(err.message || t('internal_note_failed')),
+    onError: (err: Error) => toast.error(formatApiError(err, t('internal_note_failed'))),
   });
 
   const statusMutation = useMutation({
@@ -133,7 +135,7 @@ export default function AdminTicketDetailPage({ params }: AdminTicketDetailPageP
     onSuccess: () => toast.success(t('status_updated')),
     onError: (err: Error, _v, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(['admin', 'ticket', params.id], ctx.prev);
-      toast.error(err.message || t('status_update_failed'));
+      toast.error(formatApiError(err, t('status_update_failed')));
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['admin', 'ticket', params.id] }),
   });

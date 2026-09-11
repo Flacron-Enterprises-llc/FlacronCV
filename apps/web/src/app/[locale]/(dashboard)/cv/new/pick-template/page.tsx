@@ -2,7 +2,7 @@
 import React from 'react';
 
 import { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -10,6 +10,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { ArrowLeft, Lock, Zap, Crown } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -23,6 +24,7 @@ import {
   type CVLayout,
 } from '@flacroncv/shared-types';
 import { CV_NEW_DRAFT_KEY as DRAFT_KEY } from '../constants';
+import { localizedTemplateField } from '@/lib/localized-template';
 
 /* ─── Constants ──────────────────────────────────────────────────────────────── */
 
@@ -69,6 +71,8 @@ function SkeletonCard() {
 export default function PickTemplatePage(): React.JSX.Element | null {
   const t = useTranslations('template_picker');
   const tc = useTranslations('common');
+  const locale = useLocale();
+  const formatApiError = useApiErrorMessage();
   const router = useRouter();
   const { user } = useAuth();
   const [tierFilter, setTierFilter] = useState<TierFilter>('all');
@@ -124,7 +128,7 @@ export default function PickTemplatePage(): React.JSX.Element | null {
     },
     onError: (error: Error) => {
       setCreatingId(null);
-      toast.error(error.message || t('create_error'));
+      toast.error(formatApiError(error, t('create_error')));
     },
   });
 
@@ -274,8 +278,8 @@ export default function PickTemplatePage(): React.JSX.Element | null {
               <TemplateCard
                 key={tmpl.id}
                 id={tmpl.id}
-                name={tmpl.name}
-                description={tmpl.description}
+                name={localizedTemplateField(tmpl.nameLocalized, tmpl.name, locale)}
+                description={localizedTemplateField(tmpl.descriptionLocalized, tmpl.description, locale)}
                 layout={meta.layout}
                 color={meta.color}
                 personality={meta.personality}

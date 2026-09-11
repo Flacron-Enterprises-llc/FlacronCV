@@ -20,6 +20,7 @@ import CoverLetterPreview, { COVER_LETTER_TEMPLATES } from '@/components/cover-l
 import { ensureDarkSurface, readableOn, INK } from '@/lib/design-tokens';
 import { exportCoverLetterToPDF, exportCoverLetterToDocx } from '@/lib/export-cv';
 import { toast } from 'sonner';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { useFormatDate } from '@/lib/use-format-date';
 import { cn } from '@/lib/utils';
 import {
@@ -59,6 +60,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
   const t = useTranslations();
   const locale = useLocale();
   const formatDate = useFormatDate();
+  const formatApiError = useApiErrorMessage();
   const router = useRouter();
   const { user, refreshUser } = useAuth();
   const queryClient = useQueryClient();
@@ -347,7 +349,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     },
     onError: (error: Error) => {
       refreshUser();
-      toast.error(error.message, {
+      toast.error(formatApiError(error), {
         description: t(
           isAiCreditUnconfirmed(error)
             ? 'common.generate_failed_charge_unconfirmed'
@@ -378,7 +380,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     onError: (error: Error) => {
       // Re-read the balance; a failed refund is told via the description, not assumed.
       refreshUser();
-      toast.error(error.message, {
+      toast.error(formatApiError(error), {
         description: t(
           isAiCreditUnconfirmed(error)
             ? 'common.generate_failed_charge_unconfirmed'

@@ -103,7 +103,7 @@ export default function TopBarLayout({ cv, sections }: LayoutProps) {
             {buildContactLine(cv)}
           </p>
 
-          {(cv.personalInfo.linkedin || cv.personalInfo.website) && (
+          {(cv.personalInfo.linkedin || cv.personalInfo.website || cv.personalInfo.github) && (
             <p style={{ fontSize: `${fs.meta}px`, color: 'rgba(255,255,255,0.55)', margin: '3px 0 0' }}>
               {buildLinksLine(cv)}
             </p>

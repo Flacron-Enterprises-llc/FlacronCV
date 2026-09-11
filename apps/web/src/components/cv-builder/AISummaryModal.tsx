@@ -14,6 +14,7 @@ import InAppWarning from '@/components/shared/InAppWarning';
 import { X, Sparkles, RefreshCw, PlusCircle, Replace } from 'lucide-react';
 import { toast } from 'sonner';
 import { PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 
 interface AISummaryModalProps {
   cvId: string;
@@ -30,6 +31,7 @@ const LOCALE_LANGUAGE_NAMES: Record<string, string> = {
 export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalProps) {
   const t = useTranslations('cv_builder');
   const tCommon = useTranslations('common');
+  const formatApiError = useApiErrorMessage();
   const tw = useTranslations('in_app_warnings');
   const locale = useLocale();
   const { cv, updatePersonalInfo } = useCVStore();
@@ -95,19 +97,20 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
       refreshUser();
     } catch (error) {
       refreshUser();
-      const message = (error as Error)?.message || '';
+      const raw = error instanceof Error ? error.message : '';
       // An out-of-credits 503 (stale-state race — the client thought credits
       // remained) must surface the upgrade prompt, not a fabricated summary.
-      if (/credit/i.test(message)) {
+      // Match the API body's English `message`, not the localized toast copy.
+      if (/credit/i.test(raw)) {
         setShowUpgrade(true);
       } else {
         // Do not write a local English paragraph. Empty skills 400'd the API
         // and that filler was labelled as if the Engine produced it.
-        toast.error(message || tCommon(
+        toast.error(formatApiError(error, tCommon(
           isAiCreditUnconfirmed(error)
             ? 'generate_failed_charge_unconfirmed'
             : 'generate_failed_no_charge',
-        ));
+        )));
       }
     } finally {
       setIsGenerating(false);

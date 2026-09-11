@@ -133,6 +133,7 @@ describe('CRMUsersService', () => {
       const updated = await service.getUserById('uid-1');
       expect(updated.role).toBe(UserRole.ADMIN);
       expect(firebase.auth.setCustomUserClaims).toHaveBeenCalledWith('uid-1', { role: UserRole.ADMIN });
+      expect(firebase.auth.revokeRefreshTokens).toHaveBeenCalledWith('uid-1');
     });
 
     it('writes an audit log entry', async () => {
@@ -153,6 +154,7 @@ describe('CRMUsersService', () => {
       await seedUser(firestore, makeUser('promote-me', { role: UserRole.ADMIN }));
       await service.updateUserRole('promote-me', UserRole.SUPER_ADMIN, 'actor', 'actor@example.com');
       expect((await service.getUserById('promote-me')).role).toBe(UserRole.SUPER_ADMIN);
+      expect(firebase.auth.revokeRefreshTokens).toHaveBeenCalledWith('promote-me');
     });
 
     it('blocks demoting the LAST super_admin', async () => {
@@ -163,6 +165,7 @@ describe('CRMUsersService', () => {
       // Role must be unchanged and no claim written.
       expect((await service.getUserById('sa-1')).role).toBe(UserRole.SUPER_ADMIN);
       expect(firebase.auth.setCustomUserClaims).not.toHaveBeenCalled();
+      expect(firebase.auth.revokeRefreshTokens).not.toHaveBeenCalled();
     });
 
     it('allows demoting a super_admin when another super_admin remains', async () => {
@@ -171,6 +174,7 @@ describe('CRMUsersService', () => {
       await service.updateUserRole('sa-1', UserRole.ADMIN, 'sa-2', 'sa-2@example.com');
       expect((await service.getUserById('sa-1')).role).toBe(UserRole.ADMIN);
       expect(firebase.auth.setCustomUserClaims).toHaveBeenCalledWith('sa-1', { role: UserRole.ADMIN });
+      expect(firebase.auth.revokeRefreshTokens).toHaveBeenCalledWith('sa-1');
     });
   });
 

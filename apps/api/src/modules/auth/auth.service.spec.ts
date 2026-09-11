@@ -522,6 +522,7 @@ describe('AuthService', () => {
         role: 'super_admin',
       });
 
+      expect(mockFirebaseAdmin.auth.revokeRefreshTokens).toHaveBeenCalledWith('target');
       expect(mockAudit.log).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'USER_ROLE_CHANGED',

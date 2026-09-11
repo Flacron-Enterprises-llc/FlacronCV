@@ -115,6 +115,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/testimonials" className={linkClass}>
+                  {t('footer.testimonials')}
+                </Link>
+              </li>
+              <li>
                 <Link href="/contact-us" className={linkClass}>
                   {t('footer.contact')}
                 </Link>

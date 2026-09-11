@@ -11,7 +11,7 @@ import type { LayoutProps } from './shared';
 import {
   getTokens, ensureDarkSurface, INK,
   splitSections, SidebarSectionHeading, SectionHeading,
-  ItemRenderer, SkillLines,
+  ItemRenderer, SkillLines, contactSidebarLines,
 } from './shared';
 
 export default function SidebarLayout({ cv, sections }: LayoutProps) {
@@ -117,13 +117,7 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
         {/* Contact */}
         <div>
           <SidebarSectionHeading title={t('template_contact')} headingFont={headingFont} fs={fs} />
-          {[
-            cv.personalInfo.email,
-            cv.personalInfo.phone,
-            [cv.personalInfo.city, cv.personalInfo.country].filter(Boolean).join(', '),
-            cv.personalInfo.linkedin,
-            cv.personalInfo.website,
-          ].filter(Boolean).map((line, i) => (
+          {contactSidebarLines(cv).map((line, i) => (
             <p key={i} style={{ fontSize: `${fs.body}px`, color: 'rgba(255,255,255,0.84)', margin: '4px 0', lineHeight: 1.45, wordBreak: 'break-word' }}>
               {line}
             </p>

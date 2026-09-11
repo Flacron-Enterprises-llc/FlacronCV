@@ -7,6 +7,7 @@ import { Link, useRouter, usePathname } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 import { api } from '@/lib/api';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   User,
@@ -41,6 +42,7 @@ import { storage, auth } from '@/lib/firebase';
 
 export default function SettingsPage(): React.JSX.Element | null {
   const t = useTranslations('settings');
+  const formatApiError = useApiErrorMessage();
   const { user, resetPassword, refreshUser, logout } = useAuth();
   const { setTheme } = useTheme();
   const router = useRouter();
@@ -119,7 +121,7 @@ export default function SettingsPage(): React.JSX.Element | null {
       queryClient.invalidateQueries({ queryKey: ['user'] });
     },
     onError: (error: Error) => {
-      toast.error(error.message || t('profile.saveError'));
+      toast.error(formatApiError(error, t('profile.saveError')));
     },
   });
 
@@ -142,7 +144,7 @@ export default function SettingsPage(): React.JSX.Element | null {
       }
     },
     onError: (error: Error) => {
-      toast.error(error.message || t('preferences.saveError'));
+      toast.error(formatApiError(error, t('preferences.saveError')));
     },
   });
 
@@ -161,7 +163,7 @@ export default function SettingsPage(): React.JSX.Element | null {
       router.push('/');
     },
     onError: (error: Error) => {
-      toast.error(error.message || t('account.deleteError'));
+      toast.error(formatApiError(error, t('account.deleteError')));
     },
   });
 
@@ -181,7 +183,7 @@ export default function SettingsPage(): React.JSX.Element | null {
       router.push('/');
     },
     onError: (error: Error) => {
-      toast.error(error.message || t('account.signOutEverywhereError'));
+      toast.error(formatApiError(error, t('account.signOutEverywhereError')));
     },
   });
 
@@ -208,7 +210,7 @@ export default function SettingsPage(): React.JSX.Element | null {
 
       toast.success(t('account.downloadDataSuccess'));
     } catch (error) {
-      toast.error((error as Error)?.message || t('account.downloadDataError'));
+      toast.error(formatApiError(error, t('account.downloadDataError')));
     } finally {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       setDownloadingData(false);
@@ -266,7 +268,7 @@ export default function SettingsPage(): React.JSX.Element | null {
       toast.success(t('avatar.updated'));
     } catch (err: any) {
       setPreviewUrl(null);
-      toast.error(err?.message || t('avatar.uploadFailed'));
+      toast.error(formatApiError(err, t('avatar.uploadFailed')));
     } finally {
       setUploading(false);
       // Reset so the same file can be re-selected if needed
@@ -288,7 +290,7 @@ export default function SettingsPage(): React.JSX.Element | null {
       setPreviewUrl(null);
       toast.success(t('avatar.removed'));
     } catch (err: any) {
-      toast.error(err?.message || t('avatar.uploadFailed'));
+      toast.error(formatApiError(err, t('avatar.uploadFailed')));
     } finally {
       setUploading(false);
     }

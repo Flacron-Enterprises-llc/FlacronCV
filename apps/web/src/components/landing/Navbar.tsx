@@ -103,6 +103,9 @@ export default function Navbar() {
           <Link href="/templates" aria-current={isCurrentPage('/templates') ? 'page' : undefined} className={navLinkClass('/templates')}>
             {t('nav.templates')}
           </Link>
+          <Link href="/testimonials" aria-current={isCurrentPage('/testimonials') ? 'page' : undefined} className={navLinkClass('/testimonials')}>
+            {t('footer.testimonials')}
+          </Link>
           <Link href="/about-us" aria-current={isCurrentPage('/about-us') ? 'page' : undefined} className={navLinkClass('/about-us')}>
             {t('footer.about')}
           </Link>
@@ -179,6 +182,14 @@ export default function Navbar() {
               onClick={() => setMobileOpen(false)}
             >
               {t('nav.templates')}
+            </Link>
+            <Link
+              href="/testimonials"
+              aria-current={isCurrentPage('/testimonials') ? 'page' : undefined}
+              className={mobileNavLinkClass('/testimonials')}
+              onClick={() => setMobileOpen(false)}
+            >
+              {t('footer.testimonials')}
             </Link>
             <Link
               href="/about-us"

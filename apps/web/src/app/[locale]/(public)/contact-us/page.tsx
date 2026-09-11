@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { useAuth } from '@/providers/AuthProvider';
 import { useRouter } from '@/i18n/routing';
 import Button from '@/components/ui/Button';
@@ -50,6 +51,7 @@ type Category = keyof ReturnType<typeof categoryLabels>;
 
 export default function ContactUsPage(): React.JSX.Element | null {
   const t = useTranslations('contact');
+  const formatApiError = useApiErrorMessage();
   const router = useRouter();
   const labels = categoryLabels(t);
   const { user, firebaseUser, degraded, placeholderAccount } = useAuth();
@@ -94,7 +96,7 @@ export default function ContactUsPage(): React.JSX.Element | null {
       toast.success(t('success_title'));
     } catch (err) {
       setFailed(true);
-      toast.error((err as Error)?.message || t('error'));
+      toast.error(formatApiError(err, t('error')));
     } finally {
       setLoading(false);
     }

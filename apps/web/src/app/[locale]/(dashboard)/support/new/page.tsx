@@ -8,6 +8,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
@@ -37,6 +38,7 @@ const PRIORITY_VALUES: TicketPriority[] = [
 
 export default function NewSupportTicketPage(): React.JSX.Element | null {
   const t = useTranslations('support');
+  const formatApiError = useApiErrorMessage();
   const router = useRouter();
   const { user } = useAuth();
 
@@ -53,7 +55,7 @@ export default function NewSupportTicketPage(): React.JSX.Element | null {
       router.push(`/support/${ticket.id}`);
     },
     onError: (error: Error) => {
-      toast.error(error.message || t('ticketCreateError'));
+      toast.error(formatApiError(error, t('ticketCreateError')));
     },
   });
 

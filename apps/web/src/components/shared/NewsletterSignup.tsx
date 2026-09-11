@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { CheckCircle2 } from 'lucide-react';
 
 /** Version of the consent copy — bump when `newsletter.consent_label` changes. */
@@ -17,6 +18,7 @@ const CONSENT_VERSION = 'v1';
  */
 export default function NewsletterSignup() {
   const t = useTranslations('newsletter');
+  const formatApiError = useApiErrorMessage();
   const [email, setEmail] = useState('');
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -39,7 +41,7 @@ export default function NewsletterSignup() {
       });
       setDone(true);
     } catch (err) {
-      toast.error((err as Error)?.message || t('error'));
+      toast.error(formatApiError(err, t('error')));
     } finally {
       setLoading(false);
     }

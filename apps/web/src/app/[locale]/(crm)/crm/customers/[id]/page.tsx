@@ -36,9 +36,11 @@ import { safeFormat } from '@/lib/format-date';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import { useModalA11y } from '@/hooks/useModalA11y';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 
 export default function CustomerProfilePage(): React.JSX.Element | null {
   const t = useTranslations('crm');
+  const formatApiError = useApiErrorMessage();
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -89,28 +91,28 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
     mutationFn: (content: string) =>
       api.post(`/crm/customers/${id}/notes`, { content }),
     onSuccess: () => { setNoteText(''); invalidate(); toast.success(t('customer_detail_note_added')); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(formatApiError(e)),
   });
 
   const deleteNoteMutation = useMutation({
     mutationFn: (noteId: string) =>
       api.delete(`/crm/customers/${id}/notes/${noteId}`),
     onSuccess: () => { invalidate(); toast.success(t('customer_detail_note_deleted')); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(formatApiError(e)),
   });
 
   const addTagMutation = useMutation({
     mutationFn: (tag: string) =>
       api.post(`/crm/customers/${id}/tags`, { tag }),
     onSuccess: () => { setNewTag(''); invalidate(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(formatApiError(e)),
   });
 
   const removeTagMutation = useMutation({
     mutationFn: (tag: string) =>
       api.delete(`/crm/customers/${id}/tags/${encodeURIComponent(tag)}`),
     onSuccess: () => invalidate(),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(formatApiError(e)),
   });
 
   const updateStatusMutation = useMutation({
@@ -122,7 +124,7 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
       queryClient.invalidateQueries({ queryKey: ['crm', 'customers'] });
       toast.success(t('customer_detail_status_updated'));
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(formatApiError(e)),
   });
 
   // Seed the edit form from the loaded customer, then open the modal.
@@ -145,7 +147,7 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
       queryClient.invalidateQueries({ queryKey: ['crm', 'customers'] });
       toast.success(t('customer_detail_update_success'));
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(formatApiError(e)),
   });
 
   const deleteMutation = useMutation({
@@ -156,7 +158,7 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
       toast.success(t('customer_detail_delete_success'));
       router.push('/crm/customers');
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(formatApiError(e)),
   });
 
   if (isLoading) {

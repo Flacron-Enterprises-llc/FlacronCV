@@ -14,6 +14,7 @@ import UpgradeModal from '@/components/shared/UpgradeModal';
 import InAppWarning from '@/components/shared/InAppWarning';
 import { X, Target, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
 
 interface ATSCheckModalProps {
@@ -60,6 +61,7 @@ export default function ATSCheckModal({ open, onClose }: ATSCheckModalProps) {
   const t = useTranslations('ats');
   const tcv = useTranslations('cv_builder');
   const tCommon = useTranslations('common');
+  const formatApiError = useApiErrorMessage();
   const tw = useTranslations('in_app_warnings');
   const { cv, sections } = useCVStore();
   const { user, refreshUser } = useAuth();
@@ -118,8 +120,8 @@ export default function ATSCheckModal({ open, onClose }: ATSCheckModalProps) {
       track('ai_generation', { feature: 'ats-check' });
       refreshUser();
     } catch (error) {
-      const message = error instanceof Error ? error.message : '';
-      toast.error(message || t('error'), {
+      const message = formatApiError(error, t('error'));
+      toast.error(message, {
         description: tCommon(
           isAiCreditUnconfirmed(error)
             ? 'generate_failed_charge_unconfirmed'

@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import Button from '@/components/ui/Button';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { DELINQUENT_STATUSES, SubscriptionStatus } from '@flacroncv/shared-types';
 
 /**
@@ -17,6 +18,7 @@ import { DELINQUENT_STATUSES, SubscriptionStatus } from '@flacroncv/shared-types
  */
 export default function DunningBanner() {
   const t = useTranslations('dunning');
+  const formatApiError = useApiErrorMessage();
   const locale = useLocale();
   const { user } = useAuth();
 
@@ -28,7 +30,7 @@ export default function DunningBanner() {
     onSuccess: (data) => {
       window.location.href = data.url;
     },
-    onError: (e: Error) => toast.error(e.message || t('error')),
+    onError: (e: Error) => toast.error(formatApiError(e, t('error'))),
   });
 
   const status = user?.subscription?.status as SubscriptionStatus | undefined;

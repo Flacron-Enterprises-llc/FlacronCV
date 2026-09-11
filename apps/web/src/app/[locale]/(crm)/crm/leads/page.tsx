@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { safeFormat } from '@/lib/format-date';
 import { toast } from 'sonner';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { downloadCsv } from '@/lib/download-csv';
 
 interface ListResponse {
@@ -51,6 +52,7 @@ const STAGE_OPTIONS = [
 
 export default function CRMLeadsPage(): React.JSX.Element | null {
   const t = useTranslations('crm');
+  const formatApiError = useApiErrorMessage();
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');
@@ -93,14 +95,14 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
       setNewLead({ name: '', email: '', phone: '', company: '', source: CRMCustomerSource.MANUAL, stage: CRMLeadStage.NEW, notes: '' });
       toast.success(t('leads_toast_added'));
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(formatApiError(e)),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, ...dto }: Partial<CRMLead> & { id: string }) =>
       api.put(`/crm/leads/${id}`, dto),
     onSuccess: () => { invalidate(); setEditingLead(null); toast.success(t('leads_toast_updated')); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(formatApiError(e)),
   });
 
   const convertMutation = useMutation({
@@ -110,18 +112,18 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
       queryClient.invalidateQueries({ queryKey: ['crm', 'customers'] });
       toast.success(t('leads_toast_converted'));
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(formatApiError(e)),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (leadId: string) => api.delete(`/crm/leads/${leadId}`),
     onSuccess: () => { invalidate(); toast.success(t('leads_toast_deleted')); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(formatApiError(e)),
   });
 
   const handleExport = () => {
     downloadCsv('/crm/leads/export/csv', 'leads.csv').catch((e) =>
-      toast.error(e instanceof Error ? e.message : 'Export failed'),
+      toast.error(formatApiError(e)),
     );
   };
 

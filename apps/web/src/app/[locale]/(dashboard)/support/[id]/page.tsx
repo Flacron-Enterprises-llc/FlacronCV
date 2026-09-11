@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '@/lib/api';
 import { useFormatDate } from '@/lib/use-format-date';
 import { toast } from 'sonner';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -51,6 +52,7 @@ interface TicketDetailPageProps {
 export default function TicketDetailPage({ params }: TicketDetailPageProps) {
   const t = useTranslations('support');
   const formatDate = useFormatDate();
+  const formatApiError = useApiErrorMessage();
   const router = useRouter();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -81,7 +83,7 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
       });
     },
     onError: (error: Error) => {
-      toast.error(error.message || t('replyError'));
+      toast.error(formatApiError(error, t('replyError')));
     },
   });
 
@@ -95,7 +97,7 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
       });
     },
     onError: (error: Error) => {
-      toast.error(error.message || t('closeError'));
+      toast.error(formatApiError(error, t('closeError')));
     },
   });
 

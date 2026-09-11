@@ -8,6 +8,7 @@ import { useModalA11y } from '@/hooks/useModalA11y';
 import Button from '@/components/ui/Button';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import {
   JobApplication,
   JobStatus,
@@ -39,6 +40,7 @@ const labelClass = 'mb-1 block text-sm font-medium text-stone-700 dark:text-ston
 export default function JobFormModal({ open, onClose, job }: JobFormModalProps) {
   const t = useTranslations('jobs');
   const tCommon = useTranslations('common');
+  const formatApiError = useApiErrorMessage();
   const queryClient = useQueryClient();
   const titleId = useId();
   const dialogRef = useModalA11y<HTMLDivElement>(open, onClose);
@@ -100,7 +102,7 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
       toast.success(job ? t('updated') : t('created'));
       onClose();
     },
-    onError: (e: Error) => toast.error(e.message || t('save_error')),
+    onError: (e: Error) => toast.error(formatApiError(e, t('save_error'))),
   });
 
   if (!open) return null;

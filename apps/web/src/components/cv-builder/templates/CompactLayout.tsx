@@ -90,7 +90,7 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
           </div>
           <p style={{ fontSize: `${fs.body}px`, color: INK.meta, margin: '5px 0 0', letterSpacing: '0.2px' }}>
             {buildContactLine(cv)}
-            {(cv.personalInfo.linkedin || cv.personalInfo.website) && (
+            {(cv.personalInfo.linkedin || cv.personalInfo.website || cv.personalInfo.github) && (
               <span style={{ marginInlineStart: '10px', color: INK.meta }}>{buildLinksLine(cv)}</span>
             )}
           </p>

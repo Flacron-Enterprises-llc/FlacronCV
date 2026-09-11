@@ -9,7 +9,7 @@
 > confirmed by this pass. Runtime behaviour was never executed — this document was produced by a
 > read-only audit (no API boot, no dev server, no emulators, no cloud CLI).
 
-Created: 2026-08-18 · Last doc touch: 2026-09-11 (web verify coalesce, CL final, admin/crm sync timeout, portal locale, CRM limits display-only, localized plan bullets/meta/dates)
+Created: 2026-08-18 · Last doc touch: 2026-09-11 (API role-change refresh revoke; web i18n/templates/cosmetics)
 
 ---
 
@@ -67,8 +67,11 @@ Firestore (+ Firebase Auth, Storage)  via firebase-admin with service-account cr
 | Firestore | firebase-admin runs with full service-account privileges | Security rules do **not** protect API-mediated writes ⚠️ UNVERIFIED (rules file not audited this pass) |
 
 Two consequences worth remembering: a disabled button is never enforcement (standing rule 10), and
-ID tokens stay valid for up to ~1h after a role change or revocation, so a demoted admin keeps API
-access until the token expires (open MEDIUM in `AUDIT_OPEN_FINDINGS.md`).
+ID tokens stay valid for up to ~1h after a role change. Role changes now revoke **refresh**
+tokens (`AuthService.setUserRole`, `CrmUsersService.updateUserRole`) so a new token cannot
+carry the old `role` claim; `FirebaseAuthGuard` still verifies without `checkRevoked`
+(latency on every authenticated request — PROJECT_PROGRESS.md §8). A demoted admin's
+current token keeps admin API access until it expires.
 
 ---
 
@@ -484,9 +487,29 @@ Dashboard dates use `useFormatDate` with the active locale.
 CRM exports (`res.ok` check). It no longer `blob()`s a 403/HTML error page
 into `platform-users.csv`.
 
+**API role-change refresh revoke (2026-09-11).** `AuthService.setUserRole` and
+`CrmUsersService.updateUserRole` call `revokeRefreshTokens` after
+`setCustomUserClaims`. `FirebaseAuthGuard` still uses `verifyIdToken(token)`
+without `checkRevoked`. See PROJECT_PROGRESS.md §8.
+
 **Web API transport copy (2026-09-11).** Timeout/offline `ApiError` messages
 do not claim the work was saved. Localized keys: `auth.errors.timeout` /
-`auth.errors.offline` via `useApiErrorMessage`.
+`auth.errors.offline` / `auth.errors.network` / `auth.errors.http` via
+`useApiErrorMessage` at toast sites. `api.ts` still stores English
+`.message` for tests and any leftover `(e as Error).message` path.
+
+**Template locale (2026-09-11).** Public `/templates` and CV pick-template
+display and search `nameLocalized[locale] || nameLocalized.en || name`.
+`descriptionLocalized` is on the type but the seed does not fill it, so
+descriptions stay English until an API seed change. Admin list uses `name`.
+
+**CV personal-info extras (2026-09-11).** Editor collects `address`,
+`postalCode`, `github` (already on `PersonalInfo`). Contact/link lines in
+the React templates and client DOCX include those fields.
+
+**Testimonials nav (2026-09-11).** Navbar (desktop + mobile) and footer
+Company column link `/testimonials` via `footer.testimonials`. Landing
+testimonials *section* stays hidden (no placeholder quotes).
 
 **CV AI summary (E6, 2026-08-26).** Mobile `SummaryStep` POSTs
 `{ experience, skills, targetRole }` to `/ai/cv-summary` (GenerateCvSummaryDto).

@@ -290,6 +290,18 @@ export default function CVEditor() {
             value={cv.personalInfo.country}
             onChange={(e) => updatePersonalInfo('country', e.target.value)}
           />
+          <Input
+            label={t('field_address')}
+            value={cv.personalInfo.address}
+            onChange={(e) => updatePersonalInfo('address', e.target.value)}
+            placeholder={t('ph_address')}
+          />
+          <Input
+            label={t('field_postal_code')}
+            value={cv.personalInfo.postalCode}
+            onChange={(e) => updatePersonalInfo('postalCode', e.target.value)}
+            placeholder={t('ph_postal_code')}
+          />
           <div className="sm:col-span-2">
             <Input
               label={t('field_headline')}
@@ -337,6 +349,12 @@ export default function CVEditor() {
             value={cv.personalInfo.website}
             onChange={(e) => updatePersonalInfo('website', e.target.value)}
             placeholder={t('ph_website')}
+          />
+          <Input
+            label={t('field_github')}
+            value={cv.personalInfo.github}
+            onChange={(e) => updatePersonalInfo('github', e.target.value)}
+            placeholder={t('ph_github')}
           />
         </div>
       </Card>

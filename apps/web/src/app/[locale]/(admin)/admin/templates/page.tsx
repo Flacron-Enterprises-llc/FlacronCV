@@ -12,6 +12,7 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import { toast } from 'sonner';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { useFormatDate } from '@/lib/use-format-date';
 import {
   Plus,
@@ -39,6 +40,7 @@ export default function AdminTemplatesPage(): React.JSX.Element | null {
   const formatDate = useFormatDate();
   const t = useTranslations('admin');
   const tc = useTranslations('common');
+  const formatApiError = useApiErrorMessage();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
@@ -56,7 +58,7 @@ export default function AdminTemplatesPage(): React.JSX.Element | null {
       toast.success(t('template_created'));
       closeModal();
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(formatApiError(err)),
   });
 
   const updateMutation = useMutation({
@@ -67,7 +69,7 @@ export default function AdminTemplatesPage(): React.JSX.Element | null {
       toast.success(t('template_updated'));
       closeModal();
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(formatApiError(err)),
   });
 
   const deleteMutation = useMutation({
@@ -76,7 +78,7 @@ export default function AdminTemplatesPage(): React.JSX.Element | null {
       queryClient.invalidateQueries({ queryKey: ['admin', 'templates'] });
       toast.success(t('template_deleted'));
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(formatApiError(err)),
   });
 
   const openCreate = () => {

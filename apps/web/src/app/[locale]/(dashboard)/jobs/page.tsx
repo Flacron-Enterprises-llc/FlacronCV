@@ -31,6 +31,7 @@ import {
   BellRing,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { JobApplication, JobStatus } from '@flacroncv/shared-types';
 
 const STATUS_ORDER: JobStatus[] = [
@@ -78,6 +79,7 @@ const SORTERS: Record<SortKey, (a: JobApplication, b: JobApplication) => number>
 
 export default function JobsPage(): React.JSX.Element | null {
   const t = useTranslations('jobs');
+  const formatApiError = useApiErrorMessage();
   const formatDate = useFormatDate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -137,7 +139,7 @@ export default function JobsPage(): React.JSX.Element | null {
     },
     onError: (e, _vars, ctx) => {
       if (ctx?.previous) queryClient.setQueryData(['jobs'], ctx.previous);
-      toast.error((e as Error)?.message || t('save_error'));
+      toast.error(formatApiError(e, t('save_error')));
     },
     onSettled: invalidate,
   });
@@ -153,7 +155,7 @@ export default function JobsPage(): React.JSX.Element | null {
       invalidate();
       toast.success(t('deleted'));
     } catch (e) {
-      toast.error((e as Error)?.message || t('save_error'));
+      toast.error(formatApiError(e, t('save_error')));
     }
   };
 
@@ -164,7 +166,7 @@ export default function JobsPage(): React.JSX.Element | null {
       invalidate();
       toast.success(job.archived ? t('unarchived') : t('archived_toast'));
     } catch (e) {
-      toast.error((e as Error)?.message || t('save_error'));
+      toast.error(formatApiError(e, t('save_error')));
     }
   };
 

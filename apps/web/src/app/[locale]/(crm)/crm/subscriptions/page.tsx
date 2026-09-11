@@ -31,6 +31,7 @@ import {
   Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { downloadCsv } from '@/lib/download-csv';
 import { cn } from '@/lib/utils';
 
@@ -272,6 +273,7 @@ function StripeCustomerId({
 export default function CRMSubscriptionsPage(): React.JSX.Element {
   const formatDate = useFormatDate();
   const t = useTranslations('crm');
+  const formatApiError = useApiErrorMessage();
   // Status labels already exist, translated, under the billing namespace —
   // reused here rather than duplicated as new crm.* keys.
   const tBilling = useTranslations('billing');
@@ -409,7 +411,7 @@ export default function CRMSubscriptionsPage(): React.JSX.Element {
           icon={<Download className="h-4 w-4" />}
           onClick={() =>
             downloadCsv('/crm/subscriptions/export/csv', 'subscriptions.csv').catch((e) =>
-              toast.error(e instanceof Error ? e.message : 'Export failed'),
+              toast.error(formatApiError(e)),
             )
           }
         >

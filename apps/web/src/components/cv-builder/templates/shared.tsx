@@ -424,16 +424,32 @@ export function formatCVDate(dateStr?: string | null): string {
 
 // ─── Contact line builder ─────────────────────────────────────────────────────
 
+function locationLine(cv: CV): string {
+  const cityPostal = [cv.personalInfo.city, cv.personalInfo.postalCode].filter(Boolean).join(' ');
+  return [cv.personalInfo.address, cityPostal, cv.personalInfo.country].filter(Boolean).join(', ');
+}
+
 export function buildContactLine(cv: CV): string {
   return [
     cv.personalInfo.email,
     cv.personalInfo.phone,
-    [cv.personalInfo.city, cv.personalInfo.country].filter(Boolean).join(', '),
+    locationLine(cv),
   ].filter(Boolean).join('  ·  ');
 }
 
 export function buildLinksLine(cv: CV): string {
-  return [cv.personalInfo.linkedin, cv.personalInfo.website].filter(Boolean).join('  ·  ');
+  return [cv.personalInfo.linkedin, cv.personalInfo.website, cv.personalInfo.github].filter(Boolean).join('  ·  ');
+}
+
+export function contactSidebarLines(cv: CV): string[] {
+  return [
+    cv.personalInfo.email,
+    cv.personalInfo.phone,
+    locationLine(cv),
+    cv.personalInfo.linkedin,
+    cv.personalInfo.website,
+    cv.personalInfo.github,
+  ].filter(Boolean);
 }
 
 // ─── Sidebar section splitter ─────────────────────────────────────────────────

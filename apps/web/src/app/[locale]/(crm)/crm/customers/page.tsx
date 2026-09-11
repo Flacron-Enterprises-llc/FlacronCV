@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { safeFormat } from '@/lib/format-date';
 import { toast } from 'sonner';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { downloadCsv } from '@/lib/download-csv';
 import { cn } from '@/lib/utils';
 
@@ -74,6 +75,7 @@ const TABLE_COLUMNS: {
 
 export default function CRMCustomersPage(): React.JSX.Element | null {
   const t = useTranslations('crm');
+  const formatApiError = useApiErrorMessage();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -117,7 +119,7 @@ export default function CRMCustomersPage(): React.JSX.Element | null {
       setNewCustomer({ name: '', email: '', phone: '', company: '', source: CRMCustomerSource.MANUAL, status: CRMCustomerStatus.ACTIVE });
       toast.success(t('customers_add_success'));
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(formatApiError(err)),
   });
 
   const handleSort = (field: typeof sortBy) => {
@@ -132,9 +134,9 @@ export default function CRMCustomersPage(): React.JSX.Element | null {
 
   const handleExport = useCallback(() => {
     downloadCsv('/crm/customers/export/csv', 'customers.csv').catch((e) =>
-      toast.error(e instanceof Error ? e.message : 'Export failed'),
+      toast.error(formatApiError(e)),
     );
-  }, []);
+  }, [formatApiError]);
 
   return (
     <div className="space-y-6">

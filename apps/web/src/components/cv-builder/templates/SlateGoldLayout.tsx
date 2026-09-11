@@ -17,6 +17,7 @@ import type { LayoutProps } from './shared';
 import {
   getTokens, hexToRgba, readableOn, INK,
   splitSections, formatCVDate, formatDegree, SkillList, SkillLines,
+  contactSidebarLines,
 } from './shared';
 
 /* ─── Palette ────────────────────────────────────────────────────────────────── */
@@ -335,13 +336,7 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
         {/* ── Contact ── */}
         <div style={{ padding: `${sp.section * 0.7}px ${sp.pad * 0.55}px` }}>
           <SideHeading title={t('template_contact')} gold={goldSide} headingFont={headingFont} fs={fs} />
-          {[
-            cv.personalInfo.email,
-            cv.personalInfo.phone,
-            [cv.personalInfo.city, cv.personalInfo.country].filter(Boolean).join(', '),
-            cv.personalInfo.linkedin,
-            cv.personalInfo.website,
-          ].filter(Boolean).map((line, i) => (
+          {contactSidebarLines(cv).map((line, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginBottom: '5px' }}>
               {/* Gold bullet */}
               <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: goldSide, marginTop: '5px', flexShrink: 0 }} />

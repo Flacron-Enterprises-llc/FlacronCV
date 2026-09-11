@@ -547,6 +547,22 @@ const NoBorders = {
   insideHorizontal: NoBorder, insideVertical: NoBorder,
 };
 
+function docxLocation(info: CV['personalInfo'] | undefined): string {
+  const cityPostal = [info?.city, info?.postalCode].filter(Boolean).join(' ');
+  return [info?.address, cityPostal, info?.country].filter(Boolean).join(', ');
+}
+
+function docxContactParts(info: CV['personalInfo'] | undefined): string[] {
+  return [
+    info?.email, info?.phone, docxLocation(info) || undefined,
+    info?.linkedin, info?.website, info?.github,
+  ].filter(Boolean) as string[];
+}
+
+function docxLinkParts(info: CV['personalInfo'] | undefined): string[] {
+  return [info?.linkedin, info?.website, info?.github].filter(Boolean) as string[];
+}
+
 // ── Classic ──────────────────────────────────────────────────────────────────
 function buildClassicChildren(
   d: any, cv: CV, layout: LayoutDescriptor, color: string, tokens: Tokens, labels: DocxLabels,
@@ -554,11 +570,7 @@ function buildClassicChildren(
   const name = [cv.personalInfo?.firstName, cv.personalInfo?.lastName].filter(Boolean).join(' ') || cv.title;
   const info = cv.personalInfo;
   const { fs, sp } = tokens;
-  const contactParts = [
-    info?.email, info?.phone,
-    info?.city && info?.country ? `${info.city}, ${info.country}` : info?.city || info?.country,
-    info?.linkedin, info?.website,
-  ].filter(Boolean) as string[];
+  const contactParts = docxContactParts(info);
 
   const children: any[] = [];
 
@@ -638,11 +650,7 @@ function buildSidebarChildren(
   }));
 
   leftParas.push(sidebarSectionHeadingDocx(d, labels.contact, tokens));
-  const contactLines = [
-    info?.email, info?.phone,
-    info?.city && info?.country ? `${info.city}, ${info.country}` : info?.city || info?.country,
-    info?.linkedin, info?.website,
-  ].filter(Boolean) as string[];
+  const contactLines = docxContactParts(info);
   for (const line of contactLines) leftParas.push(para(d, {
     children: [new d.TextRun({ text: line, size: pxToHalfPt(fs.body), color: 'E0E0E0' })],
     spacing: { line: LS.normal, after: pxToTwips(3) },
@@ -707,10 +715,9 @@ function buildTopBarChildren(
   const col = layout.columns[0];
   const name = [info?.firstName, info?.lastName].filter(Boolean).join(' ') || cv.title;
   const contactParts = [
-    info?.email, info?.phone,
-    info?.city && info?.country ? `${info.city}, ${info.country}` : info?.city || info?.country,
+    info?.email, info?.phone, docxLocation(info) || undefined,
   ].filter(Boolean) as string[];
-  const linkParts = [info?.linkedin, info?.website].filter(Boolean) as string[];
+  const linkParts = docxLinkParts(info);
 
   const children: any[] = [];
 
@@ -784,11 +791,7 @@ function buildCompactChildren(
   const tightSp     = { ...sp, section: Math.round(sp.section * 0.85), item: Math.round(sp.item * 0.8) };
   const tightTokens = { ...tokens, sp: tightSp };
   const name = [info?.firstName, info?.lastName].filter(Boolean).join(' ') || cv.title;
-  const contactParts = [
-    info?.email, info?.phone,
-    info?.city && info?.country ? `${info.city}, ${info.country}` : info?.city || info?.country,
-    info?.linkedin, info?.website,
-  ].filter(Boolean) as string[];
+  const contactParts = docxContactParts(info);
 
   const children: any[] = [];
 

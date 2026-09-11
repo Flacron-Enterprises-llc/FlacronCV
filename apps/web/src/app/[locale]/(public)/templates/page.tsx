@@ -17,6 +17,7 @@ import TopBarLayout    from '@/components/cv-builder/templates/TopBarLayout';
 import CompactLayout   from '@/components/cv-builder/templates/CompactLayout';
 import SlateGoldLayout from '@/components/cv-builder/templates/SlateGoldLayout';
 import { buildSampleCV, SAMPLE_SECTIONS } from '@/lib/previewSampleCV';
+import { localizedTemplateField, templateSearchHaystack } from '@/lib/localized-template';
 import {
   Lock,
   Star,
@@ -236,12 +237,12 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
       if (categoryFilter !== 'all' && tmpl.category !== categoryFilter) return false;
       if (tierFilter !== 'all' && tmpl.tier !== tierFilter) return false;
       if (query) {
-        const haystack = `${tmpl.name ?? ''} ${tmpl.description ?? ''}`.toLowerCase();
+        const haystack = templateSearchHaystack(tmpl, locale);
         if (!haystack.includes(query)) return false;
       }
       return true;
     });
-  }, [templates, search, categoryFilter, tierFilter]);
+  }, [templates, search, categoryFilter, tierFilter, locale]);
 
   const hasActiveFilters = search.trim() !== '' || categoryFilter !== 'all' || tierFilter !== 'all';
 
@@ -515,7 +516,9 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
                     className="absolute inset-0 z-10 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500"
                   >
                     <span className="sr-only">
-                      {t('template_picker.preview_aria', { name: template.name })}
+                      {t('template_picker.preview_aria', {
+                        name: localizedTemplateField(template.nameLocalized, template.name, locale),
+                      })}
                     </span>
                   </button>
 
@@ -569,10 +572,10 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
                     <div className="space-y-2">
                       <div>
                         <h3 className="font-semibold text-stone-900 dark:text-white">
-                          {template.name}
+                          {localizedTemplateField(template.nameLocalized, template.name, locale)}
                         </h3>
                         <p className="mt-1 line-clamp-2 text-xs text-stone-500 dark:text-stone-400">
-                          {template.description}
+                          {localizedTemplateField(template.descriptionLocalized, template.description, locale)}
                         </p>
                       </div>
 
@@ -724,7 +727,7 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
         <TemplatePreviewModal
           isOpen={true}
           onClose={() => setPreviewTemplate(null)}
-          templateName={previewTemplate.name}
+          templateName={localizedTemplateField(previewTemplate.nameLocalized, previewTemplate.name, locale)}
           layout={previewLayout}
           accentColor={previewColor}
           isPro={previewIsPro}

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { PlatformUserItem } from '@flacroncv/shared-types';
 import { Link } from '@/i18n/routing';
 import {
@@ -74,6 +75,7 @@ function UserAvatar({ user }: { user: PlatformUserItem }) {
 export default function CRMUsersPage(): React.JSX.Element {
   const formatDate = useFormatDate();
   const t = useTranslations('crm');
+  const formatApiError = useApiErrorMessage();
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -161,7 +163,7 @@ export default function CRMUsersPage(): React.JSX.Element {
 
   const handleExport = () => {
     downloadCsv('/crm/users/export/csv', 'platform-users.csv').catch((e) =>
-      toast.error(e instanceof Error ? e.message : 'Export failed'),
+      toast.error(formatApiError(e)),
     );
   };
 

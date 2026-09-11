@@ -76,7 +76,7 @@ export default function ClassicLayout({ cv, sections }: LayoutProps) {
           {buildContactLine(cv)}
         </p>
 
-        {(cv.personalInfo.linkedin || cv.personalInfo.website) && (
+        {(cv.personalInfo.linkedin || cv.personalInfo.website || cv.personalInfo.github) && (
           <p style={{ fontSize: `${fs.meta}px`, color: INK.meta, margin: '3px 0 0' }}>
             {buildLinksLine(cv)}
           </p>

@@ -37,7 +37,7 @@ export default function CVListPage(): React.JSX.Element | null {
   const cvsCreated = user?.usage?.cvsCreated ?? 0;
   const atLimit = cvLimit !== 'unlimited' && cvsCreated >= cvLimit;
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['cvs'],
     queryFn: () => api.get<{ items: CV[] }>('/cvs?limit=100'),
   });
@@ -89,6 +89,9 @@ export default function CVListPage(): React.JSX.Element | null {
         <Card className="flex flex-col items-center gap-3 py-16 text-center">
           <AlertTriangle className="h-8 w-8 text-red-500" />
           <p className="text-sm text-stone-500 dark:text-stone-400">{t('dashboard.load_error')}</p>
+          <Button variant="secondary" onClick={() => refetch()}>
+            {t('dashboard.stats_retry')}
+          </Button>
         </Card>
       ) : isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

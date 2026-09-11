@@ -40,11 +40,13 @@ import { toDate } from '@/lib/format-date';
 import { shouldClaimCheckoutSuccess } from '@/lib/checkout-verify';
 import { localizedPlanFeatures } from '@/lib/plan-features';
 import { legalDocLinks } from '@/components/auth/LegalAcceptanceModal';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 
 export default function BillingPage(): React.JSX.Element | null {
   const t = useTranslations('billing');
   const tPricing = useTranslations('pricing');
   const tUpgrade = useTranslations('upgrade_modal');
+  const formatApiError = useApiErrorMessage();
   const queryClient = useQueryClient();
   const { user, refreshUser } = useAuth();
   const searchParams = useSearchParams();
@@ -199,7 +201,7 @@ export default function BillingPage(): React.JSX.Element | null {
         void refetchTrialEligibility();
         return;
       }
-      toast.error(error.message || t('checkoutError'));
+      toast.error(formatApiError(error, t('checkoutError')));
     },
   });
 
@@ -213,7 +215,7 @@ export default function BillingPage(): React.JSX.Element | null {
       window.location.href = data.url;
     },
     onError: (error: Error) => {
-      toast.error(error.message || t('portalError'));
+      toast.error(formatApiError(error, t('portalError')));
     },
   });
 

@@ -12,6 +12,7 @@ import Button from '@/components/ui/Button';
 import UpgradeModal from '@/components/shared/UpgradeModal';
 import { X, Upload, FileUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { PLAN_CONFIGS, resolveEffectivePlan, type CV } from '@flacroncv/shared-types';
 import { CV_NEW_DRAFT_KEY as DRAFT_KEY } from '@/app/[locale]/(dashboard)/cv/new/constants';
 
@@ -26,6 +27,7 @@ export default function ImportResumeModal({ open, onClose, title }: ImportResume
   const t = useTranslations('resume_import');
   const tcv = useTranslations('cv_builder');
   const tCommon = useTranslations('common');
+  const formatApiError = useApiErrorMessage();
   const router = useRouter();
   const { user, refreshUser } = useAuth();
 
@@ -94,8 +96,8 @@ export default function ImportResumeModal({ open, onClose, title }: ImportResume
       toast.success(t('success'));
       router.push(`/cv/${cv.id}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : '';
-      toast.error(message || t('error'), {
+      const message = formatApiError(error, t('error'));
+      toast.error(message, {
         description: tCommon(
           isAiCreditUnconfirmed(error)
             ? 'generate_failed_charge_unconfirmed'

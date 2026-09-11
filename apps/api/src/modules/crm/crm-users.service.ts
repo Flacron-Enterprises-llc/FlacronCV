@@ -124,8 +124,11 @@ export class CRMUsersService {
       role,
       updatedAt: new Date(),
     });
-    // Sync to Firebase Auth custom claims so the JWT reflects the new role immediately
     await this.firebase.auth.setCustomUserClaims(uid, { role });
+    // Same as AuthService.setUserRole: kill refresh tokens so a demoted admin
+    // cannot mint a new ID token with the old claim. The live ID token remains
+    // valid until expiry — `checkRevoked` is deliberately off (PROJECT_PROGRESS §8).
+    await this.firebase.auth.revokeRefreshTokens(uid);
     await this.audit.log({
       actorId,
       actorEmail,

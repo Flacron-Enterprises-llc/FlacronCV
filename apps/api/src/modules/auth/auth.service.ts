@@ -274,6 +274,11 @@ export class AuthService {
     const previous = (await this.usersService.findById(uid))?.role;
     await this.firebaseAdmin.auth.setCustomUserClaims(uid, { role });
     await this.usersService.updateRole(uid, role);
+    // Refresh tokens die so the next mint cannot carry the old `role` claim.
+    // The ID token already in the browser still works until `exp` (~1h) —
+    // FirebaseAuthGuard does not pass `checkRevoked` (per-request Auth lookup
+    // on every call, including CV autosave). See PROJECT_PROGRESS.md §8.
+    await this.revokeTokens(uid);
     this.logger.log(`User ${uid} role set to ${role}`);
 
     // A privilege change is the single most security-relevant mutation in the

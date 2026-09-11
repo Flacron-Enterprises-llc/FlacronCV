@@ -54,6 +54,8 @@ const ALLOWED: Record<string, string> = {
   // Example values shown inside form fields — illustrative, not prose.
   'cv_builder.ph_linkedin': 'example URL',
   'cv_builder.ph_website': 'example URL',
+  'cv_builder.ph_github': 'example URL',
+  'cv_builder.field_github': 'brand',
   'contact.info_email': 'literal address',
   'contact.parent_email': 'literal address',
   'contact.parent_name': 'company name',

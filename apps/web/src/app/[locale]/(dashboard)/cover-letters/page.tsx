@@ -24,11 +24,13 @@ import { CoverLetter, PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shar
 import { useFormatDate } from '@/lib/use-format-date';
 import { toast } from 'sonner';
 import { useAuth } from '@/providers/AuthProvider';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 
 export default function CoverLettersPage(): React.JSX.Element | null {
   const t = useTranslations();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const formatApiError = useApiErrorMessage();
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const letterLimit = PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)].limits.coverLetters;
@@ -48,7 +50,7 @@ export default function CoverLettersPage(): React.JSX.Element | null {
       setDeleteId(null);
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(formatApiError(error));
     },
   });
 

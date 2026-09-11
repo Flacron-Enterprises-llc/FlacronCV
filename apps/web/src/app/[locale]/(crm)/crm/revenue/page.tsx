@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { safeFormat } from '@/lib/format-date';
 import { toast } from 'sonner';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { downloadCsv } from '@/lib/download-csv';
 import { CRMRevenueDataPoint } from '@flacroncv/shared-types';
 
@@ -43,6 +44,7 @@ interface ListResponse {
 
 export default function CRMRevenuePage(): React.JSX.Element | null {
   const t = useTranslations('crm');
+  const formatApiError = useApiErrorMessage();
   const queryClient = useQueryClient();
 
   const [page, setPage] = useState(1);
@@ -88,7 +90,7 @@ export default function CRMRevenuePage(): React.JSX.Element | null {
       setNewTx({ currency: 'USD', status: CRMTransactionStatus.COMPLETED });
       toast.success(t('revenue_toast_added'));
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(formatApiError(e)),
   });
 
   const deleteMutation = useMutation({
@@ -98,7 +100,7 @@ export default function CRMRevenuePage(): React.JSX.Element | null {
       queryClient.invalidateQueries({ queryKey: ['crm', 'analytics'] });
       toast.success(t('revenue_toast_deleted'));
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(formatApiError(e)),
   });
 
   const handleExport = () => {
@@ -106,7 +108,7 @@ export default function CRMRevenuePage(): React.JSX.Element | null {
     if (startDate) params.set('startDate', startDate);
     if (endDate) params.set('endDate', endDate);
     downloadCsv(`/crm/transactions/export/csv?${params}`, 'transactions.csv').catch((e) =>
-      toast.error(e instanceof Error ? e.message : 'Export failed'),
+      toast.error(formatApiError(e)),
     );
   };
 
