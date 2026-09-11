@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useInView } from '@/hooks/useInView';
 import { useAuth } from '@/providers/AuthProvider';
+import { localizedPlanFeatures } from '@/lib/plan-features';
 
 /** Per-plan presentation. Which of these actually render is decided by
  *  `customerFacingPlans()` — see the visibility rule in shared-types. */
@@ -49,6 +50,7 @@ const PLAN_PRESENTATION: Record<
 
 export default function Pricing() {
   const t = useTranslations();
+  const tPricing = useTranslations('pricing');
   const { user } = useAuth();
   const [yearly, setYearly] = useState(false);
   const { ref: sectionRef, isInView } = useInView({ threshold: 0.1 });
@@ -269,7 +271,11 @@ export default function Pricing() {
                     has no team/seat concept), so its 500 credits are one
                     account's allowance, not a shared pool. */}
                 <ul className="mb-8 flex-1 space-y-3">
-                  {config.features.map((feature) => (
+                  {localizedPlanFeatures(
+                    key,
+                    tPricing,
+                    t(`upgrade_modal.template_reach.${config.limits.templates}`),
+                  ).map((feature) => (
                     <li key={feature} className="flex items-start gap-3 text-sm">
                       <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" />
                       <span className="text-stone-600 dark:text-stone-400">{feature}</span>

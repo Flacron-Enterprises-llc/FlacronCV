@@ -12,7 +12,7 @@ import { Plus, FileText, Trash2, Copy, Pencil, Sparkles, AlertTriangle } from 'l
 import Skeleton from '@/components/ui/Skeleton';
 import { CV, PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
 import CVThumbnail from '@/components/cv-builder/CVThumbnail';
-import { formatDate } from '@/lib/utils';
+import { useFormatDate } from '@/lib/use-format-date';
 import { toast } from 'sonner';
 import { useId, useState } from 'react';
 import { useRouter } from '@/i18n/routing';
@@ -128,7 +128,14 @@ export default function CVListPage(): React.JSX.Element | null {
               key={cv.id}
               cv={cv}
               onDelete={() => setConfirmDeleteId(cv.id)}
-              onDuplicate={() => { setDuplicatingId(cv.id); duplicateMutation.mutate(cv.id); }}
+              onDuplicate={() => {
+                if (atLimit) {
+                  setShowUpgrade(true);
+                  return;
+                }
+                setDuplicatingId(cv.id);
+                duplicateMutation.mutate(cv.id);
+              }}
               duplicating={duplicatingId === cv.id && duplicateMutation.isPending}
             />
           ))}
@@ -201,6 +208,7 @@ function CVCard({
 }) {
   const router = useRouter();
   const t = useTranslations('cv');
+  const formatDate = useFormatDate();
 
   return (
     <Card padding="none" className="group overflow-hidden transition-shadow hover:shadow-md">

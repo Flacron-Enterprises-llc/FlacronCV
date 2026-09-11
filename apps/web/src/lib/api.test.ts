@@ -127,6 +127,7 @@ describe('api lib', () => {
       expect(err.retryable).toBe(true);
       // The old copy was a bare "the server did not respond".
       expect(err.message).toMatch(/longer than expected/i);
+      expect(err.message).not.toMatch(/work is saved/i);
     });
 
     it('classifies an abort as offline when the device has no connection', async () => {
@@ -136,6 +137,7 @@ describe('api lib', () => {
       const err = await api.get('/slow').catch((e) => e);
       expect(err.kind).toBe('offline');
       expect(err.message).toMatch(/offline/i);
+      expect(err.message).not.toMatch(/work is saved/i);
     });
 
     it('classifies a fetch TypeError as a network error', async () => {

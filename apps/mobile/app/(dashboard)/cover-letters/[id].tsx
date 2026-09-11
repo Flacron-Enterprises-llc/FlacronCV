@@ -151,6 +151,7 @@ export default function CoverLetterEditorScreen() {
         jobDescription: coverLetter.jobDescription ?? '',
         companyName: coverLetter.companyName ?? '',
         tone,
+        linkedCVId: coverLetter.linkedCVId || undefined,
       });
       setContent(contentForEditor(updated.content));
       await syncUser();

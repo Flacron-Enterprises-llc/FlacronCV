@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import Navbar from '@/components/landing/Navbar';
 import Hero from '@/components/landing/Hero';
 import Features from '@/components/landing/Features';
@@ -15,11 +16,17 @@ export async function generateMetadata({
 }: {
   params: { locale: string };
 }): Promise<Metadata> {
+  const t = await getTranslations({ locale, namespace: 'meta' });
+  const title = t('home_title');
+  const description = t('home_description');
+  const ogTitle = t('home_og_title');
+  const ogDescription = t('home_og_description');
+  const twitterDescription = t('home_twitter_description');
+  const ogAlt = t('home_og_alt');
   return {
     // Bare title — the root layout template appends " | FlacronCV".
-    title: 'Build Your Perfect CV with AI',
-    description:
-      'Draft a CV with AI from templates built so applicant tracking systems can read your details. Edit every line, export to PDF or Word. Free to start — no card required.',
+    title,
+    description,
     keywords: [
       'CV builder',
       'resume builder',
@@ -31,9 +38,8 @@ export async function generateMetadata({
       'professional CV templates',
     ],
     openGraph: {
-      title: 'Build Your Perfect CV with AI | FlacronCV',
-      description:
-        'AI-drafted CVs with templates built to be parsed cleanly. Edit every line, export to PDF or Word. Six languages.',
+      title: ogTitle,
+      description: ogDescription,
       type: 'website',
       url: `${SITE_URL}/${locale}`,
       siteName: 'FlacronCV',
@@ -42,15 +48,14 @@ export async function generateMetadata({
           url: `${SITE_URL}/og.png`,
           width: 1200,
           height: 630,
-          alt: 'FlacronCV – AI-Powered CV & Cover Letter Builder',
+          alt: ogAlt,
         },
       ],
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'Build Your Perfect CV with AI | FlacronCV',
-      description:
-        'Draft your CV with AI. Templates use clear structure so tracking systems can read the text. Free to start.',
+      title: ogTitle,
+      description: twitterDescription,
       images: [`${SITE_URL}/og.png`],
     },
     alternates: localizedAlternates('', locale),

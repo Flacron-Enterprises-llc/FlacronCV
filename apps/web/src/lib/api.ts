@@ -167,8 +167,8 @@ async function request<T>(
       const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
       throw new ApiError(
         offline
-          ? 'You appear to be offline. Your work is saved — reconnect and try again.'
-          : 'This is taking longer than expected. Your work is saved — please try again.',
+          ? 'You appear to be offline. This change was not saved. Reconnect and try again.'
+          : 'This is taking longer than expected. This change was not saved. Please try again.',
         { kind: offline ? 'offline' : 'timeout', retryable: true },
       );
     }

@@ -6,7 +6,7 @@ import { Link, useRouter } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { useFormatDate } from '@/lib/use-format-date';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -37,6 +37,7 @@ const statusVariantMap: Record<
 
 export default function SupportPage(): React.JSX.Element | null {
   const t = useTranslations('support');
+  const formatDate = useFormatDate();
   const router = useRouter();
   const { user } = useAuth();
 

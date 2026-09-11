@@ -20,10 +20,10 @@ export function cn(...inputs: ClassValue[]) {
  * Returns an em dash rather than '' for a missing/unparseable value so a label
  * like "Updated {date}" can never render as a dangling word again.
  */
-export function formatDate(date: unknown): string {
+export function formatDate(date: unknown, locale?: string): string {
   const d = toDate(date);
   if (!d) return '—';
-  return d.toLocaleDateString('en-US', {
+  return d.toLocaleDateString(locale, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

@@ -5,11 +5,14 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useRouter } from '@/i18n/routing';
 import CRMSidebar from '@/components/crm/CRMSidebar';
 import TopBar from '@/components/dashboard/TopBar';
+import AccountSyncError from '@/components/shared/AccountSyncError';
 // The translated ErrorBoundary — the `ui/` twin renders hardcoded English.
 // Both implementations are deliberately kept (see the release-freeze note);
 // the defect was only that the CRM wired the untranslated one.
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Loader2 } from 'lucide-react';
+
+const SYNC_TIMEOUT_MS = 15_000;
 
 /**
  * The CRM chrome. This was `(crm)/layout.tsx` verbatim until 2026-08-18; it
@@ -20,9 +23,11 @@ import { Loader2 } from 'lucide-react';
  * Layout matches DashboardShell: full-width navy TopBar, sidebar below.
  */
 export default function CRMShell({ children }: { children: React.ReactNode }) {
-  const { user, loading, placeholderAccount } = useAuth();
+  const { user, loading, placeholderAccount, refreshUser, logout } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [syncTimedOut, setSyncTimedOut] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -37,6 +42,30 @@ export default function CRMShell({ children }: { children: React.ReactNode }) {
       router.push('/dashboard');
     }
   }, [loading, user, placeholderAccount, router]);
+
+  useEffect(() => {
+    if (!placeholderAccount) {
+      setSyncTimedOut(false);
+      return;
+    }
+    const timer = setTimeout(() => setSyncTimedOut(true), SYNC_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [placeholderAccount]);
+
+  if (placeholderAccount && syncTimedOut) {
+    return (
+      <AccountSyncError
+        retrying={retrying}
+        onRetry={() => {
+          setRetrying(true);
+          void refreshUser().finally(() => setRetrying(false));
+        }}
+        onSignOut={() => {
+          void logout().then(() => router.push('/'));
+        }}
+      />
+    );
+  }
 
   if (loading || !user || placeholderAccount) {
     return (

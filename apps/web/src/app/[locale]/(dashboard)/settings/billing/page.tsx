@@ -38,11 +38,13 @@ import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
 import { toDate } from '@/lib/format-date';
 import { shouldClaimCheckoutSuccess } from '@/lib/checkout-verify';
+import { localizedPlanFeatures } from '@/lib/plan-features';
 import { legalDocLinks } from '@/components/auth/LegalAcceptanceModal';
 
 export default function BillingPage(): React.JSX.Element | null {
   const t = useTranslations('billing');
   const tPricing = useTranslations('pricing');
+  const tUpgrade = useTranslations('upgrade_modal');
   const queryClient = useQueryClient();
   const { user, refreshUser } = useAuth();
   const searchParams = useSearchParams();
@@ -205,7 +207,7 @@ export default function BillingPage(): React.JSX.Element | null {
   const portalMutation = useMutation({
     mutationFn: () =>
       api.post<{ url: string }>('/payments/create-portal-session', {
-        returnUrl: `${window.location.origin}/settings/billing`,
+        returnUrl: `${window.location.origin}/${locale}/settings/billing`,
       }),
     onSuccess: (data) => {
       window.location.href = data.url;
@@ -249,7 +251,7 @@ export default function BillingPage(): React.JSX.Element | null {
   const formatDate = (date: unknown) => {
     const d = toDate(date);
     if (!d) return '-';
-    return d.toLocaleDateString(undefined, {
+    return d.toLocaleDateString(locale, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -521,7 +523,11 @@ export default function BillingPage(): React.JSX.Element | null {
               </div>
             </div>
             <ul className="mb-6 space-y-3">
-              {PLAN_CONFIGS[SubscriptionPlan.PRO].features.map((feature) => (
+              {localizedPlanFeatures(
+                SubscriptionPlan.PRO,
+                tPricing,
+                tUpgrade(`template_reach.${PLAN_CONFIGS[SubscriptionPlan.PRO].limits.templates}`),
+              ).map((feature) => (
                 <li key={feature} className="flex items-start gap-2">
                   <Check className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" />
                   <span className="min-w-0 break-words text-sm text-stone-600 dark:text-stone-400">{feature}</span>
@@ -571,7 +577,11 @@ export default function BillingPage(): React.JSX.Element | null {
               </div>
             </div>
             <ul className="mb-6 space-y-3">
-              {PLAN_CONFIGS[SubscriptionPlan.CAREER_ACCELERATOR].features.map((feature) => (
+              {localizedPlanFeatures(
+                SubscriptionPlan.CAREER_ACCELERATOR,
+                tPricing,
+                tUpgrade(`template_reach.${PLAN_CONFIGS[SubscriptionPlan.CAREER_ACCELERATOR].limits.templates}`),
+              ).map((feature) => (
                 <li key={feature} className="flex items-start gap-2">
                   <Check className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" />
                   <span className="min-w-0 break-words text-sm text-stone-600 dark:text-stone-400">{feature}</span>
@@ -610,7 +620,11 @@ export default function BillingPage(): React.JSX.Element | null {
               </div>
             </div>
             <ul className="mb-6 space-y-3">
-              {PLAN_CONFIGS[SubscriptionPlan.ENTERPRISE].features.map((feature) => (
+              {localizedPlanFeatures(
+                SubscriptionPlan.ENTERPRISE,
+                tPricing,
+                tUpgrade(`template_reach.${PLAN_CONFIGS[SubscriptionPlan.ENTERPRISE].limits.templates}`),
+              ).map((feature) => (
                 <li key={feature} className="flex items-start gap-2">
                   <Check className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" />
                   <span className="min-w-0 break-words text-sm text-stone-600 dark:text-stone-400">{feature}</span>

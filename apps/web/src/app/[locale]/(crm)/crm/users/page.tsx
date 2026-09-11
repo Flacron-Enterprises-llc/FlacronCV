@@ -26,9 +26,8 @@ import {
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
-import { formatDate } from '@/lib/format-date';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+import { useFormatDate } from '@/lib/use-format-date';
+import { downloadCsv } from '@/lib/download-csv';
 
 interface ListResponse {
   items: PlatformUserItem[];
@@ -73,6 +72,7 @@ function UserAvatar({ user }: { user: PlatformUserItem }) {
 }
 
 export default function CRMUsersPage(): React.JSX.Element {
+  const formatDate = useFormatDate();
   const t = useTranslations('crm');
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
@@ -159,16 +159,10 @@ export default function CRMUsersPage(): React.JSX.Element {
     setPage(1);
   };
 
-  const handleExport = async () => {
-    const { auth } = await import('@/lib/firebase');
-    const token = await auth?.currentUser?.getIdToken();
-    const url = `${API_URL}/crm/users/export/csv`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-    const blob = await res.blob();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'platform-users.csv';
-    a.click();
+  const handleExport = () => {
+    downloadCsv('/crm/users/export/csv', 'platform-users.csv').catch((e) =>
+      toast.error(e instanceof Error ? e.message : 'Export failed'),
+    );
   };
 
   const users = data?.items ?? [];

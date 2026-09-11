@@ -3,6 +3,7 @@ import { immer } from 'zustand/middleware/immer';
 import {
   CoverLetter,
   CoverLetterStyling,
+  CoverLetterStatus,
   UpdateCoverLetterData,
 } from '@flacroncv/shared-types';
 
@@ -20,6 +21,8 @@ interface CoverLetterState {
   ) => void;
   setContent: (content: string) => void;
   updateStyling: (field: keyof CoverLetterStyling, value: string) => void;
+  /** Persist status locally without marking dirty — status is saved by its own PUT. */
+  setStatus: (status: CoverLetterStatus) => void;
   setSaving: (saving: boolean) => void;
   setDirty: (dirty: boolean) => void;
   setLastSavedAt: (date: Date) => void;
@@ -64,6 +67,13 @@ export const useCoverLetterStore = create<CoverLetterState>()(
         if (state.coverLetter) {
           state.coverLetter.styling[field] = value;
           state.isDirty = true;
+        }
+      }),
+
+    setStatus: (status) =>
+      set((state) => {
+        if (state.coverLetter) {
+          state.coverLetter.status = status;
         }
       }),
 

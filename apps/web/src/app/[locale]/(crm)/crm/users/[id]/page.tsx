@@ -30,7 +30,7 @@ import {
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
-import { formatDate, formatDateTime } from '@/lib/format-date';
+import { useFormatDate, useFormatDateTime } from '@/lib/use-format-date';
 
 const PLAN_COLORS: Record<string, string> = {
   free: 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300',
@@ -85,6 +85,8 @@ function UsageMeter({ label, used, limit }: { label: string; used: number; limit
 }
 
 export default function CRMUserDetailPage(): React.JSX.Element {
+  const formatDate = useFormatDate();
+  const formatDateTime = useFormatDateTime();
   const t = useTranslations('crm');
   const params = useParams();
   const uid = params.id as string;

@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
-import { Menu, Sun, Moon, LogOut, User as UserIcon } from 'lucide-react';
+import { Menu, Sun, Moon, LogOut, User as UserIcon, Loader2 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { Link, useRouter } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
@@ -28,6 +28,7 @@ const AREA_HOME: Record<TopBarArea, '/dashboard' | '/admin' | '/crm'> = {
 
 export default function TopBar({ onMenuClick, area = 'dashboard' }: TopBarProps) {
   const { user, logout } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
   const { setTheme, resolvedTheme } = useTheme();
   const router = useRouter();
   const t = useTranslations();
@@ -52,30 +53,38 @@ export default function TopBar({ onMenuClick, area = 'dashboard' }: TopBarProps)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      if (loggingOut) return;
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [loggingOut]);
 
   // Close the user menu with Escape and return focus to its trigger.
   useEffect(() => {
     if (!dropdownOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (loggingOut) return;
         setDropdownOpen(false);
         dropdownTriggerRef.current?.focus();
       }
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [dropdownOpen]);
+  }, [dropdownOpen, loggingOut]);
 
   const handleLogout = async () => {
-    await logout();
-    router.push('/');
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+      router.push('/');
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   return (
@@ -162,9 +171,12 @@ export default function TopBar({ onMenuClick, area = 'dashboard' }: TopBarProps)
               </button>
               <button
                 onClick={handleLogout}
-                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                disabled={loggingOut}
+                aria-busy={loggingOut}
+                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60 dark:text-red-400 dark:hover:bg-red-900/20"
               >
-                <LogOut className="h-4 w-4" /> {t('nav.logout')}
+                {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                {t('nav.logout')}
               </button>
             </div>
           )}

@@ -5,8 +5,8 @@ import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { AppSettings } from '@flacroncv/shared-types';
-import { formatDateTime } from '@/lib/format-date';
+import { AppSettings, PLAN_CONFIGS, SubscriptionPlan } from '@flacroncv/shared-types';
+import { useFormatDateTime } from '@/lib/use-format-date';
 import { useAuth } from '@/providers/AuthProvider';
 import { useRouter } from '@/i18n/routing';
 import {
@@ -73,11 +73,13 @@ function NumberInput({
   value,
   onChange,
   note,
+  disabled,
 }: {
   label: string;
   value: number;
-  onChange: (v: number) => void;
+  onChange?: (v: number) => void;
   note?: string;
+  disabled?: boolean;
 }) {
   const t = useTranslations('crm');
   return (
@@ -88,8 +90,13 @@ function NumberInput({
         value={value === -1 ? '' : value}
         placeholder={value === -1 ? t('settings_unlimited_placeholder') : undefined}
         min={-1}
-        onChange={(e) => onChange(e.target.value === '' ? -1 : parseInt(e.target.value, 10) || 0)}
-        className="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-stone-700 dark:bg-stone-900 dark:text-white"
+        disabled={disabled}
+        readOnly={disabled}
+        onChange={(e) => {
+          if (disabled || !onChange) return;
+          onChange(e.target.value === '' ? -1 : parseInt(e.target.value, 10) || 0);
+        }}
+        className="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-70 dark:border-stone-700 dark:bg-stone-900 dark:text-white"
       />
       {note && <p className="mt-0.5 text-xs text-stone-400">{note}</p>}
     </div>
@@ -97,6 +104,7 @@ function NumberInput({
 }
 
 export default function CRMSettingsPage(): React.JSX.Element {
+  const formatDateTime = useFormatDateTime();
   const t = useTranslations('crm');
   const { user, placeholderAccount } = useAuth();
   const router = useRouter();
@@ -167,12 +175,17 @@ export default function CRMSettingsPage(): React.JSX.Element {
     );
   }
 
-  const planLimitFields: { key: keyof typeof form.planLimits.free; label: string; icon: React.ElementType }[] = [
-    { key: 'cvsLimit', label: t('settings_cvs_limit_label'), icon: FileText },
-    { key: 'coverLettersLimit', label: t('settings_cover_letters_limit_label'), icon: Briefcase },
-    { key: 'aiCreditsLimit', label: t('settings_ai_credits_limit_label'), icon: Bot },
-    { key: 'exportsLimit', label: t('settings_exports_per_month_label'), icon: Download },
+  const planLimitFields: { key: 'cvs' | 'coverLetters' | 'aiCredits' | 'exports'; label: string; icon: React.ElementType }[] = [
+    { key: 'cvs', label: t('settings_cvs_limit_label'), icon: FileText },
+    { key: 'coverLetters', label: t('settings_cover_letters_limit_label'), icon: Briefcase },
+    { key: 'aiCredits', label: t('settings_ai_credits_limit_label'), icon: Bot },
+    { key: 'exports', label: t('settings_exports_per_month_label'), icon: Download },
   ];
+
+  const liveLimit = (plan: SubscriptionPlan, key: (typeof planLimitFields)[number]['key']): number => {
+    const v = PLAN_CONFIGS[plan].limits[key];
+    return v === 'unlimited' ? -1 : v;
+  };
 
   return (
     <div className="space-y-6">
@@ -213,17 +226,17 @@ export default function CRMSettingsPage(): React.JSX.Element {
         </div>
 
         <div className="space-y-6">
-          {(['free', 'pro', 'enterprise'] as const).map((plan) => (
+          {([SubscriptionPlan.FREE, SubscriptionPlan.PRO, SubscriptionPlan.ENTERPRISE] as const).map((plan) => (
             <div key={plan}>
               <div className="mb-3 flex items-center gap-2">
                 <div className={cn(
                   'h-2 w-2 rounded-full',
-                  plan === 'free' ? 'bg-stone-400' : plan === 'pro' ? 'bg-brand-500' : 'bg-violet-500',
+                  plan === SubscriptionPlan.FREE ? 'bg-stone-400' : plan === SubscriptionPlan.PRO ? 'bg-brand-500' : 'bg-violet-500',
                 )} />
                 <h3 className={cn(
                   'text-sm font-semibold capitalize',
-                  plan === 'free' ? 'text-stone-600 dark:text-stone-400' :
-                  plan === 'pro' ? 'text-brand-600 dark:text-brand-400' :
+                  plan === SubscriptionPlan.FREE ? 'text-stone-600 dark:text-stone-400' :
+                  plan === SubscriptionPlan.PRO ? 'text-brand-600 dark:text-brand-400' :
                   'text-violet-600 dark:text-violet-400',
                 )}>
                   {t('settings_plan_heading', { plan })}
@@ -234,32 +247,13 @@ export default function CRMSettingsPage(): React.JSX.Element {
                   <NumberInput
                     key={key}
                     label={label}
-                    value={form.planLimits[plan][key]}
-                    onChange={(v) =>
-                      setForm((f) => f ? {
-                        ...f,
-                        planLimits: {
-                          ...f.planLimits,
-                          [plan]: { ...f.planLimits[plan], [key]: v },
-                        },
-                      } : f)
-                    }
+                    value={liveLimit(plan, key)}
+                    disabled
                   />
                 ))}
               </div>
             </div>
           ))}
-        </div>
-
-        <div className="mt-5 flex justify-end">
-          <Button
-            size="sm"
-            loading={updateMutation.isPending}
-            icon={savedSection === 'planLimits' ? undefined : <Save className="h-4 w-4" />}
-            onClick={() => saveSection('planLimits', { planLimits: form.planLimits })}
-          >
-            {savedSection === 'planLimits' ? t('saved') : t('settings_save_plan_limits')}
-          </Button>
         </div>
       </Card>
 

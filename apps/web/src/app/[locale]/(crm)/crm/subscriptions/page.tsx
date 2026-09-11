@@ -10,7 +10,8 @@ import {
   CRMSubscriptionRecord,
   SubscriptionStatus,
 } from '@flacroncv/shared-types';
-import { formatDate, toDate } from '@/lib/format-date';
+import { toDate } from '@/lib/format-date';
+import { useFormatDate } from '@/lib/use-format-date';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import CRMStatCard from '@/components/crm/CRMStatCard';
@@ -269,6 +270,7 @@ function StripeCustomerId({
 }
 
 export default function CRMSubscriptionsPage(): React.JSX.Element {
+  const formatDate = useFormatDate();
   const t = useTranslations('crm');
   // Status labels already exist, translated, under the billing namespace —
   // reused here rather than duplicated as new crm.* keys.

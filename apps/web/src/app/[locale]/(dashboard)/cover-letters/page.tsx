@@ -21,7 +21,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { CoverLetter, PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
-import { formatDate } from '@/lib/utils';
+import { useFormatDate } from '@/lib/use-format-date';
 import { toast } from 'sonner';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -163,6 +163,7 @@ function CoverLetterCard({
 }) {
   const router = useRouter();
   const t = useTranslations('coverLetters');
+  const formatDate = useFormatDate();
   const statusLabel = coverLetter.status === 'final' ? t('status_final') : t('status_draft');
 
   return (

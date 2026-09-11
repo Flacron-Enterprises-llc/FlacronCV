@@ -10,7 +10,8 @@ import { api } from '@/lib/api';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
-import { formatDate, cn } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { useFormatDate } from '@/lib/use-format-date';
 import {
   MessageSquare,
   Loader2,
@@ -57,6 +58,7 @@ const statusVariant: Record<string, 'info' | 'warning' | 'success' | 'default'> 
 };
 
 export default function AdminTicketsPage(): React.JSX.Element | null {
+  const formatDate = useFormatDate();
   const t = useTranslations('admin');
   const ts = useTranslations('support');
   const router = useRouter();

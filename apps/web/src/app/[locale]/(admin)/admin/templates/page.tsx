@@ -12,7 +12,7 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import { toast } from 'sonner';
-import { formatDate } from '@/lib/utils';
+import { useFormatDate } from '@/lib/use-format-date';
 import {
   Plus,
   Edit2,
@@ -36,6 +36,7 @@ interface Template {
 }
 
 export default function AdminTemplatesPage(): React.JSX.Element | null {
+  const formatDate = useFormatDate();
   const t = useTranslations('admin');
   const tc = useTranslations('common');
   const queryClient = useQueryClient();

@@ -31,6 +31,7 @@ export const GOOGLE_ERROR_KEY = 'flacroncv_google_error';
 import { api } from '@/lib/api';
 import { User } from '@flacroncv/shared-types';
 import { retryPendingLegalAcceptance } from '@/lib/legal-acceptance';
+import { createInFlight } from '@/lib/in-flight';
 
 interface AuthContextType {
   firebaseUser: FirebaseUser | null;
@@ -115,6 +116,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasRealAccount = useRef(false);
   // Lets the retry timer call the latest syncUser without a circular dependency.
   const syncRef = useRef<((fb: FirebaseUser) => Promise<void>) | null>(null);
+  // Register and onAuthStateChanged both POST /auth/verify. Without this they
+  // race and both can take the API's new-user branch (duplicate verification
+  // emails + REGISTERED audit rows). Concurrent callers share one request.
+  const postVerify = useRef(createInFlight<User>()).current;
 
   const clearRetry = useCallback(() => {
     if (retryTimer.current) clearTimeout(retryTimer.current);
@@ -124,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const syncUser = useCallback(
     async (fbUser: FirebaseUser): Promise<void> => {
       try {
-        const userData = await api.post<User>('/auth/verify');
+        const userData = await postVerify('verify', () => api.post<User>('/auth/verify'));
         setUser(userData);
         setDegraded(false);
         hasRealAccount.current = true;
@@ -154,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [clearRetry],
+    [clearRetry, postVerify],
   );
 
   useEffect(() => {
@@ -249,15 +254,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) throw new Error('Firebase not configured');
     const result = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(result.user, { displayName: name });
-    // The first /auth/verify (fired by onAuthStateChanged) may have raced
-    // ahead of updateProfile and stored a placeholder name. Re-sync now that
-    // the Auth record carries the real name so the backend can heal it.
+    // Join any in-flight verify from onAuthStateChanged (one create-user
+    // email), then sync again now that displayName is set so the API can
+    // heal displayNamePending. The second call is sequential — existing
+    // user, no second verification email.
     try {
-      const userData = await api.post<User>('/auth/verify');
-      setUser(userData);
-      setDegraded(false);
-      hasRealAccount.current = true;
-      setPlaceholderAccount(false);
+      await syncUser(result.user);
+      await syncUser(result.user);
     } catch {
       // Non-fatal: the next sync heals the name via displayNamePending.
     }
@@ -319,8 +322,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshUser = async () => {
+    if (firebaseUser) {
+      await syncUser(firebaseUser);
+      return;
+    }
     try {
-      const userData = await api.post<User>('/auth/verify');
+      const userData = await postVerify('verify', () => api.post<User>('/auth/verify'));
       setUser(userData);
       setDegraded(false);
       hasRealAccount.current = true;

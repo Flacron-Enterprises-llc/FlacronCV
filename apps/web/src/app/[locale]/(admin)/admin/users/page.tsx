@@ -12,7 +12,7 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
-import { formatDate } from '@/lib/utils';
+import { useFormatDate } from '@/lib/use-format-date';
 import { toast } from 'sonner';
 import {
   Search,
@@ -53,6 +53,7 @@ interface UsersResponse {
 }
 
 export default function AdminUsersPage(): React.JSX.Element | null {
+  const formatDate = useFormatDate();
   const t = useTranslations('admin');
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);

@@ -8,6 +8,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/providers/AuthProvider';
 import { api, isAiCreditUnconfirmed } from '@/lib/api';
 import { serializeCVToText } from '@/lib/serializeCV';
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -64,6 +65,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
   const locale = useLocale();
   const router = useRouter();
   const { user, refreshUser } = useAuth();
+  const formatApiError = useApiErrorMessage();
 
   const [title, setTitle] = useState('');
   const [recipientName, setRecipientName] = useState('');
@@ -77,6 +79,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
   // and nothing is sent anywhere until the user explicitly saves it.
   const [draft, setDraft] = useState<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<'ai_credits' | 'cover_letters'>('ai_credits');
 
   // If the blank create succeeded but writing the content back failed, reuse
   // the same document on retry instead of stacking duplicate cover letters.
@@ -90,6 +93,20 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
 
   const cvs = cvsData?.items || [];
 
+  const letterLimit = PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)].limits.coverLetters;
+  const lettersCreated = user?.usage?.coverLettersCreated ?? 0;
+  const atLetterLimit = letterLimit !== 'unlimited' && lettersCreated >= letterLimit;
+
+  /** True when the user still has a cover-letter slot; opens the paywall when not. */
+  const ensureLetterQuota = (): boolean => {
+    if (atLetterLimit) {
+      setUpgradeReason('cover_letters');
+      setShowUpgradeModal(true);
+      return false;
+    }
+    return true;
+  };
+
   /** True when the user still has AI credits; opens the paywall when not. */
   const ensureAICredits = (): boolean => {
     const aiCreditsUsed = user?.usage?.aiCreditsUsed || 0;
@@ -97,6 +114,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
     const stored = user?.usage?.aiCreditsLimit;
     const aiCreditsLimit = typeof stored === 'number' ? Math.min(stored, planLimit) : planLimit;
     if (aiCreditsUsed >= aiCreditsLimit) {
+      setUpgradeReason('ai_credits');
       setShowUpgradeModal(true);
       return false;
     }
@@ -111,7 +129,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
       router.push(`/cover-letters/${coverLetter.id}`);
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(formatApiError(error));
     },
   });
 
@@ -129,7 +147,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
     },
     onError: (error: Error) => {
       refreshUser();
-      toast.error(error.message, {
+      toast.error(formatApiError(error), {
         description: t(
           isAiCreditUnconfirmed(error)
             ? 'common.generate_failed_charge_unconfirmed'
@@ -224,7 +242,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
       router.push(`/cover-letters/${id}`);
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(formatApiError(error));
     },
   });
 
@@ -242,6 +260,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
       toast.error(t('coverLetters.ai_fields_required'));
       return;
     }
+    if (!ensureLetterQuota()) return;
     if (!ensureAICredits()) return;
 
     generateMutation.mutate({ tone, length });
@@ -253,6 +272,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
       toast.error(t('coverLetters.title_required'));
       return;
     }
+    if (!ensureLetterQuota()) return;
     createMutation.mutate({
       title: title.trim(),
       recipientName: recipientName.trim() || undefined,
@@ -593,7 +613,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
       <UpgradeModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        reason="ai_credits"
+        reason={upgradeReason}
       />
     </div>
   );

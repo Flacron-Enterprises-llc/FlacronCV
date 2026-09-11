@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/providers/AuthProvider';
 import { api } from '@/lib/api';
@@ -17,12 +17,13 @@ import { DELINQUENT_STATUSES, SubscriptionStatus } from '@flacroncv/shared-types
  */
 export default function DunningBanner() {
   const t = useTranslations('dunning');
+  const locale = useLocale();
   const { user } = useAuth();
 
   const portal = useMutation({
     mutationFn: () =>
       api.post<{ url: string }>('/payments/create-portal-session', {
-        returnUrl: `${window.location.origin}/settings/billing`,
+        returnUrl: `${window.location.origin}/${locale}/settings/billing`,
       }),
     onSuccess: (data) => {
       window.location.href = data.url;

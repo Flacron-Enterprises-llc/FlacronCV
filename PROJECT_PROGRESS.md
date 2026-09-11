@@ -1171,6 +1171,52 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 9. Change log (append newest at top)
 
+- 2026-09-11 — **Web: verify coalesce, CL final, staff sync timeout, portal
+  locale, CRM limits display-only, i18n bullets/meta/dates.** (24) Concurrent
+  `/auth/verify` shares one in-flight POST; register then syncs again after
+  `updateProfile` (sequential, no second verification email). (12) Wired
+  Mark as final / Revert to draft — API already accepted `status`; badge was
+  a lie if we only removed it. (14) Admin/CRM spinner times out at 15s with
+  Retry + Sign out. (16) Portal returnUrl keeps `/{locale}/`. (18) CRM plan
+  limits are display-only from `PLAN_CONFIGS` (enforcing stored values would
+  be API/billing). (19) Plan bullets via `localizedPlanFeatures` + `t()`.
+  (21) Landing metadata from `meta.home_*`. (22) Dates use the UI locale, not
+  `en-US`. API, mobile, S1, IAP untouched.
+
+- 2026-09-11 — **Web: CV title, sections, sign-out, ticket retry, duplicate
+  gate.** (9) Toolbar edits `cv.title` (already in the autosave PUT; export
+  filename). (10) Section headers edit `section.title`. (11) Projects /
+  certs / languages / references / custom collect date, issuer, proficiency,
+  contact; `updateItem` already spread-merged so a web edit did **not** drop
+  mobile-saved keys — they just had no inputs. (13) Sign-out shows a spinner
+  until logout returns. (15) Ticket detail: non-404 failures get Retry, not
+  “Ticket not found”. (17) Duplicate at CV cap opens upgrade instead of a
+  403. API, mobile, S1, IAP untouched.
+
+- 2026-09-11 — **Mobile: cover-letter generate sends linkedCVId.** Same hole
+  as web Improve: `handleAIGenerate` omitted the stored link, so a linked
+  letter spent a credit without CV context. Now sends
+  `coverLetter.linkedCVId`. API fallback still not added. S1, IAP, API
+  untouched.
+
+- 2026-09-11 — **Web: four credit/data-loss fixes.** (1) Cover-letter Improve
+  sends stored `linkedCVId`. API still has no `cl.linkedCVId` fallback;
+  mobile generate was still omitting it at the time of this entry (fixed
+  in the mobile slice below). Tone still `professional` (web editor has
+  no tone picker). (2) AI summary: block generate until skills are filled;
+  no local English fallback on API failure. (3) CRM users CSV uses
+  `downloadCsv`. (4) Autosave: section PUT 404/500 re-POSTs the same id so
+  a missing section doc cannot wedge retries. API, S1, IAP untouched.
+
+- 2026-09-11 — **Web: four editor/save honesty fixes.** (1) CV editor unmount
+  writes `cv_backup_{id}` before the flush; photo upload failure no longer
+  skips the root PUT; in-app Links get Stay/Leave. (2) `markSectionsPersisted`
+  no longer prunes against live sections, so a delete during an in-flight save
+  still reaches the server. (3) Timeout/offline API copy no longer says
+  “Your work is saved”; `auth.errors.timeout` / `offline` in all six locales.
+  (4) Cover-letter generate (and blank create) gated on letter quota before
+  the AI call. API, mobile, S1, IAP untouched.
+
 - 2026-09-11 — **Mobile: support status underscores; onboarding storage
   catch.** Ticket status uses `replace(/_/g, ' ')` so `waiting_on_customer`
   reads “waiting on customer”. Index `getItem(flacroncv_onboarding_seen)`

@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import { formatDate } from '@/lib/format-date';
+import { useFormatDate } from '@/lib/use-format-date';
 
 /**
  * Shared date-range control for the CRM dashboards.
@@ -101,6 +101,7 @@ export function dateRangeFilenameSlug(value: DateRangeValue): string {
  */
 export function useDateRangeLabel(value: DateRangeValue): string {
   const t = useTranslations('crm');
+  const formatDate = useFormatDate();
   const { from, to } = resolveDateRange(value);
 
   if (from && to) return t('date_range_active_between', { from: formatDate(from), to: formatDate(to) });

@@ -2,7 +2,7 @@
 import React from 'react';
 
 import { useEffect, useCallback, useRef, useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { Link, useRouter } from '@/i18n/routing';
@@ -10,8 +10,9 @@ import { useAuth } from '@/providers/AuthProvider';
 import { api, isAiCreditUnconfirmed } from '@/lib/api';
 import { track } from '@/lib/analytics';
 import { useCoverLetterStore } from '@/store/cover-letter-store';
-import { CoverLetter, UpdateCoverLetterData, SubscriptionPlan, PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
+import { CoverLetter, UpdateCoverLetterData, CoverLetterStatus, SubscriptionPlan, PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
 import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import UpgradeModal from '@/components/shared/UpgradeModal';
 import InAppWarning from '@/components/shared/InAppWarning';
@@ -19,7 +20,7 @@ import CoverLetterPreview, { COVER_LETTER_TEMPLATES } from '@/components/cover-l
 import { ensureDarkSurface, readableOn, INK } from '@/lib/design-tokens';
 import { exportCoverLetterToPDF, exportCoverLetterToDocx } from '@/lib/export-cv';
 import { toast } from 'sonner';
-import { formatDate } from '@/lib/utils';
+import { useFormatDate } from '@/lib/use-format-date';
 import { cn } from '@/lib/utils';
 import {
   ArrowLeft,
@@ -57,8 +58,10 @@ import TextAlign from '@tiptap/extension-text-align';
 export default function CoverLetterEditorPage(): React.JSX.Element | null {
   const t = useTranslations();
   const locale = useLocale();
+  const formatDate = useFormatDate();
   const router = useRouter();
   const { user, refreshUser } = useAuth();
+  const queryClient = useQueryClient();
   const params = useParams();
   const coverLetterId = params.id as string;
   const [exportMenuOpen, setExportMenuOpen]     = useState(false);
@@ -74,6 +77,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
   // below the lg breakpoint so small-screen users can see their letter.
   const [mobileView, setMobileView]             = useState<'edit' | 'preview'>('edit');
   const [detailsOpen, setDetailsOpen]           = useState(false);
+  const [statusPending, setStatusPending]       = useState(false);
 
   const {
     coverLetter,
@@ -85,6 +89,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     updateField,
     updateStyling,
     setSaving,
+    setStatus,
     markSaved,
     reset,
   } = useCoverLetterStore();
@@ -250,6 +255,24 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     autoSave();
   };
 
+  const handleToggleStatus = async () => {
+    if (!coverLetter || statusPending) return;
+    const next =
+      coverLetter.status === CoverLetterStatus.FINAL
+        ? CoverLetterStatus.DRAFT
+        : CoverLetterStatus.FINAL;
+    setStatusPending(true);
+    try {
+      await api.put(`/cover-letters/${coverLetterId}`, { status: next });
+      setStatus(next);
+      void queryClient.invalidateQueries({ queryKey: ['cover-letters'] });
+    } catch {
+      toast.error(t('coverLetters.status_update_failed'));
+    } finally {
+      setStatusPending(false);
+    }
+  };
+
   // Does the letter have content that a regenerate would overwrite?
   const hasExistingContent = () => {
     const html = coverLetter?.content || '';
@@ -311,6 +334,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
         companyName: coverLetter?.companyName || '',
         tone: 'professional',
         language: LOCALE_LANGUAGE_NAMES[locale] || 'English',
+        linkedCVId: coverLetter?.linkedCVId || undefined,
       }),
     onSuccess: (data) => {
       setCoverLetter(data);
@@ -521,6 +545,11 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
             placeholder={t('coverLetters.untitled')}
             aria-label={t('coverLetters.title_label')}
           />
+          <Badge variant={coverLetter.status === CoverLetterStatus.FINAL ? 'success' : 'default'}>
+            {coverLetter.status === CoverLetterStatus.FINAL
+              ? t('coverLetters.status_final')
+              : t('coverLetters.status_draft')}
+          </Badge>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -553,6 +582,17 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
             icon={<Save className="h-4 w-4" />}
           >
             {t('common.save')}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            loading={statusPending}
+            onClick={() => void handleToggleStatus()}
+          >
+            {coverLetter.status === CoverLetterStatus.FINAL
+              ? t('coverLetters.mark_draft')
+              : t('coverLetters.mark_final')}
           </Button>
 
           {/* AI Improve */}

@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import { formatDate } from '@/lib/utils';
+import { useFormatDate } from '@/lib/use-format-date';
 import {
   CreditCard,
   Loader2,
@@ -43,6 +43,7 @@ interface SubscriptionsResponse {
 }
 
 export default function AdminSubscriptionsPage(): React.JSX.Element | null {
+  const formatDate = useFormatDate();
   const t = useTranslations('admin');
 
   // Served by the working CRM subscriptions endpoint (list) + the admin revenue

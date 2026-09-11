@@ -391,22 +391,24 @@ function SortableSection({ section }: { section: CVSection }) {
 
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex-1 text-start"
+          className="rounded p-1 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700"
           aria-expanded={expanded}
           aria-label={expanded ? t('collapse_section') : t('expand_section')}
         >
-          <div className="flex items-center gap-2">
-            {expanded ? (
-              <ChevronDown className="h-4 w-4 text-stone-400" aria-hidden="true" />
-            ) : (
-              <ChevronRight className="h-4 w-4 text-stone-400 rtl:rotate-180" aria-hidden="true" />
-            )}
-            <span className="text-sm font-semibold text-stone-900 dark:text-white">
-              {section.title}
-            </span>
-            <span className="text-xs text-stone-400">{t('items_count', { count: section.items.length })}</span>
-          </div>
+          {expanded ? (
+            <ChevronDown className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <ChevronRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
+          )}
         </button>
+        <input
+          type="text"
+          value={section.title}
+          onChange={(e) => updateSection(section.id, { title: e.target.value })}
+          className="min-w-0 flex-1 border-none bg-transparent text-sm font-semibold text-stone-900 outline-none focus:ring-0 dark:text-white"
+          aria-label={t('section_title')}
+        />
+        <span className="text-xs text-stone-400">{t('items_count', { count: section.items.length })}</span>
 
         <button
           onClick={() => updateSection(section.id, { isVisible: !section.isVisible })}
@@ -507,7 +509,64 @@ function SectionContent({ section }: { section: CVSection }) {
               </Select>
             </div>
           )}
-          {!['experience', 'education', 'skills'].includes(section.type) && (
+          {section.type === 'projects' && (
+            <div className="space-y-2">
+              <Input label={t('field_title')} value={item.name || ''} onChange={(e) => updateItem(index, { name: e.target.value, title: e.target.value })} />
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input label={t('field_start_date')} value={item.startDate || ''} onChange={(e) => updateItem(index, { startDate: e.target.value })} placeholder={t('ph_start_date')} />
+                <Input label={t('field_end_date')} value={item.endDate || ''} onChange={(e) => updateItem(index, { endDate: e.target.value })} placeholder={t('ph_present')} />
+              </div>
+              <Input label={t('field_website')} value={item.url || ''} onChange={(e) => updateItem(index, { url: e.target.value })} placeholder={t('ph_website')} />
+              <Input
+                label={t('field_technologies')}
+                value={(item.technologies ?? []).join(', ')}
+                onChange={(e) => updateItem(index, { technologies: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean) })}
+                placeholder={t('ph_technologies')}
+              />
+              <textarea className="input-field min-h-[40px]" value={item.description || ''} onChange={(e) => updateItem(index, { description: e.target.value })} placeholder={t('ph_generic_desc')} />
+            </div>
+          )}
+          {section.type === 'certifications' && (
+            <div className="space-y-2">
+              <Input label={t('field_title')} value={item.name || ''} onChange={(e) => updateItem(index, { name: e.target.value, title: e.target.value })} />
+              <Input label={t('field_issuer')} value={item.issuer || ''} onChange={(e) => updateItem(index, { issuer: e.target.value })} />
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input label={t('field_date')} value={item.date || ''} onChange={(e) => updateItem(index, { date: e.target.value })} placeholder={t('ph_start_date')} />
+                <Input label={t('field_expiry_date')} value={item.expiryDate || ''} onChange={(e) => updateItem(index, { expiryDate: e.target.value })} />
+              </div>
+              <Input label={t('field_credential_id')} value={item.credentialId || ''} onChange={(e) => updateItem(index, { credentialId: e.target.value })} placeholder={t('ph_credential_id')} />
+              <Input label={t('field_website')} value={item.url || ''} onChange={(e) => updateItem(index, { url: e.target.value })} placeholder={t('ph_website')} />
+            </div>
+          )}
+          {section.type === 'languages' && (
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Input label={t('field_title')} value={item.name || ''} onChange={(e) => updateItem(index, { name: e.target.value, title: e.target.value })} />
+              <Input label={t('field_proficiency')} value={item.proficiency || ''} onChange={(e) => updateItem(index, { proficiency: e.target.value })} />
+            </div>
+          )}
+          {section.type === 'references' && (
+            <div className="space-y-2">
+              <div className="grid gap-2 sm:grid-cols-2">
+              <Input label={t('field_name')} value={item.name || ''} onChange={(e) => updateItem(index, { name: e.target.value })} />
+              <Input label={t('field_title')} value={item.title || ''} onChange={(e) => updateItem(index, { title: e.target.value })} />
+              </div>
+              <Input label={t('field_company')} value={item.company || ''} onChange={(e) => updateItem(index, { company: e.target.value })} />
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input label={t('field_email')} value={item.email || ''} onChange={(e) => updateItem(index, { email: e.target.value })} />
+                <Input label={t('field_phone')} value={item.phone || ''} onChange={(e) => updateItem(index, { phone: e.target.value })} />
+              </div>
+              <Input label={t('field_relationship')} value={item.relationship || ''} onChange={(e) => updateItem(index, { relationship: e.target.value })} />
+            </div>
+          )}
+          {section.type === 'custom' && (
+            <div className="space-y-2">
+              <Input label={t('field_title')} value={item.title || item.name || ''} onChange={(e) => updateItem(index, { title: e.target.value, name: e.target.value })} />
+              <Input label={t('field_subtitle')} value={item.subtitle || ''} onChange={(e) => updateItem(index, { subtitle: e.target.value })} />
+              <Input label={t('field_date')} value={item.date || ''} onChange={(e) => updateItem(index, { date: e.target.value })} placeholder={t('ph_start_date')} />
+              <textarea className="input-field min-h-[40px]" value={item.description || ''} onChange={(e) => updateItem(index, { description: e.target.value })} placeholder={t('ph_generic_desc')} />
+            </div>
+          )}
+          {!['experience', 'education', 'skills', 'projects', 'certifications', 'languages', 'references', 'custom'].includes(section.type) && (
             <div className="space-y-2">
               <Input label={t('field_title')} value={item.name || item.title || ''} onChange={(e) => updateItem(index, { name: e.target.value, title: e.target.value })} />
               <textarea className="input-field min-h-[40px]" value={item.description || ''} onChange={(e) => updateItem(index, { description: e.target.value })} placeholder={t('ph_generic_desc')} />

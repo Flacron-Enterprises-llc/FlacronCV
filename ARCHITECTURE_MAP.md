@@ -9,7 +9,7 @@
 > confirmed by this pass. Runtime behaviour was never executed — this document was produced by a
 > read-only audit (no API boot, no dev server, no emulators, no cloud CLI).
 
-Created: 2026-08-18 · Last doc touch: 2026-09-11 (mobile support status, onboarding catch)
+Created: 2026-08-18 · Last doc touch: 2026-09-11 (web verify coalesce, CL final, admin/crm sync timeout, portal locale, CRM limits display-only, localized plan bullets/meta/dates)
 
 ---
 
@@ -411,6 +411,23 @@ Exit: `usePreventRemove` (`beforeRemove`) for in-app back, Android gesture
 Back, and hardware Back — same Stay/Leave alert as the CV editor. Header back
 is `router.back()` so it hits that guard instead of auto-saving then leaving.
 
+**Web cover-letter create quota (2026-09-11).** `cover-letters/new` checks
+`PLAN_CONFIGS[…].limits.coverLetters` against `usage.coverLettersCreated`
+before `POST /ai/cover-letter` (and before blank create), same idea as the CV
+list create button. At limit it opens `UpgradeModal` `reason="cover_letters"`
+so a Free user cannot spend an Engine credit and then fail to save.
+
+**Web cover-letter Improve (2026-09-11).** Editor
+`POST /cover-letters/:id/ai/generate` now sends `linkedCVId` from the stored
+letter. The API still only loads a CV when the **request** carries
+`linkedCVId` (it already falls back `jobTitle` / `jobDescription` /
+`companyName` from `cl`). Mobile editor does the same. API fallback not
+added.
+
+**Web CV summary generate (2026-09-11).** `AISummaryModal` requires skills
+before `POST /ai/cv-summary` (`skills` is `@IsNotEmpty` on the DTO). API
+failure no longer writes a local English paragraph.
+
 **Mobile export (Q3, 2026-08-26).** Editors POST `/cvs/:id/export/{pdf|docx}`
 and `/cover-letters/:id/export/pdf` (Puppeteer, not the web html2canvas
 reserve/confirm/refund). `useExport` alerts on POST failure, non-200 download,
@@ -428,6 +445,48 @@ hardware Back — one Stay/Leave alert. Finish saves first and does not exit
 while `isDirty`. Wizard `STEPS` is UI-only (Personal → Experience → Education
 → Skills → Summary → …). It does not write `sectionOrder`. Web has no linear
 wizard: summary sits on the personal-info card beside Generate.
+
+**Web CV editor leave / section persist (2026-09-11).** Unmount flush writes
+`cv_backup_{id}` (same shape as autosave) *before* the fire-and-forget
+PUT/POST/DELETE. A `resolvePersonalInfoPhoto` failure keeps the original
+`personalInfo` and still PUTs title/styling. Dirty in-app `<a href>` clicks
+open Stay/Leave (`cv_builder.unsaved_leave_*`); `beforeunload` still covers
+tab close. `markSectionsPersisted` union-adds snapshot ids and does **not**
+prune against live sections — a delete during an in-flight save stays in
+`persistedSectionIds` so the next save can DELETE it. Autosave: a section PUT
+that 404s or 500s (missing Firestore doc — Nest maps `.update()` NOT_FOUND to
+500) re-POSTs the same client id (`addSection` uses `.set()`).
+
+**Web CV title / section fields (2026-09-11).** Editor toolbar edits `cv.title`
+(autosave already PUTs it; exports use it as the filename). Section headers
+are an editable `section.title`. Projects / certifications / languages /
+references / custom collect the same extra fields templates already render
+(date, issuer, proficiency, contact). `updateItem` spreads, so a web edit of
+one field does **not** strip keys mobile saved. Sign-out in `TopBar` shows a
+pending spinner until `POST /auth/logout` + Firebase `signOut` finish. Support
+ticket detail: non-404 load failures use `support.load_error` + Retry; 404
+still uses `ticketNotFound`. CV list Duplicate at plan cap opens the upgrade
+modal instead of POSTing `/duplicate`.
+
+**Web register verify / CL final / staff sync / billing locale (2026-09-11).**
+`AuthProvider` coalesces concurrent `POST /auth/verify` (`createInFlight`);
+register joins the listener's request then syncs again after `updateProfile`
+so the name heals without a second verification email. Cover-letter editor
+PUTs `status` (draft/final); list badge can become Final. Admin/CRM shells
+time out placeholder sync at 15s with Retry + Sign out (`dashboard.degraded_*`).
+Stripe portal `returnUrl` includes `/{locale}/settings/billing` (checkout
+already did). CRM Settings plan-limit fields are read-only from `PLAN_CONFIGS`
+(not the unused stored `planLimits`). Pricing/billing/upgrade bullets use
+`localizedPlanFeatures` + `t()`. Landing `generateMetadata` uses `meta.home_*`.
+Dashboard dates use `useFormatDate` with the active locale.
+
+**CRM CSV (2026-09-11).** `crm/users` export uses `downloadCsv` like the other
+CRM exports (`res.ok` check). It no longer `blob()`s a 403/HTML error page
+into `platform-users.csv`.
+
+**Web API transport copy (2026-09-11).** Timeout/offline `ApiError` messages
+do not claim the work was saved. Localized keys: `auth.errors.timeout` /
+`auth.errors.offline` via `useApiErrorMessage`.
 
 **CV AI summary (E6, 2026-08-26).** Mobile `SummaryStep` POSTs
 `{ experience, skills, targetRole }` to `/ai/cv-summary` (GenerateCvSummaryDto).
@@ -465,10 +524,10 @@ so the home-indicator inset comes from SafeAreaView, not a second copy of
 the tab bar.
 
 **Mobile cover letter generate (Q11a, 2026-08-27).** Editor
-`POST /cover-letters/:id/ai/generate` sends only DTO fields (`jobTitle`,
-`jobDescription`, `companyName`, `tone`). `recipientName` is valid on
-create, not on generate (`forbidNonWhitelisted` 400). Tone remains
-hardcoded `professional` until a persist decision. Create
+`POST /cover-letters/:id/ai/generate` sends DTO fields (`jobTitle`,
+`jobDescription`, `companyName`, `tone`, and as of 2026-09-11 `linkedCVId`
+from the stored letter). `recipientName` is valid on
+create, not on generate (`forbidNonWhitelisted` 400). Create
 (`cover-letters/new.tsx`) sends only persisted fields (`title`, `jobTitle`,
 `companyName`, `recipientName`, `jobDescription`, `templateId`). `styling` /
 `status` / `recipientTitle` / `content` / `aiGenerated` are accepted by the

@@ -9,7 +9,7 @@ import { api } from '@/lib/api';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
-import { formatDate } from '@/lib/utils';
+import { useFormatDate } from '@/lib/use-format-date';
 import {
   FileSearch,
   Loader2,
@@ -124,6 +124,7 @@ function humanizeAction(action: string): string {
 }
 
 export default function AdminAuditLogsPage(): React.JSX.Element | null {
+  const formatDate = useFormatDate();
   const t = useTranslations('admin');
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);

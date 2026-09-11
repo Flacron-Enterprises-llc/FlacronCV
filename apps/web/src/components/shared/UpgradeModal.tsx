@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button';
 import { Sparkles, Check, Crown } from 'lucide-react';
 import { PLAN_CONFIGS, SubscriptionPlan } from '@flacroncv/shared-types';
 import { useAuth } from '@/providers/AuthProvider';
+import { localizedPlanFeatures } from '@/lib/plan-features';
 import { track } from '@/lib/analytics';
 
 interface UpgradeModalProps {
@@ -27,6 +28,7 @@ const REASON_ICON = {
 export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }: UpgradeModalProps) {
   const router = useRouter();
   const t = useTranslations('upgrade_modal');
+  const tPricing = useTranslations('pricing');
   const { user, degraded, placeholderAccount } = useAuth();
   const exhaustedTracked = useRef(false);
 
@@ -66,7 +68,11 @@ export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }:
   // was promising more than the plan delivers at the exact moment the user
   // decides to pay. Reading the real config makes that impossible, and the
   // advertised-vs-enforced test in the API suite keeps the config itself honest.
-  const offeredFeatures = offeredConfig.features;
+  const offeredFeatures = localizedPlanFeatures(
+    offeredPlan,
+    tPricing,
+    t(`template_reach.${offeredConfig.limits.templates}`),
+  );
 
   const handleUpgrade = () => {
     onClose();

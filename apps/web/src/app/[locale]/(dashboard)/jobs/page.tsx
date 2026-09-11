@@ -5,7 +5,8 @@ import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/providers/AuthProvider';
-import { formatDate, cn } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { useFormatDate } from '@/lib/use-format-date';
 import { toDate } from '@/lib/format-date';
 import { buildIcsEvent, downloadIcs } from '@/lib/ics';
 import Button from '@/components/ui/Button';
@@ -77,6 +78,7 @@ const SORTERS: Record<SortKey, (a: JobApplication, b: JobApplication) => number>
 
 export default function JobsPage(): React.JSX.Element | null {
   const t = useTranslations('jobs');
+  const formatDate = useFormatDate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 

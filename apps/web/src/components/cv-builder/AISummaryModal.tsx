@@ -75,6 +75,10 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
       toast.error(t('profession_required'));
       return;
     }
+    if (!keySkills.trim()) {
+      toast.error(t('skills_required'));
+      return;
+    }
 
     setIsGenerating(true);
     const language = LOCALE_LANGUAGE_NAMES[locale] || 'English';
@@ -90,27 +94,20 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
       track('ai_generation', { feature: 'cv-summary' });
       refreshUser();
     } catch (error) {
+      refreshUser();
       const message = (error as Error)?.message || '';
       // An out-of-credits 503 (stale-state race — the client thought credits
-      // remained) must surface the upgrade prompt, NOT be masked by a fabricated
-      // "local" summary that looks like real output.
+      // remained) must surface the upgrade prompt, not a fabricated summary.
       if (/credit/i.test(message)) {
         setShowUpgrade(true);
       } else {
-        // Genuine transient failure (network / timeout / provider down): fall
-        // back to a local, clearly-labelled summary rather than blocking the user.
-        const skills = keySkills.split(',').map((s) => s.trim()).filter(Boolean);
-        const levelText = experienceLevel.replace('_', ' ');
-        const fallback = `${levelText.charAt(0).toUpperCase() + levelText.slice(1)} ${profession} with expertise in ${skills.length > 0 ? skills.join(', ') : 'various technologies'}. ${careerGoal ? careerGoal + '.' : 'Passionate about delivering high-quality results and continuous professional growth.'}`;
-        setGeneratedSummary(fallback);
-        setIsLocalFallback(true);
-        toast.info(t('generated_locally'), {
-          description: tCommon(
-            isAiCreditUnconfirmed(error)
-              ? 'generate_failed_charge_unconfirmed'
-              : 'generate_failed_no_charge',
-          ),
-        });
+        // Do not write a local English paragraph. Empty skills 400'd the API
+        // and that filler was labelled as if the Engine produced it.
+        toast.error(message || tCommon(
+          isAiCreditUnconfirmed(error)
+            ? 'generate_failed_charge_unconfirmed'
+            : 'generate_failed_no_charge',
+        ));
       }
     } finally {
       setIsGenerating(false);

@@ -68,7 +68,7 @@ const DEFAULT_DATE_OPTS: Intl.DateTimeFormatOptions = {
 export function formatDate(
   value: unknown,
   opts: Intl.DateTimeFormatOptions = DEFAULT_DATE_OPTS,
-  locale = 'en-GB',
+  locale?: string,
 ): string {
   const d = toDate(value);
   return d ? d.toLocaleDateString(locale, opts) : '—';
@@ -78,7 +78,7 @@ export function formatDate(
 export function formatDateTime(
   value: unknown,
   opts: Intl.DateTimeFormatOptions = { dateStyle: 'medium', timeStyle: 'short' },
-  locale = 'en-GB',
+  locale?: string,
 ): string {
   const d = toDate(value);
   return d ? d.toLocaleString(locale, opts) : '—';

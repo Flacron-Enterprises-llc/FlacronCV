@@ -5,13 +5,14 @@ import { useEffect, useCallback, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { Link } from '@/i18n/routing';
 import { cn } from '@/lib/utils';
 import { useCVStore } from '@/store/cv-store';
 import { CV, CVSection, PersonalInfo } from '@flacroncv/shared-types';
 import { toast } from 'sonner';
 import Button from '@/components/ui/Button';
+import Modal from '@/components/ui/Modal';
 import CVEditor from '@/components/cv-builder/CVEditor';
 import LivePreview from '@/components/cv-builder/LivePreview';
 import EditorToolbar from '@/components/cv-builder/toolbar/EditorToolbar';
@@ -90,6 +91,9 @@ export default function CVBuilderPage(): React.JSX.Element | null {
   const saveErrorToastRef = useRef<string | number | undefined>(undefined);
   // Bumped on each autosave failure to re-arm the save effect (see below).
   const [retryTick, setRetryTick] = useState(0);
+  // In-app leave (sidebar / Links) — `beforeunload` does not fire for SPA nav.
+  const [leaveHref, setLeaveHref] = useState<string | null>(null);
+  const allowLeaveRef = useRef(false);
 
   // Reset store and invalidate queries when switching CVs.
   // On unmount: flush any pending unsaved changes before clearing state so the
@@ -111,6 +115,15 @@ export default function CVBuilderPage(): React.JSX.Element | null {
       } = useCVStore.getState();
 
       if (dirty && currentCV) {
+        // Same shape as autosave: write the backup *before* the network calls
+        // so a failed flush still survives refresh.
+        writeBackup(cvId, {
+          cv: currentCV,
+          sections: currentSections,
+          persistedSectionIds: currentPersistedIds,
+          savedAt: Date.now(),
+        });
+
         const newSections     = currentSections.filter((s) => !currentPersistedIds.includes(s.id));
         const existingSections = currentSections.filter((s) => currentPersistedIds.includes(s.id));
         const deletedIds      = currentPersistedIds.filter((id) => !currentSections.some((s) => s.id === id));
@@ -121,7 +134,8 @@ export default function CVBuilderPage(): React.JSX.Element | null {
           try {
             personalInfo = await resolvePersonalInfoPhoto(currentCV.personalInfo);
           } catch {
-            return;
+            // Keep the original personalInfo. A photo failure must not skip
+            // title, personalInfo, and styling.
           }
           await api.put(`/cvs/${cvId}`, {
             title: currentCV.title,
@@ -164,7 +178,7 @@ export default function CVBuilderPage(): React.JSX.Element | null {
   // (e.g., typing a new URL) while they have unsaved changes.
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (!isDirty) return;
+      if (!isDirty || allowLeaveRef.current) return;
       e.preventDefault();
       // Chrome requires returnValue to trigger the dialog
       e.returnValue = '';
@@ -172,6 +186,36 @@ export default function CVBuilderPage(): React.JSX.Element | null {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  // SPA navigation (sidebar, dashboard Links) never fires `beforeunload`.
+  useEffect(() => {
+    if (!isDirty) {
+      setLeaveHref(null);
+      return;
+    }
+    const onClick = (e: MouseEvent) => {
+      if (allowLeaveRef.current) return;
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+        return;
+      }
+      const el = (e.target as HTMLElement | null)?.closest?.('a[href]');
+      if (!el) return;
+      const href = el.getAttribute('href');
+      if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+        return;
+      }
+      const url = new URL(href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+      if (url.pathname === window.location.pathname && url.search === window.location.search) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      setLeaveHref(`${url.pathname}${url.search}${url.hash}`);
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
   }, [isDirty]);
 
   // Fetch CV data — use React Query data for enabled/loading, sync to store separately
@@ -328,14 +372,30 @@ export default function CVBuilderPage(): React.JSX.Element | null {
         });
       }
 
-      // 3. Update sections already in the DB
+      // 3. Update sections already in the DB. A missing Firestore doc makes
+      // `.update()` throw; Nest maps that to 500 (not 404). Re-POST the same
+      // client id — addSection uses `.set()` — so autosave is not wedged on
+      // the same PUT. Other failures still abort the save.
       for (const section of existingSections) {
-        await api.put(`/cvs/${cvId}/sections/${section.id}`, {
-          title: section.title,
-          isVisible: section.isVisible,
-          items: section.items,
-          order: section.order,
-        });
+        try {
+          await api.put(`/cvs/${cvId}/sections/${section.id}`, {
+            title: section.title,
+            isVisible: section.isVisible,
+            items: section.items,
+            order: section.order,
+          });
+        } catch (error) {
+          const status = error instanceof ApiError ? error.status : undefined;
+          if (status !== 404 && status !== 500) throw error;
+          await api.post(`/cvs/${cvId}/sections`, {
+            id: section.id,
+            type: section.type,
+            title: section.title,
+            order: section.order,
+            isVisible: section.isVisible,
+            items: section.items,
+          });
+        }
       }
 
       // 4. Delete sections removed on the client
@@ -470,6 +530,31 @@ export default function CVBuilderPage(): React.JSX.Element | null {
           <LivePreview />
         </div>
       </div>
+
+      <Modal
+        isOpen={leaveHref !== null}
+        onClose={() => setLeaveHref(null)}
+        title={t('unsaved_leave_title')}
+        size="sm"
+      >
+        <p className="text-sm text-stone-600 dark:text-stone-400">{t('unsaved_leave_body')}</p>
+        <div className="mt-6 flex justify-end gap-3">
+          <Button variant="secondary" onClick={() => setLeaveHref(null)}>
+            {t('unsaved_stay')}
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => {
+              const href = leaveHref;
+              allowLeaveRef.current = true;
+              setLeaveHref(null);
+              if (href) window.location.assign(href);
+            }}
+          >
+            {t('unsaved_leave')}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

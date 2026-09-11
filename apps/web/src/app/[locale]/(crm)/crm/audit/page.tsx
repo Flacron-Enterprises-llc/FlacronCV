@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useTranslations } from 'next-intl';
 import { AuditLogEntry } from '@flacroncv/shared-types';
-import { formatDateTime } from '@/lib/format-date';
+import { useFormatDateTime } from '@/lib/use-format-date';
 import {
   Shield,
   ChevronLeft,
@@ -96,6 +96,7 @@ function DetailCell({ details }: { details: Record<string, unknown> }) {
 }
 
 export default function CRMAuditPage(): React.JSX.Element {
+  const formatDateTime = useFormatDateTime();
   const t = useTranslations('crm');
   const [page, setPage] = useState(1);
   const [actionFilter, setActionFilter] = useState('');

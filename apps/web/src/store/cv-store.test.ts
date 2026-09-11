@@ -76,6 +76,16 @@ describe('cv-store', () => {
     });
   });
 
+  describe('updateTitle', () => {
+    it('updates the CV title and sets isDirty=true', () => {
+      useCVStore.getState().setCV(makeCV());
+      useCVStore.getState().updateTitle('Senior Engineer CV');
+      const state = useCVStore.getState();
+      expect(state.cv!.title).toBe('Senior Engineer CV');
+      expect(state.isDirty).toBe(true);
+    });
+  });
+
   describe('addSection', () => {
     it('adds section to sections array and sectionOrder', () => {
       const cv = makeCV({ sectionOrder: [] });
@@ -101,6 +111,22 @@ describe('cv-store', () => {
       expect(state.sections.find((s) => s.id === 's1')).toBeUndefined();
       expect(state.cv!.sectionOrder).not.toContain('s1');
       expect(state.cv!.sectionOrder).toContain('s2');
+    });
+  });
+
+  describe('markSectionsPersisted', () => {
+    it('keeps a concurrently deleted id so the next save can DELETE it', () => {
+      const s = () => useCVStore.getState();
+      s().setCV(makeCV({ sectionOrder: ['a', 'b'] }));
+      s().setSections([makeSection('a'), makeSection('b')]);
+      expect(s().persistedSectionIds).toEqual(['a', 'b']);
+
+      s().removeSection('b');
+      // In-flight save of the pre-delete snapshot still reports both ids.
+      s().markSectionsPersisted(['a', 'b']);
+
+      expect(s().persistedSectionIds).toContain('b');
+      expect(s().sections.find((sec) => sec.id === 'b')).toBeUndefined();
     });
   });
 

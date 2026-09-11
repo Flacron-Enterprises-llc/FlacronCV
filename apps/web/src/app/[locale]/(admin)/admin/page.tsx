@@ -9,7 +9,7 @@ import { api } from '@/lib/api';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import { formatDate } from '@/lib/utils';
+import { useFormatDate } from '@/lib/use-format-date';
 import {
   Users,
   CreditCard,
@@ -35,6 +35,7 @@ interface AdminStats {
 }
 
 export default function AdminDashboardPage(): React.JSX.Element | null {
+  const formatDate = useFormatDate();
   const t = useTranslations('admin');
 
   const {

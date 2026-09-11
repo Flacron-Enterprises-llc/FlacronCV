@@ -18,6 +18,7 @@ interface CVState {
   setCV: (cv: CV) => void;
   setSections: (sections: CVSection[]) => void;
   updatePersonalInfo: (field: keyof PersonalInfo, value: string) => void;
+  updateTitle: (title: string) => void;
   updateStyling: (field: keyof CVStyling, value: string | boolean) => void;
   updateSection: (sectionId: string, data: Partial<CVSection>) => void;
   addSection: (section: CVSection) => void;
@@ -84,6 +85,13 @@ export const useCVStore = create<CVState>()(
     updatePersonalInfo: (field, value) => set((state) => {
       if (state.cv) {
         (state.cv.personalInfo as any)[field] = value;
+        state.isDirty = true;
+      }
+    }),
+
+    updateTitle: (title) => set((state) => {
+      if (state.cv) {
+        state.cv.title = title;
         state.isDirty = true;
       }
     }),
@@ -162,10 +170,11 @@ export const useCVStore = create<CVState>()(
           state.persistedSectionIds.push(id);
         }
       }
-      // Remove any IDs that are no longer in sections (they were deleted)
-      state.persistedSectionIds = state.persistedSectionIds.filter(
-        (id) => state.sections.some((s) => s.id === id),
-      );
+      // Do not prune against live sections. A delete during an in-flight save
+      // would drop the id here, skip the server DELETE, and the section would
+      // come back on reload. The next save (and the unmount flush) compute
+      // deletions as persistedSectionIds minus current sections; extra DELETE
+      // is idempotent.
     }),
 
     setPersistedSectionIds: (ids) => set((state) => {

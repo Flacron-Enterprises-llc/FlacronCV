@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useRouter } from '@/i18n/routing';
 import { api } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { useFormatDate } from '@/lib/use-format-date';
 import { toDate } from '@/lib/format-date';
 import { toast } from 'sonner';
 import Card from '@/components/ui/Card';
@@ -77,6 +77,7 @@ interface AdminTicketDetailPageProps {
 }
 
 export default function AdminTicketDetailPage({ params }: AdminTicketDetailPageProps) {
+  const formatDate = useFormatDate();
   const t = useTranslations('admin');
   const ts = useTranslations('support');
   const router = useRouter();

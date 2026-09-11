@@ -5,8 +5,8 @@ import { useTranslations } from 'next-intl';
 import { Link, useRouter } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { api, ApiError } from '@/lib/api';
+import { useFormatDate } from '@/lib/use-format-date';
 import { toast } from 'sonner';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -17,6 +17,7 @@ import {
   XCircle,
   User as UserIcon,
   ShieldCheck,
+  AlertCircle,
 } from 'lucide-react';
 import {
   SupportTicket,
@@ -49,6 +50,7 @@ interface TicketDetailPageProps {
 
 export default function TicketDetailPage({ params }: TicketDetailPageProps) {
   const t = useTranslations('support');
+  const formatDate = useFormatDate();
   const router = useRouter();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -57,7 +59,7 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
 
   // GET /support/tickets/:id returns the ticket AND its messages in one payload;
   // there is no separate /messages GET route. Consume the combined shape.
-  const { data, isLoading: ticketLoading } = useQuery({
+  const { data, isLoading: ticketLoading, isError, error, refetch } = useQuery({
     queryKey: ['support-ticket', params.id],
     queryFn: () =>
       api.get<{ ticket: SupportTicket; messages: TicketMessage[] }>(
@@ -140,6 +142,25 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
   }
 
   if (!ticket) {
+    const notFound = isError && error instanceof ApiError && error.status === 404;
+    if (isError && !notFound) {
+      return (
+        <div className="mx-auto max-w-3xl">
+          <Card className="flex flex-col items-center justify-center py-16 text-center">
+            <AlertCircle className="mb-4 h-12 w-12 text-danger-400 dark:text-danger-500" />
+            <h3 className="text-lg font-semibold text-stone-900 dark:text-white">
+              {t('load_error')}
+            </h3>
+            <Button variant="secondary" className="mt-4" onClick={() => refetch()}>
+              {t('retry')}
+            </Button>
+            <Link href="/support" className="mt-3">
+              <Button variant="ghost">{t('backToTickets')}</Button>
+            </Link>
+          </Card>
+        </div>
+      );
+    }
     return (
       <div className="mx-auto max-w-3xl">
         <Card className="flex flex-col items-center justify-center py-16 text-center">

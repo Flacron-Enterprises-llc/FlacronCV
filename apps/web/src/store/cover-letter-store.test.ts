@@ -62,4 +62,12 @@ describe('cover-letter-store', () => {
     expect(useCoverLetterStore.getState().isDirty).toBe(true);
     expect(useCoverLetterStore.getState().coverLetter?.content).toBe('<p>Typed during save</p>');
   });
+
+  it('setStatus updates status without marking dirty', () => {
+    useCoverLetterStore.getState().setCoverLetter(makeLetter());
+    useCoverLetterStore.getState().setStatus(CoverLetterStatus.FINAL);
+    const state = useCoverLetterStore.getState();
+    expect(state.coverLetter?.status).toBe(CoverLetterStatus.FINAL);
+    expect(state.isDirty).toBe(false);
+  });
 });

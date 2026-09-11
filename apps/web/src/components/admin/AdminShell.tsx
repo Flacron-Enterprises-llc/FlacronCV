@@ -4,8 +4,11 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import TopBar from '@/components/dashboard/TopBar';
+import AccountSyncError from '@/components/shared/AccountSyncError';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from '@/i18n/routing';
+
+const SYNC_TIMEOUT_MS = 15_000;
 
 /**
  * The admin chrome. This was `(admin)/layout.tsx` verbatim until 2026-08-18; it
@@ -16,9 +19,11 @@ import { useRouter } from '@/i18n/routing';
  * Layout matches DashboardShell: full-width navy TopBar, sidebar below.
  */
 export default function AdminShell({ children }: { children: React.ReactNode }) {
-  const { user, loading, placeholderAccount } = useAuth();
+  const { user, loading, placeholderAccount, refreshUser, logout } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [syncTimedOut, setSyncTimedOut] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -34,6 +39,30 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       router.push('/dashboard');
     }
   }, [loading, user, placeholderAccount, router]);
+
+  useEffect(() => {
+    if (!placeholderAccount) {
+      setSyncTimedOut(false);
+      return;
+    }
+    const timer = setTimeout(() => setSyncTimedOut(true), SYNC_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [placeholderAccount]);
+
+  if (placeholderAccount && syncTimedOut) {
+    return (
+      <AccountSyncError
+        retrying={retrying}
+        onRetry={() => {
+          setRetrying(true);
+          void refreshUser().finally(() => setRetrying(false));
+        }}
+        onSignOut={() => {
+          void logout().then(() => router.push('/'));
+        }}
+      />
+    );
+  }
 
   if (loading || !user || placeholderAccount || (user.role !== 'admin' && user.role !== 'super_admin')) {
     return (

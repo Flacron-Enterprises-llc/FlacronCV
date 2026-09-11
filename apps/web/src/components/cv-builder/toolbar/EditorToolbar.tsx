@@ -40,7 +40,7 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
   const tli = useTranslations('linkedin');
   const tw = useTranslations('in_app_warnings');
   const locale = useLocale();
-  const { cv, sections, isDirty, isSaving, lastSavedAt, undo, redo, canUndo, canRedo } = useCVStore();
+  const { cv, sections, isDirty, isSaving, lastSavedAt, undo, redo, canUndo, canRedo, updateTitle } = useCVStore();
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
@@ -108,9 +108,14 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-y-2 border-b border-stone-200 bg-white px-2 py-2 sm:px-4 dark:border-stone-700 dark:bg-stone-900">
       <div className="flex min-w-0 items-center gap-2">
-        <h2 className="truncate max-w-[120px] text-sm font-semibold text-stone-900 sm:max-w-[200px] dark:text-white">
-          {cv?.title || t('untitled_cv')}
-        </h2>
+        <input
+          type="text"
+          value={cv?.title ?? ''}
+          onChange={(e) => updateTitle(e.target.value)}
+          className="min-w-0 w-32 border-none bg-transparent text-sm font-semibold text-stone-900 outline-none focus:ring-0 sm:w-52 dark:text-white"
+          placeholder={t('untitled_cv')}
+          aria-label={t('new_title_label')}
+        />
         {isSaving ? (
           <Badge variant="warning">
             <Loader2 className="me-1 h-3 w-3 animate-spin" />
