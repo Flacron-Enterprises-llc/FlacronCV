@@ -18,7 +18,6 @@ import {
   coverLetterLimitReachedMessage,
   upgradeAlertButtons,
 } from '../../../src/config/paid-upgrades';
-import { CoverLetterStatus } from '../../../src/types/enums';
 import { colors } from '../../../src/theme/colors';
 
 const schema = z.object({
@@ -26,7 +25,6 @@ const schema = z.object({
   jobTitle: z.string().min(1, 'Job title is required'),
   companyName: z.string().min(1, 'Company name is required'),
   recipientName: z.string().optional(),
-  recipientTitle: z.string().optional(),
   jobDescription: z.string().optional(),
 });
 
@@ -67,13 +65,8 @@ export default function NewCoverLetterScreen() {
         jobTitle: data.jobTitle,
         companyName: data.companyName,
         recipientName: data.recipientName ?? '',
-        recipientTitle: data.recipientTitle ?? '',
         jobDescription: data.jobDescription ?? '',
-        content: '',
         templateId: 'modern',
-        status: CoverLetterStatus.DRAFT,
-        aiGenerated: false,
-        styling: { fontFamily: 'Inter', fontSize: '14px', primaryColor: colors.brand[600] },
       });
       setCoverLetter(cl);
       router.replace(`/(dashboard)/cover-letters/${cl.id}`);

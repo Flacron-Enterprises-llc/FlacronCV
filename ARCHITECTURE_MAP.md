@@ -9,7 +9,7 @@
 > confirmed by this pass. Runtime behaviour was never executed — this document was produced by a
 > read-only audit (no API boot, no dev server, no emulators, no cloud CLI).
 
-Created: 2026-08-18 · Last doc touch: 2026-09-11 (mobile legal fail-open, CL load error, legal modal dismiss)
+Created: 2026-08-18 · Last doc touch: 2026-09-11 (mobile support status, onboarding catch)
 
 ---
 
@@ -425,7 +425,9 @@ like web. Section ids from `expo-crypto` `randomUUID()` (`generateId`). Editor
 hydrates Zustand from React Query once per CV id. Exit: `usePreventRemove`
 (`beforeRemove`) on `cvs/[id]` for in-app back, Android gesture Back, and
 hardware Back — one Stay/Leave alert. Finish saves first and does not exit
-while `isDirty`.
+while `isDirty`. Wizard `STEPS` is UI-only (Personal → Experience → Education
+→ Skills → Summary → …). It does not write `sectionOrder`. Web has no linear
+wizard: summary sits on the personal-info card beside Generate.
 
 **CV AI summary (E6, 2026-08-26).** Mobile `SummaryStep` POSTs
 `{ experience, skills, targetRole }` to `/ai/cv-summary` (GenerateCvSummaryDto).
@@ -435,8 +437,13 @@ disable Generate.
 
 **Mobile ATS Check (2026-09-06).** Nested screen `cvs/[id]/ats-check` from
 the CV editor header. Serializes the in-memory CV (unsaved edits included)
-via `serializeCVToText`. `useATSCheck` sends only `{ cvContent, jobDescription }`
-clamped to AtsCheckDto MaxLength.
+via `serializeCVToText` (visible sections by `sectionOrder`, including project
+description/tech, cert issuer/date, language proficiency, reference details).
+`useATSCheck` sends only `{ cvContent, jobDescription }` clamped to AtsCheckDto
+MaxLength (50000 / 20000); a longer CV is truncated at the end. Web
+`apps/web/src/lib/serializeCV.ts` uses the same by-type serializer (ATS Check,
+Interview Prep, LinkedIn optimize, cover-letter `candidateSummary`, PDF
+invisible text layer) and clamps to 50000 at the end of the string.
 
 **Mobile Interview Prep (2026-09-06).** Nested screen `cvs/[id]/interview-prep`
 from the same editor header. `useInterviewPrep` sends only
@@ -461,7 +468,11 @@ the tab bar.
 `POST /cover-letters/:id/ai/generate` sends only DTO fields (`jobTitle`,
 `jobDescription`, `companyName`, `tone`). `recipientName` is valid on
 create, not on generate (`forbidNonWhitelisted` 400). Tone remains
-hardcoded `professional` until a persist decision.
+hardcoded `professional` until a persist decision. Create
+(`cover-letters/new.tsx`) sends only persisted fields (`title`, `jobTitle`,
+`companyName`, `recipientName`, `jobDescription`, `templateId`). `styling` /
+`status` / `recipientTitle` / `content` / `aiGenerated` are accepted by the
+API DTO as mobile-compat and intentionally not written.
 
 **Mobile failed-fetch vs empty (Q10, 2026-08-27).** Dashboard / Settings /
 Billing / Templates treat React Query `error` (and `userSyncError`) as
@@ -501,9 +512,10 @@ were removed earlier; this switch is the real control. The identity header
 opens Profile.
 
 **Mobile onboarding inset (Q13, 2026-08-27).** First-launch screen
-(`flacroncv_onboarding_seen` in AsyncStorage). Footer padding is
-`useSafeAreaInsets().bottom`; SafeAreaView is `edges={['top']}` so the
-gesture-bar inset is not applied twice. Pagination dots do not use CSS
+(`flacroncv_onboarding_seen` in AsyncStorage). Index `getItem` catch treats a
+failed read as unseen (show onboarding) so the boot spinner cannot hang.
+Footer padding is `useSafeAreaInsets().bottom`; SafeAreaView is `edges={['top']}`
+so the gesture-bar inset is not applied twice. Pagination dots do not use CSS
 `transition`.
 
 **Mobile effective plan (Q15, 2026-08-27).** Gating helpers live in

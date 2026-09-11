@@ -97,7 +97,7 @@ export default function TicketDetailScreen() {
         </TouchableOpacity>
         <View className="flex-1">
           <Text className="font-bold text-stone-900" numberOfLines={1}>{ticket.subject}</Text>
-          <Text className="text-stone-400 text-xs capitalize">{ticket.status?.replace('_', ' ')}</Text>
+          <Text className="text-stone-400 text-xs capitalize">{ticket.status?.replace(/_/g, ' ')}</Text>
         </View>
       </View>
 

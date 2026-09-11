@@ -42,7 +42,7 @@ export default function SupportScreen() {
           </View>
           <View className="px-2 py-0.5 rounded-full ml-2" style={{ backgroundColor: statusColor.bg }}>
             <Text className="text-xs font-medium" style={{ color: statusColor.text }}>
-              {item.status.replace('_', ' ')}
+              {item.status.replace(/_/g, ' ')}
             </Text>
           </View>
         </View>

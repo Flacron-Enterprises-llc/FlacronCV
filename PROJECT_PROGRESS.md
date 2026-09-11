@@ -1171,6 +1171,36 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 9. Change log (append newest at top)
 
+- 2026-09-11 — **Mobile: support status underscores; onboarding storage
+  catch.** Ticket status uses `replace(/_/g, ' ')` so `waiting_on_customer`
+  reads “waiting on customer”. Index `getItem(flacroncv_onboarding_seen)`
+  catch falls through to onboarding instead of spinning forever. Login
+  password min left at 6 — Firebase floor is 6; raising the form to 8 would
+  lock out any 6–7 character accounts. S1, IAP, last slices untouched.
+
+- 2026-09-11 — **Web serializeCVToText clamps at 50000.** Same end-slice as
+  mobile `clampDto` (later `sectionOrder` sections drop first) so ATS /
+  interview / LinkedIn / cover-letter `candidateSummary` cannot 400 the DTO
+  after the richer serializer. PDF invisible layer uses the same string. API
+  and mobile untouched.
+
+- 2026-09-11 — **Web serializeCVToText matches mobile.** ATS Check, Interview
+  Prep, LinkedIn optimize, cover-letter generate (`candidateSummary`), and the
+  PDF invisible text layer now serialize by `section.type`: project
+  description/tech, cert issuer/date, language proficiency, reference details.
+  Same `name`-first hole as mobile. API and mobile serializer untouched.
+
+- 2026-09-11 — **Mobile: wizard Summary after Skills; ATS serialize; CL create
+  payload.** (1) CV wizard STEPS is now Personal → Experience → Education →
+  Skills → Summary → optional sections. UI-only; `sectionOrder` unchanged. Web
+  has no linear wizard (summary lives on the personal-info card). (2)
+  `serializeCVToText` includes project description/tech, cert issuer/date,
+  language proficiency, and reference details. ATS/interview hooks still clamp
+  `cvContent` at 50000 (tail truncated). Web serializer still thin — not
+  edited. (3) Cover letter create sends only persisted fields; ignored
+  styling/status/recipientTitle/content/aiGenerated dropped. No API change.
+  S1, IAP, last-slice legal/CL-error/modal untouched.
+
 - 2026-09-11 — **Mobile: three fail-closed holes (legal POST, CL load, legal
   modal).** (1) `recordAcceptanceAfterSignup` no longer clears consent before
   POST; login/register ungate `legalGate` only when the write succeeds. Failed

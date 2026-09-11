@@ -19,10 +19,10 @@ import { ReferencesStep } from './steps/ReferencesStep';
 
 const STEPS = [
   { id: 'personal', label: 'Personal Info', icon: 'person-outline' },
-  { id: 'summary', label: 'Summary', icon: 'document-text-outline' },
   { id: 'experience', label: 'Experience', icon: 'briefcase-outline' },
   { id: 'education', label: 'Education', icon: 'school-outline' },
   { id: 'skills', label: 'Skills', icon: 'code-slash-outline' },
+  { id: 'summary', label: 'Summary', icon: 'document-text-outline' },
   { id: 'projects', label: 'Projects', icon: 'construct-outline' },
   { id: 'certifications', label: 'Certifications', icon: 'ribbon-outline' },
   { id: 'languages', label: 'Languages', icon: 'language-outline' },
@@ -140,16 +140,16 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
   };
 
   const renderStep = () => {
-    switch (currentStep) {
-      case 0: return <PersonalInfoStep onValidChange={handleValidChange} />;
-      case 1: return <SummaryStep onValidChange={handleValidChange} />;
-      case 2: return <ExperienceStep onValidChange={handleValidChange} />;
-      case 3: return <EducationStep onValidChange={handleValidChange} />;
-      case 4: return <SkillsStep onValidChange={handleValidChange} />;
-      case 5: return <ProjectsStep onValidChange={handleValidChange} />;
-      case 6: return <CertificationsStep onValidChange={handleValidChange} />;
-      case 7: return <LanguagesStep onValidChange={handleValidChange} />;
-      case 8: return <ReferencesStep onValidChange={handleValidChange} />;
+    switch (STEPS[currentStep]?.id) {
+      case 'personal': return <PersonalInfoStep onValidChange={handleValidChange} />;
+      case 'experience': return <ExperienceStep onValidChange={handleValidChange} />;
+      case 'education': return <EducationStep onValidChange={handleValidChange} />;
+      case 'skills': return <SkillsStep onValidChange={handleValidChange} />;
+      case 'summary': return <SummaryStep onValidChange={handleValidChange} />;
+      case 'projects': return <ProjectsStep onValidChange={handleValidChange} />;
+      case 'certifications': return <CertificationsStep onValidChange={handleValidChange} />;
+      case 'languages': return <LanguagesStep onValidChange={handleValidChange} />;
+      case 'references': return <ReferencesStep onValidChange={handleValidChange} />;
       default: return null;
     }
   };

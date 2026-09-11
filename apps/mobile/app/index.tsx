@@ -13,10 +13,15 @@ export default function Index() {
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(ONBOARDING_SEEN_KEY).then((value) => {
-      setHasSeenOnboarding(value === 'true');
-      setOnboardingChecked(true);
-    });
+    AsyncStorage.getItem(ONBOARDING_SEEN_KEY)
+      .then((value) => {
+        setHasSeenOnboarding(value === 'true');
+        setOnboardingChecked(true);
+      })
+      .catch(() => {
+        setHasSeenOnboarding(false);
+        setOnboardingChecked(true);
+      });
   }, []);
 
   // Wait for both Firebase auth state and AsyncStorage check
