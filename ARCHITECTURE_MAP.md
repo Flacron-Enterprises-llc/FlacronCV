@@ -9,7 +9,7 @@
 > confirmed by this pass. Runtime behaviour was never executed — this document was produced by a
 > read-only audit (no API boot, no dev server, no emulators, no cloud CLI).
 
-Created: 2026-08-18 · Last doc touch: 2026-09-11 (API role-change refresh revoke; web i18n/templates/cosmetics)
+Created: 2026-08-18 · Last doc touch: 2026-09-14 (mobile TemplateCard top-anchor thumbs)
 
 ---
 
@@ -28,7 +28,7 @@ pnpm workspaces + turbo. Root scripts fan out via `turbo run <task>`.
 | `dataconnect/` | Firebase Data Connect schema + connector | Generated SDKs (`dataconnect-generated`, `dataconnect-admin-generated`) are **unused by all three apps** — held for a decision, see `PROJECT_PROGRESS.md` §8 |
 | `docker/` | docker-compose + nginx | **Pre-AWS path. Dead.** See `DEPLOYMENT_AND_OPS.md` |
 | `scripts/` | `seed-admin.mjs` | The operationally interesting scripts live in `apps/api/scripts/` |
-| `apps/api/scripts/` | `seed-emulator.mjs`, `seed-qa-accounts.mjs` (untracked), `verify-yearly-prices.mjs`, `reconcile-subscription.mjs`, `which-webhook-secret.mjs` | |
+| `apps/api/scripts/` | `seed-emulator.mjs`, `seed-qa-accounts.mjs` (untracked), `verify-yearly-prices.mjs`, `reconcile-subscription.mjs`, `which-webhook-secret.mjs`, `backfill-template-previews.mjs`, `grant-admin.mjs` | |
 | `buildspec-api.yml` | CodeBuild spec — the live backend deploy | |
 
 **Do not read:** `node_modules`, `.next`, `dist`, `coverage`, `dataconnect-generated`, lockfiles.
@@ -131,7 +131,7 @@ the route group — the groups only control layout and client-side redirects.
 | `(crm)` | `customers`, `leads`, `revenue`, `subscriptions`, `users`, `platform`, `audit`, `settings` | `admin` / `super_admin` claim |
 | `[...rest]` | Localised 404 | Public |
 
-**Store stills.** Capture stays local-only: `pnpm --filter web capture-templates` copies `apps/web/scripts/template-capture/` into a gitignored `src/app/[locale]/(dev)/template-capture/` folder, then deletes the copy — Amplify never ships `/template-capture`. Hosted files live at Storage `template-previews/cv/{id}/thumb.webp` and `page.webp` (public read). `seedDefaults` sets those URLs **on create only**; a live change is `PUT /templates/:id`. Cover letters have no stills yet.
+**Store stills.** Capture stays local-only: `pnpm --filter web capture-templates` copies `apps/web/scripts/template-capture/` into a gitignored `src/app/[locale]/(dev)/template-capture/` folder, then deletes the copy — Amplify never ships `/template-capture`. Hosted files live at Storage `template-previews/cv/{id}/thumb.webp` and `page.webp` (public read). `seedDefaults` sets those URLs **on create only**; a live change is `PUT /templates/:id`. Empty live CV docs (created before stills existed) are filled by `pnpm --filter api run backfill:template-previews -- --apply` (dry-run without `--apply`; uses `apps/api/.env`; writes `thumbnailURL` / `previewImages` / `updatedAt` only). Mobile `TemplateCard` top-anchors the 800×480 thumb (RN `cover` is centre-only). Cover letters have no stills yet.
 
 **Legal routes are `/privacy-policy`, `/terms-of-service`, `/cookie-policy`, `/disclaimer`,
 `/refund-policy`, plus `/contact-us`.** The client's checklist names `/privacy`, `/terms`,

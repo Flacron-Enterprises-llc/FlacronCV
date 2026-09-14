@@ -12,7 +12,7 @@
 > 4. Tick completed items here; log every change in the Change Log.
 > 5. Report Out-of-Scope / architectural items separately — do not implement without approval.
 
-Last updated: 2026-09-11
+Last updated: 2026-09-14
 
 > **Note on dates.** The header previously read `2026-07-29` while the two newest change-log
 > entries were dated `2026-07-30`; the header was stale, the entries were right. Corrected
@@ -823,8 +823,11 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
   `seedDefaults` writes `thumbnailURL` / `previewImages` for the ten CV
   catalog ids when the Firestore doc does not exist. Re-seed of an existing
   doc updates name/tier/localization only — not stills. If a live template's
-  preview needs changing, `PUT /templates/:id`. Cover letters (`cl-*`) have
-  no stills yet.
+  preview needs changing, `PUT /templates/:id`. Empty live CV docs (created
+  before stills existed) are filled by
+  `pnpm --filter api run backfill:template-previews -- --apply` (dry-run
+  without `--apply`; service account from `apps/api/.env`; those two fields
+  plus `updatedAt` only). Cover letters (`cl-*`) have no stills yet.
 
 - **⚠️ ADDED 2026-09-05 — Android target API 36 ignores the portrait lock on
   tablets and foldables.** Play required `targetSdkVersion` 36.
@@ -1185,6 +1188,21 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-09-14 — **Mobile TemplateCard: top-anchor thumbnail crop.** RN
+  `resizeMode="cover"` centre-crops and hid the CV name/header on most
+  stills. Card now sizes the 800×480 Storage thumb like CSS
+  `object-fit: cover` with top alignment (`TopCoverThumb` in
+  `TemplateCard.tsx`). No image regen, no API/Storage change. Templates
+  grid and CV new picker both use this card.
+
+- 2026-09-14 — **Operator script: backfill CV template still URLs.**
+  `apps/api/scripts/backfill-template-previews.mjs` writes `thumbnailURL` /
+  `previewImages` / `updatedAt` on the ten CV catalog ids via the API
+  service account in `apps/api/.env`. Dry-run by default; `--apply` writes.
+  Refuses emulator host and a non-`flacron-cv` project. Does not create
+  docs, does not touch cover letters, does not call production itself.
+  `PUT /templates/:id` remains the path for a later preview change.
 
 - 2026-09-11 — **API: role change revokes refresh tokens.** CRM
   `updateUserRole` and `AuthService.setUserRole` call `revokeRefreshTokens`

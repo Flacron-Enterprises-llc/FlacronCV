@@ -15,7 +15,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json --forceExit",
     "seed:emulator": "node scripts/seed-emulator.mjs",
     "grant:admin": "node scripts/grant-admin.mjs",
-    "seed:qa": "node scripts/seed-qa-accounts.mjs"
+    "seed:qa": "node scripts/seed-qa-accounts.mjs",
+    "backfill:template-previews": "node scripts/backfill-template-previews.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.1091.0",

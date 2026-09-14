@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Image, LayoutChangeEvent, Pressable, Text, View } from 'react-native';
 import { Template } from '../../types/template.types';
 import { SubscriptionPlan } from '../../types/enums';
 import { colors } from '../../theme/colors';
@@ -21,6 +21,52 @@ const tierClasses: Record<SubscriptionPlan, { bg: string; text: string; label: s
 
 const FALLBACK_TIER = { bg: 'bg-stone-100', text: 'text-stone-700', label: 'Pro' };
 
+/** Storage thumbs are 800×480 top-of-page crops (width/height). */
+const THUMB_ASPECT = 800 / 480;
+
+/**
+ * RN Image `resizeMode="cover"` always crops from the centre. That hides the
+ * name/header on these stills. Size like CSS object-fit:cover, pin to the top.
+ */
+function TopCoverThumb({ uri }: { uri: string }) {
+  const [box, setBox] = useState({ w: 0, h: 0 });
+
+  const onLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setBox((prev) => (prev.w === width && prev.h === height ? prev : { w: width, h: height }));
+  };
+
+  let imgW = 0;
+  let imgH = 0;
+  if (box.w > 0 && box.h > 0) {
+    if (box.w / box.h > THUMB_ASPECT) {
+      imgW = box.w;
+      imgH = box.w / THUMB_ASPECT;
+    } else {
+      imgH = box.h;
+      imgW = box.h * THUMB_ASPECT;
+    }
+  }
+
+  return (
+    <View className="absolute inset-0 overflow-hidden" onLayout={onLayout}>
+      {imgW > 0 ? (
+        <Image
+          source={{ uri }}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: (box.w - imgW) / 2,
+            width: imgW,
+            height: imgH,
+          }}
+          resizeMode="stretch"
+        />
+      ) : null}
+    </View>
+  );
+}
+
 export function TemplateCard({ template, isSelected, isLocked, onSelect, onPreview }: TemplateCardProps) {
   // API may send tiers mobile enum omits (e.g. career_accelerator) — never crash the grid.
   const tier = tierClasses[template.tier] ?? FALLBACK_TIER;
@@ -34,15 +80,11 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
       ].join(' ')}
     >
       {/* Template Thumbnail */}
-      <View className="h-48 bg-stone-100 items-center justify-center relative">
+      <View className="h-48 bg-stone-100 relative overflow-hidden">
         {template.thumbnailURL ? (
-          <Image
-            source={{ uri: template.thumbnailURL }}
-            className="w-full h-full"
-            resizeMode="cover"
-          />
+          <TopCoverThumb uri={template.thumbnailURL} />
         ) : (
-          <View className="items-center">
+          <View className="flex-1 items-center justify-center">
             <Ionicons name="document-text-outline" size={48} color={colors.stone[300]} />
             <Text className="text-stone-300 text-sm mt-2">{template.name}</Text>
           </View>
