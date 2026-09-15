@@ -57,17 +57,22 @@ export async function recordAcceptanceAfterSignup(): Promise<boolean> {
   }
 }
 
-/** No-op when the stored uid does not match the signed-in user (grandfathered). */
-export async function retryPendingLegalAcceptance(): Promise<void> {
+/** No-op when the stored uid does not match the signed-in user (grandfathered).
+ * Returns true when a pending POST succeeded and both SecureStore flags were cleared.
+ */
+export async function retryPendingLegalAcceptance(): Promise<boolean> {
   const uid = getFirebaseAuth().currentUser?.uid;
-  if (!uid) return;
+  if (!uid) return false;
   const pending = await secureStore.getPendingLegalPost();
-  if (pending !== uid) return;
+  if (pending !== uid) return false;
   try {
     await submitLegalAcceptance();
     await secureStore.clearPendingLegalPost();
+    await secureStore.clearPendingLegalConsent();
+    return true;
   } catch {
     // Stay pending. Never delete the account.
+    return false;
   }
 }
 

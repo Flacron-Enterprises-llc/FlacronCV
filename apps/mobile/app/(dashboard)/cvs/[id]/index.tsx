@@ -30,8 +30,13 @@ export default function CVEditorScreen() {
   const { setCV, setSections, cv: storeCV, isDirty } = useCVStore();
   const exportCV = useExportCV();
 
-  const { data: cv, isLoading: cvLoading, error } = useCV(id);
-  const { data: sections, isLoading: sectionsLoading } = useCVSections(id);
+  const { data: cv, isLoading: cvLoading, error: cvError } = useCV(id);
+  const {
+    data: sections,
+    isLoading: sectionsLoading,
+    error: sectionsError,
+  } = useCVSections(id);
+  const loadError = cvError || sectionsError;
   const [hydratedId, setHydratedId] = useState<string | null>(null);
 
   // Hydrate once per CV id. Re-applying React Query data after a save (or a
@@ -68,6 +73,16 @@ export default function CVEditorScreen() {
     exportCV.mutate({ cvId: id!, format });
   };
 
+  // Error before loading: hydratedId stays unset on failure, so checking load
+  // first spun forever and never reached ErrorState.
+  if (loadError) {
+    return (
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+        <ErrorState message="Failed to load CV" onRetry={() => router.back()} />
+      </SafeAreaView>
+    );
+  }
+
   if (cvLoading || sectionsLoading || hydratedId !== id) {
     return (
       <SafeAreaView className="flex-1 bg-white items-center justify-center">
@@ -75,10 +90,6 @@ export default function CVEditorScreen() {
         <Text className="text-stone-500 mt-3">Loading CV...</Text>
       </SafeAreaView>
     );
-  }
-
-  if (error) {
-    return <ErrorState message="Failed to load CV" onRetry={() => router.back()} />;
   }
 
   return (

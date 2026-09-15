@@ -9,7 +9,7 @@
 > confirmed by this pass. Runtime behaviour was never executed — this document was produced by a
 > read-only audit (no API boot, no dev server, no emulators, no cloud CLI).
 
-Created: 2026-08-18 · Last doc touch: 2026-09-14 (mobile TemplateCard top-anchor thumbs)
+Created: 2026-08-18 · Last doc touch: 2026-09-15 (EAS preview S1 on for IAP sandbox)
 
 ---
 
@@ -611,19 +611,21 @@ completeness bar. The previous fill was a hardcoded 70% with no API or web
 definition. Cards still show title, headline, status, updated date, version,
 and download count.
 
-**Paid upgrades flag (S1, 2026-08-26; Q9 lock 2026-08-27; IAP Stage 2 2026-09-06).**
+**Paid upgrades flag (S1, 2026-08-26; Q9 lock 2026-08-27; IAP Stage 2 2026-09-06; preview QA 2026-09-15).**
 One switch, `PAID_UPGRADES_ENABLED` in `apps/mobile/src/config/paid-upgrades.ts`.
 Defaults off on every `Platform.OS`. `EXPO_PUBLIC_PAID_UPGRADES_ENABLED`
-overrides for QA/rollback. When off: no paywall, no prices, no Upgrade/Choose
-CTAs; billing stays as plan+usage only. When on, **ios/android** use
-`expo-iap` (`StorePaywall` → `POST /billing/mobile/verify`); store
-subscribers manage in App Store / Play, not the Stripe portal. Expo web
-(if the flag is ever on there) still uses the existing Checkout/portal
-hooks. Checkout/portal/PlanCard code is kept. Web (Next.js) subscriptions
-are unchanged. Locked template tiles never navigate through: flag OFF
-Alerts with no purchase route; flag ON Alerts with Upgrade → billing.
-Product ids: `apps/mobile/src/config/iap-products.ts` (placeholders until
-the stores exist).
+overrides for QA/rollback. **EAS `preview` sets the override to `true`;
+`production` does not** (store binaries stay off until sandbox purchase is
+proven). When off: no paywall, no prices, no Upgrade/Choose CTAs; billing
+stays as plan+usage only. When on, **ios/android** use `expo-iap`
+(`StorePaywall` → `POST /billing/mobile/verify`); store subscribers manage
+in App Store / Play, not the Stripe portal. Expo web (if the flag is ever
+on there) still uses the existing Checkout/portal hooks. Checkout/portal/
+PlanCard code is kept. Web (Next.js) subscriptions are unchanged. Locked
+template tiles never navigate through: flag OFF Alerts with no purchase
+route; flag ON Alerts with Upgrade → billing. Product ids:
+`apps/mobile/src/config/iap-products.ts` (Apple includes Enterprise yearly;
+Google does not — Play price cap; paywall omits unsellable SKUs).
 
 **Legal acceptance (L1 + Q5, 2026-08-26; fail-open closed 2026-09-11).** Mobile
 register/login Google (new users) POST `/legal/acceptances` with the same body
@@ -862,6 +864,7 @@ lazy-required). A production AAB that includes the plugin will still show
 Play Billing to Play Console. iOS IAP capability is on the App ID, not an
 Info.plist usage string. Do not init the IAP connection at app root.
 Expo Go keeps working until the flag is on (then a development build is
-required). Product ids are placeholders in
-`apps/mobile/src/config/iap-products.ts` — swap there, not in screens.
+required). Product ids live in
+`apps/mobile/src/config/iap-products.ts` (Apple has Enterprise yearly;
+Google does not — Play price cap). Change ids there, not in screens.
 

@@ -207,6 +207,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    // Unregister while auth still works; then clear local schedules. Dynamic
+    // imports avoid a push.ts ↔ auth-store cycle.
+    try {
+      const { unregisterExpoPushToken } = await import('../lib/push');
+      await unregisterExpoPushToken();
+    } catch {
+      /* best-effort */
+    }
+    try {
+      const { cancelAllJobReminders } = await import('../lib/job-reminders');
+      await cancelAllJobReminders();
+    } catch {
+      /* best-effort */
+    }
+    try {
+      const Notifications = await import('expo-notifications');
+      await Notifications.cancelAllScheduledNotificationsAsync();
+    } catch {
+      /* best-effort */
+    }
+
     try {
       await signOut(getFirebaseAuth());
       await secureStore.clearAll();
@@ -272,7 +293,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       const user = await api.post<User>('/auth/verify');
       set({ user, userSyncError: null });
-      await retryPendingLegalAcceptance();
+      const acceptedPending = await retryPendingLegalAcceptance();
+      if (acceptedPending) {
+        set({ legalGate: false });
+      }
     } catch (err) {
       // Do not rethrow: initialize() would clear firebaseUser and bounce
       // to login. Do not touch legalGate. Keep any previously synced user.

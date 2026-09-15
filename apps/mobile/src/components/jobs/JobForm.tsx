@@ -294,7 +294,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       className="flex-1"
     >
       <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">

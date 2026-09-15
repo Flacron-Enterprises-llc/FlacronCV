@@ -60,3 +60,11 @@ export interface User {
   isActive: boolean;
   deletedAt: string | null;
 }
+
+/** PUT /users/me — Nest UpdateUserDto. Not Partial<User> (uid/email/subscription would 400). */
+export interface UpdateUserPayload {
+  displayName?: string;
+  photoURL?: string | null;
+  profile?: Partial<UserProfile>;
+  preferences?: Partial<UserPreferences>;
+}

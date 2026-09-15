@@ -145,6 +145,46 @@ export interface CV {
   deletedAt: string | null;
 }
 
+/** Create body — required title/templateId + Nest mobile-compat optionals. Not Partial<CV>. */
+export interface CreateCVPayload {
+  title: string;
+  templateId: string;
+  status?: CVStatus;
+  isPublic?: boolean;
+  personalInfo?: PersonalInfo;
+  styling?: CVStyling;
+  sectionOrder?: string[];
+}
+
+/** Update body — Nest UpdateCvDto whitelist. */
+export interface UpdateCVPayload {
+  title?: string;
+  templateId?: string;
+  personalInfo?: PersonalInfo;
+  sectionOrder?: string[];
+  styling?: CVStyling;
+  status?: CVStatus;
+  isPublic?: boolean;
+}
+
+/** POST /cvs/:id/sections — Nest AddSectionDto. */
+export interface AddCVSectionPayload {
+  id?: string;
+  type: CVSectionType;
+  title: string;
+  order: number;
+  isVisible?: boolean;
+  items?: CVSectionItem[];
+}
+
+/** PUT /cvs/:id/sections/:sectionId — Nest UpdateSectionDto. */
+export interface UpdateCVSectionPayload {
+  title?: string;
+  isVisible?: boolean;
+  items?: CVSectionItem[];
+  order?: number;
+}
+
 export interface CVVersion {
   id: string;
   versionNumber: number;

@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation, usePreventRemove } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -28,8 +29,16 @@ import {
   useUploadProfilePhoto,
 } from '../../../src/hooks/useUser';
 import { requestFailureMessage } from '../../../src/lib/api-errors';
-import { User } from '../../../src/types/user.types';
+import { UpdateUserPayload, User } from '../../../src/types/user.types';
 import { colors } from '../../../src/theme/colors';
+
+/** Same prompt as CV / cover letter / jobs — in-app back, hardware Back, gesture. */
+function confirmUnsavedLeave(onLeave: () => void) {
+  Alert.alert('Unsaved Changes', 'You have unsaved changes. Leave anyway?', [
+    { text: 'Stay', style: 'cancel' },
+    { text: 'Leave', style: 'destructive', onPress: onLeave },
+  ]);
+}
 
 const schema = z.object({
   displayName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -87,20 +96,14 @@ const PROFILE_DIRTY_KEYS = [
 function payloadFromDirty(
   data: FormData,
   dirty: Partial<Record<keyof FormData, boolean>>,
-): {
-  displayName?: string;
-  profile?: Partial<User['profile']>;
-} {
-  const payload: {
-    displayName?: string;
-    profile?: Partial<User['profile']>;
-  } = {};
+): UpdateUserPayload {
+  const payload: UpdateUserPayload = {};
 
   if (dirty.displayName) {
     payload.displayName = data.displayName;
   }
 
-  const profile: Partial<User['profile']> = {};
+  const profile: NonNullable<UpdateUserPayload['profile']> = {};
   for (const [formKey, profileKey] of PROFILE_DIRTY_KEYS) {
     if (dirty[formKey]) {
       profile[profileKey] = data[formKey] ?? '';
@@ -124,6 +127,7 @@ function photoFailureMessage(err: unknown): string {
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { data: user, isError, refetch } = useCurrentUser();
   const updateProfile = useUpdateProfile();
   const uploadPhoto = useUploadProfilePhoto();
@@ -131,7 +135,7 @@ export default function ProfileScreen() {
   const [hydratedUid, setHydratedUid] = useState<string | null>(null);
   const photoBusy = uploadPhoto.isPending || removePhoto.isPending;
 
-  const { control, handleSubmit, reset, formState: { errors, dirtyFields } } = useForm<FormData>({
+  const { control, handleSubmit, reset, formState: { errors, dirtyFields, isDirty } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: EMPTY_VALUES,
   });
@@ -148,6 +152,10 @@ export default function ProfileScreen() {
 
   const formReady = !!user && hydratedUid === user.uid;
 
+  usePreventRemove(formReady && isDirty, ({ data }) => {
+    confirmUnsavedLeave(() => navigation.dispatch(data.action));
+  });
+
   const onSubmit = async (data: FormData) => {
     if (!user || hydratedUid !== user.uid) return;
 
@@ -158,7 +166,9 @@ export default function ProfileScreen() {
     }
 
     try {
-      await updateProfile.mutateAsync(payload as Partial<User>);
+      await updateProfile.mutateAsync(payload);
+      // Clear dirty before leave so usePreventRemove does not re-prompt.
+      reset(data);
       Alert.alert('Success', 'Profile updated successfully!');
       router.back();
     } catch (err) {
@@ -241,7 +251,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
         <View className="flex-row items-center px-5 pt-4 pb-3 border-b border-stone-100">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
             <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />

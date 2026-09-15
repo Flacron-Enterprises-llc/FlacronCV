@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { getFirebaseAuth, getFirebaseStorage } from '../lib/firebase';
 import { useAuthStore } from '../store/auth-store';
-import { User } from '../types/user.types';
+import { UpdateUserPayload, User } from '../types/user.types';
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
@@ -23,7 +23,7 @@ export function useUpdateProfile() {
   const qc = useQueryClient();
   const { firebaseUser } = useAuthStore();
   return useMutation({
-    mutationFn: (data: Partial<User>) => api.put<User>('/users/me', data),
+    mutationFn: (data: UpdateUserPayload) => api.put<User>('/users/me', data),
     onSuccess: async (updated) => {
       qc.setQueryData(['user', firebaseUser?.uid], updated);
       // Auth store feeds settings header / dashboard name — keep it in sync.

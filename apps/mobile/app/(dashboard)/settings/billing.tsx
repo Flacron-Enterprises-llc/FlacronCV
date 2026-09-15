@@ -129,7 +129,7 @@ export default function BillingScreen() {
   const yearlyDiscount = yearlySavingsPercent(SubscriptionPlan.PRO);
 
   return (
-    <SafeAreaView className="flex-1 bg-stone-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
           <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />

@@ -38,7 +38,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
         <ScrollView className="flex-1 px-6" keyboardShouldPersistTaps="handled">
           <TouchableOpacity onPress={() => router.back()} className="mt-4 mb-8 flex-row items-center">
             <Ionicons name="arrow-back" size={22} color={colors.stone[500]} />

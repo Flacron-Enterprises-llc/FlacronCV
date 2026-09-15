@@ -49,7 +49,7 @@ export function Modal({ visible, onClose, title, children, size = 'md', closeDis
         onPress={closeDisabled ? undefined : onClose}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <Pressable
             className="bg-white rounded-t-3xl overflow-hidden"

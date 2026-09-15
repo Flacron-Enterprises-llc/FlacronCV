@@ -90,6 +90,14 @@ function alertExportRequestError(err: unknown): void {
     );
     return;
   }
+  if (isDocxRejection(err)) {
+    Alert.alert(
+      'Could not export',
+      exportRequestFailureMessage(err),
+      upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+    );
+    return;
+  }
   Alert.alert('Could not export', exportRequestFailureMessage(err));
 }
 

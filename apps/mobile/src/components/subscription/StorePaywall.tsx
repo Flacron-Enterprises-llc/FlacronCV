@@ -121,8 +121,8 @@ export function StorePaywall({ interval, currentPlan, onEntitlementChanged }: St
       }
       if (error.code === ErrorCode.ItemUnavailable || error.code === ErrorCode.SkuNotFound) {
         Alert.alert(
-          'Plan not in the store yet',
-          'This product is not available. Product ids are still placeholders until App Store / Play products exist.',
+          'Plan not available',
+          'This product is not available in the store for this account or region. Try another plan or Restore purchases.',
         );
         return;
       }
@@ -144,8 +144,8 @@ export function StorePaywall({ interval, currentPlan, onEntitlementChanged }: St
       const token = androidOfferToken(sub);
       if (!token) {
         Alert.alert(
-          'Plan not in the store yet',
-          'Google Play has not returned an offer for this product. Product ids are still placeholders.',
+          'Plan not available',
+          'Google Play has not returned an offer for this product. Try again later or pick another plan.',
         );
         return;
       }
@@ -221,13 +221,16 @@ export function StorePaywall({ interval, currentPlan, onEntitlementChanged }: St
     }
   };
 
-  const paidPlans = [SubscriptionPlan.PRO, SubscriptionPlan.ENTERPRISE];
+  // Omit plans with no sellable SKU for this interval (e.g. Enterprise yearly on Android).
+  const paidPlans = [SubscriptionPlan.PRO, SubscriptionPlan.ENTERPRISE].filter(
+    (p) => skuForPlan(p, interval) != null,
+  );
 
   return (
     <View>
       {paidPlans.map((p) => {
-        const sku = skuForPlan(p, interval);
-        const storeProduct = sku ? subscriptions.find((s) => s.id === sku) : undefined;
+        const sku = skuForPlan(p, interval)!;
+        const storeProduct = subscriptions.find((s) => s.id === sku);
         return (
           <PlanCard
             key={p}

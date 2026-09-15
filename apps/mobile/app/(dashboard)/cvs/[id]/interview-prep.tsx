@@ -8,7 +8,7 @@ import { Button } from '../../../../src/components/ui/Button';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { Input } from '../../../../src/components/ui/Input';
 import { SkeletonCard } from '../../../../src/components/ui/Skeleton';
-import { aiCreditsExhaustedMessage } from '../../../../src/config/paid-upgrades';
+import { aiCreditsExhaustedMessage, upgradeAlertButtons } from '../../../../src/config/paid-upgrades';
 import { useInterviewPrep } from '../../../../src/hooks/useAI';
 import { useCV, useCVSections } from '../../../../src/hooks/useCVs';
 import { extractJsonObject } from '../../../../src/lib/ai-json';
@@ -108,7 +108,13 @@ export default function InterviewPrepScreen() {
       Alert.alert('Empty CV', 'Add content to this CV before preparing questions.');
       return;
     }
-    if (!user) return;
+    if (!user) {
+      Alert.alert(
+        'Account not loaded',
+        'Your account has not loaded yet. Check your connection and try again.',
+      );
+      return;
+    }
     if (
       !canUseAI(
         user.subscription,
@@ -116,7 +122,11 @@ export default function InterviewPrepScreen() {
         user.usage?.aiCreditsLimit,
       )
     ) {
-      Alert.alert('Credits Exhausted', aiCreditsExhaustedMessage('summary'));
+      Alert.alert(
+        'Credits Exhausted',
+        aiCreditsExhaustedMessage('summary'),
+        upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+      );
       return;
     }
 

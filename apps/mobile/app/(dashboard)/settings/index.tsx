@@ -44,9 +44,9 @@ export default function SettingsScreen() {
   const usage = currentUser?.usage;
   const usageFailed = !usage && !!(userError || userSyncError);
   const usageLoading = !usage && !usageFailed;
-  // Same effective plan the API / client gates use (not a stale stored Pro).
-  const plan = effectivePlanForCopy(currentUser?.subscription);
-  const planConfig = PLAN_CONFIGS[plan];
+  // user === null is not Free — only resolve a plan when the account document loaded.
+  const plan = currentUser ? effectivePlanForCopy(currentUser.subscription) : null;
+  const planConfig = plan ? PLAN_CONFIGS[plan] : null;
   const pushOn = currentUser?.preferences?.pushNotifications === true;
 
   const handleLogout = () => {
@@ -61,13 +61,13 @@ export default function SettingsScreen() {
     setPushBusy(true);
     try {
       if (next) {
-        const ok = await enablePushNotifications();
-        if (!ok) {
+        const result = await enablePushNotifications();
+        if (result === 'permission_denied') {
           Alert.alert(
             'Notifications are off',
             'You can enable them later from system Settings, or from here.',
           );
-        } else {
+        } else if (result === 'granted') {
           try {
             const jobs =
               queryClient.getQueryData<JobApplication[]>(['jobs']) ??
@@ -80,6 +80,7 @@ export default function SettingsScreen() {
             // Preference is on; the next successful GET /jobs will reconcile.
           }
         }
+        // token_failed: enablePushNotifications already Alerted.
       } else {
         await disablePushNotifications();
         await cancelAllJobReminders();
@@ -138,11 +139,19 @@ export default function SettingsScreen() {
               <Text className="text-lg font-black text-stone-900">{currentUser?.displayName ?? 'User'}</Text>
               <Text className="text-stone-500 text-sm">{currentUser?.email}</Text>
               <View className="flex-row items-center mt-1.5">
-                {plan ? (
+                {!currentUser && (userError || userSyncError) ? (
+                  <View className="bg-warning-bg px-2.5 py-0.5 rounded-full">
+                    <Text className="text-warning text-xs font-bold">Unavailable</Text>
+                  </View>
+                ) : plan ? (
                   <View className="bg-brand-100 px-2.5 py-0.5 rounded-full">
                     <Text className="text-brand-700 text-xs font-bold capitalize">{plan}</Text>
                   </View>
-                ) : null}
+                ) : (
+                  <View className="bg-stone-100 px-2.5 py-0.5 rounded-full">
+                    <Text className="text-stone-400 text-xs font-bold">…</Text>
+                  </View>
+                )}
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} />

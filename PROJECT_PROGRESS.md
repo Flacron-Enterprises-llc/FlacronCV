@@ -12,7 +12,7 @@
 > 4. Tick completed items here; log every change in the Change Log.
 > 5. Report Out-of-Scope / architectural items separately — do not implement without approval.
 
-Last updated: 2026-09-14
+Last updated: 2026-09-15
 
 > **Note on dates.** The header previously read `2026-07-29` while the two newest change-log
 > entries were dated `2026-07-30`; the header was stale, the entries were right. Corrected
@@ -764,6 +764,15 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 8. Out-of-scope / architectural recommendations (do NOT implement without approval)
 
+- **⚠️ ADDED 2026-09-15 — Mobile editor AsyncStorage crash backup (QA #7).**
+  CV wizard and cover letter editor are in-memory until Continue/Save.
+  `usePreventRemove` covers navigation leave; a force-quit still loses work
+  since the last save. Web CV writes a `localStorage` backup before each
+  network save and restores when newer than server `updatedAt`. A mobile
+  equivalent (AsyncStorage keyed by uid+id, debounce on dirty, restore after
+  hydrate, clear on successful save; ~1–1.5 days) was deferred — not the best
+  use of time vs other QA items. Do not build without approval.
+
 - **⚠️ ADDED 2026-09-11 — Role changes revoke refresh tokens; the live ID
   token still works until expiry.** CRM `updateUserRole` and
   `AuthService.setUserRole` now call `revokeRefreshTokens` after
@@ -1188,6 +1197,40 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-09-15 — **Mobile: unsynced account no longer paints Free (QA #2).**
+  Dashboard and settings plan badges only call `effectivePlanForCopy` when
+  `user` is loaded; otherwise “…” or “Unavailable”. Shared-types untouched.
+  QA #7 (AsyncStorage editor backup) deferred — recorded in §8.
+
+- 2026-09-15 — **Mobile: tighten write payload types (QA #20/#21).**
+  `GenerateCoverLetterData` matches Nest DTO (required tone/jobDescription; no
+  `recipientName`). Create/update hooks for CV, cover letter, and user take
+  whitelist payload types instead of `Partial<Entity>` so whole-doc PUTs fail
+  at compile time. Call sites unchanged in behavior.
+
+- 2026-09-15 — **Mobile QA batch: push honesty, logout cleanup, Android KAV, legal retry.**
+  (1) `enablePushNotifications` sets preference only after token POST; Alert on
+  token failure (Expo Go vs network). (2) Logout unregisters push, cancels job
+  reminder map, then `cancelAllScheduledNotificationsAsync` (before signOut).
+  (3) Android KAV `behavior` → `undefined` on forms that still used `height`
+  (Modal sheetHeight/padding untouched). (4) `retryPendingLegalAcceptance`
+  clears POST + consent flags; syncUser drops `legalGate` on success.
+
+- 2026-09-15 — **Mobile QA batch: IAP SKUs, CV load error, AI/profile/billing UX.**
+  (1) `iap-products.ts`: real store ids; Google omits Enterprise yearly (Play
+  price cap); paywall hides unsellable SKUs; placeholder Alert copy removed.
+  (2) CV editor: error before loading spinner; sections errors read; ErrorState
+  in SafeArea. (3) AI Generate/Run Alert when `user` null. (4) Profile
+  `usePreventRemove` unsaved leave. (5) Credits-exhausted + DOCX 403 use
+  `upgradeAlertButtons` → Billing. (6) Billing `edges={['top','bottom']}`.
+  S1 / Stripe-vs-IAP routing untouched.
+
+- 2026-09-15 — **Mobile preview: S1 on for sandbox IAP only.**
+  `eas.json` preview `env` sets `EXPO_PUBLIC_PAID_UPGRADES_ENABLED=true`.
+  Production profile unchanged (flag absent → defaults off). Store bump:
+  `android.versionCode` 9, `ios.buildNumber` `"8"`. Do not flip production
+  until a sandbox purchase is proven.
 
 - 2026-09-14 — **Mobile TemplateCard: top-anchor thumbnail crop.** RN
   `resizeMode="cover"` centre-crops and hid the CV name/header on most

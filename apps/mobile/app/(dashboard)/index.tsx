@@ -63,6 +63,9 @@ export default function DashboardScreen() {
   const usage = user?.usage;
   const usageFailed = !usage && !!(userError || userSyncError);
   const usageLoading = !usage && !usageFailed;
+  // user === null with a Firebase session is not Free — do not paint the Free badge.
+  const accountFailed = !user && !!(userError || userSyncError);
+  const accountLoading = !user && !accountFailed;
 
   const cvsFailed = !!cvsError;
   const coverLettersFailed = !!clError;
@@ -76,7 +79,7 @@ export default function DashboardScreen() {
     void refetchCLs();
   };
 
-  const plan = effectivePlanForCopy(user?.subscription);
+  const plan = user ? effectivePlanForCopy(user.subscription) : null;
   const planBadge = {
     [SubscriptionPlan.FREE]: {
       label: 'Free Plan',
@@ -94,7 +97,7 @@ export default function DashboardScreen() {
       bgClass: 'bg-brand-100',
     },
   };
-  const badge = planBadge[plan];
+  const badge = plan ? planBadge[plan] : null;
 
   const pullRefreshing =
     (userFetching || cvsFetching || clFetching) &&
@@ -125,11 +128,21 @@ export default function DashboardScreen() {
               </Text>
             </View>
             <View className="flex-row items-center gap-2">
-              <View className={`px-3 py-1 rounded-full ${badge.bgClass}`}>
-                <Text className={`text-xs font-bold ${badge.textClass}`}>
-                  {badge.label}
-                </Text>
-              </View>
+              {accountFailed ? (
+                <View className="px-3 py-1 rounded-full bg-warning-bg">
+                  <Text className="text-xs font-bold text-warning">Unavailable</Text>
+                </View>
+              ) : accountLoading || !badge ? (
+                <View className="px-3 py-1 rounded-full bg-stone-100">
+                  <Text className="text-xs font-bold text-stone-400">…</Text>
+                </View>
+              ) : (
+                <View className={`px-3 py-1 rounded-full ${badge.bgClass}`}>
+                  <Text className={`text-xs font-bold ${badge.textClass}`}>
+                    {badge.label}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         </View>

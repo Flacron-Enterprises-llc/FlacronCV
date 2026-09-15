@@ -36,14 +36,18 @@ async function currentExpoPushToken(): Promise<string | null> {
   return data;
 }
 
-/** Register this install's token. No-ops in Expo Go (remote push unavailable). */
-export async function registerExpoPushToken(): Promise<void> {
+/**
+ * Register this install's token. Returns true only when the token was obtained
+ * and posted. No-ops (false) in Expo Go — remote push unavailable there.
+ */
+export async function registerExpoPushToken(): Promise<boolean> {
   try {
     const token = await currentExpoPushToken();
-    if (!token) return;
+    if (!token) return false;
     await api.post('/users/me/push-tokens', { token });
+    return true;
   } catch {
-    // Token registration must never fail the calling flow.
+    return false;
   }
 }
 
@@ -53,12 +57,17 @@ export async function unregisterExpoPushToken(): Promise<void> {
     if (!token) return;
     await api.delete('/users/me/push-tokens', { token });
   } catch {
-    // Preference is already off; token cleanup is best-effort.
+    // Preference is already off / logout is best-effort; token cleanup may fail.
   }
 }
 
-/** Request OS permission, register token when possible, persist the opt-in. */
-export async function enablePushNotifications(): Promise<boolean> {
+export type EnablePushResult = 'granted' | 'permission_denied' | 'token_failed';
+
+/**
+ * Request OS permission, register token, then persist opt-in.
+ * Preference is set only when a token was actually obtained and posted.
+ */
+export async function enablePushNotifications(): Promise<EnablePushResult> {
   const { status: existing } = await Notifications.getPermissionsAsync();
   let status = existing;
   if (existing !== 'granted') {
@@ -66,10 +75,21 @@ export async function enablePushNotifications(): Promise<boolean> {
     status = asked.status;
   }
   await markPushPrompted();
-  if (status !== 'granted') return false;
-  await registerExpoPushToken();
+  if (status !== 'granted') return 'permission_denied';
+
+  const registered = await registerExpoPushToken();
+  if (!registered) {
+    Alert.alert(
+      'Could not enable notifications',
+      isExpoGo()
+        ? 'Remote notifications are not available in Expo Go. Use a development or store build.'
+        : 'We could not register this device for notifications. Check your connection and try again.',
+    );
+    return 'token_failed';
+  }
+
   await api.patch('/users/me/preferences', { pushNotifications: true });
-  return true;
+  return 'granted';
 }
 
 export async function disablePushNotifications(): Promise<void> {
@@ -125,8 +145,8 @@ export function maybeAskPushAfterFollowUpSave(
             text: 'Enable',
             onPress: () => {
               void enablePushNotifications()
-                .then(async (ok) => {
-                  if (!ok) {
+                .then(async (result) => {
+                  if (result !== 'granted') {
                     onDone('declined');
                     return;
                   }

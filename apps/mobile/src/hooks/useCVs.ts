@@ -1,7 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/auth-store';
-import { CV, CVSection } from '../types/cv.types';
+import {
+  AddCVSectionPayload,
+  CreateCVPayload,
+  CV,
+  CVSection,
+  UpdateCVPayload,
+  UpdateCVSectionPayload,
+} from '../types/cv.types';
 import { ListPage } from '../types/api.types';
 
 function useAuthReady() {
@@ -42,7 +49,7 @@ export function useCVSections(cvId: string | null) {
 export function useCreateCV() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<CV>) => api.post<CV>('/cvs', data),
+    mutationFn: (data: CreateCVPayload) => api.post<CV>('/cvs', data),
     onSuccess: async () => {
       qc.invalidateQueries({ queryKey: ['cvs'] });
       qc.invalidateQueries({ queryKey: ['user'] });
@@ -54,7 +61,7 @@ export function useCreateCV() {
 export function useUpdateCV(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<CV>) => api.put<CV>(`/cvs/${id}`, data),
+    mutationFn: (data: UpdateCVPayload) => api.put<CV>(`/cvs/${id}`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cv', id] });
       qc.invalidateQueries({ queryKey: ['cvs'] });
@@ -87,7 +94,7 @@ export function useDuplicateCV() {
 export function useUpdateCVSection(cvId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ sectionId, data }: { sectionId: string; data: Partial<CVSection> }) =>
+    mutationFn: ({ sectionId, data }: { sectionId: string; data: UpdateCVSectionPayload }) =>
       api.put<CVSection>(`/cvs/${cvId}/sections/${sectionId}`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cv-sections', cvId] });
@@ -98,7 +105,7 @@ export function useUpdateCVSection(cvId: string) {
 export function useAddCVSection(cvId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<CVSection>) => api.post<CVSection>(`/cvs/${cvId}/sections`, data),
+    mutationFn: (data: AddCVSectionPayload) => api.post<CVSection>(`/cvs/${cvId}/sections`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cv-sections', cvId] });
     },

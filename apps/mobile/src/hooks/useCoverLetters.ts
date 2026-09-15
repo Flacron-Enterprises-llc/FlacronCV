@@ -1,7 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/auth-store';
-import { CoverLetter, GenerateCoverLetterData } from '../types/cover-letter.types';
+import {
+  CoverLetter,
+  CreateCoverLetterPayload,
+  GenerateCoverLetterData,
+  UpdateCoverLetterPayload,
+} from '../types/cover-letter.types';
 import { ListPage } from '../types/api.types';
 
 function useAuthReady() {
@@ -32,7 +37,7 @@ export function useCoverLetter(id: string | null) {
 export function useCreateCoverLetter() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<CoverLetter>) => api.post<CoverLetter>('/cover-letters', data),
+    mutationFn: (data: CreateCoverLetterPayload) => api.post<CoverLetter>('/cover-letters', data),
     onSuccess: async () => {
       qc.invalidateQueries({ queryKey: ['cover-letters'] });
       qc.invalidateQueries({ queryKey: ['user'] });
@@ -44,7 +49,8 @@ export function useCreateCoverLetter() {
 export function useUpdateCoverLetter(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<CoverLetter>) => api.put<CoverLetter>(`/cover-letters/${id}`, data),
+    mutationFn: (data: UpdateCoverLetterPayload) =>
+      api.put<CoverLetter>(`/cover-letters/${id}`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cover-letter', id] });
       qc.invalidateQueries({ queryKey: ['cover-letters'] });

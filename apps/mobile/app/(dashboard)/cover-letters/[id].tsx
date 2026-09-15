@@ -141,7 +141,11 @@ export default function CoverLetterEditorScreen() {
       user?.usage?.aiCreditsUsed ?? 0,
       user?.usage?.aiCreditsLimit,
     )) {
-      Alert.alert('Credits Exhausted', aiCreditsExhaustedMessage('coverLetter'));
+      Alert.alert(
+        'Credits Exhausted',
+        aiCreditsExhaustedMessage('coverLetter'),
+        upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+      );
       return;
     }
 
@@ -213,7 +217,7 @@ export default function CoverLetterEditorScreen() {
         </View>
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
         <ScrollView className="flex-1 px-5 pt-4" keyboardShouldPersistTaps="handled">
           <View className="bg-brand-50 rounded-xl p-3 mb-4">
             <Text className="font-bold text-brand-900">{coverLetter?.jobTitle}</Text>

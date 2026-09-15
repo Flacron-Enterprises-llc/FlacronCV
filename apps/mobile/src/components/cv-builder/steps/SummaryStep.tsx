@@ -1,3 +1,5 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -10,7 +12,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useCVStore } from '../../../store/cv-store';
@@ -18,7 +19,10 @@ import { useGenerateSummary } from '../../../hooks/useAI';
 import { useAuthStore } from '../../../store/auth-store';
 import { canUseAI } from '../../../lib/entitlements';
 import { alertIfUnverifiedEmail } from '../../../lib/email-verification';
-import { aiCreditsExhaustedMessage } from '../../../config/paid-upgrades';
+import {
+  aiCreditsExhaustedMessage,
+  upgradeAlertButtons,
+} from '../../../config/paid-upgrades';
 import { colors } from '../../../theme/colors';
 import { CV, CVSection, CVSectionItem, ExperienceItem, SkillItem } from '../../../types/cv.types';
 import { CVSectionType } from '../../../types/enums';
@@ -130,6 +134,7 @@ function generateFailureMessage(err: unknown): string {
 }
 
 export function SummaryStep({ onValidChange }: SummaryStepProps) {
+  const router = useRouter();
   const { cv, sections, updatePersonalInfo } = useCVStore();
   const { user, syncUser } = useAuthStore();
   const queryClient = useQueryClient();
@@ -149,13 +154,23 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
   };
 
   const handleGenerate = async () => {
-    if (!user) return;
+    if (!user) {
+      Alert.alert(
+        'Account not loaded',
+        'Your account has not loaded yet. Check your connection and try again.',
+      );
+      return;
+    }
     if (!canUseAI(
       user.subscription,
       user.usage?.aiCreditsUsed ?? 0,
       user.usage?.aiCreditsLimit,
     )) {
-      Alert.alert('Credits Exhausted', aiCreditsExhaustedMessage('summary'));
+      Alert.alert(
+        'Credits Exhausted',
+        aiCreditsExhaustedMessage('summary'),
+        upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+      );
       return;
     }
     if (!canBuildBody) {
@@ -182,7 +197,7 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       className="flex-1"
     >
       <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
