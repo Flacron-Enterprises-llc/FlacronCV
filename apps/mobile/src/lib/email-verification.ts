@@ -1,6 +1,7 @@
 import { Alert } from 'react-native';
 import {
   isEmailUnverifiedRejection,
+  isTooManyRequests,
   nestErrorMessage,
   requestFailureMessage,
 } from './api-errors';
@@ -14,6 +15,13 @@ async function handleResend(): Promise<void> {
     await useAuthStore.getState().resendVerification();
     Alert.alert('Email sent', 'Check your inbox for a verification link.');
   } catch (err) {
+    if (isTooManyRequests(err)) {
+      Alert.alert(
+        'Too many attempts',
+        'You have tried to resend too many times. Wait a few minutes, then try again.',
+      );
+      return;
+    }
     Alert.alert(
       'Could not resend',
       requestFailureMessage(err, 'Could not send verification email. Please try again.'),

@@ -33,6 +33,10 @@ export function requestFailureMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
+export function isTooManyRequests(err: unknown): boolean {
+  return axios.isAxiosError(err) && err.response?.status === 429;
+}
+
 export function isLimitRejection(err: unknown): boolean {
   if (!axios.isAxiosError(err) || err.response?.status !== 403) return false;
   return /limit reached/i.test(nestErrorMessage(err));

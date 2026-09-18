@@ -1198,6 +1198,17 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 9. Change log (append newest at top)
 
+- 2026-09-18 — **Mobile: one verification email path; clearer resend throttle.**
+  Register no longer calls Firebase `sendEmailVerification` — only
+  `POST /auth/verify` → SES (matches web). Resend on HTTP 429 shows “Too many
+  attempts / wait a few minutes” instead of generic “Could not resend”.
+  `resendVerification` rethrows the Axios error so status is preserved. API
+  untouched.
+
+- 2026-09-15 — **EAS `qa` profile: internal APK, S1 off.** Same Firebase/API
+  env as production; no `EXPO_PUBLIC_PAID_UPGRADES_ENABLED`. For sideload QA
+  without paywall purchase failures (`preview` keeps S1 on for IAP sandbox).
+
 - 2026-09-15 — **Mobile: unsynced account no longer paints Free (QA #2).**
   Dashboard and settings plan badges only call `effectivePlanForCopy` when
   `user` is loaded; otherwise “…” or “Unavailable”. Shared-types untouched.

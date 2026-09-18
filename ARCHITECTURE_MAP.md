@@ -615,7 +615,8 @@ and download count.
 One switch, `PAID_UPGRADES_ENABLED` in `apps/mobile/src/config/paid-upgrades.ts`.
 Defaults off on every `Platform.OS`. `EXPO_PUBLIC_PAID_UPGRADES_ENABLED`
 overrides for QA/rollback. **EAS `preview` sets the override to `true`;
-`production` does not** (store binaries stay off until sandbox purchase is
+EAS `qa` and `production` do not** (`qa` = internal APK for testers without
+paywall; production store binaries stay off until sandbox purchase is
 proven). When off: no paywall, no prices, no Upgrade/Choose CTAs; billing
 stays as plan+usage only. When on, **ios/android** use `expo-iap`
 (`StorePaywall` → `POST /billing/mobile/verify`); store subscribers manage

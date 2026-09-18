@@ -2,7 +2,6 @@ import {
   createUserWithEmailAndPassword,
   getAdditionalUserInfo,
   GoogleAuthProvider,
-  sendEmailVerification,
   signInWithCredential,
   signInWithEmailAndPassword,
   signOut,
@@ -181,7 +180,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await secureStore.setPendingLegalConsent(credential.user.uid);
       set({ legalGate: true });
       await updateProfile(credential.user, { displayName });
-      await sendEmailVerification(credential.user);
+      // Verification email is sent by POST /auth/verify → SES (same as web).
+      // Do not also call Firebase sendEmailVerification — that was a second email.
       const token = await credential.user.getIdToken();
       await secureStore.setAuthToken(token);
 
@@ -258,9 +258,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await api.post('/auth/send-verification');
     } catch (err: unknown) {
+      // API route — Nest message / network, not Firebase Auth codes.
+      // Rethrow the original error so callers can branch on HTTP status (e.g. 429).
       const message = requestFailureMessage(err, 'Could not send verification email. Please try again.');
       set({ error: message });
-      throw new Error(message);
+      throw err;
     } finally {
       set({ isLoading: false });
     }
