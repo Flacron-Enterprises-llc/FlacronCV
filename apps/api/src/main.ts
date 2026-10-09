@@ -8,6 +8,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { CORS_ALLOWED_HEADERS } from './cors-allowed-headers';
 import { assertLiveStripePricesConfigured } from './config/stripe-live-prices';
+import { checkStripeSecretKey, resolveAppId } from './config/stripe-app';
 
 function validateEnv() {
   const required = [
@@ -22,6 +23,10 @@ function validateEnv() {
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
+  // Throws on a malformed APP_ID, and on a key that is not sk_/rk_ live/test.
+  resolveAppId();
+  const { warning } = checkStripeSecretKey(process.env.STRIPE_SECRET_KEY);
+  if (warning) console.warn(`[stripe] ${warning}`);
   // Live keys must not fall back to compiled PLAN_CONFIGS test-account price ids.
   assertLiveStripePricesConfigured(process.env.STRIPE_SECRET_KEY);
 }

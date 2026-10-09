@@ -4,6 +4,8 @@ import { StripeWebhookController } from './stripe-webhook.controller';
 import { MobileBillingController } from './mobile-billing.controller';
 import { StoreWebhookController } from './store-webhook.controller';
 import { PaymentService } from './payment.service';
+import { BillingLedgerService } from './billing-ledger.service';
+import { BillingReportingController } from './billing-reporting.controller';
 import { CancelAtPeriodEndReconcileService } from './cancel-at-period-end-reconcile.service';
 import { MobileBillingService } from './mobile-billing.service';
 import { StoreReceiptVerifier } from './store-receipt-verifier';
@@ -19,9 +21,11 @@ import { UsersModule } from '../users/users.module';
     StripeWebhookController,
     MobileBillingController,
     StoreWebhookController,
+    BillingReportingController,
   ],
   providers: [
     PaymentService,
+    BillingLedgerService,
     CancelAtPeriodEndReconcileService,
     MobileBillingService,
     StoreReceiptVerifier,

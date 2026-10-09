@@ -3,8 +3,12 @@
  * Those fallbacks belong to the test account; a live secret with no env
  * override used to 500 checkout ("No such price").
  *
- * Detection is the `sk_live_` prefix only. Never log or return the key.
+ * Detection is the key prefix: `sk_live_` (secret) or `rk_live_` (restricted —
+ * what the Flacron Stripe standard requires). Missing the restricted form let a
+ * live `rk_live_` key skip this gate entirely. Never log or return the key.
  */
+import { stripeKeyMode } from './stripe-app';
+
 export const LIVE_STRIPE_PRICE_ENV_KEYS = [
   'STRIPE_PRO_MONTHLY_PRICE_ID',
   'STRIPE_PRO_YEARLY_PRICE_ID',
@@ -13,7 +17,7 @@ export const LIVE_STRIPE_PRICE_ENV_KEYS = [
 ] as const;
 
 export function isLiveStripeSecretKey(secret: string | undefined | null): boolean {
-  return (secret ?? '').trim().startsWith('sk_live_');
+  return stripeKeyMode(secret) === 'live';
 }
 
 export function missingLiveStripePriceEnv(

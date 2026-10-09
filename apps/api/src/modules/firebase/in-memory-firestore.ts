@@ -69,11 +69,22 @@ class InMemoryDocumentReference {
     return this.docId;
   }
 
-  async set(data: DocData): Promise<void> {
+  async set(data: DocData, options?: { merge?: boolean }): Promise<void> {
     if (!this.store.has(this.collectionPath)) {
       this.store.set(this.collectionPath, new Map());
     }
-    this.store.get(this.collectionPath)!.set(this.docId, JSON.parse(JSON.stringify(data)));
+    const coll = this.store.get(this.collectionPath)!;
+    const incoming = JSON.parse(JSON.stringify(data));
+    // `{ merge: true }` keeps fields the write does not name, as Firestore does.
+    coll.set(this.docId, options?.merge ? { ...(coll.get(this.docId) ?? {}), ...incoming } : incoming);
+  }
+
+  /** Matches Firestore `create()`: fails with ALREADY_EXISTS (code 6) if the doc exists. */
+  async create(data: DocData): Promise<void> {
+    if (this.store.get(this.collectionPath)?.has(this.docId)) {
+      throw Object.assign(new Error(`6 ALREADY_EXISTS: ${this.collectionPath}/${this.docId}`), { code: 6 });
+    }
+    await this.set(data);
   }
 
   async get(): Promise<InMemoryDocumentSnapshot> {
@@ -126,8 +137,8 @@ class InMemoryBatch {
     this.operations.push(() => ref.update(data));
   }
 
-  set(ref: InMemoryDocumentReference, data: DocData): void {
-    this.operations.push(() => ref.set(data));
+  set(ref: InMemoryDocumentReference, data: DocData, options?: { merge?: boolean }): void {
+    this.operations.push(() => ref.set(data, options));
   }
 
   delete(ref: InMemoryDocumentReference): void {
@@ -153,8 +164,8 @@ class InMemoryTransaction {
     this.operations.push(() => ref.update(data));
   }
 
-  set(ref: InMemoryDocumentReference, data: DocData): void {
-    this.operations.push(() => ref.set(data));
+  set(ref: InMemoryDocumentReference, data: DocData, options?: { merge?: boolean }): void {
+    this.operations.push(() => ref.set(data, options));
   }
 
   delete(ref: InMemoryDocumentReference): void {

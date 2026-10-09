@@ -212,6 +212,29 @@ browser as a 500. Client header ↔ allowlist parity is gated by
   `stripe listen --forward-to localhost:4000/api/v1/webhooks/stripe`
   (`/api/v1/payments/webhook` is not a route; a bootstrap spec 404s it).
 
+### Stripe — Flacron shared-account standard
+
+FlacronCV bills through the **one** Flacron Stripe account (`acct_1HUAch…`), shared with every other
+Flacron app. What keeps the money apart:
+
+| Piece | FlacronCV value / where |
+|---|---|
+| App id | `APP_ID=flacron-cv` (task env). Stamped as `app_id` metadata on customers, checkout sessions, subscriptions (`subscription_data.metadata`), renewal PaymentIntents, products and prices |
+| Key | `STRIPE_SECRET_KEY` = FlacronCV's **own restricted key** (`rk_…`). Never another app's key |
+| Catalog | Products `FlacronCV - Pro` / `FlacronCV - Enterprise`, prices with lookup keys `fcv_<plan>_<monthly\|yearly>`. Checkout refuses any price not stamped `app_id=flacron-cv` in the key's mode |
+| Portal | `STRIPE_PORTAL_CONFIGURATION_ID` — FlacronCV's own portal config, plan switching limited to FlacronCV prices. The account default portal is shared by every app |
+| Webhook | Own endpoint + `STRIPE_WEBHOOK_SECRET`, API version `2024-04-10`. **Every endpoint on the account receives every app's events**, so the API applies an event only when the object's `app_id` is `flacron-cv` and its mode matches the key; others are recorded as `app_mismatch` / `unattributed` / `mode_mismatch` |
+| Idempotency | `payment_events/{evt_id}` — claimed atomically before processing, kept once processed, released on failure so Stripe's retry runs again |
+| Ledger | Firestore `billing_payments`, `billing_subscriptions`, `billing_refunds`, `billing_invoices`, `billing_customers` — every row has `application_id` and `livemode` |
+| Reporting | `GET /api/v1/admin/billing/revenue?application_id=flacron-cv\|all&livemode=true\|false` (admin), plus `/admin/billing/{payments,subscriptions,refunds,invoices,customers}` |
+
+Scripts (`apps/api/scripts/`): `stripe-sync-catalog.mjs` (create/tag products, prices, portal config,
+webhook endpoint; prints the env values to pin) and `stripe-backfill-app-id.mjs` (stamps pre-standard
+FlacronCV subscriptions/customers, decided by price ownership). Both refuse a live key without `--live`.
+
+Never mix test and live values in one environment: key, webhook secret, price ids and portal config
+all come from the same mode.
+
 ---
 
 ## 9. Troubleshooting

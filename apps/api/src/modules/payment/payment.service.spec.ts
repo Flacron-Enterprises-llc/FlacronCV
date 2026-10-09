@@ -53,6 +53,19 @@ async function seedUser(firestore: InMemoryFirestore, uid: string, overrides: Re
  */
 const liveCustomers = () => ({ retrieve: jest.fn(async (id: string) => ({ id })) });
 
+/** FlacronCV's id on the shared Flacron Stripe account (the config default). */
+const APP_ID = 'flacron-cv';
+const OUR_METADATA = { app_id: APP_ID };
+
+/**
+ * A `prices.retrieve` that confirms every price is FlacronCV's. Checkout now
+ * refuses a price not stamped with our app_id, so stubs for tests about OTHER
+ * behaviour need this to state the ordinary case: the price is ours.
+ */
+const ourPrices = () => ({
+  retrieve: jest.fn(async (id: string) => ({ id, active: true, livemode: false, metadata: { ...OUR_METADATA } })),
+});
+
 /**
  * Subscription lifecycle events are written to the audit trail, so the service
  * takes an AuditService. It is a fire-and-forget dependency here — the spies let
@@ -322,6 +335,7 @@ describe('PaymentService', () => {
           retrieve: jest.fn(async () => { throw noSuchCustomer(); }),
           create: jest.fn(async () => ({ id: 'cus_Fresh' })),
         },
+        prices: ourPrices(),
         subscriptions: { list: jest.fn(async () => ({ data: [] })) },
         checkout: { sessions: { create: jest.fn(async () => ({ id: 'cs_1', url: 'http://checkout' })) } },
         billingPortal: { sessions: { create: jest.fn(async () => ({ url: 'http://portal' })) } },
@@ -491,12 +505,15 @@ describe('PaymentService', () => {
           stripeSubscriptionId: 'sub_refund',
         },
       });
-      (service as any).stripe = { subscriptions: { cancel: jest.fn().mockResolvedValue({}) } };
+      (service as any).stripe = {
+        subscriptions: { cancel: jest.fn().mockResolvedValue({}) },
+        refunds: { list: jest.fn().mockResolvedValue({ data: [] }) },
+      };
 
       await service.handleWebhookEvent({
         id: 'evt_refund',
         type: 'charge.refunded',
-        data: { object: { refunded: true, customer: 'cus_refund' } },
+        data: { object: { refunded: true, customer: 'cus_refund', metadata: OUR_METADATA } },
       } as any);
 
       // Stripe subscription cancelled + user downgraded to free.
@@ -532,7 +549,7 @@ describe('PaymentService', () => {
       });
       (service as any).stripe = {
         subscriptions: { cancel: jest.fn().mockResolvedValue({}) },
-        charges: { retrieve: jest.fn().mockResolvedValue({ customer: 'cus_dispute' }) },
+        charges: { retrieve: jest.fn().mockResolvedValue({ customer: 'cus_dispute', metadata: OUR_METADATA }) },
       };
 
       await service.handleWebhookEvent({
@@ -646,6 +663,7 @@ describe('PaymentService', () => {
       current_period_start: 1_700_000_000,
       current_period_end: 1_702_600_000,
       currency: 'usd',
+      metadata: { ...OUR_METADATA },
       ...overrides,
     });
 
@@ -660,7 +678,9 @@ describe('PaymentService', () => {
       await service.handleWebhookEvent({
         id: 'evt_ck',
         type: 'checkout.session.completed',
-        data: { object: { metadata: { firebaseUid: 'u-checkout' }, subscription: 'sub_ck', customer: 'cus_ck' } },
+        data: {
+          object: { metadata: { firebaseUid: 'u-checkout', ...OUR_METADATA }, subscription: 'sub_ck', customer: 'cus_ck' },
+        },
       } as any);
 
       const userDoc = await firestore.collection('users').doc('u-checkout').get();
@@ -749,7 +769,7 @@ describe('PaymentService', () => {
       await service.handleWebhookEvent({
         id: 'evt_fail',
         type: 'invoice.payment_failed',
-        data: { object: { customer: 'cus_f' } },
+        data: { object: { customer: 'cus_f', subscription_details: { metadata: OUR_METADATA } } },
       } as any);
 
       expect(usersService.updateSubscription).toHaveBeenCalledWith('u-fail', { status: SubscriptionStatus.PAST_DUE });
@@ -767,6 +787,7 @@ describe('PaymentService', () => {
           object: {
             customer: 'cus_u',
             status: 'active',
+            metadata: OUR_METADATA,
             cancel_at_period_end: false,
             current_period_end: 1_702_600_000,
             items: { data: [{ price: { id: ENT_PRICE } }] },
@@ -809,6 +830,7 @@ describe('PaymentService', () => {
             object: {
               customer: 'cus_x',
               status: stripeStatus,
+              metadata: OUR_METADATA,
               cancel_at_period_end: false,
               current_period_end: 1_702_600_000,
               items: { data: [{ price: { id: PRO_PRICE } }] },
@@ -837,6 +859,7 @@ describe('PaymentService', () => {
           object: {
             customer: 'cus_d',
             status: 'active',
+            metadata: OUR_METADATA,
             cancel_at_period_end: false,
             current_period_end: 1_702_600_000,
             items: { data: [{ price: { id: PRO_PRICE } }] },
@@ -863,7 +886,7 @@ describe('PaymentService', () => {
       await service.handleWebhookEvent({
         id: 'evt_del',
         type: 'customer.subscription.deleted',
-        data: { object: { customer: 'cus_x2' } },
+        data: { object: { customer: 'cus_x2', metadata: OUR_METADATA } },
       } as any);
 
       expect(usersService.updateSubscription).toHaveBeenCalledWith(
@@ -895,7 +918,7 @@ describe('PaymentService', () => {
       await service.handleWebhookEvent({
         id: 'evt_del_iap',
         type: 'customer.subscription.deleted',
-        data: { object: { customer: 'cus_iap' } },
+        data: { object: { customer: 'cus_iap', metadata: OUR_METADATA } },
       } as any);
 
       expect(usersService.updateSubscription).not.toHaveBeenCalled();
@@ -915,6 +938,7 @@ describe('PaymentService', () => {
       const create = jest.fn().mockResolvedValue({ id: 'cs_2', url: 'https://stripe.test/cs_2' });
       (service as any).stripe = {
         customers: liveCustomers(),
+        prices: ourPrices(),
         checkout: { sessions: { create } },
         subscriptions: { list: jest.fn().mockResolvedValue({ data: [{ id: 'sub_old', status: 'canceled' }] }) },
       };
@@ -922,7 +946,7 @@ describe('PaymentService', () => {
       await service.createCheckoutSession('u-repeat', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
 
       expect(create).toHaveBeenCalledWith(
-        expect.not.objectContaining({ subscription_data: expect.anything() }),
+        expect.objectContaining({ subscription_data: expect.not.objectContaining({ trial_period_days: expect.anything() }) }),
       );
     });
 
@@ -933,6 +957,7 @@ describe('PaymentService', () => {
       const create = jest.fn().mockResolvedValue({ id: 'cs_3', url: 'https://stripe.test/cs_3' });
       (service as any).stripe = {
         customers: liveCustomers(),
+        prices: ourPrices(),
         checkout: { sessions: { create } },
         subscriptions: { list: jest.fn().mockRejectedValue(new Error('stripe down')) },
       };
@@ -941,7 +966,7 @@ describe('PaymentService', () => {
 
       // Fail closed — an outage must not become a free-trial dispenser.
       expect(create).toHaveBeenCalledWith(
-        expect.not.objectContaining({ subscription_data: expect.anything() }),
+        expect.objectContaining({ subscription_data: expect.not.objectContaining({ trial_period_days: expect.anything() }) }),
       );
     });
 
@@ -952,6 +977,7 @@ describe('PaymentService', () => {
       const create = jest.fn();
       (service as any).stripe = {
         customers: liveCustomers(),
+        prices: ourPrices(),
         checkout: { sessions: { create } },
         subscriptions: { list: jest.fn().mockResolvedValue({ data: [{ id: 'sub_old', status: 'canceled' }] }) },
       };
@@ -985,6 +1011,7 @@ describe('PaymentService', () => {
       const create = jest.fn().mockResolvedValue({ id: 'cs_paid', url: 'https://stripe.test/cs' });
       (service as any).stripe = {
         customers: liveCustomers(),
+        prices: ourPrices(),
         checkout: { sessions: { create } },
         subscriptions: { list: jest.fn().mockResolvedValue({ data: [{ id: 'sub_old' }] }) },
       };
@@ -997,7 +1024,7 @@ describe('PaymentService', () => {
       );
 
       expect(create).toHaveBeenCalledWith(
-        expect.not.objectContaining({ subscription_data: expect.anything() }),
+        expect.objectContaining({ subscription_data: expect.not.objectContaining({ trial_period_days: expect.anything() }) }),
       );
     });
   });
@@ -1011,6 +1038,7 @@ describe('PaymentService', () => {
       const list = jest.fn();
       (service as any).stripe = {
         customers: { ...liveCustomers(), create: createCustomer },
+        prices: ourPrices(),
         subscriptions: { list },
       };
 
@@ -1026,6 +1054,7 @@ describe('PaymentService', () => {
       const createCustomer = jest.fn();
       (service as any).stripe = {
         customers: { ...liveCustomers(), create: createCustomer },
+        prices: ourPrices(),
         subscriptions: { list: jest.fn().mockResolvedValue({ data: [{ id: 'sub_old' }] }) },
       };
 
@@ -1043,6 +1072,7 @@ describe('PaymentService', () => {
       });
       (service as any).stripe = {
         customers: liveCustomers(),
+        prices: ourPrices(),
         subscriptions: { list: jest.fn().mockRejectedValue(new Error('stripe down')) },
       };
 
@@ -1060,6 +1090,7 @@ describe('PaymentService', () => {
       const list = jest.fn();
       (service as any).stripe = {
         customers: liveCustomers(),
+        prices: ourPrices(),
         subscriptions: { list },
       };
 
@@ -1138,6 +1169,7 @@ describe('PaymentService', () => {
       const create = jest.fn().mockResolvedValue({ id: 'cs_1', url: 'https://stripe.test/cs_1' });
       (service as any).stripe = {
         customers: liveCustomers(),
+        prices: ourPrices(),
         checkout: { sessions: { create } },
         // Trial eligibility is now decided from the customer's Stripe
         // subscription history, not from our own stripeSubscriptionId field —
@@ -1149,7 +1181,9 @@ describe('PaymentService', () => {
       await service.createCheckoutSession('u-trial', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
 
       expect(create).toHaveBeenCalledWith(
-        expect.objectContaining({ subscription_data: { trial_period_days: TRIAL_PERIOD_DAYS } }),
+        expect.objectContaining({
+          subscription_data: expect.objectContaining({ trial_period_days: TRIAL_PERIOD_DAYS }),
+        }),
       );
       expect(usersService.updateSubscription).toHaveBeenCalledWith(
         'u-trial',
@@ -1169,13 +1203,14 @@ describe('PaymentService', () => {
       const list = jest.fn().mockResolvedValue({ data: [] });
       (service as any).stripe = {
         customers: liveCustomers(),
+        prices: ourPrices(),
         checkout: { sessions: { create } },
         subscriptions: { list },
       };
 
       await service.createCheckoutSession('u-flag', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
 
-      expect(create.mock.calls[0][0].subscription_data).toBeUndefined();
+      expect(create.mock.calls[0][0].subscription_data.trial_period_days).toBeUndefined();
       expect(list).not.toHaveBeenCalled();
     });
 
@@ -1187,6 +1222,7 @@ describe('PaymentService', () => {
       const list = jest.fn().mockResolvedValue({ data: [] });
       (service as any).stripe = {
         customers: liveCustomers(),
+        prices: ourPrices(),
         checkout: { sessions: { create } },
         subscriptions: { list },
       };
@@ -1198,7 +1234,7 @@ describe('PaymentService', () => {
         'http://cancel',
       );
 
-      expect(create.mock.calls[0][0].subscription_data).toBeUndefined();
+      expect(create.mock.calls[0][0].subscription_data.trial_period_days).toBeUndefined();
       expect(list).not.toHaveBeenCalled();
     });
 
@@ -1207,11 +1243,11 @@ describe('PaymentService', () => {
         subscription: { plan: SubscriptionPlan.FREE, stripeCustomerId: 'cus_r', stripeSubscriptionId: 'sub_old' },
       });
       const create = jest.fn().mockResolvedValue({ id: 'cs_2', url: 'x' });
-      (service as any).stripe = { customers: liveCustomers(), checkout: { sessions: { create } } };
+      (service as any).stripe = { customers: liveCustomers(), prices: ourPrices(), checkout: { sessions: { create } } };
 
       await service.createCheckoutSession('u-ret', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
 
-      expect(create.mock.calls[0][0].subscription_data).toBeUndefined();
+      expect(create.mock.calls[0][0].subscription_data.trial_period_days).toBeUndefined();
     });
 
     it('records a TRIALING subscription when a trial checkout is verified (no immediate payment)', async () => {

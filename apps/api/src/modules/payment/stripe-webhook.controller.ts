@@ -1,8 +1,8 @@
-import { Controller, Post, Req, Headers, HttpCode, HttpStatus, Logger, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Req, Headers, HttpCode, HttpStatus, Logger, BadRequestException, ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiTags } from '@nestjs/swagger';
 import { createHash } from 'node:crypto';
-import { PaymentService } from './payment.service';
+import { PaymentService, StripeEventInProgressError } from './payment.service';
 import { Request } from 'express';
 
 @ApiTags('webhooks')
@@ -104,9 +104,14 @@ export class StripeWebhookController {
     }
 
     try {
-      await this.paymentService.handleWebhookEvent(event);
-      return { received: true };
+      const outcome = await this.paymentService.handleWebhookEvent(event);
+      return { received: true, outcome };
     } catch (error) {
+      if (error instanceof StripeEventInProgressError) {
+        // Another delivery of this event is mid-flight. A non-2xx makes Stripe
+        // retry later instead of marking it delivered before it is applied.
+        throw new ConflictException(error.message);
+      }
       this.logger.error(`Webhook processing error: ${(error as Error).message}`, (error as Error).stack);
       throw new BadRequestException('Webhook processing failed');
     }

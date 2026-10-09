@@ -51,8 +51,10 @@ services:
       - WATSONX_API_KEY=${WATSONX_API_KEY}
       - WATSONX_PROJECT_ID=${WATSONX_PROJECT_ID}
       - WATSONX_URL=${WATSONX_URL}
+      - APP_ID=${APP_ID:-flacron-cv}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_PORTAL_CONFIGURATION_ID=${STRIPE_PORTAL_CONFIGURATION_ID}
       # The API reads MONTHLY/YEARLY price ids (config/configuration.ts);
       # STRIPE_PRO_PRICE_ID / STRIPE_ENTERPRISE_PRICE_ID were names nothing has
       # ever read, so annual and monthly checkout both fell back to the compiled

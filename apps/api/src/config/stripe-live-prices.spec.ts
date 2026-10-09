@@ -10,8 +10,11 @@ const ALL_SET = Object.fromEntries(
 ) as Record<string, string>;
 
 describe('stripe live price env', () => {
-  it('treats only the sk_live_ prefix as live (trimmed)', () => {
+  it('treats the sk_live_ and rk_live_ prefixes as live (trimmed)', () => {
     expect(isLiveStripeSecretKey('sk_live_x')).toBe(true);
+    expect(isLiveStripeSecretKey('rk_live_x')).toBe(true);
+    expect(isLiveStripeSecretKey('rk_test_x')).toBe(false);
+    expect(isLiveStripeSecretKey('pk_live_x')).toBe(false);
     expect(isLiveStripeSecretKey('  sk_live_x  ')).toBe(true);
     expect(isLiveStripeSecretKey('sk_test_x')).toBe(false);
     expect(isLiveStripeSecretKey('')).toBe(false);
@@ -28,6 +31,11 @@ describe('stripe live price env', () => {
 
   it('does not throw for a test secret even with no price env', () => {
     expect(() => assertLiveStripePricesConfigured('sk_test_x', {})).not.toThrow();
+  });
+
+  it('gates a live restricted key exactly like a live secret key', () => {
+    expect(() => assertLiveStripePricesConfigured('rk_live_x', {})).toThrow(/STRIPE_PRO_MONTHLY_PRICE_ID/);
+    expect(() => assertLiveStripePricesConfigured('rk_live_x', ALL_SET)).not.toThrow();
   });
 
   it('does not throw for a live secret when all four prices are set', () => {

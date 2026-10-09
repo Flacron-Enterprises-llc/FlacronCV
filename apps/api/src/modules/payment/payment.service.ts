@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, ConflictException, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { UsersService } from '../users/users.service';
@@ -7,22 +7,98 @@ import { AuditAction } from '../audit/audit-actions';
 import Stripe from 'stripe';
 import { SubscriptionPlan, SubscriptionStatus, BillingInterval, PLAN_CONFIGS, BillingInvoice, TRIAL_PERIOD_DAYS, YEARLY_BILLING_ENABLED, hasLiveStorePurchase, resolveEffectivePlan } from '@flacroncv/shared-types';
 import { isLiveStripeSecretKey } from '../../config/stripe-live-prices';
+import { APP_ID_METADATA_KEY, DEFAULT_APP_ID, stripeKeyMode } from '../../config/stripe-app';
+import { BillingLedgerService, EventOutcome } from './billing-ledger.service';
+import { LedgerPayment, LedgerSubscription, ledgerPaymentStatus } from './billing-ledger';
+
+/** The Stripe events this API acts on. Anything else is acknowledged and ignored. */
+const HANDLED_STRIPE_EVENTS: ReadonlySet<string> = new Set([
+  'checkout.session.completed',
+  'invoice.paid',
+  'invoice.payment_failed',
+  'customer.subscription.updated',
+  'customer.subscription.deleted',
+  'customer.subscription.paused',
+  'charge.refunded',
+  'charge.refund.updated',
+  'charge.dispute.created',
+]);
+
+/** Thrown when another delivery of the same event is mid-flight; Stripe retries. */
+export class StripeEventInProgressError extends Error {}
+
+type Metadata = Record<string, string>;
+
+function stripeId(value: string | { id: string } | null | undefined): string | null {
+  if (!value) return null;
+  return typeof value === 'string' ? value : value.id ?? null;
+}
+
+function fromUnix(seconds: number | null | undefined): Date | null {
+  return typeof seconds === 'number' && Number.isFinite(seconds) ? new Date(seconds * 1000) : null;
+}
 
 @Injectable()
 export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
   private stripe!: Stripe;
+  private readonly ledger: BillingLedgerService;
+
+  /** This application's id on the shared Flacron Stripe account. */
+  readonly appId: string;
+
+  /**
+   * Whether the configured key is live. Null when Stripe is not configured.
+   * Events and prices from the other mode are never applied.
+   */
+  readonly livemode: boolean | null;
+
+  /** Price ids already confirmed as ours, with the time the confirmation expires. */
+  private readonly verifiedPrices = new Map<string, number>();
 
   constructor(
     private configService: ConfigService,
     private firebaseAdmin: FirebaseAdminService,
     private usersService: UsersService,
     private audit: AuditService,
+    @Optional() ledger?: BillingLedgerService,
   ) {
     const secretKey = this.configService.get<string>('stripe.secretKey');
     if (secretKey) {
       this.stripe = new Stripe(secretKey, { apiVersion: '2024-04-10' as any });
     }
+    this.ledger = ledger ?? new BillingLedgerService(firebaseAdmin);
+    this.appId = this.configService.get<string>('stripe.appId') || DEFAULT_APP_ID;
+    const mode = stripeKeyMode(secretKey);
+    this.livemode = mode === null ? null : mode === 'live';
+  }
+
+  /**
+   * Metadata for every Stripe object this application creates: `app_id` makes
+   * the object attributable to FlacronCV on the shared account,
+   * `internal_user_id` ties it to our user. `firebaseUid` is the pre-standard
+   * spelling, kept because sessions and customers already in flight carry it.
+   */
+  private appMetadata(userId?: string | null, extra: Record<string, string | null | undefined> = {}): Metadata {
+    const metadata: Metadata = { [APP_ID_METADATA_KEY]: this.appId };
+    if (userId) {
+      metadata.internal_user_id = userId;
+      metadata.firebaseUid = userId;
+    }
+    for (const [key, value] of Object.entries(extra)) {
+      if (value) metadata[key] = value;
+    }
+    return metadata;
+  }
+
+  /** The `app_id` a Stripe object was stamped with, or null. */
+  private static appIdOf(obj: { metadata?: Stripe.Metadata | null } | null | undefined): string | null {
+    const value = obj?.metadata?.[APP_ID_METADATA_KEY];
+    return typeof value === 'string' && value.trim() ? value.trim() : null;
+  }
+
+  private objectLivemode(obj: { livemode?: boolean } | null | undefined): boolean {
+    return typeof obj?.livemode === 'boolean' ? obj.livemode : this.livemode ?? false;
   }
 
   /**
@@ -97,13 +173,30 @@ export class PaymentService {
    * for the user to recover, since nothing in the app ever cleared the id.
    */
   private async liveCustomerId(customerId: string | null | undefined): Promise<string | null> {
+    return (await this.liveCustomer(customerId))?.id ?? null;
+  }
+
+  /**
+   * {@link liveCustomerId}, returning the customer. A customer stamped with
+   * ANOTHER application's `app_id` is treated as unusable: on the shared
+   * account, reusing it would bill FlacronCV plans to another app's customer
+   * record and mix the two applications' revenue.
+   */
+  private async liveCustomer(customerId: string | null | undefined): Promise<Stripe.Customer | null> {
     if (!customerId) return null;
     try {
       const customer = await this.stripe.customers.retrieve(customerId);
       // A DELETED customer resolves successfully rather than throwing, and
       // then fails every call that references it. `deleted` is the only tell.
       if ((customer as Stripe.DeletedCustomer).deleted) return null;
-      return customer.id;
+      const owner = PaymentService.appIdOf(customer as Stripe.Customer);
+      if (owner && owner !== this.appId) {
+        this.logger.warn(
+          `Stored Stripe customer ${customerId} belongs to app_id ${owner}, not ${this.appId} — treating as unset.`,
+        );
+        return null;
+      }
+      return customer as Stripe.Customer;
     } catch (err) {
       if (PaymentService.isMissingResource(err)) {
         this.logger.warn(`Stored Stripe customer ${customerId} no longer exists — treating as unset.`);
@@ -273,15 +366,24 @@ export class PaymentService {
 
     // Resolve BEFORE the trial check below, so a replacement customer is the
     // one whose subscription history that check reads.
-    let customerId = await this.liveCustomerId(user.subscription?.stripeCustomerId);
+    await this.assertPriceIsOurs(priceId);
+
+    const existingCustomer = await this.liveCustomer(user.subscription?.stripeCustomerId);
+    let customerId = existingCustomer?.id ?? null;
+    if (existingCustomer && !PaymentService.appIdOf(existingCustomer)) {
+      // A customer created before the app_id standard: claim it for FlacronCV
+      // so the central dashboard can attribute it.
+      await this.stampCustomer(existingCustomer, userId, user.email);
+    }
     if (!customerId) {
       const customer = await this.stripe.customers.create({
         email: user.email,
         name: user.displayName,
-        metadata: { firebaseUid: userId },
+        metadata: this.appMetadata(userId),
       });
       customerId = customer.id;
       await this.usersService.updateSubscription(userId, { stripeCustomerId: customerId });
+      await this.recordCustomer(customer, userId, user.email);
     }
 
     // Trial is Pro-only. Enterprise is a paid plan from the first charge —
@@ -317,20 +419,24 @@ export class PaymentService {
         code: 'TRIAL_NOT_ELIGIBLE',
       });
     }
-    const subscriptionData = isFirstTimeSubscriber
-      ? { trial_period_days: TRIAL_PERIOD_DAYS }
-      : undefined;
+    // The same metadata on the session AND the subscription it creates, so
+    // every later invoice, payment and webhook can be attributed to FlacronCV.
+    const metadata = this.appMetadata(userId, { plan: selection.plan, interval });
 
     const session = await this.stripe.checkout.sessions.create({
       customer: customerId,
+      client_reference_id: userId,
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
       success_url: resolvedSuccessUrl,
       cancel_url: resolvedCancelUrl,
       allow_promotion_codes: true,
-      metadata: { firebaseUid: userId },
-      ...(subscriptionData ? { subscription_data: subscriptionData } : {}),
+      metadata,
+      subscription_data: {
+        metadata,
+        ...(isFirstTimeSubscriber ? { trial_period_days: TRIAL_PERIOD_DAYS } : {}),
+      },
     });
 
     if (isFirstTimeSubscriber) {
@@ -372,6 +478,14 @@ export class PaymentService {
     // Security: ensure this session belongs to this user
     if (session.metadata?.firebaseUid !== userId) {
       throw new BadRequestException('Session does not belong to this user');
+    }
+
+    // ...and to this application. Sessions from before the app_id standard
+    // carry no app_id and are still accepted on the user check above.
+    const sessionApp = PaymentService.appIdOf(session);
+    if (sessionApp && sessionApp !== this.appId) {
+      this.logger.warn(`Rejected session ${sessionId}: app_id ${sessionApp}, expected ${this.appId}`);
+      throw new BadRequestException('Session does not belong to this application');
     }
 
     // A trial checkout collects the card but takes NO immediate payment, so its
@@ -433,6 +547,7 @@ export class PaymentService {
 
     batch.set(db.collection('subscriptions').doc(subscription.id), {
       id: subscription.id,
+      applicationId: this.appId,
       userId,
       stripeCustomerId: session.customer as string,
       plan,
@@ -453,6 +568,7 @@ export class PaymentService {
     }, { merge: true });
 
     await batch.commit();
+    await this.ledger.upsertSubscription(this.toLedgerSubscription(subscription, userId));
     this.logger.log(`Session verified and plan applied for user ${userId}: ${plan} (${status})`);
 
     return { plan, status };
@@ -515,25 +631,88 @@ export class PaymentService {
       throw new BadRequestException('No active subscription found. Please subscribe to a plan first.');
     }
 
+    // FlacronCV's own portal configuration: the account default is shared by
+    // every Flacron app and would offer their plans as upgrade options.
+    const configuration = this.configService.get<string>('stripe.portalConfigurationId');
     const session = await this.stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: returnUrl,
+      ...(configuration ? { configuration } : {}),
     });
 
     return { url: session.url };
   }
 
-  async handleWebhookEvent(event: Stripe.Event) {
-    // Idempotency check
-    const eventDoc = await this.firebaseAdmin.firestore
-      .collection('payment_events')
-      .doc(event.id)
-      .get();
-    if (eventDoc.exists) {
+  /**
+   * Apply one signature-verified Stripe event, at most once.
+   *
+   * Every Flacron application shares one Stripe account, so this endpoint is
+   * sent the OTHER applications' events too. Arriving here proves nothing about
+   * ownership: an event is applied only when the Stripe object it concerns is
+   * stamped with this application's `app_id` and comes from the same mode
+   * (test/live) as our key. Anything else is logged, recorded with its outcome,
+   * and acknowledged without touching a user or a ledger row.
+   *
+   * Idempotency: the event id is claimed before processing and kept once done,
+   * so a redelivery is a no-op. A handler that throws releases the claim and
+   * the error surfaces as a 4xx/5xx, so Stripe's retry runs it again.
+   */
+  async handleWebhookEvent(event: Stripe.Event): Promise<EventOutcome | 'duplicate'> {
+    const claim = await this.ledger.claimEvent(event);
+    if (claim === 'duplicate') {
       this.logger.log(`Event ${event.id} already processed, skipping`);
-      return;
+      return 'duplicate';
+    }
+    if (claim === 'in_progress') {
+      throw new StripeEventInProgressError(`Event ${event.id} is already being processed`);
     }
 
+    const objectId = (event.data?.object as { id?: string } | undefined)?.id ?? null;
+    try {
+      let outcome: EventOutcome;
+      let applicationId: string | null = null;
+
+      if (typeof event.livemode === 'boolean' && this.livemode !== null && event.livemode !== this.livemode) {
+        outcome = 'mode_mismatch';
+        this.logger.error(
+          `Stripe event ${event.id} (${event.type}) is ${event.livemode ? 'live' : 'test'} mode but this ` +
+            `deployment's key is ${this.livemode ? 'live' : 'test'} — not applied.`,
+        );
+      } else if (!HANDLED_STRIPE_EVENTS.has(event.type)) {
+        outcome = 'ignored';
+        this.logger.log(`Unhandled event type: ${event.type}`);
+      } else {
+        applicationId = await this.attributeEvent(event);
+        if (applicationId === this.appId) {
+          await this.dispatch(event);
+          outcome = 'applied';
+        } else if (applicationId) {
+          outcome = 'app_mismatch';
+          this.logger.warn(
+            `app_id mismatch on ${event.type} ${event.id} (${objectId}): expected ${this.appId}, ` +
+              `received ${applicationId} — not applied`,
+          );
+        } else {
+          outcome = 'unattributed';
+          this.logger.log(
+            `No app_id on ${event.type} ${event.id} (${objectId}) — not attributable to ${this.appId}, not applied`,
+          );
+        }
+      }
+
+      await this.ledger.completeEvent(event.id, outcome, {
+        applicationId,
+        expectedApplicationId: this.appId,
+        objectId,
+      });
+      return outcome;
+    } catch (err) {
+      await this.ledger.releaseEvent(event.id);
+      throw err;
+    }
+  }
+
+  private async dispatch(event: Stripe.Event): Promise<void> {
     switch (event.type) {
       case 'checkout.session.completed':
         await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
@@ -553,33 +732,300 @@ export class PaymentService {
       case 'charge.refunded':
         await this.handleChargeRefunded(event.data.object as Stripe.Charge);
         break;
+      case 'charge.refund.updated':
+        await this.recordRefund(event.data.object as Stripe.Refund);
+        break;
       case 'charge.dispute.created':
         await this.handleDisputeCreated(event.data.object as Stripe.Dispute);
         break;
       case 'customer.subscription.paused':
         await this.handleSubscriptionPaused(event.data.object as Stripe.Subscription);
         break;
+    }
+  }
+
+  // ─── app_id attribution ──────────────────────────────────────────────────────
+
+  /**
+   * The `app_id` of the Stripe object an event concerns.
+   *
+   * Sessions and subscriptions carry it directly. Invoices, charges and refunds
+   * created by a subscription do not, so it is resolved through what they
+   * belong to: our own payment ledger first (no Stripe call), then the
+   * PaymentIntent we stamp on renewal, then the invoice's subscription.
+   */
+  private async attributeEvent(event: Stripe.Event): Promise<string | null> {
+    const obj = event.data.object as unknown;
+    switch (event.type) {
+      case 'checkout.session.completed':
+        return PaymentService.appIdOf(obj as Stripe.Checkout.Session);
+      case 'customer.subscription.updated':
+      case 'customer.subscription.deleted':
+      case 'customer.subscription.paused':
+        return PaymentService.appIdOf(obj as Stripe.Subscription);
+      case 'invoice.paid':
+      case 'invoice.payment_failed':
+        return this.invoiceAppId(obj as Stripe.Invoice);
+      case 'charge.refunded':
+        return this.chargeAppId(obj as Stripe.Charge);
+      case 'charge.refund.updated':
+        return this.refundAppId(obj as Stripe.Refund);
+      case 'charge.dispute.created': {
+        const chargeId = stripeId((obj as Stripe.Dispute).charge);
+        if (!chargeId) return null;
+        return this.chargeAppId(await this.stripe.charges.retrieve(chargeId));
+      }
       default:
-        this.logger.log(`Unhandled event type: ${event.type}`);
+        return null;
+    }
+  }
+
+  private async invoiceAppId(invoice: Stripe.Invoice): Promise<string | null> {
+    const fromInvoice =
+      PaymentService.appIdOf(invoice.subscription_details as { metadata?: Stripe.Metadata | null }) ??
+      PaymentService.appIdOf(
+        (invoice as unknown as { parent?: { subscription_details?: { metadata?: Stripe.Metadata } } }).parent
+          ?.subscription_details,
+      ) ??
+      PaymentService.appIdOf(invoice);
+    if (fromInvoice) return fromInvoice;
+    const subscriptionId = stripeId(invoice.subscription);
+    if (!subscriptionId) return null;
+    return PaymentService.appIdOf(await this.stripe.subscriptions.retrieve(subscriptionId));
+  }
+
+  private async paymentIntentAppId(paymentIntentId: string | null): Promise<string | null> {
+    if (!paymentIntentId) return null;
+    const known = await this.ledger.getPayment(paymentIntentId);
+    if (known?.application_id) return known.application_id;
+    return PaymentService.appIdOf(await this.stripe.paymentIntents.retrieve(paymentIntentId));
+  }
+
+  private async chargeAppId(charge: Stripe.Charge): Promise<string | null> {
+    const direct = PaymentService.appIdOf(charge) ?? (await this.paymentIntentAppId(stripeId(charge.payment_intent)));
+    if (direct) return direct;
+    const invoiceId = stripeId(charge.invoice);
+    if (!invoiceId) return null;
+    return this.invoiceAppId(await this.stripe.invoices.retrieve(invoiceId));
+  }
+
+  private async refundAppId(refund: Stripe.Refund): Promise<string | null> {
+    const direct = PaymentService.appIdOf(refund) ?? (await this.paymentIntentAppId(stripeId(refund.payment_intent)));
+    if (direct) return direct;
+    const chargeId = stripeId(refund.charge);
+    if (!chargeId) return null;
+    return this.chargeAppId(await this.stripe.charges.retrieve(chargeId));
+  }
+
+  /**
+   * Refuse to sell a price that is not FlacronCV's.
+   *
+   * On the shared account every application's prices resolve, so a mistyped
+   * or copied STRIPE_*_PRICE_ID would happily charge another application's
+   * plan. The price must be active, stamped with our `app_id`, and in the same
+   * mode as the key. Confirmations are cached briefly so checkout stays one
+   * extra round-trip at most.
+   */
+  private async assertPriceIsOurs(priceId: string): Promise<void> {
+    const cachedUntil = this.verifiedPrices.get(priceId);
+    if (cachedUntil && cachedUntil > Date.now()) return;
+
+    let price: Stripe.Price;
+    try {
+      price = await this.stripe.prices.retrieve(priceId);
+    } catch (err) {
+      if (PaymentService.isMissingResource(err)) {
+        this.logger.error(`Configured price ${priceId} does not exist in this Stripe account/mode`);
+        throw new BadRequestException('Unsupported plan selection.');
+      }
+      throw err;
     }
 
-    // Mark event as processed — expireAt causes Firestore TTL to auto-delete after 90 days
-    const processedAt = new Date();
-    const expireAt = new Date(processedAt.getTime() + 90 * 24 * 60 * 60 * 1000);
-    await this.firebaseAdmin.firestore.collection('payment_events').doc(event.id).set({
-      type: event.type,
-      processedAt,
-      expireAt,
-      data: JSON.parse(JSON.stringify(event.data.object)),
+    const owner = PaymentService.appIdOf(price);
+    const modeOk = this.livemode === null || price.livemode === this.livemode;
+    if (!price.active || owner !== this.appId || !modeOk) {
+      this.logger.error(
+        `Refusing price ${priceId}: active=${price.active} app_id=${owner ?? 'none'} ` +
+          `livemode=${price.livemode} (expected app_id=${this.appId}, livemode=${this.livemode})`,
+      );
+      throw new BadRequestException('Unsupported plan selection.');
+    }
+    this.verifiedPrices.set(priceId, Date.now() + 10 * 60 * 1000);
+  }
+
+  // ─── Ledger writes ───────────────────────────────────────────────────────────
+
+  private toLedgerSubscription(subscription: Stripe.Subscription, userId?: string | null): LedgerSubscription {
+    const item = subscription.items?.data?.[0];
+    const priceId = item?.price?.id ?? null;
+    const now = new Date();
+    return {
+      application_id: this.appId,
+      livemode: this.objectLivemode(subscription),
+      stripe_subscription_id: subscription.id,
+      stripe_customer_id: stripeId(subscription.customer) ?? '',
+      internal_user_id:
+        subscription.metadata?.internal_user_id || subscription.metadata?.firebaseUid || userId || null,
+      plan: priceId ? this.determinePlan(priceId) : SubscriptionPlan.FREE,
+      price_id: priceId,
+      interval: item?.price?.recurring?.interval ?? 'month',
+      status: subscription.status,
+      amount: (item?.price?.unit_amount ?? 0) * (item?.quantity ?? 1),
+      currency: subscription.currency ?? item?.price?.currency ?? 'usd',
+      current_period_end: fromUnix(subscription.current_period_end),
+      cancel_at_period_end: !!subscription.cancel_at_period_end,
+      canceled_at: fromUnix(subscription.canceled_at),
+      created_at: fromUnix(subscription.created) ?? now,
+      updated_at: now,
+    };
+  }
+
+  private async recordSubscription(subscription: Stripe.Subscription, userId?: string | null): Promise<void> {
+    if (!subscription?.id) return;
+    await this.ledger.upsertSubscription(this.toLedgerSubscription(subscription, userId));
+  }
+
+  private async recordCustomer(customer: Stripe.Customer, userId: string, email?: string | null): Promise<void> {
+    try {
+      await this.ledger.upsertCustomer({
+        application_id: this.appId,
+        livemode: this.objectLivemode(customer),
+        stripe_customer_id: customer.id,
+        internal_user_id: userId,
+        email: email ?? customer.email ?? null,
+        created_at: fromUnix(customer.created) ?? new Date(),
+        updated_at: new Date(),
+      });
+    } catch (err) {
+      // Checkout must not fail over the customer index; the customer is also
+      // reachable from every subscription and payment row.
+      this.logger.warn(`Could not record customer ${customer.id}: ${(err as Error).message}`);
+    }
+  }
+
+  /** Claim a pre-standard customer for FlacronCV. Best-effort: checkout continues either way. */
+  private async stampCustomer(customer: Stripe.Customer, userId: string, email?: string | null): Promise<void> {
+    try {
+      await this.stripe.customers.update(customer.id, {
+        metadata: { ...(customer.metadata ?? {}), ...this.appMetadata(userId) },
+      });
+      await this.recordCustomer(customer, userId, email);
+    } catch (err) {
+      this.logger.warn(`Could not stamp app_id on customer ${customer.id}: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * Record an invoice and the payment that settled (or failed to settle) it.
+   *
+   * Subscription Checkout cannot put metadata on the PaymentIntents Stripe
+   * creates for each invoice, so they are stamped here, on first sight. That
+   * makes every FlacronCV payment attributable in the Stripe Dashboard too,
+   * not only in our ledger.
+   */
+  private async recordInvoice(invoice: Stripe.Invoice, userId: string | null): Promise<void> {
+    const now = new Date();
+    const paymentIntentId = stripeId(invoice.payment_intent);
+    const subscriptionId = stripeId(invoice.subscription);
+    const customerId = stripeId(invoice.customer);
+
+    await this.ledger.upsertInvoice({
+      application_id: this.appId,
+      livemode: this.objectLivemode(invoice),
+      stripe_invoice_id: invoice.id,
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscriptionId,
+      payment_id: paymentIntentId,
+      status: invoice.status ?? 'open',
+      amount_due: invoice.amount_due ?? 0,
+      amount_paid: invoice.amount_paid ?? 0,
+      currency: invoice.currency ?? 'usd',
+      billing_reason: invoice.billing_reason ?? null,
+      created_at: fromUnix(invoice.created) ?? now,
+      updated_at: now,
+    });
+
+    // A $0 invoice (a trial start) has no PaymentIntent and moves no money.
+    if (!paymentIntentId) return;
+
+    let paymentIntent = await this.stripe.paymentIntents.retrieve(paymentIntentId);
+    const owner = PaymentService.appIdOf(paymentIntent);
+    if (owner && owner !== this.appId) {
+      this.logger.warn(`PaymentIntent ${paymentIntentId} on our invoice ${invoice.id} is stamped ${owner} — not recorded`);
+      return;
+    }
+    if (!owner) {
+      paymentIntent = await this.stripe.paymentIntents.update(paymentIntentId, {
+        metadata: {
+          ...(paymentIntent.metadata ?? {}),
+          ...this.appMetadata(userId, { stripe_invoice_id: invoice.id, stripe_subscription_id: subscriptionId }),
+        },
+      });
+    }
+
+    await this.recordPayment(paymentIntent, {
+      invoiceId: invoice.id,
+      subscriptionId,
+      customerId,
+      userId,
+    });
+  }
+
+  private async recordPayment(
+    paymentIntent: Stripe.PaymentIntent,
+    ctx: { invoiceId?: string | null; subscriptionId?: string | null; customerId?: string | null; userId?: string | null },
+  ): Promise<void> {
+    const now = new Date();
+    const status = ledgerPaymentStatus(paymentIntent.status);
+    const chargeId = stripeId(paymentIntent.latest_charge);
+    const existing = await this.ledger.getPayment(paymentIntent.id);
+    const row: LedgerPayment = {
+      application_id: this.appId,
+      livemode: this.objectLivemode(paymentIntent),
+      stripe_payment_id: paymentIntent.id,
+      customer_id: stripeId(paymentIntent.customer) ?? ctx.customerId ?? null,
+      internal_user_id:
+        paymentIntent.metadata?.internal_user_id || paymentIntent.metadata?.firebaseUid || ctx.userId || null,
+      stripe_charge_id: chargeId,
+      stripe_invoice_id: ctx.invoiceId ?? stripeId(paymentIntent.invoice) ?? null,
+      stripe_subscription_id: ctx.subscriptionId ?? null,
+      amount: status === 'succeeded' ? paymentIntent.amount_received ?? paymentIntent.amount : paymentIntent.amount,
+      amount_refunded: existing?.amount_refunded ?? 0,
+      currency: paymentIntent.currency ?? 'usd',
+      status,
+      failure_message: paymentIntent.last_payment_error?.message ?? null,
+      created_at: fromUnix(paymentIntent.created) ?? now,
+      updated_at: now,
+    };
+    await this.ledger.upsertPayment(row);
+  }
+
+  private async recordRefund(refund: Stripe.Refund): Promise<void> {
+    const now = new Date();
+    await this.ledger.upsertRefund({
+      application_id: this.appId,
+      livemode: this.objectLivemode(refund as unknown as { livemode?: boolean }),
+      stripe_refund_id: refund.id,
+      payment_id: stripeId(refund.payment_intent),
+      charge_id: stripeId(refund.charge),
+      amount: refund.amount,
+      currency: refund.currency ?? 'usd',
+      status: refund.status ?? 'pending',
+      reason: refund.reason ?? null,
+      created_at: fromUnix(refund.created) ?? now,
+      updated_at: now,
     });
   }
 
   private async handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-    const userId = session.metadata?.firebaseUid;
+    const userId = session.metadata?.firebaseUid || session.metadata?.internal_user_id || session.client_reference_id;
+    if (!session.subscription) return;
+
+    const subscription = await this.stripe.subscriptions.retrieve(stripeId(session.subscription)!);
+    await this.recordSubscription(subscription, userId);
     if (!userId) return;
     if (await this.skipStripeEntitlementWrite(userId)) return;
 
-    const subscription = await this.stripe.subscriptions.retrieve(session.subscription as string);
     const plan = this.determinePlan(subscription.items.data[0].price.id);
     const limits = PLAN_CONFIGS[plan].limits;
     const trial = this.extractTrial(subscription);
@@ -607,6 +1053,7 @@ export class PaymentService {
 
     batch.set(subscriptionRef, {
       id: subscription.id,
+      applicationId: this.appId,
       userId,
       stripeCustomerId: session.customer as string,
       plan,
@@ -641,9 +1088,12 @@ export class PaymentService {
   }
 
   private async handleInvoicePaid(invoice: Stripe.Invoice) {
+    const userId = await this.findUserByCustomerId(invoice.customer as string);
+    // The money is recorded whether or not a user still maps to the customer.
+    await this.recordInvoice(invoice, userId);
     if (!invoice.subscription) return;
     const sub = await this.stripe.subscriptions.retrieve(invoice.subscription as string);
-    const userId = await this.findUserByCustomerId(invoice.customer as string);
+    await this.recordSubscription(sub, userId);
     if (!userId) return;
     if (await this.skipStripeEntitlementWrite(userId)) return;
 
@@ -674,6 +1124,8 @@ export class PaymentService {
 
   private async handlePaymentFailed(invoice: Stripe.Invoice) {
     const userId = await this.findUserByCustomerId(invoice.customer as string);
+    // Recorded as a failed payment — counted, never summed as revenue.
+    await this.recordInvoice(invoice, userId);
     if (!userId) return;
     if (await this.skipStripeEntitlementWrite(userId)) return;
     await this.usersService.updateSubscription(userId, { status: SubscriptionStatus.PAST_DUE });
@@ -688,6 +1140,7 @@ export class PaymentService {
 
   private async handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     const userId = await this.findUserByCustomerId(subscription.customer as string);
+    await this.recordSubscription(subscription, userId);
     if (!userId) return;
     if (await this.skipStripeEntitlementWrite(userId)) return;
 
@@ -730,6 +1183,7 @@ export class PaymentService {
 
   private async handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     const userId = await this.findUserByCustomerId(subscription.customer as string);
+    await this.recordSubscription(subscription, userId);
     if (!userId) return;
 
     await this.applyDeletedSubscriptionWrite(
@@ -805,11 +1259,50 @@ export class PaymentService {
   }
 
   private async handleChargeRefunded(charge: Stripe.Charge) {
+    await this.recordChargeRefunds(charge);
     // Only a FULL refund revokes access; ignore partial refunds.
     if (!charge.refunded) return;
     const userId = await this.findUserByCustomerId(charge.customer as string);
     if (!userId) return;
     await this.revokeToFree(userId, 'refund');
+  }
+
+  /**
+   * Every refund on a charge, and the payment's refunded total. Refunds are
+   * listed rather than read off the event: since API 2022-11-15 a charge no
+   * longer embeds them.
+   */
+  private async recordChargeRefunds(charge: Stripe.Charge): Promise<void> {
+    const refunds = await this.stripe.refunds.list({ charge: charge.id, limit: 100 });
+    for (const refund of refunds.data) await this.recordRefund(refund);
+
+    const paymentIntentId = stripeId(charge.payment_intent);
+    if (!paymentIntentId) return;
+    const existing = await this.ledger.getPayment(paymentIntentId);
+    if (existing) {
+      await this.ledger.upsertPayment({ ...existing, amount_refunded: charge.amount_refunded ?? 0, updated_at: new Date() });
+      return;
+    }
+    // Paid before the ledger existed: record the payment from the charge so
+    // the refund has something to net against.
+    const now = new Date();
+    await this.ledger.upsertPayment({
+      application_id: this.appId,
+      livemode: this.objectLivemode(charge),
+      stripe_payment_id: paymentIntentId,
+      customer_id: stripeId(charge.customer),
+      internal_user_id: charge.metadata?.internal_user_id || null,
+      stripe_charge_id: charge.id,
+      stripe_invoice_id: stripeId(charge.invoice),
+      stripe_subscription_id: null,
+      amount: charge.amount_captured ?? charge.amount,
+      amount_refunded: charge.amount_refunded ?? 0,
+      currency: charge.currency ?? 'usd',
+      status: charge.status === 'succeeded' ? 'succeeded' : ledgerPaymentStatus(charge.status),
+      failure_message: charge.failure_message ?? null,
+      created_at: fromUnix(charge.created) ?? now,
+      updated_at: now,
+    });
   }
 
   private async handleDisputeCreated(dispute: Stripe.Dispute) {
@@ -831,6 +1324,7 @@ export class PaymentService {
 
   private async handleSubscriptionPaused(subscription: Stripe.Subscription) {
     const userId = await this.findUserByCustomerId(subscription.customer as string);
+    await this.recordSubscription(subscription, userId);
     if (!userId) return;
     await this.revokeToFree(userId, 'subscription paused');
   }

@@ -1,3 +1,5 @@
+import { resolveAppId } from './stripe-app';
+
 export default () => ({
   port: parseInt(process.env.PORT || '4000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -15,7 +17,13 @@ export default () => ({
   },
 
   stripe: {
-    secretKey: process.env.STRIPE_SECRET_KEY,
+    // This application's permanent id on the shared Flacron Stripe account.
+    // Stamped as `app_id` on every Stripe object and stored as
+    // `application_id` on every billing row. See config/stripe-app.ts.
+    appId: resolveAppId(),
+    // This app's OWN restricted key (rk_live_… / rk_test_…). Never shared
+    // with another Flacron application. Trimmed for the same reason as below.
+    secretKey: process.env.STRIPE_SECRET_KEY?.trim(),
     // Trimmed. A trailing space or stray carriage return in .env (or pasted
     // into a hosting dashboard's env editor) is invisible on screen but changes
     // the HMAC key, so every signature check fails with a mismatch error that
@@ -27,6 +35,10 @@ export default () => ({
       enterpriseMonthly: process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID,
       enterpriseYearly: process.env.STRIPE_ENTERPRISE_YEARLY_PRICE_ID,
     },
+    // FlacronCV's own Customer Portal configuration (bpc_…). The account's
+    // default portal is shared by every Flacron app, so without this a
+    // customer could be offered another application's plans.
+    portalConfigurationId: process.env.STRIPE_PORTAL_CONFIGURATION_ID?.trim() || undefined,
   },
 
   // Apple IAP + Google Play Billing. Optional at boot — Stripe must keep
