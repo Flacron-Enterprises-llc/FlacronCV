@@ -32,6 +32,7 @@ import { writeFileSync } from 'node:fs';
 
 const APP_ID = process.env.APP_ID?.trim() || 'flacron-cv';
 const API_VERSION = '2024-04-10';
+const WEBHOOK_API_VERSION = '2020-08-27';
 
 const PLANS = [
   { plan: 'pro', name: 'FlacronCV - Pro', monthly: 2999, yearly: 29999 },
@@ -214,7 +215,11 @@ if (typeof args.webhook === 'string') {
     const created = await stripe('POST', '/v1/webhook_endpoints', {
       url: args.webhook,
       enabled_events: WEBHOOK_EVENTS,
-      api_version: API_VERSION,
+      // The shared account allows only 3 distinct API versions across live
+      // endpoints; the Flacron apps standardise on 2020-08-27. PaymentService
+      // re-reads subscriptions/PaymentIntents with its own pinned version, so
+      // it does not depend on newer webhook payload fields.
+      api_version: typeof args['api-version'] === 'string' ? args['api-version'] : WEBHOOK_API_VERSION,
       description: `FlacronCV API (${mode})`,
       metadata: { app_id: APP_ID },
     });
