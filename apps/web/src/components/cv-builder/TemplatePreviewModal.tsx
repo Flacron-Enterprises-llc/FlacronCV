@@ -20,7 +20,7 @@ import React, { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { X, Lock, ArrowRight, Crown, Zap, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useRouter } from '@/i18n/routing';
-import type { CVLayout } from '@flacroncv/shared-types';
+import { SubscriptionPlan, type CVLayout } from '@flacroncv/shared-types';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import ClassicLayout   from './templates/ClassicLayout';
@@ -44,6 +44,8 @@ export interface TemplatePreviewModalProps {
   tierLabel?: string;
   /** If false AND isPro, the "Upgrade to Edit" wall is shown */
   userCanAccess: boolean;
+  /** Effective plan of the signed-in account, when known. */
+  viewerPlan?: SubscriptionPlan;
   onSelect: () => void;
 }
 
@@ -74,6 +76,7 @@ export default function TemplatePreviewModal({
   isPro,
   tierLabel = 'Pro',
   userCanAccess,
+  viewerPlan,
   onSelect,
 }: TemplatePreviewModalProps) {
   const router     = useRouter();
@@ -125,6 +128,7 @@ export default function TemplatePreviewModal({
   const TierIcon = tierLabel === 'Enterprise' ? Crown : tierLabel === 'Pro' ? Zap : Sparkles;
   // Display the tier via the shared common namespace; logic keeps the canonical label.
   const tierName = tCommon(tierLabel.toLowerCase());
+  const needsEnterprise = tierLabel === 'Enterprise' && viewerPlan === SubscriptionPlan.PRO;
 
   const PRO_PERKS = [
     t('benefit_exports'),
@@ -296,7 +300,7 @@ export default function TemplatePreviewModal({
                     router.push('/settings/billing');
                   }}
                 >
-                  {t('upgrade_to', { tier: tierName })}
+                  {needsEnterprise ? t('needs_enterprise') : t('upgrade_to', { tier: tierName })}
                 </Button>
                 <Button
                   variant="ghost"

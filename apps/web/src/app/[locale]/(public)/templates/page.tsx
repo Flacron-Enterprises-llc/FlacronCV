@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useLayoutEffect, useRef } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
@@ -113,8 +113,26 @@ const templateMeta: Record<string, { layout: CVLayout; color: string }> = {
 
 /* ─── Real template thumbnail ─── */
 
+const THUMB_PAGE_WIDTH = 794;
+
 function CVTemplateThumbnail({ slug }: { slug: string }) {
   const meta = templateMeta[slug];
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.33);
+
+  useLayoutEffect(() => {
+    const frame = frameRef.current?.parentElement;
+    if (!frame) return;
+    const apply = () => {
+      const width = frame.clientWidth;
+      if (width > 0) setScale(width / THUMB_PAGE_WIDTH);
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(frame);
+    return () => observer.disconnect();
+  }, []);
+
   if (!meta) return null;
 
   const cv       = buildSampleCV(meta.layout, meta.color);
@@ -131,18 +149,17 @@ function CVTemplateThumbnail({ slug }: { slug: string }) {
 
   return (
     <div
+      ref={frameRef}
       style={{
         position: 'absolute',
         top: 0,
         left: '50%',
-        width: '794px',
+        width: `${THUMB_PAGE_WIDTH}px`,
         transformOrigin: 'top center',
-        transform: 'translateX(-50%) scale(var(--thumb-scale, 0.33))',
+        transform: `translateX(-50%) scale(${scale})`,
         pointerEvents: 'none',
         userSelect: 'none',
       }}
-      // Responsive scale: matches grid breakpoints (xl=4col, lg=3col, sm=2col, 1col)
-      className="[--thumb-scale:0.44] sm:[--thumb-scale:0.60] lg:[--thumb-scale:0.45] xl:[--thumb-scale:0.34]"
     >
       <LayoutComponent cv={cv} sections={sections} />
     </div>
@@ -733,6 +750,7 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
           isPro={previewIsPro}
           tierLabel={previewTierLabel}
           userCanAccess={previewAccess}
+          viewerPlan={userPlan}
           onSelect={() => {
             setPreviewTemplate(null);
             handleUseTemplate(previewTemplate);

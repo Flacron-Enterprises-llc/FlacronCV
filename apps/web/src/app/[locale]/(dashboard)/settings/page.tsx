@@ -39,6 +39,7 @@ import { toast } from 'sonner';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { updateProfile } from 'firebase/auth';
 import { storage, auth } from '@/lib/firebase';
+import { fileToJpegBlob, ImageUploadError } from '@/lib/prepare-image-upload';
 
 export default function SettingsPage(): React.JSX.Element | null {
   const t = useTranslations('settings');
@@ -56,6 +57,7 @@ export default function SettingsPage(): React.JSX.Element | null {
   // Per-field messages for LinkedIn/GitHub/Website, shown under the input that
   // is actually wrong rather than as one generic "save failed" toast.
   const [linkErrors, setLinkErrors] = useState<Partial<Record<ProfileLinkField, string>>>({});
+  const [nameErrors, setNameErrors] = useState<{ firstName?: string; lastName?: string }>({});
 
   // Profile form state
   const [profile, setProfile] = useState<Partial<UserProfile>>({
@@ -221,33 +223,22 @@ export default function SettingsPage(): React.JSX.Element | null {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const ALLOWED = ['image/jpeg', 'image/png', 'image/webp'];
-    const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-
-    if (!ALLOWED.includes(file.type)) {
-      toast.error(t('avatar.invalidType'));
-      return;
-    }
-    if (file.size > MAX_BYTES) {
-      toast.error(t('avatar.tooLarge', { max: '5 MB' }));
-      return;
-    }
-
-    // Optimistic local preview
-    const localUrl = URL.createObjectURL(file);
-    setPreviewUrl(localUrl);
-
     if (!storage || !auth?.currentUser || !user) {
       toast.error(t('avatar.unavailable'));
-      setPreviewUrl(null);
       return;
     }
 
     setUploading(true);
+    let localUrl: string | null = null;
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}.${ext}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      // Downscale and convert before the 5 MB rule. The original camera file
+      // is often larger than that; the JPEG that is uploaded is not.
+      const blob = await fileToJpegBlob(file, 512);
+      localUrl = URL.createObjectURL(blob);
+      setPreviewUrl(localUrl);
+
+      const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}.jpg`);
+      const uploadTask = uploadBytesResumable(storageRef, blob, { contentType: 'image/jpeg' });
 
       const downloadURL = await new Promise<string>((resolve, reject) => {
         uploadTask.on('state_changed', null, reject, async () => {
@@ -266,9 +257,17 @@ export default function SettingsPage(): React.JSX.Element | null {
       setPreviewUrl(null);
 
       toast.success(t('avatar.updated'));
-    } catch (err: any) {
+    } catch (err: unknown) {
       setPreviewUrl(null);
-      toast.error(formatApiError(err, t('avatar.uploadFailed')));
+      if (err instanceof ImageUploadError && err.code === 'INVALID_TYPE') {
+        toast.error(t('avatar.invalidType'));
+      } else if (err instanceof ImageUploadError && err.code === 'TOO_LARGE') {
+        toast.error(t('avatar.tooLarge', { max: '5 MB' }));
+      } else if (err instanceof ImageUploadError) {
+        toast.error(t('avatar.uploadFailed'));
+      } else {
+        toast.error(formatApiError(err, t('avatar.uploadFailed')));
+      }
     } finally {
       setUploading(false);
       // Reset so the same file can be re-selected if needed
@@ -315,6 +314,9 @@ export default function SettingsPage(): React.JSX.Element | null {
   const handleProfileSave = () => {
     const errors: Partial<Record<ProfileLinkField, string>> = {};
     const normalized = { ...profile };
+    const nextNameErrors: { firstName?: string; lastName?: string } = {};
+    if (!profile.firstName?.trim()) nextNameErrors.firstName = t('profile.firstNameRequired');
+    if (!profile.lastName?.trim()) nextNameErrors.lastName = t('profile.lastNameRequired');
 
     (['linkedin', 'github', 'website'] as ProfileLinkField[]).forEach((field) => {
       const result = validateProfileLink(field, profile[field] ?? '');
@@ -323,6 +325,8 @@ export default function SettingsPage(): React.JSX.Element | null {
     });
 
     setLinkErrors(errors);
+    setNameErrors(nextNameErrors);
+    if (nextNameErrors.firstName || nextNameErrors.lastName) return;
     if (Object.keys(errors).length > 0) {
       toast.error(t('profile.fixLinks'));
       return;
@@ -413,7 +417,7 @@ export default function SettingsPage(): React.JSX.Element | null {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
               className="hidden"
               onChange={handleAvatarChange}
             />
@@ -447,14 +451,22 @@ export default function SettingsPage(): React.JSX.Element | null {
               id="firstName"
               label={t('profile.firstName')}
               value={profile.firstName}
-              onChange={(e) => setProfile((p) => ({ ...p, firstName: e.target.value }))}
+              onChange={(e) => {
+                setProfile((p) => ({ ...p, firstName: e.target.value }));
+                setNameErrors((errs) => ({ ...errs, firstName: undefined }));
+              }}
+              error={nameErrors.firstName}
               placeholder={t('profile.firstNamePlaceholder')}
             />
             <Input
               id="lastName"
               label={t('profile.lastName')}
               value={profile.lastName}
-              onChange={(e) => setProfile((p) => ({ ...p, lastName: e.target.value }))}
+              onChange={(e) => {
+                setProfile((p) => ({ ...p, lastName: e.target.value }));
+                setNameErrors((errs) => ({ ...errs, lastName: undefined }));
+              }}
+              error={nameErrors.lastName}
               placeholder={t('profile.lastNamePlaceholder')}
             />
           </div>

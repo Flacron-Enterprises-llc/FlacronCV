@@ -33,6 +33,15 @@ describe('User write DTOs (ValidationPipe)', () => {
     expect(result.pushNotifications).toBe(false);
   });
 
+  it('rejects a blank or whitespace-only name, and still accepts a name that was omitted', async () => {
+    await expectReject(UpdateUserDto, { profile: { firstName: '   ', lastName: 'Lovelace' } });
+    await expectReject(UpdateUserDto, { profile: { firstName: 'Ada', lastName: '' } });
+    const result = await transformBody(UpdateUserDto, { profile: { headline: 'Engineer' } });
+    expect(result.profile?.headline).toBe('Engineer');
+    expect(result.profile?.firstName).toBeUndefined();
+    expect(result.profile?.lastName).toBeUndefined();
+  });
+
   it('rejects unknown top-level and nested keys', async () => {
     await expectReject(UpdateUserDto, { role: 'admin' });
     await expectReject(UpdateUserDto, { profile: { firstName: 'Ada', twitter: 'x' } });

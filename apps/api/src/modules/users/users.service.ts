@@ -165,7 +165,8 @@ export class UsersService {
       Object.entries(data.profile).forEach(([key, value]) => {
         const max = UsersService.PROFILE_MAX_LENGTHS[key as keyof UserProfile];
         if (max === undefined) return; // unknown key — drop
-        const str = this.assertString(`profile.${key}`, value, max);
+        const nonBlank = key === 'firstName' || key === 'lastName';
+        const str = this.assertString(`profile.${key}`, value, max, nonBlank);
         // The link fields get the shared rule (right site, real URL, http/https
         // only) rather than just a length cap. Length alone let a GitHub URL
         // save into the LinkedIn field and ship onto a CV labelled LinkedIn.
@@ -195,9 +196,12 @@ export class UsersService {
     return this.findByIdOrThrow(uid);
   }
 
-  private assertString(field: string, value: unknown, maxLen: number): string {
+  private assertString(field: string, value: unknown, maxLen: number, nonBlank = false): string {
     if (typeof value !== 'string') {
       throw new BadRequestException(`${field} must be a string.`);
+    }
+    if (nonBlank && value.trim().length === 0) {
+      throw new BadRequestException(`${field} must not be blank.`);
     }
     if (value.length > maxLen) {
       throw new BadRequestException(`${field} must be at most ${maxLen} characters.`);

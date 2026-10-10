@@ -155,6 +155,32 @@ describe('resolveEffectivePlan', () => {
       ).toBe(SubscriptionPlan.PRO);
     });
 
+    it('Firestore admin JSON {_seconds, _nanoseconds} — handled', () => {
+      const future = {
+        _seconds: Math.floor(FUTURE.getTime() / 1000),
+        _nanoseconds: (FUTURE.getTime() % 1000) * 1e6,
+      };
+      expect(
+        resolveEffectivePlan(
+          { plan: SubscriptionPlan.PRO, status: SubscriptionStatus.PAST_DUE, currentPeriodEnd: future },
+          NOW,
+        ),
+      ).toBe(SubscriptionPlan.PRO);
+    });
+
+    it('malformed period end is unreadable and does not grant paid access', () => {
+      expect(
+        resolveEffectivePlan(
+          {
+            plan: SubscriptionPlan.PRO,
+            status: SubscriptionStatus.PAST_DUE,
+            currentPeriodEnd: { _seconds: 'yesterday', _nanoseconds: 'nope' } as never,
+          },
+          NOW,
+        ),
+      ).toBe(SubscriptionPlan.FREE);
+    });
+
     it('ISO string period end — handled', () => {
       expect(
         resolveEffectivePlan(

@@ -15,6 +15,13 @@ import * as Handlebars from 'handlebars';
 import * as path from 'path';
 import * as fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  allowPrintSubresource,
+  safeColor,
+  safeFontFamily,
+  safeFontSize,
+  sanitizePrintHtml,
+} from './print-html';
 
 /** Cadence follows the plan: Free never resets, paid numeric caps are monthly. */
 export function exportLimitReachedMessage(
@@ -256,17 +263,7 @@ export class ExportService {
 
     try {
       const page = await browser.newPage();
-      // Harden against SSRF / injected-script execution: these print templates are
-      // fully self-contained (no external fonts/images/scripts), so disable JS and
-      // block every non-inline outbound request. This neutralizes injected markup
-      // such as <img src="http://169.254.169.254/…"> or <script>fetch(internal)</script>
-      // embedded in user-supplied CV / cover-letter fields.
-      await page.setJavaScriptEnabled(false);
-      await page.setRequestInterception(true);
-      page.on('request', (req: any) => {
-        if (req.url().startsWith('data:')) req.continue();
-        else req.abort();
-      });
+      await this.hardenPrintPage(page);
       await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
 
       const pdfBuffer = await page.pdf({
@@ -404,6 +401,20 @@ export class ExportService {
     return { downloadUrl: url, expiresAt: new Date(Date.now() + 60 * 60 * 1000) };
   }
 
+  /**
+   * JavaScript off, and no network except `data:`.
+   * The print HTML does not request font files; family names fall back to
+   * fonts already on the machine. HTML is allowlisted before this runs.
+   */
+  private async hardenPrintPage(page: any): Promise<void> {
+    await page.setJavaScriptEnabled(false);
+    await page.setRequestInterception(true);
+    page.on('request', (req: { url: () => string; continue: () => void; abort: () => void }) => {
+      if (allowPrintSubresource(req.url())) req.continue();
+      else req.abort();
+    });
+  }
+
   /** HTML-escape a plaintext value before interpolating it into a template. */
   private esc(v: unknown): string {
     return String(v ?? '')
@@ -420,15 +431,18 @@ export class ExportService {
       return template({ cv, sections });
     }
 
-    // Fallback inline template
+    // Fallback inline template. User text is escaped. Font and color are
+    // allowlisted so a styling value cannot close the <style> block.
+    const fontFamily = safeFontFamily(cv.styling?.fontFamily);
+    const primaryColor = safeColor(cv.styling?.primaryColor);
     return `<!DOCTYPE html>
 <html>
 <head>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: ${cv.styling.fontFamily}, sans-serif; color: #1a1a1a; line-height: 1.6; padding: 40px; }
-  h1 { color: ${cv.styling.primaryColor}; font-size: 28px; margin-bottom: 4px; }
-  h2 { color: ${cv.styling.primaryColor}; font-size: 18px; border-bottom: 2px solid ${cv.styling.primaryColor}; padding-bottom: 4px; margin: 20px 0 10px; }
+  body { font-family: ${fontFamily}, sans-serif; color: #1a1a1a; line-height: 1.6; padding: 40px; }
+  h1 { color: ${primaryColor}; font-size: 28px; margin-bottom: 4px; }
+  h2 { color: ${primaryColor}; font-size: 18px; border-bottom: 2px solid ${primaryColor}; padding-bottom: 4px; margin: 20px 0 10px; }
   .header { text-align: center; margin-bottom: 24px; }
   .headline { font-size: 16px; color: #555; margin-bottom: 8px; }
   .contact { font-size: 13px; color: #666; }
@@ -441,7 +455,7 @@ export class ExportService {
   .item-date { color: #888; font-size: 13px; }
   .item-desc { font-size: 14px; margin-top: 4px; }
   .skills-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-  .skill-tag { background: ${cv.styling.primaryColor}15; color: ${cv.styling.primaryColor}; padding: 4px 12px; border-radius: 4px; font-size: 13px; white-space: nowrap; }
+  .skill-tag { background: ${primaryColor}15; color: ${primaryColor}; padding: 4px 12px; border-radius: 4px; font-size: 13px; white-space: nowrap; }
   .skill-level { opacity: 0.7; font-size: 11px; }
 </style>
 </head>
@@ -504,17 +518,7 @@ export class ExportService {
 
     try {
       const page = await browser.newPage();
-      // Harden against SSRF / injected-script execution: these print templates are
-      // fully self-contained (no external fonts/images/scripts), so disable JS and
-      // block every non-inline outbound request. This neutralizes injected markup
-      // such as <img src="http://169.254.169.254/…"> or <script>fetch(internal)</script>
-      // embedded in user-supplied CV / cover-letter fields.
-      await page.setJavaScriptEnabled(false);
-      await page.setRequestInterception(true);
-      page.on('request', (req: any) => {
-        if (req.url().startsWith('data:')) req.continue();
-        else req.abort();
-      });
+      await this.hardenPrintPage(page);
       await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
 
       const pdfBuffer = await page.pdf({
@@ -644,6 +648,10 @@ export class ExportService {
       month: 'long',
       day: 'numeric'
     });
+    const fontFamily = safeFontFamily(coverLetter.styling?.fontFamily);
+    const fontSize = safeFontSize(coverLetter.styling?.fontSize);
+    const primaryColor = safeColor(coverLetter.styling?.primaryColor);
+    const content = sanitizePrintHtml(coverLetter.content);
 
     return `<!DOCTYPE html>
 <html>
@@ -651,16 +659,16 @@ export class ExportService {
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: ${coverLetter.styling.fontFamily}, sans-serif;
+    font-family: ${fontFamily}, sans-serif;
     color: #1a1a1a;
     line-height: 1.6;
     padding: 60px 80px;
-    font-size: ${coverLetter.styling.fontSize};
+    font-size: ${fontSize};
   }
   .date { text-align: right; margin-bottom: 24px; }
   .recipient { margin-bottom: 24px; }
   .recipient-line { margin-bottom: 4px; }
-  .subject { font-weight: 600; margin-bottom: 24px; color: ${coverLetter.styling.primaryColor}; }
+  .subject { font-weight: 600; margin-bottom: 24px; color: ${primaryColor}; }
   .content { margin-bottom: 24px; }
   .content p { margin-bottom: 16px; }
 </style>
@@ -676,7 +684,7 @@ export class ExportService {
   </div>
   ` : ''}
   ${coverLetter.jobTitle ? `<div class="subject">RE: ${this.esc(coverLetter.jobTitle)}</div>` : ''}
-  <div class="content">${coverLetter.content}</div>
+  <div class="content">${content}</div>
 </body>
 </html>`;
   }

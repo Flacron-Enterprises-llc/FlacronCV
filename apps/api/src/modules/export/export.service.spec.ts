@@ -205,4 +205,28 @@ describe('ExportService client export reserve / refund / confirm', () => {
       expect(await service.confirmClientExport('uid', reservationId!)).toBe('invalid');
     });
   });
+
+  describe('print HTML', () => {
+    it('allowlists cover-letter content and styling before Puppeteer sees them', () => {
+      const html = (service as unknown as { renderCoverLetterHTML: (cl: unknown) => string }).renderCoverLetterHTML({
+        styling: {
+          fontFamily: 'Inter</style><img src=http://169.254.169.254/>',
+          fontSize: '16px;}</style>',
+          primaryColor: '#2563eb',
+        },
+        content:
+          '<p>Hi</p><script>fetch("http://169.254.169.254/")</script><img src="http://169.254.169.254/">',
+        recipientName: 'A</script>',
+        companyName: '',
+        jobTitle: '',
+      });
+      expect(html).toContain('<p>Hi</p>');
+      expect(html).toContain('font-family: Inter,');
+      expect(html).toContain('font-size: 16px');
+      expect(html).toContain('A&lt;/script&gt;');
+      expect(html).not.toContain('<script');
+      expect(html).not.toContain('<img');
+      expect(html).not.toContain('169.254');
+    });
+  });
 });

@@ -159,6 +159,24 @@ describe('UsersService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it('rejects a blank or whitespace-only first or last name with 400', async () => {
+      await service.create({ uid: 'v-name', email: 'name@b.com', displayName: 'Named User', photoURL: null });
+      await expect(
+        service.update('v-name', { profile: { firstName: '   ' } }),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.update('v-name', { profile: { lastName: '' } }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('saves other profile fields when the stored name is already blank and the name is omitted', async () => {
+      await service.create({ uid: 'v-blank', email: 'blank@b.com', displayName: '', photoURL: null });
+      const updated = await service.update('v-blank', { profile: { headline: 'Engineer' } });
+      expect(updated.profile.headline).toBe('Engineer');
+      expect(updated.profile.firstName).toBe('');
+      expect(updated.profile.lastName).toBe('');
+    });
+
     it('rejects an over-length bio with 400', async () => {
       await service.create({ uid: 'v-3', email: 'v3@b.com', displayName: 'V3', photoURL: null });
       await expect(

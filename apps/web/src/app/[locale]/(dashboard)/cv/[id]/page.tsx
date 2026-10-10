@@ -105,6 +105,10 @@ export default function CVBuilderPage(): React.JSX.Element | null {
 
     return () => {
       clearTimeout(saveTimerRef.current);
+      if (saveErrorToastRef.current !== undefined) {
+        toast.dismiss(saveErrorToastRef.current);
+        saveErrorToastRef.current = undefined;
+      }
 
       // Read current state synchronously — safe to call outside React render
       const {

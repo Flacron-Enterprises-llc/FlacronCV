@@ -437,6 +437,25 @@ reserve/confirm/refund). `useExport` alerts on POST failure, non-200 download,
 and no share sheet. Cover letter export uses `canExport` like CV. Limit copy
 is `exportLimitReachedMessage()` (S1). Usage is incremented on the server
 before the signed URL is returned; a failed client download is not refunded.
+Those Puppeteer pages keep JavaScript off and abort every subresource that
+is not `data:` (the HTML names font families; it does not fetch font files).
+Cover-letter body HTML and the font/color/size values are allowlisted before
+`setContent`. Web PDF/DOCX still renders in the browser.
+
+**Web cover-letter draft (2026-10-10).** A generated letter on
+`/cover-letters/new` is written to `localStorage` as soon as
+`POST /ai/cover-letter` returns, and restored if the tab was closed. It is
+cleared on save or discard. The editor writes `cl_backup_${id}` before each
+PUT, restores it when newer than the server letter, and clears it only after
+a successful save.
+
+**Web QA batch 2 (2026-10-10).** The CV editor dismisses its infinite autosave
+toast on unmount. Avatar and CV photo uploads are downscaled to JPEG before
+the 5 MB storage rule. Signed-in paid visitors on pricing go to
+`/settings/billing`. A Pro account looking at an Enterprise template sees
+`template_picker.needs_enterprise`. The cover-letter toolbar wraps so Export
+stays on screen at phone width. Public template thumbnails scale from the
+card width (`ResizeObserver`), not a CSS variable inside `transform`.
 
 **CV editor persistence (E1–E5, E7, 2026-08-26).** Mobile `CVWizard` save matches
 web autosave: `PUT /cvs/:id` with `{ title, personalInfo, styling, sectionOrder }`,
@@ -829,6 +848,9 @@ logged as `still-active` / `retrieve-failed` / `no-subscription-id` (uid only;
 never email or subscription id). Query is `cancelAtPeriodEnd == true` only; no
 composite index. Do not treat a stale `currentPeriodEnd` on an *uncancelled*
 active sub as expired. Do not push the entitlement change without this job.
+`coerceDate` accepts a Date, an ISO string, epoch millis, `{seconds}`, and the
+admin JSON `{_seconds,_nanoseconds}`. Any other shape is unreadable and fails
+safe to Free when the period is what the gate is checking.
 
 **17. Mobile IAP verify is store-authoritative and does not touch Stripe handlers.**
 `POST /api/v1/billing/mobile/verify` (`MobileBillingService`) requires a Firebase

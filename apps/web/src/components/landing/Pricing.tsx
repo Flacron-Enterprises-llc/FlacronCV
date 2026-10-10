@@ -58,23 +58,14 @@ export default function Pricing() {
   // Resolve the CTA destination based on auth state so logged-in users never
   // bounce through /register on their way to the app.
   //
-  //   not signed in            → /register
-  //   signed in, Free plan     → /dashboard for Free, /settings/billing to buy
-  //   signed in, already PAID  → /contact-us
-  //
-  // That last case matters: /settings/billing only renders its upgrade cards
-  // when the visitor is on the Free plan (the page gates them behind
-  // `isFreePlan`, because a paid subscriber changes plan through the Stripe
-  // portal). Sending a Pro subscriber there from an "Upgrade" button under
-  // Enterprise dropped them on a page with no Enterprise card and no way to
-  // buy it — a dead end. Until in-app plan switching exists for paid users,
-  // routing them to a human is the honest destination.
-  const isPaidSubscriber = !!user && user.subscription?.plan !== SubscriptionPlan.FREE;
-
+  //   not signed in        → /register
+  //   signed in, Free plan → /dashboard for Free, /settings/billing to buy
+  //   signed in, paid      → /settings/billing (portal for a plan change,
+  //                          including yearly)
   const planCtaHref = (key: SubscriptionPlan): string => {
     if (!user) return '/register';
     if (key === SubscriptionPlan.FREE) return '/dashboard';
-    return isPaidSubscriber ? '/contact-us' : '/settings/billing';
+    return '/settings/billing';
   };
 
   // Shown plans come from the shared visibility rule, so this page and the

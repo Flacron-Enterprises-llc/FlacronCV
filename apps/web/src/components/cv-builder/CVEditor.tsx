@@ -43,10 +43,8 @@ import { useState, useRef } from 'react';
 import { CVSection, CVSectionType, CVSectionItem, SkillLevel } from '@flacroncv/shared-types';
 import { cn } from '@/lib/utils';
 import { uploadCvPhotoBlob } from '@/lib/upload-cv-photo';
+import { fileToJpegBlob, ImageUploadError } from '@/lib/prepare-image-upload';
 import AISummaryModal from './AISummaryModal';
-
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
@@ -63,75 +61,35 @@ export default function CVEditor() {
     e.target.value = '';
     if (!file) return;
 
-    // Validate MIME type (primary check — not spoofable via rename)
-    if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(file.type)) {
-      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'unknown';
-      const msg = t('photo_invalid', { ext });
-      setPhotoError(msg);
-      toast.error(msg);
-      return;
-    }
-
-    // Validate file size
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-      const msg = t('photo_too_large', { size: sizeMB });
-      setPhotoError(msg);
-      toast.error(msg);
-      return;
-    }
-
     setPhotoError(null);
     setPhotoUploading(true);
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const dataUrl = evt.target?.result as string;
-      const img = new Image();
-      img.onload = () => {
-        const MAX = 400;
-        const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
-        const canvas = document.createElement('canvas');
-        canvas.width  = Math.round(img.width  * ratio);
-        canvas.height = Math.round(img.height * ratio);
-        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob(
-          (blob) => {
-            void (async () => {
-              try {
-                if (!blob) throw new Error('PHOTO_READ_FAILED');
-                const downloadURL = await uploadCvPhotoBlob(blob, 'jpg');
-                updatePersonalInfo('photoURL', downloadURL);
-                updateStyling('showPhoto', true);
-              } catch (err) {
-                const code = err instanceof Error ? err.message : '';
-                const msg = t(code === 'PHOTO_UNAVAILABLE' ? 'photo_unavailable' : 'photo_upload_failed');
-                setPhotoError(msg);
-                toast.error(msg);
-              } finally {
-                setPhotoUploading(false);
-              }
-            })();
-          },
-          'image/jpeg',
-          0.88,
-        );
-      };
-      img.onerror = () => {
-        const msg = t('photo_upload_failed');
+    void (async () => {
+      try {
+        // Downscale and convert before the 5 MB rule. The original camera
+        // file is often larger than that; the JPEG that is uploaded is not.
+        const blob = await fileToJpegBlob(file, 400);
+        const downloadURL = await uploadCvPhotoBlob(blob, 'jpg');
+        updatePersonalInfo('photoURL', downloadURL);
+        updateStyling('showPhoto', true);
+      } catch (err) {
+        const ext = file.name.split('.').pop()?.toLowerCase() ?? 'unknown';
+        const code = err instanceof ImageUploadError
+          ? err.code
+          : err instanceof Error
+            ? err.message
+            : '';
+        const msg = code === 'INVALID_TYPE'
+          ? t('photo_invalid', { ext })
+          : code === 'TOO_LARGE'
+            ? t('photo_too_large', { size: err instanceof ImageUploadError && err.sizeMb ? err.sizeMb : '5' })
+            : t(code === 'PHOTO_UNAVAILABLE' ? 'photo_unavailable' : 'photo_upload_failed');
         setPhotoError(msg);
         toast.error(msg);
+      } finally {
         setPhotoUploading(false);
-      };
-      img.src = dataUrl;
-    };
-    reader.onerror = () => {
-      const msg = t('photo_upload_failed');
-      setPhotoError(msg);
-      toast.error(msg);
-      setPhotoUploading(false);
-    };
-    reader.readAsDataURL(file);
+      }
+    })();
   };
 
   const removePhoto = () => {
@@ -246,7 +204,7 @@ export default function CVEditor() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
               className="hidden"
               onChange={handlePhotoChange}
               data-testid="photo-upload-input"

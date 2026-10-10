@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from '@/i18n/routing';
 import { useTranslations, useLocale } from 'next-intl';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -31,6 +31,52 @@ const LENGTHS = ['short', 'medium', 'long'] as const;
 
 type Tone = (typeof TONES)[number];
 type Length = (typeof LENGTHS)[number];
+
+/** Survives a refresh or a closed tab after the credit is spent, before save. */
+const GENERATED_DRAFT_KEY = 'cover_letter_generate_draft';
+
+interface StoredGeneratedDraft {
+  draft: string;
+  title: string;
+  recipientName: string;
+  companyName: string;
+  jobTitle: string;
+  jobDescription: string;
+  linkedCVId: string;
+  tone: Tone;
+  length: Length;
+}
+
+function readStoredGeneratedDraft(): StoredGeneratedDraft | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(GENERATED_DRAFT_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as Partial<StoredGeneratedDraft>;
+    if (typeof saved.draft !== 'string' || !saved.draft.trim()) return null;
+    return {
+      draft: saved.draft,
+      title: typeof saved.title === 'string' ? saved.title : '',
+      recipientName: typeof saved.recipientName === 'string' ? saved.recipientName : '',
+      companyName: typeof saved.companyName === 'string' ? saved.companyName : '',
+      jobTitle: typeof saved.jobTitle === 'string' ? saved.jobTitle : '',
+      jobDescription: typeof saved.jobDescription === 'string' ? saved.jobDescription : '',
+      linkedCVId: typeof saved.linkedCVId === 'string' ? saved.linkedCVId : '',
+      tone: TONES.includes(saved.tone as Tone) ? (saved.tone as Tone) : 'professional',
+      length: LENGTHS.includes(saved.length as Length) ? (saved.length as Length) : 'medium',
+    };
+  } catch {
+    return null;
+  }
+}
+
+function clearStoredGeneratedDraft(): void {
+  try {
+    localStorage.removeItem(GENERATED_DRAFT_KEY);
+  } catch {
+    /* private mode / quota */
+  }
+}
 
 interface CreateCoverLetterPayload {
   title: string;
@@ -75,15 +121,52 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
   const [linkedCVId, setLinkedCVId] = useState('');
   const [tone, setTone] = useState<Tone>('professional');
   const [length, setLength] = useState<Length>('medium');
-  // The generated letter, held on the client for review. Nothing is persisted
-  // and nothing is sent anywhere until the user explicitly saves it.
+  // The generated letter, held for review. Written to localStorage as soon as
+  // generation succeeds so a refresh or a closed tab does not throw away a spent credit.
   const [draft, setDraft] = useState<string | null>(null);
+  const draftRestored = useRef(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState<'ai_credits' | 'cover_letters'>('ai_credits');
 
   // If the blank create succeeded but writing the content back failed, reuse
   // the same document on retry instead of stacking duplicate cover letters.
   const createdIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (draftRestored.current) return;
+    draftRestored.current = true;
+    const saved = readStoredGeneratedDraft();
+    if (!saved) return;
+    setDraft(saved.draft);
+    setTitle(saved.title);
+    setRecipientName(saved.recipientName);
+    setCompanyName(saved.companyName);
+    setJobTitle(saved.jobTitle);
+    setJobDescription(saved.jobDescription);
+    setLinkedCVId(saved.linkedCVId);
+    setTone(saved.tone);
+    setLength(saved.length);
+  }, []);
+
+  useEffect(() => {
+    if (!draftRestored.current || draft === null) return;
+    try {
+      const payload: StoredGeneratedDraft = {
+        draft,
+        title,
+        recipientName,
+        companyName,
+        jobTitle,
+        jobDescription,
+        linkedCVId,
+        tone,
+        length,
+      };
+      localStorage.setItem(GENERATED_DRAFT_KEY, JSON.stringify(payload));
+    } catch {
+      /* private mode / quota — the in-memory draft still shows */
+    }
+  }, [draft, title, recipientName, companyName, jobTitle, jobDescription, linkedCVId, tone, length]);
 
   // Fetch existing CVs for the dropdown
   const { data: cvsData } = useQuery({
@@ -202,7 +285,24 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
         length: vars.length,
         language: LOCALE_LANGUAGE_NAMES[locale] || 'English',
       });
-      return result.content;
+      const text = result.content.trim();
+      try {
+        const payload: StoredGeneratedDraft = {
+          draft: text,
+          title,
+          recipientName,
+          companyName,
+          jobTitle,
+          jobDescription,
+          linkedCVId,
+          tone: vars.tone,
+          length: vars.length,
+        };
+        localStorage.setItem(GENERATED_DRAFT_KEY, JSON.stringify(payload));
+      } catch {
+        /* the review box still holds it until the next navigation */
+      }
+      return text;
     },
     onSuccess: (content) => {
       setDraft(content.trim());
@@ -237,6 +337,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
       return id;
     },
     onSuccess: (id) => {
+      clearStoredGeneratedDraft();
       toast.success(t('coverLetters.created'));
       track('cover_letter_created', { withAI: true });
       router.push(`/cover-letters/${id}`);
@@ -526,7 +627,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
           </Card>
         )}
 
-        {/* Review step — the draft lives only in the browser until saved. */}
+        {/* Review step — also in localStorage until the user saves or discards. */}
         {draft !== null && !generateMutation.isPending && (
           <Card className="border-brand-200 dark:border-brand-900">
             <h3 className="font-semibold text-stone-900 dark:text-white">
@@ -560,7 +661,10 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
               variant="ghost"
               type="button"
               disabled={busy}
-              onClick={() => setDraft(null)}
+              onClick={() => {
+                clearStoredGeneratedDraft();
+                setDraft(null);
+              }}
               icon={<X className="h-4 w-4" />}
             >
               {t('coverLetters.discard_draft')}

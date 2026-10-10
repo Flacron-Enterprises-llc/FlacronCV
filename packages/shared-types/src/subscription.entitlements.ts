@@ -51,7 +51,13 @@ export interface EntitlementSubscription {
     | Date
     | string
     | number
-    | { toDate?: () => Date; seconds?: number }
+    | {
+        toDate?: () => Date;
+        seconds?: number;
+        nanoseconds?: number;
+        _seconds?: number;
+        _nanoseconds?: number;
+      }
     | null;
 }
 
@@ -66,14 +72,21 @@ export const CANCEL_AT_PERIOD_END_GRACE_MS = 15 * 60 * 1000;
 
 /**
  * Coerce the many runtime shapes `currentPeriodEnd` can take — a JS Date, a
- * Firestore Timestamp (`.toDate()` / `.seconds`), an ISO string, epoch millis,
- * or null — into a Date, or null if it cannot be understood.
+ * Firestore Timestamp (`.toDate()`, `{seconds}`, or the admin JSON shape
+ * `{_seconds,_nanoseconds}`), an ISO string, epoch millis, or null — into a
+ * Date, or null if it cannot be understood.
  */
 function coerceDate(value: EntitlementSubscription['currentPeriodEnd']): Date | null {
   if (value == null) return null;
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
   if (typeof value === 'object') {
-    const ts = value as { toDate?: () => Date; seconds?: number };
+    const ts = value as {
+      toDate?: () => Date;
+      seconds?: number;
+      nanoseconds?: number;
+      _seconds?: number;
+      _nanoseconds?: number;
+    };
     if (typeof ts.toDate === 'function') {
       try {
         const d = ts.toDate();
@@ -82,8 +95,20 @@ function coerceDate(value: EntitlementSubscription['currentPeriodEnd']): Date | 
         return null;
       }
     }
-    if (typeof ts.seconds === 'number') return new Date(ts.seconds * 1000);
-    return null;
+    const seconds = typeof ts.seconds === 'number'
+      ? ts.seconds
+      : typeof ts._seconds === 'number'
+        ? ts._seconds
+        : null;
+    if (seconds == null || !Number.isFinite(seconds)) return null;
+    const nanos = typeof ts.nanoseconds === 'number'
+      ? ts.nanoseconds
+      : typeof ts._nanoseconds === 'number'
+        ? ts._nanoseconds
+        : 0;
+    const extraMs = Number.isFinite(nanos) ? Math.trunc(nanos / 1e6) : 0;
+    const d = new Date(seconds * 1000 + extraMs);
+    return Number.isNaN(d.getTime()) ? null : d;
   }
   if (typeof value === 'number') return Number.isNaN(value) ? null : new Date(value);
   if (typeof value === 'string') {

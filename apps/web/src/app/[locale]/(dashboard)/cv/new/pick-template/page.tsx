@@ -286,6 +286,7 @@ export default function PickTemplatePage(): React.JSX.Element | null {
                 isPro={isPro}
                 tierLabel={tierLabel}
                 userCanAccess={canUseTemplate(tmpl)}
+                viewerPlan={userPlan}
                 isCreating={creatingId === tmpl.id && createMutation.isPending}
                 isDisabled={createMutation.isPending}
                 onSelect={handleSelect}

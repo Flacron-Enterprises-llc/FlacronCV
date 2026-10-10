@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
@@ -12,11 +13,13 @@ import { Locale, Theme, UpdateUserData, UserPreferences, UserProfile } from '@fl
 export class UserProfileDto implements Partial<UserProfile> {
   @IsOptional()
   @IsString()
+  @Matches(/\S/, { message: 'firstName must not be blank.' })
   @MaxLength(100)
   firstName?: string;
 
   @IsOptional()
   @IsString()
+  @Matches(/\S/, { message: 'lastName must not be blank.' })
   @MaxLength(100)
   lastName?: string;
 

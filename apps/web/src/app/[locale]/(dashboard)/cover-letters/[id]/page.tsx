@@ -56,6 +56,44 @@ import StarterKit from '@tiptap/starter-kit';
 import UnderlineExtension from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 
+/** Shape written to localStorage before every save attempt. */
+interface CoverLetterBackup {
+  coverLetter: CoverLetter;
+  savedAt: number;
+}
+
+const backupKey = (id: string) => `cl_backup_${id}`;
+
+function toEpochMs(value: unknown): number {
+  if (!value) return 0;
+  if (typeof value === 'string' || typeof value === 'number') {
+    const t = new Date(value).getTime();
+    return Number.isNaN(t) ? 0 : t;
+  }
+  if (typeof value === 'object') {
+    const v = value as { _seconds?: number; seconds?: number };
+    const secs = v._seconds ?? v.seconds;
+    if (typeof secs === 'number') return secs * 1000;
+  }
+  return 0;
+}
+
+function writeBackup(id: string, backup: CoverLetterBackup) {
+  try {
+    localStorage.setItem(backupKey(id), JSON.stringify(backup));
+  } catch {
+    /* quota — the in-memory letter is unchanged */
+  }
+}
+
+function clearBackup(id: string) {
+  try {
+    localStorage.removeItem(backupKey(id));
+  } catch {
+    /* ignore */
+  }
+}
+
 export default function CoverLetterEditorPage(): React.JSX.Element | null {
   const t = useTranslations();
   const locale = useLocale();
@@ -92,12 +130,14 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     updateStyling,
     setSaving,
     setStatus,
+    setDirty,
     markSaved,
     reset,
   } = useCoverLetterStore();
 
   const saveTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const saveErrorToastRef = useRef<string | number | undefined>(undefined);
+  const serverLetterRef = useRef<CoverLetter | null>(null);
   // Bumped on each autosave failure to re-arm the save effect (same pattern as CV editor).
   const [retryTick, setRetryTick] = useState(0);
   const detailsAutoOpened = useRef(false);
@@ -121,10 +161,11 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
   // setCoverLetter. Tabbing away for a minute and returning therefore replaced
   // the in-progress draft with the server copy and reset the dirty flag, losing
   // unsaved edits with no warning.
-  const { isLoading, isError, refetch } = useQuery({
+  const { data: serverLetter, isLoading, isError, refetch } = useQuery({
     queryKey: ['cover-letter', coverLetterId],
     queryFn: async () => {
       const data = await api.get<CoverLetter>(`/cover-letters/${coverLetterId}`);
+      serverLetterRef.current = data;
       setCoverLetter(data);
       return data;
     },
@@ -162,15 +203,44 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     }
   }, [editor, coverLetter?.content]);
 
-  // Flush a pending unsaved change on unmount, then clear the store. Reads the
-  // latest state directly (safe outside render) so an edit made in the 2s
-  // autosave window isn't lost when navigating away.
+  // After the server letter loads, restore a newer device backup.
+  useEffect(() => {
+    if (!serverLetter) return;
+    try {
+      const raw = localStorage.getItem(backupKey(coverLetterId));
+      if (!raw) return;
+      const backup = JSON.parse(raw) as CoverLetterBackup;
+      const serverTs = toEpochMs(serverLetter.updatedAt);
+      if (!backup.coverLetter || serverTs === 0 || backup.savedAt <= serverTs) {
+        clearBackup(coverLetterId);
+        return;
+      }
+      setCoverLetter(backup.coverLetter);
+      setDirty(true);
+      toast(t('cv_builder.backup_restored'), {
+        duration: 6000,
+        action: {
+          label: t('cv_builder.backup_discard'),
+          onClick: () => {
+            if (serverLetterRef.current) setCoverLetter(serverLetterRef.current);
+            clearBackup(coverLetterId);
+          },
+        },
+      });
+    } catch {
+      clearBackup(coverLetterId);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coverLetterId, serverLetter]);
+
+  // Flush a pending unsaved change on unmount, then clear the store. The
+  // backup is written first so a failed leave-page PUT still survives refresh.
   useEffect(() => {
     return () => {
       clearTimeout(saveTimerRef.current);
       const { coverLetter: cl, isDirty: dirty } = useCoverLetterStore.getState();
       if (dirty && cl) {
-        // Fire-and-forget — the component is unmounting but the request continues.
+        writeBackup(coverLetterId, { coverLetter: cl, savedAt: Date.now() });
         api.put(`/cover-letters/${coverLetterId}`, {
           title: cl.title,
           templateId: cl.templateId,
@@ -182,7 +252,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
           jobDescription: cl.jobDescription,
           content: cl.content,
           styling: cl.styling,
-        }).catch(() => {});
+        }).then(() => clearBackup(coverLetterId)).catch(() => {});
       }
       reset();
     };
@@ -204,6 +274,8 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     const snapshot = useCoverLetterStore.getState().coverLetter;
     if (!snapshot || !useCoverLetterStore.getState().isDirty) return;
 
+    writeBackup(coverLetterId, { coverLetter: snapshot, savedAt: Date.now() });
+
     setSaving(true);
     try {
       const updateData: UpdateCoverLetterData = {
@@ -220,6 +292,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
       };
 
       await api.put(`/cover-letters/${coverLetterId}`, updateData);
+      clearBackup(coverLetterId);
       markSaved(snapshot);
 
       if (saveErrorToastRef.current !== undefined) {
@@ -529,9 +602,9 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col -m-4 sm:-m-6 lg:-m-8">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 bg-white px-4 py-2 dark:border-stone-700 dark:bg-stone-900">
-        <div className="flex items-center gap-3">
-          <Link href="/cover-letters">
+      <div className="flex flex-col gap-2 border-b border-stone-200 bg-white px-4 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between dark:border-stone-700 dark:bg-stone-900">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link href="/cover-letters" className="shrink-0">
             <button
               className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800"
               aria-label={t('coverLetters.back_to_list')}
@@ -543,18 +616,18 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
             type="text"
             value={coverLetter.title}
             onChange={(e) => updateField('title', e.target.value)}
-            className="border-none bg-transparent text-lg font-semibold text-stone-900 outline-none focus:ring-0 dark:text-white"
+            className="min-w-0 flex-1 truncate border-none bg-transparent text-lg font-semibold text-stone-900 outline-none focus:ring-0 dark:text-white"
             placeholder={t('coverLetters.untitled')}
             aria-label={t('coverLetters.title_label')}
           />
-          <Badge variant={coverLetter.status === CoverLetterStatus.FINAL ? 'success' : 'default'}>
+          <Badge variant={coverLetter.status === CoverLetterStatus.FINAL ? 'success' : 'default'} className="shrink-0">
             {coverLetter.status === CoverLetterStatus.FINAL
               ? t('coverLetters.status_final')
               : t('coverLetters.status_draft')}
           </Badge>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           {/* Save status */}
           <span className="flex items-center gap-1.5 text-xs text-stone-400">
             {isSaving ? (
@@ -734,7 +807,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
                   className="fixed inset-0 z-10"
                   onClick={() => setExportMenuOpen(false)}
                 />
-                <div className="absolute end-0 z-20 mt-1 w-72 rounded-lg border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-800">
+                <div className="absolute end-0 z-20 mt-1 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-800">
                   <div className="px-2 pt-2 pb-1">
                     <InAppWarning>
                       <strong className="block">{t('in_app_warnings.export_title')}</strong>

@@ -12,7 +12,7 @@
 > 4. Tick completed items here; log every change in the Change Log.
 > 5. Report Out-of-Scope / architectural items separately — do not implement without approval.
 
-Last updated: 2026-09-15
+Last updated: 2026-10-10
 
 > **Note on dates.** The header previously read `2026-07-29` while the two newest change-log
 > entries were dated `2026-07-30`; the header was stale, the entries were right. Corrected
@@ -1197,6 +1197,31 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-10-10 — **Entitlements and profile names.** `coerceDate` now reads
+  the Firestore admin JSON shape `{_seconds,_nanoseconds}` as well as
+  `.seconds` and ISO. A value that is not a real timestamp stays unreadable,
+  so a delinquent account still falls back to Free. The web profile form
+  requires a first and last name and shows the error on the field. `PUT
+  /users/me` rejects a blank or whitespace-only name when that field is sent,
+  and still accepts a payload that omits the name.
+
+- 2026-10-10 — **Web: pricing, photos, template paywall copy, editor chrome.**
+  Paid pricing CTAs go to `/settings/billing`. Avatar and CV photo files are
+  downscaled to JPEG before the 5 MB check. A Pro account sees “This template
+  needs Enterprise” on an Enterprise template. The CV autosave toast is
+  dismissed when the editor unmounts. Cover-letter Export wraps onto its own
+  row at phone width. Gallery thumbnails scale from measured card width.
+
+- 2026-10-10 — **Web/API: cover-letter PDF allowlist, generated-draft persistence, editor backup.**
+  Mobile still calls `POST /cover-letters/:id/export/pdf` and
+  `POST /cvs/:id/export/{pdf|docx}`, so those routes stay. Puppeteer already
+  ran with JavaScript off and non-`data:` requests aborted; print HTML now
+  allowlists the letter body and font/color/size before `setContent`. A
+  generated letter is stored in `localStorage` (`cover_letter_generate_draft`)
+  as soon as generation returns, and cleared on save or discard. The editor
+  writes `cl_backup_${id}` before save and on leave, and restores it when
+  newer than the server copy.
 
 - 2026-09-18 — **Mobile: one verification email path; clearer resend throttle.**
   Register no longer calls Firebase `sendEmailVerification` — only

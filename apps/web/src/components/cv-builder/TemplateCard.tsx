@@ -9,7 +9,7 @@ import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import CVThumbnail from '@/components/cv-builder/CVThumbnail';
 import TemplatePreviewModal from '@/components/cv-builder/TemplatePreviewModal';
-import type { CVLayout } from '@flacroncv/shared-types';
+import { SubscriptionPlan, type CVLayout } from '@flacroncv/shared-types';
 
 /* ─── Props ──────────────────────────────────────────────────────────────────── */
 
@@ -35,6 +35,8 @@ export interface TemplateCardProps {
   onSelect: (id: string) => void;
   /** Whether the current user's plan grants access to this template. */
   userCanAccess: boolean;
+  /** Effective plan of the signed-in account, when known. */
+  viewerPlan?: SubscriptionPlan;
 }
 
 /* ─── Component ──────────────────────────────────────────────────────────────── */
@@ -52,6 +54,7 @@ export default function TemplateCard({
   isDisabled = false,
   onSelect,
   userCanAccess,
+  viewerPlan,
 }: TemplateCardProps) {
   const t = useTranslations('template_picker');
   const tc = useTranslations('common');
@@ -63,6 +66,7 @@ export default function TemplateCard({
   const TierIcon = tierLabel === 'Enterprise' ? Crown : Zap;
   // Display the tier via the shared common namespace; logic keeps the canonical label.
   const tierName = tc(tierLabel.toLowerCase());
+  const needsEnterprise = tierLabel === 'Enterprise' && viewerPlan === SubscriptionPlan.PRO;
 
   const handleSelectClick = () => {
     if (isPro && !userCanAccess) {
@@ -185,6 +189,7 @@ export default function TemplateCard({
         isPro={isPro}
         tierLabel={tierLabel}
         userCanAccess={userCanAccess}
+        viewerPlan={viewerPlan}
         onSelect={() => handleSelectClick()}
       />
 
@@ -200,7 +205,7 @@ export default function TemplateCard({
           </div>
           <h3 className="text-xl font-bold text-stone-900 dark:text-white">{t('purchase_required')}</h3>
           <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
-            {t('purchase_desc', { name, tier: tierName })}
+            {needsEnterprise ? t('needs_enterprise') : t('purchase_desc', { name, tier: tierName })}
           </p>
           <ul className="mt-4 w-full space-y-2 rounded-xl border border-stone-100 bg-stone-50 px-4 py-3 text-start text-sm dark:border-stone-700 dark:bg-stone-800/60">
             {[
@@ -222,7 +227,7 @@ export default function TemplateCard({
               icon={<ArrowRight className="h-4 w-4" />}
               onClick={handleUpgrade}
             >
-              {t('upgrade_to', { tier: tierName })}
+              {needsEnterprise ? t('needs_enterprise') : t('upgrade_to', { tier: tierName })}
             </Button>
             <Button variant="ghost" className="w-full" onClick={() => setShowPaywall(false)}>
               {t('maybe_later')}
