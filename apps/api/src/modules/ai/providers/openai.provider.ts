@@ -44,25 +44,36 @@ export class OpenAIProvider implements IAIProvider {
 
     const start = Date.now();
 
-    const completion = await this.client.chat.completions.create({
-      model: options.model || 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a professional CV and cover letter writing assistant. Provide clear, concise, and impactful content.',
-        },
-        { role: 'user', content: prompt },
-      ],
-      max_tokens: options.maxTokens,
-      temperature: options.temperature,
-    });
+    try {
+      const completion = await this.client.chat.completions.create({
+        model: options.model || 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a professional CV and cover letter writing assistant. Provide clear, concise, and impactful content.',
+          },
+          { role: 'user', content: prompt },
+        ],
+        max_tokens: options.maxTokens,
+        temperature: options.temperature,
+      });
 
-    return {
-      content: completion.choices[0]?.message?.content || '',
-      provider: 'openai',
-      model: completion.model,
-      tokensUsed: completion.usage?.total_tokens || 0,
-      latencyMs: Date.now() - start,
-    };
+      return {
+        content: completion.choices[0]?.message?.content || '',
+        provider: 'openai',
+        model: completion.model,
+        tokensUsed: completion.usage?.total_tokens || 0,
+        latencyMs: Date.now() - start,
+      };
+    } catch (error) {
+      // Status, type, and code only. The message and body can echo the prompt
+      // or sit next to key material, so neither is written here.
+      const err = error as { status?: unknown; type?: unknown; code?: unknown };
+      const status = typeof err.status === 'number' ? String(err.status) : 'none';
+      const type = typeof err.type === 'string' && err.type ? err.type : 'none';
+      const code = typeof err.code === 'string' && err.code ? err.code : 'none';
+      this.logger.error(`OpenAI request failed status=${status} type=${type} code=${code}`);
+      throw error;
+    }
   }
 }

@@ -13,7 +13,9 @@ export default () => ({
   },
 
   openai: {
-    apiKey: process.env.OPENAI_API_KEY,
+    // Trimmed. A trailing space or newline pasted into the ECS console is
+    // invisible and makes every OpenAI call fail as a bad key.
+    apiKey: process.env.OPENAI_API_KEY?.trim(),
   },
 
   stripe: {

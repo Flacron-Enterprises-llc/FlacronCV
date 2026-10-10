@@ -1198,6 +1198,11 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 9. Change log (append newest at top)
 
+- 2026-10-10 — **OpenAI failures log status, type, and code.** `OPENAI_API_KEY`
+  is trimmed when configuration reads it. A rejected completion logs the HTTP
+  status and the OpenAI error type and code, and nothing from the key, the
+  body, or the prompt.
+
 - 2026-10-10 — **Entitlements and profile names.** `coerceDate` now reads
   the Firestore admin JSON shape `{_seconds,_nanoseconds}` as well as
   `.seconds` and ISO. A value that is not a real timestamp stays unreadable,
