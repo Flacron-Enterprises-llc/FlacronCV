@@ -21,6 +21,7 @@ import { useTranslations } from 'next-intl';
 import { X, Lock, ArrowRight, Crown, Zap, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useRouter } from '@/i18n/routing';
 import { SubscriptionPlan, type CVLayout } from '@flacroncv/shared-types';
+import { fcgeUpgradeClicked } from '@/lib/fcge';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import ClassicLayout   from './templates/ClassicLayout';
@@ -296,6 +297,7 @@ export default function TemplatePreviewModal({
                   className="w-full"
                   icon={<ArrowRight className="h-4 w-4" />}
                   onClick={() => {
+                    fcgeUpgradeClicked(tierLabel.toLowerCase());
                     onClose();
                     router.push('/settings/billing');
                   }}

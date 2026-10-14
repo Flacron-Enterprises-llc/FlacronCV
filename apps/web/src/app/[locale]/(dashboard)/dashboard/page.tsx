@@ -9,6 +9,7 @@ import { Link } from '@/i18n/routing';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { PLAN_CONFIGS, SubscriptionPlan, User } from '@flacroncv/shared-types';
+import { fcgeUpgradeClicked } from '@/lib/fcge';
 import {
   FileText,
   Mail,
@@ -272,7 +273,7 @@ export default function DashboardPage(): React.JSX.Element | null {
               <h3 className="text-lg font-bold">{t('upgrade_title')}</h3>
               <p className="mt-1 text-sm text-white/90">{t('upgrade_desc')}</p>
             </div>
-            <Link href="/settings/billing">
+            <Link href="/settings/billing" onClick={() => fcgeUpgradeClicked(SubscriptionPlan.PRO)}>
               <Button variant="secondary" className="whitespace-nowrap border-0 bg-white text-brand-700 hover:bg-brand-50">
                 {t('upgrade_cta')}
               </Button>

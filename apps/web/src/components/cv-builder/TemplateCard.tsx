@@ -10,6 +10,7 @@ import Modal from '@/components/ui/Modal';
 import CVThumbnail from '@/components/cv-builder/CVThumbnail';
 import TemplatePreviewModal from '@/components/cv-builder/TemplatePreviewModal';
 import { SubscriptionPlan, type CVLayout } from '@flacroncv/shared-types';
+import { fcgeUpgradeClicked } from '@/lib/fcge';
 
 /* ─── Props ──────────────────────────────────────────────────────────────────── */
 
@@ -77,6 +78,7 @@ export default function TemplateCard({
   };
 
   const handleUpgrade = () => {
+    fcgeUpgradeClicked(tierLabel.toLowerCase());
     setShowPaywall(false);
     router.push('/settings/billing');
   };

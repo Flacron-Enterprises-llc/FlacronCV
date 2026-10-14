@@ -18,6 +18,7 @@ import CompactLayout   from '@/components/cv-builder/templates/CompactLayout';
 import SlateGoldLayout from '@/components/cv-builder/templates/SlateGoldLayout';
 import { buildSampleCV, SAMPLE_SECTIONS } from '@/lib/previewSampleCV';
 import { localizedTemplateField, templateSearchHaystack } from '@/lib/localized-template';
+import { fcgeUpgradeClicked } from '@/lib/fcge';
 import {
   Lock,
   Star,
@@ -292,6 +293,7 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
     }
 
     if (!canUseTemplate(template)) {
+      fcgeUpgradeClicked(String(template.tier));
       toast.error(t('templates.upgradePlanMessage'));
       router.push('/settings/billing');
       return;

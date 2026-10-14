@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/providers/ThemeProvider';
 import { QueryProvider } from '@/providers/QueryProvider';
 import LoadingBar from '@/components/shared/LoadingBar';
 import CookieConsent from '@/components/shared/CookieConsent';
+import FcgeLoader from '@/components/shared/FcgeLoader';
 import AnalyticsProvider from '@/providers/AnalyticsProvider';
 import { Toaster } from 'sonner';
 import { SITE_URL } from '@/lib/seo';
@@ -103,6 +104,7 @@ export default async function LocaleLayout({
                   {children}
                   <Toaster position="bottom-right" richColors />
                   <CookieConsent />
+                  <FcgeLoader />
                 </AnalyticsProvider>
               </AuthProvider>
             </ThemeProvider>

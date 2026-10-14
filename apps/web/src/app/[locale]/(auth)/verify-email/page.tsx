@@ -11,6 +11,7 @@ import Button from '@/components/ui/Button';
 import { getPostLoginRedirect } from '@/lib/post-auth-redirect';
 import { currentUserRole } from '@/lib/current-user-role';
 import { track } from '@/lib/analytics';
+import { fcgeTrack } from '@/lib/fcge';
 
 export default function VerifyEmailPage(): React.JSX.Element | null {
   const t = useTranslations('auth');
@@ -38,6 +39,7 @@ export default function VerifyEmailPage(): React.JSX.Element | null {
       /* storage unavailable — still emit once this mount via the ref */
     }
     track('email_verified');
+    fcgeTrack('email_verified');
   }, []);
 
   useEffect(() => {

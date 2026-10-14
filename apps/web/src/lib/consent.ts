@@ -11,7 +11,9 @@
  *
  * The rule this module exists to enforce: a category must gate a real
  * technology. `PREFERENCE_STORAGE_KEYS` is the whole inventory for Preferences,
- * and `setAnalyticsConsent` is the whole gate for Analytics. Anything new that
+ * and `setAnalyticsConsent` is the whole gate for Analytics. FCGE uses that
+ * same flag (`lib/fcge.ts`); there is still no marketing-cookie category.
+ * Anything new that
  * writes to the browser belongs in one of these lists or under Strictly
  * Necessary — with a reason.
  */
@@ -53,6 +55,8 @@ export const PREFERENCE_STORAGE_KEYS = [
 
 /** Fired to reopen the preference centre from anywhere (e.g. the footer). */
 const OPEN_EVENT = 'flacroncv:consent-open';
+/** Fired after a decision is stored, so late acceptors can load gated scripts. */
+const CHANGE_EVENT = 'flacroncv:consent-change';
 
 export const ACCEPT_ALL: ConsentChoice = { preferences: true, analytics: true };
 export const REJECT_NON_ESSENTIAL: ConsentChoice = { preferences: false, analytics: false };
@@ -141,6 +145,10 @@ export function saveConsent(choice: ConsentChoice): ConsentRecord {
   setAnalyticsConsent(record.analytics);
   if (!record.preferences) clearPreferenceStorage();
 
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(CHANGE_EVENT));
+  }
+
   return record;
 }
 
@@ -165,6 +173,13 @@ export function syncConsentOnLoad(): void {
 export function openPreferences(): void {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new Event(OPEN_EVENT));
+}
+
+/** Subscribe to a saved consent decision. Returns an unsubscribe function. */
+export function onConsentChange(listener: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  window.addEventListener(CHANGE_EVENT, listener);
+  return () => window.removeEventListener(CHANGE_EVENT, listener);
 }
 
 /** Subscribe to {@link openPreferences}. Returns an unsubscribe function. */

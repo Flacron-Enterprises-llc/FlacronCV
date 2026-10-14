@@ -10,6 +10,7 @@ import { PLAN_CONFIGS, SubscriptionPlan } from '@flacroncv/shared-types';
 import { useAuth } from '@/providers/AuthProvider';
 import { localizedPlanFeatures } from '@/lib/plan-features';
 import { track } from '@/lib/analytics';
+import { fcgeUpgradeClicked } from '@/lib/fcge';
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -75,6 +76,7 @@ export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }:
   );
 
   const handleUpgrade = () => {
+    fcgeUpgradeClicked(SubscriptionPlan.PRO);
     onClose();
     router.push('/settings/billing');
   };

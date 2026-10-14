@@ -6,6 +6,7 @@ import { useCVStore } from '@/store/cv-store';
 import { useAuth } from '@/providers/AuthProvider';
 import { api, isAiCreditUnconfirmed } from '@/lib/api';
 import { track } from '@/lib/analytics';
+import { fcgeTrack } from '@/lib/fcge';
 import { serializeCVToText } from '@/lib/serializeCV';
 import { extractJsonObject } from '@/lib/ai-json';
 import { useModalA11y } from '@/hooks/useModalA11y';
@@ -118,6 +119,7 @@ export default function ATSCheckModal({ open, onClose }: ATSCheckModalProps) {
       }
       setResult(parsed);
       track('ai_generation', { feature: 'ats-check' });
+      fcgeTrack('feature_used', { feature: 'ats_check_run' });
       refreshUser();
     } catch (error) {
       const message = formatApiError(error, t('error'));

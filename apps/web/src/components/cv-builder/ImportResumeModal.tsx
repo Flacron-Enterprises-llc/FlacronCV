@@ -7,6 +7,7 @@ import { useModalA11y } from '@/hooks/useModalA11y';
 import { useAuth } from '@/providers/AuthProvider';
 import { api, isAiCreditUnconfirmed } from '@/lib/api';
 import { track } from '@/lib/analytics';
+import { fcgeTrack } from '@/lib/fcge';
 import { extractResumeText, ResumeExtractError, RESUME_UPLOAD_ACCEPT } from '@/lib/extractResumeText';
 import Button from '@/components/ui/Button';
 import UpgradeModal from '@/components/shared/UpgradeModal';
@@ -92,6 +93,7 @@ export default function ImportResumeModal({ open, onClose, title }: ImportResume
       sessionStorage.removeItem(DRAFT_KEY);
       refreshUser();
       track('cv_created', { source: 'import' });
+      fcgeTrack('feature_used', { feature: 'resume_created' });
       track('ai_generation', { feature: 'resume-import' });
       toast.success(t('success'));
       router.push(`/cv/${cv.id}`);

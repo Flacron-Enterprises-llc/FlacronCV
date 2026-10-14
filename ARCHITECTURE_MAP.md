@@ -274,6 +274,7 @@ session and must not delete the account.
 | `NEXT_PUBLIC_FIREBASE_API_KEY` / `_AUTH_DOMAIN` / `_PROJECT_ID` / `_STORAGE_BUCKET` / `_MESSAGING_SENDER_ID` / `_APP_ID` | Firebase client SDK | **required** — missing the prefix is the Amplify regression |
 | `NEXT_PUBLIC_ANALYTICS_PROVIDER` | Adapter key (default `ga4`) | optional |
 | `NEXT_PUBLIC_GA4_MEASUREMENT_ID` | GA4 id; analytics no-ops safely without it | optional |
+| `NEXT_PUBLIC_FCGE_APP_ID` / `_KEY` / `_ENDPOINT` | Flacron Growth Engine. All three must be set or the SDK never loads. Loads only after analytics consent, and not on `/admin` or `/crm`. | optional |
 | `NEXT_PUBLIC_USE_FIREBASE_EMULATOR` / `NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_URL` / `NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST` | Point the browser client at local emulators | local only |
 
 ---

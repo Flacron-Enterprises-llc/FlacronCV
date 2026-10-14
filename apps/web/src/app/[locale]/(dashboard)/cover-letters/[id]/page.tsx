@@ -9,6 +9,7 @@ import { Link, useRouter } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import { api, isAiCreditUnconfirmed } from '@/lib/api';
 import { track } from '@/lib/analytics';
+import { fcgeUpgradeClicked } from '@/lib/fcge';
 import { useCoverLetterStore } from '@/store/cover-letter-store';
 import { CoverLetter, UpdateCoverLetterData, CoverLetterStatus, SubscriptionPlan, PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
 import Button from '@/components/ui/Button';
@@ -711,6 +712,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
                           type="button"
                           onClick={() => {
                             if (locked) {
+                              fcgeUpgradeClicked(tmpl.tier);
                               setTemplateMenuOpen(false);
                               router.push('/settings/billing');
                               return;

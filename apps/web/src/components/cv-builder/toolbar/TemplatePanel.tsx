@@ -8,6 +8,7 @@ import { LayoutTemplate, X, ChevronDown, Lock } from 'lucide-react';
 import { useRouter } from '@/i18n/routing';
 import type { CVLayout, SectionStyle, BorderRadiusStyle } from '@flacroncv/shared-types';
 import { resolveEffectivePlan, CV_LAYOUT_TIER, canUseCvLayout } from '@flacroncv/shared-types';
+import { fcgeUpgradeClicked } from '@/lib/fcge';
 import CVThumbnail from '@/components/cv-builder/CVThumbnail';
 
 // ─── Layout cards ─────────────────────────────────────────────────────────────
@@ -130,6 +131,7 @@ export default function TemplatePanel() {
                         key={opt.key}
                         onClick={() => {
                           if (locked) {
+                            fcgeUpgradeClicked(CV_LAYOUT_TIER[opt.key]);
                             setOpen(false);
                             router.push('/settings/billing');
                             return;

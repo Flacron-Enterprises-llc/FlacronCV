@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
+import { fcgeTrack, fcgeUpgradeClicked } from '@/lib/fcge';
 import { toDate } from '@/lib/format-date';
 import { shouldClaimCheckoutSuccess } from '@/lib/checkout-verify';
 import { localizedPlanFeatures } from '@/lib/plan-features';
@@ -82,6 +83,9 @@ export default function BillingPage(): React.JSX.Element | null {
           setSyncSuccess(true);
           setSyncFailed(false);
           track('plan_upgraded');
+          if (res?.status === 'trialing') {
+            fcgeTrack('trial_started', { days: TRIAL_PERIOD_DAYS });
+          }
         } else {
           setSyncSuccess(false);
           setSyncFailed(true);
@@ -538,13 +542,14 @@ export default function BillingPage(): React.JSX.Element | null {
             </ul>
             <Button
               className="w-full"
-              onClick={() =>
+              onClick={() => {
+                fcgeUpgradeClicked(SubscriptionPlan.PRO);
                 checkoutMutation.mutate({
                   plan: SubscriptionPlan.PRO,
                   interval: billingInterval,
                   ...(trialEligible ? { expectTrial: true } : {}),
-                })
-              }
+                });
+              }}
               loading={checkoutMutation.isPending || proAwaitingEligibility}
               disabled={proAwaitingEligibility}
               icon={<Zap className="h-4 w-4" />}
@@ -593,9 +598,10 @@ export default function BillingPage(): React.JSX.Element | null {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() =>
-                checkoutMutation.mutate({ plan: SubscriptionPlan.CAREER_ACCELERATOR, interval: billingInterval })
-              }
+              onClick={() => {
+                fcgeUpgradeClicked(SubscriptionPlan.CAREER_ACCELERATOR);
+                checkoutMutation.mutate({ plan: SubscriptionPlan.CAREER_ACCELERATOR, interval: billingInterval });
+              }}
               loading={checkoutMutation.isPending}
               icon={<Sparkles className="h-4 w-4" />}
             >
@@ -636,7 +642,10 @@ export default function BillingPage(): React.JSX.Element | null {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => checkoutMutation.mutate({ plan: SubscriptionPlan.ENTERPRISE, interval: billingInterval })}
+              onClick={() => {
+                fcgeUpgradeClicked(SubscriptionPlan.ENTERPRISE);
+                checkoutMutation.mutate({ plan: SubscriptionPlan.ENTERPRISE, interval: billingInterval });
+              }}
               loading={checkoutMutation.isPending}
               icon={<Crown className="h-4 w-4" />}
             >
@@ -727,12 +736,13 @@ export default function BillingPage(): React.JSX.Element | null {
                   <Button
                     variant="outline"
                     className="mt-3 w-full"
-                    onClick={() =>
+                    onClick={() => {
+                      fcgeUpgradeClicked(SubscriptionPlan.PRO);
                       checkoutMutation.mutate({
                         plan: SubscriptionPlan.PRO,
                         interval: billingInterval,
-                      })
-                    }
+                      });
+                    }}
                     loading={checkoutMutation.isPending}
                     icon={<Zap className="h-4 w-4" />}
                   >

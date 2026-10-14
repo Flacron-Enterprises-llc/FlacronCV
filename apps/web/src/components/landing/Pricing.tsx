@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import { Check, ShieldCheck, Lock, Trash2, Zap } from 'lucide-react';
@@ -19,6 +19,8 @@ import { cn } from '@/lib/utils';
 import { useInView } from '@/hooks/useInView';
 import { useAuth } from '@/providers/AuthProvider';
 import { localizedPlanFeatures } from '@/lib/plan-features';
+import { fcgePricingVisited, fcgeUpgradeClicked } from '@/lib/fcge';
+import { onConsentChange } from '@/lib/consent';
 
 /** Per-plan presentation. Which of these actually render is decided by
  *  `customerFacingPlans()` — see the visibility rule in shared-types. */
@@ -54,6 +56,12 @@ export default function Pricing() {
   const { user } = useAuth();
   const [yearly, setYearly] = useState(false);
   const { ref: sectionRef, isInView } = useInView({ threshold: 0.1 });
+
+  useEffect(() => {
+    if (!isInView) return;
+    fcgePricingVisited();
+    return onConsentChange(() => fcgePricingVisited());
+  }, [isInView]);
 
   // Resolve the CTA destination based on auth state so logged-in users never
   // bounce through /register on their way to the app.
@@ -274,7 +282,12 @@ export default function Pricing() {
                   ))}
                 </ul>
 
-                <Link href={planCtaHref(key)}>
+                <Link
+                  href={planCtaHref(key)}
+                  onClick={() => {
+                    if (key !== SubscriptionPlan.FREE) fcgeUpgradeClicked(key);
+                  }}
+                >
                   <Button
                     variant={featured ? 'primary' : 'outline'}
                     className="w-full"

@@ -17,6 +17,7 @@ import GoogleIcon from '@/components/shared/GoogleIcon';
 import LegalAcceptanceModal, { legalDocLinks } from '@/components/auth/LegalAcceptanceModal';
 import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
+import { fcgeTrack } from '@/lib/fcge';
 
 type PendingSignup = 'password' | 'google' | null;
 
@@ -97,6 +98,7 @@ function RegisterForm(): React.JSX.Element {
       await register(email, password, name);
       await recordAcceptanceAfterSignup();
       track('sign_up', { method: 'password' });
+      fcgeTrack('user_registered');
       redirectHandled.current = true;
       router.push('/verify-email');
     } catch (error) {
@@ -113,6 +115,7 @@ function RegisterForm(): React.JSX.Element {
       if (auth?.currentUser) {
         await recordAcceptanceAfterSignup();
         track('sign_up', { method: 'google' });
+        fcgeTrack('user_registered');
         redirectHandled.current = true;
         router.push(getPostLoginRedirect(callbackUrl, await currentUserRole()));
       }

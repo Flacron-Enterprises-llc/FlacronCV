@@ -9,6 +9,7 @@ import InAppWarning from '@/components/shared/InAppWarning';
 import { api } from '@/lib/api';
 import { exportToPDF, exportToDocx, type DocxLabels } from '@/lib/export-cv';
 import { track } from '@/lib/analytics';
+import { fcgeTrack } from '@/lib/fcge';
 import {
   Undo2,
   Redo2,
@@ -89,6 +90,7 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
       }
       toast.success(t('export_success', { format: format.toUpperCase() }));
       track('cv_exported', { format });
+      fcgeTrack('feature_used', { feature: 'resume_exported' });
     } catch (error) {
       console.error('Export error:', error);
       if (reservationId) {

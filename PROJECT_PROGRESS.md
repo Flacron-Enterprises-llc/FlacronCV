@@ -12,7 +12,7 @@
 > 4. Tick completed items here; log every change in the Change Log.
 > 5. Report Out-of-Scope / architectural items separately — do not implement without approval.
 
-Last updated: 2026-10-10
+Last updated: 2026-10-14
 
 > **Note on dates.** The header previously read `2026-07-29` while the two newest change-log
 > entries were dated `2026-07-30`; the header was stale, the entries were right. Corrected
@@ -1197,6 +1197,14 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-10-14 — **Web: Flacron Growth Engine, consent-gated.** The SDK loads
+  from the locale layout only when `NEXT_PUBLIC_FCGE_APP_ID`, `_KEY`, and
+  `_ENDPOINT` are all set and the visitor has accepted analytics cookies.
+  It does not load on `/admin` or `/crm`. Identify uses the effective plan
+  and sends marketing consent only when `preferences.marketingEmails` is
+  true. `verify_url` is not sent. There is no web onboarding flow, so
+  `onboarding_completed` is not fired.
 
 - 2026-10-10 — **OpenAI failures log status, type, and code.** `OPENAI_API_KEY`
   is trimmed when configuration reads it. A rejected completion logs the HTTP

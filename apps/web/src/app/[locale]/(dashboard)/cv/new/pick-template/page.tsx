@@ -10,6 +10,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
+import { fcgeTrack, fcgeUpgradeClicked } from '@/lib/fcge';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { ArrowLeft, Lock, Zap, Crown } from 'lucide-react';
 import Button from '@/components/ui/Button';
@@ -124,6 +125,7 @@ export default function PickTemplatePage(): React.JSX.Element | null {
       sessionStorage.removeItem(DRAFT_KEY);
       toast.success(t('created_toast'));
       track('cv_created', { source: 'template' });
+      fcgeTrack('feature_used', { feature: 'resume_created' });
       router.push(`/cv/${cv.id}`);
     },
     onError: (error: Error) => {
@@ -203,7 +205,10 @@ export default function PickTemplatePage(): React.JSX.Element | null {
             size="sm"
             variant="outline"
             className="shrink-0 border-amber-400 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300"
-            onClick={() => router.push('/settings/billing')}
+            onClick={() => {
+              fcgeUpgradeClicked(SubscriptionPlan.PRO);
+              router.push('/settings/billing');
+            }}
           >
             {tc('upgrade')}
           </Button>
@@ -222,7 +227,10 @@ export default function PickTemplatePage(): React.JSX.Element | null {
             size="sm"
             variant="outline"
             className="shrink-0"
-            onClick={() => router.push('/settings/billing')}
+            onClick={() => {
+              fcgeUpgradeClicked(SubscriptionPlan.ENTERPRISE);
+              router.push('/settings/billing');
+            }}
           >
             <Crown className="me-1.5 h-3.5 w-3.5" />
             {t('go_enterprise')}
