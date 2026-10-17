@@ -114,7 +114,7 @@ describe('PaymentService', () => {
           plan: SubscriptionPlan.PRO,
           status: SubscriptionStatus.ACTIVE,
           originalTransactionId: 'orig-1',
-          currentPeriodEnd: new Date('2026-10-15T00:00:00.000Z'),
+          currentPeriodEnd: new Date(Date.now() + 30 * 86400000),
         },
       });
       await expect(
@@ -911,7 +911,7 @@ describe('PaymentService', () => {
           stripeCustomerId: 'cus_iap',
           stripeSubscriptionId: 'sub_lapsed',
           originalTransactionId: 'orig-1',
-          currentPeriodEnd: new Date('2026-10-15T00:00:00.000Z'),
+          currentPeriodEnd: new Date(Date.now() + 30 * 86400000),
         },
       });
 

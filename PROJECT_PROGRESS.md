@@ -1198,6 +1198,14 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 9. Change log (append newest at top)
 
+- 2026-10-17 — **API tests: store subscription and IAP test dates pinned dynamically.**
+  Fixed hardcoded `2026-10-15` dates in `mobile-billing.service.spec.ts`,
+  `payment.service.spec.ts`, and `store-webhook.service.spec.ts` that expired
+  and caused `BadRequestException ('This purchase is no longer active')` and
+  `hasLiveStorePurchase` regressions. Made future/past test dates relative to
+  `Date.now()` and increased Vitest `testTimeout` to 15s to prevent timeouts
+  during parallel turbo test runs.
+
 - 2026-10-17 — **Web: FCGE snippet, chat widget, and lifecycle events.** Added
   the Growth Engine initialization script and SDK loader directly in `<head>`
   of the root locale layout, and inserted the chat widget before `</body>`.

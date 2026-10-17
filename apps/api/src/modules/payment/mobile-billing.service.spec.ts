@@ -10,8 +10,8 @@ import { MobileBillingService } from './mobile-billing.service';
 import { InvalidStoreReceiptError, StoreNotConfiguredError } from './store-receipt-verifier';
 import { AuditAction } from '../audit/audit-actions';
 
-const FUTURE = new Date('2026-10-15T00:00:00.000Z');
-const PAST = new Date('2026-08-01T00:00:00.000Z');
+const FUTURE = new Date(Date.now() + 30 * 86400000);
+const PAST = new Date(Date.now() - 30 * 86400000);
 
 function makeConfig() {
   return {
@@ -288,7 +288,7 @@ describe('MobileBillingService.verify', () => {
       originalTransactionId: 'orig-1',
       currentPeriodEnd: PAST,
     });
-    const later = new Date('2026-11-01T00:00:00.000Z');
+    const later = new Date(Date.now() + 60 * 86400000);
     storeVerifier.verifyApple.mockResolvedValue({
       provider: BillingProvider.APPLE,
       productId: 'pro_yearly',

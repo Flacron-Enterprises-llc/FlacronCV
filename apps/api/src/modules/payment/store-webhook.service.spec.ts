@@ -7,7 +7,7 @@ import { GoogleRtdnUnauthorizedError } from './google-rtdn-auth';
 import { StoreUnavailableError } from './store-receipt-verifier';
 import { AuditAction } from '../audit/audit-actions';
 
-const FUTURE = new Date('2026-10-15T00:00:00.000Z');
+const FUTURE = new Date(Date.now() + 30 * 86400000);
 
 function jws(payload: unknown): string {
   return `hdr.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.sig`;
