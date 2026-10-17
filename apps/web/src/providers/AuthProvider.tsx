@@ -32,6 +32,7 @@ import { api } from '@/lib/api';
 import { User } from '@flacroncv/shared-types';
 import { retryPendingLegalAcceptance } from '@/lib/legal-acceptance';
 import { createInFlight } from '@/lib/in-flight';
+import { fcgeReset } from '@/lib/fcge';
 
 interface AuthContextType {
   firebaseUser: FirebaseUser | null;
@@ -301,6 +302,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // left to authenticate the call. Awaited but non-fatal: sign-out must
     // proceed even if the audit write fails.
     await api.post('/auth/logout').catch(() => {});
+    fcgeReset();
     await signOut(auth);
     setUser(null);
   };

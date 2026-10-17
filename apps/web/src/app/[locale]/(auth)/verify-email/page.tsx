@@ -40,6 +40,7 @@ export default function VerifyEmailPage(): React.JSX.Element | null {
     }
     track('email_verified');
     fcgeTrack('email_verified');
+    fcgeTrack('onboarding_completed');
   }, []);
 
   useEffect(() => {

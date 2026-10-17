@@ -1,5 +1,5 @@
 /* eslint-disable import/first -- vi.mock factories must run before the module under test */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const storage = new Map<string, string>();
 const scheduled: {
@@ -81,6 +81,30 @@ import {
   reconcileJobReminders,
   syncJobReminder,
 } from './job-reminders';
+
+/**
+ * Wall clock for every test that calls `new Date()` inside the scheduler.
+ * Local noon, built from components so UTC+5 and UTC agree on the calendar day.
+ * Follow-ups fire at 09:00 local, so "today" is already past and offsets start
+ * at tomorrow.
+ */
+const PINNED_NOW = new Date(2026, 0, 15, 12, 0, 0);
+
+function ymd(offsetDays: number): string {
+  const d = new Date(PINNED_NOW.getFullYear(), PINNED_NOW.getMonth(), PINNED_NOW.getDate() + offsetDays);
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+function ymdHm(offsetDays: number, hh: number, mm: number): string {
+  return `${ymd(offsetDays)}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+function pinClock(): void {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(PINNED_NOW);
+}
 
 function job(partial: {
   id: string;
@@ -176,10 +200,15 @@ describe('syncJobReminder', () => {
     nextId = 1;
     permission = 'granted';
     pushOn = true;
+    pinClock();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('schedules on save for a future follow-up', async () => {
-    await syncJobReminder(job({ id: 'j1', followUpDate: '2026-09-20' }), {
+    await syncJobReminder(job({ id: 'j1', followUpDate: ymd(1) }), {
       skipPreferenceCheck: true,
     });
     expect(scheduled).toHaveLength(1);
@@ -194,7 +223,7 @@ describe('syncJobReminder', () => {
   });
 
   it('schedules an interview with clock time in the body', async () => {
-    await syncJobReminder(job({ id: 'j1', interviewDate: '2026-12-01T14:30' }), {
+    await syncJobReminder(job({ id: 'j1', interviewDate: ymdHm(10, 14, 30) }), {
       skipPreferenceCheck: true,
     });
     expect(scheduled).toHaveLength(1);
@@ -204,11 +233,11 @@ describe('syncJobReminder', () => {
   });
 
   it('reschedules on date change and cancels the old id', async () => {
-    await syncJobReminder(job({ id: 'j1', followUpDate: '2026-09-20' }), {
+    await syncJobReminder(job({ id: 'j1', followUpDate: ymd(1) }), {
       skipPreferenceCheck: true,
     });
     const firstId = scheduled[0].id;
-    await syncJobReminder(job({ id: 'j1', followUpDate: '2026-09-21' }), {
+    await syncJobReminder(job({ id: 'j1', followUpDate: ymd(2) }), {
       skipPreferenceCheck: true,
     });
     expect(scheduled.find((s) => s.id === firstId)).toBeUndefined();
@@ -219,7 +248,7 @@ describe('syncJobReminder', () => {
   });
 
   it('cancels on delete', async () => {
-    await syncJobReminder(job({ id: 'j1', followUpDate: '2026-09-20' }), {
+    await syncJobReminder(job({ id: 'j1', followUpDate: ymd(1) }), {
       skipPreferenceCheck: true,
     });
     await cancelJobReminders('j1');
@@ -228,10 +257,10 @@ describe('syncJobReminder', () => {
   });
 
   it('cancel-all on toggle off', async () => {
-    await syncJobReminder(job({ id: 'j1', followUpDate: '2026-09-20' }), {
+    await syncJobReminder(job({ id: 'j1', followUpDate: ymd(1) }), {
       skipPreferenceCheck: true,
     });
-    await syncJobReminder(job({ id: 'j2', followUpDate: '2026-09-22' }), {
+    await syncJobReminder(job({ id: 'j2', followUpDate: ymd(3) }), {
       skipPreferenceCheck: true,
     });
     await cancelAllJobReminders();
@@ -247,22 +276,22 @@ describe('syncJobReminder', () => {
 
   it('does not schedule when permission is denied', async () => {
     permission = 'denied';
-    await syncJobReminder(job({ id: 'j1', followUpDate: '2026-09-20' }));
+    await syncJobReminder(job({ id: 'j1', followUpDate: ymd(1) }));
     expect(scheduled).toHaveLength(0);
   });
 
   it('does not schedule when the preference is off', async () => {
     pushOn = false;
-    await syncJobReminder(job({ id: 'j1', followUpDate: '2026-09-20' }));
+    await syncJobReminder(job({ id: 'j1', followUpDate: ymd(1) }));
     expect(scheduled).toHaveLength(0);
   });
 
   it('leaves a matching entry alone on a second sync', async () => {
-    await syncJobReminder(job({ id: 'j1', followUpDate: '2026-09-20' }), {
+    await syncJobReminder(job({ id: 'j1', followUpDate: ymd(1) }), {
       skipPreferenceCheck: true,
     });
     expect(scheduled).toHaveLength(1);
-    await syncJobReminder(job({ id: 'j1', followUpDate: '2026-09-20' }), {
+    await syncJobReminder(job({ id: 'j1', followUpDate: ymd(1) }), {
       skipPreferenceCheck: true,
     });
     expect(scheduled).toHaveLength(1);
@@ -277,13 +306,18 @@ describe('reconcileJobReminders', () => {
     nextId = 1;
     permission = 'granted';
     pushOn = true;
+    pinClock();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('schedules a new job', async () => {
-    await syncJobReminder(job({ id: 'keep', followUpDate: '2026-09-20' }));
+    await syncJobReminder(job({ id: 'keep', followUpDate: ymd(1) }));
     await reconcileJobReminders([
-      job({ id: 'keep', followUpDate: '2026-09-20' }),
-      job({ id: 'new', followUpDate: '2026-09-28' }),
+      job({ id: 'keep', followUpDate: ymd(1) }),
+      job({ id: 'new', followUpDate: ymd(6) }),
     ]);
     const stored = await mapOf();
     expect(stored.new.followUp).toBeTruthy();
@@ -291,25 +325,25 @@ describe('reconcileJobReminders', () => {
   });
 
   it('cancels a removed job', async () => {
-    await syncJobReminder(job({ id: 'keep', followUpDate: '2026-09-20' }));
-    await syncJobReminder(job({ id: 'gone', followUpDate: '2026-09-22' }));
+    await syncJobReminder(job({ id: 'keep', followUpDate: ymd(1) }));
+    await syncJobReminder(job({ id: 'gone', followUpDate: ymd(3) }));
     const goneId = (await mapOf()).gone.followUp!.id;
-    await reconcileJobReminders([job({ id: 'keep', followUpDate: '2026-09-20' })]);
+    await reconcileJobReminders([job({ id: 'keep', followUpDate: ymd(1) })]);
     expect((await mapOf()).gone).toBeUndefined();
     expect(scheduled.find((s) => s.id === goneId)).toBeUndefined();
   });
 
   it('reschedules when the date changed', async () => {
-    await syncJobReminder(job({ id: 'moved', followUpDate: '2026-09-24' }));
+    await syncJobReminder(job({ id: 'moved', followUpDate: ymd(4) }));
     const movedOld = (await mapOf()).moved.followUp!.id;
-    await reconcileJobReminders([job({ id: 'moved', followUpDate: '2026-09-25' })]);
+    await reconcileJobReminders([job({ id: 'moved', followUpDate: ymd(5) })]);
     expect((await mapOf()).moved.followUp!.id).not.toBe(movedOld);
   });
 
   it('leaves an unchanged entry alone', async () => {
-    await syncJobReminder(job({ id: 'keep', followUpDate: '2026-09-20' }));
+    await syncJobReminder(job({ id: 'keep', followUpDate: ymd(1) }));
     const keepId = (await mapOf()).keep.followUp!.id;
-    await reconcileJobReminders([job({ id: 'keep', followUpDate: '2026-09-20' })]);
+    await reconcileJobReminders([job({ id: 'keep', followUpDate: ymd(1) })]);
     expect((await mapOf()).keep.followUp!.id).toBe(keepId);
     expect(scheduled).toHaveLength(1);
   });

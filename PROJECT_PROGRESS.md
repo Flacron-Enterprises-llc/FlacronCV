@@ -1198,6 +1198,21 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 9. Change log (append newest at top)
 
+- 2026-10-17 — **Web: FCGE snippet, chat widget, and lifecycle events.** Added
+  the Growth Engine initialization script and SDK loader directly in `<head>`
+  of the root locale layout, and inserted the chat widget before `</body>`.
+  Refined user identification, logout reset, and key lifecycle events
+  (`user_registered`, `email_verified`, `onboarding_completed`, `trial_started`,
+  `feature_used`, `usage_limit_90`, `pricing_page_visited`, `upgrade_clicked`).
+  Exported global `FCGE` convenience wrapper and configured default credentials
+  and environment fallback variables.
+
+- 2026-10-14 — **Mobile tests: job reminders no longer expire.** The
+  scheduler was refusing September 2026 dates because they are now in the
+  past. The tests pin the clock and build dates from that day, so CI in UTC
+  and a laptop in UTC+5 see the same future triggers. The scheduler itself
+  is unchanged.
+
 - 2026-10-14 — **Web: Flacron Growth Engine, consent-gated.** The SDK loads
   from the locale layout only when `NEXT_PUBLIC_FCGE_APP_ID`, `_KEY`, and
   `_ENDPOINT` are all set and the visitor has accepted analytics cookies.

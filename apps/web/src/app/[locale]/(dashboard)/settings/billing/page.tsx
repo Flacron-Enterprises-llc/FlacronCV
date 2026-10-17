@@ -84,7 +84,7 @@ export default function BillingPage(): React.JSX.Element | null {
           setSyncFailed(false);
           track('plan_upgraded');
           if (res?.status === 'trialing') {
-            fcgeTrack('trial_started', { days: TRIAL_PERIOD_DAYS });
+            fcgeTrack('trial_started', { plan: 'pro', trialDays: TRIAL_PERIOD_DAYS, days: TRIAL_PERIOD_DAYS });
           }
         } else {
           setSyncSuccess(false);

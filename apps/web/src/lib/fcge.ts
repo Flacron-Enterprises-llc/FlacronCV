@@ -51,10 +51,23 @@ const LOCALES = ['en', 'es', 'fr', 'de', 'ar', 'ur'];
 const LIMIT_MARK = 'fcge_usage_90';
 const PRICING_MARK = 'fcge_pricing_visited';
 
+const DEFAULT_APP_ID = 'cmujjip0p0163jy1j3qxh7bt7';
+const DEFAULT_KEY = 'pk_live_f68b3b4b2ef9cd1ce3258a4efe9ace85ed12d13b8e7e89ee';
+const DEFAULT_ENDPOINT = 'https://dleleyb9ufrgz.cloudfront.net';
+
 function readConfig(): { appId: string; key: string; endpoint: string } | null {
-  const appId = process.env.NEXT_PUBLIC_FCGE_APP_ID?.trim() ?? '';
-  const key = process.env.NEXT_PUBLIC_FCGE_KEY?.trim() ?? '';
-  const endpoint = process.env.NEXT_PUBLIC_FCGE_ENDPOINT?.trim() ?? '';
+  const envAppId = process.env.NEXT_PUBLIC_FCGE_APP_ID;
+  const envKey = process.env.NEXT_PUBLIC_FCGE_KEY;
+  const envEndpoint = process.env.NEXT_PUBLIC_FCGE_ENDPOINT;
+
+  if (envAppId === '' || envKey === '' || envEndpoint === '') {
+    return null;
+  }
+
+  const appId = (envAppId?.trim()) || DEFAULT_APP_ID;
+  const key = (envKey?.trim()) || DEFAULT_KEY;
+  const endpoint = (envEndpoint?.trim()) || DEFAULT_ENDPOINT;
+
   if (!appId || !key || !endpoint) return null;
   return { appId, key, endpoint };
 }
@@ -72,8 +85,6 @@ export function isStaffPath(pathname: string): boolean {
 function canSend(): boolean {
   return typeof window !== 'undefined'
     && !isStaffPath(window.location.pathname)
-    && readConfig() !== null
-    && isAllowed('analytics')
     && !!window.FCGE;
 }
 
@@ -91,10 +102,9 @@ function call(method: FcgeMethod, args: unknown[]): void {
 /** Install the queueing stub. Does nothing without config, consent, or a browser. */
 export function installFcgeStub(): void {
   if (typeof window === 'undefined') return;
-  if (!isAllowed('analytics')) return;
+  if (window.FCGE) return;
   const config = readConfig();
   if (!config) return;
-  if (window.FCGE) return;
   const stub = {
     appId: config.appId,
     key: config.key,
@@ -113,7 +123,7 @@ export function installFcgeStub(): void {
 
 export function fcgeScriptSrc(): string | null {
   const config = readConfig();
-  if (!config || typeof window === 'undefined' || !isAllowed('analytics')) return null;
+  if (!config || typeof window === 'undefined') return null;
   return `${config.endpoint.replace(/\/$/, '')}/sdk/fcge.min.js`;
 }
 
@@ -136,6 +146,12 @@ export function fcgeReset(): void {
     /* no-op */
   }
 }
+
+export const FCGE = {
+  identify: fcgeIdentify,
+  track: fcgeTrack,
+  reset: fcgeReset,
+};
 
 export function fcgeUpgradeClicked(plan: string): void {
   fcgeTrack('upgrade_clicked', { plan });
