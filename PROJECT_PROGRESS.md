@@ -1198,6 +1198,14 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 
 ## 9. Change log (append newest at top)
 
+- 2026-10-20 — **Production release: interactive app tour.** Pushed to `main` in
+  two commits so API preference support (`7edd380c`) could go out before the web
+  tour (`39fd80dd`). Previous tip was `060b0906`. No migration or backfill.
+  Live locale `tour.replay` confirmed on `https://www.flacroncv.com`. AWS console
+  verification of the ECS image tag was blocked (no local AWS credentials).
+  Authenticated production Replay checks remain pending without a designated
+  production test account.
+
 - 2026-10-20 — **Web: interactive app tour for new accounts.** A spotlight
   walkthrough starts on the first visit to the dashboard for accounts created
   after this change (`preferences.appTour.status` `unseen` or `in_progress`).
