@@ -9,6 +9,7 @@ import DunningBanner from '@/components/dashboard/DunningBanner';
 import AnnouncementBanner from '@/components/dashboard/AnnouncementBanner';
 import MaintenanceGate from '@/components/dashboard/MaintenanceGate';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import AppTourProvider from '@/components/onboarding/AppTourProvider';
 import PoweredBy from '@/components/shared/PoweredBy';
 import { isAllowed, openPreferences } from '@/lib/consent';
 import { Loader2 } from 'lucide-react';
@@ -93,30 +94,37 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         />
 
         <main id="main-content" className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <ErrorBoundary>
-            <AnnouncementBanner />
-            <DunningBanner />
-            <MaintenanceGate>{children}</MaintenanceGate>
-          </ErrorBoundary>
+          <AppTourProvider
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            sidebarCollapsed={sidebarCollapsed}
+            setSidebarCollapsed={setSidebarCollapsed}
+          >
+            <ErrorBoundary>
+              <AnnouncementBanner />
+              <DunningBanner />
+              <MaintenanceGate>{children}</MaintenanceGate>
+            </ErrorBoundary>
 
-          {/* Inside the scroll container on purpose: the layout is `h-screen`, so a
-              fixed strip outside `main` would permanently cost vertical space that
-              the app chrome needs more than the copyright does. */}
-          <footer className="mt-8 flex flex-col items-center gap-1 border-t border-stone-200 pt-6 sm:flex-row sm:justify-between dark:border-stone-800">
-            <p className="text-xs text-stone-500 dark:text-stone-400">
-              &copy; {new Date().getFullYear()} FlacronCV. {t('rights')}
-            </p>
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={openPreferences}
-                className="text-xs text-stone-500 underline underline-offset-2 transition-colors hover:text-brand-600 dark:text-stone-400 dark:hover:text-brand-400"
-              >
-                {t('cookie_preferences')}
-              </button>
-              <PoweredBy />
-            </div>
-          </footer>
+            {/* Inside the scroll container on purpose: the layout is `h-screen`, so a
+                fixed strip outside `main` would permanently cost vertical space that
+                the app chrome needs more than the copyright does. */}
+            <footer className="mt-8 flex flex-col items-center gap-1 border-t border-stone-200 pt-6 sm:flex-row sm:justify-between dark:border-stone-800">
+              <p className="text-xs text-stone-500 dark:text-stone-400">
+                &copy; {new Date().getFullYear()} FlacronCV. {t('rights')}
+              </p>
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={openPreferences}
+                  className="text-xs text-stone-500 underline underline-offset-2 transition-colors hover:text-brand-600 dark:text-stone-400 dark:hover:text-brand-400"
+                >
+                  {t('cookie_preferences')}
+                </button>
+                <PoweredBy />
+              </div>
+            </footer>
+          </AppTourProvider>
         </main>
       </div>
     </div>

@@ -33,6 +33,7 @@ import {
 import { toast } from 'sonner';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { JobApplication, JobStatus } from '@flacroncv/shared-types';
+import { TOUR_TARGETS } from '@/lib/app-tour';
 
 const STATUS_ORDER: JobStatus[] = [
   JobStatus.WISHLIST,
@@ -212,7 +213,7 @@ export default function JobsPage(): React.JSX.Element | null {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" data-tour={TOUR_TARGETS.jobs}>
         <div>
           <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{t('title')}</h1>
           <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{t('subtitle')}</p>

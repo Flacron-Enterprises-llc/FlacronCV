@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { exportToPDF, exportToDocx, type DocxLabels } from '@/lib/export-cv';
 import { track } from '@/lib/analytics';
 import { fcgeTrack } from '@/lib/fcge';
+import { TOUR_TARGETS } from '@/lib/app-tour';
 import {
   Undo2,
   Redo2,
@@ -157,6 +158,7 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
           icon={<Target className="h-4 w-4" />}
           onClick={() => setShowATS(true)}
           title={tats('button')}
+          data-tour={TOUR_TARGETS.editorAts}
         >
           {tats('button')}
         </Button>
@@ -188,6 +190,7 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
             icon={<Download className="h-4 w-4" />}
             loading={exporting}
             onClick={() => setExportOpen(!exportOpen)}
+            data-tour={TOUR_TARGETS.editorExport}
           >
             {t('export')}
           </Button>

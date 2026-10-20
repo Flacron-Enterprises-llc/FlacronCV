@@ -10,6 +10,7 @@ import {
   syncConsentOnLoad,
 } from '@/lib/consent';
 import { setAnalyticsConsent } from '@/lib/analytics';
+import { APP_TOUR_CACHE_PREFIX } from '@/lib/app-tour';
 
 // The analytics module is the gate, not the subject. Mocking it keeps these
 // tests about the consent record and lets us assert the gate was actually
@@ -88,12 +89,14 @@ describe('cookie consent', () => {
       // Withdrawal has to remove what is already there, or "reject" would only
       // mean "stop adding more".
       for (const key of PREFERENCE_STORAGE_KEYS) localStorage.setItem(key, 'x');
+      localStorage.setItem(`${APP_TOUR_CACHE_PREFIX}user-a`, '{"status":"completed"}');
 
       saveConsent(REJECT_NON_ESSENTIAL);
 
       for (const key of PREFERENCE_STORAGE_KEYS) {
         expect(localStorage.getItem(key)).toBeNull();
       }
+      expect(localStorage.getItem(`${APP_TOUR_CACHE_PREFIX}user-a`)).toBeNull();
     });
 
     it('leaves preference storage alone when Preferences is granted', () => {

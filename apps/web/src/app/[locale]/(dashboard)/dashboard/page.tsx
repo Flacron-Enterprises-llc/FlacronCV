@@ -10,6 +10,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { PLAN_CONFIGS, SubscriptionPlan, User } from '@flacroncv/shared-types';
 import { fcgeUpgradeClicked } from '@/lib/fcge';
+import { TOUR_TARGETS } from '@/lib/app-tour';
 import {
   FileText,
   Mail,
@@ -158,7 +159,7 @@ export default function DashboardPage(): React.JSX.Element | null {
   return (
     <div className="space-y-6">
       {/* Welcome */}
-      <div>
+      <div data-tour={TOUR_TARGETS.welcome}>
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
           {firstName ? t('greeting_named', { name: firstName }) : t('greeting')}
         </h1>
@@ -205,7 +206,7 @@ export default function DashboardPage(): React.JSX.Element | null {
               </div>
             </Card>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-tour={TOUR_TARGETS.usage}>
               {stats.map((stat) => (
                 <Card key={stat.label} padding="sm">
                   {/* items-start, not items-center: with a wrapping value the
@@ -242,7 +243,12 @@ export default function DashboardPage(): React.JSX.Element | null {
         <h2 className="mb-4 text-lg font-semibold text-stone-900 dark:text-white">{t('quick_actions')}</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {quickActions.map(({ href, title, desc, icon: Icon, color }) => (
-            <Link key={href} href={href} className="group h-full focus:outline-none">
+            <Link
+              key={href}
+              href={href}
+              data-tour={href === '/cv/new' ? TOUR_TARGETS.createCv : undefined}
+              className="group h-full focus:outline-none"
+            >
               {/* h-full on both: the Link is the grid item (stretches to the row),
                   so the Card must fill it or cards whose title wraps render taller
                   than their siblings. shrink-0 keeps the icon from being squeezed. */}

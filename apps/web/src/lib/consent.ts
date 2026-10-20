@@ -19,6 +19,7 @@
  */
 
 import { setAnalyticsConsent } from '@/lib/analytics';
+import { APP_TOUR_CACHE_PREFIX } from '@/lib/app-tour';
 
 export type ConsentCategory = 'necessary' | 'preferences' | 'analytics';
 
@@ -118,6 +119,18 @@ function clearPreferenceStorage(): void {
     } catch {
       /* storage unavailable — nothing was written either */
     }
+  }
+  // Account-scoped tour cache is preference data. The completion record
+  // lives on the account, so dropping the cache does not restart the tour.
+  try {
+    const stale: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (key && key.startsWith(APP_TOUR_CACHE_PREFIX)) stale.push(key);
+    }
+    for (const key of stale) window.localStorage.removeItem(key);
+  } catch {
+    /* storage unavailable */
   }
 }
 

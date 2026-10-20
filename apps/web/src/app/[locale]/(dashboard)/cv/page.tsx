@@ -18,6 +18,7 @@ import { useId, useState } from 'react';
 import { useRouter } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import UpgradeModal from '@/components/shared/UpgradeModal';
+import { TOUR_TARGETS } from '@/lib/app-tour';
 
 export default function CVListPage(): React.JSX.Element | null {
   const t = useTranslations();
@@ -69,10 +70,15 @@ export default function CVListPage(): React.JSX.Element | null {
   });
 
   const cvs = data?.items || [];
+  const listReady = !isLoading && !isError;
+  const highlightEmpty = listReady && cvs.length === 0;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div
+        className="flex items-center justify-between"
+        data-tour={listReady && !highlightEmpty ? TOUR_TARGETS.myCvs : undefined}
+      >
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{t('dashboard.my_cvs')}</h1>
         {atLimit ? (
           <Button icon={<Plus className="h-4 w-4" />} onClick={() => setShowUpgrade(true)}>
@@ -110,6 +116,7 @@ export default function CVListPage(): React.JSX.Element | null {
           ))}
         </div>
       ) : cvs.length === 0 ? (
+        <div data-tour={TOUR_TARGETS.myCvs}>
         <Card className="py-16 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 dark:bg-brand-950">
             <FileText className="h-8 w-8 text-brand-600" />
@@ -124,6 +131,7 @@ export default function CVListPage(): React.JSX.Element | null {
             </Button>
           </Link>
         </Card>
+        </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {cvs.map((cv) => (

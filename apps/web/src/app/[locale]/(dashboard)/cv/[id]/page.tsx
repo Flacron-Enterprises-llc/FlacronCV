@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import { api, ApiError } from '@/lib/api';
 import { Link } from '@/i18n/routing';
 import { cn } from '@/lib/utils';
+import { TOUR_TARGETS } from '@/lib/app-tour';
 import { useCVStore } from '@/store/cv-store';
 import { CV, CVSection, PersonalInfo } from '@flacroncv/shared-types';
 import { toast } from 'sonner';
@@ -505,6 +506,7 @@ export default function CVBuilderPage(): React.JSX.Element | null {
           <button
             role="tab"
             aria-selected={mobileView === 'preview'}
+            data-tour={TOUR_TARGETS.editorPreview}
             onClick={() => setMobileView('preview')}
             className={cn(
               'flex items-center gap-1.5 rounded-md px-4 py-1.5 text-sm font-medium transition-colors',
@@ -530,7 +532,7 @@ export default function CVBuilderPage(): React.JSX.Element | null {
         <div className={cn(
           'w-full overflow-y-auto bg-stone-100 p-6 dark:bg-stone-800 lg:block lg:w-1/2',
           mobileView === 'preview' ? 'block' : 'hidden',
-        )}>
+        )} data-tour={TOUR_TARGETS.editorPreview}>
           <LivePreview />
         </div>
       </div>

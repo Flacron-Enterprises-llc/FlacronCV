@@ -10,7 +10,8 @@ import { useFormatDate } from '@/lib/use-format-date';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import { HelpCircle, Plus, Clock, AlertCircle } from 'lucide-react';
+import { HelpCircle, Plus, Clock, AlertCircle, RotateCcw } from 'lucide-react';
+import { useAppTourReplay } from '@/components/onboarding/AppTourProvider';
 import {
   SupportTicket,
   TicketPriority,
@@ -37,6 +38,8 @@ const statusVariantMap: Record<
 
 export default function SupportPage(): React.JSX.Element | null {
   const t = useTranslations('support');
+  const tTour = useTranslations('tour');
+  const replayTour = useAppTourReplay();
   const formatDate = useFormatDate();
   const router = useRouter();
   const { user } = useAuth();
@@ -58,9 +61,19 @@ export default function SupportPage(): React.JSX.Element | null {
             {t('description')}
           </p>
         </div>
-        <Link href="/support/new">
-          <Button icon={<Plus className="h-4 w-4" />}>{t('newTicket')}</Button>
-        </Link>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Button
+            type="button"
+            variant="outline"
+            icon={<RotateCcw className="h-4 w-4" />}
+            onClick={replayTour}
+          >
+            {tTour('replay')}
+          </Button>
+          <Link href="/support/new">
+            <Button icon={<Plus className="h-4 w-4" />}>{t('newTicket')}</Button>
+          </Link>
+        </div>
       </div>
 
       {isLoading ? (

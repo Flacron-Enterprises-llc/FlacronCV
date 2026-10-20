@@ -42,6 +42,7 @@ import {
 import { useState, useRef } from 'react';
 import { CVSection, CVSectionType, CVSectionItem, SkillLevel } from '@flacroncv/shared-types';
 import { cn } from '@/lib/utils';
+import { TOUR_TARGETS } from '@/lib/app-tour';
 import { uploadCvPhotoBlob } from '@/lib/upload-cv-photo';
 import { fileToJpegBlob, ImageUploadError } from '@/lib/prepare-image-upload';
 import AISummaryModal from './AISummaryModal';
@@ -276,6 +277,7 @@ export default function CVEditor() {
               <button
                 type="button"
                 onClick={() => setShowAISummary(true)}
+                data-tour={TOUR_TARGETS.editorAi}
                 className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-brand-400 dark:hover:bg-brand-900/20"
               >
                 <Sparkles className="h-3.5 w-3.5" />
@@ -595,7 +597,7 @@ function AddSectionButton() {
   };
 
   return (
-    <div className="relative">
+    <div className="relative" data-tour={TOUR_TARGETS.editorSections}>
       <Button variant="secondary" className="w-full" icon={<Plus className="h-4 w-4" />} onClick={() => setOpen(!open)}>
         {t('add_section')}
       </Button>

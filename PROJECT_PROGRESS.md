@@ -12,7 +12,7 @@
 > 4. Tick completed items here; log every change in the Change Log.
 > 5. Report Out-of-Scope / architectural items separately — do not implement without approval.
 
-Last updated: 2026-10-14
+Last updated: 2026-10-20
 
 > **Note on dates.** The header previously read `2026-07-29` while the two newest change-log
 > entries were dated `2026-07-30`; the header was stale, the entries were right. Corrected
@@ -1197,6 +1197,20 @@ imperative Suspend/Ban action buttons (they don't display a bound value). 6 real
 ---
 
 ## 9. Change log (append newest at top)
+
+- 2026-10-20 — **Web: interactive app tour for new accounts.** A spotlight
+  walkthrough starts on the first visit to the dashboard for accounts created
+  after this change (`preferences.appTour.status` `unseen` or `in_progress`).
+  Accounts that omit `appTour` are existing users and are not auto-started;
+  there is no backfill. Skip and Finish are stored on the account
+  (`PATCH /users/me/preferences`). Replay is **Replay App Tour** in Settings
+  and on the Support page, and abandoning a replay does not turn automatic
+  start back on. One end-user role (`user`); staff are not auto-started and
+  there is no separate admin tour. Editor steps are included only after a
+  read-only list and fetch show a CV this account can open. The usage counter
+  is not used for that decision. Unsaved CV or cover-letter edits stop the
+  tour instead of navigating away or marking it finished. The tour does not
+  create documents, run AI, download files, or start a payment.
 
 - 2026-10-17 — **API tests: store subscription and IAP test dates pinned dynamically.**
   Fixed hardcoded `2026-10-15` dates in `mobile-billing.service.spec.ts`,

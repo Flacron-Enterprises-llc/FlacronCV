@@ -34,21 +34,26 @@ import {
   Loader2,
   Download,
   LogOut,
+  RotateCcw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { updateProfile } from 'firebase/auth';
 import { storage, auth } from '@/lib/firebase';
 import { fileToJpegBlob, ImageUploadError } from '@/lib/prepare-image-upload';
+import { useAppTourReplay } from '@/components/onboarding/AppTourProvider';
+import { TOUR_TARGETS } from '@/lib/app-tour';
 
 export default function SettingsPage(): React.JSX.Element | null {
   const t = useTranslations('settings');
+  const tTour = useTranslations('tour');
   const formatApiError = useApiErrorMessage();
   const { user, resetPassword, refreshUser, logout } = useAuth();
   const { setTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const replayTour = useAppTourReplay();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -556,6 +561,30 @@ export default function SettingsPage(): React.JSX.Element | null {
           {t('preferences.title')}
         </h3>
         <div className="space-y-6">
+          <div
+            className="flex flex-col gap-3 border-b border-stone-200 pb-6 sm:flex-row sm:items-center sm:justify-between dark:border-stone-700"
+            data-tour={TOUR_TARGETS.settings}
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-900/30">
+                <RotateCcw className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-stone-900 dark:text-white">{tTour('replay')}</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400">{tTour('replayDescription')}</p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 self-start sm:self-auto"
+              onClick={replayTour}
+            >
+              {tTour('replay')}
+            </Button>
+          </div>
+
           {/* Language */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">

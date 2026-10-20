@@ -36,7 +36,10 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
 
   if (maintenance?.enabled && !isAdmin) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
+      <div
+        data-maintenance=""
+        className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center"
+      >
         <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-amber-500 dark:bg-amber-950 dark:text-amber-400">
           <Wrench className="h-8 w-8" />
         </div>

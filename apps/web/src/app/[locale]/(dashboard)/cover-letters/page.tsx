@@ -25,6 +25,7 @@ import { useFormatDate } from '@/lib/use-format-date';
 import { toast } from 'sonner';
 import { useAuth } from '@/providers/AuthProvider';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
+import { TOUR_TARGETS } from '@/lib/app-tour';
 
 export default function CoverLettersPage(): React.JSX.Element | null {
   const t = useTranslations();
@@ -66,10 +67,15 @@ export default function CoverLettersPage(): React.JSX.Element | null {
   });
 
   const coverLetters = data?.items || [];
+  const listReady = !isLoading && !isError;
+  const highlightEmpty = listReady && coverLetters.length === 0;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div
+        className="flex items-center justify-between"
+        data-tour={listReady && !highlightEmpty ? TOUR_TARGETS.coverLetters : undefined}
+      >
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
           {t('coverLetters.title')}
         </h1>
@@ -94,6 +100,7 @@ export default function CoverLettersPage(): React.JSX.Element | null {
           </Button>
         </Card>
       ) : coverLetters.length === 0 ? (
+        <div data-tour={TOUR_TARGETS.coverLetters}>
         <Card className="py-16 text-center">
           <Mail className="mx-auto h-12 w-12 text-stone-300 dark:text-stone-600" />
           <h3 className="mt-4 text-lg font-semibold text-stone-900 dark:text-white">
@@ -106,6 +113,7 @@ export default function CoverLettersPage(): React.JSX.Element | null {
             </Button>
           </Link>
         </Card>
+        </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {coverLetters.map((cl) => (

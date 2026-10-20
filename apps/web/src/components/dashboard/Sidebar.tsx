@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { TOUR_TARGETS } from '@/lib/app-tour';
 
 interface SidebarProps {
   /** Mobile drawer open state (below `lg`). */
@@ -37,7 +38,7 @@ export default function Sidebar({ open, onClose, collapsed = false, onToggleColl
     { href: '/cv', icon: FileText, label: t('my_cvs') },
     { href: '/cover-letters', icon: Mail, label: t('my_cover_letters') },
     { href: '/jobs', icon: Briefcase, label: t('job_tracker') },
-    { href: '/templates', icon: Palette, label: t('templates') },
+    { href: '/templates', icon: Palette, label: t('templates'), tour: TOUR_TARGETS.templates },
   ];
 
   const bottomItems = [
@@ -62,10 +63,11 @@ export default function Sidebar({ open, onClose, collapsed = false, onToggleColl
     .filter(({ href }) => pathname === href || pathname.startsWith(href + '/'))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
-  const NavLink = ({ href, icon: Icon, label }: { href: string; icon: any; label: string }) => (
+  const NavLink = ({ href, icon: Icon, label, tour }: { href: string; icon: any; label: string; tour?: string }) => (
     <Link
       href={href}
       onClick={onClose}
+      data-tour={tour}
       aria-current={href === activeHref ? 'page' : undefined}
       // Native tooltip is the affordance that replaces the hidden label on the rail.
       title={collapsed ? label : undefined}

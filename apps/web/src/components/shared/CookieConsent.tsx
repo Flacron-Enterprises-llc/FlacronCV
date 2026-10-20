@@ -90,6 +90,7 @@ export default function CookieConsent() {
         <div
           role="region"
           aria-label={t('aria_label')}
+          data-cookie-banner
           className="fixed inset-x-0 bottom-0 z-[90] border-t border-stone-200 bg-white/95 p-4 shadow-lg backdrop-blur motion-safe:animate-fade-in dark:border-stone-700 dark:bg-stone-900/95"
         >
           <div className="mx-auto flex max-w-5xl flex-col items-start gap-4 lg:flex-row lg:items-center lg:justify-between">

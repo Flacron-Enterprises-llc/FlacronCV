@@ -9,7 +9,7 @@
 > confirmed by this pass. Runtime behaviour was never executed — this document was produced by a
 > read-only audit (no API boot, no dev server, no emulators, no cloud CLI).
 
-Created: 2026-08-18 · Last doc touch: 2026-09-15 (EAS preview S1 on for IAP sandbox)
+Created: 2026-08-18 · Last doc touch: 2026-10-20 (account app-tour preference)
 
 ---
 
@@ -189,7 +189,7 @@ opaque baked-in rectangle — standing request in `PROJECT_PROGRESS.md` §8.
 
 | Collection | Shape (abridged) |
 |---|---|
-| `users` | `{ uid, email, displayName, photoURL, role, isActive, subscription{plan,status,stripeCustomerId,stripeSubscriptionId,currentPeriodEnd,trialStart,trialEnd,cancelAtPeriodEnd,hasUsedTrial,provider?,originalTransactionId?,purchaseToken?}, usage{cvsCreated,coverLettersCreated,aiCreditsUsed,aiCreditsLimit,exportsThisMonth,lastExportReset}, abuse{deviceHash,ipHash,networkHash,riskScore,riskBand,riskSignals,scoredAt,grantStatus?,cooldownEndsAt?}, preferences{…, pushNotifications?}, pushTokens?: string[], createdAt, updatedAt, lastLoginAt, deletedAt }` |
+| `users` | `{ uid, email, displayName, photoURL, role, isActive, subscription{plan,status,stripeCustomerId,stripeSubscriptionId,currentPeriodEnd,trialStart,trialEnd,cancelAtPeriodEnd,hasUsedTrial,provider?,originalTransactionId?,purchaseToken?}, usage{cvsCreated,coverLettersCreated,aiCreditsUsed,aiCreditsLimit,exportsThisMonth,lastExportReset}, abuse{deviceHash,ipHash,networkHash,riskScore,riskBand,riskSignals,scoredAt,grantStatus?,cooldownEndsAt?}, preferences{…, pushNotifications?, appTour?}, pushTokens?: string[], createdAt, updatedAt, lastLoginAt, deletedAt }`. `preferences.appTour` is `unseen`, `in_progress`, `skipped`, or `completed`, and is written only when the account is created after the interactive tour. Missing means an existing account and is not an automatic start. No backfill. Editor tour steps are chosen from a read-only CV list plus a read of that document, not from `usage.cvsCreated`. |
 | `cvs` | Owner-scoped; soft-deleted via `deletedAt`; `isPublic` + `publicSlug` for sharing. Subcollections `sections`, `versions` |
 | `cover_letters` | Owner-scoped, soft-deleted, optional `linkedCVId` |
 | `job_applications` | Owner-scoped, 6 statuses wishlist→applied→interviewing→offer→rejected→accepted |
