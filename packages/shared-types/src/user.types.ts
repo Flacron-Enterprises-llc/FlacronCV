@@ -11,6 +11,28 @@ export interface UserProfile {
   github: string;
 }
 
+/**
+ * Product-tour progress stored on the account. Missing entirely on accounts
+ * created before the tour shipped — that absence is intentional and must not
+ * be treated as "unseen". No production backfill.
+ *
+ * A later `version` must not restart the tour for anyone who already
+ * completed or skipped it.
+ */
+export const APP_TOUR_VERSION = 1;
+
+export type AppTourStatus = 'unseen' | 'in_progress' | 'skipped' | 'completed';
+
+export interface AppTourPreference {
+  version: number;
+  status: AppTourStatus;
+  /** Step to resume while `in_progress`. Null otherwise. */
+  stepId: string | null;
+  completedAt: string | null;
+  skippedAt: string | null;
+  updatedAt: string | null;
+}
+
 export interface UserPreferences {
   language: Locale;
   theme: Theme;
@@ -22,6 +44,11 @@ export interface UserPreferences {
    * (treated as false). Enforced server-side — a client toggle is UX only.
    */
   pushNotifications?: boolean;
+  /**
+   * Interactive app tour. Set to `unseen` only when the account is created.
+   * Omitted on older accounts.
+   */
+  appTour?: AppTourPreference;
 }
 
 export interface UserSubscription {

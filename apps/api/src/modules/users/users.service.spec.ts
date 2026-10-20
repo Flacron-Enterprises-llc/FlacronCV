@@ -36,6 +36,14 @@ describe('UsersService', () => {
       expect(user.isActive).toBe(true);
       expect(user.pushTokens).toEqual([]);
       expect(user.preferences.pushNotifications).toBe(false);
+      expect(user.preferences.appTour).toEqual({
+        version: 1,
+        status: 'unseen',
+        stepId: null,
+        completedAt: null,
+        skippedAt: null,
+        updatedAt: null,
+      });
       expect(user.createdAt).toBeInstanceOf(Date);
     });
   });
@@ -149,6 +157,41 @@ describe('UsersService', () => {
       await service.create({ uid: 'v-1', email: 'v1@b.com', displayName: 'V1', photoURL: null });
       await expect(
         service.update('v-1', { preferences: { theme: 'neon' } as any }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('stores an app tour record without touching other preferences', async () => {
+      await service.create({ uid: 'tour-1', email: 't@b.com', displayName: 'T', photoURL: null });
+      const updated = await service.update('tour-1', {
+        preferences: {
+          appTour: {
+            version: 1,
+            status: 'completed',
+            stepId: null,
+            completedAt: '2026-10-20T12:00:00.000Z',
+            skippedAt: null,
+            updatedAt: '2026-10-20T12:00:00.000Z',
+          },
+        },
+      });
+      expect(updated.preferences.appTour?.status).toBe('completed');
+      expect(updated.preferences.emailNotifications).toBe(true);
+      expect(updated.preferences.language).toBe('en');
+    });
+
+    it('rejects a malformed app tour record with 400', async () => {
+      await service.create({ uid: 'tour-2', email: 't2@b.com', displayName: 'T2', photoURL: null });
+      await expect(
+        service.update('tour-2', {
+          preferences: { appTour: { version: 1, status: 'done', stepId: null } } as any,
+        }),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.update('tour-2', {
+          preferences: {
+            appTour: { version: 1, status: 'skipped', stepId: '../secret', completedAt: null, skippedAt: null, updatedAt: null },
+          },
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 

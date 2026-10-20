@@ -12,6 +12,9 @@ import {
   SubscriptionStatus,
   Locale,
   Theme,
+  APP_TOUR_VERSION,
+  AppTourPreference,
+  AppTourStatus,
   PLAN_CONFIGS,
   resolveEffectivePlan,
   ProfileLinkField,
@@ -103,6 +106,7 @@ export class UsersService {
         marketingEmails: false,
         pushNotifications: false,
         defaultCVTemplate: 'modern',
+        appTour: UsersService.freshAppTour(),
       },
       pushTokens: [],
       subscription: {
@@ -260,9 +264,67 @@ export class UsersService {
         return value;
       case 'defaultCVTemplate':
         return this.assertString('defaultCVTemplate', value, 100);
+      case 'appTour':
+        return this.validateAppTour(value);
       default:
         return undefined; // unknown preference key — dropped by the caller
     }
+  }
+
+  /** New accounts only. Older documents omit the field and are not backfilled. */
+  private static freshAppTour(): AppTourPreference {
+    return {
+      version: APP_TOUR_VERSION,
+      status: 'unseen',
+      stepId: null,
+      completedAt: null,
+      skippedAt: null,
+      updatedAt: null,
+    };
+  }
+
+  private validateAppTour(value: unknown): AppTourPreference {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new BadRequestException('Invalid app tour preference.');
+    }
+    const raw = value as Record<string, unknown>;
+    const allowed = new Set(['version', 'status', 'stepId', 'completedAt', 'skippedAt', 'updatedAt']);
+    for (const key of Object.keys(raw)) {
+      if (!allowed.has(key)) throw new BadRequestException('Invalid app tour preference.');
+    }
+    const version = raw.version;
+    if (typeof version !== 'number' || !Number.isInteger(version) || version < 1 || version > 1000) {
+      throw new BadRequestException('Invalid app tour version.');
+    }
+    const statuses: AppTourStatus[] = ['unseen', 'in_progress', 'skipped', 'completed'];
+    if (typeof raw.status !== 'string' || !statuses.includes(raw.status as AppTourStatus)) {
+      throw new BadRequestException('Invalid app tour status.');
+    }
+    const stepId = this.optionalTourStep(raw.stepId);
+    return {
+      version,
+      status: raw.status as AppTourStatus,
+      stepId,
+      completedAt: this.optionalTourInstant(raw.completedAt, 'completedAt'),
+      skippedAt: this.optionalTourInstant(raw.skippedAt, 'skippedAt'),
+      updatedAt: this.optionalTourInstant(raw.updatedAt, 'updatedAt'),
+    };
+  }
+
+  private optionalTourStep(value: unknown): string | null {
+    if (value === null || value === undefined) return null;
+    if (typeof value !== 'string' || !/^[a-z0-9-]{1,64}$/.test(value)) {
+      throw new BadRequestException('Invalid app tour step.');
+    }
+    return value;
+  }
+
+  private optionalTourInstant(value: unknown, field: string): string | null {
+    if (value === null || value === undefined) return null;
+    if (typeof value !== 'string' || value.length > 40 || !value.includes('T') || !Number.isFinite(Date.parse(value))) {
+      throw new BadRequestException(`Invalid app tour ${field}.`);
+    }
+    return value;
   }
 
   async updateLastLogin(uid: string): Promise<void> {
@@ -489,6 +551,7 @@ export class UsersService {
     'marketingEmails',
     'pushNotifications',
     'defaultCVTemplate',
+    'appTour',
   ] as const;
 
   private static readonly EXPORTED_USAGE_FIELDS = [

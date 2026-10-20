@@ -2,13 +2,26 @@ import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
+  IsIn,
+  IsInt,
+  IsISO8601,
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
+  Min,
   ValidateNested,
 } from 'class-validator';
-import { Locale, Theme, UpdateUserData, UserPreferences, UserProfile } from '@flacroncv/shared-types';
+import {
+  AppTourPreference,
+  AppTourStatus,
+  Locale,
+  Theme,
+  UpdateUserData,
+  UserPreferences,
+  UserProfile,
+} from '@flacroncv/shared-types';
 
 export class UserProfileDto implements Partial<UserProfile> {
   @IsOptional()
@@ -54,6 +67,36 @@ export class UserProfileDto implements Partial<UserProfile> {
   github?: string;
 }
 
+const APP_TOUR_STATUSES: AppTourStatus[] = ['unseen', 'in_progress', 'skipped', 'completed'];
+
+export class AppTourPreferenceDto implements AppTourPreference {
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  version!: number;
+
+  @IsIn(APP_TOUR_STATUSES)
+  status!: AppTourStatus;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  @Matches(/^[a-z0-9-]+$/)
+  stepId!: string | null;
+
+  @IsOptional()
+  @IsISO8601()
+  completedAt!: string | null;
+
+  @IsOptional()
+  @IsISO8601()
+  skippedAt!: string | null;
+
+  @IsOptional()
+  @IsISO8601()
+  updatedAt!: string | null;
+}
+
 export class UserPreferencesDto implements Partial<UserPreferences> {
   @IsOptional()
   @IsEnum(Locale, { message: `language must be one of: ${Object.values(Locale).join(', ')}` })
@@ -79,6 +122,11 @@ export class UserPreferencesDto implements Partial<UserPreferences> {
   @IsString()
   @MaxLength(100)
   defaultCVTemplate?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AppTourPreferenceDto)
+  appTour?: AppTourPreferenceDto;
 }
 
 export class UpdateUserDto implements UpdateUserData {

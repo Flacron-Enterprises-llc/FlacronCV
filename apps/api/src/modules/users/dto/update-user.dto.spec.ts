@@ -51,4 +51,26 @@ describe('User write DTOs (ValidationPipe)', () => {
   it('rejects a malformed preference', async () => {
     await expectReject(UpdatePreferencesDto, { language: 'xx' });
   });
+
+  it('accepts an app tour record and rejects a bad one', async () => {
+    const result = await transformBody(UpdatePreferencesDto, {
+      appTour: {
+        version: 1,
+        status: 'in_progress',
+        stepId: 'welcome',
+        completedAt: null,
+        skippedAt: null,
+        updatedAt: '2026-10-20T12:00:00.000Z',
+      },
+    });
+    expect(result.appTour?.status).toBe('in_progress');
+    expect(result.appTour?.stepId).toBe('welcome');
+
+    await expectReject(UpdatePreferencesDto, {
+      appTour: { version: 1, status: 'finished', stepId: null },
+    });
+    await expectReject(UpdatePreferencesDto, {
+      appTour: { version: 1, status: 'skipped', stepId: 'Welcome' },
+    });
+  });
 });
