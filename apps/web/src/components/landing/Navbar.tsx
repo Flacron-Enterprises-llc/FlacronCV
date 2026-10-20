@@ -75,7 +75,7 @@ export default function Navbar() {
     <nav className="fixed top-0 z-50 w-full border-b border-white/10 bg-chrome dark:border-white/15 dark:bg-chrome/70 dark:backdrop-blur-lg">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
-        <Link href="/" className="flex items-center">
+        <Link href="/" className="flex items-center md:me-6">
           {/* h-12 in an h-16 bar: the brand assets have generous internal padding,
               so a smaller height renders the wordmark almost illegibly.
               on-dark: this bar is navy in light and dark (translucent + blur in dark).
