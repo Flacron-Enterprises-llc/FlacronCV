@@ -2324,7 +2324,17 @@
       "save_search": "Enregistrer la recherche",
       "saved": "Recherche enregistrée. Elle n'utilise pas d'alerte.",
       "capacity": "Cette offre n'a plus de place pour une recherche enregistrée.",
-      "quiet_invalid": "Les heures calmes ont besoin d'un début et d'une fin, et ils ne peuvent pas être identiques."
+      "quiet_invalid": "Les heures calmes ont besoin d'un début et d'une fin, et ils ne peuvent pas être identiques.",
+      "searches_title": "Vos recherches enregistrées",
+      "searches_error": "Vos recherches enregistrées n’ont pas pu être chargées. Rien n’a été modifié.",
+      "searches_empty": "Aucune recherche enregistrée pour l’instant.",
+      "searches_any": "Toutes les offres",
+      "searches_paused": "En pause",
+      "searches_pause": "Mettre en pause",
+      "searches_resume": "Reprendre",
+      "searches_delete": "Supprimer",
+      "searches_delete_label": "Supprimer la recherche enregistrée {query}",
+      "channel_not_connected": "Pas encore connecté : ces alertes s’affichent uniquement ici, dans l’application."
     },
     "career_modes": {
       "meta_title": "Relocalisation & Modes de carrière spécialisés",

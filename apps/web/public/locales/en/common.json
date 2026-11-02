@@ -2324,7 +2324,17 @@
       "save_search": "Save search",
       "saved": "Search saved. It does not use an alert.",
       "capacity": "This plan has no room for another saved search.",
-      "quiet_invalid": "Quiet hours need a start and an end, and they cannot be the same time."
+      "quiet_invalid": "Quiet hours need a start and an end, and they cannot be the same time.",
+      "searches_title": "Your saved searches",
+      "searches_error": "Your saved searches could not be loaded. Nothing was changed.",
+      "searches_empty": "No saved searches yet.",
+      "searches_any": "All opportunities",
+      "searches_paused": "Paused",
+      "searches_pause": "Pause",
+      "searches_resume": "Resume",
+      "searches_delete": "Delete",
+      "searches_delete_label": "Delete saved search {query}",
+      "channel_not_connected": "Not connected yet: these alerts are shown here in the app only."
     },
     "career_modes": {
       "meta_title": "Relocation & Specialist Career Modes",

@@ -2324,7 +2324,17 @@
       "save_search": "Suche speichern",
       "saved": "Suche gespeichert. Sie verbraucht keine Benachrichtigung.",
       "capacity": "Dieser Tarif bietet keinen Platz für eine weitere gespeicherte Suche.",
-      "quiet_invalid": "Die Ruhezeit braucht einen Beginn und ein Ende, und beide dürfen nicht gleich sein."
+      "quiet_invalid": "Die Ruhezeit braucht einen Beginn und ein Ende, und beide dürfen nicht gleich sein.",
+      "searches_title": "Deine gespeicherten Suchen",
+      "searches_error": "Deine gespeicherten Suchen konnten nicht geladen werden. Es wurde nichts geändert.",
+      "searches_empty": "Noch keine gespeicherten Suchen.",
+      "searches_any": "Alle Stellenangebote",
+      "searches_paused": "Pausiert",
+      "searches_pause": "Pausieren",
+      "searches_resume": "Fortsetzen",
+      "searches_delete": "Löschen",
+      "searches_delete_label": "Gespeicherte Suche {query} löschen",
+      "channel_not_connected": "Noch nicht verbunden: Diese Benachrichtigungen erscheinen nur hier in der App."
     },
     "career_modes": {
       "meta_title": "Umzug & spezialisierte Karrieremodi",

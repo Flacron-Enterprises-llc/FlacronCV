@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
-import { isApiError, type AlertItem, type AlertList, type ApiClient } from '@flacroncv/career-api-client';
+import { isApiError, type AlertItem, type AlertList, type ApiClient, type SavedSearch } from '@flacroncv/career-api-client';
 import {
   Button,
   Card,
@@ -36,6 +36,17 @@ export function AlertsScreen({
   const [query, setQuery] = useState('');
   const [note, setNote] = useState<'saved' | 'capacity' | 'upgrade' | 'quiet' | null>(null);
   const [pending, setPending] = useState(false);
+  // Saved searches load separately: a failure here must not hide the alert centre.
+  const [searches, setSearches] = useState<SavedSearch[] | 'error' | null>(null);
+  const [searchBusy, setSearchBusy] = useState<string | null>(null);
+
+  const loadSearches = useCallback(async () => {
+    try {
+      setSearches((await api.savedSearches()).items);
+    } catch {
+      setSearches('error');
+    }
+  }, [api]);
 
   const loadAlerts = useCallback(async () => {
     setLoad('loading');
@@ -55,7 +66,8 @@ export function AlertsScreen({
       return;
     }
     void loadAlerts();
-  }, [ready, user, loadAlerts]);
+    void loadSearches();
+  }, [ready, user, loadAlerts, loadSearches]);
 
   if (!ready || load === 'loading') return <LoadingState label={t('loading')} />;
   if (load === 'permission') return <PermissionDeniedState title={t('permission_title')} body={t('permission_body')} />;
@@ -96,12 +108,38 @@ export function AlertsScreen({
     try {
       await api.createSavedSearch({ q: query });
       setNote('saved');
+      setQuery('');
+      void loadSearches();
     } catch (error) {
       if (isApiError(error, 'capacity_exceeded')) setNote('capacity');
       else if (isApiError(error, 'plan_upgrade_required')) setNote('upgrade');
       else setLoad('unavailable');
     } finally {
       setPending(false);
+    }
+  }
+
+  async function togglePaused(search: SavedSearch) {
+    setSearchBusy(search.id);
+    try {
+      const next = await api.updateSavedSearch(search.id, { paused: !search.paused });
+      setSearches((current) => (Array.isArray(current) ? current.map((s) => (s.id === search.id ? next : s)) : current));
+    } catch {
+      setSearches('error');
+    } finally {
+      setSearchBusy(null);
+    }
+  }
+
+  async function removeSearch(search: SavedSearch) {
+    setSearchBusy(search.id);
+    try {
+      await api.deleteSavedSearch(search.id);
+      setSearches((current) => (Array.isArray(current) ? current.filter((s) => s.id !== search.id) : current));
+    } catch {
+      setSearches('error');
+    } finally {
+      setSearchBusy(null);
     }
   }
 
@@ -167,6 +205,36 @@ export function AlertsScreen({
           </form>
         </Card>
         <Card>
+          <h2 className="text-lg font-semibold text-career-navy dark:text-white">{t('searches_title')}</h2>
+          {searches === null ? (
+            <p className="mt-2 text-sm text-slate">{t('loading')}</p>
+          ) : searches === 'error' ? (
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+              <span>{t('searches_error')}</span>
+              <Button type="button" onClick={() => void loadSearches()}>
+                {t('retry')}
+              </Button>
+            </div>
+          ) : searches.length === 0 ? (
+            <p className="mt-2 text-sm text-slate">{t('searches_empty')}</p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {searches.map((search) => (
+                <li key={search.id} className="flex flex-wrap items-center gap-2 rounded-md border border-career-line p-3 text-sm">
+                  <span className="min-w-0 flex-1 break-words font-semibold">{search.q || t('searches_any')}</span>
+                  {search.paused ? <span className="text-xs font-semibold uppercase text-slate">{t('searches_paused')}</span> : null}
+                  <Button type="button" disabled={searchBusy === search.id} onClick={() => void togglePaused(search)}>
+                    {search.paused ? t('searches_resume') : t('searches_pause')}
+                  </Button>
+                  <Button type="button" disabled={searchBusy === search.id} onClick={() => void removeSearch(search)} aria-label={t('searches_delete_label', { query: search.q || t('searches_any') })}>
+                    {t('searches_delete')}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+        <Card>
           <form className="space-y-3" onSubmit={(event) => void saveSettings(event)}>
             <h2 className="text-lg font-semibold text-career-navy dark:text-white">{t('settings_title')}</h2>
             <label className="flex min-h-career-touch items-center gap-2 text-sm">
@@ -177,10 +245,12 @@ export function AlertsScreen({
               <input type="checkbox" name="push" defaultChecked={settings.push} />
               {t('push')}
             </label>
+            <p className="-mt-2 text-xs text-slate">{t('channel_not_connected')}</p>
             <label className="flex min-h-career-touch items-center gap-2 text-sm">
               <input type="checkbox" name="telegram" defaultChecked={settings.telegram} />
               {t('telegram')}
             </label>
+            <p className="-mt-2 text-xs text-slate">{t('channel_not_connected')}</p>
             <label className="block text-sm font-semibold" htmlFor="digest">
               {t('digest')}
             </label>

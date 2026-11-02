@@ -2324,7 +2324,17 @@
       "save_search": "Guardar búsqueda",
       "saved": "Búsqueda guardada. No usa ninguna alerta.",
       "capacity": "Este plan no tiene espacio para otra búsqueda guardada.",
-      "quiet_invalid": "Las horas de silencio necesitan un inicio y un fin, y no pueden ser la misma hora."
+      "quiet_invalid": "Las horas de silencio necesitan un inicio y un fin, y no pueden ser la misma hora.",
+      "searches_title": "Tus búsquedas guardadas",
+      "searches_error": "No se pudieron cargar tus búsquedas guardadas. No se ha cambiado nada.",
+      "searches_empty": "Todavía no tienes búsquedas guardadas.",
+      "searches_any": "Todas las ofertas",
+      "searches_paused": "En pausa",
+      "searches_pause": "Pausar",
+      "searches_resume": "Reanudar",
+      "searches_delete": "Eliminar",
+      "searches_delete_label": "Eliminar la búsqueda guardada {query}",
+      "channel_not_connected": "Aún no conectado: estas alertas solo se muestran aquí, en la aplicación."
     },
     "career_modes": {
       "meta_title": "Reubicación y modos profesionales especializados",

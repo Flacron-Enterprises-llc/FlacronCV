@@ -79,3 +79,38 @@ describe('AlertsScreen', () => {
     expect(updateAlertSettings).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('AlertsScreen saved searches', () => {
+  const searches = [
+    { id: 's1', q: 'data analyst', category: null, locationProfileId: null, radiusMiles: null, schedule: 'weekly' as const, paused: false },
+    { id: 's2', q: null, category: null, locationProfileId: null, radiusMiles: null, schedule: 'daily' as const, paused: true },
+  ];
+
+  it('lists saved searches and pauses, resumes and deletes them', async () => {
+    const updateSavedSearch = vi.fn().mockResolvedValue({ ...searches[0], paused: true });
+    const deleteSavedSearch = vi.fn().mockResolvedValue({ ok: true });
+    const api = testApi({
+      alerts: vi.fn().mockResolvedValue(center),
+      savedSearches: vi.fn().mockResolvedValue({ items: searches }),
+      updateSavedSearch,
+      deleteSavedSearch,
+    });
+    renderAlerts(api);
+    expect(await screen.findByText('data analyst')).toBeTruthy();
+    expect(screen.getByText('All opportunities')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
+    expect(updateSavedSearch).toHaveBeenCalledWith('s1', { paused: true });
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete saved search All opportunities' }));
+    expect(deleteSavedSearch).toHaveBeenCalledWith('s2');
+    await screen.findByText('data analyst');
+    expect(screen.queryByText('All opportunities')).toBeNull();
+  });
+
+  it('keeps the alert centre when saved searches fail to load, and says push/Telegram are not connected', async () => {
+    const api = testApi({ alerts: vi.fn().mockResolvedValue(center) });
+    renderAlerts(api);
+    expect(await screen.findByText('SQL analyst')).toBeTruthy();
+    expect(await screen.findByText(/saved searches could not be loaded/)).toBeTruthy();
+    expect(screen.getAllByText(/Not connected yet/).length).toBe(2);
+  });
+});
