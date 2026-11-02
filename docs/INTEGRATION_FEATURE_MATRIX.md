@@ -23,7 +23,7 @@ Branch `integration/v2-features`, 2 Nov 2026. Requirement IDs from `flacroncv-v2
 | CV04-01 | Letters, bios, outreach; claim checks | V1 cover letters | writing | P (generation) / A (edit, export) | A (edit, save, export, share) | — | e2e `writing` | OpenAI key |
 | CV05-01 | Opportunities (paste) | — | opportunities | A | A (read-only list, "no live feed") | Mobile paste | e2e `opportunities` | — |
 | X1 | Licensed job feeds | — | parsers only | M | M | Live feed loader + licence | — | Licence + keys |
-| CV07-01 | Saved searches, alerts, quiet hours | — | alerts | A (in-app; list/edit UI missing) | M | Web: manage saved searches/locations; mobile screen | e2e `alerts` | — |
+| CV07-01 | Saved searches, alerts, quiet hours | — | alerts | A (in-app; saved searches managed; locations/companies UI missing) | M | Web: locations/followed companies UI; mobile screen | e2e `alerts` | — |
 | X3 | Off-box alert delivery (email/push) | V1 SES, V1 Expo push for job reminders | SES mailer | P (email) / M (push) | M (career push) | Career push bridge to V1 push tokens; Telegram sender | e2e `alerts` (in-app ledger) | SES role; push creds |
 | CV08-01 | Application tracking | **V1 Job Tracker** | V2 tracker | A (V1 `/jobs`, unchanged) | A (V1 Jobs, unchanged) | — (merged; no duplicate tracker) | `no-record-sync.e2e-spec.ts` | Decision D8 (pipeline fields) |
 | CV19-01 | Outcome analytics | V1 jobs | learning loop | A | M (web only) | — | e2e `v1-bridge`; smoke (50 % sample) | — |

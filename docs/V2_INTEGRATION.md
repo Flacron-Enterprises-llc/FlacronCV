@@ -191,6 +191,7 @@ Legend — State: **Op** operational locally · **Prov** provider-dependent (sta
   - Live: `smoke.sh` (add-on status, purchase 403 without prices, unconfirmed 400, operator access, V2 routes 404) and `reliability.sh` (AI failure releases credit, replay same job; evidence upload/owner link/other account 403/delete/404) pass.
   - Browser (Edge, production build): 38/38 — both showcases at 1440/1280/768/390/360, counts from catalog, A4 thumbnails rendered, no clipped text or overflow, samples labelled, es/fr/de/ar/ur incl. RTL, dark, reduced motion without scrolling, keyboard focus ring, signed-out and signed-in links, career menu, plans add-on wording; 0 page errors in the career/plans run. Screenshots: `FlacronCV-integration-localscreenshots-session4`.
   - Firebase SSR assertion: no longer logged after a page request on the rebuilt server.
+  - Alerts page: saved-search list/pause/delete and honest push/Telegram notes (2 new tests).
 
 ## 7. Known limitations
 - L1 AI-dependent features (import, generation, tailoring, letters, text interviews) verified only on their failure path (no AI key). Speech, map tiles, licensed feeds and off-box mail/push are provider-unavailable by design.
@@ -201,4 +202,4 @@ Legend — State: **Op** operational locally · **Prov** provider-dependent (sta
 - L6 (fixed) The Firebase "Expected a class definition" assertion during server rendering came from V1 code (identical in V1 main): browser-only persistence passed to `initializeAuth` on the server. The server now uses `getAuth()`; browser behaviour unchanged.
 - L7 Mobile is English-only and light-only (existing V1 app); the six web locales and dark mode do not apply there.
 - L8 On a fresh database, phase 2–4 career features are off until an operator switches them on (§5.2); the local demo seed switches them on.
-- L9 Web UI gaps inherited from V2: no screen to list/edit saved searches, location profiles or followed companies; no Business counselor-assignment screen; voice transcription not wired (no vendor).
+- L9 Web UI gaps inherited from V2: saved searches can now be listed, paused and deleted (third pass), but location profiles and followed companies still have no screen; no Business counselor-assignment screen; voice transcription not wired (no vendor).
