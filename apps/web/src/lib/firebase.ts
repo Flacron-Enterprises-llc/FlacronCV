@@ -76,7 +76,13 @@ if (isConfigured) {
   // signInWithPopup with "INTERNAL ASSERTION FAILED: Pending promise was never
   // set". Initialising auth explicitly pins it to the browser code path and the
   // browser popup resolver. Falls back to getAuth() on HMR re-imports.
-  if (isNewApp) {
+  //
+  // Only in the browser. During server rendering the Node build of
+  // firebase/auth has no IndexedDB/localStorage persistence classes, so
+  // initializeAuth logged "INTERNAL ASSERTION FAILED: Expected a class
+  // definition" on every server start before falling back. Nobody signs in on
+  // the server; plain getAuth() is the right instance there.
+  if (isNewApp && typeof window !== 'undefined') {
     try {
       auth = initializeAuth(app, {
         persistence: [indexedDBLocalPersistence, browserLocalPersistence],

@@ -48,6 +48,12 @@ const ALLOWED: Record<string, string> = {
   'career.home.sample_name': 'fictional person name in the document preview',
   'career.home.sample_email': 'example email address in the document preview',
   'career.plans.plan.career_pro': 'product name of a career catalog plan',
+  // Homepage showcase samples: fictional company and person names (labelled as samples).
+  'home_showcase.listing_1_org': 'fictional company name in a sample listing',
+  'home_showcase.listing_2_org': 'fictional company name in a sample listing',
+  'home_showcase.listing_3_org': 'fictional company name in a sample listing',
+  'home_showcase.sample_letter_recipient': 'fictional person name in the sample letter',
+  'home_showcase.sample_letter_company': 'fictional company name in the sample letter',
   // A postal address must stay in the form the postal service delivers to.
   'footer.address': 'postal address — must remain deliverable as written',
   // Product and plan names — deliberately not localised, like "Pro".
