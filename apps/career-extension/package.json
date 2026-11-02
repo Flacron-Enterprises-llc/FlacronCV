@@ -1,0 +1,9 @@
+{
+  "name": "@flacroncv/career-extension",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Local unpacked Chrome MV3 fill for example-jobs.test. Not a store listing.",
+  "scripts": {
+    "test": "node --test content.test.mjs"
+  }
+}

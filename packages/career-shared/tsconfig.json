@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.career.base.json",
+  "compilerOptions": {
+    "types": []
+  },
+  "include": ["src/**/*.ts"]
+}

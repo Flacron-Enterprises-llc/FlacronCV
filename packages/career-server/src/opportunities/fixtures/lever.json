@@ -1,0 +1,10 @@
+[
+  {
+    "id": "lev-1",
+    "text": "Dock planner",
+    "hostedUrl": "https://example.test/lever/lev-1",
+    "categories": { "location": "Dover", "commitment": "Full-time" },
+    "descriptionPlain": "Plan the morning dock.",
+    "createdAt": 1760000000000
+  }
+]

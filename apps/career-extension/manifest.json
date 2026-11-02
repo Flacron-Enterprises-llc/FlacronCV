@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "FlacronCV form fill (local)",
+  "version": "0.0.1",
+  "description": "Fills reviewed example-jobs.test fields. Does not submit. Not a store listing.",
+  "action": {
+    "default_title": "FlacronCV fill",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab"],
+  "host_permissions": [
+    "http://example-jobs.test/*",
+    "http://example-jobs.test:*/*",
+    "https://example-jobs.test/*",
+    "https://example-jobs.test:*/*",
+    "http://127.0.0.1:4001/*",
+    "http://localhost:4001/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://example-jobs.test/*",
+        "http://example-jobs.test:*/*",
+        "https://example-jobs.test/*",
+        "https://example-jobs.test:*/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -1,0 +1,180 @@
+{
+  "users": [
+    {
+      "uid": "ada",
+      "email": "ada@example.test",
+      "displayName": "Ada Lovelace",
+      "photoURL": null,
+      "phoneNumber": null,
+      "profile": {
+        "firstName": "Ada",
+        "lastName": "Lovelace",
+        "headline": "Analyst",
+        "bio": "Wrote notes on the engine.",
+        "location": "",
+        "website": "",
+        "linkedin": "",
+        "github": ""
+      },
+      "preferences": {
+        "language": "es",
+        "theme": "light",
+        "emailNotifications": true,
+        "marketingEmails": false,
+        "defaultCVTemplate": "classic",
+        "pushNotifications": false
+      },
+      "subscription": {
+        "plan": "free",
+        "status": "active",
+        "stripeCustomerId": null,
+        "stripeSubscriptionId": null,
+        "currentPeriodEnd": null,
+        "cancelAtPeriodEnd": false
+      },
+      "usage": {
+        "cvsCreated": 1,
+        "coverLettersCreated": 1,
+        "aiCreditsUsed": 4,
+        "aiCreditsLimit": 5,
+        "exportsThisMonth": 0,
+        "lastExportReset": "2026-10-01T00:00:00.000Z"
+      },
+      "pushTokens": ["expo-token-ada"],
+      "createdAt": { "seconds": 1760630400, "nanoseconds": 0 },
+      "updatedAt": "2026-10-16T00:00:00.000Z",
+      "deletedAt": null
+    },
+    {
+      "uid": "gone",
+      "email": "gone@example.test",
+      "displayName": "Gone",
+      "photoURL": null,
+      "phoneNumber": null,
+      "profile": { "firstName": "", "lastName": "", "headline": "", "bio": "", "location": "", "website": "", "linkedin": "", "github": "" },
+      "preferences": { "language": "en", "theme": "light", "emailNotifications": false, "marketingEmails": false, "defaultCVTemplate": "classic" },
+      "subscription": { "plan": "free", "status": "active", "stripeCustomerId": null, "stripeSubscriptionId": null, "currentPeriodEnd": null, "cancelAtPeriodEnd": false },
+      "usage": { "cvsCreated": 0, "coverLettersCreated": 0, "aiCreditsUsed": 0, "aiCreditsLimit": 5, "exportsThisMonth": 0, "lastExportReset": "2026-10-01T00:00:00.000Z" },
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z",
+      "deletedAt": "2026-02-01T00:00:00.000Z"
+    },
+    {
+      "uid": "bea",
+      "email": "bea@example.test",
+      "displayName": "Bea",
+      "photoURL": null,
+      "phoneNumber": null,
+      "profile": { "firstName": "Bea", "lastName": "", "headline": "", "bio": "", "location": "", "website": "", "linkedin": "", "github": "" },
+      "preferences": { "language": "fr", "theme": "dark", "emailNotifications": true, "marketingEmails": false, "defaultCVTemplate": "classic", "pushNotifications": true },
+      "subscription": {
+        "plan": "pro",
+        "status": "trialing",
+        "stripeCustomerId": null,
+        "stripeSubscriptionId": null,
+        "currentPeriodEnd": "2026-11-16T00:00:00.000Z",
+        "cancelAtPeriodEnd": false,
+        "hasUsedTrial": true
+      },
+      "usage": { "cvsCreated": 9, "coverLettersCreated": 3, "aiCreditsUsed": 40, "aiCreditsLimit": 999, "exportsThisMonth": 2, "lastExportReset": "2026-10-01T00:00:00.000Z" },
+      "createdAt": "2026-09-16T00:00:00.000Z",
+      "updatedAt": "2026-10-16T00:00:00.000Z",
+      "deletedAt": null
+    }
+  ],
+  "cvs": [
+    {
+      "id": "cv-ada",
+      "userId": "ada",
+      "title": "Ada CV",
+      "templateId": "classic",
+      "isPublic": false,
+      "publicSlug": null,
+      "personalInfo": { "summary": "Wrote notes on the engine." },
+      "deletedAt": null
+    },
+    {
+      "id": "cv-gone",
+      "userId": "gone",
+      "title": "Gone CV",
+      "templateId": "classic",
+      "isPublic": false,
+      "publicSlug": null,
+      "personalInfo": {},
+      "deletedAt": null
+    }
+  ],
+  "sections": [
+    {
+      "id": "section-ada",
+      "cvId": "cv-ada",
+      "userId": "ada",
+      "type": "experience",
+      "title": "Experience",
+      "items": [{ "company": "Analytical Engines", "position": "Analyst", "startDate": "2020-01", "description": "Notes" }],
+      "deletedAt": null
+    }
+  ],
+  "versions": [
+    {
+      "id": "ver-ada",
+      "cvId": "cv-ada",
+      "userId": "ada",
+      "versionNumber": 1,
+      "snapshot": { "title": "Ada CV" },
+      "createdAt": "2026-10-16T00:00:00.000Z",
+      "deletedAt": null
+    }
+  ],
+  "coverLetters": [
+    {
+      "id": "letter-ada",
+      "userId": "ada",
+      "title": "Letter to Babbage",
+      "content": "I wrote notes on the engine.",
+      "linkedCVId": "cv-ada",
+      "deletedAt": null
+    }
+  ],
+  "jobApplications": [
+    {
+      "id": "job-ada",
+      "userId": "ada",
+      "company": "Babbage",
+      "position": "Analyst",
+      "status": "accepted",
+      "appliedDate": "2026-10-01",
+      "notes": null,
+      "linkedCVId": "cv-ada",
+      "linkedCoverLetterId": "letter-ada",
+      "contactName": "Charles",
+      "contactEmail": null,
+      "followUpDate": "2026-11-01",
+      "deletedAt": null
+    }
+  ],
+  "legalAcceptances": [
+    {
+      "userId": "ada",
+      "email": "ada@example.test",
+      "termsAccepted": false,
+      "privacyAccepted": true,
+      "disclaimerAccepted": true,
+      "termsVersion": "2026-10-10",
+      "privacyVersion": "2026-10-10",
+      "disclaimerVersion": "2026-10-10",
+      "acceptedAt": "2026-10-10T00:00:00.000Z"
+    },
+    {
+      "userId": "bea",
+      "email": "bea@example.test",
+      "termsAccepted": true,
+      "privacyAccepted": true,
+      "disclaimerAccepted": true,
+      "termsVersion": "2026-10-10",
+      "privacyVersion": "2026-10-10",
+      "disclaimerVersion": "2026-10-10",
+      "acceptedAt": "2026-10-10T00:00:00.000Z"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "results": [
+    {
+      "id": "adz-1",
+      "title": "Ledger analyst",
+      "company": { "display_name": "Babbage Works" },
+      "description": "Keep the ledger. Pay is discussed later.",
+      "location": { "display_name": "London" },
+      "redirect_url": "https://example.test/adzuna/adz-1",
+      "created": "2026-10-01T00:00:00Z"
+    },
+    {
+      "id": "adz-2",
+      "title": "Night clerk",
+      "company": { "display_name": "Harbour Office" },
+      "description": "Sort the evening post.",
+      "location": { "display_name": "Dover" },
+      "redirect_url": "https://example.test/adzuna/adz-2",
+      "salary_min": 28000,
+      "salary_max": 32000,
+      "created": "2026-10-02T00:00:00Z"
+    }
+  ]
+}

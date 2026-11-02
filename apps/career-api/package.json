@@ -1,0 +1,66 @@
+{
+  "name": "career-api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "nest start",
+    "lint": "tsc --noEmit",
+    "type-check": "tsc --noEmit",
+    "test": "jest",
+    "test:e2e": "jest --config test/jest-e2e.json --runInBand",
+    "migrate": "tsx scripts/migrate.ts up",
+    "migrate:down": "tsx scripts/migrate.ts down",
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "storage:cleanup": "tsx scripts/storage-cleanup.ts"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testEnvironment": "node",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    }
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1149.0",
+    "@aws-sdk/s3-request-presigner": "3.1149.0",
+    "@flacroncv/career-server": "workspace:*",
+    "@flacroncv/career-shared": "workspace:*",
+    "@nestjs/common": "^10.3.0",
+    "@nestjs/config": "^3.1.0",
+    "@nestjs/core": "^10.3.0",
+    "@nestjs/platform-express": "^10.3.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "pg": "^8.13.0",
+    "qrcode": "1.5.4",
+    "reflect-metadata": "^0.2.1",
+    "rxjs": "^7.8.1",
+    "firebase-admin": "^12.0.0",
+    "@flacroncv/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^10.3.0",
+    "@nestjs/schematics": "^10.1.0",
+    "@nestjs/testing": "^10.3.0",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.11.0",
+    "@types/pg": "^8.11.0",
+    "@types/supertest": "^6.0.3",
+    "jest": "^29.7.0",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.1.0",
+    "ts-loader": "^9.5.0",
+    "ts-node": "^10.9.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.3.0"
+  }
+}

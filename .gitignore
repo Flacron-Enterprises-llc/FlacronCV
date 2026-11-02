@@ -96,3 +96,6 @@ apps/web/test-results/
 # only the App Router copy and the PNG output folder are ignored.
 apps/web/src/app/**/template-capture/
 apps/web/template-capture-output/
+
+# Career service local settings (see .env.career.example)
+.env.career

@@ -1,0 +1,18 @@
+{
+  "SearchResult": {
+    "SearchResultItems": [
+      {
+        "MatchedObjectId": "usa-1",
+        "MatchedObjectDescriptor": {
+          "PositionTitle": "Records clerk",
+          "OrganizationName": "Example Records Office",
+          "PositionURI": "https://example.test/usajobs/usa-1",
+          "PositionLocation": [{ "LocationName": "Washington, District of Columbia" }],
+          "UserArea": { "Details": { "JobSummary": "File the day's records." } },
+          "PositionRemuneration": [{ "MinimumRange": "40000", "MaximumRange": "52000", "RateIntervalCode": "Per Year" }],
+          "ApplicationCloseDate": "2020-01-01"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "jobs": [
+    {
+      "id": 4401,
+      "title": "Ledger analyst",
+      "absolute_url": "https://example.test/greenhouse/4401",
+      "location": { "name": "London" },
+      "content": "<p>Keep the ledger. The board adds a line the other feed did not.</p>",
+      "updated_at": "2026-10-03T00:00:00Z"
+    }
+  ]
+}
