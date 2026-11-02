@@ -25,3 +25,12 @@ No phone simulator is available on this laptop, so the app was not run. What exi
 - Settings → **Your data & account deletion** (new for all builds: download data, delete account in the app).
 - Billing shows the Career add-on status only (no price, no purchase button, per App Store / Google Play rules).
 To try it on a device: see "Mobile" in `C:\Users\win 11\FlacronCV-integration-local\README.txt`.
+
+## What each part is (3 Nov 2026)
+- **Working locally:** homepage (hero, product and template showcases); V1 CVs, letters, Job Tracker and templates; Career profile, drafts (edit, save, reopen, layout change, PDF/DOCX), evidence files, portfolios (public page shows only items marked "share on portfolio"), alerts with saved searches, data export and account deletion; operator tools; local test entitlement for the career account.
+- **Mock-tested only:** buying the Career add-on through Stripe (checkout, renewals, refunds, failures, cancellation, duplicate events); S3 storage; the OpenAI adapters (no real AI call was made).
+- **Awaiting provider configuration:** AI drafting, import, tailoring, letters and text interviews (OpenAI key); email alerts (SES); geocoding (Google key); Career purchase (Stripe price IDs). Not built yet: speech transcription, map tiles, licensed job feeds, Career push and Telegram.
+- **Awaiting mobile device testing:** everything in the app; see `docs/MOBILE_DEVICE_CHECKLIST.md`.
+- **Awaiting hosting or publication:** the career service (database, API, worker), app-store builds, the browser extension.
+
+Editor behaviour to notice: unsaved letter text is marked and protected; if the same document was saved in another tab, the save is refused and your text stays on screen; changing the letter layout keeps your typed text; a retried paid action after a lost connection never charges twice.

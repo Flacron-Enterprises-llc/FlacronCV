@@ -198,6 +198,17 @@ Legend — State: **Op** operational locally · **Prov** provider-dependent (sta
   - Browser (Edge, final production build): 37/37, 0 page/console errors — both showcases at 1440/1280/768/390/360, counts from catalog, A4 thumbnails rendered, no clipped text or overflow, samples labelled, es/fr/de/ar/ur incl. RTL, dark, reduced motion without scrolling, keyboard focus ring, signed-out and signed-in links, career menu, plans add-on wording. Screenshots: `FlacronCV-integration-localscreenshots-session4`.
   - Firebase SSR assertion: no longer logged after a page request on the rebuilt server.
   - Alerts page: saved-search list/pause/delete and honest push/Telegram notes (2 new tests).
+- **Fourth pass (3 Nov 2026) — reliability and data safety.** Two read-only audits (web editors/privacy; server jobs/deletion) were checked against the code; each fix below has a test that fails without it.
+  - Privacy: the public portfolio published linked evidence the owner never marked "share on portfolio" (now filtered; e2e). Mobile kept the previous account's cached CVs/letters/jobs in memory after sign-out (cache now cleared on every sign-out path).
+  - Deletion: a V1-closed account whose erase failed after it was marked was never retried (now retried after 15 minutes; e2e). Evidence file removal now clears the item before deleting the object (queued for the sweeper if storage refuses).
+  - Background jobs: one person's failure no longer aborts hourly alert matching/digests for everyone after them (the worker logs a count, never who); alert settings are never written back for an erased person.
+  - Editors (web): no false conflict after generate/tailor/template link; letter saves are revision-checked and keep the text on conflict; changing the letter layout keeps typed text; unsaved marker and leave warning for letters; paid actions reuse their idempotency key across a retry after a lost response; reload-and-keep-my-lines on a CV conflict; downloads named after the document with a real download error; copy to V1 reads the latest letter and finishes a part-way copy into the same V1 document.
+  - Billing wording: the lock screen no longer says the V1 plan includes career tools "yet".
+  - Providers: OpenAI model configurable (`OPENAI_MODEL`, `OPENAI_TEXT_MODEL`), default unchanged (§0.6). Apple rule scope corrected (§0.5).
+  - Results: career-server alerts 5/5, evidence 23/23, AI 6/6; career-api e2e portfolios 3/3, v1-bridge + privacy + storage-cleanup 19/19; V1 API AI 24/24; web resume/documents/lib 41/41 + full suite (see below); mobile 48/48, tsc and ESLint clean.
+- **Known open items from the fourth-pass audits (not fixed, recorded):**
+  - Web: in-app navigation (sidebar links) does not warn about unsaved career edits; only closing or reloading the tab does.
+  - Server: a deleted career account can be re-created after 2 hours by a new request, with a fresh monthly allowance; the closed-account sweep checks 20 people per 15-minute tick (about 1,900 a day); operator routes can create a career row for a V1-deactivated admin whose token still carries the staff claim; erasures started without a token can leave business invitations naming the person's email; a notification could be sent twice if a run crashes between sending and recording (no off-box notifier exists yet); a paid AI call running longer than 15 minutes is released while still running (no double charge).
 
 ## 7. Known limitations
 - L1 AI-dependent features (import, generation, tailoring, letters, text interviews) verified only on their failure path (no AI key). Speech, map tiles, licensed feeds and off-box mail/push are provider-unavailable by design.
@@ -208,4 +219,5 @@ Legend — State: **Op** operational locally · **Prov** provider-dependent (sta
 - L6 (fixed) The Firebase "Expected a class definition" assertion during server rendering came from V1 code (identical in V1 main): browser-only persistence passed to `initializeAuth` on the server. The server now uses `getAuth()`; browser behaviour unchanged.
 - L7 Mobile is English-only and light-only (existing V1 app); the six web locales and dark mode do not apply there.
 - L8 On a fresh database, phase 2–4 career features are off until an operator switches them on (§5.2); the local demo seed switches them on.
+- L10 Mobile device behaviour is unverified; the manual list is `docs/MOBILE_DEVICE_CHECKLIST.md`.
 - L9 Web UI gaps inherited from V2: saved searches can now be listed, paused and deleted (third pass), but location profiles and followed companies still have no screen; no Business counselor-assignment screen; voice transcription not wired (no vendor).
