@@ -10,12 +10,12 @@ Drafts for review. Nothing below has been sent to the client or to Umer.
 > 1. In Stripe, create the Career prices exactly as in the catalog (USD, no trial): Starter $21.99/month and $219.90/year; Professional $38.99/month and $389.90/year; Career Pro $68.99/month and $689.90/year. Send us the six **price IDs** (they are not secret). We reuse the existing Stripe webhook; please confirm it also sends `checkout.session.expired` and `charge.refunded`.
 > 2. Approve hosting for the career service (a small Postgres database and two containers beside the current site; roughly $80/month on AWS on-demand prices) and give our deploy role access to it.
 > 3. In Google Cloud (project `flacron-cv`), grant **read-only Firestore** (Cloud Datastore Viewer) to the career service — ideally through workload identity from AWS, so no key file is needed.
-> 4. An **OpenAI** project for FlacronCV Career with a budget limit; store its service-account key in Secrets Manager. (Note: OpenAI retires the current model on 14 Jan 2027; we will switch models before then.)
+> 4. An **OpenAI** project for FlacronCV Career with a budget limit; store its service-account key in Secrets Manager. (Note: OpenAI shuts down the model snapshot we use on 14 Jan 2027; the model is now a setting, and we will test and switch before then.)
 > 5. Names of the staff who should moderate career content (we look up their accounts).
 >
 > **Optional, can come later:** a private S3 bucket + role for evidence files (and malware scanning), SES sending role reuse for career emails, a Google Maps geocoding key restricted to our server IP, a speech-to-text choice, licensed job feeds (Adzuna requires a paid commercial licence), Telegram, browser-extension store accounts, and Career subscriptions in the App Store / Google Play.
 >
-> **Mobile apps:** the Career tools are built into the app but stay switched off. Apple only allows unlocking a web-bought subscription if it can also be bought in the app, so please decide whether we should add Career in-app subscriptions (see the decisions list).
+> **Mobile apps:** the Career tools are built into the app but stay switched off. Apple’s rule for apps like ours (guideline 3.1.3(b), all storefronts including the US) allows unlocking a subscription bought on the website only if it can also be bought in the app, so please decide whether we should add Career in-app subscriptions (see the decisions list).
 >
 > The full checklist with permissions, costs and official links is in `docs/INTEGRATION_CREDENTIALS_CHECKLIST.md`.
 
