@@ -55,11 +55,15 @@ export function maintenanceHandlers(pool: Pool): Record<string, JobHandler> {
 export function alertHandlers(pool: Pool): Record<string, JobHandler> {
   const alerts = new AlertService(pool, new MeteringService(pool), new RecordingAlertNotifier());
   return {
+    // Per-person failures are isolated and retried on the next run; the count
+    // (never who) is logged so a persistent problem is visible.
     [QUEUES.alertMatch]: async () => {
-      await alerts.runDue();
+      const run = await alerts.runDue();
+      if (run.failed > 0) console.warn(`alert matching: ${run.failed} person(s) failed; retried next run`);
     },
     [QUEUES.alertDigest]: async () => {
-      await alerts.sendDigests();
+      const run = await alerts.sendDigests();
+      if (run.failed > 0) console.warn(`alert digests: ${run.failed} person(s) failed; retried next run`);
     },
   };
 }

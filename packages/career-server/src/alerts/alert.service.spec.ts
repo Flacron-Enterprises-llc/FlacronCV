@@ -134,12 +134,12 @@ describe('AlertService', () => {
     const first = await alerts.runDue();
     expect(first.surfaced).toBe(1);
     expect(notifier.delivered).toHaveLength(0);
-    expect(await alerts.sendDigests()).toEqual({ sent: 0 });
+    expect(await alerts.sendDigests()).toEqual({ sent: 0, failed: 0 });
     expect(await units(p)).toEqual(['alert_item:committed']);
 
     clock.set('2026-10-16T13:00:00Z');
     await alerts.updateSettings(p, { quietStart: null, quietEnd: null });
-    expect(await alerts.sendDigests()).toEqual({ sent: 1 });
+    expect(await alerts.sendDigests()).toEqual({ sent: 1, failed: 0 });
     expect(notifier.delivered).toEqual([
       expect.objectContaining({ channel: 'email', title: 'digest:1', recipientAuthUserId: 'alert-ada' }),
     ]);
@@ -188,5 +188,31 @@ describe('AlertService', () => {
     expect(await units(p)).toEqual([]);
     const found = await opportunities.search(p, { q: 'Ledger' });
     expect(found.items.length).toBeGreaterThan(0);
+  });
+
+  it("one person's failure does not stop the run for everyone after them", async () => {
+    await alerts.createSearch(await person('alert-broken'), { q: 'SQL' });
+    await alerts.createSearch(await person('alert-fine'), { q: 'SQL' });
+    type Surfacer = { surfacePerson: (p: { authUserId: string }) => Promise<unknown> };
+    const real = (alerts as unknown as Surfacer).surfacePerson.bind(alerts);
+    const seen: string[] = [];
+    jest.spyOn(alerts as unknown as Surfacer, 'surfacePerson').mockImplementation(async (p) => {
+      seen.push(p.authUserId);
+      if (p.authUserId === 'alert-broken') throw new Error('simulated failure');
+      return real(p);
+    });
+    const run = await alerts.runDue();
+    expect(run.failed).toBe(1);
+    expect(seen).toContain('alert-broken');
+    expect(seen).toContain('alert-fine');
+  });
+
+  it('does not re-create alert settings for a person whose erasure has started', async () => {
+    const p = await person('alert-erased');
+    await db.pool.query(`DELETE FROM alert_settings WHERE candidate_auth_user_id = $1`, [p.authUserId]);
+    await db.pool.query(`UPDATE users SET deletion_requested_at = now() WHERE auth_user_id = $1`, [p.authUserId]);
+    await (alerts as unknown as { touchMatched: (p: Principal) => Promise<void> }).touchMatched(p);
+    const rows = await db.pool.query(`SELECT 1 FROM alert_settings WHERE candidate_auth_user_id = $1`, [p.authUserId]);
+    expect(rows.rows).toHaveLength(0);
   });
 });

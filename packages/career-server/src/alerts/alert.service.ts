@@ -401,21 +401,29 @@ export class AlertService {
    * not reserve `resume_analysis`. A new listing revision reserves one
    * `alert_item`. Quota stops new items for that person and leaves the rest.
    */
-  async runDue(): Promise<{ surfaced: number; paused: number }> {
+  async runDue(): Promise<{ surfaced: number; paused: number; failed: number }> {
     const people = await this.candidates();
     let surfaced = 0;
     let paused = 0;
+    let failed = 0;
     for (const person of people) {
-      const outcome = await this.surfacePerson(person);
-      surfaced += outcome.surfaced;
-      if (outcome.paused) paused += 1;
-      if (!outcome.skipped) await this.deliverPending(person);
+      // One person's failure (a deletion in progress, a replayed failed key, a
+      // database error) must not stop matching for everyone after them; their
+      // own work is retried on the next run.
+      try {
+        const outcome = await this.surfacePerson(person);
+        surfaced += outcome.surfaced;
+        if (outcome.paused) paused += 1;
+        if (!outcome.skipped) await this.deliverPending(person);
+      } catch {
+        failed += 1;
+      }
     }
-    return { surfaced, paused };
+    return { surfaced, paused, failed };
   }
 
   /** One digest for the items that have no email row yet. It does not reserve. */
-  async sendDigests(): Promise<{ sent: number }> {
+  async sendDigests(): Promise<{ sent: number; failed: number }> {
     const people = await this.pool.query<{ recipient_auth_user_id: string; workspace_id: string; billing_account_id: string }>(
       `SELECT DISTINCT a.recipient_auth_user_id, a.workspace_id, b.id AS billing_account_id
          FROM alert_items a
@@ -423,18 +431,23 @@ export class AlertService {
         ORDER BY a.recipient_auth_user_id, b.id`,
     );
     let sent = 0;
+    let failed = 0;
     const seen = new Set<string>();
     for (const row of people.rows) {
       if (seen.has(row.recipient_auth_user_id)) continue;
       seen.add(row.recipient_auth_user_id);
-      const did = await this.digestPerson({
-        authUserId: row.recipient_auth_user_id,
-        workspaceId: row.workspace_id,
-        billingAccountId: row.billing_account_id,
-      });
-      if (did) sent += 1;
+      try {
+        const did = await this.digestPerson({
+          authUserId: row.recipient_auth_user_id,
+          workspaceId: row.workspace_id,
+          billingAccountId: row.billing_account_id,
+        });
+        if (did) sent += 1;
+      } catch {
+        failed += 1;
+      }
     }
-    return { sent };
+    return { sent, failed };
   }
 
   private async surfacePerson(person: Person): Promise<{ surfaced: number; paused: boolean; skipped: boolean }> {
@@ -743,9 +756,10 @@ export class AlertService {
   }
 
   private async touchMatched(person: Person): Promise<void> {
+    // Never re-creates a settings row for a person whose erasure has started or finished.
     await this.pool.query(
       `INSERT INTO alert_settings (candidate_auth_user_id, workspace_id, last_matched_at)
-       VALUES ($1, $2, $3)
+       SELECT $1, $2, $3 WHERE ${livePersonCondition(1)}
        ON CONFLICT (candidate_auth_user_id) DO UPDATE SET last_matched_at = EXCLUDED.last_matched_at`,
       [person.authUserId, person.workspaceId, this.clock.now()],
     );
