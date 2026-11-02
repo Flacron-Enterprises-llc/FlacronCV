@@ -81,8 +81,10 @@ export function CareerPlansScreen() {
   const current = status.data?.careerSubscription;
   const currentLabel = useMemo(() => {
     if (!access.data?.enabled) return t('current_none');
-    return t('current_plan', { plan: t(`plan.${access.data.careerPlan}`), source: t(`source.${access.data.source ?? 'v1_plan_map'}`) });
-  }, [access.data, t]);
+    // A locally seeded entitlement must never read as a purchase.
+    const source = current?.source === 'local_fixture' ? t('fixture_badge') : t(`source.${access.data.source ?? 'v1_plan_map'}`);
+    return t('current_plan', { plan: t(`plan.${access.data.careerPlan}`), source });
+  }, [access.data, current?.source, t]);
 
   async function confirmPurchase() {
     if (!selected || inFlight.current) return;
