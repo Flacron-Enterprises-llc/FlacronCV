@@ -42,6 +42,9 @@ function documentLocale(uiLocale: string): Locale {
   return isLaunchLocale(uiLocale) ? uiLocale : 'en';
 }
 
+/** Module-level, so its identity is stable across renders (the overview reloads when it changes). */
+const loadV1Jobs = async () => careerItemsFromV1Jobs(await v1Api.get<JobApplication[]>('/jobs'));
+
 export function CareerOverviewRoute() {
   const { uiLocale, ...props } = useScreenProps();
   return (
@@ -50,7 +53,7 @@ export function CareerOverviewRoute() {
         {...props}
         locale={uiLocale}
         // V1's Jobs tracker is the only application tracker.
-        loadApplications={async () => careerItemsFromV1Jobs(await v1Api.get<JobApplication[]>('/jobs'))}
+        loadApplications={loadV1Jobs}
       />
     </CareerGate>
   );

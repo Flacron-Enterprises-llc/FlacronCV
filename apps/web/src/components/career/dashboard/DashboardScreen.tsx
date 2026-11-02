@@ -84,7 +84,7 @@ export function DashboardScreen({
       const failure = profileLoadFailure(error);
       setLoad(failure === 'signed-out' ? 'signed-out' : failure === 'permission' ? 'permission' : 'unavailable');
     }
-  }, [api]);
+  }, [api, loadApplications]);
 
   useEffect(() => {
     if (!ready) return;

@@ -473,7 +473,7 @@ export function RelocationModesScreen({
                         {t('minutes')} • {t(`remote_${loc.remoteFlexibility}`)}
                       </p>
                       {loc.notes && (
-                        <p className="mt-2 rounded bg-career-wash p-2 text-career-ink/80 italic">"{loc.notes}"</p>
+                        <p className="mt-2 rounded bg-career-wash p-2 text-career-ink/80 italic">&ldquo;{loc.notes}&rdquo;</p>
                       )}
                     </div>
                   </div>
