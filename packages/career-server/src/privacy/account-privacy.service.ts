@@ -270,11 +270,15 @@ export class AccountPrivacyService {
          FROM users u
          JOIN workspaces w ON w.owner_user_id = u.id AND w.kind = 'individual'
          JOIN billing_accounts b ON b.workspace_id = w.id
-        WHERE u.deletion_requested_at IS NULL
+        WHERE (u.deletion_requested_at IS NULL OR u.deletion_requested_at < $3)
           AND (u.v1_closure_checked_at IS NULL OR u.v1_closure_checked_at < $1)
         ORDER BY u.v1_closure_checked_at NULLS FIRST
         LIMIT $2`,
-      [new Date(now.getTime() - V1_CLOSURE_RECHECK_MS), limit],
+      // A row marked earlier but not erased (storage or database failed mid-erase,
+      // or a person's own deletion stalled) is picked up again once the attempt is
+      // surely over. Without this it was never retried: V1 had closed the account,
+      // so the person could not retry either.
+      [new Date(now.getTime() - V1_CLOSURE_RECHECK_MS), limit, new Date(now.getTime() - INTERRUPTED_DELETION_AFTER_MS)],
     );
     let erased = 0;
     let failed = 0;
@@ -303,7 +307,8 @@ export class AccountPrivacyService {
         await this.eraseAndCheck(owner, true);
         erased += 1;
       } catch {
-        // V1 or storage unreachable: the row is not stamped, so the next tick retries it.
+        // V1, storage or the database failed: the closure check is not stamped, so a
+        // later tick retries it (after INTERRUPTED_DELETION_AFTER_MS if it was marked).
         failed += 1;
       }
     }

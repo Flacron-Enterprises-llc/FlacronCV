@@ -217,6 +217,28 @@ describe('V1 closure sweep', () => {
     await t.app.get(StorageCleanupScheduler).tick();
     expect(await userCount('staying-ben')).toBe(1);
   });
+
+  it('retries a closed account whose earlier erase failed after it was marked, but leaves a deletion in progress alone', async () => {
+    for (const uid of ['stalled-dee', 'in-progress-eve']) {
+      accounts.set(uid, { uid, plan: 'pro', active: true });
+      const res = await http()
+        .post('/api/career/v1/facts')
+        .set('Authorization', bearer(uid))
+        .send({ factType: 'experience', value: { company: 'Fictional Co', startDate: '2020-02' } });
+      expect(res.status).toBe(201);
+      accounts.set(uid, { uid, plan: 'pro', active: false });
+    }
+    // Simulate a sweep that marked the account and then failed (storage or database error):
+    // marked 20 minutes ago, closure check never stamped. The other was marked a minute ago.
+    await t.db.pool.query(`UPDATE users SET deletion_requested_at = now() - interval '20 minutes' WHERE auth_user_id = 'stalled-dee'`);
+    await t.db.pool.query(`UPDATE users SET deletion_requested_at = now() - interval '1 minute' WHERE auth_user_id = 'in-progress-eve'`);
+
+    await t.app.get(StorageCleanupScheduler).tick();
+
+    expect(await userCount('stalled-dee')).toBe(0);
+    expect(await factCount('stalled-dee')).toBe(0);
+    expect(await userCount('in-progress-eve')).toBe(1);
+  });
 });
 
 describe('purchased career entitlement (default map: no V1 plan grants career access)', () => {
