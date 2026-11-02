@@ -3371,7 +3371,7 @@
     },
     "plans": {
       "title": "Career plans",
-      "intro": "Career plans unlock the career tools: career profile, grounded drafts, job matching, interview practice and more. Prices and allowances come from the FlacronCV career catalog. Your current FlacronCV plan, your CVs, cover letters, credits and price are not changed on this page.",
+      "intro": "Career plans are optional add-ons that unlock the career tools: career profile, grounded drafts, job matching, interview practice and more. Prices and allowances come from the FlacronCV career catalog.",
       "current_none": "You don't have a career plan.",
       "current_plan": "Your career plan: {plan} ({source}).",
       "source": {
@@ -3379,9 +3379,6 @@
         "purchase": "career plan purchase"
       },
       "fixture_badge": "Local test entitlement, not a real purchase",
-      "disabled_title": "Career plans cannot be purchased yet",
-      "disabled_body": "Prices are shown for information. Purchase opens once FlacronCV confirms how career plans combine with existing subscriptions. Nothing is charged.",
-      "fixture_mode_notice": "Test setup: checkout uses Stripe test mode only. This is a local test, not an approved offer.",
       "interval_label": "Billing interval",
       "interval": {
         "month": "Monthly",
@@ -3433,13 +3430,21 @@
       "review_title": "Review before you pay",
       "review_plan": "Plan",
       "review_amount": "Amount",
-      "review_v1_unchanged_fixture": "In this test setup the career plan is a separate subscription: your current FlacronCV plan is not changed or cancelled.",
-      "review_model_pending": "How a career plan combines with your current FlacronCV plan will be confirmed before purchase opens.",
       "review_no_charge_yet": "Nothing is charged until you confirm on Stripe's secure checkout page.",
       "confirm": "Continue to secure checkout ({amount})",
-      "confirm_disabled": "Purchase not available yet",
+      "confirm_disabled": "Purchase not available here",
       "cancel": "Cancel",
-      "checkout_failed": "Checkout could not start. You were not charged."
+      "checkout_failed": "Checkout could not start. You were not charged.",
+      "addon_note": "A career plan is billed in addition to your current FlacronCV plan ({v1Plan}). Your current plan, its price, CVs, cover letters and AI credits stay exactly as they are.",
+      "credits_note": "Career credits are separate from your FlacronCV AI credits and are used only by the career tools.",
+      "optional_note": "Nothing is added or charged unless you choose a career plan and confirm it on Stripe's secure checkout page.",
+      "unavailable_title": "Career plans cannot be bought here yet",
+      "unavailable_disabled": "Career plan sales are switched off in this environment. Prices are shown for information; nothing can be charged.",
+      "unavailable_setup": "Checkout for career plans is not set up in this environment yet. Prices are shown for information; nothing can be charged.",
+      "test_mode_notice": "Test mode: checkout uses Stripe's test environment. No real payment is taken.",
+      "in_addition": "in addition to your current plan",
+      "review_addon": "Charged in addition to your current FlacronCV plan ({v1Plan}), which is not changed or cancelled.",
+      "review_cancel": "Cancelling the career plan later ends only the career tools; your FlacronCV plan continues."
     }
   },
   "home_hero": {

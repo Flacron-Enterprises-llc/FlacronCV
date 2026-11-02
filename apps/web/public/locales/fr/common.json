@@ -3371,7 +3371,7 @@
     },
     "plans": {
       "title": "Forfaits carrière",
-      "intro": "Les forfaits carrière donnent accès aux outils de carrière : profil de carrière, brouillons fondés, correspondance avec les offres, entraînement aux entretiens et plus encore. Les prix et quotas proviennent du catalogue carrière FlacronCV. Votre forfait FlacronCV actuel, vos CV, lettres de motivation, crédits et votre prix ne sont pas modifiés sur cette page.",
+      "intro": "Les forfaits carrière sont des options facultatives qui donnent accès aux outils de carrière : profil de carrière, brouillons fondés, correspondance avec les offres, entraînement aux entretiens et plus encore. Les prix et quotas proviennent du catalogue carrière FlacronCV.",
       "current_none": "Vous n’avez pas de forfait carrière.",
       "current_plan": "Votre forfait carrière : {plan} ({source}).",
       "source": {
@@ -3379,9 +3379,6 @@
         "purchase": "achat d’un forfait carrière"
       },
       "fixture_badge": "Droit d’accès de test local, pas un achat réel",
-      "disabled_title": "Les forfaits carrière ne peuvent pas encore être achetés",
-      "disabled_body": "Les prix sont affichés à titre d’information. L’achat ouvrira une fois que FlacronCV aura confirmé comment les forfaits carrière s’articulent avec les abonnements existants. Rien n’est facturé.",
-      "fixture_mode_notice": "Configuration de test : le paiement utilise uniquement le mode test de Stripe. Il s’agit d’un test local, pas d’une offre approuvée.",
       "interval_label": "Périodicité de facturation",
       "interval": {
         "month": "Mensuel",
@@ -3433,13 +3430,21 @@
       "review_title": "Vérifiez avant de payer",
       "review_plan": "Forfait",
       "review_amount": "Montant",
-      "review_v1_unchanged_fixture": "Dans cette configuration de test, le forfait carrière est un abonnement distinct : votre forfait FlacronCV actuel n’est ni modifié ni résilié.",
-      "review_model_pending": "La façon dont un forfait carrière s’articule avec votre forfait FlacronCV actuel sera confirmée avant l’ouverture de l’achat.",
       "review_no_charge_yet": "Rien n’est facturé tant que vous ne confirmez pas sur la page de paiement sécurisée de Stripe.",
       "confirm": "Continuer vers le paiement sécurisé ({amount})",
-      "confirm_disabled": "Achat pas encore disponible",
+      "confirm_disabled": "Achat non disponible ici",
       "cancel": "Annuler",
-      "checkout_failed": "Le paiement n’a pas pu démarrer. Vous n’avez pas été débité."
+      "checkout_failed": "Le paiement n’a pas pu démarrer. Vous n’avez pas été débité.",
+      "addon_note": "Un forfait carrière est facturé en plus de votre forfait FlacronCV actuel ({v1Plan}). Votre forfait actuel, son prix, vos CV, lettres de motivation et crédits IA restent exactement les mêmes.",
+      "credits_note": "Les crédits carrière sont distincts de vos crédits IA FlacronCV et ne servent qu’aux outils de carrière.",
+      "optional_note": "Rien n’est ajouté ni facturé tant que vous ne choisissez pas un forfait carrière et ne le confirmez pas sur la page de paiement sécurisée de Stripe.",
+      "unavailable_title": "Les forfaits carrière ne peuvent pas encore être achetés ici",
+      "unavailable_disabled": "La vente des forfaits carrière est désactivée dans cet environnement. Les prix sont affichés à titre d’information ; rien ne peut être facturé.",
+      "unavailable_setup": "Le paiement des forfaits carrière n’est pas encore configuré dans cet environnement. Les prix sont affichés à titre d’information ; rien ne peut être facturé.",
+      "test_mode_notice": "Mode test : le paiement utilise l’environnement de test de Stripe. Aucun paiement réel n’est effectué.",
+      "in_addition": "en plus de votre forfait actuel",
+      "review_addon": "Facturé en plus de votre forfait FlacronCV actuel ({v1Plan}), qui n’est ni modifié ni résilié.",
+      "review_cancel": "Si vous résiliez plus tard le forfait carrière, seuls les outils de carrière s’arrêtent ; votre forfait FlacronCV continue."
     }
   },
   "home_hero": {

@@ -12,6 +12,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { useAuth } from '@/providers/AuthProvider';
+import { PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
 import { useCareerAccess } from './CareerServices';
 
 /** Individual career plans offered here. Business (seats, candidates) is a team product and is not sold in this flow. */
@@ -38,7 +39,9 @@ type Interval = 'month' | 'year';
 interface CareerBillingStatus {
   mode: 'disabled' | 'addon_fixture';
   purchasable: boolean;
+  blockedReason: 'disabled' | 'stripe_not_configured' | 'prices_not_configured' | null;
   configuredPrices: string[];
+  stripeTestMode: boolean;
   careerSubscription: { plan: string | null; status: string | null; currentPeriodEnd: string | null; cancelAtPeriodEnd: boolean; source: string | null } | null;
 }
 
@@ -47,16 +50,18 @@ function money(cents: number, locale: string): string {
 }
 
 /**
- * Career plans and their price, from the V2 catalog. Shows the amount, the
- * interval and what is included before anything is confirmed. Nothing is
- * charged here: a confirmed purchase goes to Stripe Checkout through V1's
- * billing, and only while purchase is switched on (it is off until the
- * commercial model is decided). The V1 plan and its benefits are not changed.
+ * Career plans are optional ADD-ONS (client decision, 2 Nov 2026): billed in
+ * addition to the customer's current FlacronCV plan, with their own career
+ * credits. Prices and allowances come from the V2 catalog. Amount, interval
+ * and benefits are shown before anything is confirmed; a confirmed purchase
+ * goes to Stripe Checkout through V1's billing. The V1 plan is never changed.
  */
 export function CareerPlansScreen() {
   const t = useTranslations('career.plans');
   const locale = useLocale();
   const { user } = useAuth();
+  // The customer's existing plan, by its V1 product name, so the add-on is clearly "in addition".
+  const v1PlanName = PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)]?.name ?? '';
   const formatApiError = useApiErrorMessage();
   const access = useCareerAccess();
   const [interval, setInterval] = useState<Interval>('month');
@@ -71,6 +76,7 @@ export function CareerPlansScreen() {
   });
 
   const purchasable = Boolean(status.data?.purchasable);
+  const purchasableHere = (plan: PlanId) => purchasable && Boolean(status.data?.configuredPrices.includes(`${plan}:${interval}`));
   const amountOf = (plan: PlanId) => (interval === 'year' ? PLANS[plan].annualCents : PLANS[plan].monthlyCents);
   const benefitText = (plan: PlanId, benefit: Benefit): string | null => {
     const value = ALLOWANCES[plan][benefit] as number | boolean | null;
@@ -111,6 +117,11 @@ export function CareerPlansScreen() {
       <div>
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{t('title')}</h1>
         <p className="mt-2 max-w-3xl text-sm text-stone-600 dark:text-stone-300">{t('intro')}</p>
+        <ul className="mt-3 max-w-3xl list-disc space-y-1 ps-5 text-sm text-stone-700 dark:text-stone-200">
+          <li>{t('addon_note', { v1Plan: v1PlanName })}</li>
+          <li>{t('credits_note')}</li>
+          <li>{t('optional_note')}</li>
+        </ul>
         <p className="mt-2 text-sm font-medium text-stone-800 dark:text-stone-100">{currentLabel}</p>
         {current?.source === 'local_fixture' ? (
           <p className="mt-1 inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
@@ -124,16 +135,18 @@ export function CareerPlansScreen() {
           <div className="flex items-start gap-3">
             <Lock className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" aria-hidden="true" />
             <div>
-              <p className="text-sm font-semibold text-stone-900 dark:text-white">{t('disabled_title')}</p>
-              <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">{t('disabled_body')}</p>
+              <p className="text-sm font-semibold text-stone-900 dark:text-white">{t('unavailable_title')}</p>
+              <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
+                {status.data?.blockedReason === 'disabled' ? t('unavailable_disabled') : t('unavailable_setup')}
+              </p>
             </div>
           </div>
         </Card>
-      ) : (
+      ) : status.data?.stripeTestMode ? (
         <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-900/30 dark:text-amber-100" role="note">
-          {t('fixture_mode_notice')}
+          {t('test_mode_notice')}
         </p>
-      )}
+      ) : null}
 
       <div className="inline-flex rounded-lg border border-stone-200 p-1 dark:border-stone-700" role="group" aria-label={t('interval_label')}>
         {(['month', 'year'] as const).map((value) => (
@@ -163,6 +176,7 @@ export function CareerPlansScreen() {
               {money(amountOf(plan), locale)}
               <span className="ms-1 text-sm font-normal text-stone-500 dark:text-stone-400">{t(`per.${interval}`)}</span>
             </p>
+            <p className="text-xs font-medium text-brand-700 dark:text-brand-300">{t('in_addition')}</p>
             {interval === 'year' ? <p className="text-xs text-stone-500 dark:text-stone-400">{t('annual_note')}</p> : null}
             <ul className="mt-4 flex-1 space-y-1.5 text-sm">
               {BENEFITS.map((benefit) => {
@@ -198,11 +212,13 @@ export function CareerPlansScreen() {
               </dd>
             </div>
           </dl>
-          <p className="mt-3 text-sm text-stone-600 dark:text-stone-300">{purchasable ? t('review_v1_unchanged_fixture') : t('review_model_pending')}</p>
+          <p className="mt-3 text-sm text-stone-600 dark:text-stone-300">{t('review_addon', { v1Plan: v1PlanName })}</p>
+          <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">{t('credits_note')}</p>
+          <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">{t('review_cancel')}</p>
           <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">{t('review_no_charge_yet')}</p>
           <div className="mt-4 flex flex-wrap gap-3">
-            <Button onClick={() => void confirmPurchase()} disabled={!purchasable || busy} loading={busy}>
-              {purchasable ? t('confirm', { amount: money(amountOf(selected), locale) }) : t('confirm_disabled')}
+            <Button onClick={() => void confirmPurchase()} disabled={!purchasableHere(selected) || busy} loading={busy}>
+              {purchasableHere(selected) ? t('confirm', { amount: money(amountOf(selected), locale) }) : t('confirm_disabled')}
             </Button>
             <Button variant="ghost" onClick={() => setSelected(null)}>
               {t('cancel')}

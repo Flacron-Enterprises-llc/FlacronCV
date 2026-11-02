@@ -5,8 +5,8 @@ import { CareerBillingService, readCareerBillingMode, readCareerStripePrices } f
 import { PaymentService } from './payment.service';
 
 /**
- * Career plans through V1 billing. Purchase activation is a client decision,
- * so `addon_fixture` below is a LABELLED LOCAL FIXTURE, not approved behaviour.
+ * Career plans through V1 billing: an optional ADD-ON subscription with its own
+ * career credits (approved model). Stripe is mocked; no Stripe resource is used.
  * Every webhook test also asserts the V1 plan, credits and V1 subscription are untouched.
  */
 const APP = { app_id: 'flacron-cv' };
@@ -77,8 +77,9 @@ async function seedV1Pro(firestore: InMemoryFirestore) {
 describe('career billing configuration', () => {
   it('is disabled by default and refuses the local fixture mode in production', () => {
     expect(readCareerBillingMode({})).toBe('disabled');
-    expect(readCareerBillingMode({ CAREER_BILLING_MODE: 'addon_fixture', NODE_ENV: 'development' })).toBe('addon_fixture');
-    expect(() => readCareerBillingMode({ CAREER_BILLING_MODE: 'addon_fixture', NODE_ENV: 'production' })).toThrow(/refused in production/);
+    expect(readCareerBillingMode({ CAREER_BILLING_MODE: 'addon', NODE_ENV: 'development' })).toBe('addon');
+    expect(readCareerBillingMode({ CAREER_BILLING_MODE: 'addon', NODE_ENV: 'production' })).toBe('addon');
+    expect(() => readCareerBillingMode({ CAREER_BILLING_MODE: 'addon_fixture' })).toThrow();
     expect(() => readCareerBillingMode({ CAREER_BILLING_MODE: 'live' })).toThrow();
     expect(() => readCareerStripePrices({ CAREER_STRIPE_PRICES: '{"platinum:month":"price_x"}' })).toThrow(/unknown key/);
   });
@@ -112,11 +113,11 @@ describe('career checkout', () => {
     expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
   });
 
-  it('[fixture] charges only the confirmed amount, on the existing customer, with no trial and career metadata', async () => {
-    await expect(confirmBuy(make('addon_fixture'), 999)).rejects.toBeInstanceOf(ConflictException);
+  it('[add-on] charges only the confirmed amount, on the existing customer, with no trial and career metadata', async () => {
+    await expect(confirmBuy(make('addon'), 999)).rejects.toBeInstanceOf(ConflictException);
     expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
 
-    const result = await confirmBuy(make('addon_fixture'));
+    const result = await confirmBuy(make('addon'));
     expect(result.sessionId).toBe('cs_1');
     expect(stripe.customers.create).not.toHaveBeenCalled();
     const [params, options] = stripe.checkout.sessions.create.mock.calls[0] as any[];
@@ -126,9 +127,29 @@ describe('career checkout', () => {
     expect(options).toEqual({ idempotencyKey: 'career-checkout:u1:k1' });
   });
 
-  it('[fixture] refuses a second career subscription while one is live', async () => {
+  it('[add-on] explains why purchase is unavailable, and never touches V1 subscription fields', async () => {
+    const noPrices = (() => {
+      process.env.CAREER_BILLING_MODE = 'addon';
+      process.env.CAREER_STRIPE_PRICES = '';
+      return new CareerBillingService(config(), { firestore } as any, users(firestore), stripe as any);
+    })();
+    expect(await noPrices.status('u1')).toMatchObject({ model: 'addon', purchasable: false, blockedReason: 'prices_not_configured' });
+    await expect(confirmBuy(noPrices)).rejects.toBeInstanceOf(ForbiddenException);
+    const svc = make('addon');
+    expect(await svc.status('u1')).toMatchObject({ purchasable: true, blockedReason: null, configuredPrices: ['professional:month'] });
+    await expect(
+      svc.createCheckout('u1', { plan: 'professional', interval: 'year', expectedAmountCents: 38990 }, { success: 's', cancel: 'c' }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await confirmBuy(svc);
+    const v1 = (await firestore.collection('users').doc('u1').get()).data() as any;
+    expect(v1.subscription).toMatchObject({ plan: SubscriptionPlan.PRO, stripeSubscriptionId: V1_SUB, stripeCustomerId: 'cus_shared' });
+    expect(v1.usage).toEqual({ aiCreditsUsed: 7, aiCreditsLimit: 100, exportsThisMonth: 2 });
+    expect(v1.careerSubscription).toBeUndefined();
+  });
+
+  it('[add-on] refuses a second career subscription while one is live', async () => {
     await firestore.collection('users').doc('u1').update({ careerSubscription: { plan: 'professional', status: 'active', stripeSubscriptionId: CAREER_SUB } });
-    await expect(confirmBuy(make('addon_fixture'))).rejects.toBeInstanceOf(ConflictException);
+    await expect(confirmBuy(make('addon'))).rejects.toBeInstanceOf(ConflictException);
     expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
   });
 });
@@ -215,6 +236,27 @@ describe('career webhooks through V1 PaymentService', () => {
     expect((await user()).careerSubscription).toMatchObject({ status: 'active', cancelAtPeriodEnd: true });
     await payments.handleWebhookEvent(event('evt_c2', 'customer.subscription.deleted', careerSubscription('canceled', t0 + 30 * 86400), t0 + 2));
     expect((await user()).careerSubscription.status).toBe('canceled');
+    await expectV1Untouched();
+  });
+
+  it('an abandoned or expired checkout grants nothing', async () => {
+    const expired = { id: 'cs_x', subscription: null, metadata: { ...APP, product: 'career', firebaseUid: 'u1' } };
+    expect(await payments.handleWebhookEvent(event('evt_exp', 'checkout.session.expired', expired, t0))).toBe('ignored');
+    const completedWithoutSubscription = { ...expired, id: 'cs_y' };
+    await payments.handleWebhookEvent(event('evt_nosub', 'checkout.session.completed', completedWithoutSubscription, t0));
+    expect((await user()).careerSubscription).toBeUndefined();
+    await expectV1Untouched();
+  });
+
+  it('a renewal extends the paid period once; replaying it changes nothing', async () => {
+    await payments.handleWebhookEvent(event('evt_start', 'customer.subscription.updated', careerSubscription('active', t0 + 30 * 86400), t0));
+    stripe.subs.set(CAREER_SUB, careerSubscription('active', t0 + 60 * 86400));
+    const invoice = { id: 'in_2', customer: 'cus_shared', subscription: CAREER_SUB, subscription_details: { metadata: { ...APP, product: 'career' } }, lines: { data: [] } };
+    await payments.handleWebhookEvent(event('evt_renew', 'invoice.paid', invoice, t0 + 30 * 86400));
+    const renewed = (await user()).careerSubscription;
+    expect(new Date(renewed.currentPeriodEnd).getTime()).toBe((t0 + 60 * 86400) * 1000);
+    expect(await payments.handleWebhookEvent(event('evt_renew', 'invoice.paid', invoice, t0 + 30 * 86400))).toBe('duplicate');
+    expect((await user()).careerSubscription.stateAt).toBe(renewed.stateAt);
     await expectV1Untouched();
   });
 

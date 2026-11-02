@@ -3371,7 +3371,7 @@
     },
     "plans": {
       "title": "Karrieretarife",
-      "intro": "Karrieretarife schalten die Karrieretools frei: Karriereprofil, faktenbasierte Entwürfe, Job-Matching, Interviewtraining und mehr. Preise und Kontingente stammen aus dem FlacronCV-Karrierekatalog. Dein aktueller FlacronCV-Tarif, deine Lebensläufe, Anschreiben, Credits und dein Preis werden auf dieser Seite nicht geändert.",
+      "intro": "Karrieretarife sind optionale Zusatzpakete, die die Karrieretools freischalten: Karriereprofil, belegte Entwürfe, Job-Matching, Interviewtraining und mehr. Preise und Kontingente stammen aus dem FlacronCV-Karrierekatalog.",
       "current_none": "Du hast keinen Karrieretarif.",
       "current_plan": "Dein Karrieretarif: {plan} ({source}).",
       "source": {
@@ -3379,9 +3379,6 @@
         "purchase": "Kauf eines Karrieretarifs"
       },
       "fixture_badge": "Lokale Testberechtigung, kein echter Kauf",
-      "disabled_title": "Karrieretarife können noch nicht gekauft werden",
-      "disabled_body": "Die Preise dienen nur zur Information. Der Kauf wird freigeschaltet, sobald FlacronCV bestätigt, wie Karrieretarife mit bestehenden Abonnements kombiniert werden. Es wird nichts berechnet.",
-      "fixture_mode_notice": "Testumgebung: Der Checkout verwendet ausschließlich den Stripe-Testmodus. Dies ist ein lokaler Test, kein freigegebenes Angebot.",
       "interval_label": "Abrechnungszeitraum",
       "interval": {
         "month": "Monatlich",
@@ -3433,13 +3430,21 @@
       "review_title": "Vor dem Bezahlen prüfen",
       "review_plan": "Tarif",
       "review_amount": "Betrag",
-      "review_v1_unchanged_fixture": "In dieser Testumgebung ist der Karrieretarif ein separates Abonnement: Dein aktueller FlacronCV-Tarif wird weder geändert noch gekündigt.",
-      "review_model_pending": "Wie ein Karrieretarif mit deinem aktuellen FlacronCV-Tarif kombiniert wird, wird bestätigt, bevor der Kauf freigeschaltet wird.",
       "review_no_charge_yet": "Es wird erst etwas berechnet, wenn du auf der sicheren Checkout-Seite von Stripe bestätigst.",
       "confirm": "Weiter zum sicheren Checkout ({amount})",
-      "confirm_disabled": "Kauf noch nicht verfügbar",
+      "confirm_disabled": "Kauf hier nicht verfügbar",
       "cancel": "Abbrechen",
-      "checkout_failed": "Der Checkout konnte nicht gestartet werden. Dir wurde nichts berechnet."
+      "checkout_failed": "Der Checkout konnte nicht gestartet werden. Dir wurde nichts berechnet.",
+      "addon_note": "Ein Karrieretarif wird zusätzlich zu deinem aktuellen FlacronCV-Tarif ({v1Plan}) berechnet. Dein aktueller Tarif, sein Preis, deine Lebensläufe, Anschreiben und KI-Credits bleiben genau so, wie sie sind.",
+      "credits_note": "Karriere-Credits sind von deinen FlacronCV-KI-Credits getrennt und werden nur von den Karrieretools verwendet.",
+      "optional_note": "Es wird nichts hinzugefügt oder berechnet, solange du keinen Karrieretarif auswählst und ihn auf der sicheren Zahlungsseite von Stripe bestätigst.",
+      "unavailable_title": "Karrieretarife können hier noch nicht gekauft werden",
+      "unavailable_disabled": "Der Verkauf von Karrieretarifen ist in dieser Umgebung ausgeschaltet. Die Preise dienen nur zur Information; es kann nichts berechnet werden.",
+      "unavailable_setup": "Die Bezahlung von Karrieretarifen ist in dieser Umgebung noch nicht eingerichtet. Die Preise dienen nur zur Information; es kann nichts berechnet werden.",
+      "test_mode_notice": "Testmodus: Die Bezahlung nutzt die Testumgebung von Stripe. Es wird keine echte Zahlung ausgeführt.",
+      "in_addition": "zusätzlich zu deinem aktuellen Tarif",
+      "review_addon": "Wird zusätzlich zu deinem aktuellen FlacronCV-Tarif ({v1Plan}) berechnet, der weder geändert noch gekündigt wird.",
+      "review_cancel": "Wenn du den Karrieretarif später kündigst, enden nur die Karrieretools; dein FlacronCV-Tarif läuft weiter."
     }
   },
   "home_hero": {

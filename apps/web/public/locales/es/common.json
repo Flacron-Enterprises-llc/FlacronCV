@@ -3371,7 +3371,7 @@
     },
     "plans": {
       "title": "Planes profesionales",
-      "intro": "Los planes profesionales desbloquean las herramientas profesionales: perfil profesional, borradores fundamentados, coincidencia con empleos, práctica de entrevistas y más. Los precios y las asignaciones provienen del catálogo profesional de FlacronCV. Tu plan actual de FlacronCV, tus CV, cartas de presentación, créditos y precio no cambian en esta página.",
+      "intro": "Los planes profesionales son complementos opcionales que desbloquean las herramientas profesionales: perfil profesional, borradores fundamentados, búsqueda de ofertas afines, práctica de entrevistas y más. Los precios y cupos proceden del catálogo profesional de FlacronCV.",
       "current_none": "No tienes un plan profesional.",
       "current_plan": "Tu plan profesional: {plan} ({source}).",
       "source": {
@@ -3379,9 +3379,6 @@
         "purchase": "compra de plan profesional"
       },
       "fixture_badge": "Acceso de prueba local, no es una compra real",
-      "disabled_title": "Los planes profesionales aún no se pueden comprar",
-      "disabled_body": "Los precios se muestran a título informativo. La compra se habilitará cuando FlacronCV confirme cómo se combinan los planes profesionales con las suscripciones existentes. No se cobra nada.",
-      "fixture_mode_notice": "Configuración de prueba: el pago usa solo el modo de prueba de Stripe. Es una prueba local, no una oferta aprobada.",
       "interval_label": "Periodo de facturación",
       "interval": {
         "month": "Mensual",
@@ -3433,13 +3430,21 @@
       "review_title": "Revisa antes de pagar",
       "review_plan": "Plan profesional",
       "review_amount": "Importe",
-      "review_v1_unchanged_fixture": "En esta configuración de prueba, el plan profesional es una suscripción aparte: tu plan actual de FlacronCV no se modifica ni se cancela.",
-      "review_model_pending": "Antes de habilitar la compra se confirmará cómo se combina un plan profesional con tu plan actual de FlacronCV.",
       "review_no_charge_yet": "No se cobra nada hasta que confirmes en la página de pago segura de Stripe.",
       "confirm": "Continuar al pago seguro ({amount})",
-      "confirm_disabled": "La compra aún no está disponible",
+      "confirm_disabled": "Compra no disponible aquí",
       "cancel": "Cancelar",
-      "checkout_failed": "No se pudo iniciar el pago. No se te ha cobrado nada."
+      "checkout_failed": "No se pudo iniciar el pago. No se te ha cobrado nada.",
+      "addon_note": "Un plan profesional se cobra además de tu plan actual de FlacronCV ({v1Plan}). Tu plan actual, su precio, tus CV, cartas de presentación y créditos de IA se mantienen exactamente igual.",
+      "credits_note": "Los créditos profesionales son independientes de tus créditos de IA de FlacronCV y solo los usan las herramientas profesionales.",
+      "optional_note": "No se añade ni se cobra nada a menos que elijas un plan profesional y lo confirmes en la página de pago segura de Stripe.",
+      "unavailable_title": "Todavía no se pueden comprar planes profesionales aquí",
+      "unavailable_disabled": "La venta de planes profesionales está desactivada en este entorno. Los precios se muestran a título informativo; no se puede cobrar nada.",
+      "unavailable_setup": "El pago de los planes profesionales aún no está configurado en este entorno. Los precios se muestran a título informativo; no se puede cobrar nada.",
+      "test_mode_notice": "Modo de prueba: el pago usa el entorno de pruebas de Stripe. No se realiza ningún cobro real.",
+      "in_addition": "además de tu plan actual",
+      "review_addon": "Se cobra además de tu plan actual de FlacronCV ({v1Plan}), que no se modifica ni se cancela.",
+      "review_cancel": "Si más adelante cancelas el plan profesional, solo terminan las herramientas profesionales; tu plan de FlacronCV continúa."
     }
   },
   "home_hero": {

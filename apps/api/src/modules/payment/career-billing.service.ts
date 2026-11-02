@@ -11,10 +11,14 @@ import { DEFAULT_APP_ID, APP_ID_METADATA_KEY } from '../../config/stripe-app';
  * billing. V1 stays the only billing owner: same Stripe account, same customer,
  * same webhook endpoint and event ledger.
  *
- * COMMERCIAL MODEL NOT DECIDED (add-on vs. replacing upgrade). Therefore:
+ * COMMERCIAL MODEL (approved by the client, 2 Nov 2026): a career plan is an
+ * optional ADD-ON — a separate Stripe subscription beside the unchanged V1
+ * plan, with its own career credits. Customers buy it explicitly; nobody is
+ * enrolled or charged automatically, and V1 plans include no career access.
  * - `CAREER_BILLING_MODE=disabled` (default): no checkout can be created.
- * - `CAREER_BILLING_MODE=addon_fixture`: LOCAL TESTING ONLY. A separate career
- *   subscription beside the V1 one. Refused when NODE_ENV=production.
+ * - `CAREER_BILLING_MODE=addon`: checkout for plans whose Stripe price ids are
+ *   configured in `CAREER_STRIPE_PRICES` (none are; they are created by the client).
+ * No trial: none is defined for the add-on.
  *
  * A career subscription carries `metadata.product = 'career'`. Its webhook
  * events are routed here BEFORE V1's handlers, so a career payment, failure,
@@ -26,7 +30,7 @@ export const CAREER_PRODUCT = 'career';
 export const CAREER_PLANS = ['starter', 'professional', 'career_pro', 'business'] as const;
 export type CareerPlanId = (typeof CAREER_PLANS)[number];
 export type CareerInterval = 'month' | 'year';
-export type CareerBillingMode = 'disabled' | 'addon_fixture';
+export type CareerBillingMode = 'disabled' | 'addon';
 
 export interface CareerSubscriptionState {
   plan: CareerPlanId;
@@ -47,13 +51,8 @@ const LIVE_STATUSES = new Set(['active', 'trialing', 'past_due']);
 export function readCareerBillingMode(env: NodeJS.ProcessEnv = process.env): CareerBillingMode {
   const raw = env.CAREER_BILLING_MODE?.trim() || 'disabled';
   if (raw === 'disabled') return 'disabled';
-  if (raw === 'addon_fixture') {
-    if (env.NODE_ENV?.trim() === 'production') {
-      throw new Error('CAREER_BILLING_MODE=addon_fixture is a local test fixture and is refused in production');
-    }
-    return 'addon_fixture';
-  }
-  throw new Error('CAREER_BILLING_MODE must be disabled or addon_fixture');
+  if (raw === 'addon') return 'addon';
+  throw new Error('CAREER_BILLING_MODE must be disabled or addon');
 }
 
 /** `{"professional:month":"price_…"}` → map. Unknown keys are a boot error. */
@@ -100,10 +99,17 @@ export class CareerBillingService {
   async status(userId: string) {
     const user = await this.usersService.findByIdOrThrow(userId);
     const state = (user as unknown as { careerSubscription?: Partial<CareerSubscriptionState> & { source?: string } }).careerSubscription ?? null;
+    const blockedReason =
+      this.mode === 'disabled' ? 'disabled' : !this.stripe ? 'stripe_not_configured' : this.prices.size === 0 ? 'prices_not_configured' : null;
     return {
+      model: 'addon' as const,
       mode: this.mode,
-      purchasable: this.mode !== 'disabled',
+      purchasable: blockedReason === null,
+      blockedReason,
+      /** Plans/intervals that can actually be bought here, e.g. "professional:month". */
       configuredPrices: [...this.prices.keys()],
+      /** True when V1's Stripe key is a test key: no real money moves. */
+      stripeTestMode: /^(sk|rk)_test_/.test(this.configService.get<string>('stripe.secretKey') ?? ''),
       careerSubscription: state
         ? {
             plan: state.plan ?? null,
