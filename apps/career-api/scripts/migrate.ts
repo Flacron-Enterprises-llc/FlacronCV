@@ -22,10 +22,12 @@ async function main(): Promise<number> {
     return 1;
   }
 
-  await runMigrations({ databaseUrl, direction });
-  console.log('Migrations complete!');
+  // --dry-run prints the SQL inside a rolled-back transaction; nothing is applied or seeded.
+  const dryRun = process.argv.includes('--dry-run');
+  await runMigrations({ databaseUrl, direction, dryRun });
+  console.log(dryRun ? 'Dry run complete: nothing was applied.' : 'Migrations complete!');
 
-  if (direction === 'up') {
+  if (direction === 'up' && !dryRun) {
     const pool = new Pool({ connectionString: databaseUrl, max: 1 });
     try {
       const result = await publishCatalog(pool);

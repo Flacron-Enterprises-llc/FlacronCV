@@ -13,7 +13,9 @@
     "migrate": "tsx scripts/migrate.ts up",
     "migrate:down": "tsx scripts/migrate.ts down",
     "seed:demo": "tsx scripts/seed-demo.ts",
-    "storage:cleanup": "tsx scripts/storage-cleanup.ts"
+    "storage:cleanup": "tsx scripts/storage-cleanup.ts",
+    "migrate:status": "tsx scripts/migration-status.ts",
+    "migrate:dry-run": "tsx scripts/migrate.ts up --dry-run"
   },
   "jest": {
     "moduleFileExtensions": [

@@ -24,6 +24,8 @@ export interface MigrationOptions {
    * that no other process migrates, such as a test's throwaway schema.
    */
   noLock?: boolean;
+  /** Print the SQL that would run, inside a transaction that is rolled back. Applies nothing. */
+  dryRun?: boolean;
 }
 
 export async function runMigrations(options: MigrationOptions): Promise<void> {
@@ -36,6 +38,7 @@ export async function runMigrations(options: MigrationOptions): Promise<void> {
     count: options.count,
     checkOrder: true,
     noLock: options.noLock ?? false,
+    dryRun: options.dryRun ?? false,
     ...(options.schema
       ? { schema: options.schema, migrationsSchema: options.schema, createSchema: true, createMigrationsSchema: true }
       : {}),
