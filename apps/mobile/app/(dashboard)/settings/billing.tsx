@@ -21,6 +21,7 @@ import { skuForPlan } from '../../../src/config/iap-products';
 import { formatDate, toDate } from '../../../src/lib/utils';
 import { PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
 import { colors } from '../../../src/theme/colors';
+import { CareerAddonCard } from '../../../src/components/career/CareerAddonCard';
 
 function formatLimit(limit: number | 'unlimited'): string {
   return limit === 'unlimited' ? '∞' : String(limit);
@@ -262,6 +263,7 @@ export default function BillingScreen() {
             </View>
           </>
         )}
+        <CareerAddonCard />
       </ScrollView>
     </SafeAreaView>
   );

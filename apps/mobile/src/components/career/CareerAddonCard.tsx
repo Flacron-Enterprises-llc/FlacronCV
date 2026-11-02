@@ -1,0 +1,50 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
+import { CAREER_ENABLED } from '../../config/career';
+import { useCareerAccess, useCareerSubscription } from '../../hooks/useCareer';
+import { careerAccessState, describeAccess } from '../../lib/career-view';
+import { colors } from '../../theme/colors';
+import { Pill } from './CareerHeader';
+
+/**
+ * Billing screen: the career add-on's status, provider independent. It never
+ * offers a purchase, shows a price or links to buy elsewhere; it does not
+ * touch the V1 plan above it.
+ */
+export function CareerAddonCard() {
+  const router = useRouter();
+  const access = useCareerAccess();
+  const subscription = useCareerSubscription();
+  if (!CAREER_ENABLED) return null;
+  const state = careerAccessState({
+    enabled: true,
+    loading: access.isLoading,
+    error: access.error,
+    access: access.data,
+    subscription: subscription.data,
+  });
+  const copy = describeAccess(state);
+  return (
+    <View className="mx-5 mb-6">
+      <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">Career tools add-on</Text>
+      <TouchableOpacity
+        onPress={() => router.push('/(dashboard)/career')}
+        className="bg-white rounded-2xl border border-stone-100 p-4 flex-row items-center"
+        accessibilityRole="button"
+        activeOpacity={0.8}
+      >
+        <View className="flex-1 mr-2">
+          <View className="flex-row items-center justify-between">
+            <Text className="font-bold text-stone-900 flex-1 mr-2">{copy.title}</Text>
+            {copy.badge ? <Pill label={copy.badge} tone={copy.badge === 'ACTIVE' ? 'success' : 'warning'} /> : null}
+          </View>
+          {copy.body ? <Text className="text-stone-500 text-sm mt-1 leading-5">{copy.body}</Text> : null}
+          <Text className="text-stone-400 text-xs mt-2">Separate from your FlacronCV plan above, which it never changes.</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} />
+      </TouchableOpacity>
+    </View>
+  );
+}

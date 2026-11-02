@@ -4,7 +4,7 @@ import { secureStore } from './secure-store';
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
 
 /** RFC1918 + loopback. Release APKs must not silently talk to a laptop. */
-function isPrivateOrLocalHost(hostname: string): boolean {
+export function isPrivateOrLocalHost(hostname: string): boolean {
   const host = hostname.toLowerCase();
   if (host === 'localhost' || host === '127.0.0.1') return true;
   const parts = host.split('.');

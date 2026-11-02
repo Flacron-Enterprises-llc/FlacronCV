@@ -20,6 +20,7 @@ import { useCurrentUser } from '../../src/hooks/useUser';
 import { SubscriptionPlan } from '../../src/types/enums';
 import { PLAN_CONFIGS } from '../../src/types/subscription.types';
 import { PAID_UPGRADES_ENABLED } from '../../src/config/paid-upgrades';
+import { CAREER_ENABLED } from '../../src/config/career';
 import { effectivePlanForCopy } from '../../src/lib/entitlements';
 import {
   confirmVerifiedEmail,
@@ -266,6 +267,23 @@ export default function DashboardScreen() {
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} />
           </TouchableOpacity>
+          {CAREER_ENABLED ? (
+            <TouchableOpacity
+              onPress={() => router.push('/(dashboard)/career')}
+              className="mt-3 bg-white rounded-2xl border border-stone-100 p-4 flex-row items-center"
+              activeOpacity={0.8}
+              accessibilityRole="button"
+            >
+              <View className="w-10 h-10 rounded-xl bg-brand-50 items-center justify-center mr-3">
+                <Ionicons name="compass-outline" size={20} color={colors.brand[600]} />
+              </View>
+              <View className="flex-1">
+                <Text className="font-bold text-stone-900">Career tools</Text>
+                <Text className="text-stone-500 text-sm mt-0.5">Career profile, drafts and opportunities</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} />
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {/* Recent Documents */}

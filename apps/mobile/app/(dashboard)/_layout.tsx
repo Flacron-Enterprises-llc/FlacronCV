@@ -11,7 +11,7 @@ function hideTabBarOnNested(segments: readonly string[]): boolean {
   const parts = segments.filter((s) => !s.startsWith('('));
   if (parts.length <= 1) return false;
   const tab = parts[0];
-  if (tab === 'support' || tab === 'jobs') return true;
+  if (tab === 'support' || tab === 'jobs' || tab === 'career') return true;
   const rest = parts.slice(1).filter((s) => s !== 'index');
   return TAB_ROOTS.has(tab) && rest.length > 0;
 }
@@ -95,6 +95,11 @@ export default function DashboardLayout() {
       />
       <Tabs.Screen
         name="jobs"
+        options={{ href: null }}
+      />
+      {/* Career tools (optional add-on); the stack redirects home when the build has career off. */}
+      <Tabs.Screen
+        name="career"
         options={{ href: null }}
       />
     </Tabs>

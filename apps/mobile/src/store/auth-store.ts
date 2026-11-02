@@ -227,6 +227,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       /* best-effort */
     }
+    // Unsaved career edits live only in memory; never carry them to the next account.
+    const { careerDrafts } = await import('./career-drafts');
+    careerDrafts.clearAll();
 
     try {
       await signOut(getFirebaseAuth());

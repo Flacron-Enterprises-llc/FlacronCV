@@ -12,6 +12,7 @@ import { PLAN_CONFIGS } from '../../../src/types/subscription.types';
 import { JobApplication } from '../../../src/types/job.types';
 import { openLegalDocument } from '../../../src/lib/legal-acceptance';
 import { PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
+import { CAREER_ENABLED } from '../../../src/config/career';
 import { Avatar } from '../../../src/components/ui/Avatar';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { colors } from '../../../src/theme/colors';
@@ -100,6 +101,10 @@ export default function SettingsScreen() {
       items: [
         { icon: 'person-outline', label: 'Profile', onPress: () => router.push('/(dashboard)/settings/profile') },
         { icon: 'briefcase-outline', label: 'Job Tracker', onPress: () => router.push('../jobs') },
+        ...(CAREER_ENABLED
+          ? [{ icon: 'compass-outline', label: 'Career tools', onPress: () => router.push('/(dashboard)/career') }]
+          : []),
+        { icon: 'shield-checkmark-outline', label: 'Your data & account deletion', onPress: () => router.push('/(dashboard)/settings/data') },
       ],
     },
     {

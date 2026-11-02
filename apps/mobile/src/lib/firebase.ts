@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp, getApps, initializeApp, FirebaseApp } from '@firebase/app';
-import { Auth, getAuth, initializeAuth } from '@firebase/auth';
+import { Auth, connectAuthEmulator, getAuth, initializeAuth } from '@firebase/auth';
 import { FirebaseStorage, getStorage } from '@firebase/storage';
 // getReactNativePersistence exists in the RN build at runtime but not in the main TS typings.
 // Using require() so Metro resolves it from the react-native condition at bundle time.
@@ -39,6 +39,12 @@ export function getFirebaseAuth(): Auth {
     // Auth already initialized (e.g. Fast Refresh) — returns the existing instance
     // which already has AsyncStorage persistence from the first initializeAuth call.
     _auth = getAuth(firebaseApp);
+  }
+  // Local development only: the Firebase Auth emulator with fictional accounts.
+  // Ignored in release builds, so a stray value can never redirect real sign-ins.
+  const emulatorHost = process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST?.trim();
+  if (__DEV__ && emulatorHost && !_auth.emulatorConfig) {
+    connectAuthEmulator(_auth, `http://${emulatorHost}`, { disableWarnings: true });
   }
   return _auth;
 }
