@@ -191,9 +191,15 @@ async function call(method, path, body) {
 }
 
 const existing = await call('GET', '/facts');
+// Keep the contact fact in line with this demo account (an earlier seed used another fictional person).
+const contact = existing.items.find((fact) => fact.factType === 'contact');
+if (contact && (contact.value.fullName !== pro.name || contact.value.email !== pro.email)) {
+  await call('PATCH', `/facts/${contact.id}`, { value: { ...contact.value, fullName: pro.name, email: pro.email } });
+  await call('POST', `/facts/${contact.id}/confirm`);
+}
 if (existing.items.length === 0) {
   const facts = [
-    ['contact', { fullName: 'Ada Example', headline: 'Data analyst', email: 'demo.pro@example.test', city: 'Montreal', country: 'Canada' }],
+    ['contact', { fullName: pro.name, headline: 'Data analyst', email: pro.email, city: 'Montreal', country: 'Canada' }],
     ['summary', { text: 'Data analyst with three years of reporting and SQL work in fictional retail and health settings.' }],
     ['experience', { position: 'Reporting Analyst', company: 'Fictional Retail Co', location: 'Montreal, QC', startDate: '2023-02', current: true, responsibilities: 'Built weekly sales dashboards. Wrote SQL for the finance team.' }],
     ['experience', { position: 'Junior Analyst', company: 'Example Clinic Group', startDate: '2021-06', endDate: '2023-01', responsibilities: 'Cleaned appointment data and prepared monthly reports.' }],
