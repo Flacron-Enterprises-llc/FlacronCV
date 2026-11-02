@@ -55,6 +55,31 @@ export const CAREER_SECTIONS = [
   },
 ] as const;
 
+/**
+ * Pages whose actions sit behind an operator switch (`feature_flags`, else the
+ * catalog phase; see career-server `isFeatureEnabled`). `/access` reports each
+ * switch; a page whose switch is off is left out of the menu, because every
+ * action on it would answer `feature_unavailable`. Hiding is only navigation:
+ * the career API refuses the calls either way.
+ */
+export const LINK_FEATURE: Record<string, string> = {
+  '/career/evidence': 'evidenceItems',
+  '/career/portfolios': 'portfolioPages',
+  '/career/opportunities/map': 'mapSessions',
+  '/career/action-pack': 'actionPacks',
+  '/career/forms': 'assistedForms',
+  '/career/learning-loop': 'applicationAnalytics',
+  '/career/interviews/voice': 'voiceMinutes',
+  '/career/learning': 'skillReports',
+  '/career/scenarios': 'scenarioReports',
+  '/career/business': 'staffSeats',
+};
+
+export function linkSwitchedOn(href: string, features: Record<string, boolean> | undefined): boolean {
+  const feature = LINK_FEATURE[href];
+  return !feature || features?.[feature] === true;
+}
+
 function isActive(pathname: string, href: string): boolean {
   if (href === '/career') return pathname === '/career';
   // The most specific link wins: /career/opportunities/map is not also /career/opportunities.
@@ -77,7 +102,7 @@ export function CareerNav() {
             {t(`group_${section.key}`)}
           </span>
           <ul className="flex min-w-0 gap-1 overflow-x-auto pb-1">
-            {section.links.map(([href, key]) => {
+            {section.links.filter(([href]) => linkSwitchedOn(href, access.data?.features)).map(([href, key]) => {
               const active = isActive(pathname, href);
               return (
                 <li key={href} className="shrink-0">

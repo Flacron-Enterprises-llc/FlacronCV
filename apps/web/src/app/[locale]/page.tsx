@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import Navbar from '@/components/landing/Navbar';
 import HeroV2 from '@/components/landing/HeroV2';
+import ProductShowcase from '@/components/landing/ProductShowcase';
+import TemplateShowcase from '@/components/landing/TemplateShowcase';
 import Features from '@/components/landing/Features';
 import Pricing from '@/components/landing/Pricing';
 import HowItWorks from '@/components/landing/HowItWorks';
@@ -74,8 +76,10 @@ export default function LandingPage({
       <JsonLd data={faqPage()} />
       <Navbar />
       <HeroV2 />
+      <ProductShowcase />
       <HowItWorks />
       <Features />
+      <TemplateShowcase />
       {/* Testimonials intentionally hidden until real, verifiable customer
           testimonials are collected — do not re-enable with placeholder data. */}
       <Pricing />
