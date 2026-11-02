@@ -89,7 +89,7 @@ export interface ExportOptions {
 /**
  * The person's own data, as plain JSON. File contents are not inside it:
  * each stored evidence file is described (name, type, size, SHA-256) and can
- * be downloaded while signed in with `GET /api/v1/evidence/:id/attachment`,
+ * be downloaded while signed in with `GET /api/career/v1/evidence/:id/attachment`,
  * which returns a five-minute link. No passwords exist in V2 (sign-in is
  * Firebase); no credential, storage key, signed URL, provider id, or other
  * person's data is included.
@@ -194,7 +194,7 @@ export async function personalExport(db: Db, owner: Principal, options: ExportOp
             sizeBytes: Number(attachment_size_bytes),
             sha256: attachment_sha256,
             uploadedAt: attachment_uploaded_at,
-            retrieve: `GET /api/v1/evidence/${row.id}/attachment while signed in (returns a five-minute download link)`,
+            retrieve: `GET /api/career/v1/evidence/${row.id}/attachment while signed in (returns a five-minute download link)`,
           }
         : null,
     };
@@ -349,7 +349,7 @@ export async function personalExport(db: Db, owner: Principal, options: ExportOp
     attachments: {
       included: false,
       howToRetrieve:
-        'Stored evidence files are described under documents.evidence[].file. Download each while signed in with GET /api/v1/evidence/:id/attachment, which returns a five-minute link. Links you supplied yourself are under documents.evidence[].link.',
+        'Stored evidence files are described under documents.evidence[].file. Download each while signed in with GET /api/career/v1/evidence/:id/attachment, which returns a five-minute link. Links you supplied yourself are under documents.evidence[].link.',
     },
     notIncluded: Object.values(EXPORT_OMITTED),
     account: account ? { ...account, legalAcceptances: legal } : null,

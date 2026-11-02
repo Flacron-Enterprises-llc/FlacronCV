@@ -113,7 +113,7 @@ describe('personal export (fictional accounts, local Postgres, memory storage)',
     // The stored file is described, with how to fetch it; its bytes and storage key are not in the JSON.
     const file = json.documents.evidence.find((e: any) => e.id === item.id).file;
     expect(file).toMatchObject({ name: 'certificate.pdf', contentType: 'application/pdf', sizeBytes: PDF.length });
-    expect(file.retrieve).toContain(`/api/v1/evidence/${item.id}/attachment`);
+    expect(file.retrieve).toContain(`/api/career/v1/evidence/${item.id}/attachment`);
     expect(json.attachments.included).toBe(false);
     expect(text).not.toContain('%PDF');
     expect(text).not.toContain(objectKey);

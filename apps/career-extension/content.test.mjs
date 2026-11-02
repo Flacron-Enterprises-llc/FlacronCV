@@ -14,11 +14,11 @@ describe('unpacked extension', () => {
     assert.ok(manifest.host_permissions.length > 0);
     assert.ok(
       manifest.host_permissions.every(
-        (pattern) => /example-jobs\.test/.test(pattern) || /^https?:\/\/(127\.0\.0\.1|localhost):4001\//.test(pattern),
+        (pattern) => /example-jobs\.test/.test(pattern) || /^https?:\/\/(127\.0\.0\.1|localhost):4101\//.test(pattern),
       ),
     );
     assert.ok(manifest.host_permissions.some((pattern) => /example-jobs\.test/.test(pattern)));
-    assert.ok(manifest.host_permissions.some((pattern) => /127\.0\.0\.1:4001/.test(pattern)));
+    assert.ok(manifest.host_permissions.some((pattern) => /127\.0\.0\.1:4101/.test(pattern)));
     assert.ok(
       !manifest.host_permissions.some((pattern) => pattern === '<all_urls>' || pattern === '*://*/*' || pattern === '*://*'),
     );

@@ -7,7 +7,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 async function fillTab({ apiOrigin, sessionId, token, tabId }) {
-  const response = await fetch(`${apiOrigin}/api/v1/forms/${sessionId}/fill`, {
+  const response = await fetch(`${apiOrigin}/api/career/v1/forms/${sessionId}/fill`, {
     headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
   });
   const payload = await response.json();

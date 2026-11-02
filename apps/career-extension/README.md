@@ -14,4 +14,4 @@ After you review an `example-jobs.test` session in FlacronCV and start the fill 
 4. Point a host entry, or Chrome `--host-resolver-rules="MAP example-jobs.test 127.0.0.1"`, at a local server that serves `fixtures/example-jobs.html` as `http://example-jobs.test/` (any port on that host is allowed).
 5. In FlacronCV, prepare and review the form, copy the session id and a current ID token, then click **Fill reviewed fields**.
 
-Host permissions cover `example-jobs.test` (any port) plus the local API on `127.0.0.1:4001` / `localhost:4001` so the service worker can fetch a reviewed fill payload. Other job hosts and store publication stay unfinished.
+Host permissions cover `example-jobs.test` (any port) plus the local API on `127.0.0.1:4101` / `localhost:4101` so the service worker can fetch a reviewed fill payload. Other job hosts and store publication stay unfinished.
