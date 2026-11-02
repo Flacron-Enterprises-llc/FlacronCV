@@ -102,7 +102,7 @@ export function useSaveResumeLines(resumeId: string | undefined) {
   const queryClient = useQueryClient();
   const uid = useUid();
   return useMutation({
-    mutationFn: (input: { versionId: string; lines: Array<{ factId: string; text: string }>; expectedRevision?: number }) =>
+    mutationFn: (input: { versionId: string; lines: { factId: string; text: string }[]; expectedRevision?: number }) =>
       careerApi.updateResumeVersion(input.versionId, { lines: input.lines, expectedRevision: input.expectedRevision }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['career', uid, 'resume', resumeId] });
