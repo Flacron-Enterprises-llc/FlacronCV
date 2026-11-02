@@ -227,9 +227,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       /* best-effort */
     }
-    // Unsaved career edits live only in memory; never carry them to the next account.
-    const { careerDrafts } = await import('./career-drafts');
-    careerDrafts.clearAll();
+    // Cached account data and unsaved career edits live only in memory; never
+    // carry them to the next account (see lib/session-cleanup.ts).
+    const [{ careerDrafts }, { queryClient }, { clearAccountCaches }] = await Promise.all([
+      import('./career-drafts'),
+      import('../providers/QueryProvider'),
+      import('../lib/session-cleanup'),
+    ]);
+    clearAccountCaches({ queryClient, careerDrafts });
 
     try {
       await signOut(getFirebaseAuth());
