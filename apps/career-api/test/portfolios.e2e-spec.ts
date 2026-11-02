@@ -9,9 +9,42 @@ describe('portfolios over HTTP (CV16)', () => {
   beforeAll(async () => {
     t = await createTestApp('api_portfolios');
     await t.db.pool.query(
-      `INSERT INTO feature_flags (feature, enabled) VALUES ('portfolioPages', true)
+      `INSERT INTO feature_flags (feature, enabled) VALUES ('portfolioPages', true), ('evidenceItems', true)
        ON CONFLICT (feature) DO UPDATE SET enabled = true`,
     );
+  });
+
+  it('publishes only evidence the owner marked as shared, even when more is linked', async () => {
+    const auth = bearer('http-portfolio-sharing');
+    const me = await http().get('/api/career/v1/me').set('Authorization', auth);
+    await t.db.pool.query(`UPDATE billing_accounts SET plan_id = 'starter' WHERE auth_user_id = $1`, [me.body.user.authUserId]);
+    const shared = await http()
+      .post('/api/career/v1/evidence')
+      .set('Authorization', auth)
+      .send({ title: 'Shared certificate', evidenceType: 'credential', isPortfolioShared: true });
+    const privateItem = await http()
+      .post('/api/career/v1/evidence')
+      .set('Authorization', auth)
+      .send({ title: 'Private reference letter', evidenceType: 'credential', isPortfolioShared: false });
+    expect(shared.status).toBe(201);
+    expect(privateItem.status).toBe(201);
+
+    const page = await http()
+      .post('/api/career/v1/portfolios')
+      .set('Authorization', auth)
+      .send({ title: 'Work', displayName: 'Ada' });
+    expect(page.status).toBe(201);
+    const linked = await http()
+      .patch(`/api/career/v1/portfolios/${page.body.id}`)
+      .set('Authorization', auth)
+      .send({ evidenceIds: [shared.body.id, privateItem.body.id] });
+    expect(linked.status).toBe(200);
+    await http().post(`/api/career/v1/portfolios/${page.body.id}/publish`).set('Authorization', auth).send({ visibility: 'public' });
+
+    const open = await http().get(`/api/career/v1/portfolios/public/${page.body.slug}`);
+    expect(open.status).toBe(200);
+    expect((open.body.items as Array<{ title: string }>).map((item) => item.title)).toEqual(['Shared certificate']);
+    expect(JSON.stringify(open.body)).not.toContain('Private reference letter');
   });
 
   afterAll(async () => {

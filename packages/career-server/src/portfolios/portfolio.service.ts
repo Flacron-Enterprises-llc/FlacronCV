@@ -238,6 +238,9 @@ export class PortfolioService {
          FROM portfolio_evidence pe
          JOIN career_evidence e ON e.id = pe.evidence_id
         WHERE pe.portfolio_id = $1
+          -- Only evidence the owner marked "share on portfolio" is ever public;
+          -- linking an item to a page is not consent to publish it.
+          AND e.is_portfolio_shared = TRUE
         ORDER BY pe.position, e.id`,
       [row.id],
     );
