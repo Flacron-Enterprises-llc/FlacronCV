@@ -7,6 +7,9 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Local verification only: NEXT_DIST_DIR builds beside a running dev server
+  // without touching its `.next`. Unset (every hosted build) keeps `.next`.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   output: 'standalone',
   // On Next 14 this key lives under `experimental` — at the top level it is
   // rejected ("Unrecognized key(s) in object: 'outputFileTracingRoot'") and

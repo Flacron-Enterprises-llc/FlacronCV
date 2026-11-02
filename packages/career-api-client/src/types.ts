@@ -876,6 +876,8 @@ export interface CareerAccessView {
   enabled: boolean;
   v1Plan: string | null;
   careerPlan?: string;
+  /** Where the career plan comes from: the V1 plan map, or a purchased career plan. */
+  source?: 'v1_plan_map' | 'purchase';
   reason?: 'plan_not_mapped' | 'v1_account_missing' | 'v1_account_inactive';
   features: Record<string, boolean>;
 }

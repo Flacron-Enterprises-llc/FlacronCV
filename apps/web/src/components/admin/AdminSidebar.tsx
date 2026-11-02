@@ -12,8 +12,10 @@ import {
   FileSearch,
   ArrowLeft,
   X,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isCareerEnabled } from '@/components/career/CareerServices';
 
 interface AdminSidebarProps {
   open: boolean;
@@ -42,6 +44,8 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
     { href: '/admin/templates', icon: Layout, label: t('templates') },
     { href: '/admin/tickets', icon: MessageSquare, label: t('tickets') },
     { href: '/admin/audit-logs', icon: FileSearch, label: t('audit_logs') },
+    // Career tools moderation; the career service also requires its operator allowlist.
+    ...(isCareerEnabled() ? [{ href: '/admin/career', icon: ShieldCheck, label: t('career_moderation') }] : []),
   ];
 
   const isActive = (href: string) => {

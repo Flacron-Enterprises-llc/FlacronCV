@@ -250,3 +250,94 @@
     break-inside: avoid;
   }
 }
+
+/* ─── Homepage hero (ported from V2, components/landing/HeroV2.tsx) ─────────
+   Every selector and keyframe here is prefixed `fc-hero` and only used by that
+   component; nothing else on the site is affected. Colours are the V2 values,
+   with the orange disc kept on V1's brand-orange family. */
+.fc-hero-copy {
+  animation: fc-hero-copy-in 560ms ease-out both;
+}
+
+.fc-hero-media {
+  animation: fc-hero-media-in 720ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+}
+
+/* Transparent client cutout: soft fade into the hero's bottom edge, light navy shadow. */
+.fc-hero-portrait img {
+  -webkit-mask-image: linear-gradient(to bottom, #000 86%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 86%, transparent 100%);
+  filter: drop-shadow(0 18px 28px rgba(30, 58, 95, 0.1));
+}
+
+.dark .fc-hero-portrait img {
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.35));
+}
+
+.fc-hero-blob-peach {
+  background: radial-gradient(circle at 40% 40%, #fed7aa, #ffedd5 62%, rgba(255, 237, 213, 0) 72%);
+}
+
+.fc-hero-blob-blue {
+  background: radial-gradient(circle at 50% 50%, #dbe8ff, rgba(219, 232, 255, 0) 70%);
+}
+
+.dark .fc-hero-blob-peach {
+  background: radial-gradient(circle at 40% 40%, rgba(249, 115, 22, 0.22), rgba(249, 115, 22, 0.08) 62%, rgba(249, 115, 22, 0) 72%);
+}
+
+.dark .fc-hero-blob-blue {
+  background: radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0) 70%);
+}
+
+.fc-hero-float {
+  animation: fc-hero-float 7s ease-in-out infinite;
+}
+
+.fc-hero-float-late {
+  animation-delay: -2.4s;
+}
+
+.fc-hero-float-later {
+  animation-delay: -4.6s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-hero-copy,
+  .fc-hero-media,
+  .fc-hero-float {
+    animation: none;
+  }
+}
+
+@keyframes fc-hero-copy-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.55rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fc-hero-media-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fc-hero-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}

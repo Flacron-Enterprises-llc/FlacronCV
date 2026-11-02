@@ -223,7 +223,7 @@ export function DashboardScreen({
                   {remaining === 0 ? (
                     <>
                       {' '}
-                      <a className="font-semibold text-career-orange-text" href={`/${locale}/settings/billing`}>{t('open_billing')}</a>
+                      <a className="font-semibold text-career-orange-text" href={`/${locale}/career/plans`}>{t('open_billing')}</a>
                     </>
                   ) : null}
                 </li>

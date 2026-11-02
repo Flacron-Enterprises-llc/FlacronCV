@@ -49,6 +49,7 @@ export const CAREER_SECTIONS = [
       ['/career/recruiting', 'recruiting'],
       ['/career/developer', 'developer'],
       ['/career/services', 'services'],
+      ['/career/plans', 'plans'],
       ['/career/data', 'data'],
     ],
   },

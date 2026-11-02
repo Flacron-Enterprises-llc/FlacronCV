@@ -4,6 +4,57 @@ Status: **local integration branch `integration/v2-features`, not merged, not de
 Baseline: V1 `main@9239e0e7`. V2 source reference: `flacroncv-v2 main@792b9958` (unchanged).
 Everything below was verified only against local emulators and a private local Postgres. Nothing here is evidence about hosted behaviour.
 
+> **Update (second pass, 2 Nov 2026).** Scope now also covers: V2's homepage hero replacing only V1's hero (§0.1), paid access to the career tools through V1 billing (§0.2, purchase **disabled** pending the commercial decision), operator access, migration rehearsal tooling and an isolated production build. Sections 1–6 below remain valid except where §0 supersedes them (notably: the local plan map is now empty, so **no V1 plan grants career access by itself**).
+
+## 0.1 Homepage hero
+
+Only V1's hero section was replaced by V2's latest hero (`apps/web/src/components/landing/HeroV2.tsx`, icons in `HeroV2Icons.tsx`, styles scoped to `.fc-hero-*`/`.fc-blob-*` in `globals.css`, strings in the new `home_hero` namespace in all six locales). Header, footer, every other homepage section, pricing and other pages are unchanged. Portrait: the approved public derivatives only (`apps/web/public/marketing/client-portrait-cutout-{480,720,960}.webp` + `-720.png`); provenance and usage rules are V2 `docs/DESIGN_SYSTEM.md` "Marketing imagery". The private original is not in this repository. CTAs follow V1 routes and sign-in state. See the hero verification record for before/after screenshots.
+
+## 0.2 Paid access to the career tools (V1 billing)
+
+**Payment provider — no difference.** V1 and V2 both use Stripe (Checkout in subscription mode, signed webhooks, `app_id` metadata) plus Apple/Google store purchases. The differences are the catalog (V1: Free / Pro / Career Accelerator (not sold) / Enterprise with CV, letter, AI-credit and export limits; V2: Free / Starter / Professional / Career Pro / Business with versioned monthly allowances, packs and seats), and that V2 ran its own Stripe products and webhook. Inside V1 there is **one** billing owner: V1's Stripe account, customer, webhook endpoint and event ledger.
+
+**Commercial model — NOT DECIDED.** V2's 16 Oct plan (written for V2 as V1's successor) said a V1 subscriber keeps the legacy plan until they *choose* a V2 plan, which then *replaces* it; that was superseded on 29 Oct by the independence decision, and nothing defines how a career plan combines with a V1 plan that keeps governing the CV builder. So:
+- Purchase is **disabled** (`CAREER_BILLING_MODE=disabled`, default). The plans page shows prices, intervals and benefits; the confirm button is disabled; `POST /career-billing/checkout` returns 403 and never reaches Stripe.
+- The plumbing is built and tested for the *add-on* shape only as a **labelled local fixture** (`addon_fixture`, refused in production): a separate career Stripe subscription on the same V1 customer, `metadata.product=career`.
+- The local demo grants one career entitlement directly (`careerSubscription.source = local_fixture`), shown with a "Local test entitlement, not a real purchase" badge.
+
+**Mapping (prices and allowances from `packages/career-shared/src/catalog.ts`, catalog 2026-10-10, USD).**
+
+| | Starter | Professional (recommended) | Career Pro | Business (not offered here) |
+|---|---|---|---|---|
+| Monthly / Annual | $21.99 / $219.90 | $38.99 / $389.90 | $68.99 / $689.90 | $208.00 / $2,080.00 |
+| Document credits / month | 20 | 60 | 150 | 500 pooled |
+| CV analyses / month | 15 | 60 | 150 | 500 |
+| Action packs / month | — | 10 | 30 | 100 |
+| Text interview sessions / month | 2 | 5 | 15 | 50 |
+| Voice minutes / month | — | 30 | 120 | 300 |
+| Skill reports / month | 1 | 5 | 15 | 50 |
+| Scenario reports / month | — | 1 | 5 | 25 |
+| Assisted forms / month | — | 20 | 75 | 200 |
+| Map sessions / month | — | 50 | 200 | 1000 |
+| Alert items / month | 50 | 200 | 500 | 2000 |
+| Evidence items / storage | 20 / 1 GB | 100 / 5 GB | 300 / 20 GB | 100 per candidate / 100 GB |
+| Portfolio pages | 1 | 1 | 3 | 1 per candidate |
+| DOCX export of drafts | yes | yes | yes | yes |
+
+Free (career) is not offered as a purchase. Annual = 10 × monthly; allowances still renew monthly on the billing anniversary and do not roll over. Editing, reopening saved results and downloads use no credits; a failed generation releases its reservation (verified). Packs, extra capacity, Business seats, human review, employer checkout, the maintenance offer, API packages and SSO stay closed.
+
+| Existing V1 plan | Its V1 benefits | Career access today (local) | With a purchased career plan |
+|---|---|---|---|
+| Free | unchanged (5 CVs, 1 letter, 5 AI credits, 2 PDF exports) | none | the purchased plan |
+| Pro | unchanged (10 CVs, 20 letters, 100 AI credits, unlimited exports, DOCX) | none | the purchased plan |
+| Career Accelerator (not sold) | unchanged | none | the purchased plan |
+| Enterprise | unchanged | none | the purchased plan |
+
+`CAREER_PLAN_MAP` can still include career benefits in a V1 plan if the client decides so (default empty). The effective career plan is the higher of the mapped plan and a live purchase. Neither ever changes the V1 plan, its credits, its price or its Stripe subscription.
+
+**Entitlement rules (career service).** A purchase grants access while `active`/`trialing`; `past_due` and `canceled` keep access only until the paid period ends (V1's own rule); `incomplete`, `incomplete_expired`, `unpaid`, `paused`, an unknown plan or `free` grant nothing. Plan changes re-grant "new grant − units used" (never a second month).
+
+**Webhook rules (V1 payment module).** Career events are recognised (session/subscription metadata, invoice subscription details, or the configured career price ids) and routed **before** V1's handlers — otherwise V1's full-refund handler would have revoked the V1 plan through the shared customer. Stored as a state with the event time: replays (ledger) and older events change nothing. Full refund ends career access immediately and cancels the career subscription; a partial refund changes nothing (V1's rule). Ledger rows for invoices and refunds are still written. V1 account closure cancels a live career subscription too. Checkout: server-chosen price and URLs, confirmed amount must equal Stripe's price, no trial, no second live career subscription, V1's existing Stripe customer reused.
+
+**Operators.** Career moderation/feature switches require V1's `admin`/`super_admin` claim **and** `ADMIN_AUTH_USER_IDS` (narrower than either); they no longer depend on the operator's own career plan. Linked from V1's admin sidebar when the career build switch is on.
+
 ## 1. Architecture and data ownership
 
 | Concern | Owner | Notes |

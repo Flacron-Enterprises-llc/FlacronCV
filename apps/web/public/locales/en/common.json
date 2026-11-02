@@ -1332,7 +1332,8 @@
     "internal_note_placeholder": "Visible to the support team only…",
     "save_internal_note": "Save note",
     "internal_note_added": "Internal note added",
-    "internal_note_failed": "Couldn't add the internal note"
+    "internal_note_failed": "Couldn't add the internal note",
+    "career_moderation": "Career moderation"
   },
   "common": {
     "loading": "Loading...",
@@ -3296,7 +3297,7 @@
       "locked_plan_not_mapped": "Your current plan does not include the career tools yet. Your CVs, cover letters and job tracker work as before.",
       "locked_v1_account_missing": "We could not find your account details. Sign out and sign in again, then try once more.",
       "locked_v1_account_inactive": "This account is no longer active, so the career tools are closed.",
-      "see_plan": "See your plan",
+      "see_plan": "See career plans",
       "your_data": "Export or erase career data",
       "unreachable_title": "Career tools are unavailable right now",
       "unreachable_body": "We could not reach the career service. Your CVs, cover letters and job tracker are not affected. Try again in a few minutes."
@@ -3328,7 +3329,8 @@
       "recruiting": "Recruiting",
       "developer": "Developer API",
       "services": "Human services",
-      "data": "Career data"
+      "data": "Career data",
+      "plans": "Career plans"
     },
     "data": {
       "title": "Career data",
@@ -3366,6 +3368,103 @@
       "copied_letter": "New cover letter created from your draft.",
       "copy_failed": "The draft could not be copied.",
       "no_version": "This draft has no content yet."
+    },
+    "plans": {
+      "title": "Career plans",
+      "intro": "Career plans unlock the career tools: career profile, grounded drafts, job matching, interview practice and more. Prices and allowances come from the FlacronCV career catalog. Your current FlacronCV plan, your CVs, cover letters, credits and price are not changed on this page.",
+      "current_none": "You don't have a career plan.",
+      "current_plan": "Your career plan: {plan} ({source}).",
+      "source": {
+        "v1_plan_map": "included with your FlacronCV plan",
+        "purchase": "career plan purchase"
+      },
+      "fixture_badge": "Local test entitlement, not a real purchase",
+      "disabled_title": "Career plans cannot be purchased yet",
+      "disabled_body": "Prices are shown for information. Purchase opens once FlacronCV confirms how career plans combine with existing subscriptions. Nothing is charged.",
+      "fixture_mode_notice": "Test setup: checkout uses Stripe test mode only. This is a local test, not an approved offer.",
+      "interval_label": "Billing interval",
+      "interval": {
+        "month": "Monthly",
+        "year": "Annual"
+      },
+      "per": {
+        "month": "/ month",
+        "year": "/ year"
+      },
+      "annual_note": "Billed once a year. Allowances still renew every month.",
+      "recommended": "Recommended",
+      "plan": {
+        "free": "Free",
+        "starter": "Starter",
+        "professional": "Professional",
+        "career_pro": "Career Pro",
+        "business": "Business"
+      },
+      "benefit": {
+        "documentCredits": "{count, plural, one {# document credit} other {# document credits}} a month",
+        "resumeAnalyses": "{count, plural, one {# CV analysis} other {# CV analyses}} a month",
+        "actionPacks": "{count, plural, one {# action pack} other {# action packs}} a month",
+        "textInterviewSessions": "{count, plural, one {# text interview session} other {# text interview sessions}} a month",
+        "voiceMinutes": "{count, plural, one {# minute} other {# minutes}} of voice practice a month",
+        "skillReports": "{count, plural, one {# skill report} other {# skill reports}} a month",
+        "scenarioReports": "{count, plural, one {# scenario report} other {# scenario reports}} a month",
+        "assistedForms": "{count, plural, one {# assisted form} other {# assisted forms}} a month",
+        "mapSessions": "{count, plural, one {# map session} other {# map sessions}} a month",
+        "evidenceItems": "Up to {count, plural, one {# evidence item} other {# evidence items}}",
+        "portfolioPages": "Up to {count, plural, one {# portfolio page} other {# portfolio pages}}",
+        "docxExport": "DOCX export of drafts"
+      },
+      "benefit_none": {
+        "documentCredits": "No document credits",
+        "resumeAnalyses": "No CV analyses",
+        "actionPacks": "No action packs",
+        "textInterviewSessions": "No text interview sessions",
+        "voiceMinutes": "No voice practice",
+        "skillReports": "No skill reports",
+        "scenarioReports": "No scenario reports",
+        "assistedForms": "No assisted forms",
+        "mapSessions": "No map sessions",
+        "evidenceItems": "No evidence items",
+        "portfolioPages": "No public portfolio",
+        "docxExport": "PDF export only"
+      },
+      "review": "Review this plan",
+      "renewal_note": "Included units renew every month on your billing date and do not roll over. Editing, reopening saved results and downloads use no credits. A failed generation returns its credit.",
+      "review_title": "Review before you pay",
+      "review_plan": "Plan",
+      "review_amount": "Amount",
+      "review_v1_unchanged_fixture": "In this test setup the career plan is a separate subscription: your current FlacronCV plan is not changed or cancelled.",
+      "review_model_pending": "How a career plan combines with your current FlacronCV plan will be confirmed before purchase opens.",
+      "review_no_charge_yet": "Nothing is charged until you confirm on Stripe's secure checkout page.",
+      "confirm": "Continue to secure checkout ({amount})",
+      "confirm_disabled": "Purchase not available yet",
+      "cancel": "Cancel",
+      "checkout_failed": "Checkout could not start. You were not charged."
     }
+  },
+  "home_hero": {
+    "title_1": "Your Career.",
+    "title_2": "More Opportunities.",
+    "title_3": "A Brighter Future.",
+    "lede": "One place to build a professional CV from your real experience, write matching cover letters, keep the vacancies you want, and track every application.",
+    "cta_start": "Get started free",
+    "cta_dashboard": "Go to your dashboard",
+    "cta_plans": "View plans",
+    "pillars_label": "What you can do with FlacronCV",
+    "pillar_jobs": "Jobs & Opportunities",
+    "pillar_resume": "Professional Resume Builder",
+    "pillar_tailored": "Tailored Applications",
+    "pillar_growth": "Career Development",
+    "pillar_tracker": "Job application tracker",
+    "pillar_ats": "ATS score check",
+    "image_alt": "Portrait of a smiling professional in glasses and a blue suit",
+    "card_sample": "Sample",
+    "card_templates": "Templates",
+    "card_templates_cv": "CV layouts",
+    "card_templates_letters": "Cover-letter styles",
+    "card_track": "Application tracker",
+    "card_export": "Export",
+    "export_pdf": "PDF on every plan",
+    "export_docx": "DOCX on paid plans"
   }
 }

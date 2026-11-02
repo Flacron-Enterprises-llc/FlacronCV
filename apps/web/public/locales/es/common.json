@@ -1332,7 +1332,8 @@
     "internal_note_placeholder": "Visible solo para el equipo de soporte…",
     "save_internal_note": "Guardar nota",
     "internal_note_added": "Nota interna añadida",
-    "internal_note_failed": "No se pudo añadir la nota interna"
+    "internal_note_failed": "No se pudo añadir la nota interna",
+    "career_moderation": "Moderación profesional"
   },
   "common": {
     "loading": "Cargando...",
@@ -3296,7 +3297,7 @@
       "locked_plan_not_mapped": "Tu plan actual todavía no incluye las herramientas profesionales. Tus CV, cartas de presentación y seguimiento de empleos funcionan como siempre.",
       "locked_v1_account_missing": "No encontramos los datos de tu cuenta. Cierra sesión, vuelve a iniciarla e inténtalo otra vez.",
       "locked_v1_account_inactive": "Esta cuenta ya no está activa, por lo que las herramientas profesionales están cerradas.",
-      "see_plan": "Ver tu plan",
+      "see_plan": "Ver planes profesionales",
       "your_data": "Exportar o borrar datos profesionales",
       "unreachable_title": "Las herramientas profesionales no están disponibles en este momento",
       "unreachable_body": "No pudimos conectar con el servicio profesional. Tus CV, cartas de presentación y seguimiento de empleos no se ven afectados. Inténtalo de nuevo en unos minutos."
@@ -3328,7 +3329,8 @@
       "recruiting": "Reclutamiento",
       "developer": "API para desarrolladores",
       "services": "Servicios humanos",
-      "data": "Datos profesionales"
+      "data": "Datos profesionales",
+      "plans": "Planes profesionales"
     },
     "data": {
       "title": "Datos profesionales",
@@ -3366,6 +3368,103 @@
       "copied_letter": "Nueva carta de presentación creada a partir de tu borrador.",
       "copy_failed": "No se pudo copiar el borrador.",
       "no_version": "Este borrador aún no tiene contenido."
+    },
+    "plans": {
+      "title": "Planes profesionales",
+      "intro": "Los planes profesionales desbloquean las herramientas profesionales: perfil profesional, borradores fundamentados, coincidencia con empleos, práctica de entrevistas y más. Los precios y las asignaciones provienen del catálogo profesional de FlacronCV. Tu plan actual de FlacronCV, tus CV, cartas de presentación, créditos y precio no cambian en esta página.",
+      "current_none": "No tienes un plan profesional.",
+      "current_plan": "Tu plan profesional: {plan} ({source}).",
+      "source": {
+        "v1_plan_map": "incluido en tu plan de FlacronCV",
+        "purchase": "compra de plan profesional"
+      },
+      "fixture_badge": "Acceso de prueba local, no es una compra real",
+      "disabled_title": "Los planes profesionales aún no se pueden comprar",
+      "disabled_body": "Los precios se muestran a título informativo. La compra se habilitará cuando FlacronCV confirme cómo se combinan los planes profesionales con las suscripciones existentes. No se cobra nada.",
+      "fixture_mode_notice": "Configuración de prueba: el pago usa solo el modo de prueba de Stripe. Es una prueba local, no una oferta aprobada.",
+      "interval_label": "Periodo de facturación",
+      "interval": {
+        "month": "Mensual",
+        "year": "Anual"
+      },
+      "per": {
+        "month": "/ mes",
+        "year": "/ año"
+      },
+      "annual_note": "Se factura una vez al año. Las asignaciones se renuevan igualmente cada mes.",
+      "recommended": "Recomendado",
+      "plan": {
+        "free": "Gratis",
+        "starter": "Starter",
+        "professional": "Profesional",
+        "career_pro": "Career Pro",
+        "business": "Negocios"
+      },
+      "benefit": {
+        "documentCredits": "{count, plural, one {# crédito de documentos} other {# créditos de documentos}} al mes",
+        "resumeAnalyses": "{count, plural, one {# análisis de CV} other {# análisis de CV}} al mes",
+        "actionPacks": "{count, plural, one {# paquete de acción} other {# paquetes de acción}} al mes",
+        "textInterviewSessions": "{count, plural, one {# sesión de entrevista por escrito} other {# sesiones de entrevista por escrito}} al mes",
+        "voiceMinutes": "{count, plural, one {# minuto} other {# minutos}} de práctica por voz al mes",
+        "skillReports": "{count, plural, one {# informe de habilidades} other {# informes de habilidades}} al mes",
+        "scenarioReports": "{count, plural, one {# informe de escenario} other {# informes de escenarios}} al mes",
+        "assistedForms": "{count, plural, one {# formulario asistido} other {# formularios asistidos}} al mes",
+        "mapSessions": "{count, plural, one {# sesión de mapa} other {# sesiones de mapa}} al mes",
+        "evidenceItems": "Hasta {count, plural, one {# evidencia} other {# evidencias}}",
+        "portfolioPages": "Hasta {count, plural, one {# página de portafolio} other {# páginas de portafolio}}",
+        "docxExport": "Exportación DOCX de borradores"
+      },
+      "benefit_none": {
+        "documentCredits": "Sin créditos de documentos",
+        "resumeAnalyses": "Sin análisis de CV",
+        "actionPacks": "Sin paquetes de acción",
+        "textInterviewSessions": "Sin sesiones de entrevista por escrito",
+        "voiceMinutes": "Sin práctica por voz",
+        "skillReports": "Sin informes de habilidades",
+        "scenarioReports": "Sin informes de escenarios",
+        "assistedForms": "Sin formularios asistidos",
+        "mapSessions": "Sin sesiones de mapa",
+        "evidenceItems": "Sin evidencias",
+        "portfolioPages": "Sin portafolio público",
+        "docxExport": "Solo exportación PDF"
+      },
+      "review": "Revisar este plan",
+      "renewal_note": "Las unidades incluidas se renuevan cada mes en tu fecha de facturación y no se acumulan. Editar, volver a abrir resultados guardados y descargar no usan créditos. Una generación fallida devuelve su crédito.",
+      "review_title": "Revisa antes de pagar",
+      "review_plan": "Plan profesional",
+      "review_amount": "Importe",
+      "review_v1_unchanged_fixture": "En esta configuración de prueba, el plan profesional es una suscripción aparte: tu plan actual de FlacronCV no se modifica ni se cancela.",
+      "review_model_pending": "Antes de habilitar la compra se confirmará cómo se combina un plan profesional con tu plan actual de FlacronCV.",
+      "review_no_charge_yet": "No se cobra nada hasta que confirmes en la página de pago segura de Stripe.",
+      "confirm": "Continuar al pago seguro ({amount})",
+      "confirm_disabled": "La compra aún no está disponible",
+      "cancel": "Cancelar",
+      "checkout_failed": "No se pudo iniciar el pago. No se te ha cobrado nada."
     }
+  },
+  "home_hero": {
+    "title_1": "Tu carrera.",
+    "title_2": "Más oportunidades.",
+    "title_3": "Un futuro mejor.",
+    "lede": "Un solo lugar para crear un CV profesional a partir de tu experiencia real, escribir cartas de presentación a juego, guardar las vacantes que te interesan y seguir cada solicitud.",
+    "cta_start": "Empieza gratis",
+    "cta_dashboard": "Ir a tu panel",
+    "cta_plans": "Ver planes",
+    "pillars_label": "Lo que puedes hacer con FlacronCV",
+    "pillar_jobs": "Empleos y oportunidades",
+    "pillar_resume": "Creador de CV profesional",
+    "pillar_tailored": "Solicitudes a medida",
+    "pillar_growth": "Desarrollo profesional",
+    "pillar_tracker": "Seguimiento de solicitudes",
+    "pillar_ats": "Puntuación ATS del CV",
+    "image_alt": "Retrato de un profesional sonriente con gafas y traje azul",
+    "card_sample": "Ejemplo",
+    "card_templates": "Plantillas",
+    "card_templates_cv": "Diseños de CV",
+    "card_templates_letters": "Estilos de carta",
+    "card_track": "Seguimiento de solicitudes",
+    "card_export": "Exportar",
+    "export_pdf": "PDF en todos los planes",
+    "export_docx": "DOCX en los planes de pago"
   }
 }

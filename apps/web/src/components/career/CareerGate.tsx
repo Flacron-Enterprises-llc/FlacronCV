@@ -45,7 +45,7 @@ export function CareerGate({ children }: { children: ReactNode }) {
             <h2 className="text-lg font-semibold text-stone-900 dark:text-white">{t('locked_title')}</h2>
             <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">{t(`locked_${reason}`)}</p>
             <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold">
-              <Link className="text-brand-700 underline-offset-2 hover:underline dark:text-brand-400" href="/settings/billing">
+              <Link className="text-brand-700 underline-offset-2 hover:underline dark:text-brand-400" href="/career/plans">
                 {t('see_plan')}
               </Link>
               <Link className="text-brand-700 underline-offset-2 hover:underline dark:text-brand-400" href="/career/data">

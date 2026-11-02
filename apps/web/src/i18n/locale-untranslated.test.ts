@@ -47,6 +47,7 @@ const ALLOWED: Record<string, string> = {
   // Career document preview: a fictional sample person (proper name and example address).
   'career.home.sample_name': 'fictional person name in the document preview',
   'career.home.sample_email': 'example email address in the document preview',
+  'career.plans.plan.career_pro': 'product name of a career catalog plan',
   // A postal address must stay in the form the postal service delivers to.
   'footer.address': 'postal address — must remain deliverable as written',
   // Product and plan names — deliberately not localised, like "Pro".

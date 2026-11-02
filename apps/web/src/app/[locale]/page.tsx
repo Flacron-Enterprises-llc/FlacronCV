@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import Navbar from '@/components/landing/Navbar';
-import Hero from '@/components/landing/Hero';
+import HeroV2 from '@/components/landing/HeroV2';
 import Features from '@/components/landing/Features';
 import Pricing from '@/components/landing/Pricing';
 import HowItWorks from '@/components/landing/HowItWorks';
@@ -73,7 +73,7 @@ export default function LandingPage({
       <JsonLd data={softwareApplication()} />
       <JsonLd data={faqPage()} />
       <Navbar />
-      <Hero />
+      <HeroV2 />
       <HowItWorks />
       <Features />
       {/* Testimonials intentionally hidden until real, verifiable customer

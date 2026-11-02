@@ -1332,7 +1332,8 @@
     "internal_note_placeholder": "Visible uniquement par l'équipe support…",
     "save_internal_note": "Enregistrer la note",
     "internal_note_added": "Note interne ajoutée",
-    "internal_note_failed": "Impossible d'ajouter la note interne"
+    "internal_note_failed": "Impossible d'ajouter la note interne",
+    "career_moderation": "Modération carrière"
   },
   "common": {
     "loading": "Chargement...",
@@ -3296,7 +3297,7 @@
       "locked_plan_not_mapped": "Votre forfait actuel n’inclut pas encore les outils de carrière. Vos CV, lettres de motivation et votre suivi de candidatures fonctionnent comme avant.",
       "locked_v1_account_missing": "Nous n’avons pas trouvé les informations de votre compte. Déconnectez-vous, reconnectez-vous, puis réessayez.",
       "locked_v1_account_inactive": "Ce compte n’est plus actif : les outils de carrière sont donc fermés.",
-      "see_plan": "Voir votre forfait",
+      "see_plan": "Voir les forfaits carrière",
       "your_data": "Exporter ou effacer les données de carrière",
       "unreachable_title": "Les outils de carrière sont indisponibles pour le moment",
       "unreachable_body": "Le service de carrière est injoignable. Vos CV, lettres de motivation et votre suivi de candidatures ne sont pas concernés. Réessayez dans quelques minutes."
@@ -3328,7 +3329,8 @@
       "recruiting": "Recrutement",
       "developer": "API développeurs",
       "services": "Services humains",
-      "data": "Données de carrière"
+      "data": "Données de carrière",
+      "plans": "Forfaits carrière"
     },
     "data": {
       "title": "Données de carrière",
@@ -3366,6 +3368,103 @@
       "copied_letter": "Nouvelle lettre de motivation créée à partir de votre brouillon.",
       "copy_failed": "Le brouillon n’a pas pu être copié.",
       "no_version": "Ce brouillon n’a pas encore de contenu."
+    },
+    "plans": {
+      "title": "Forfaits carrière",
+      "intro": "Les forfaits carrière donnent accès aux outils de carrière : profil de carrière, brouillons fondés, correspondance avec les offres, entraînement aux entretiens et plus encore. Les prix et quotas proviennent du catalogue carrière FlacronCV. Votre forfait FlacronCV actuel, vos CV, lettres de motivation, crédits et votre prix ne sont pas modifiés sur cette page.",
+      "current_none": "Vous n’avez pas de forfait carrière.",
+      "current_plan": "Votre forfait carrière : {plan} ({source}).",
+      "source": {
+        "v1_plan_map": "inclus dans votre forfait FlacronCV",
+        "purchase": "achat d’un forfait carrière"
+      },
+      "fixture_badge": "Droit d’accès de test local, pas un achat réel",
+      "disabled_title": "Les forfaits carrière ne peuvent pas encore être achetés",
+      "disabled_body": "Les prix sont affichés à titre d’information. L’achat ouvrira une fois que FlacronCV aura confirmé comment les forfaits carrière s’articulent avec les abonnements existants. Rien n’est facturé.",
+      "fixture_mode_notice": "Configuration de test : le paiement utilise uniquement le mode test de Stripe. Il s’agit d’un test local, pas d’une offre approuvée.",
+      "interval_label": "Périodicité de facturation",
+      "interval": {
+        "month": "Mensuel",
+        "year": "Annuel"
+      },
+      "per": {
+        "month": "/ mois",
+        "year": "/ an"
+      },
+      "annual_note": "Facturé une fois par an. Les quotas se renouvellent tout de même chaque mois.",
+      "recommended": "Recommandé",
+      "plan": {
+        "free": "Gratuit",
+        "starter": "Starter",
+        "professional": "Professionnel",
+        "career_pro": "Career Pro",
+        "business": "Entreprise"
+      },
+      "benefit": {
+        "documentCredits": "{count, plural, one {# crédit de document} other {# crédits de document}} par mois",
+        "resumeAnalyses": "{count, plural, one {# analyse de CV} other {# analyses de CV}} par mois",
+        "actionPacks": "{count, plural, one {# pack d’action} other {# packs d’action}} par mois",
+        "textInterviewSessions": "{count, plural, one {# séance d’entretien écrit} other {# séances d’entretien écrit}} par mois",
+        "voiceMinutes": "{count, plural, one {# minute} other {# minutes}} d’entraînement vocal par mois",
+        "skillReports": "{count, plural, one {# rapport de compétences} other {# rapports de compétences}} par mois",
+        "scenarioReports": "{count, plural, one {# rapport de scénario} other {# rapports de scénario}} par mois",
+        "assistedForms": "{count, plural, one {# formulaire assisté} other {# formulaires assistés}} par mois",
+        "mapSessions": "{count, plural, one {# séance de carte} other {# séances de carte}} par mois",
+        "evidenceItems": "Jusqu’à {count, plural, one {# preuve} other {# preuves}}",
+        "portfolioPages": "Jusqu’à {count, plural, one {# page de portfolio} other {# pages de portfolio}}",
+        "docxExport": "Export DOCX des brouillons"
+      },
+      "benefit_none": {
+        "documentCredits": "Aucun crédit de document",
+        "resumeAnalyses": "Aucune analyse de CV",
+        "actionPacks": "Aucun pack d’action",
+        "textInterviewSessions": "Aucune séance d’entretien écrit",
+        "voiceMinutes": "Pas d’entraînement vocal",
+        "skillReports": "Aucun rapport de compétences",
+        "scenarioReports": "Aucun rapport de scénario",
+        "assistedForms": "Aucun formulaire assisté",
+        "mapSessions": "Aucune séance de carte",
+        "evidenceItems": "Aucune preuve",
+        "portfolioPages": "Pas de portfolio public",
+        "docxExport": "Export PDF uniquement"
+      },
+      "review": "Examiner ce forfait",
+      "renewal_note": "Les unités incluses se renouvellent chaque mois à votre date de facturation et ne sont pas reportées. Modifier, rouvrir un résultat enregistré et télécharger ne consomment aucun crédit. Une génération échouée rend son crédit.",
+      "review_title": "Vérifiez avant de payer",
+      "review_plan": "Forfait",
+      "review_amount": "Montant",
+      "review_v1_unchanged_fixture": "Dans cette configuration de test, le forfait carrière est un abonnement distinct : votre forfait FlacronCV actuel n’est ni modifié ni résilié.",
+      "review_model_pending": "La façon dont un forfait carrière s’articule avec votre forfait FlacronCV actuel sera confirmée avant l’ouverture de l’achat.",
+      "review_no_charge_yet": "Rien n’est facturé tant que vous ne confirmez pas sur la page de paiement sécurisée de Stripe.",
+      "confirm": "Continuer vers le paiement sécurisé ({amount})",
+      "confirm_disabled": "Achat pas encore disponible",
+      "cancel": "Annuler",
+      "checkout_failed": "Le paiement n’a pas pu démarrer. Vous n’avez pas été débité."
     }
+  },
+  "home_hero": {
+    "title_1": "Votre carrière.",
+    "title_2": "Plus d'opportunités.",
+    "title_3": "Un meilleur avenir.",
+    "lede": "Un seul endroit pour créer un CV professionnel à partir de votre vraie expérience, rédiger des lettres assorties, garder les offres qui vous intéressent et suivre chaque candidature.",
+    "cta_start": "Commencer gratuitement",
+    "cta_dashboard": "Aller au tableau de bord",
+    "cta_plans": "Voir les offres",
+    "pillars_label": "Ce que vous pouvez faire avec FlacronCV",
+    "pillar_jobs": "Emplois et opportunités",
+    "pillar_resume": "Création de CV professionnels",
+    "pillar_tailored": "Candidatures sur mesure",
+    "pillar_growth": "Développement de carrière",
+    "pillar_tracker": "Suivi des candidatures",
+    "pillar_ats": "Score ATS du CV",
+    "image_alt": "Portrait d'un professionnel souriant, en lunettes et costume bleu",
+    "card_sample": "Exemple",
+    "card_templates": "Modèles",
+    "card_templates_cv": "Modèles de CV",
+    "card_templates_letters": "Styles de lettre",
+    "card_track": "Suivi des candidatures",
+    "card_export": "Export",
+    "export_pdf": "PDF sur chaque offre",
+    "export_docx": "DOCX sur les offres payantes"
   }
 }

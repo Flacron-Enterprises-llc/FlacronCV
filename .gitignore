@@ -99,3 +99,5 @@ apps/web/template-capture-output/
 
 # Career service local settings (see .env.career.example)
 .env.career
+# Local isolated production build output (NEXT_DIST_DIR)
+.next-integration-prod/

@@ -509,7 +509,7 @@ export function RelocationModesScreen({
                 {t('upgrade_required_body')}
               </p>
               <div className="mt-4">
-                <a href="/settings/billing" className="btn-primary min-h-career-touch inline-flex items-center px-4 py-2 font-medium">
+                <a href="/career/plans" className="btn-primary min-h-career-touch inline-flex items-center px-4 py-2 font-medium">
                   {t('view_plans')}
                 </a>
               </div>
