@@ -3092,7 +3092,15 @@
       "letter_template": "Mise en page de lettre",
       "letter_layout_note": "La mise en page est enregistrée avec ce brouillon. La changer conserve le texte déjà écrit.",
       "conflict": "Ce CV a été enregistré depuis un autre onglet ou appareil après son ouverture ici. Rechargez la dernière version, puis refaites votre modification.",
-      "conflict_reload": "Recharger la dernière version"
+      "conflict_reload": "Recharger la dernière version",
+      "unsaved_changes": "Modifications non enregistrées.",
+      "export_unsaved": "Les téléchargements utilisent la dernière version enregistrée.",
+      "letter_save_error": "Enregistrement impossible. Votre texte est toujours là ; réessayez.",
+      "letter_conflict": "Ce document a été enregistré depuis un autre onglet ou appareil après son ouverture ici, votre enregistrement a donc été refusé. Votre texte est toujours là : copiez ce que vous voulez garder, puis rechargez la dernière version.",
+      "letter_reload": "Recharger la dernière version (votre texte sera perdu)",
+      "download_failed": "Le fichier n’a pas pu être téléchargé. Rien n’a été modifié ; réessayez.",
+      "leave_unsaved_letter": "Remplacer la lettre affichée ? Votre texte non enregistré sera perdu.",
+      "conflict_keep": "Recharger en gardant mes lignes saisies"
     },
     "scope": {
       "loading": "Chargement",

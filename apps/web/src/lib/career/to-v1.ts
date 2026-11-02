@@ -90,10 +90,35 @@ function withoutUnstatedClaims(item: Record<string, unknown>): Record<string, un
  * remaining sections are added in order. Returns the new V1 CV id.
  *
  * Every call goes through V1's API with the person's own token. A failure
- * part-way leaves an ordinary V1 CV the person can edit or delete.
+ * part-way throws `PartialV1CopyError` carrying the new V1 id: pass it back as
+ * `resumeInto` to finish filling that same CV. V1 counts every creation
+ * against the plan (deleting does not give it back), so a retry must never
+ * create a second CV.
  */
-export async function createV1Cv(api: V1Api, plan: V1CvPlan): Promise<string> {
-  const cv = await api.post<{ id: string; personalInfo?: Record<string, unknown> }>('/cvs', plan.create);
+export async function createV1Cv(api: V1Api, plan: V1CvPlan, resumeInto?: string): Promise<string> {
+  const cv = resumeInto
+    ? await api.get<{ id: string; personalInfo?: Record<string, unknown> }>(`/cvs/${resumeInto}`).then((found) => ({ ...found, id: resumeInto }))
+    : await api.post<{ id: string; personalInfo?: Record<string, unknown> }>('/cvs', plan.create);
+  try {
+    await fillV1Cv(api, plan, cv);
+  } catch (error) {
+    throw new PartialV1CopyError(cv.id, error);
+  }
+  return cv.id;
+}
+
+/** A V1 document was created but not completely filled; retry with `resumeInto: v1Id`. */
+export class PartialV1CopyError extends Error {
+  constructor(
+    readonly v1Id: string,
+    readonly cause: unknown,
+  ) {
+    super('partial_v1_copy');
+    this.name = 'PartialV1CopyError';
+  }
+}
+
+async function fillV1Cv(api: V1Api, plan: V1CvPlan, cv: { id: string; personalInfo?: Record<string, unknown> }): Promise<void> {
   // V1's create ignores supplied personal details and seeds a generic sample
   // summary. Write the person's own details over it; with no summary in the
   // draft the sample is cleared rather than left as a claim they never made.
@@ -120,12 +145,15 @@ export async function createV1Cv(api: V1Api, plan: V1CvPlan): Promise<string> {
       items: section.items,
     });
   }
-  return cv.id;
 }
 
-/** Creates a V1 cover letter from a career letter draft. Returns the new V1 id. */
-export async function createV1CoverLetter(api: V1Api, draft: { title: string; body: string }): Promise<string> {
-  const letter = await api.post<{ id: string }>('/cover-letters', { title: draft.title.trim() || 'Cover letter' });
-  await api.put(`/cover-letters/${letter.id}`, { content: letterTextToHtml(draft.body) });
-  return letter.id;
+/** Creates a V1 cover letter from a career letter draft. Returns the new V1 id. Same retry rule as `createV1Cv`. */
+export async function createV1CoverLetter(api: V1Api, draft: { title: string; body: string }, resumeInto?: string): Promise<string> {
+  const id = resumeInto ?? (await api.post<{ id: string }>('/cover-letters', { title: draft.title.trim() || 'Cover letter' })).id;
+  try {
+    await api.put(`/cover-letters/${id}`, { content: letterTextToHtml(draft.body) });
+  } catch (error) {
+    throw new PartialV1CopyError(id, error);
+  }
+  return id;
 }

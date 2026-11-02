@@ -12,7 +12,7 @@ import { api as v1Api } from '@/lib/api';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { useRouter } from '@/i18n/routing';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
-import { createV1CoverLetter, createV1Cv, planV1Cv } from '@/lib/career/to-v1';
+import { createV1CoverLetter, createV1Cv, PartialV1CopyError, planV1Cv } from '@/lib/career/to-v1';
 import { ResumeScreen } from '../resume/ResumeScreen';
 
 /** V1 `cv_builder.*` keys for section titles, so the copy reads like a CV made in V1. */
@@ -46,6 +46,8 @@ export function DocumentsScreen(props: { api: ApiClient; user: SignedInUser | nu
   const [busy, setBusy] = useState<string | null>(null);
   // Synchronous guard: a second click before React re-renders must not create a second V1 document.
   const inFlight = useRef(false);
+  // Draft id -> V1 document created by a copy that failed part-way; a retry fills that one instead of creating another.
+  const partial = useRef<Record<string, string>>({});
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -74,11 +76,13 @@ export function DocumentsScreen(props: { api: ApiClient; user: SignedInUser | nu
       }
       // The client types templateId as a string; the converter only checks it against V1's ids.
       const plan = planV1Cv(detail.version.body as ResumeBody, facts.items, resume.title, (type) => tSections(SECTION_TITLE_KEY[type]));
-      const cvId = await createV1Cv(v1Api, plan);
+      const cvId = await createV1Cv(v1Api, plan, partial.current[resume.id]);
+      delete partial.current[resume.id];
       toast.success(t('copied_cv'));
       router.push(`/cv/${cvId}`);
     } catch (error) {
-      toast.error(formatApiError(error, t('copy_failed')));
+      if (error instanceof PartialV1CopyError) partial.current[resume.id] = error.v1Id;
+      toast.error(formatApiError(error instanceof PartialV1CopyError ? error.cause : error, t('copy_failed')));
     } finally {
       inFlight.current = false;
       setBusy(null);
@@ -90,11 +94,15 @@ export function DocumentsScreen(props: { api: ApiClient; user: SignedInUser | nu
     inFlight.current = true;
     setBusy(letter.id);
     try {
-      const id = await createV1CoverLetter(v1Api, { title: letter.title, body: letter.body });
+      // The list above is loaded once; the studio below may have saved newer text since. Copy the latest saved letter.
+      const latest = await api.writingDocument(letter.id);
+      const id = await createV1CoverLetter(v1Api, { title: latest.title, body: latest.body }, partial.current[letter.id]);
+      delete partial.current[letter.id];
       toast.success(t('copied_letter'));
       router.push(`/cover-letters/${id}`);
     } catch (error) {
-      toast.error(formatApiError(error, t('copy_failed')));
+      if (error instanceof PartialV1CopyError) partial.current[letter.id] = error.v1Id;
+      toast.error(formatApiError(error instanceof PartialV1CopyError ? error.cause : error, t('copy_failed')));
     } finally {
       inFlight.current = false;
       setBusy(null);

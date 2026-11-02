@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FactForDocument, ResumeBody } from '@flacroncv/career-shared';
-import { createV1CoverLetter, createV1Cv, planV1Cv, type V1Api } from './to-v1';
+import { createV1CoverLetter, createV1Cv, PartialV1CopyError, planV1Cv, type V1Api } from './to-v1';
 
 const facts: FactForDocument[] = [
   { id: 'f-contact', factType: 'contact', value: { fullName: 'Ada Example', email: 'ada@example.test', city: 'Lyon' } },
@@ -106,5 +106,48 @@ describe('career letter -> V1 cover letter', () => {
       ['POST', '/cover-letters', { title: 'Letter' }],
       ['PUT', '/cover-letters/cl-1', { content: '<p>Dear team,</p><p>I &lt;3 data.</p>' }],
     ]);
+  });
+});
+
+describe('copy into V1 after a failure part-way', () => {
+  it('reports the created V1 CV and a retry fills it instead of creating a second one', async () => {
+    const { api, calls } = fakeV1();
+    let failOnce = true;
+    const flaky: V1Api = {
+      ...api,
+      async put<T>(endpoint: string, payload?: unknown) {
+        if (failOnce && endpoint === '/cvs/cv-1') {
+          failOnce = false;
+          throw new Error('network');
+        }
+        return api.put<T>(endpoint, payload);
+      },
+    };
+    const plan = planV1Cv(body, facts, 'CV', (type) => type);
+    const first = await createV1Cv(flaky, plan).catch((error: unknown) => error);
+    expect(first).toBeInstanceOf(PartialV1CopyError);
+    const partialId = (first as PartialV1CopyError).v1Id;
+    expect(partialId).toBe('cv-1');
+    expect(await createV1Cv(flaky, plan, partialId)).toBe('cv-1');
+    expect(calls.filter(([method, endpoint]) => method === 'POST' && endpoint === '/cvs')).toHaveLength(1);
+  });
+
+  it('a letter retry writes into the same V1 letter', async () => {
+    const { api, calls } = fakeV1();
+    let failOnce = true;
+    const flaky: V1Api = {
+      ...api,
+      async put<T>(endpoint: string, payload?: unknown) {
+        if (failOnce) {
+          failOnce = false;
+          throw new Error('network');
+        }
+        return api.put<T>(endpoint, payload);
+      },
+    };
+    const first = await createV1CoverLetter(flaky, { title: 'L', body: 'Hi' }).catch((error: unknown) => error);
+    expect(first).toBeInstanceOf(PartialV1CopyError);
+    expect(await createV1CoverLetter(flaky, { title: 'L', body: 'Hi' }, (first as PartialV1CopyError).v1Id)).toBe('cl-1');
+    expect(calls.filter(([method, endpoint]) => method === 'POST' && endpoint === '/cover-letters')).toHaveLength(1);
   });
 });

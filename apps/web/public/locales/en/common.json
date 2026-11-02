@@ -3092,7 +3092,15 @@
       "letter_template": "Cover-letter layout",
       "letter_layout_note": "The layout is saved with this draft. Changing it keeps the text you already wrote.",
       "conflict": "This CV was saved from another tab or device after you opened it. Reload to see the latest version, then make your change again.",
-      "conflict_reload": "Reload the latest version"
+      "conflict_reload": "Reload the latest version",
+      "unsaved_changes": "Unsaved changes.",
+      "export_unsaved": "Downloads use the last saved version.",
+      "letter_save_error": "Could not save. Your text is still here; try again.",
+      "letter_conflict": "This document was saved from another tab or device after you opened it, so your save was refused. Your text is still here: copy anything you want to keep, then reload the latest version.",
+      "letter_reload": "Reload the latest version (discards your text)",
+      "download_failed": "The file could not be downloaded. Nothing was changed; try again.",
+      "leave_unsaved_letter": "Replace the letter on screen? Your unsaved text will be lost.",
+      "conflict_keep": "Reload and keep my typed lines"
     },
     "scope": {
       "loading": "Loading",

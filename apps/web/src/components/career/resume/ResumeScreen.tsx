@@ -31,7 +31,18 @@ import {
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { profileLoadFailure } from '@/lib/career/profile-load';
 
-type Problem = 'failed' | 'quota' | 'capacity' | 'upgrade' | 'missing' | 'clarify' | 'unusable' | 'conflict' | null;
+type Problem = 'failed' | 'quota' | 'capacity' | 'upgrade' | 'missing' | 'clarify' | 'unusable' | 'conflict' | 'download' | null;
+
+/** "Marie Curie — CV.pdf"-style names from the document title; unsafe characters removed, fallback when empty. */
+export function downloadName(title: string, fallback: string, format: string): string {
+  const base = title
+    .replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80)
+    .trim();
+  return `${base || fallback}.${format}`;
+}
 
 const UNUSABLE_LETTER_REASONS = new Set([
   'current_role_unsupported',
@@ -91,6 +102,13 @@ export function ResumeScreen({
   const [letterTemplate, setLetterTemplate] = useState<CoverLetterTemplateId>('classic');
   const [requestedTemplate, setRequestedTemplate] = useState<string | null>(null);
   const appliedTemplateQuery = useRef(false);
+  const [letterSave, setLetterSave] = useState<'idle' | 'saving' | 'saved' | 'error' | 'conflict'>('idle');
+  /**
+   * Idempotency key per paid action, kept until that action settles. A retry
+   * after a lost response or a 5xx reuses the key, so the server replays the
+   * first result instead of charging and generating twice.
+   */
+  const retryKeys = useRef<Record<string, string>>({});
 
   const loadResumes = useCallback(async () => {
     setLoad('loading');
@@ -159,7 +177,18 @@ export function ResumeScreen({
     appliedTemplateQuery.current = true;
     void api
       .updateResumeVersion(current.id, { templateId: requestedTemplate })
-      .then((next) => replace(next, true))
+      .then(async (next) => {
+        replace(next, true);
+        // The template change moved the resume's revision; read it so the next save is not a false conflict.
+        const resumeId = detail?.id;
+        if (!resumeId) return;
+        try {
+          const fresh = await api.resume(resumeId);
+          setDetail((cur) => (cur && cur.id === fresh.id ? { ...cur, revision: fresh.revision } : cur));
+        } catch {
+          /* A later save reports a conflict if needed; nothing is lost. */
+        }
+      })
       .catch((error) => {
         appliedTemplateQuery.current = false;
         note(error);
@@ -181,15 +210,17 @@ export function ResumeScreen({
     );
   }
 
+  const letterDirty = Boolean(writingDoc && documentDraft !== writingDoc.body);
+
   useEffect(() => {
-    if (!dirty) return undefined;
+    if (!dirty && !letterDirty) return undefined;
     const onLeave = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = '';
     };
     window.addEventListener('beforeunload', onLeave);
     return () => window.removeEventListener('beforeunload', onLeave);
-  }, [dirty]);
+  }, [dirty, letterDirty]);
 
   if (!ready || load === 'loading') return <LoadingState label={t('loading')} />;
   if (load === 'permission') return <PermissionDeniedState title={t('permission_title')} body={t('permission_body')} />;
@@ -277,8 +308,9 @@ export function ResumeScreen({
         expectedRevision: detail?.revision,
       });
       replace(saved);
-      await refreshRevision();
+      // Persisted: say so even if the follow-up revision read fails.
       setSaveState('saved');
+      await refreshRevisionQuietly();
     } catch (error) {
       setSaveState('error');
       note(error);
@@ -326,8 +358,11 @@ export function ResumeScreen({
     setPending(true);
     setProblem(null);
     try {
-      const paid = await api.generateResume(detail.id, '', newIdempotencyKey());
+      const action = `generate:${detail.id}`;
+      const paid = await settlePaid(action, (key) => api.generateResume(detail.id, '', key));
       replace(paid.version);
+      // A new version moves the resume's revision; without this the next save is refused as a conflict.
+      await refreshRevisionQuietly();
       setVersions((current) => [paid.version, ...current.filter((item) => item.id !== paid.version.id)]);
       setCredit((current) =>
         current ? { ...current, includedRemaining: paid.usage.includedRemaining, packRemaining: paid.usage.packRemaining } : current,
@@ -345,8 +380,10 @@ export function ResumeScreen({
     setPending(true);
     setProblem(null);
     try {
-      const paid = await api.tailorResume(detail.id, opportunityId.trim(), newIdempotencyKey());
+      const target = opportunityId.trim();
+      const paid = await settlePaid(`tailor:${detail.id}:${target}`, (key) => api.tailorResume(detail.id, target, key));
       replace(paid.version);
+      await refreshRevisionQuietly();
       setVersions((current) => [paid.version, ...current.filter((item) => item.id !== paid.version.id)]);
     } catch (error) {
       if (isApiError(error, 'not_found')) setProblem('missing');
@@ -357,19 +394,24 @@ export function ResumeScreen({
   }
 
   async function writeDocument() {
+    if (letterDirty && typeof window !== 'undefined' && !window.confirm(t('leave_unsaved_letter'))) return;
     setPending(true);
     setProblem(null);
     try {
-      const paid = await api.createWriting(
-        {
-          type: writingType,
-          opportunityId: writingOpportunity.trim() || null,
-          templateId: writingType === 'cover_letter' ? letterTemplate : undefined,
-        },
-        newIdempotencyKey(),
+      const target = writingOpportunity.trim() || null;
+      const paid = await settlePaid(`write:${writingType}:${target ?? ''}`, (key) =>
+        api.createWriting(
+          {
+            type: writingType,
+            opportunityId: target,
+            templateId: writingType === 'cover_letter' ? letterTemplate : undefined,
+          },
+          key,
+        ),
       );
       setWritingDoc(paid.document);
       setDocumentDraft(paid.document.body);
+      setLetterSave('idle');
       setCredit((current) =>
         current ? { ...current, includedRemaining: paid.usage.includedRemaining, packRemaining: paid.usage.packRemaining } : current,
       );
@@ -386,19 +428,45 @@ export function ResumeScreen({
     if (!writingDoc) return;
     setPending(true);
     setProblem(null);
+    setLetterSave('saving');
     try {
-      const saved = await api.updateWriting(writingDoc.id, { body: documentDraft });
+      // The revision it was based on: a newer save from another tab or device is refused, not overwritten.
+      const saved = await api.updateWriting(writingDoc.id, { body: documentDraft, expectedRevision: writingDoc.revision });
       setWritingDoc(saved);
       setDocumentDraft(saved.body);
+      setLetterSave('saved');
     } catch (error) {
-      note(error);
+      // The typed text stays in the editor either way.
+      setLetterSave(isApiError(error, 'revision_conflict') ? 'conflict' : 'error');
+      if (!isApiError(error, 'revision_conflict')) noteLetterFailure(error);
     } finally {
       setPending(false);
     }
   }
 
+  /** A failed letter save or export is not a failed generation; only plan/quota problems reuse those panels. */
+  function noteLetterFailure(error: unknown) {
+    if (isApiError(error, 'plan_upgrade_required') || isApiError(error, 'quota_exhausted') || isApiError(error, 'permission_denied')) note(error);
+  }
+
+  /** Discards the typed letter text and shows the latest saved version. */
+  async function reloadLetter() {
+    if (!writingDoc) return;
+    try {
+      const fresh = await api.writingDocument(writingDoc.id);
+      setWritingDoc(fresh);
+      setDocumentDraft(fresh.body);
+      setLetterSave('idle');
+    } catch (error) {
+      setLetterSave('error');
+      noteLetterFailure(error);
+    }
+  }
+
   async function loadDrafts() {
+    if (letterDirty && typeof window !== 'undefined' && !window.confirm(t('leave_unsaved_letter'))) return;
     setProblem(null);
+    setLetterSave('idle');
     try {
       const list = await api.writingDocuments();
       setCredit(list.documentCredit);
@@ -442,12 +510,13 @@ export function ResumeScreen({
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = format === 'pdf' ? 'letter.pdf' : format === 'docx' ? 'letter.docx' : 'letter.txt';
+        link.download = downloadName(writingDoc.title, writingDoc.type === 'cover_letter' ? 'letter' : writingDoc.type, format);
         link.click();
         URL.revokeObjectURL(url);
       }
     } catch (error) {
-      note(error);
+      setProblem('download');
+      noteLetterFailure(error);
     }
   }
 
@@ -463,24 +532,58 @@ export function ResumeScreen({
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = format === 'pdf' ? 'resume.pdf' : 'resume.docx';
+        link.download = downloadName(detail?.title ?? '', 'resume', format);
         link.click();
         URL.revokeObjectURL(url);
       }
+    } catch (error) {
+      if (isApiError(error, 'plan_upgrade_required')) note(error);
+      else setProblem('download');
+    }
+  }
+
+  /**
+   * Fresh revision, lines and preview after a conflict. With keepTyped, lines
+   * typed here are laid over the latest version (for lines that still exist),
+   * so the person can review and save again instead of retyping.
+   */
+  async function reloadResume(resumeId: string, keepTyped = false) {
+    const typed = keepTyped && version ? changedLines(version) : [];
+    try {
+      const full = await api.resume(resumeId);
+      setDetail(full);
+      const fresh = draftsFrom(full.version);
+      for (const line of typed) if (line.factId in fresh) fresh[line.factId] = line.text;
+      setDrafts(fresh);
+      setVersions((await api.resumeVersions(resumeId)).items);
+      setSaveState('idle');
     } catch (error) {
       note(error);
     }
   }
 
-  /** Fresh revision, lines and preview after a conflict; unsaved edits on this page are dropped. */
-  async function reloadResume(resumeId: string) {
+  /** Runs a paid action with a key that survives retries until the action settles. */
+  async function settlePaid<T>(action: string, run: (key: string) => Promise<T>): Promise<T> {
+    const key = (retryKeys.current[action] ??= newIdempotencyKey());
     try {
-      const full = await api.resume(resumeId);
-      setDetail(full);
-      setDrafts(draftsFrom(full.version));
-      setVersions((await api.resumeVersions(resumeId)).items);
+      const result = await run(key);
+      delete retryKeys.current[action];
+      return result;
     } catch (error) {
-      note(error);
+      // A definite answer (4xx, including a refusal or a released provider failure) ends the attempt.
+      // A lost response or a server error keeps the key, so a retry cannot charge twice.
+      const status = isApiError(error) ? error.status : 0;
+      if (status >= 400 && status < 500) delete retryKeys.current[action];
+      if (isApiError(error, 'provider_unavailable')) delete retryKeys.current[action];
+      throw error;
+    }
+  }
+
+  async function refreshRevisionQuietly() {
+    try {
+      await refreshRevision();
+    } catch {
+      /* The next save reports a conflict if the revision really moved; nothing is lost. */
     }
   }
 
@@ -676,6 +779,7 @@ export function ResumeScreen({
               <Button type="button" disabled={pending} onClick={() => setConfirming(true)}>{t('generate')}</Button>
               <Button type="button" variant="secondary" onClick={() => void download('pdf')}>{t('pdf')}</Button>
               <Button type="button" variant="secondary" onClick={() => void download('docx')}>{t('docx')}</Button>
+              {dirty ? <p className="self-center text-sm text-career-muted">{t('export_unsaved')}</p> : null}
               <Button type="button" variant="secondary" onClick={() => void checkReadability()}>{t('readability')}</Button>
             </div>
             {confirming ? (
@@ -729,13 +833,23 @@ export function ResumeScreen({
                       if (!isCoverLetterTemplateId(value)) return;
                       setLetterTemplate(value);
                       if (!writingDoc) return;
+                      // Typed text is saved together with the new template, never replaced by the stored body.
+                      setLetterSave(letterDirty ? 'saving' : 'idle');
                       void api
-                        .updateWriting(writingDoc.id, { templateId: value })
+                        .updateWriting(writingDoc.id, {
+                          templateId: value,
+                          ...(letterDirty ? { body: documentDraft } : {}),
+                          expectedRevision: writingDoc.revision,
+                        })
                         .then((saved) => {
                           setWritingDoc(saved);
                           setDocumentDraft(saved.body);
+                          if (letterDirty) setLetterSave('saved');
                         })
-                        .catch(note);
+                        .catch((error: unknown) => {
+                          setLetterSave(isApiError(error, 'revision_conflict') ? 'conflict' : 'error');
+                          noteLetterFailure(error);
+                        });
                     }}
                   >
                     {COVER_LETTER_TEMPLATES.map((template) => (
@@ -791,8 +905,23 @@ export function ResumeScreen({
                   id="writing-draft"
                   className="min-h-32 w-full min-w-0 rounded-md border border-career-line bg-white p-3 text-sm text-career-ink dark:bg-career-surface"
                   value={documentDraft}
-                  onChange={(event) => setDocumentDraft(event.target.value)}
+                  onChange={(event) => {
+                    setDocumentDraft(event.target.value);
+                    if (letterSave === 'saved') setLetterSave('idle');
+                  }}
                 />
+                {letterDirty && letterSave !== 'conflict' ? (
+                  <p className="text-sm text-career-muted">{t('unsaved_changes')} {t('export_unsaved')}</p>
+                ) : null}
+                {letterSave === 'saving' ? <p role="status" className="text-sm text-career-muted">{t('save_saving')}</p> : null}
+                {letterSave === 'saved' ? <p role="status" className="text-sm text-career-ink">{t('save_saved')}</p> : null}
+                {letterSave === 'error' ? <p role="status" className="text-sm text-career-danger">{t('letter_save_error')}</p> : null}
+                {letterSave === 'conflict' ? (
+                  <div role="alert" className="flex flex-col gap-2 text-sm">
+                    <p>{t('letter_conflict')}</p>
+                    <Button type="button" variant="ghost" onClick={() => void reloadLetter()}>{t('letter_reload')}</Button>
+                  </div>
+                ) : null}
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Button type="submit" variant="secondary" disabled={pending}>{t('writing_save')}</Button>
                   <Button type="button" variant="ghost" onClick={() => void downloadWriting('pdf')}>
@@ -838,9 +967,15 @@ export function ResumeScreen({
       {problem === 'conflict' && detail ? (
         <div role="alert" className="flex flex-col gap-2">
           <p>{t('conflict')}</p>
-          <Button type="button" variant="secondary" onClick={() => { setProblem(null); void reloadResume(detail.id); }}>{t('conflict_reload')}</Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {dirty ? (
+              <Button type="button" variant="secondary" onClick={() => { setProblem(null); void reloadResume(detail.id, true); }}>{t('conflict_keep')}</Button>
+            ) : null}
+            <Button type="button" variant={dirty ? 'ghost' : 'secondary'} onClick={() => { setProblem(null); void reloadResume(detail.id); }}>{t('conflict_reload')}</Button>
+          </div>
         </div>
       ) : null}
+      {problem === 'download' ? <p role="alert">{t('download_failed')}</p> : null}
       {problem === 'missing' ? <p role="status">{t('tailor_missing')}</p> : null}
     </div>
   );

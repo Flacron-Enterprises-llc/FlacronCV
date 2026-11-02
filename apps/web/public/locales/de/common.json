@@ -3092,7 +3092,15 @@
       "letter_template": "Layout des Anschreibens",
       "letter_layout_note": "Das Layout wird mit diesem Entwurf gespeichert. Eine Änderung behält den bereits geschriebenen Text bei.",
       "conflict": "Dieser Lebenslauf wurde nach dem Öffnen in einem anderen Tab oder auf einem anderen Gerät gespeichert. Lade neu, um die neueste Version zu sehen, und nimm deine Änderung dann erneut vor.",
-      "conflict_reload": "Neueste Version laden"
+      "conflict_reload": "Neueste Version laden",
+      "unsaved_changes": "Ungespeicherte Änderungen.",
+      "export_unsaved": "Downloads verwenden die zuletzt gespeicherte Version.",
+      "letter_save_error": "Speichern fehlgeschlagen. Dein Text ist noch da; versuch es erneut.",
+      "letter_conflict": "Dieses Dokument wurde nach dem Öffnen in einem anderen Tab oder auf einem anderen Gerät gespeichert, daher wurde dein Speichern abgelehnt. Dein Text ist noch da: Kopiere, was du behalten möchtest, und lade dann die neueste Version.",
+      "letter_reload": "Neueste Version laden (dein Text wird verworfen)",
+      "download_failed": "Die Datei konnte nicht heruntergeladen werden. Es wurde nichts geändert; versuch es erneut.",
+      "leave_unsaved_letter": "Den angezeigten Brief ersetzen? Dein ungespeicherter Text geht verloren.",
+      "conflict_keep": "Neu laden und meine getippten Zeilen behalten"
     },
     "scope": {
       "loading": "Wird geladen",

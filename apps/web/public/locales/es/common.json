@@ -3092,7 +3092,15 @@
       "letter_template": "Diseño de la carta de presentación",
       "letter_layout_note": "El diseño se guarda con este borrador. Cambiarlo conserva el texto que ya escribiste.",
       "conflict": "Este CV se guardó desde otra pestaña u otro dispositivo después de que lo abrieras. Recarga para ver la última versión y vuelve a hacer tu cambio.",
-      "conflict_reload": "Recargar la última versión"
+      "conflict_reload": "Recargar la última versión",
+      "unsaved_changes": "Cambios sin guardar.",
+      "export_unsaved": "Las descargas usan la última versión guardada.",
+      "letter_save_error": "No se pudo guardar. Tu texto sigue aquí; inténtalo de nuevo.",
+      "letter_conflict": "Este documento se guardó desde otra pestaña o dispositivo después de abrirlo aquí, así que tu guardado se rechazó. Tu texto sigue aquí: copia lo que quieras conservar y luego recarga la última versión.",
+      "letter_reload": "Recargar la última versión (se descarta tu texto)",
+      "download_failed": "No se pudo descargar el archivo. No se ha cambiado nada; inténtalo de nuevo.",
+      "leave_unsaved_letter": "¿Reemplazar la carta en pantalla? Se perderá tu texto sin guardar.",
+      "conflict_keep": "Recargar y conservar mis líneas escritas"
     },
     "scope": {
       "loading": "Cargando",
