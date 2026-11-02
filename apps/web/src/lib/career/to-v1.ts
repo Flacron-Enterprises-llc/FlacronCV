@@ -93,7 +93,13 @@ function withoutUnstatedClaims(item: Record<string, unknown>): Record<string, un
  * part-way leaves an ordinary V1 CV the person can edit or delete.
  */
 export async function createV1Cv(api: V1Api, plan: V1CvPlan): Promise<string> {
-  const cv = await api.post<{ id: string }>('/cvs', plan.create);
+  const cv = await api.post<{ id: string; personalInfo?: Record<string, unknown> }>('/cvs', plan.create);
+  // V1's create ignores supplied personal details and seeds a generic sample
+  // summary. Write the person's own details over it; with no summary in the
+  // draft the sample is cleared rather than left as a claim they never made.
+  await api.put(`/cvs/${cv.id}`, {
+    personalInfo: { ...(cv.personalInfo ?? {}), ...plan.create.personalInfo, summary: plan.create.personalInfo.summary ?? '' },
+  });
   const seeded = await api.get<V1Section[]>(`/cvs/${cv.id}/sections`);
   const remaining = [...plan.sections];
   for (const sample of seeded) {

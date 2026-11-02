@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/routing';
 import { cn } from '@/lib/utils';
+import { useCareerAccess } from './CareerServices';
 
 /**
  * The career area's own navigation, inside V1's dashboard shell. Grouped so
@@ -64,6 +65,9 @@ function isActive(pathname: string, href: string): boolean {
 export function CareerNav() {
   const t = useTranslations('career.nav');
   const pathname = usePathname();
+  const access = useCareerAccess();
+  // Without access the gate explains why; a menu of closed pages would only mislead.
+  if (!access.data?.enabled) return null;
   return (
     <nav aria-label={t('label')} className="mb-6 space-y-2">
       {CAREER_SECTIONS.map((section) => (

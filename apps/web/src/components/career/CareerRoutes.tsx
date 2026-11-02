@@ -3,7 +3,10 @@
 import { useLocale } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { isLaunchLocale, type Locale } from '@flacroncv/career-shared';
+import type { JobApplication } from '@flacroncv/shared-types';
 import { useAuth } from '@/providers/AuthProvider';
+import { api as v1Api } from '@/lib/api';
+import { careerItemsFromV1Jobs } from '@/lib/career/v1-jobs';
 import { ActionPackScreen } from './action-pack/ActionPackScreen';
 import { AdminScreen } from './admin/AdminScreen';
 import { AlertsScreen } from './alerts/AlertsScreen';
@@ -43,7 +46,12 @@ export function CareerOverviewRoute() {
   const { uiLocale, ...props } = useScreenProps();
   return (
     <CareerGate>
-      <DashboardScreen {...props} locale={uiLocale} />
+      <DashboardScreen
+        {...props}
+        locale={uiLocale}
+        // V1's Jobs tracker is the only application tracker.
+        loadApplications={async () => careerItemsFromV1Jobs(await v1Api.get<JobApplication[]>('/jobs'))}
+      />
     </CareerGate>
   );
 }

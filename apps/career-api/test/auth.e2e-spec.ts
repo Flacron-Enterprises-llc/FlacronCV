@@ -60,6 +60,8 @@ describe('auth routes', () => {
       planId: 'free',
     });
     expect(typeof res.body.workspaceId).toBe('string');
+    // V1 owns legal acceptance; the career screens must not ask again.
+    expect(res.body.legal.needsAcceptance).toBe(false);
     const other = await http().get('/api/career/v1/me').set('Authorization', bearer('other-user'));
     expect(other.body.workspaceId).not.toBe(res.body.workspaceId);
   });

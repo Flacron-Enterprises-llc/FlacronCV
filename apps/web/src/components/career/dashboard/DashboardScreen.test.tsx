@@ -171,7 +171,7 @@ describe('DashboardScreen', () => {
     });
     renderDashboard(api);
     const action = await screen.findByRole('link', { name: /SQL analyst/ });
-    expect(action.getAttribute('href')).toBe('/en/applications');
+    expect(action.getAttribute('href')).toBe('/en/jobs');
     expect(screen.getByText(/2099-01-01/)).toBeTruthy();
     expect(screen.queryByText(/2020-01-01/)).toBeNull();
     expect(screen.getByText('Draft')).toBeTruthy();

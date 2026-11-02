@@ -77,13 +77,24 @@ describe('career draft -> V1 CV', () => {
     expect(await createV1Cv(api, plan)).toBe('cv-1');
     expect(calls.map(([method, endpoint]) => `${method} ${endpoint}`)).toEqual([
       'POST /cvs',
+      'PUT /cvs/cv-1',
       'GET /cvs/cv-1/sections',
       'PUT /cvs/cv-1/sections/s-exp',
       'DELETE /cvs/cv-1/sections/s-edu',
       'PUT /cvs/cv-1/sections/s-skill',
       'POST /cvs/cv-1/sections',
     ]);
-    expect(calls[5][2]).toMatchObject({ type: 'languages', order: 2, isVisible: true });
+    expect(calls[1][2]).toEqual({
+      personalInfo: { firstName: 'Ada', lastName: 'Example', email: 'ada@example.test', city: 'Lyon', summary: 'Analyst with data experience.' },
+    });
+    expect(calls[6][2]).toMatchObject({ type: 'languages', order: 2, isVisible: true });
+  });
+
+  it('clears the V1 sample summary when the draft has none', async () => {
+    const { api, calls } = fakeV1();
+    const noSummary = { ...body, sections: body.sections.filter((section) => section.factType !== 'summary') };
+    await createV1Cv(api, planV1Cv(noSummary, facts, 'CV', (type) => type));
+    expect((calls[1][2] as { personalInfo: { summary: string } }).personalInfo.summary).toBe('');
   });
 });
 

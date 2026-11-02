@@ -25,12 +25,15 @@ export function DashboardScreen({
   ready,
   signInHref,
   locale,
+  loadApplications,
 }: {
   api: ApiClient;
   user: SignedInUser | null;
   ready: boolean;
   signInHref: string;
   locale: string;
+  /** V1 integration: the overview reads V1's Jobs tracker. Defaults to the career API's own list (V2 tests). */
+  loadApplications?: () => Promise<ApplicationItem[]>;
 }) {
   const t = useTranslations('career.dashboard');
   const units = useTranslations('career.billing');
@@ -51,14 +54,14 @@ export function DashboardScreen({
         api.me(),
         api.facts(),
         api.usage(),
-        api.applications(),
+        loadApplications ? loadApplications() : api.applications().then((list) => list.items),
         api.alerts(),
         api.resumes(),
       ]);
       if (!usableAccount(account)) throw new Error('account');
       setFacts(factList.items);
       setUsage(usageView);
-      setApplications(applicationList.items);
+      setApplications(applicationList);
       setResumes(resumeList.items);
       setAlertCount(alertList.items.length);
       const recent = resumeList.items[0];
@@ -137,7 +140,7 @@ export function DashboardScreen({
   const interview = usage?.units.find((unit) => unit.unit === 'text_interview');
   const interviewRemaining = interview ? interview.includedRemaining + interview.packRemaining : 0;
   const practice = applications.find((item) => item.status === 'interviewing');
-  const practiceHref = practice
+  const practiceHref = practice?.opportunityId
     ? `/${locale}/career/interviews?opportunityId=${encodeURIComponent(practice.opportunityId)}`
     : `/${locale}/career/interviews`;
 
@@ -250,8 +253,8 @@ function toCard(item: ApplicationItem): DashboardApplication {
 
 function actionHref(action: DashboardAction, locale: string): string {
   if (action.kind === 'profile') return `/${locale}/career/profile`;
-  if (action.kind === 'application') return `/${locale}/applications`;
-  if (action.kind === 'alerts') return `/${locale}/alerts`;
+  if (action.kind === 'application') return `/${locale}/jobs`;
+  if (action.kind === 'alerts') return `/${locale}/career/alerts`;
   if (action.kind === 'interview') {
     return action.opportunityId
       ? `/${locale}/career/interviews?opportunityId=${encodeURIComponent(action.opportunityId)}`

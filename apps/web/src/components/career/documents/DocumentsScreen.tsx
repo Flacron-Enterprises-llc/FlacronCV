@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { FileText, Mail } from 'lucide-react';
@@ -44,6 +44,8 @@ export function DocumentsScreen(props: { api: ApiClient; user: SignedInUser | nu
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [letters, setLetters] = useState<WritingDocument[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  // Synchronous guard: a second click before React re-renders must not create a second V1 document.
+  const inFlight = useRef(false);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -61,6 +63,8 @@ export function DocumentsScreen(props: { api: ApiClient; user: SignedInUser | nu
   }, [load]);
 
   async function copyResume(resume: Resume) {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(resume.id);
     try {
       const [detail, facts] = await Promise.all([api.resume(resume.id), api.facts()]);
@@ -76,11 +80,14 @@ export function DocumentsScreen(props: { api: ApiClient; user: SignedInUser | nu
     } catch (error) {
       toast.error(formatApiError(error, t('copy_failed')));
     } finally {
+      inFlight.current = false;
       setBusy(null);
     }
   }
 
   async function copyLetter(letter: WritingDocument) {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(letter.id);
     try {
       const id = await createV1CoverLetter(v1Api, { title: letter.title, body: letter.body });
@@ -89,6 +96,7 @@ export function DocumentsScreen(props: { api: ApiClient; user: SignedInUser | nu
     } catch (error) {
       toast.error(formatApiError(error, t('copy_failed')));
     } finally {
+      inFlight.current = false;
       setBusy(null);
     }
   }
