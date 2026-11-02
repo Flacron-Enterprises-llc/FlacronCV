@@ -1,5 +1,7 @@
 export { ApiError, CAREER_API_PATH, createApiClient, fieldErrors, isApiError, newIdempotencyKey } from './client';
 export type { ApiClient, ApiClientOptions, FetchLike } from './client';
+export { CareerErasureNeedsFreshSignIn, eraseCareerDataBeforeAccountDeletion } from './account-deletion';
+export type { CareerErasure } from './account-deletion';
 export type {
   AiJob,
   DocumentCredit,
