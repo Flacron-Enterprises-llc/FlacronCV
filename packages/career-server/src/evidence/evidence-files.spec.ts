@@ -327,6 +327,21 @@ describe('EvidenceService private files (CV11, memory storage)', () => {
     expect(JSON.stringify(refusal)).not.toMatch(/Kim private plan|secret body/);
   });
 
+  it('removing a file when storage refuses clears it from the item and queues the object for the sweeper', async () => {
+    const nia = await identities.principal(identity('nia-files', clock.now()));
+    const item = await service.create(nia, { title: 'Reference', evidenceType: 'credential' });
+    await service.uploadAttachment(nia, item.id, { body: PDF, contentType: 'application/pdf' });
+    const key = (await db.pool.query(`SELECT attachment_object_key FROM career_evidence WHERE id = $1`, [item.id])).rows[0]
+      .attachment_object_key as string;
+
+    storage.failDelete = true;
+    const removed = await service.removeAttachment(nia, item.id);
+    // The item never points at a file that may be gone; the object is listed for a later delete.
+    expect(removed).toMatchObject({ attachmentStored: false });
+    const queued = await db.pool.query(`SELECT 1 FROM stored_object_intents WHERE object_key = $1`, [key]);
+    expect(queued.rows).toHaveLength(1);
+  });
+
   it('treats removing twice and deleting twice as harmless', async () => {
     const max = await identities.principal(identity('max-files', clock.now()));
     const item = await service.create(max, { title: 'Twice', evidenceType: 'project' });

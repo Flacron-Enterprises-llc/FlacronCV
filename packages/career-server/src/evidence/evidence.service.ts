@@ -422,11 +422,15 @@ export class EvidenceService {
     return { url, expiresAt: expiresAt.toISOString() };
   }
 
-  /** Deletes the stored file, then clears it from the item. Repeating it is harmless. */
+  /**
+   * Clears the file from the item, then deletes the stored object. In that
+   * order a failure never leaves the item pointing at a file that is gone:
+   * if the update fails nothing changed, and if storage refuses the delete
+   * the object is queued for the sweeper (`discard`). Repeating it is harmless.
+   */
   async removeAttachment(owner: ProfileOwner, id: string): Promise<CareerEvidence> {
     const prior = await this.owned(owner, id);
     if (!prior.attachment_object_key) return this.mapRow(prior);
-    await this.storage.delete(prior.attachment_object_key);
     const label = prior.evidence_label === 'evidence_attached' ? defaultEvidenceLabel(prior.evidence_type, false) : prior.evidence_label;
     const res = await this.pool.query<EvidenceRow>(
       `UPDATE career_evidence SET
@@ -442,6 +446,7 @@ export class EvidenceService {
        RETURNING *`,
       [id, label, owner.workspaceId, owner.authUserId],
     );
+    await this.discard(prior.attachment_object_key, owner.authUserId);
     return this.mapRow(res.rows[0]!);
   }
 
