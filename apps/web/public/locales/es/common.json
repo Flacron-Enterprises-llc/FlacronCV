@@ -3304,7 +3304,7 @@
     },
     "gate": {
       "locked_title": "Las herramientas profesionales no están incluidas en tu plan",
-      "locked_plan_not_mapped": "Tu plan actual todavía no incluye las herramientas profesionales. Tus CV, cartas de presentación y seguimiento de empleos funcionan como siempre.",
+      "locked_plan_not_mapped": "Las herramientas profesionales son un complemento opcional con sus propios créditos, que se cobra aparte de tu plan actual. Tus CV, cartas de presentación y seguimiento de empleos funcionan como antes.",
       "locked_v1_account_missing": "No encontramos los datos de tu cuenta. Cierra sesión, vuelve a iniciarla e inténtalo otra vez.",
       "locked_v1_account_inactive": "Esta cuenta ya no está activa, por lo que las herramientas profesionales están cerradas.",
       "see_plan": "Ver planes profesionales",

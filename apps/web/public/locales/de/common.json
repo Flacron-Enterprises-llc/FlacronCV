@@ -3304,7 +3304,7 @@
     },
     "gate": {
       "locked_title": "Die Karrieretools sind in deinem Tarif nicht enthalten",
-      "locked_plan_not_mapped": "Dein aktueller Tarif enthält die Karrieretools noch nicht. Deine Lebensläufe, Anschreiben und der Bewerbungs-Tracker funktionieren wie bisher.",
+      "locked_plan_not_mapped": "Die Karrieretools sind ein optionales Zusatzpaket mit eigenen Credits, das getrennt von deinem aktuellen Tarif berechnet wird. Deine Lebensläufe, Anschreiben und dein Job-Tracker funktionieren wie bisher.",
       "locked_v1_account_missing": "Wir konnten deine Kontodaten nicht finden. Melde dich ab und wieder an und versuche es dann erneut.",
       "locked_v1_account_inactive": "Dieses Konto ist nicht mehr aktiv, daher sind die Karrieretools geschlossen.",
       "see_plan": "Karrieretarife ansehen",

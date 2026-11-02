@@ -3304,7 +3304,7 @@
     },
     "gate": {
       "locked_title": "Les outils de carrière ne sont pas inclus dans votre forfait",
-      "locked_plan_not_mapped": "Votre forfait actuel n’inclut pas encore les outils de carrière. Vos CV, lettres de motivation et votre suivi de candidatures fonctionnent comme avant.",
+      "locked_plan_not_mapped": "Les outils de carrière sont une option facultative avec leurs propres crédits, facturée séparément de votre forfait actuel. Vos CV, lettres de motivation et votre suivi des candidatures fonctionnent comme avant.",
       "locked_v1_account_missing": "Nous n’avons pas trouvé les informations de votre compte. Déconnectez-vous, reconnectez-vous, puis réessayez.",
       "locked_v1_account_inactive": "Ce compte n’est plus actif : les outils de carrière sont donc fermés.",
       "see_plan": "Voir les forfaits carrière",

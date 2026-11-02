@@ -3304,7 +3304,7 @@
     },
     "gate": {
       "locked_title": "Career tools are not included in your plan",
-      "locked_plan_not_mapped": "Your current plan does not include the career tools yet. Your CVs, cover letters and job tracker work as before.",
+      "locked_plan_not_mapped": "Career tools are an optional add-on with their own credits, billed separately from your current plan. Your CVs, cover letters and job tracker work as before.",
       "locked_v1_account_missing": "We could not find your account details. Sign out and sign in again, then try once more.",
       "locked_v1_account_inactive": "This account is no longer active, so the career tools are closed.",
       "see_plan": "See career plans",
