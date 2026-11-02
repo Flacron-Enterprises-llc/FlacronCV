@@ -42,7 +42,7 @@ export class CareerAccessService {
     const now = this.clock.now().getTime();
     const cached = this.accessCache.get(uid);
     if (cached && cached.expiresAt > now) return cached.value;
-    const access = decideCareerAccess(await this.source.read(uid), this.map);
+    const access = decideCareerAccess(await this.source.read(uid), this.map, this.clock.now());
     this.accessCache.set(uid, { value: access, expiresAt: now + ACCESS_CACHE_MS });
     return access;
   }

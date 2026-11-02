@@ -26,7 +26,7 @@ export class AccessController {
       }
     }
     return access.enabled
-      ? { enabled: true, v1Plan: access.v1Plan, careerPlan: access.careerPlan, features }
+      ? { enabled: true, v1Plan: access.v1Plan, careerPlan: access.careerPlan, source: access.source, features }
       : { enabled: false, v1Plan: access.v1Plan, reason: access.reason, features };
   }
 

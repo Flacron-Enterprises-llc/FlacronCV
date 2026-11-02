@@ -63,10 +63,18 @@ admin.initializeApp({ projectId: project });
 const auth = admin.auth();
 const db = admin.firestore();
 
+/**
+ * careerFixture: a career entitlement GRANTED BY THIS SEED for the local demo
+ * (users/{uid}.careerSubscription with source 'local_fixture'). It is not a
+ * purchase and is labelled as such everywhere it is shown.
+ */
 const ACCOUNTS = [
-  { key: 'pro', email: 'demo.pro@example.test', name: 'Ada Example', plan: 'pro', role: 'user' },
-  { key: 'free', email: 'demo.free@example.test', name: 'Bo Example', plan: 'free', role: 'user' },
-  { key: 'admin', email: 'demo.admin@example.test', name: 'Cy Example', plan: 'enterprise', role: 'super_admin' },
+  { key: 'pro', email: 'demo.pro@example.test', name: 'Ada Example', plan: 'pro', role: 'user', careerFixture: null, note: 'existing V1 Pro customer, no career plan' },
+  { key: 'career', email: 'demo.career@example.test', name: 'Dee Example', plan: 'pro', role: 'user', careerFixture: 'professional', note: 'V1 Pro + LOCAL FIXTURE career Professional entitlement' },
+  { key: 'free', email: 'demo.free@example.test', name: 'Bo Example', plan: 'free', role: 'user', careerFixture: null, note: 'V1 Free' },
+  { key: 'admin', email: 'demo.admin@example.test', name: 'Cy Example', plan: 'enterprise', role: 'super_admin', careerFixture: null, note: 'V1 Enterprise + super_admin (career operator via allowlist)' },
+  { key: 'del1', email: 'demo.delete1@example.test', name: 'Eli Example', plan: 'pro', role: 'user', careerFixture: 'professional', note: 'DISPOSABLE: for account-deletion tests' },
+  { key: 'del2', email: 'demo.delete2@example.test', name: 'Fay Example', plan: 'free', role: 'user', careerFixture: null, note: 'DISPOSABLE: for account-deletion tests' },
 ];
 
 const now = new Date();
@@ -104,16 +112,27 @@ for (const account of ACCOUNTS) {
       lastLoginAt: now,
       isActive: true,
       deletedAt: null,
+      careerSubscription: account.careerFixture
+        ? {
+            plan: account.careerFixture,
+            interval: 'month',
+            status: 'active',
+            currentPeriodEnd: periodEnd,
+            cancelAtPeriodEnd: false,
+            source: 'local_fixture',
+            note: 'LOCAL DEMO FIXTURE granted by seed-local-integration.mjs - not a purchase',
+          }
+        : admin.firestore.FieldValue.delete(),
     },
     { merge: true },
   );
   account.uid = user.uid;
   account.password = password;
-  credentials.push(`${account.key.padEnd(6)} ${account.email}  password: ${password}  (V1 plan ${account.plan}, role ${account.role}, uid ${user.uid})`);
+  credentials.push(`${account.key.padEnd(6)} ${account.email}  password: ${password}  (${account.note}; uid ${user.uid})`);
 }
 
-// V1 Jobs tracker entries for the Pro demo account (fictional companies).
-const pro = ACCOUNTS[0];
+// V1 Jobs tracker entries and career data for the career-entitled demo account (fictional companies).
+const pro = ACCOUNTS.find((account) => account.key === 'career');
 const jobs = [
   ['Fictional Analytics Co', 'Data Analyst', 'applied'],
   ['Example Retail Group', 'Reporting Analyst', 'interviewing'],

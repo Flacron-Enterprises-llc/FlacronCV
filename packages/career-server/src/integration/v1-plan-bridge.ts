@@ -60,6 +60,40 @@ export interface V1AccountSnapshot {
   plan: V1Plan;
   /** False once V1 soft-deleted or deactivated the account. */
   active: boolean;
+  /**
+   * A career entitlement the person bought through V1's billing
+   * (`users/{uid}.careerSubscription`, written only by V1's webhook handler).
+   * Absent when they never bought one.
+   */
+  careerPurchase?: CareerPurchase | null;
+}
+
+/** The provider state V1 recorded for a purchased career entitlement. */
+export interface CareerPurchase {
+  plan: string;
+  /** Stripe subscription status as V1 stored it (`active`, `trialing`, `past_due`, `canceled`, …). */
+  status: string;
+  currentPeriodEnd: Date | null;
+  /** `local_fixture` marks an entitlement granted by the local demo seed, never by a payment. */
+  source?: string | null;
+}
+
+/**
+ * Whether a purchased entitlement grants access now. Same rule V1 applies to
+ * its own plans (`resolveEffectivePlan`): active or trialing grants; a
+ * past-due or cancelling subscription keeps access until the paid period ends;
+ * anything else (canceled after period end, unpaid, incomplete, a failed or
+ * abandoned checkout) grants nothing.
+ */
+export function livePurchasedPlan(purchase: CareerPurchase | null | undefined, now: Date): PlanId | null {
+  if (!purchase || !(PLAN_ORDER as readonly string[]).includes(purchase.plan) || purchase.plan === 'free') return null;
+  const plan = purchase.plan as PlanId;
+  const withinPeriod = purchase.currentPeriodEnd !== null && purchase.currentPeriodEnd.getTime() > now.getTime();
+  if (purchase.status === 'active' || purchase.status === 'trialing') {
+    return purchase.currentPeriodEnd === null || withinPeriod ? plan : null;
+  }
+  if (purchase.status === 'past_due' || purchase.status === 'canceled') return withinPeriod ? plan : null;
+  return null;
 }
 
 export interface V1AccountSource {
@@ -88,15 +122,23 @@ export function careerStatusFromV1(status: unknown): ApplicationStatus | null {
 }
 
 export type CareerAccess =
-  | { enabled: true; v1Plan: V1Plan; careerPlan: PlanId }
+  | { enabled: true; v1Plan: V1Plan; careerPlan: PlanId; source: 'v1_plan_map' | 'purchase' }
   | { enabled: false; v1Plan: V1Plan | null; reason: 'plan_not_mapped' | 'v1_account_missing' | 'v1_account_inactive' };
 
-export function decideCareerAccess(account: V1AccountSnapshot | null, map: CareerPlanMap): CareerAccess {
+/**
+ * The career plan is the higher of what the V1 plan maps to and a live
+ * purchased entitlement. Neither one changes the V1 plan or its benefits.
+ */
+export function decideCareerAccess(account: V1AccountSnapshot | null, map: CareerPlanMap, now: Date = new Date()): CareerAccess {
   if (!account) return { enabled: false, v1Plan: null, reason: 'v1_account_missing' };
   if (!account.active) return { enabled: false, v1Plan: account.plan, reason: 'v1_account_inactive' };
-  const careerPlan = map[account.plan];
-  if (!careerPlan) return { enabled: false, v1Plan: account.plan, reason: 'plan_not_mapped' };
-  return { enabled: true, v1Plan: account.plan, careerPlan };
+  const mapped = map[account.plan];
+  const purchased = livePurchasedPlan(account.careerPurchase, now);
+  if (!mapped && !purchased) return { enabled: false, v1Plan: account.plan, reason: 'plan_not_mapped' };
+  if (purchased && (!mapped || PLAN_ORDER.indexOf(purchased) > PLAN_ORDER.indexOf(mapped))) {
+    return { enabled: true, v1Plan: account.plan, careerPlan: purchased, source: 'purchase' };
+  }
+  return { enabled: true, v1Plan: account.plan, careerPlan: mapped as PlanId, source: 'v1_plan_map' };
 }
 
 /**

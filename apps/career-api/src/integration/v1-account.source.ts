@@ -2,7 +2,7 @@ import { App, cert, deleteApp, getApps, initializeApp } from 'firebase-admin/app
 import { Firestore, getFirestore } from 'firebase-admin/firestore';
 import { resolveEffectivePlan } from '@flacroncv/shared-types';
 import { careerStatusFromV1, deployEnv, isV1Plan } from '@flacroncv/career-server';
-import type { V1AccountSnapshot, V1AccountSource } from '@flacroncv/career-server';
+import type { CareerPurchase, V1AccountSnapshot, V1AccountSource } from '@flacroncv/career-server';
 import type { ApplicationStatus } from '@flacroncv/career-shared';
 
 /** Upper bound on tracker rows read for analytics; V1's own export caps collections at 500. */
@@ -31,6 +31,7 @@ export class FirestoreV1AccountSource implements V1AccountSource {
       uid,
       plan: isV1Plan(plan) ? plan : 'free',
       active: data.isActive !== false && !data.deletedAt,
+      careerPurchase: careerPurchaseOf(data.careerSubscription),
     };
   }
 
@@ -45,6 +46,22 @@ export class FirestoreV1AccountSource implements V1AccountSource {
     }
     return statuses;
   }
+}
+
+/** `users/{uid}.careerSubscription` as V1's webhook handler (or the labelled local seed) wrote it. */
+function careerPurchaseOf(raw: unknown): CareerPurchase | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const value = raw as Record<string, unknown>;
+  if (typeof value.plan !== 'string' || typeof value.status !== 'string') return null;
+  const end = value.currentPeriodEnd as { toDate?: () => Date } | Date | string | null | undefined;
+  const currentPeriodEnd =
+    end instanceof Date ? end : end && typeof end === 'object' && typeof end.toDate === 'function' ? end.toDate() : typeof end === 'string' ? new Date(end) : null;
+  return {
+    plan: value.plan,
+    status: value.status,
+    currentPeriodEnd: currentPeriodEnd && !Number.isNaN(currentPeriodEnd.getTime()) ? currentPeriodEnd : null,
+    source: typeof value.source === 'string' ? value.source : null,
+  };
 }
 
 /** Fixed answers. Tests and the local demo without a Firestore emulator only. */

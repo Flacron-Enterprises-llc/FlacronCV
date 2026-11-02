@@ -12,6 +12,8 @@ describe('opportunity trust signals and moderation over HTTP (CV15)', () => {
     t = await createTestApp('api_opportunity_trust', {
       customize: (builder) => builder.overrideProvider(ADMIN_UIDS).useValue(new Set(['http-admin'])),
     });
+    // V1 integration: operators need V1's staff claim as well as the allowlist.
+    t.tokens.set('http-admin', { role: 'super_admin' });
   });
 
   afterAll(async () => {

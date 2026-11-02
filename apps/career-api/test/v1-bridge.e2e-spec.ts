@@ -218,3 +218,68 @@ describe('V1 closure sweep', () => {
     expect(await userCount('staying-ben')).toBe(1);
   });
 });
+
+describe('purchased career entitlement (default map: no V1 plan grants career access)', () => {
+  let t: TestApp;
+  const now = new Date('2026-11-02T10:00:00Z');
+  const accounts = new Map<string, V1AccountSnapshot>();
+  const http = () => request(t.app.getHttpServer());
+  const day = 24 * 60 * 60 * 1000;
+  const buyer = (uid: string, plan: V1AccountSnapshot['plan'], status: string, periodEndOffset: number, careerPlan = 'professional') =>
+    accounts.set(uid, { uid, plan, active: true, careerPurchase: { plan: careerPlan, status, currentPeriodEnd: new Date(now.getTime() + periodEndOffset) } });
+  const access = async (uid: string) => (await http().get('/api/career/v1/access').set('Authorization', bearer(uid))).body;
+
+  beforeAll(async () => {
+    t = await createTestApp('api_v1_purchase', { v1: { accounts, map: parseCareerPlanMap(''), clock: { now: () => now } } });
+  });
+
+  afterAll(async () => {
+    if (t) await t.close();
+  });
+
+  it('existing V1 plans keep their V1 benefits but get no career access without a purchase', async () => {
+    for (const plan of ['free', 'pro', 'career_accelerator', 'enterprise'] as const) {
+      accounts.set(`plain-${plan}`, { uid: `plain-${plan}`, plan, active: true });
+      expect(await access(`plain-${plan}`)).toMatchObject({ enabled: false, reason: 'plan_not_mapped' });
+      expect((await http().get('/api/career/v1/facts').set('Authorization', bearer(`plain-${plan}`))).status).toBe(403);
+    }
+  });
+
+  it('an active or trialing purchase grants exactly the purchased plan', async () => {
+    buyer('buy-active', 'pro', 'active', 20 * day);
+    expect(await access('buy-active')).toMatchObject({ enabled: true, careerPlan: 'professional', source: 'purchase', v1Plan: 'pro' });
+    const me = await http().get('/api/career/v1/me').set('Authorization', bearer('buy-active'));
+    expect(me.body.planId).toBe('professional');
+    buyer('buy-trial', 'free', 'trialing', 5 * day, 'starter');
+    expect(await access('buy-trial')).toMatchObject({ enabled: true, careerPlan: 'starter' });
+  });
+
+  it('past-due and cancelling purchases keep access only until the paid period ends', async () => {
+    buyer('buy-pastdue', 'pro', 'past_due', 3 * day);
+    expect((await access('buy-pastdue')).enabled).toBe(true);
+    buyer('buy-pastdue-over', 'pro', 'past_due', -1 * day);
+    expect((await access('buy-pastdue-over')).enabled).toBe(false);
+    buyer('buy-canceled-in-period', 'pro', 'canceled', 2 * day);
+    expect((await access('buy-canceled-in-period')).enabled).toBe(true);
+    buyer('buy-canceled', 'pro', 'canceled', -2 * day);
+    expect((await access('buy-canceled')).enabled).toBe(false);
+  });
+
+  it('failed or abandoned checkouts never grant access, and direct API calls are refused', async () => {
+    for (const status of ['incomplete', 'incomplete_expired', 'unpaid', 'paused']) {
+      buyer(`buy-${status}`, 'pro', status, 20 * day);
+      expect((await access(`buy-${status}`)).enabled).toBe(false);
+      const direct = await http().post('/api/career/v1/facts').set('Authorization', bearer(`buy-${status}`)).send({ factType: 'skill', value: { name: 'SQL' } });
+      expect(direct.status).toBe(403);
+    }
+    const rows = await t.db.pool.query(`SELECT count(*)::int AS n FROM users WHERE auth_user_id LIKE 'buy-i%' OR auth_user_id LIKE 'buy-u%' OR auth_user_id LIKE 'buy-pa%'`);
+    expect(rows.rows[0].n).toBe(0);
+  });
+
+  it('a purchase only ever raises the career plan; an unknown or free purchase grants nothing', async () => {
+    buyer('buy-unknown', 'pro', 'active', 20 * day, 'platinum');
+    expect((await access('buy-unknown')).enabled).toBe(false);
+    buyer('buy-free', 'pro', 'active', 20 * day, 'free');
+    expect((await access('buy-free')).enabled).toBe(false);
+  });
+});

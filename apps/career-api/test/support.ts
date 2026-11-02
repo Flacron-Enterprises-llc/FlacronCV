@@ -39,7 +39,7 @@ export interface TestAppOptions {
 /** Test double: access granted, plan left as the test set it. Never used outside tests. */
 export class PassthroughCareerAccess {
   async forUid(): Promise<CareerAccess> {
-    return { enabled: true, v1Plan: 'pro', careerPlan: 'free' };
+    return { enabled: true, v1Plan: 'pro', careerPlan: 'free', source: 'v1_plan_map' };
   }
   async syncPlan(): Promise<void> {}
   planMap(): CareerPlanMap {

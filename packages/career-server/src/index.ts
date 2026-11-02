@@ -151,6 +151,7 @@ export {
   isV1Plan,
   parseCareerPlanMap,
   careerStatusFromV1,
+  livePurchasedPlan,
   V1_PLANS,
 } from './integration/v1-plan-bridge';
-export type { CareerAccess, CareerPlanMap, V1AccountSnapshot, V1AccountSource, V1Plan } from './integration/v1-plan-bridge';
+export type { CareerAccess, CareerPlanMap, CareerPurchase, V1AccountSnapshot, V1AccountSource, V1Plan } from './integration/v1-plan-bridge';

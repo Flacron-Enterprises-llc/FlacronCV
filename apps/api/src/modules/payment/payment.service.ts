@@ -10,6 +10,7 @@ import { isLiveStripeSecretKey } from '../../config/stripe-live-prices';
 import { APP_ID_METADATA_KEY, DEFAULT_APP_ID, stripeKeyMode } from '../../config/stripe-app';
 import { BillingLedgerService, EventOutcome } from './billing-ledger.service';
 import { LedgerPayment, LedgerSubscription, ledgerPaymentStatus } from './billing-ledger';
+import { CareerBillingService } from './career-billing.service';
 
 /** The Stripe events this API acts on. Anything else is acknowledged and ignored. */
 const HANDLED_STRIPE_EVENTS: ReadonlySet<string> = new Set([
@@ -62,6 +63,8 @@ export class PaymentService {
     private usersService: UsersService,
     private audit: AuditService,
     @Optional() ledger?: BillingLedgerService,
+    // Career tools (former V2): their subscriptions are routed away from every V1 handler.
+    @Optional() private readonly careerBilling?: CareerBillingService,
   ) {
     const secretKey = this.configService.get<string>('stripe.secretKey');
     if (secretKey) {
@@ -713,6 +716,21 @@ export class PaymentService {
   }
 
   private async dispatch(event: Stripe.Event): Promise<void> {
+    // A career subscription shares the V1 customer. Its events must never reach the
+    // V1 handlers: a career refund or failure would otherwise revoke the V1 plan.
+    if (this.careerBilling && (await this.careerBilling.isCareerEvent(event))) {
+      // Transaction history is still kept in the shared billing ledger (ledger-only writes).
+      if (event.type === 'invoice.paid' || event.type === 'invoice.payment_failed') {
+        const invoice = event.data.object as Stripe.Invoice;
+        await this.recordInvoice(invoice, await this.findUserByCustomerId(invoice.customer as string));
+      } else if (event.type === 'charge.refunded') {
+        await this.recordChargeRefunds(event.data.object as Stripe.Charge);
+      } else if (event.type === 'charge.refund.updated') {
+        await this.recordRefund(event.data.object as Stripe.Refund);
+      }
+      await this.careerBilling.apply(event);
+      return;
+    }
     switch (event.type) {
       case 'checkout.session.completed':
         await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
@@ -1343,6 +1361,7 @@ export class PaymentService {
    * product the person could no longer sign in to.
    */
   async cancelBillingForUser(userId: string, reason: string): Promise<void> {
+    await this.careerBilling?.cancelForUser(userId);
     await this.revokeToFree(userId, reason);
   }
 

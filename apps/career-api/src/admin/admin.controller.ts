@@ -3,7 +3,7 @@ import { IsBoolean, IsIn, IsOptional, IsString, MaxLength } from 'class-validato
 import { AdminService, adminUidSet, OpportunityTrustService } from '@flacroncv/career-server';
 import type { Principal } from '@flacroncv/career-server';
 import type { ModerationAction, ModerationStatus } from '@flacroncv/career-shared';
-import { CurrentPrincipal } from '../auth/auth.guard';
+import { CurrentPrincipal, OperatorRoute } from '../auth/auth.guard';
 import { DatabaseService } from '../database/database.service';
 
 class PublishDto {}
@@ -55,6 +55,8 @@ export const adminProviders: Provider[] = [
   },
 ];
 
+// V1 integration: V1 staff claim + allowlist; independent of the operator's own career plan.
+@OperatorRoute()
 @Controller()
 export class AdminController {
   constructor(

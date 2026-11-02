@@ -11,6 +11,12 @@ export interface VerifiedIdentity {
   authTime: Date;
   issuedAt: Date;
   signInProvider: string | null;
+  /**
+   * V1 integration: the `role` custom claim V1 sets on staff accounts (`admin`,
+   * `super_admin`); absent for customers. Career operator routes require it in
+   * addition to the ADMIN_AUTH_USER_IDS allowlist.
+   */
+  role?: string | null;
 }
 
 export interface IdTokenVerifier {
@@ -95,6 +101,7 @@ function checkClaims(payload: Record<string, unknown>, projectId: string, now: D
     authTime: new Date(authTime * 1000),
     issuedAt: new Date(iat * 1000),
     signInProvider: typeof firebase.sign_in_provider === 'string' ? firebase.sign_in_provider : null,
+    role: typeof payload.role === 'string' ? payload.role : null,
   };
 }
 

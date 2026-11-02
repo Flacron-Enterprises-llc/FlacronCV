@@ -27,6 +27,17 @@ export const AllowWithoutCareerAccess = () => SetMetadata(WITHOUT_CAREER_ACCESS,
 /** Needs only the verified token and the access decision; creates no career rows. */
 export const AccessOnly = () => SetMetadata(ACCESS_ONLY, true);
 
+const OPERATOR_ROUTE = 'flacroncv:operator';
+/** V1 staff roles that may use career operator tools. */
+export const V1_STAFF_ROLES: readonly string[] = ['admin', 'super_admin'];
+
+/**
+ * Career operator tools (moderation, feature switches). Requires V1's staff
+ * claim here AND the ADMIN_AUTH_USER_IDS allowlist in the services, so it is
+ * narrower than either alone. Independent of the operator's own career plan.
+ */
+export const OperatorRoute = () => SetMetadata(OPERATOR_ROUTE, true);
+
 type AuthedRequest = Request & { principal?: Principal; careerAccess?: CareerAccess; identity?: VerifiedIdentity };
 
 /**
@@ -60,6 +71,14 @@ export class AuthGuard implements CanActivate {
     const access = await this.access.forUid(identity.uid);
     request.careerAccess = access;
     if (this.reflector.getAllAndOverride<boolean>(ACCESS_ONLY, targets)) return true;
+
+    if (this.reflector.getAllAndOverride<boolean>(OPERATOR_ROUTE, targets)) {
+      if (!identity.role || !V1_STAFF_ROLES.includes(identity.role)) {
+        throw new BillingError('permission_denied', { reason: 'not_v1_staff' });
+      }
+      request.principal = await this.identities.principal(identity);
+      return true;
+    }
 
     const duringDeletion = Boolean(this.reflector.getAllAndOverride<boolean>(DURING_DELETION, targets));
     // Export and erase act on career data that already exists, whatever the plan,
