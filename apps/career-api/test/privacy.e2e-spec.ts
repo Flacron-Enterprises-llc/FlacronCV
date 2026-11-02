@@ -24,6 +24,12 @@ describe('account export and deletion over HTTP', () => {
     expect((await http().post('/api/career/v1/account/delete').send({ confirm: 'DELETE', idToken: 'fake:http-privacy' })).status).toBe(401);
 
     const auth = bearer('http-privacy');
+    // V1 integration: export and erase never create a career account just to act on it.
+    const before = await http().post('/api/career/v1/exports').set('Authorization', auth).send({ scope: 'personal' });
+    expect(before.status).toBe(404);
+    expect((await t.db.pool.query(`SELECT 1 FROM users WHERE auth_user_id = 'http-privacy'`)).rowCount).toBe(0);
+    expect((await http().get('/api/career/v1/me').set('Authorization', auth)).status).toBe(200);
+
     const exported = await http().post('/api/career/v1/exports').set('Authorization', auth).send({ scope: 'personal' });
     expect(exported.status).toBe(503);
     expect(exported.body.code).toBe('provider_unavailable');

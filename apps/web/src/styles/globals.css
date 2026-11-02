@@ -20,6 +20,22 @@
     --border: 231 229 228;
     --ring: 249 115 22;
     --radius: 0.5rem;
+
+    /* Career area tokens (tailwind `career-*`), on V1's palette. */
+    --career-navy: #1e3a5f;
+    --career-navy-hover: #172e4b;
+    --career-orange: #ea580c;
+    --career-orange-text: #c2410c;
+    --career-orange-tint: #fff7ed;
+    --career-ink: #1c1917;
+    --career-muted: #57534e;
+    --career-line: #e7e5e4;
+    --career-canvas: #ffffff;
+    --career-surface: #ffffff;
+    --career-wash: #f5f5f4;
+    --career-danger: #b91c1c;
+    --career-success: #15803d;
+    --career-warning: #b45309;
   }
 
   .dark {
@@ -38,6 +54,21 @@
     --destructive: 239 68 68;
     --border: 68 64 60;
     --ring: 251 146 60;
+
+    --career-navy: #1e3a5f;
+    --career-navy-hover: #274b78;
+    --career-orange: #f97316;
+    --career-orange-text: #fb923c;
+    --career-orange-tint: #431407;
+    --career-ink: #f5f5f4;
+    --career-muted: #a8a29e;
+    --career-line: #44403c;
+    --career-canvas: #0c0a09;
+    --career-surface: #1c1917;
+    --career-wash: #292524;
+    --career-danger: #f87171;
+    --career-success: #4ade80;
+    --career-warning: #fbbf24;
   }
 }
 

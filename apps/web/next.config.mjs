@@ -18,7 +18,8 @@ const nextConfig = {
   experimental: {
     outputFileTracingRoot: path.join(__dirname, '../..'),
   },
-  transpilePackages: ['jspdf', 'html2canvas', 'docx', 'file-saver'],
+  // The career packages export TypeScript source (former V2 workspace packages).
+  transpilePackages: ['jspdf', 'html2canvas', 'docx', 'file-saver', '@flacroncv/career-api-client', '@flacroncv/career-shared'],
   images: {
     domains: ['firebasestorage.googleapis.com', 'lh3.googleusercontent.com'],
   },

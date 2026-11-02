@@ -15,7 +15,8 @@ import { meteringProviders } from './metering/metering.providers';
 import { ProfileController, profileProviders } from './profile/profile.controller';
 import { ResumesController, resumeProviders } from './resumes/resumes.controller';
 import { AlertsController, alertProviders } from './alerts/alerts.controller';
-import { ApplicationsController, applicationProviders } from './applications/applications.controller';
+// V1 integration: V1's Jobs tracker is the only application tracker, so ApplicationsController is not mounted.
+import { applicationProviders } from './applications/applications.controller';
 import { InterviewsController, interviewProviders } from './interviews/interviews.controller';
 import { MatchingController, matchProviders } from './matching/matching.controller';
 import { OpportunitiesController, opportunityProviders } from './opportunities/opportunities.controller';
@@ -49,7 +50,7 @@ import { CareerAccessService } from './integration/career-access.service';
  */
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true })],
-  controllers: [HealthController, AccessController, UsageController, SessionController, AiJobsController, ProfileController, ResumesController, WritingController, OpportunitiesController, MatchingController, AlertsController, ApplicationsController, InterviewsController, EvidenceController, ActionEngineController, LearningController, CareerModesController, PortfoliosController, VoiceController, RemainingController, PrivacyController, AdminController],
+  controllers: [HealthController, AccessController, UsageController, SessionController, AiJobsController, ProfileController, ResumesController, WritingController, OpportunitiesController, MatchingController, AlertsController, InterviewsController, EvidenceController, ActionEngineController, LearningController, CareerModesController, PortfoliosController, VoiceController, RemainingController, PrivacyController, AdminController],
   providers: [
     DatabaseService,
     ...integrationProviders,

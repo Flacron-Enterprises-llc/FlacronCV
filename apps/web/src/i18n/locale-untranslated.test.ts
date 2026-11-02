@@ -44,6 +44,9 @@ const ALLOWED: Record<string, string> = {
   'crm.linkedin': 'brand',
   'crm.user_detail_stripe_id': 'brand + identifier',
   'footer.powered_by_engine': 'brand — the engine name, never translated',
+  // Career document preview: a fictional sample person (proper name and example address).
+  'career.home.sample_name': 'fictional person name in the document preview',
+  'career.home.sample_email': 'example email address in the document preview',
   // A postal address must stay in the form the postal service delivers to.
   'footer.address': 'postal address — must remain deliverable as written',
   // Product and plan names — deliberately not localised, like "Pro".

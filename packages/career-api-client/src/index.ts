@@ -1,4 +1,4 @@
-export { ApiError, createApiClient, fieldErrors, isApiError, newIdempotencyKey } from './client';
+export { ApiError, CAREER_API_PATH, createApiClient, fieldErrors, isApiError, newIdempotencyKey } from './client';
 export type { ApiClient, ApiClientOptions, FetchLike } from './client';
 export type {
   AiJob,
@@ -61,6 +61,7 @@ export type {
   SavedEstimate,
   UsagePack,
   UsageSummary,
+  CareerAccessView,
   OpportunityItem,
   PaidWriting,
   WritingDocument,

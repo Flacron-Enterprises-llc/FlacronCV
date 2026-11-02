@@ -96,7 +96,7 @@ describe('PortfolioService (CV16)', () => {
     expect(refreshed.slug).toBe(slug);
 
     const qr = await portfolios.qr(owner, page.id, 'https://flacroncv.test');
-    expect(qr.path).toBe(`/en/p/${slug}`);
+    expect(qr.path).toBe(`/en/portfolio/${slug}`);
     expect(qr.path).not.toContain('Ada');
     expect(qr.svg).toContain('<svg');
 

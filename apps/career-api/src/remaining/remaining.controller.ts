@@ -8,6 +8,8 @@ import { MAX_SCENARIO_OPTIONS } from '@flacroncv/career-shared';
 import { CurrentPrincipal, Public } from '../auth/auth.guard';
 import { DatabaseService } from '../database/database.service';
 import { IdempotencyKey } from '../metering/metering.providers';
+import type { V1AccountSource } from '@flacroncv/career-server';
+import { V1_ACCOUNT_SOURCE } from '../integration/career-access.service';
 
 function optionalInt({ value }: { value: unknown }): number | null {
   if (value === null || value === undefined || value === '') return null;
@@ -158,14 +160,16 @@ class SalesInquiryDto {
 export const remainingProviders: Provider[] = [
   {
     provide: RemainingService,
-    inject: [DatabaseService, MeteringService],
-    useFactory: (database: DatabaseService, metering: MeteringService) =>
+    inject: [DatabaseService, MeteringService, V1_ACCOUNT_SOURCE],
+    useFactory: (database: DatabaseService, metering: MeteringService, v1: V1AccountSource) =>
       new RemainingService(
         database.connectionPool,
         metering,
         { now: () => new Date() },
         new UnconfiguredMapTiles(),
         createMailer(process.env),
+        // V1 integration: outcome analytics read V1's Jobs tracker (read-only).
+        (owner) => v1.jobStatuses(owner.authUserId),
       ),
   },
 ];

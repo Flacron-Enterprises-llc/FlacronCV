@@ -33,7 +33,7 @@ export interface TestAppOptions {
    * access and the career plan is whatever the test set through
    * `BillingService`, so V2's own domain tests keep exercising V2 metering.
    */
-  v1?: { accounts: Map<string, V1AccountSnapshot>; map: CareerPlanMap; clock?: { now(): Date } };
+  v1?: { accounts: Map<string, V1AccountSnapshot>; map: CareerPlanMap; clock?: { now(): Date }; jobs?: Map<string, string[]> };
 }
 
 /** Test double: access granted, plan left as the test set it. Never used outside tests. */
@@ -67,7 +67,7 @@ export async function createTestApp(label: string, options: TestAppOptions = {})
   if (options.v1) {
     builder
       .overrideProvider(V1_ACCOUNT_SOURCE)
-      .useValue(new StaticV1AccountSource(options.v1.accounts))
+      .useValue(new StaticV1AccountSource(options.v1.accounts, options.v1.jobs))
       .overrideProvider(CAREER_PLAN_MAP)
       .useValue(options.v1.map);
     if (options.v1.clock) builder.overrideProvider(ACCESS_CLOCK).useValue(options.v1.clock);

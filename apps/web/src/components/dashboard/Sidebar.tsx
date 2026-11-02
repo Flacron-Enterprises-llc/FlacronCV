@@ -14,9 +14,11 @@ import {
   CreditCard,
   ChevronsLeft,
   X,
+  Compass,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TOUR_TARGETS } from '@/lib/app-tour';
+import { useCareerAccess } from '@/components/career/CareerServices';
 
 interface SidebarProps {
   /** Mobile drawer open state (below `lg`). */
@@ -32,12 +34,16 @@ export default function Sidebar({ open, onClose, collapsed = false, onToggleColl
   const t = useTranslations('dashboard');
   const tCommon = useTranslations('common');
   const pathname = usePathname();
+  // Career tools appear only when the person's V1 plan includes them (decided by
+  // the career service). Unmapped plans, and an unreachable service, see V1 as before.
+  const careerAccess = useCareerAccess();
 
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: t('title') },
     { href: '/cv', icon: FileText, label: t('my_cvs') },
     { href: '/cover-letters', icon: Mail, label: t('my_cover_letters') },
     { href: '/jobs', icon: Briefcase, label: t('job_tracker') },
+    ...(careerAccess.data?.enabled ? [{ href: '/career', icon: Compass, label: t('career_tools') }] : []),
     { href: '/templates', icon: Palette, label: t('templates'), tour: TOUR_TARGETS.templates },
   ];
 

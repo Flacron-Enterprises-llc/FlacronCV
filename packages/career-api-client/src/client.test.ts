@@ -31,7 +31,7 @@ describe('createApiClient', () => {
     await api.facts();
     token = 'refreshed';
     await api.facts();
-    expect(calls.map((c) => c.url)).toEqual(['http://localhost:3000/api/v1/facts', 'http://localhost:3000/api/v1/facts']);
+    expect(calls.map((c) => c.url)).toEqual(['http://localhost:3000/api/career/v1/facts', 'http://localhost:3000/api/career/v1/facts']);
     expect(headers(calls[0]).Authorization).toBe('Bearer first');
     expect(headers(calls[1]).Authorization).toBe('Bearer refreshed');
   });
@@ -80,7 +80,7 @@ describe('createApiClient', () => {
     const calls: Call[] = [];
     const api = createApiClient({ baseUrl: 'http://api', getToken: async () => 't', fetch: fakeFetch(200, {}, calls) });
     await api.fact('../me');
-    expect(calls[0].url).toBe('http://api/api/v1/facts/..%2Fme');
+    expect(calls[0].url).toBe('http://api/api/career/v1/facts/..%2Fme');
   });
 
   it('sends a partial fact edit under value', async () => {

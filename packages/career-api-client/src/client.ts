@@ -56,6 +56,7 @@ import type {
   WhiteLabelConfig,
   BillingAccount,
   UsageSummary,
+  CareerAccessView,
   SavedEstimate,
   CheckoutResult,
   AccountExport,
@@ -113,7 +114,7 @@ export function isApiError(error: unknown, code?: string): error is ApiError {
 export type FetchLike = (input: string, init: RequestInit) => Promise<Response>;
 
 export interface ApiClientOptions {
-  /** Origin of the API, without `/api/v1`. */
+  /** Origin of the career API, without its path prefix. */
   baseUrl: string;
   /** The current Firebase ID token, or null when signed out. Called per request so a refreshed token is used. */
   getToken: () => Promise<string | null>;
@@ -136,8 +137,11 @@ export function newIdempotencyKey(): string {
   return globalThis.crypto.randomUUID();
 }
 
+/** Every career route is under this path (beside V1's own `/api/v1`). */
+export const CAREER_API_PATH = '/api/career/v1';
+
 export function createApiClient(options: ApiClientOptions) {
-  const base = `${options.baseUrl.replace(/\/+$/, '')}/api/v1`;
+  const base = `${options.baseUrl.replace(/\/+$/, '')}${CAREER_API_PATH}`;
   const doFetch: FetchLike = options.fetch ?? ((input, init) => globalThis.fetch(input, init));
 
   async function request<T>(method: string, path: string, opts: RequestOptions = {}): Promise<T> {
@@ -452,6 +456,8 @@ export function createApiClient(options: ApiClientOptions) {
     },
 
     billing: () => request<BillingAccount>('GET', '/billing'),
+    /** V1 integration: creates no career rows. */
+    access: () => request<CareerAccessView>('GET', '/access'),
     usage: () => request<UsageSummary>('GET', '/usage'),
     setSpendingCap: (spendingCapCents: number | null) =>
       request<BillingAccount>('PATCH', '/billing/spending-cap', { body: { spendingCapCents } }),

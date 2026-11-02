@@ -27,6 +27,8 @@ const CHARGING_STATES = ['active', 'trialing', 'past_due'];
 export const INTERRUPTED_DELETION_AFTER_MS = 15 * 60_000;
 /** ID tokens last an hour; a deleted uid is remembered a little longer so an old token cannot open a new account. */
 export const DELETED_SIGN_IN_MEMORY_MS = 2 * 60 * 60_000;
+/** V1 integration: how often each career user is re-checked for a closed V1 account. */
+export const V1_CLOSURE_RECHECK_MS = 24 * 60 * 60_000;
 
 /** What `deleteAccount` keeps, by table: accounting rows with the sign-in id cleared (OPEN_DECISIONS 21). */
 export const RETAINED_AFTER_DELETION = [
@@ -240,6 +242,72 @@ export class AccountPrivacyService {
       }
     }
     return { finished, failed };
+  }
+
+  /**
+   * V1 integration backstop. Erases the career data of people whose V1
+   * account V1 has closed, checking each user about once a day.
+   *
+   * `isClosed` must answer true only on positive evidence of closure (V1's
+   * soft delete or deactivation). An unknown or missing V1 record answers
+   * false, so a read gap can never erase anyone. Safe to run from several
+   * processes: each erase runs under the account's lock.
+   */
+  async eraseClosedV1Accounts(
+    isClosed: (authUserId: string) => Promise<boolean>,
+    limit = 20,
+  ): Promise<{ checked: number; erased: number; failed: number }> {
+    const now = this.clock.now();
+    const due = await this.pool.query<{
+      user_id: string;
+      auth_user_id: string;
+      locale: Principal['locale'];
+      workspace_id: string;
+      billing_account_id: string;
+      origin: Principal['origin'];
+    }>(
+      `SELECT u.id AS user_id, u.auth_user_id, u.locale, w.id AS workspace_id, b.id AS billing_account_id, b.origin
+         FROM users u
+         JOIN workspaces w ON w.owner_user_id = u.id AND w.kind = 'individual'
+         JOIN billing_accounts b ON b.workspace_id = w.id
+        WHERE u.deletion_requested_at IS NULL
+          AND (u.v1_closure_checked_at IS NULL OR u.v1_closure_checked_at < $1)
+        ORDER BY u.v1_closure_checked_at NULLS FIRST
+        LIMIT $2`,
+      [new Date(now.getTime() - V1_CLOSURE_RECHECK_MS), limit],
+    );
+    let erased = 0;
+    let failed = 0;
+    for (const row of due.rows) {
+      try {
+        if (!(await isClosed(row.auth_user_id))) {
+          await this.pool.query(`UPDATE users SET v1_closure_checked_at = $2 WHERE id = $1`, [row.user_id, now]);
+          continue;
+        }
+        const identity: VerifiedIdentity = { uid: row.auth_user_id, email: null, emailVerified: false, authTime: now, issuedAt: now, signInProvider: null };
+        const owner: Principal = {
+          userId: row.user_id,
+          authUserId: row.auth_user_id,
+          workspaceId: row.workspace_id,
+          billingAccountId: row.billing_account_id,
+          locale: row.locale,
+          origin: row.origin,
+          identity,
+        };
+        await this.pool.query(
+          `UPDATE users SET deletion_requested_at = COALESCE(deletion_requested_at, $2) WHERE id = $1`,
+          [row.user_id, now],
+        );
+        for (const key of await storedObjectKeys(this.pool, owner)) await this.storage.delete(key);
+        await this.eraseAndCheck(owner, false);
+        await this.eraseAndCheck(owner, true);
+        erased += 1;
+      } catch {
+        // V1 or storage unreachable: the row is not stamped, so the next tick retries it.
+        failed += 1;
+      }
+    }
+    return { checked: due.rows.length, erased, failed };
   }
 
   /** One erase pass, a check, a second pass if anything was written meanwhile, then a final check. */

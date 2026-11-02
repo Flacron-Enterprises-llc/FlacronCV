@@ -144,11 +144,13 @@ export { OpportunityTrustService } from './opportunities/opportunity-trust.servi
 export { PortfolioService } from './portfolios/portfolio.service';
 export { VoiceInterviewService } from './voice/voice-interview.service';
 export { RemainingService } from './remaining/remaining.service';
+export type { ApplicationOutcomeSource } from './remaining/remaining.service';
 export {
   applyMappedPlan,
   decideCareerAccess,
   isV1Plan,
   parseCareerPlanMap,
+  careerStatusFromV1,
   V1_PLANS,
 } from './integration/v1-plan-bridge';
 export type { CareerAccess, CareerPlanMap, V1AccountSnapshot, V1AccountSource, V1Plan } from './integration/v1-plan-bridge';

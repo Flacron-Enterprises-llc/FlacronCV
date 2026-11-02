@@ -1,6 +1,6 @@
 import type { Pool } from 'pg';
 import { PLAN_ORDER } from '@flacroncv/career-shared';
-import type { PlanId } from '@flacroncv/career-shared';
+import type { ApplicationStatus, PlanId } from '@flacroncv/career-shared';
 import { lockAccount, openBalances } from '../billing/accounts';
 import type { AccountRow } from '../billing/accounts';
 import { CatalogStore, includedUnitsFor } from '../billing/catalog';
@@ -64,6 +64,27 @@ export interface V1AccountSnapshot {
 
 export interface V1AccountSource {
   read(uid: string): Promise<V1AccountSnapshot | null>;
+  /**
+   * Statuses of the person's live (not deleted) V1 Jobs-tracker entries, or
+   * null when this source has no V1 tracker to read (V2's own tests).
+   * V1's tracker is the only application tracker; the career service never writes it.
+   */
+  jobStatuses(uid: string): Promise<ApplicationStatus[] | null>;
+}
+
+/** V1 `JobStatus` → the career outcome status. An accepted offer was an offer. */
+const V1_JOB_STATUS: Record<string, ApplicationStatus> = {
+  wishlist: 'saved',
+  applied: 'applied',
+  interviewing: 'interviewing',
+  offer: 'offered',
+  accepted: 'offered',
+  rejected: 'rejected',
+};
+
+/** Unknown or missing V1 statuses are dropped rather than guessed. */
+export function careerStatusFromV1(status: unknown): ApplicationStatus | null {
+  return typeof status === 'string' && Object.prototype.hasOwnProperty.call(V1_JOB_STATUS, status) ? V1_JOB_STATUS[status] : null;
 }
 
 export type CareerAccess =

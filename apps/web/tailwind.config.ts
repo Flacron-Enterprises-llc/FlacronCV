@@ -25,6 +25,28 @@ const config: Config = {
         // letter default (`#1e3a5f`). Header/footer in light and dark (dark
         // surfaces override via `dark:bg-chrome` / `dark:bg-chrome/70`).
         chrome: '#1e3a5f',
+        // Career area (former V2 screens). Namespaced so no existing V1 class
+        // changes meaning; the values are CSS variables set to V1's palette
+        // in globals.css, for light and dark.
+        career: {
+          navy: 'var(--career-navy)',
+          'navy-hover': 'var(--career-navy-hover)',
+          orange: 'var(--career-orange)',
+          'orange-text': 'var(--career-orange-text)',
+          'orange-tint': 'var(--career-orange-tint)',
+          ink: 'var(--career-ink)',
+          muted: 'var(--career-muted)',
+          line: 'var(--career-line)',
+          canvas: 'var(--career-canvas)',
+          surface: 'var(--career-surface)',
+          wash: 'var(--career-wash)',
+          danger: 'var(--career-danger)',
+          success: 'var(--career-success)',
+          warning: 'var(--career-warning)',
+        },
+      },
+      minHeight: {
+        'career-touch': '2.75rem',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

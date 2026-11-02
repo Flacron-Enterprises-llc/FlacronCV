@@ -26,6 +26,13 @@ import { checkCapacity, requireFeature } from '../metering/access';
 import { MeteringService, type JsonValue, type MeteredResult } from '../metering/metering.service';
 import type { FeatureId } from '@flacroncv/career-shared';
 import type { ProfileOwner } from '../profile/career-profile.service';
+import type { ApplicationStatus } from '@flacroncv/career-shared';
+
+/**
+ * Where application outcomes come from. Inside V1 it is V1's Jobs tracker
+ * (read-only); null means "no external tracker" and V2's own table is used.
+ */
+export type ApplicationOutcomeSource = (owner: ProfileOwner) => Promise<ApplicationStatus[] | null>;
 
 const systemClock: Clock = { now: () => new Date() };
 
@@ -42,6 +49,7 @@ export class RemainingService {
     private readonly clock: Clock = systemClock,
     private readonly tiles: MapTiles = new UnconfiguredMapTiles(),
     private readonly mailer: Mailer = new RecordingMailer(),
+    private readonly outcomes: ApplicationOutcomeSource = async () => null,
   ) {}
 
   async createScenario(owner: ProfileOwner, options: ScenarioOptionInput[], idempotencyKey?: string): Promise<MeteredResult<JsonValue>> {
@@ -73,6 +81,8 @@ export class RemainingService {
     if (level === 'none') {
       throw new BillingError('plan_upgrade_required', { feature: 'applicationAnalytics', minimumPlan: 'starter' });
     }
+    const external = await this.outcomes(owner);
+    if (external) return learningLoopReport(external.map((status) => ({ status })), level);
     const rows = await this.pool.query<{ status: string }>(
       `SELECT status FROM applications WHERE workspace_id = $1 AND candidate_auth_user_id = $2`,
       [owner.workspaceId, owner.authUserId],

@@ -53,7 +53,7 @@ describe('portfolios over HTTP (CV16)', () => {
       .query({ origin: 'https://flacroncv.test' })
       .set('Authorization', auth);
     expect(qr.status).toBe(200);
-    expect(qr.body.path).toBe(`/en/p/${created.body.slug}`);
+    expect(qr.body.path).toBe(`/en/portfolio/${created.body.slug}`);
     expect(qr.body.svg).toContain('<svg');
 
     const closed = await http().post(`/api/career/v1/portfolios/${created.body.id}/unpublish`).set('Authorization', auth).send({});

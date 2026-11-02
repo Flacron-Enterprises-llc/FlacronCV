@@ -62,14 +62,16 @@ export class AuthGuard implements CanActivate {
     if (this.reflector.getAllAndOverride<boolean>(ACCESS_ONLY, targets)) return true;
 
     const duringDeletion = Boolean(this.reflector.getAllAndOverride<boolean>(DURING_DELETION, targets));
-    if (!access.enabled) {
-      if (!this.reflector.getAllAndOverride<boolean>(WITHOUT_CAREER_ACCESS, targets)) {
-        throw new BillingError('feature_unavailable', { feature: 'career', reason: access.reason });
-      }
+    // Export and erase act on career data that already exists, whatever the plan,
+    // and never create an account just to export or erase it.
+    if (this.reflector.getAllAndOverride<boolean>(WITHOUT_CAREER_ACCESS, targets)) {
       const existing = await this.identities.existingPrincipal(identity, { allowPendingDeletion: duringDeletion });
       if (!existing) throw new BillingError('not_found', { reason: 'no_career_account' });
       request.principal = existing;
       return true;
+    }
+    if (!access.enabled) {
+      throw new BillingError('feature_unavailable', { feature: 'career', reason: access.reason });
     }
 
     const principal = await this.identities.principal(identity, undefined, { allowPendingDeletion: duringDeletion });

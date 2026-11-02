@@ -429,6 +429,12 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.0
         version: 3.2.2(react@18.3.1)
+      '@flacroncv/career-api-client':
+        specifier: workspace:*
+        version: link:../../packages/career-api-client
+      '@flacroncv/career-shared':
+        specifier: workspace:*
+        version: link:../../packages/career-shared
       '@flacroncv/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types

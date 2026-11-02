@@ -1,8 +1,12 @@
 import { App, cert, deleteApp, getApps, initializeApp } from 'firebase-admin/app';
 import { Firestore, getFirestore } from 'firebase-admin/firestore';
 import { resolveEffectivePlan } from '@flacroncv/shared-types';
-import { deployEnv, isV1Plan } from '@flacroncv/career-server';
+import { careerStatusFromV1, deployEnv, isV1Plan } from '@flacroncv/career-server';
 import type { V1AccountSnapshot, V1AccountSource } from '@flacroncv/career-server';
+import type { ApplicationStatus } from '@flacroncv/career-shared';
+
+/** Upper bound on tracker rows read for analytics; V1's own export caps collections at 500. */
+const MAX_JOB_ROWS = 2000;
 
 const APP_NAME = 'flacroncv-career-v1-reader';
 
@@ -29,14 +33,36 @@ export class FirestoreV1AccountSource implements V1AccountSource {
       active: data.isActive !== false && !data.deletedAt,
     };
   }
+
+  async jobStatuses(uid: string): Promise<ApplicationStatus[]> {
+    const rows = await this.firestore.collection('job_applications').where('userId', '==', uid).limit(MAX_JOB_ROWS).get();
+    const statuses: ApplicationStatus[] = [];
+    for (const doc of rows.docs) {
+      const data = doc.data();
+      if (data.deletedAt) continue;
+      const status = careerStatusFromV1(data.status);
+      if (status) statuses.push(status);
+    }
+    return statuses;
+  }
 }
 
 /** Fixed answers. Tests and the local demo without a Firestore emulator only. */
 export class StaticV1AccountSource implements V1AccountSource {
-  constructor(private readonly accounts: ReadonlyMap<string, V1AccountSnapshot>) {}
+  constructor(
+    private readonly accounts: ReadonlyMap<string, V1AccountSnapshot>,
+    /** V1 job statuses per uid. A uid with no entry has no V1 tracker (null). */
+    private readonly jobs: ReadonlyMap<string, string[]> = new Map(),
+  ) {}
 
   async read(uid: string): Promise<V1AccountSnapshot | null> {
     return this.accounts.get(uid) ?? null;
+  }
+
+  async jobStatuses(uid: string): Promise<ApplicationStatus[] | null> {
+    const rows = this.jobs.get(uid);
+    if (!rows) return null;
+    return rows.map(careerStatusFromV1).filter((status): status is ApplicationStatus => status !== null);
   }
 }
 

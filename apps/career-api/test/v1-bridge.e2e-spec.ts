@@ -3,6 +3,7 @@ import { parseCareerPlanMap } from '@flacroncv/career-server';
 import type { V1AccountSnapshot } from '@flacroncv/career-server';
 import { bearer } from '@flacroncv/career-server/src/testing';
 import { createTestApp, TestApp } from './support';
+import { StorageCleanupScheduler } from '../src/storage/storage-cleanup.scheduler';
 
 /**
  * The V1 bridge end to end: the V1 plan (fixture standing in for Firestore)
@@ -35,8 +36,24 @@ describe('V1 plan bridge', () => {
         // Fixture only. The real mapping is a client decision; the default is all `none`.
         map: parseCareerPlanMap('free:none,pro:professional,career_accelerator:none,enterprise:career_pro'),
         clock: { now: () => now },
+        jobs,
       },
     });
+  });
+
+  const jobs = new Map<string, string[]>();
+
+  it('outcome analytics count the V1 Jobs tracker, not a second tracker', async () => {
+    v1('loop-ji', 'pro');
+    // V1 statuses as stored in job_applications. `mystery` is not a V1 status and is dropped.
+    jobs.set('loop-ji', ['wishlist', 'applied', 'applied', 'interviewing', 'offer', 'accepted', 'rejected', 'mystery']);
+    await t.db.pool.query(`INSERT INTO feature_flags (feature, enabled, updated_by) VALUES ('applicationAnalytics', true, 'test')`);
+    const res = await http().get('/api/career/v1/learning-loop').set('Authorization', bearer('loop-ji'));
+    expect(res.status).toBe(200);
+    // recorded = applied×2, interviewing, offer, accepted(=offer), rejected = 6; saved (wishlist) is unrecorded.
+    expect(res.body).toMatchObject({ sampleSize: 7, recordedApplications: 6, unrecorded: 1, interviews: 3, offers: 2, interviewRatePercent: 50 });
+    const careerRows = await t.db.pool.query(`SELECT count(*)::int AS n FROM applications`);
+    expect(careerRows.rows[0].n).toBe(0);
   });
 
   afterAll(async () => {
@@ -152,5 +169,52 @@ describe('V1 plan bridge', () => {
     );
     expect(rows.rows).toHaveLength(2);
     expect(rows.rows[1].included_remaining).toBe(60);
+  });
+});
+
+describe('V1 closure sweep', () => {
+  let t: TestApp;
+  const accounts = new Map<string, V1AccountSnapshot>();
+  const http = () => request(t.app.getHttpServer());
+  const userCount = async (uid: string) =>
+    (await t.db.pool.query(`SELECT count(*)::int AS n FROM users WHERE auth_user_id = $1`, [uid])).rows[0].n as number;
+  const factCount = async (uid: string) =>
+    (await t.db.pool.query(`SELECT count(*)::int AS n FROM career_facts WHERE candidate_auth_user_id = $1`, [uid])).rows[0]
+      .n as number;
+
+  beforeAll(async () => {
+    t = await createTestApp('api_v1_closure', {
+      v1: { accounts, map: parseCareerPlanMap('pro:professional') },
+    });
+  });
+
+  afterAll(async () => {
+    if (t) await t.close();
+  });
+
+  it('erases career data only for accounts V1 closed, never for active or missing V1 records', async () => {
+    for (const uid of ['closing-ana', 'staying-ben', 'missing-cal']) {
+      accounts.set(uid, { uid, plan: 'pro', active: true });
+      const res = await http()
+        .post('/api/career/v1/facts')
+        .set('Authorization', bearer(uid))
+        .send({ factType: 'experience', value: { company: 'Fictional Co', startDate: '2020-02' } });
+      expect(res.status).toBe(201);
+    }
+    // V1 soft-deletes one account; another V1 record cannot be read at all.
+    accounts.set('closing-ana', { uid: 'closing-ana', plan: 'pro', active: false });
+    accounts.delete('missing-cal');
+
+    await t.app.get(StorageCleanupScheduler).tick();
+
+    expect(await userCount('closing-ana')).toBe(0);
+    expect(await factCount('closing-ana')).toBe(0);
+    expect(await userCount('staying-ben')).toBe(1);
+    expect(await factCount('staying-ben')).toBe(1);
+    expect(await userCount('missing-cal')).toBe(1);
+    expect(await factCount('missing-cal')).toBe(1);
+    // A second tick does not re-check the survivors today, and changes nothing.
+    await t.app.get(StorageCleanupScheduler).tick();
+    expect(await userCount('staying-ben')).toBe(1);
   });
 });

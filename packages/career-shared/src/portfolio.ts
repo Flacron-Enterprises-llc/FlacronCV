@@ -70,7 +70,8 @@ export interface PortfolioQr {
 
 /** The slug is the stable id. A display-name change must not appear in this path. */
 export function portfolioPath(locale: 'en' | 'fr', slug: string, token?: string | null): string {
-  const path = `/${locale}/p/${slug}`;
+  // V1 serves public portfolios at /[locale]/portfolio/[slug] (V2 used /p/).
+  const path = `/${locale}/portfolio/${slug}`;
   if (!token) return path;
   return `${path}?token=${encodeURIComponent(token)}`;
 }

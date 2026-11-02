@@ -43,10 +43,14 @@ import { storage, auth } from '@/lib/firebase';
 import { fileToJpegBlob, ImageUploadError } from '@/lib/prepare-image-upload';
 import { useAppTourReplay } from '@/components/onboarding/AppTourProvider';
 import { TOUR_TARGETS } from '@/lib/app-tour';
+import { isCareerEnabled, useCareerApi } from '@/components/career/CareerServices';
+import { CareerErasureNeedsFreshSignIn, eraseCareerDataBeforeAccountDeletion } from '@/lib/career/account-deletion';
 
 export default function SettingsPage(): React.JSX.Element | null {
   const t = useTranslations('settings');
   const tTour = useTranslations('tour');
+  const tCareerData = useTranslations('career.data');
+  const careerApi = useCareerApi();
   const formatApiError = useApiErrorMessage();
   const { user, resetPassword, refreshUser, logout } = useAuth();
   const { setTheme } = useTheme();
@@ -155,9 +159,18 @@ export default function SettingsPage(): React.JSX.Element | null {
     },
   });
 
-  // Delete account mutation
+  // Delete account mutation. With the career integration on, career data is
+  // erased first (or left to the career service's closure sweep if it is
+  // unreachable); off, this is exactly V1's original deletion.
   const deleteMutation = useMutation({
-    mutationFn: () => api.delete('/users/me'),
+    mutationFn: async () => {
+      await eraseCareerDataBeforeAccountDeletion(careerApi, isCareerEnabled(), async () => {
+        const current = auth?.currentUser;
+        if (!current) throw new Error('signed out');
+        return current.getIdToken(true);
+      });
+      return api.delete('/users/me');
+    },
     onSuccess: async () => {
       toast.success(t('account.deleteSuccess'));
       // Clear the local session — the server has revoked this account's refresh
@@ -170,6 +183,10 @@ export default function SettingsPage(): React.JSX.Element | null {
       router.push('/');
     },
     onError: (error: Error) => {
+      if (error instanceof CareerErasureNeedsFreshSignIn) {
+        toast.error(tCareerData('sign_in_again'));
+        return;
+      }
       toast.error(formatApiError(error, t('account.deleteError')));
     },
   });

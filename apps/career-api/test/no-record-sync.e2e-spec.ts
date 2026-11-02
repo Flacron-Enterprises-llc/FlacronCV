@@ -28,3 +28,28 @@ describe('no record synchronisation endpoints', () => {
     expect((await t.db.pool.query(`SELECT 1 FROM shared_record_requests`)).rowCount).toBe(0);
   });
 });
+
+/**
+ * V1's Jobs tracker (Firestore `job_applications`) is the only application
+ * tracker. V2's separate tracker routes are not served, so a customer can
+ * never end up with two disagreeing lists; outcome analytics read V1's.
+ */
+describe('one application tracker', () => {
+  let t: TestApp;
+  const http = () => request(t.app.getHttpServer());
+
+  beforeAll(async () => {
+    t = await createTestApp('api_one_tracker');
+  });
+
+  afterAll(async () => {
+    if (t) await t.close();
+  });
+
+  it('does not serve the V2 applications routes', async () => {
+    const auth = bearer('tracker-ada');
+    expect((await http().get('/api/career/v1/applications').set('Authorization', auth)).status).toBe(404);
+    expect((await http().post('/api/career/v1/applications').set('Authorization', auth).send({})).status).toBe(404);
+    expect((await http().get('/api/career/v1/applications/any/calendar').set('Authorization', auth)).status).toBe(404);
+  });
+});

@@ -867,3 +867,15 @@ export interface WhiteLabelConfig {
 
 
 
+
+/**
+ * V1 integration: whether the caller may use the career area, from their V1
+ * plan through the configured map. `features` are the operator switches.
+ */
+export interface CareerAccessView {
+  enabled: boolean;
+  v1Plan: string | null;
+  careerPlan?: string;
+  reason?: 'plan_not_mapped' | 'v1_account_missing' | 'v1_account_inactive';
+  features: Record<string, boolean>;
+}
