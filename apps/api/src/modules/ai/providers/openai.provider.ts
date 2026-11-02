@@ -3,14 +3,25 @@ import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { IAIProvider, AIProviderOptions, AIProviderResponse } from './ai-provider.interface';
 
+export const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
+
+/** Accept a model id such as "gpt-4o-mini" or "gpt-6-luna"; anything else falls back to the default. */
+export function openAIModelOrDefault(value: string | undefined | null): string {
+  const v = value?.trim() ?? '';
+  return /^[a-z0-9][a-z0-9._:-]{1,79}$/i.test(v) ? v : DEFAULT_OPENAI_MODEL;
+}
+
 @Injectable()
 export class OpenAIProvider implements IAIProvider {
   readonly name = 'openai';
   private client!: OpenAI;
   private readonly logger = new Logger(OpenAIProvider.name);
+  /** OPENAI_MODEL when set and well-formed, else 'gpt-4o-mini' (unchanged default). */
+  readonly defaultModel: string;
 
   constructor(private configService: ConfigService) {
     const apiKey = this.configService.get<string>('openai.apiKey');
+    this.defaultModel = openAIModelOrDefault(this.configService.get<string>('openai.model'));
     if (apiKey) {
       // ── Timeout budget (must stay consistent with apps/web/src/lib/api.ts) ──
       // Browser AI budget      60s
@@ -46,7 +57,7 @@ export class OpenAIProvider implements IAIProvider {
 
     try {
       const completion = await this.client.chat.completions.create({
-        model: options.model || 'gpt-4o-mini',
+        model: options.model || this.defaultModel,
         messages: [
           {
             role: 'system',

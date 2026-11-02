@@ -47,3 +47,24 @@ describe('createTextModel', () => {
     expect(createTextModel({ AI_PROVIDER: 'openai', OPENAI_API_KEY: 'sk-test' })).toBeInstanceOf(OpenAITextModel);
   });
 });
+
+describe('OPENAI_TEXT_MODEL', () => {
+  const model = (env: NodeJS.ProcessEnv) => (createTextModel(env) as unknown as { model: string }).model;
+
+  it('keeps gpt-4o-mini when unset, blank or malformed', () => {
+    expect(model({ AI_PROVIDER: 'openai', OPENAI_API_KEY: 'k' })).toBe('gpt-4o-mini');
+    expect(model({ AI_PROVIDER: 'openai', OPENAI_API_KEY: 'k', OPENAI_TEXT_MODEL: '  ' })).toBe('gpt-4o-mini');
+    expect(model({ AI_PROVIDER: 'openai', OPENAI_API_KEY: 'k', OPENAI_TEXT_MODEL: 'bad model; rm' })).toBe('gpt-4o-mini');
+  });
+
+  it('uses a configured model id and sends it to the API', async () => {
+    expect(model({ AI_PROVIDER: 'openai', OPENAI_API_KEY: 'k', OPENAI_TEXT_MODEL: 'gpt-6-luna' })).toBe('gpt-6-luna');
+    const fetchImpl = jest.fn(async () =>
+      new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), { status: 200, headers: { 'content-type': 'application/json' } }),
+    );
+    const live = new OpenAITextModel('k', 'gpt-6-luna', fetchImpl as unknown as typeof fetch);
+    await live.complete({ template: 't@1', system: 's', prompt: 'p', maxTokens: 5, temperature: 0 });
+    const body = JSON.parse(String((fetchImpl.mock.calls[0] as unknown as [string, RequestInit])[1].body));
+    expect(body.model).toBe('gpt-6-luna');
+  });
+});

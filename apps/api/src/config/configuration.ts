@@ -16,6 +16,10 @@ export default () => ({
     // Trimmed. A trailing space or newline pasted into the ECS console is
     // invisible and makes every OpenAI call fail as a bad key.
     apiKey: process.env.OPENAI_API_KEY?.trim(),
+    // Chat model for V1 AI features. Unset keeps 'gpt-4o-mini'. OpenAI lists its
+    // only snapshot (gpt-4o-mini-2024-07-18) for shutdown on 14 Jan 2027; switch
+    // here after testing the replacement, without a code change.
+    model: process.env.OPENAI_MODEL?.trim() || undefined,
   },
 
   stripe: {

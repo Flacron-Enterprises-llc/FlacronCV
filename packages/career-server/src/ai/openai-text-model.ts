@@ -1,7 +1,13 @@
 import { BillingError } from '../billing/errors';
 import type { TextModel, TextModelRequest, TextModelResponse } from './text-model';
 
-const DEFAULT_MODEL = 'gpt-4o-mini';
+export const DEFAULT_MODEL = 'gpt-4o-mini';
+
+/** A well-formed model id from configuration, else the default. */
+export function textModelOrDefault(value: string | undefined | null): string {
+  const v = value?.trim() ?? '';
+  return /^[a-z0-9][a-z0-9._:-]{1,79}$/i.test(v) ? v : DEFAULT_MODEL;
+}
 const DEFAULT_TIMEOUT_MS = 40_000;
 
 /**
