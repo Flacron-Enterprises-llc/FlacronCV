@@ -36,7 +36,13 @@ describe('FirebaseIdTokenVerifier', () => {
       authTime: new Date((NOW_S - 20) * 1000),
       issuedAt: new Date((NOW_S - 10) * 1000),
       signInProvider: 'password',
+      role: null,
     });
+  });
+
+  it('reads the V1 staff role claim, used by career operator routes', async () => {
+    const identity = await verifier.verify(keys.token({ uid: 'staff-1', iat: NOW_S - 10, role: 'super_admin' }));
+    expect(identity.role).toBe('super_admin');
   });
 
   it('refuses a token signed by another key', async () => {

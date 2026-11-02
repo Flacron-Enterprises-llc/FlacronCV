@@ -140,36 +140,33 @@ Legend — State: **Op** operational locally · **Prov** provider-dependent (sta
 | X | Off-box notifications, store purchases, licensed feeds | — | — | — | Prov | — |
 
 ## 4. Client decisions needed
-- **D1 Feature-to-plan map (`CAREER_PLAN_MAP`).** Proposal for discussion, *not configured anywhere but the local demo fixture*:
-
-  | V1 plan | Proposed career plan | Rationale |
-  |---|---|---|
-  | free | none (or `free` for a teaser) | `free` grants e.g. 3 document credits, 25 tracked items |
-  | pro ($29.99) | `professional` | closest price point |
-  | career_accelerator (not sold) | `career_pro` | plan already advertises "career tools" |
-  | enterprise ($99.99, individual) | `career_pro` | `business` is a team/workspace product (seats, candidates) |
-  The local demo uses `free:none,pro:professional,career_accelerator:none,enterprise:career_pro`.
+- **D0 (blocks purchase activation) — commercial model of a career plan.** Is it (a) an **add-on**: a separate career subscription beside the unchanged V1 plan (what the local fixture implements), or (b) an **upgrade that replaces** the V1 subscription (V2's 16 Oct legacy plan; that would also need a rule for what the V1 CV-builder limits become)? Until answered, purchase stays disabled.
+- **D1 V1-plan map (`CAREER_PLAN_MAP`).** Default empty: no V1 plan includes career benefits. If the client wants some included (for example Pro → Starter as a teaser), it is one setting.
 - **D2** Whether career generation should draw on V1 AI credits instead of separate career allowances (currently separate).
-- **D3** Whether to sell `business`, packs, human review, recruiting checkout, API packages, maintenance offer (all withheld).
+- **D3** Whether to sell `business`, packs, extra capacity, human review, recruiting checkout, API packages or the maintenance offer (all closed).
 - **D4** AI provider for career generation (`AI_PROVIDER=openai` + key), speech vendor, map tiles, licensed job feeds.
-- **D5** Admin access: keep allowlist or honour V1 `admin/super_admin` claims (L3).
-- **D6** Hosting: an extra container + managed Postgres + private S3 bucket; cost approval.
-- **D7** German form of address: the new German strings use "Sie"; most older V1 German strings use "du".
+- **D5** Stripe products/prices for career plans (created by the client in Stripe, then `CAREER_STRIPE_PRICES`), and whether the Professional 7-day trial applies (currently no trial).
+- **D6** Hosting: an extra container + worker + managed Postgres + private S3 bucket; cost approval.
 - **D8** Whether to show V2's 7-stage pipeline fields (deadline/checklist) inside V1's Jobs tracker.
 - **D9** One combined personal-data export file vs two downloads.
+- Resolved this pass: German form of address (career and hero strings now use "du" like V1's dashboard, settings and job tracker); operator access (V1 staff claim AND allowlist).
 
 ## 5. Future migrations / configuration (not executed)
-1. Provision Postgres; run `pnpm --filter career-api migrate` (36 migrations; `migrate:down` refuses non-local hosts). Dry-run first on a restored staging copy; take a snapshot before; rollback = drop the career database (V1 holds no career data).
-2. No V1 data migration is required. Optional later: back-fill nothing; career accounts are created lazily.
-3. Configure `.env.career` per `.env.career.example` (production: `DEPLOY_ENV=production`, `FIREBASE_PROJECT_ID=flacron-cv`, read-only Firestore role for `users` and `job_applications`, `OBJECT_STORAGE=s3` + career bucket, `CORS_ORIGINS` = V1 hosts, no Stripe key).
-4. Route `/api/career/*` on the existing load balancer to the career container; set `NEXT_PUBLIC_CAREER_ENABLED=true` and `NEXT_PUBLIC_CAREER_API_URL` in the web build only after D1.
-5. Run the worker (`apps/career-worker`) for renewals/alerts.
+1. Provision Postgres. Run `pnpm --filter career-api migrate:status --snapshot before.json` (read-only), `migrate:dry-run` (prints SQL, applies nothing), then `migrate` (36 migrations), then `migrate:status --snapshot after.json` and compare. `migrate:down` refuses non-local hosts. Rehearsed locally on a copy: rollback of the two integration migrations, dry run, re-apply; 74 tables with identical row counts. Rolling back the bridge migration resets the `plan_source`/`v1_plan` values, which the bridge rewrites on the next request. Full rollback = drop the career database (V1 holds no career data).
+2. No V1 data migration is required; career accounts are created lazily.
+3. Configure `.env.career` per `.env.career.example` (production: `DEPLOY_ENV=production`, `FIREBASE_PROJECT_ID=flacron-cv`, a read-only Firestore role for `users` and `job_applications`, `OBJECT_STORAGE=s3` + career bucket, `CORS_ORIGINS` = V1 hosts, `ADMIN_AUTH_USER_IDS`, no Stripe key). V1 API: `CAREER_BILLING_MODE` stays `disabled` until D0; production refuses `addon_fixture`.
+4. Route `/api/career/*` on the existing load balancer to the career container; run `apps/career-worker`; set `NEXT_PUBLIC_CAREER_ENABLED=true` and `NEXT_PUBLIC_CAREER_API_URL` in the web build.
 
-## 6. Known limitations
-- L1 AI-dependent features (import, generation, tailoring, letters, text interviews) were verified only on their failure path locally (no AI key).
-- L2 Career documents are generated in English or French; other V1 languages get an English document (UI is translated).
-- L3 Career admin uses `ADMIN_AUTH_USER_IDS`, not V1 role claims.
-- L4 New German copy uses "Sie" (D7). Spanish/German/Arabic/Urdu career strings are machine-assisted and need native review.
-- L5 V1 server-side Puppeteer export and mobile app were not changed or re-verified.
-- L6 `next build` was not run (known local font/symlink limits); type-check and dev server only.
-- L7 The emulator stack runs on local disk storage; S3 is covered by V2's mocked adapter tests only.
+## 6. Verification (local only, 2 Nov 2026)
+- Automated: V1 web 64 files; V1 API 58 suites / 691 tests (11 new career-billing); career-server 58 suites / 401; career-api unit 15 + HTTP 27 suites / 102 (V1 bridge, purchase rules, billing boundary, admin claim + allowlist); career-shared 113; api-client 8; worker 9; extension 1; type-check of all seven packages.
+- Live (emulators + private Postgres): plan gate per account type; purchase disabled (403) and unconfirmed checkout refused (400); fixture entitlement; operator access; outcomes from V1 jobs; AI failure releases its credit and a replay returns the same job; private evidence upload, owner download, cross-account 403, delete; saved edit + template switch + reopen + PDF/DOCX inspected visually (accents, guillemets, em dash, French dates, correct customer); no credits used by edits or downloads; account deletion erases career rows and soft-deletes V1; worker schedules registered.
+- Browser (Edge, production build): 65/65 checks — hero at 1440/1280/768/390/360, six locales incl. ar/ur RTL, dark theme, reduced motion, keyboard focus, signed-in/out CTAs, protected-route redirects, refresh, sign-out, plans page at all widths and locales, fixture label, free/admin/entitled paths; 0 page errors.
+- Build: isolated `next build` (standalone) succeeds. Root causes of the earlier local blockers: fonts.gstatic resolves to IPv6 first and there is no IPv6 route here (the build process uses `--dns-result-order=ipv4first`); symlinks now work because Developer Mode is on. Hazard found and fixed: rebuilding over an existing standalone output deleted through its absolute symlinks into node_modules (repaired offline from the pnpm store; the build script now removes the old output with `rmdir /s /q` first and refuses to run while the server uses it).
+
+## 7. Known limitations
+- L1 AI-dependent features (import, generation, tailoring, letters, text interviews) verified only on their failure path (no AI key). Speech, map tiles, licensed feeds and off-box mail/push are provider-unavailable by design.
+- L2 Career documents are generated in English or French; other V1 languages get an English document (the UI is translated).
+- L3 Spanish/German/Arabic/Urdu strings are machine-assisted and need native review (notably plan-name transliterations in ar/ur).
+- L4 V1 server-side Puppeteer export and the mobile app were not changed or re-verified.
+- L5 Local storage is a disk adapter; S3 is covered by V2's mocked adapter tests only. Stripe was not called: checkout and webhooks are verified with mocked Stripe in unit tests.
+- L6 A Firebase SDK assertion ("Expected a class definition") is logged once during server rendering of the production build; pages and sign-in work. Not compared against original V1.

@@ -17,6 +17,8 @@ export interface TokenClaims {
   aud?: string;
   iss?: string;
   signInProvider?: string;
+  /** V1 custom claim for staff accounts. */
+  role?: string;
 }
 
 function payloadFor(claims: TokenClaims, projectId: string): Record<string, unknown> {
@@ -32,6 +34,7 @@ function payloadFor(claims: TokenClaims, projectId: string): Record<string, unkn
     ...(claims.email === undefined || claims.email === null ? {} : { email: claims.email }),
     email_verified: claims.emailVerified ?? false,
     firebase: { sign_in_provider: claims.signInProvider ?? 'password', identities: {} },
+    ...(claims.role ? { role: claims.role } : {}),
   };
 }
 
