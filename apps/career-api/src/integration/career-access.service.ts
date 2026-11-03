@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { CATALOG_VERSION } from '@flacroncv/career-shared';
-import { applyMappedPlan, decideCareerAccess, parseCareerPlanMap } from '@flacroncv/career-server';
+import { applyMappedPlan, BillingError, decideCareerAccess, parseCareerPlanMap } from '@flacroncv/career-server';
 import type { CareerAccess, CareerPlanMap, V1AccountSource } from '@flacroncv/career-server';
 import { DatabaseService } from '../database/database.service';
 
@@ -38,11 +38,25 @@ export class CareerAccessService {
     @Inject(ACCESS_CLOCK) private readonly clock: { now(): Date },
   ) {}
 
-  async forUid(uid: string): Promise<CareerAccess> {
+  /**
+   * `fresh` skips the cache: the guard asks for it before anything that could
+   * create or change career records, so a V1 account deactivated or deleted a
+   * moment ago (and a stale token that still carries a staff claim) is refused
+   * before any write. A V1 record that cannot be read is never treated as
+   * active: the request fails closed with `provider_unavailable`.
+   */
+  async forUid(uid: string, options: { fresh?: boolean } = {}): Promise<CareerAccess> {
     const now = this.clock.now().getTime();
     const cached = this.accessCache.get(uid);
-    if (cached && cached.expiresAt > now) return cached.value;
-    const access = decideCareerAccess(await this.source.read(uid), this.map, this.clock.now());
+    if (!options.fresh && cached && cached.expiresAt > now) return cached.value;
+    let account: Awaited<ReturnType<V1AccountSource['read']>>;
+    try {
+      account = await this.source.read(uid);
+    } catch {
+      this.accessCache.delete(uid);
+      throw new BillingError('provider_unavailable', { reason: 'v1_status_unavailable' });
+    }
+    const access = decideCareerAccess(account, this.map, this.clock.now());
     this.accessCache.set(uid, { value: access, expiresAt: now + ACCESS_CACHE_MS });
     return access;
   }

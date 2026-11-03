@@ -68,19 +68,40 @@ export class AuthGuard implements CanActivate {
     const identity = await this.verifier.verify(match[1]);
     request.identity = identity;
 
-    const access = await this.access.forUid(identity.uid);
+    let access = await this.access.forUid(identity.uid);
     request.careerAccess = access;
     if (this.reflector.getAllAndOverride<boolean>(ACCESS_ONLY, targets)) return true;
 
-    if (this.reflector.getAllAndOverride<boolean>(OPERATOR_ROUTE, targets)) {
+    const duringDeletion = Boolean(this.reflector.getAllAndOverride<boolean>(DURING_DELETION, targets));
+    const operator = Boolean(this.reflector.getAllAndOverride<boolean>(OPERATOR_ROUTE, targets));
+    const withoutAccess = Boolean(this.reflector.getAllAndOverride<boolean>(WITHOUT_CAREER_ACCESS, targets));
+
+    // The V1 account's *current* status decides before anything can be
+    // created or changed: an operator route, a request that may provision a
+    // career account, or any write. Reads of an existing account may use the
+    // short cache. The token's claims are never the only source of "active".
+    if (!withoutAccess) {
+      const mayWrite = operator || !['GET', 'HEAD', 'OPTIONS'].includes((request.method ?? 'GET').toUpperCase());
+      const mayProvision = !mayWrite && !(await this.identities.existingPrincipal(identity, { allowPendingDeletion: duringDeletion }));
+      if (mayWrite || mayProvision) {
+        access = await this.access.forUid(identity.uid, { fresh: true });
+        request.careerAccess = access;
+      }
+    }
+
+    if (operator) {
       if (!identity.role || !V1_STAFF_ROLES.includes(identity.role)) {
         throw new BillingError('permission_denied', { reason: 'not_v1_staff' });
+      }
+      // A staff claim on a stale token does not outlive the V1 account: an
+      // inactive or missing V1 account is refused before any career row is written.
+      if (!access.enabled && (access.reason === 'v1_account_inactive' || access.reason === 'v1_account_missing')) {
+        throw new BillingError('permission_denied', { reason: access.reason });
       }
       request.principal = await this.identities.principal(identity);
       return true;
     }
 
-    const duringDeletion = Boolean(this.reflector.getAllAndOverride<boolean>(DURING_DELETION, targets));
     // Export and erase act on career data that already exists, whatever the plan,
     // and never create an account just to export or erase it.
     if (this.reflector.getAllAndOverride<boolean>(WITHOUT_CAREER_ACCESS, targets)) {
