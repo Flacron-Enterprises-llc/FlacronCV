@@ -3,6 +3,7 @@ import { allowanceDeltas, CatalogSnapshot, includedUnitsFor, isV2Plan, planRank 
 import type { Db } from './db';
 import { BillingError } from './errors';
 import { addMonthsUtc, periodContaining } from './periods';
+import { personKey } from '../privacy/live-person';
 
 export type AccountStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete';
 
@@ -82,10 +83,13 @@ export async function openBalances(
   options: { regrant?: boolean } = {},
 ): Promise<void> {
   const planId = v2PlanOf(snapshot, account);
+  const carried = await carriedUsage(db, account);
+  // A unit's "used" in this period is what this account used, or what a deleted
+  // account of the same sign-in used in the same period, whichever is larger.
   const onConflict = options.regrant
     ? `DO UPDATE SET included_granted = EXCLUDED.included_granted,
          included_remaining = GREATEST(
-           EXCLUDED.included_granted - (usage_balances.included_granted - usage_balances.included_remaining), 0),
+           EXCLUDED.included_granted - GREATEST(usage_balances.included_granted - usage_balances.included_remaining, $7::int), 0),
          allowance_period_end = EXCLUDED.allowance_period_end,
          updated_at = now()`
     : 'DO NOTHING';
@@ -94,11 +98,37 @@ export async function openBalances(
       `INSERT INTO usage_balances
          (billing_account_id, workspace_id, unit, allowance_period_start, allowance_period_end,
           included_granted, included_remaining)
-       VALUES ($1, $2, $3, $4, $5, $6, $6)
+       VALUES ($1, $2, $3, $4, $5, $6, GREATEST($6::int - $7::int, 0))
        ON CONFLICT ON CONSTRAINT usage_balances_one_row_per_period ${onConflict}`,
-      [account.id, account.workspace_id, unit, account.allowance_period_start, account.allowance_period_end, included],
+      [account.id, account.workspace_id, unit, account.allowance_period_start, account.allowance_period_end, included, carried.get(unit) ?? 0],
     );
   }
+}
+
+/**
+ * Units a deleted account of the same sign-in already used in this exact
+ * allowance period (`allowance_carryovers`, written at erase time).
+ */
+async function carriedUsage(db: Db, account: AccountRow): Promise<Map<string, number>> {
+  if (!account.auth_user_id) return new Map();
+  const res = await db.query<{ unit: string; used: number }>(
+    `SELECT unit, used FROM allowance_carryovers WHERE person_key = $1 AND period_end = $2`,
+    [personKey(account.auth_user_id), account.allowance_period_end],
+  );
+  return new Map(res.rows.map((row) => [row.unit, row.used]));
+}
+
+/**
+ * The anchor of a deleted account of this sign-in whose allowance period has
+ * not ended yet, so a re-created account lands in the same period (and its
+ * carried usage applies) instead of starting a fresh one.
+ */
+export async function carriedAnchor(db: Db, authUserId: string, now: Date): Promise<Date | null> {
+  const res = await db.query<{ anchor: Date }>(
+    `SELECT anchor FROM allowance_carryovers WHERE person_key = $1 AND period_end > $2 ORDER BY period_end DESC LIMIT 1`,
+    [personKey(authUserId), now],
+  );
+  return res.rows[0]?.anchor ?? null;
 }
 
 /**

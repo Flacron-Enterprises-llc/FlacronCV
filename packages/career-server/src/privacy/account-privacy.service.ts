@@ -206,6 +206,8 @@ export class AccountPrivacyService {
   async finishInterruptedDeletions(limit = 20): Promise<{ finished: number; failed: number }> {
     const now = this.clock.now();
     await this.pool.query(`DELETE FROM deleted_sign_ins WHERE deleted_at < $1`, [new Date(now.getTime() - DELETED_SIGN_IN_MEMORY_MS)]);
+    // Carried usage is needed only until its allowance period ends.
+    await this.pool.query(`DELETE FROM allowance_carryovers WHERE period_end <= $1`, [now]);
     const due = await this.pool.query<{
       user_id: string;
       auth_user_id: string;
@@ -546,6 +548,18 @@ async function erasePersonalData(db: Db, owner: Principal, options: { removeUser
   await run(`DELETE FROM account_exports WHERE auth_user_id = $1`);
   await run(`UPDATE admin_audit SET actor_auth_user_id = 'deleted-account' WHERE actor_auth_user_id = $1`);
   if (!options.removeUser) return;
+
+  // Units already used in the current allowance period survive the account
+  // (one-way person key, one row per unit, pruned when the period ends), so
+  // re-creating the account cannot reset them. See allowance_carryovers.
+  await db.query(
+    `INSERT INTO allowance_carryovers (person_key, unit, period_end, anchor, used)
+     SELECT $1, b.unit, b.allowance_period_end, a.allowance_anchor, GREATEST(b.included_granted - b.included_remaining, 0)
+       FROM usage_balances b JOIN billing_accounts a ON a.id = b.billing_account_id
+      WHERE b.billing_account_id = $2 AND b.allowance_period_end > $3 AND b.candidate_auth_user_id IS NULL
+     ON CONFLICT (person_key, unit, period_end) DO UPDATE SET used = GREATEST(allowance_carryovers.used, EXCLUDED.used)`,
+    [personKey(uid), owner.billingAccountId, options.now],
+  );
 
   await run(`UPDATE usage_ledger SET candidate_auth_user_id = NULL WHERE candidate_auth_user_id = $1`);
   await run(`UPDATE usage_balances SET candidate_auth_user_id = NULL WHERE candidate_auth_user_id = $1`);

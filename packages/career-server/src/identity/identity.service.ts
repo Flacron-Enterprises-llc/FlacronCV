@@ -1,7 +1,7 @@
 import type { Pool } from 'pg';
 import { isLaunchLocale, LEGAL_VERSIONS, needsLegalAcceptance } from '@flacroncv/career-shared';
 import type { AcceptedLegalVersions, Locale } from '@flacroncv/career-shared';
-import { createFreeAccount } from '../billing/accounts';
+import { carriedAnchor, createFreeAccount } from '../billing/accounts';
 import type { Clock } from '../billing/billing.service';
 import { CatalogStore } from '../billing/catalog';
 import { withTransaction } from '../billing/db';
@@ -99,7 +99,8 @@ export class IdentityService {
       await createFreeAccount(db, {
         authUserId: identity.uid,
         locale: isLaunchLocale(localeHint) ? localeHint : 'en',
-        anchor: now,
+        // Same sign-in re-created inside an allowance period it already used: same period, no fresh grant.
+        anchor: (await carriedAnchor(db, identity.uid, now)) ?? now,
         catalog,
         now,
       });
