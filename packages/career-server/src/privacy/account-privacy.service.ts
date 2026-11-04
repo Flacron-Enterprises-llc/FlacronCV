@@ -12,6 +12,7 @@ import type { SignInDeleter } from '../identity/sign-in-deleter';
 import type { ObjectStorage } from '../storage/object-storage';
 import { personKey, requireLivePerson } from './live-person';
 import { personalExport } from './personal-export';
+import { erasureEmailOf, verifiedErasureEmail } from './erasure-email';
 
 /** A download link lasts one hour. The account is not deleted by an export. */
 export const EXPORT_LINK_TTL_MS = 60 * 60 * 1000;
@@ -158,8 +159,11 @@ export class AccountPrivacyService {
 
     // 1. Mark. The UPDATE waits for writers holding the live-person lock; after it, they refuse.
     await this.pool.query(
-      `UPDATE users SET deletion_requested_at = COALESCE(deletion_requested_at, $2) WHERE auth_user_id = $1`,
-      [owner.authUserId, this.clock.now()],
+      `UPDATE users SET deletion_requested_at = COALESCE(deletion_requested_at, $2),
+                        erasure_email = COALESCE($3, erasure_email)
+        WHERE auth_user_id = $1`,
+      // The verified address is recorded before anything is removed, so a resumed erase still finds invitations.
+      [owner.authUserId, this.clock.now(), verifiedErasureEmail(identity)],
     );
 
     // 2. Stored objects. Deleting a missing object succeeds, so a retry repeats this safely.
@@ -434,8 +438,9 @@ export async function remainingPersonalData(db: Db, owner: Principal, options: {
     const res = await db.query(`SELECT 1 FROM ${table} WHERE workspace_id = $1 LIMIT 1`, [owner.workspaceId]);
     if (res.rows.length > 0) left.push(`${table}.workspace_id`);
   }
-  if (owner.identity?.email) {
-    const res = await db.query(`SELECT 1 FROM business_candidates WHERE lower(email) = lower($1) LIMIT 1`, [owner.identity.email]);
+  const email = await erasureEmailOf(db, owner.authUserId, owner.identity);
+  if (email) {
+    const res = await db.query(`SELECT 1 FROM business_candidates WHERE lower(trim(email)) = $1 LIMIT 1`, [email]);
     if (res.rows.length > 0) left.push('business_candidates.email');
   }
   if (!options.final) return left;
@@ -449,7 +454,8 @@ export async function remainingPersonalData(db: Db, owner: Principal, options: {
 async function erasePersonalData(db: Db, owner: Principal, options: { removeUser: boolean; now: Date }): Promise<void> {
   const uid = owner.authUserId;
   const ws = owner.workspaceId;
-  const email = owner.identity?.email?.trim().toLowerCase() || null;
+  // Recorded before deletion started (or a verified token address); never an unverified one.
+  const email = await erasureEmailOf(db, owner.authUserId, owner.identity);
   const run = (sql: string, params: unknown[] = [uid]) => db.query(sql, params);
 
   await run(`DELETE FROM notification_deliveries WHERE alert_item_id IN (SELECT id FROM alert_items WHERE recipient_auth_user_id = $1)`);
@@ -485,7 +491,7 @@ async function erasePersonalData(db: Db, owner: Principal, options: { removeUser
 
   // Business records: the person's staff seats anywhere, invitations naming their address, and the owner's own workspace.
   const staffWhere = `auth_user_id = $1 OR workspace_id = $2`;
-  const candidateWhere = `workspace_id = $2 OR ($3::text IS NOT NULL AND lower(email) = $3)`;
+  const candidateWhere = `workspace_id = $2 OR ($3::text IS NOT NULL AND lower(trim(email)) = $3)`;
   await run(
     `DELETE FROM business_assignments
       WHERE staff_id IN (SELECT id FROM business_staff WHERE ${staffWhere})
@@ -493,7 +499,7 @@ async function erasePersonalData(db: Db, owner: Principal, options: { removeUser
     [uid, ws, email],
   );
   await run(`DELETE FROM business_staff WHERE ${staffWhere}`, [uid, ws]);
-  await run(`DELETE FROM business_candidates WHERE workspace_id = $1 OR ($2::text IS NOT NULL AND lower(email) = $2)`, [ws, email]);
+  await run(`DELETE FROM business_candidates WHERE workspace_id = $1 OR ($2::text IS NOT NULL AND lower(trim(email)) = $2)`, [ws, email]);
   await run(`DELETE FROM api_keys WHERE workspace_id = $1`, [ws]);
   await run(`DELETE FROM white_label_configs WHERE workspace_id = $1`, [ws]);
 

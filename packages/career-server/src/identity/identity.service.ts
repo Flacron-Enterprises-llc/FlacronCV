@@ -8,6 +8,7 @@ import { withTransaction } from '../billing/db';
 import type { Db } from '../billing/db';
 import { BillingError } from '../billing/errors';
 import type { VerifiedIdentity } from './id-token';
+import { rememberErasureEmail, verifiedErasureEmail } from '../privacy/erasure-email';
 
 /** The caller on every authenticated request. Built from the verified token and our rows. */
 export interface Principal {
@@ -57,6 +58,8 @@ const systemClock: Clock = { now: () => new Date() };
  */
 export class IdentityService {
   private readonly catalogs = new CatalogStore();
+  /** uid -> verified address already recorded by this process, so most requests skip the write. */
+  private readonly recordedEmail = new Map<string, string>();
 
   constructor(
     private readonly pool: Pool,
@@ -80,6 +83,7 @@ export class IdentityService {
       if (found.deletion_requested_at && !options.allowPendingDeletion) {
         throw new BillingError('permission_denied', { reason: 'account_deletion_pending' });
       }
+      await this.recordErasureEmail(identity);
       return toPrincipal(found, identity);
     }
 
@@ -103,7 +107,20 @@ export class IdentityService {
       if (!created) throw new Error('Account creation did not produce a principal');
       return created;
     });
+    await this.recordErasureEmail(identity);
     return toPrincipal(row, identity);
+  }
+
+  /** See privacy/erasure-email.ts. Best effort: a failed write never blocks the request. */
+  private async recordErasureEmail(identity: VerifiedIdentity): Promise<void> {
+    const email = verifiedErasureEmail(identity);
+    if (!email || this.recordedEmail.get(identity.uid) === email) return;
+    try {
+      await rememberErasureEmail(this.pool, identity.uid, identity);
+      this.recordedEmail.set(identity.uid, email);
+    } catch {
+      /* retried on a later request */
+    }
   }
 
   /**

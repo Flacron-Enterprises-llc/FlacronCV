@@ -15,6 +15,7 @@ import {
 import type { FormFillPayload, ScenarioOptionInput } from '@flacroncv/career-shared';
 import { readAccount, v2PlanOf } from '../billing/accounts';
 import type { AccountRow } from '../billing/accounts';
+import { normalizeInviteEmail } from '../privacy/erasure-email';
 import type { Clock } from '../billing/billing.service';
 import { CatalogStore } from '../billing/catalog';
 import type { CatalogSnapshot } from '../billing/catalog';
@@ -321,8 +322,8 @@ export class RemainingService {
   async inviteCandidate(owner: ProfileOwner, email: string, consent: boolean): Promise<{ id: string }> {
     const { snapshot, account } = await this.gate(owner, 'activeCandidates');
     if (!consent) throw new BillingError('validation_error', { field: 'consent', reason: 'required' });
-    const clean = email.trim().toLowerCase();
-    if (!clean.includes('@')) throw new BillingError('validation_error', { field: 'email', reason: 'invalid' });
+    const clean = normalizeInviteEmail(email);
+    if (!clean) throw new BillingError('validation_error', { field: 'email', reason: 'invalid' });
     const used = await this.pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM business_candidates WHERE workspace_id = $1`, [owner.workspaceId]);
     checkCapacity(snapshot, account, 'activeCandidates', used.rows[0].n, 1);
     const inserted = await this.pool.query<{ id: string }>(
