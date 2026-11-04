@@ -6,6 +6,8 @@ Branch `integration/v2-features`, 2 Nov 2026. Requirement IDs from `flacroncv-v2
 
 **Platforms.** Web = V1 Next.js app (`apps/web`) + career API. Mobile = V1 Expo app (`apps/mobile`, iOS + Android, English only, light theme). Mobile career screens exist behind `EXPO_PUBLIC_CAREER_ENABLED` (default **off**, see `V2_INTEGRATION.md` §0.5). **No mobile row was run on a device or emulator** (none available here): mobile "A" means implemented, type-checked, unit-tested and included in a locally built Android JS bundle; on-device checks are listed at the end.
 
+**Fifth pass (4 Nov 2026).** Data-safety and reliability fixes verified by tests (see `V2_INTEGRATION.md` §6): allowance cannot be reset by delete/re-create; V1 status checked fresh before operator routes, provisioning and writes; background erasure removes invitations by a recorded verified address; AI reservations held by a renewed lease; unsaved-edit guard on links, Back and switches (web) and back navigation (mobile code); closure sweep batches with backoff; notification outbox. The letter editor and exports were verified in the browser with a labelled fixture letter (not AI generation).
+
 **Preconditions for any career row.** Career build switch on; the account has a career entitlement (purchased add-on, `CAREER_PLAN_MAP`, or the labelled local fixture); phase 2–4 operator switches on (the menu and the mobile overview now hide switched-off areas).
 
 | ID | Requirement | Existing V1 | V2 capability | Web | Mobile | Required implementation (remaining) | Verification | External blocker |
@@ -20,11 +22,11 @@ Branch `integration/v2-features`, 2 Nov 2026. Requirement IDs from `flacroncv-v2
 | CV02-03 | PDF/DOCX export | V1 export | export | A | A (share sheet, temp file deleted) | — | live PDF/DOCX inspected (pass 2); mobile file tests | — |
 | — | Transfer career draft to V1 CV/letter editor | V1 editors | one-way copy | A | N/A on mobile (done on web; V1 editor stays authoritative) | — | `to-v1.test.ts`; browser copy flow (1 click → 1 V1 CV) | — |
 | CV03/CV06 | Readability, match analysis, fit reasons | V1 ATS check | matching | A | M (web only) | — | e2e `matches` | — |
-| CV04-01 | Letters, bios, outreach; claim checks | V1 cover letters | writing | P (generation) / A (edit, export) | A (edit, save, export, share) | — | e2e `writing` | OpenAI key |
+| CV04-01 | Letters, bios, outreach; claim checks | V1 cover letters | writing | P (generation) / A (edit, save, conflict, export — browser-verified with a fixture letter) | A (edit, save, export, share) | — | e2e `writing` | OpenAI key |
 | CV05-01 | Opportunities (paste) | — | opportunities | A | A (read-only list, "no live feed") | Mobile paste | e2e `opportunities` | — |
 | X1 | Licensed job feeds | — | parsers only | M | M | Live feed loader + licence | — | Licence + keys |
 | CV07-01 | Saved searches, alerts, quiet hours | — | alerts | A (in-app; saved searches managed; locations/companies UI missing) | M | Web: locations/followed companies UI; mobile screen | e2e `alerts` | — |
-| X3 | Off-box alert delivery (email/push) | V1 SES, V1 Expo push for job reminders | SES mailer | P (email) / M (push) | M (career push) | Career push bridge to V1 push tokens; Telegram sender | e2e `alerts` (in-app ledger) | SES role; push creds |
+| X3 | Off-box alert delivery (email/push) | V1 SES, V1 Expo push for job reminders | SES mailer + delivery outbox (claimed, bounded retries, uncertain state) | P (email) / M (push) | M (career push) | Career push bridge to V1 push tokens; Telegram sender | e2e `alerts` (in-app ledger) | SES role; push creds |
 | CV08-01 | Application tracking | **V1 Job Tracker** | V2 tracker | A (V1 `/jobs`, unchanged) | A (V1 Jobs, unchanged) | — (merged; no duplicate tracker) | `no-record-sync.e2e-spec.ts` | Decision D8 (pipeline fields) |
 | CV19-01 | Outcome analytics | V1 jobs | learning loop | A | M (web only) | — | e2e `v1-bridge`; smoke (50 % sample) | — |
 | CV09-01 | Text interviews, STAR | V1 interview prep | interviews | P | M (web only) | — | e2e `interviews` | OpenAI key |

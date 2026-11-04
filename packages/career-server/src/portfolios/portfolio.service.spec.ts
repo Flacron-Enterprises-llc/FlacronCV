@@ -63,6 +63,8 @@ describe('PortfolioService (CV16)', () => {
       description: 'A small compiler.',
       attachmentUrl: 'https://example.test/secret.pdf',
       attachmentName: 'secret.pdf',
+      // Only evidence marked "share on portfolio" is ever public (see the public-view filter).
+      isPortfolioShared: true,
     });
     const page = await portfolios.create(owner, { title: 'Ada page', displayName: 'Ada Lovelace', headline: 'Selected work' });
     const slug = page.slug;

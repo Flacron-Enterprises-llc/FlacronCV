@@ -33,4 +33,6 @@ To try it on a device: see "Mobile" in `C:\Users\win 11\FlacronCV-integration-lo
 - **Awaiting mobile device testing:** everything in the app; see `docs/MOBILE_DEVICE_CHECKLIST.md`.
 - **Awaiting hosting or publication:** the career service (database, API, worker), app-store builds, the browser extension.
 
+Fixture letter for review: as the career account, Career tools → Grounded drafts shows "FIXTURE – Fictional cover letter (not AI-generated)". It is a labelled test letter, not an AI result. Try: edit it and click a menu link or press Back (you are asked first); open it in two tabs and save in both (the second save is refused and keeps its text); download PDF, DOCX and text (named after the letter).
+
 Editor behaviour to notice: unsaved letter text is marked and protected; if the same document was saved in another tab, the save is refused and your text stays on screen; changing the letter layout keeps your typed text; a retried paid action after a lost connection never charges twice.
