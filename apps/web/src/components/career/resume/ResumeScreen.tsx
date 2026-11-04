@@ -750,6 +750,8 @@ export function ResumeScreen({
                     <Input
                       label={tProfile(`types.${section.factType}`)}
                       name={line.factId}
+                      // Direction from the content: an English line in the Arabic/Urdu interface keeps its punctuation in place.
+                      dir="auto"
                       value={drafts[line.factId] ?? line.text}
                       onChange={(event) => {
                         setSaveState('idle');
@@ -898,6 +900,7 @@ export function ResumeScreen({
                 <label className="text-sm font-semibold text-career-ink" htmlFor="writing-draft">{t('writing_edit')}</label>
                 <textarea
                   id="writing-draft"
+                  dir="auto"
                   className="min-h-32 w-full min-w-0 rounded-md border border-career-line bg-white p-3 text-sm text-career-ink dark:bg-career-surface"
                   value={documentDraft}
                   onChange={(event) => {
