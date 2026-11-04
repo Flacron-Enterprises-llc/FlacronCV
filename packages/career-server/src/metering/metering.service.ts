@@ -228,11 +228,11 @@ export class MeteringService {
       result = await withTransaction(this.pool, async (db) => {
         // Same lock order as the sweep (account, then job), so the two serialise instead of deadlocking.
         await lockAccount(db, ledger.billing_account_id);
-        await this.requireLease(db, jobId, leaseToken);
         // A provider call can outlast an account deletion; nothing is saved for a deleted or deleting person.
         if (!(await isLiveSpender(db, op.spender))) {
           throw new BillingError('permission_denied', { reason: 'account_deleted' });
         }
+        await this.requireLease(db, jobId, leaseToken);
         const saved = await op.save(db, output);
         await commit(db, ledger.billing_account_id, ledger.id, this.clock.now());
         await db.query(
@@ -355,8 +355,14 @@ export class MeteringService {
           [jobId],
         );
         const row = job.rows[0];
+        // An erase removed the job row while the call ran: this process is the
+        // only one left that knows the reservation, so it releases it.
+        if (!row) {
+          await release(db, ledger.billing_account_id, ledger.id, this.clock.now());
+          return true;
+        }
         // Only the lease holder closes a running job; if the sweep already did, report what it left.
-        if (row && row.status === 'running' && (row.lease_token === null || row.lease_token === leaseToken)) {
+        if (row.status === 'running' && (row.lease_token === null || row.lease_token === leaseToken)) {
           await release(db, ledger.billing_account_id, ledger.id, this.clock.now());
           await db.query(
             `UPDATE ai_jobs SET status = 'failed', error_code = $2, finished_at = $3 WHERE id = $1`,

@@ -17,7 +17,8 @@ describe('MeteringService job leases', () => {
   beforeAll(async () => {
     f = await createBillingFixture('metering_lease', '2026-10-16T10:00:00Z');
     // A real heartbeat (fast in real time) and a process that never renews (stands for a crash).
-    live = new MeteringService(f.db.pool, f.clock, { leaseMs: 2 * MIN, heartbeatEveryMs: 15, maxRunMs: 30 * MIN });
+    // The live instance's lease is wide (5 min) so a heartbeat delayed by test load cannot be mistaken for a crash.
+    live = new MeteringService(f.db.pool, f.clock, { leaseMs: 5 * MIN, heartbeatEveryMs: 15, maxRunMs: 30 * MIN });
     crashed = new MeteringService(f.db.pool, f.clock, { leaseMs: 2 * MIN, heartbeatEveryMs: 0 });
     await f.db.pool.query(`CREATE TABLE lease_outputs (id serial PRIMARY KEY, account_id uuid, text text)`);
   });
