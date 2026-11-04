@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import type { Pool } from 'pg';
 import {
   ALLOWANCES,
@@ -38,19 +39,51 @@ export interface ChannelDelivery {
   recipientAuthUserId: string;
   alertItemId: string;
   title: string;
+  /**
+   * Stable per logical message (outbox row). A provider that supports
+   * idempotency must receive it as its idempotency key, so a retry of the
+   * same message cannot be delivered twice.
+   */
+  messageId: string;
 }
 
-/** Records a delivery. It does not call a network. */
+/**
+ * Sends one message. Throw `NotificationSendError('not_sent')` when the
+ * provider definitely did not accept it; any other failure (timeout,
+ * connection reset after the request was written) counts as `uncertain`.
+ */
 export interface AlertNotifier {
+  /** True only if the provider de-duplicates by `messageId`; then an uncertain send may be retried. */
+  readonly idempotent?: boolean;
   deliver(item: ChannelDelivery): Promise<void>;
 }
 
+export class NotificationSendError extends Error {
+  constructor(readonly outcome: 'not_sent' | 'uncertain', readonly reason = 'provider_error') {
+    super(`notification_${outcome}`);
+    this.name = 'NotificationSendError';
+  }
+}
+
+/** Records a delivery in memory. It does not call a network. */
 export class RecordingAlertNotifier implements AlertNotifier {
   readonly delivered: ChannelDelivery[] = [];
+  readonly idempotent: boolean = false;
 
   async deliver(item: ChannelDelivery): Promise<void> {
     this.delivered.push(item);
   }
+}
+
+/** Outbox limits. A claim older than this is considered abandoned (crash). */
+export const DELIVERY_CLAIM_MS = 5 * 60_000;
+export const DELIVERY_MAX_ATTEMPTS = 5;
+const deliveryBackoffMs = (attempts: number) => Math.min(2 ** attempts * 60_000, 60 * 60_000);
+
+type SendOutcome = 'sent' | 'retry' | 'failed' | 'uncertain';
+
+function sendOutcomeOf(error: unknown): 'not_sent' | 'uncertain' {
+  return error instanceof NotificationSendError ? error.outcome : 'uncertain';
 }
 
 export interface SavedSearchView {
@@ -610,39 +643,77 @@ export class AlertService {
     );
     for (const item of items.rows) {
       for (const channel of channels) {
-        const existing = await this.pool.query<{ status: string }>(
-          `SELECT status FROM notification_deliveries WHERE alert_item_id = $1 AND channel = $2`,
-          [item.id, channel],
+        // The outbox row exists before any send: one row per (item, channel), unique.
+        await this.pool.query(
+          `INSERT INTO notification_deliveries (alert_item_id, channel, status)
+           SELECT $1, $2, $3 WHERE ${livePersonCondition(4)}
+           ON CONFLICT (alert_item_id, channel) DO NOTHING`,
+          [item.id, channel, quiet ? 'held' : 'pending', person.authUserId],
         );
-        const status = existing.rows[0]?.status;
-        if (status === 'sent') continue;
-        if (quiet) {
-          if (!status) {
-            await this.pool.query(
-              `INSERT INTO notification_deliveries (alert_item_id, channel, status) VALUES ($1, $2, 'held')`,
-              [item.id, channel],
-            );
-          }
-          continue;
-        }
-        await this.notifier.deliver({
-          channel,
-          recipientAuthUserId: person.authUserId,
-          alertItemId: item.id,
-          title: item.title,
-        });
-        if (status === 'held') {
-          await this.pool.query(
-            `UPDATE notification_deliveries SET status = 'sent', sent_at = $3 WHERE alert_item_id = $1 AND channel = $2`,
-            [item.id, channel, this.clock.now()],
-          );
-        } else {
-          await this.pool.query(
-            `INSERT INTO notification_deliveries (alert_item_id, channel, status, sent_at) VALUES ($1, $2, 'sent', $3)`,
-            [item.id, channel, this.clock.now()],
-          );
-        }
+        if (quiet) continue;
+        await this.sendDelivery(person, item, channel);
       }
+    }
+  }
+
+  /**
+   * Claim, send, acknowledge. The claim is a single UPDATE, so two workers
+   * cannot both own a row. A claim left by a crashed worker (`sending`, past
+   * `claimed_until`) is resent only by an idempotent notifier (same
+   * `messageId`); otherwise it becomes `uncertain`, never silently `sent`.
+   */
+  private async sendDelivery(person: Person, item: { id: string; title: string }, channel: AlertChannel): Promise<SendOutcome | null> {
+    const now = this.clock.now();
+    const token = randomUUID();
+    if (this.notifier.idempotent !== true) {
+      await this.pool.query(
+        `UPDATE notification_deliveries SET status = 'uncertain', claim_token = NULL, last_error = 'interrupted_send'
+          WHERE alert_item_id = $1 AND channel = $2 AND status = 'sending' AND claimed_until <= $3`,
+        [item.id, channel, now],
+      );
+    }
+    const claimed = await this.pool.query<{ message_id: string; attempts: number }>(
+      `UPDATE notification_deliveries
+          SET status = 'sending', claim_token = $3, claimed_until = $4, attempts = attempts + 1
+        WHERE alert_item_id = $1 AND channel = $2 AND attempts < $5 AND ${livePersonCondition(6)}
+          AND (
+            (status IN ('held', 'pending') AND (claimed_until IS NULL OR claimed_until <= $7))
+            OR (status = 'sending' AND claimed_until <= $7 AND $8::boolean)
+            OR (status = 'uncertain' AND $8::boolean)
+          )
+        RETURNING message_id, attempts`,
+      [item.id, channel, token, new Date(now.getTime() + DELIVERY_CLAIM_MS), DELIVERY_MAX_ATTEMPTS, person.authUserId, now, this.notifier.idempotent === true],
+    );
+    const row = claimed.rows[0];
+    if (!row) return null;
+    const outcome = await this.attemptSend(
+      { channel, recipientAuthUserId: person.authUserId, alertItemId: item.id, title: item.title, messageId: row.message_id },
+      row.attempts,
+    );
+    const finished = this.clock.now();
+    const status = outcome === 'retry' ? 'pending' : outcome;
+    await this.pool.query(
+      `UPDATE notification_deliveries
+          SET status = $4,
+              sent_at = CASE WHEN $4 = 'sent' THEN $5::timestamptz ELSE sent_at END,
+              claim_token = NULL,
+              claimed_until = CASE WHEN $4 = 'pending' THEN $6::timestamptz ELSE NULL END,
+              last_error = CASE WHEN $4 = 'sent' THEN NULL ELSE $7 END
+        WHERE alert_item_id = $1 AND channel = $2 AND claim_token = $3`,
+      [item.id, channel, token, status, finished, new Date(finished.getTime() + deliveryBackoffMs(row.attempts)), outcome],
+    );
+    return outcome;
+  }
+
+  /** One provider call. A person whose deletion started is never sent to. */
+  private async attemptSend(delivery: ChannelDelivery, attempts: number): Promise<SendOutcome> {
+    if (!(await this.isLive(delivery.recipientAuthUserId))) return 'failed';
+    try {
+      await this.notifier.deliver(delivery);
+      return 'sent';
+    } catch (error) {
+      if (sendOutcomeOf(error) === 'uncertain') return 'uncertain';
+      return attempts >= DELIVERY_MAX_ATTEMPTS ? 'failed' : 'retry';
     }
   }
 
@@ -670,33 +741,69 @@ export class AlertService {
     );
     if (items.rows.length === 0) return false;
     const period = digestPeriodStart(this.clock.now(), settings.view.digest);
-    // No digest row or mail for a person who is deleted or being deleted.
-    const digest = await this.pool.query<{ id: string }>(
-      `INSERT INTO digests (recipient_auth_user_id, period_start, channel)
-       SELECT $1, $2, 'email' WHERE ${livePersonCondition(1)}
-       ON CONFLICT (recipient_auth_user_id, period_start, channel) DO NOTHING
-       RETURNING id`,
+    const now = this.clock.now();
+    // The digest row is the outbox entry: one per person, period and channel. No row for a person being deleted.
+    await this.pool.query(
+      `INSERT INTO digests (recipient_auth_user_id, period_start, channel, status, sent_at)
+       SELECT $1, $2, 'email', 'pending', NULL WHERE ${livePersonCondition(1)}
+       ON CONFLICT (recipient_auth_user_id, period_start, channel) DO NOTHING`,
       [person.authUserId, period],
     );
-    const digestId = digest.rows[0]?.id;
-    if (!digestId) return false;
-    await this.notifier.deliver({
-      channel: 'email',
-      recipientAuthUserId: person.authUserId,
-      alertItemId: digestId,
-      title: `digest:${items.rows.length}`,
-    });
+    const idempotent = this.notifier.idempotent === true;
+    if (!idempotent) {
+      await this.pool.query(
+        `UPDATE digests SET status = 'uncertain', claim_token = NULL, last_error = 'interrupted_send'
+          WHERE recipient_auth_user_id = $1 AND period_start = $2 AND channel = 'email' AND status = 'sending' AND claimed_until <= $3`,
+        [person.authUserId, period, now],
+      );
+    }
+    const token = randomUUID();
+    const claimed = await this.pool.query<{ id: string; message_id: string; attempts: number }>(
+      `UPDATE digests SET status = 'sending', claim_token = $3, claimed_until = $4, attempts = attempts + 1
+        WHERE recipient_auth_user_id = $1 AND period_start = $2 AND channel = 'email' AND attempts < $5 AND ${livePersonCondition(1)}
+          AND (
+            (status = 'pending' AND (claimed_until IS NULL OR claimed_until <= $6))
+            OR (status IN ('sending', 'uncertain') AND (claimed_until IS NULL OR claimed_until <= $6) AND $7::boolean)
+          )
+        RETURNING id, message_id, attempts`,
+      [person.authUserId, period, token, new Date(now.getTime() + DELIVERY_CLAIM_MS), DELIVERY_MAX_ATTEMPTS, now, idempotent],
+    );
+    const digest = claimed.rows[0];
+    if (!digest) return false;
+    const outcome = await this.attemptSend(
+      {
+        channel: 'email',
+        recipientAuthUserId: person.authUserId,
+        alertItemId: digest.id,
+        title: `digest:${items.rows.length}`,
+        messageId: digest.message_id,
+      },
+      digest.attempts,
+    );
+    const finished = this.clock.now();
+    const status = outcome === 'retry' ? 'pending' : outcome;
+    const acked = await this.pool.query(
+      `UPDATE digests
+          SET status = $3,
+              sent_at = CASE WHEN $3 = 'sent' THEN $4::timestamptz ELSE NULL END,
+              claim_token = NULL,
+              claimed_until = CASE WHEN $3 = 'pending' THEN $5::timestamptz ELSE NULL END,
+              last_error = CASE WHEN $3 = 'sent' THEN NULL ELSE $6 END
+        WHERE id = $1 AND claim_token = $2`,
+      [digest.id, token, status, finished, new Date(finished.getTime() + deliveryBackoffMs(digest.attempts)), outcome],
+    );
+    if (outcome !== 'sent' || acked.rowCount === 0) return false;
     for (const item of items.rows) {
       await this.pool.query(
         `INSERT INTO notification_deliveries (alert_item_id, channel, status, sent_at)
-         VALUES ($1, 'email', 'sent', $2)
+         SELECT $1, 'email', 'sent', $2 WHERE ${livePersonCondition(3)}
          ON CONFLICT (alert_item_id, channel) DO NOTHING`,
-        [item.id, this.clock.now()],
+        [item.id, finished, person.authUserId],
       );
     }
     await this.pool.query(`UPDATE alert_settings SET last_digest_at = $2 WHERE candidate_auth_user_id = $1`, [
       person.authUserId,
-      this.clock.now(),
+      finished,
     ]);
     return true;
   }
