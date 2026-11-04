@@ -3463,6 +3463,12 @@
       "in_addition": "in addition to your current plan",
       "review_addon": "Charged in addition to your current FlacronCV plan ({v1Plan}), which is not changed or cancelled.",
       "review_cancel": "Cancelling the career plan later ends only the career tools; your FlacronCV plan continues."
+    },
+    "unsaved": {
+      "title": "Leave without saving?",
+      "body": "You have changes that are not saved. If you leave now they are lost.",
+      "stay": "Stay on this page",
+      "leave": "Leave without saving"
     }
   },
   "home_hero": {

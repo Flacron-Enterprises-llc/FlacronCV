@@ -14,6 +14,7 @@ import { useRouter } from '@/i18n/routing';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { createV1CoverLetter, createV1Cv, PartialV1CopyError, planV1Cv } from '@/lib/career/to-v1';
 import { ResumeScreen } from '../resume/ResumeScreen';
+import { confirmLeaveIfUnsaved } from '../ui/UnsavedChangesGuard';
 
 /** V1 `cv_builder.*` keys for section titles, so the copy reads like a CV made in V1. */
 const SECTION_TITLE_KEY: Record<SharedCvSectionType, string> = {
@@ -79,7 +80,8 @@ export function DocumentsScreen(props: { api: ApiClient; user: SignedInUser | nu
       const cvId = await createV1Cv(v1Api, plan, partial.current[resume.id]);
       delete partial.current[resume.id];
       toast.success(t('copied_cv'));
-      router.push(`/cv/${cvId}`);
+      // The copy is made; opening it leaves the studio, so unsaved studio edits are asked about first.
+      if (await confirmLeaveIfUnsaved()) router.push(`/cv/${cvId}`);
     } catch (error) {
       if (error instanceof PartialV1CopyError) partial.current[resume.id] = error.v1Id;
       toast.error(formatApiError(error instanceof PartialV1CopyError ? error.cause : error, t('copy_failed')));
@@ -99,7 +101,7 @@ export function DocumentsScreen(props: { api: ApiClient; user: SignedInUser | nu
       const id = await createV1CoverLetter(v1Api, { title: latest.title, body: latest.body }, partial.current[letter.id]);
       delete partial.current[letter.id];
       toast.success(t('copied_letter'));
-      router.push(`/cover-letters/${id}`);
+      if (await confirmLeaveIfUnsaved()) router.push(`/cover-letters/${id}`);
     } catch (error) {
       if (error instanceof PartialV1CopyError) partial.current[letter.id] = error.v1Id;
       toast.error(formatApiError(error instanceof PartialV1CopyError ? error.cause : error, t('copy_failed')));

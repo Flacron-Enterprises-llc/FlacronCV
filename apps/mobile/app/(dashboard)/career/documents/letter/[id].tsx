@@ -11,6 +11,7 @@ import { careerApi } from '../../../../../src/lib/career-api';
 import { shareCareerFile } from '../../../../../src/lib/career-files';
 import { careerErrorMessage } from '../../../../../src/lib/career-view';
 import { careerDrafts } from '../../../../../src/store/career-drafts';
+import { useLeaveGuard } from '../../../../../src/hooks/useLeaveGuard';
 import { useAuthStore } from '../../../../../src/store/auth-store';
 import { colors } from '../../../../../src/theme/colors';
 
@@ -28,6 +29,7 @@ export default function CareerLetterScreen() {
   const saved = doc.data?.body ?? '';
   const text = body ?? saved;
   const dirty = body !== null && body !== saved;
+  useLeaveGuard(dirty);
 
   useEffect(() => {
     careerDrafts.set(uid, `writing:${id}`, dirty && body !== null ? { body } : {});

@@ -30,6 +30,7 @@ import {
 } from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { profileLoadFailure } from '@/lib/career/profile-load';
+import { useUnsavedChangesGuard } from '@/components/career/ui/UnsavedChangesGuard';
 
 type Problem = 'failed' | 'quota' | 'capacity' | 'upgrade' | 'missing' | 'clarify' | 'unusable' | 'conflict' | 'download' | null;
 
@@ -212,15 +213,8 @@ export function ResumeScreen({
 
   const letterDirty = Boolean(writingDoc && documentDraft !== writingDoc.body);
 
-  useEffect(() => {
-    if (!dirty && !letterDirty) return undefined;
-    const onLeave = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-    window.addEventListener('beforeunload', onLeave);
-    return () => window.removeEventListener('beforeunload', onLeave);
-  }, [dirty, letterDirty]);
+  // Tab close/reload, internal links and menus, browser Back, and document switches (see UnsavedChangesGuard).
+  const guard = useUnsavedChangesGuard(dirty || letterDirty);
 
   if (!ready || load === 'loading') return <LoadingState label={t('loading')} />;
   if (load === 'permission') return <PermissionDeniedState title={t('permission_title')} body={t('permission_body')} />;
@@ -282,7 +276,7 @@ export function ResumeScreen({
   }
 
   async function openResume(id: string) {
-    if (dirty && typeof window !== 'undefined' && !window.confirm(t('leave_unsaved'))) return;
+    if (dirty && !(await guard.confirm())) return;
     setPending(true);
     try {
       const full = await api.resume(id);
@@ -394,7 +388,7 @@ export function ResumeScreen({
   }
 
   async function writeDocument() {
-    if (letterDirty && typeof window !== 'undefined' && !window.confirm(t('leave_unsaved_letter'))) return;
+    if (letterDirty && !(await guard.confirm())) return;
     setPending(true);
     setProblem(null);
     try {
@@ -464,7 +458,7 @@ export function ResumeScreen({
   }
 
   async function loadDrafts() {
-    if (letterDirty && typeof window !== 'undefined' && !window.confirm(t('leave_unsaved_letter'))) return;
+    if (letterDirty && !(await guard.confirm())) return;
     setProblem(null);
     setLetterSave('idle');
     try {
@@ -626,6 +620,7 @@ export function ResumeScreen({
 
   return (
     <div className="flex flex-col gap-4">
+      {guard.dialog}
       <div>
         <h1 className="text-balance text-2xl font-bold text-career-ink">{t('title')}</h1>
         <p className="mt-2 max-w-2xl text-pretty text-sm text-career-muted">{t('studio_lede')}</p>

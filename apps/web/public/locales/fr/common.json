@@ -3463,6 +3463,12 @@
       "in_addition": "en plus de votre forfait actuel",
       "review_addon": "Facturé en plus de votre forfait FlacronCV actuel ({v1Plan}), qui n’est ni modifié ni résilié.",
       "review_cancel": "Si vous résiliez plus tard le forfait carrière, seuls les outils de carrière s’arrêtent ; votre forfait FlacronCV continue."
+    },
+    "unsaved": {
+      "title": "Quitter sans enregistrer ?",
+      "body": "Vous avez des modifications non enregistrées. Si vous quittez maintenant, elles seront perdues.",
+      "stay": "Rester sur cette page",
+      "leave": "Quitter sans enregistrer"
     }
   },
   "home_hero": {

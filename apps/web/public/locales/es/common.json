@@ -3463,6 +3463,12 @@
       "in_addition": "además de tu plan actual",
       "review_addon": "Se cobra además de tu plan actual de FlacronCV ({v1Plan}), que no se modifica ni se cancela.",
       "review_cancel": "Si más adelante cancelas el plan profesional, solo terminan las herramientas profesionales; tu plan de FlacronCV continúa."
+    },
+    "unsaved": {
+      "title": "¿Salir sin guardar?",
+      "body": "Tienes cambios sin guardar. Si sales ahora, se perderán.",
+      "stay": "Quedarme en esta página",
+      "leave": "Salir sin guardar"
     }
   },
   "home_hero": {

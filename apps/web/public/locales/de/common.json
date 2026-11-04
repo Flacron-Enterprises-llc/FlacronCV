@@ -3463,6 +3463,12 @@
       "in_addition": "zusätzlich zu deinem aktuellen Tarif",
       "review_addon": "Wird zusätzlich zu deinem aktuellen FlacronCV-Tarif ({v1Plan}) berechnet, der weder geändert noch gekündigt wird.",
       "review_cancel": "Wenn du den Karrieretarif später kündigst, enden nur die Karrieretools; dein FlacronCV-Tarif läuft weiter."
+    },
+    "unsaved": {
+      "title": "Ohne Speichern verlassen?",
+      "body": "Du hast ungespeicherte Änderungen. Wenn du die Seite jetzt verlässt, gehen sie verloren.",
+      "stay": "Auf dieser Seite bleiben",
+      "leave": "Ohne Speichern verlassen"
     }
   },
   "home_hero": {
