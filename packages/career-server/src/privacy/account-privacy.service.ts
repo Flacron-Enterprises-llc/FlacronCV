@@ -30,6 +30,29 @@ export const INTERRUPTED_DELETION_AFTER_MS = 15 * 60_000;
 export const DELETED_SIGN_IN_MEMORY_MS = 2 * 60 * 60_000;
 /** V1 integration: how often each career user is re-checked for a closed V1 account. */
 export const V1_CLOSURE_RECHECK_MS = 24 * 60 * 60_000;
+/** A V1 record that could not be read is looked at again after this. */
+export const V1_CLOSURE_READ_RETRY_MS = 60 * 60_000;
+
+export interface ClosureSweepOptions {
+  /** People per database read. */
+  batchSize: number;
+  /** People checked or erased at the same time (each erase holds a few short transactions). */
+  concurrency: number;
+  /** Stop starting new batches after this much wall time. */
+  timeBudgetMs: number;
+  maxBatches: number;
+}
+
+export const DEFAULT_CLOSURE_SWEEP: ClosureSweepOptions = { batchSize: 50, concurrency: 4, timeBudgetMs: 60_000, maxBatches: 100 };
+
+export interface ClosureSweepResult {
+  checked: number;
+  erased: number;
+  failed: number;
+  /** People still due after this run, and how overdue the oldest is (counts only). */
+  backlog: number;
+  oldestDueMs: number;
+}
 
 /** What `deleteAccount` keeps, by table: accounting rows with the sign-in id cleared (OPEN_DECISIONS 21). */
 export const RETAINED_AFTER_DELETION = [
@@ -258,11 +281,58 @@ export class AccountPrivacyService {
    * soft delete or deactivation). An unknown or missing V1 record answers
    * false, so a read gap can never erase anyone. Safe to run from several
    * processes: each erase runs under the account's lock.
+   *
+   * Throughput: batches of `batchSize`, `concurrency` people at a time, until
+   * nothing is due or `timeBudgetMs` is spent. A person whose V1 record cannot
+   * be read, or whose erase fails, is stamped with a short backoff so they
+   * move behind everyone else instead of blocking the front of the queue.
+   * A number instead of options keeps the old meaning (one batch of that size).
    */
   async eraseClosedV1Accounts(
     isClosed: (authUserId: string) => Promise<boolean>,
-    limit = 20,
-  ): Promise<{ checked: number; erased: number; failed: number }> {
+    options: number | Partial<ClosureSweepOptions> = {},
+  ): Promise<ClosureSweepResult> {
+    const opts: ClosureSweepOptions =
+      typeof options === 'number' ? { ...DEFAULT_CLOSURE_SWEEP, batchSize: options, maxBatches: 1 } : { ...DEFAULT_CLOSURE_SWEEP, ...options };
+    const started = Date.now();
+    const totals = { checked: 0, erased: 0, failed: 0 };
+    for (let batch = 0; batch < opts.maxBatches; batch += 1) {
+      const rows = await this.dueForClosureCheck(opts.batchSize);
+      if (rows.length === 0) break;
+      let next = 0;
+      const workers = Array.from({ length: Math.max(1, Math.min(opts.concurrency, rows.length)) }, async () => {
+        while (next < rows.length) {
+          const row = rows[next];
+          next += 1;
+          const outcome = await this.checkClosedAccount(row, isClosed);
+          totals.checked += 1;
+          if (outcome === 'erased') totals.erased += 1;
+          if (outcome === 'failed') totals.failed += 1;
+        }
+      });
+      await Promise.all(workers);
+      if (rows.length < opts.batchSize || Date.now() - started >= opts.timeBudgetMs) break;
+    }
+    return { ...totals, ...(await this.closureBacklog()) };
+  }
+
+  /** Counts only (never who): how many people are due for a V1 closure check, and how overdue the oldest is. */
+  async closureBacklog(): Promise<{ backlog: number; oldestDueMs: number }> {
+    const now = this.clock.now();
+    const recheckBefore = new Date(now.getTime() - V1_CLOSURE_RECHECK_MS);
+    const res = await this.pool.query<{ n: number; oldest: Date | null; never: number }>(
+      `SELECT count(*)::int AS n, min(v1_closure_checked_at) AS oldest, count(*) FILTER (WHERE v1_closure_checked_at IS NULL)::int AS never
+         FROM users
+        WHERE (deletion_requested_at IS NULL OR deletion_requested_at < $2)
+          AND (v1_closure_checked_at IS NULL OR v1_closure_checked_at < $1)`,
+      [recheckBefore, new Date(now.getTime() - INTERRUPTED_DELETION_AFTER_MS)],
+    );
+    const row = res.rows[0];
+    const oldestDueMs = row && row.oldest ? Math.max(0, recheckBefore.getTime() - row.oldest.getTime()) : 0;
+    return { backlog: row?.n ?? 0, oldestDueMs };
+  }
+
+  private async dueForClosureCheck(limit: number) {
     const now = this.clock.now();
     const due = await this.pool.query<{
       user_id: string;
@@ -286,13 +356,29 @@ export class AccountPrivacyService {
       // so the person could not retry either.
       [new Date(now.getTime() - V1_CLOSURE_RECHECK_MS), limit, new Date(now.getTime() - INTERRUPTED_DELETION_AFTER_MS)],
     );
-    let erased = 0;
-    let failed = 0;
-    for (const row of due.rows) {
-      try {
-        if (!(await isClosed(row.auth_user_id))) {
+    return due.rows;
+  }
+
+  /** One person: check V1, erase if closed. Failures are stamped with a backoff so they rotate to the back. */
+  private async checkClosedAccount(
+    row: { user_id: string; auth_user_id: string; locale: Principal['locale']; workspace_id: string; billing_account_id: string; origin: Principal['origin'] },
+    isClosed: (authUserId: string) => Promise<boolean>,
+  ): Promise<'checked' | 'erased' | 'failed'> {
+    const now = this.clock.now();
+    const retryAfter = (ms: number) => new Date(now.getTime() - V1_CLOSURE_RECHECK_MS + ms);
+    let closed: boolean;
+    try {
+      closed = await isClosed(row.auth_user_id);
+    } catch {
+      // V1 unreadable: never treated as closed; looked at again in an hour, behind everyone due now.
+      await this.pool.query(`UPDATE users SET v1_closure_checked_at = $2 WHERE id = $1`, [row.user_id, retryAfter(V1_CLOSURE_READ_RETRY_MS)]).catch(() => undefined);
+      return 'failed';
+    }
+    try {
+      {
+        if (!closed) {
           await this.pool.query(`UPDATE users SET v1_closure_checked_at = $2 WHERE id = $1`, [row.user_id, now]);
-          continue;
+          return 'checked';
         }
         const identity: VerifiedIdentity = { uid: row.auth_user_id, email: null, emailVerified: false, authTime: now, issuedAt: now, signInProvider: null };
         const owner: Principal = {
@@ -311,14 +397,16 @@ export class AccountPrivacyService {
         for (const key of await storedObjectKeys(this.pool, owner)) await this.storage.delete(key);
         await this.eraseAndCheck(owner, false);
         await this.eraseAndCheck(owner, true);
-        erased += 1;
-      } catch {
-        // V1, storage or the database failed: the closure check is not stamped, so a
-        // later tick retries it (after INTERRUPTED_DELETION_AFTER_MS if it was marked).
-        failed += 1;
+        return 'erased';
       }
+    } catch {
+      // Storage or the database failed mid-erase: the account stays marked and is retried after the
+      // interrupted-deletion window, behind everyone due now (the stamp moves it back in the order).
+      await this.pool
+        .query(`UPDATE users SET v1_closure_checked_at = $2 WHERE id = $1`, [row.user_id, retryAfter(INTERRUPTED_DELETION_AFTER_MS)])
+        .catch(() => undefined);
+      return 'failed';
     }
-    return { checked: due.rows.length, erased, failed };
   }
 
   /** One erase pass, a check, a second pass if anything was written meanwhile, then a final check. */
