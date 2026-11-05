@@ -12,6 +12,7 @@ import Footer from '@/components/landing/Footer';
 import JsonLd from '@/components/seo/JsonLd';
 import { SITE_URL, localizedAlternates } from '@/lib/seo';
 import { faqPage, organizationAndWebsite, softwareApplication } from '@/lib/json-ld';
+import '@/styles/home-theme.css';
 
 export async function generateMetadata({
   params: { locale },
@@ -70,11 +71,11 @@ export default function LandingPage({
   params: { locale: string };
 }): React.JSX.Element | null {
   return (
-    <main id="main-content" className="min-h-screen">
+    <main id="main-content" className="fc-home min-h-screen">
       <JsonLd data={organizationAndWebsite(locale)} />
       <JsonLd data={softwareApplication()} />
       <JsonLd data={faqPage()} />
-      <Navbar />
+      <Navbar logoVariant="auto" />
       <HeroV2 />
       <ProductShowcase />
       <HowItWorks />
@@ -84,7 +85,7 @@ export default function LandingPage({
           testimonials are collected — do not re-enable with placeholder data. */}
       <Pricing />
       <FAQ />
-      <Footer />
+      <Footer logoVariant="auto" />
     </main>
   );
 }

@@ -1,0 +1,455 @@
+/* ─── Homepage colour theme ─────────────────────────────────────────────────
+   Flacron Energy palette (read from the computed styles of flacronenergy.com,
+   Nov 2026) applied to the V1 homepage only. Colour and surface treatment only:
+   no sizes, spacing or radii change here.
+
+   Scope: imported by app/[locale]/page.tsx and every rule sits under
+   `main.fc-home`, the homepage's <main> (the Navbar and Footer render inside it,
+   so the same components keep their navy chrome on other public pages).
+
+   `main.fc-home .x` out-ranks Tailwind's `.x` and `dark:x`, so only the base
+   class is mapped here; the tokens below flip for dark mode. Hover states are
+   mapped explicitly because the base rules out-rank Tailwind's hover variants.
+
+   Document thumbnails are marked `.fc-paper` and stay white: previews look like
+   paper in either theme. Exports never use this stylesheet. */
+
+main.fc-home {
+  /* Reference tokens: light */
+  --fc-bg: #f7f9fc;
+  --fc-surface: #ffffff;
+  --fc-soft: rgba(255, 255, 255, 0.55);
+  --fc-glass: rgba(247, 249, 252, 0.78);
+  --fc-elevated: #e3e8f0;
+  --fc-wash: #f1f6fe;
+  --fc-border: #c6cedb;
+  --fc-ink: #011c49;
+  --fc-text: #2b4267;
+  --fc-muted: #54647d;
+  --fc-accent: #fb4402;
+  --fc-accent-text: #c93b12;
+  --fc-accent-tint: #fff2ee;
+  --fc-accent-tint-strong: #fee0d8;
+  --fc-blue-tint: #dfeafd;
+  --fc-blue-text: #17468e;
+  --fc-blue: #3160aa;
+  --fc-success: #15803d;
+  --fc-success-tint: rgba(27, 158, 75, 0.08);
+  --fc-warning: #8a5a00;
+  --fc-warning-tint: rgba(232, 163, 23, 0.16);
+  --fc-cta-ink: #001a49;
+  --fc-grid-line: rgba(198, 206, 219, 0.6);
+  --fc-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.6), transparent 42%);
+  --fc-shadow: 0 1px 2px rgba(0, 26, 73, 0.05), 0 10px 28px -18px rgba(0, 26, 73, 0.22);
+  --fc-shadow-hover: 0 2px 4px rgba(0, 26, 73, 0.07), 0 22px 44px -22px rgba(0, 26, 73, 0.34);
+  --fc-portrait-shadow: rgba(0, 26, 73, 0.14);
+  --fc-headline: linear-gradient(100deg, #fb4402, #c93b12 50%, #3160aa);
+  --fc-headline-rtl: linear-gradient(260deg, #fb4402, #c93b12 50%, #3160aa);
+
+  /* Career tokens used by the hero and showcases */
+  --career-navy: #002865;
+  --career-navy-hover: #001a49;
+  --career-orange: var(--fc-accent);
+  --career-orange-text: var(--fc-accent-text);
+  --career-orange-tint: var(--fc-accent-tint);
+  --career-ink: var(--fc-ink);
+  --career-muted: var(--fc-text);
+  --career-line: var(--fc-border);
+  --career-canvas: var(--fc-bg);
+  --career-surface: var(--fc-surface);
+  --career-wash: var(--fc-wash);
+  --career-success: var(--fc-success);
+  --career-warning: var(--fc-warning);
+
+  position: relative;
+  isolation: isolate;
+  background-color: var(--fc-bg);
+  color: var(--fc-ink);
+}
+
+.dark main.fc-home {
+  /* Reference tokens: dark */
+  --fc-bg: #071a38;
+  --fc-surface: #0d2546;
+  --fc-soft: rgba(13, 37, 70, 0.55);
+  --fc-glass: rgba(7, 26, 56, 0.78);
+  --fc-elevated: #143158;
+  --fc-wash: #143158;
+  --fc-border: #244168;
+  --fc-ink: #f5f8fd;
+  --fc-text: #cbd7e8;
+  --fc-muted: #a2b4cd;
+  --fc-accent-text: #ee7a5c;
+  --fc-accent-tint: rgba(251, 68, 2, 0.13);
+  --fc-accent-tint-strong: rgba(251, 68, 2, 0.22);
+  --fc-blue-tint: rgba(111, 153, 220, 0.16);
+  --fc-blue-text: #95b7ec;
+  --fc-blue: #6f99dc;
+  --fc-success: #57c983;
+  --fc-success-tint: rgba(27, 158, 75, 0.14);
+  --fc-warning: #efaf3d;
+  --fc-grid-line: rgba(36, 65, 104, 0.6);
+  --fc-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 40%);
+  --fc-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.25), 0 14px 32px -20px rgba(0, 0, 0, 0.6);
+  --fc-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 2px 6px rgba(0, 0, 0, 0.3), 0 26px 50px -24px rgba(0, 0, 0, 0.75);
+  --fc-portrait-shadow: rgba(0, 0, 0, 0.35);
+  --fc-headline: linear-gradient(100deg, #fb4402, #ee7a5c 50%, #6f99dc);
+  --fc-headline-rtl: linear-gradient(260deg, #fb4402, #ee7a5c 50%, #6f99dc);
+  --career-navy-hover: #17468e;
+  --career-orange-text: #f59e87;
+}
+
+/* Page edge colour when the browser overscrolls past the homepage. */
+body:has(main.fc-home) {
+  background-color: #f7f9fc;
+}
+
+.dark body:has(main.fc-home) {
+  background-color: #071a38;
+}
+
+/* ── Backdrop: the reference's corner glows and masked 56px grid ───────────── */
+main.fc-home::before,
+main.fc-home::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: -1;
+  height: 50rem;
+  pointer-events: none;
+}
+
+main.fc-home::before {
+  background-image:
+    radial-gradient(640px 384px at 8% -6%, rgba(251, 68, 2, 0.09), transparent 70%),
+    radial-gradient(704px 448px at 92% 0, rgba(111, 153, 220, 0.16), transparent 72%),
+    radial-gradient(480px 288px at 55% 30%, rgba(77, 123, 197, 0.06), transparent 70%);
+}
+
+main.fc-home::after {
+  opacity: 0.45;
+  background-image:
+    linear-gradient(to right, var(--fc-grid-line) 1px, transparent 1px),
+    linear-gradient(var(--fc-grid-line) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(70% 60% at 50% 18%, #000 10%, transparent 72%);
+  mask-image: radial-gradient(70% 60% at 50% 18%, #000 10%, transparent 72%);
+}
+
+[dir='rtl'] main.fc-home::before {
+  transform: scaleX(-1);
+}
+
+/* ── Sections ──────────────────────────────────────────────────────────────── */
+main.fc-home section.bg-career-canvas {
+  background-color: transparent;
+}
+
+/* Inset lines, not borders: the sections keep their exact height. */
+main.fc-home section.bg-stone-50 {
+  background-color: var(--fc-soft);
+  box-shadow: inset 0 1px 0 var(--fc-border), inset 0 -1px 0 var(--fc-border);
+}
+
+/* ── Header and mobile menu ────────────────────────────────────────────────── */
+main.fc-home > nav.fixed {
+  border-color: var(--fc-border);
+  background-color: var(--fc-glass);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+
+main.fc-home > nav .bg-chrome {
+  border-color: var(--fc-border);
+  background-color: var(--fc-bg);
+}
+
+/* ── Footer ────────────────────────────────────────────────────────────────── */
+main.fc-home > footer {
+  border-color: var(--fc-border);
+  background-color: var(--fc-soft);
+}
+
+main.fc-home footer .text-white:not(.bg-brand-600),
+main.fc-home nav .text-white:not(.bg-brand-600) {
+  color: var(--fc-ink);
+}
+
+main.fc-home footer .border-white\/10,
+main.fc-home nav .border-white\/10 {
+  border-color: var(--fc-border);
+}
+
+main.fc-home .ring-white\/20 {
+  --tw-ring-color: var(--fc-border);
+}
+
+main.fc-home .hover\:ring-brand-400\/50:hover {
+  --tw-ring-color: var(--fc-accent-text);
+}
+
+/* ── Text ──────────────────────────────────────────────────────────────────── */
+main.fc-home .text-stone-900,
+main.fc-home .text-stone-800,
+main.fc-home .text-chrome {
+  color: var(--fc-ink);
+}
+
+main.fc-home .text-stone-700,
+main.fc-home .text-stone-600,
+main.fc-home .text-stone-300,
+main.fc-home .text-stone-200 {
+  color: var(--fc-text);
+}
+
+main.fc-home .text-stone-500,
+main.fc-home .text-stone-400 {
+  color: var(--fc-muted);
+}
+
+main.fc-home .text-brand-800,
+main.fc-home .text-brand-700,
+main.fc-home .text-brand-600,
+main.fc-home .text-brand-400 {
+  color: var(--fc-accent-text);
+}
+
+main.fc-home .text-brand-500 {
+  color: var(--fc-accent);
+}
+
+main.fc-home .text-emerald-700,
+main.fc-home .text-emerald-600,
+main.fc-home .text-emerald-500 {
+  color: var(--fc-success);
+}
+
+main.fc-home .text-amber-700,
+main.fc-home .text-amber-600 {
+  color: var(--fc-warning);
+}
+
+main.fc-home .placeholder\:text-stone-400::placeholder {
+  color: var(--fc-muted);
+}
+
+/* The reference's headline gradient. Its #ee7a5c and #6f99dc stops are under
+   3:1 on the light background, so light mode uses its darker #c93b12 and #3160aa
+   stops to keep large-text contrast; dark mode uses the reference stops as-is. */
+main.fc-home h1:has(.text-brand-600) {
+  /* Flex items' margins do not collapse, so the two gradient lines' offsets below add up. */
+  display: flex;
+  flex-direction: column;
+}
+
+main.fc-home h1 .text-brand-600 {
+  background-image: var(--fc-headline);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* background-clip paints only inside the box: room for descenders, net zero. */
+  padding-block: 0.14em;
+  margin-block: -0.14em;
+}
+
+[dir='rtl'] main.fc-home h1 .text-brand-600 {
+  background-image: var(--fc-headline-rtl);
+}
+
+/* ── Surfaces and borders ──────────────────────────────────────────────────── */
+main.fc-home .bg-white {
+  background-color: var(--fc-surface);
+}
+
+main.fc-home .bg-stone-200,
+main.fc-home .bg-stone-100 {
+  background-color: var(--fc-elevated);
+}
+
+main.fc-home .bg-brand-50,
+main.fc-home .bg-brand-100 {
+  background-color: var(--fc-accent-tint);
+}
+
+main.fc-home .bg-brand-200 {
+  background-color: var(--fc-accent-tint-strong);
+}
+
+main.fc-home .bg-brand-500 {
+  background-color: var(--fc-accent);
+}
+
+main.fc-home .bg-emerald-100,
+main.fc-home .bg-emerald-50 {
+  background-color: var(--fc-success-tint);
+}
+
+main.fc-home .bg-amber-100,
+main.fc-home .bg-amber-50 {
+  background-color: var(--fc-warning-tint);
+}
+
+main.fc-home .border-stone-300,
+main.fc-home .border-stone-200 {
+  border-color: var(--fc-border);
+}
+
+main.fc-home .border-brand-100,
+main.fc-home .border-brand-200 {
+  border-color: var(--fc-accent-tint-strong);
+}
+
+main.fc-home .border-brand-500 {
+  border-color: var(--fc-accent);
+}
+
+main.fc-home .ring-brand-500 {
+  --tw-ring-color: var(--fc-accent);
+}
+
+main.fc-home input[type='checkbox'] {
+  accent-color: var(--fc-accent);
+}
+
+/* Icon tiles and status dots: the reference's orange and blue families. */
+main.fc-home .bg-\[\#eaf1fe\],
+main.fc-home .bg-\[\#f1edff\] {
+  background-color: var(--fc-blue-tint);
+}
+
+main.fc-home .text-\[\#2563eb\],
+main.fc-home .text-\[\#6447d1\] {
+  color: var(--fc-blue-text);
+}
+
+main.fc-home .bg-\[\#e4f6f2\] {
+  background-color: var(--fc-accent-tint);
+}
+
+main.fc-home .text-\[\#0f7a6c\] {
+  color: var(--fc-accent-text);
+}
+
+main.fc-home .bg-\[\#2563eb\] {
+  background-color: var(--fc-blue);
+}
+
+main.fc-home .bg-\[\#a8620a\] {
+  background-color: #e8a317;
+}
+
+/* ── Cards ─────────────────────────────────────────────────────────────────── */
+main.fc-home article,
+main.fc-home #features .group,
+main.fc-home #faq .rounded-xl,
+main.fc-home #pricing .rounded-2xl,
+main.fc-home #pricing .rounded-xl {
+  background-image: var(--fc-sheen);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--fc-shadow);
+}
+
+main.fc-home #features .group:hover {
+  border-color: var(--fc-blue);
+  box-shadow: var(--fc-shadow-hover);
+}
+
+/* Template panel: the reference's gradient-edged card. */
+main.fc-home #templates-showcase .rounded-3xl {
+  border-color: transparent;
+  background:
+    var(--fc-sheen) padding-box,
+    linear-gradient(var(--fc-surface), var(--fc-surface)) padding-box,
+    linear-gradient(140deg, var(--fc-accent), var(--fc-border) 45%, var(--fc-blue)) border-box;
+  box-shadow: var(--fc-shadow);
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+/* Primary: the reference's orange gradient with navy text (white on #fb4402 is
+   only 3.5:1). Its #c93b12 end stop is left out: navy on it falls to 3.4:1. */
+main.fc-home .bg-brand-600,
+main.fc-home .bg-brand-700,
+main.fc-home .from-brand-500 {
+  background-color: var(--fc-accent);
+  background-image: linear-gradient(135deg, #ee7a5c -20%, #fb4402 100%);
+  color: var(--fc-cta-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 1px 2px rgba(166, 43, 3, 0.5);
+}
+
+main.fc-home a.bg-brand-700:hover,
+main.fc-home button.bg-brand-600:hover,
+main.fc-home button.from-brand-500:hover {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 10px 24px -10px rgba(251, 68, 2, 0.7);
+  filter: brightness(1.04);
+}
+
+/* Secondary: light surface with a hairline edge that warms on hover. */
+main.fc-home .border-brand-600,
+main.fc-home .border-chrome\/50,
+main.fc-home button.border-stone-300 {
+  border-color: var(--fc-border);
+  background-color: var(--fc-surface);
+  color: var(--fc-ink);
+  box-shadow: var(--fc-shadow);
+}
+
+main.fc-home .border-brand-600:hover,
+main.fc-home .border-chrome\/50:hover,
+main.fc-home button.border-stone-300:hover {
+  border-color: var(--fc-accent);
+  background-color: var(--fc-surface);
+  color: var(--fc-ink);
+}
+
+/* ── Hover states ──────────────────────────────────────────────────────────── */
+main.fc-home .hover\:bg-white\/10:hover,
+main.fc-home .hover\:bg-stone-100:hover,
+main.fc-home .hover\:bg-stone-50:hover {
+  background-color: var(--fc-elevated);
+}
+
+main.fc-home .hover\:bg-brand-50:hover {
+  background-color: var(--fc-accent-tint);
+}
+
+main.fc-home .hover\:text-stone-900:hover,
+main.fc-home .hover\:text-white:hover {
+  color: var(--fc-ink);
+}
+
+main.fc-home .hover\:text-brand-400:hover,
+main.fc-home .hover\:text-brand-600:hover,
+main.fc-home .hover\:text-brand-800:hover {
+  color: var(--fc-accent-text);
+}
+
+/* ── Keyboard focus: the reference's orange outline ────────────────────────── */
+main.fc-home :is(a, button, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--fc-accent);
+  outline-offset: 3px;
+}
+
+/* ── Hero backdrop shapes and portrait ─────────────────────────────────────── */
+main.fc-home .fc-hero-blob-peach {
+  background: radial-gradient(circle at 40% 40%, #fbc1b2, #fee0d8 62%, rgba(254, 224, 216, 0) 72%);
+}
+
+main.fc-home .fc-hero-blob-blue {
+  background: radial-gradient(circle at 50% 50%, #dfeafd, rgba(223, 234, 253, 0) 70%);
+}
+
+.dark main.fc-home .fc-hero-blob-peach {
+  background: radial-gradient(circle at 40% 40%, rgba(251, 68, 2, 0.24), rgba(251, 68, 2, 0.09) 62%, rgba(251, 68, 2, 0) 72%);
+}
+
+.dark main.fc-home .fc-hero-blob-blue {
+  background: radial-gradient(circle at 50% 50%, rgba(111, 153, 220, 0.2), rgba(111, 153, 220, 0) 70%);
+}
+
+main.fc-home .fc-hero-portrait img {
+  filter: drop-shadow(0 18px 28px var(--fc-portrait-shadow));
+}
+
+/* ── Paper: document thumbnails ignore the page theme ──────────────────────── */
+main.fc-home .fc-paper {
+  background-color: #ffffff;
+}

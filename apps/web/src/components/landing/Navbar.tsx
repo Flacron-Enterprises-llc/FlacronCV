@@ -10,7 +10,12 @@ import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
 import LanguageSwitcher from '@/components/shared/LanguageSwitcher';
 
-export default function Navbar() {
+interface NavbarProps {
+  /** The homepage theme has a light header, so it uses the theme-aware logo. */
+  logoVariant?: 'auto' | 'on-dark';
+}
+
+export default function Navbar({ logoVariant = 'on-dark' }: NavbarProps) {
   const t = useTranslations();
   const { user } = useAuth();
   const { setTheme, resolvedTheme } = useTheme();
@@ -81,7 +86,7 @@ export default function Navbar() {
               on-dark: this bar is navy in light and dark (translucent + blur in dark).
               The lockup still has a baked-in opaque black rectangle — standing
               asset request, see PROJECT_PROGRESS.md. */}
-          <Logo variant="on-dark" className="h-12" priority />
+          <Logo variant={logoVariant} className="h-12" priority />
         </Link>
 
         {/* Desktop nav */}

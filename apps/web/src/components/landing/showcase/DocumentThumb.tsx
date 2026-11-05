@@ -51,7 +51,7 @@ function ScaledA4({ children, label }: { children: ReactNode; label: string }) {
       ref={frameRef}
       role="img"
       aria-label={label}
-      className="relative w-full overflow-hidden bg-white"
+      className="fc-paper relative w-full overflow-hidden bg-white"
       style={{ aspectRatio: `${A4_WIDTH} / ${A4_HEIGHT}` }}
     >
       {scale > 0 ? (

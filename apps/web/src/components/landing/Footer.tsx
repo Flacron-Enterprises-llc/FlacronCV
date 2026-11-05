@@ -11,7 +11,12 @@ import { openPreferences } from '@/lib/consent';
 /** Tel: needs E.164; the displayed number is the translated `footer.phone`. */
 const PHONE_HREF = 'tel:+19299901182';
 
-export default function Footer() {
+interface FooterProps {
+  /** The homepage theme has a light footer, so it uses the theme-aware logo. */
+  logoVariant?: 'auto' | 'on-dark';
+}
+
+export default function Footer({ logoVariant = 'on-dark' }: FooterProps) {
   const t = useTranslations();
   const pathname = usePathname();
 
@@ -39,7 +44,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-1">
             <Link href="/" className="flex items-center">
-              <Logo variant="on-dark" className="h-8" />
+              <Logo variant={logoVariant} className="h-8" />
             </Link>
             <p className="mt-3 text-sm text-stone-300 dark:text-stone-400">
               {t('footer.description')}
