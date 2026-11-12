@@ -1,6 +1,6 @@
 import type { CV, CVSection, CVSectionType } from '@flacroncv/shared-types';
 import type { CoverLetter } from '@flacroncv/shared-types';
-import { getTokens, formatCVDate } from '@/components/cv-builder/templates/shared';
+import { getTokens, formatCVDate, referenceLines } from '@/components/cv-builder/templates/shared';
 import { renderLayout, SIDEBAR_LEFT_TYPES, type LayoutDescriptor } from '@/lib/render-layout';
 import { serializeCVToText } from '@/lib/serializeCV';
 
@@ -189,7 +189,7 @@ function addInvisibleTextLayer(pdf: any, text: string, pageCount: number): void 
  * layer — the part with real logic and real consequences if it breaks — would
  * otherwise be untestable.
  */
-export const __testables = { addInvisibleTextLayer, isEncodableByStandardFont };
+export const __testables = { addInvisibleTextLayer, isEncodableByStandardFont, buildCVDocx };
 
 // ─── PDF Export ───────────────────────────────────────────────────────────────
 export async function exportToPDF(cv: CV, _sections: CVSection[], locale: string = 'en'): Promise<void> {
@@ -508,18 +508,21 @@ function buildCVSectionParagraphs(
         spacing: { line: LS.normal, before: pxToTwips(sp.item), after: itemAfter },
       }));
     } else if (type === 'references') {
-      paras.push(para(d, {
-        children: [
-          new d.TextRun({ text: it.name || '', bold: true, size: pxToHalfPt(fs.headline), color: textColor }),
-          it.title   ? new d.TextRun({ text: `, ${it.title}`,      size: pxToHalfPt(fs.name), color: textColor }) : null,
-          it.company ? new d.TextRun({ text: `  •  ${it.company}`, size: pxToHalfPt(fs.name), color: dimColor  }) : null,
-        ].filter(Boolean),
-        spacing: { line: LS.normal, before: pxToTwips(sp.item), after: itemAfter },
-      }));
-      if (it.email) paras.push(para(d, {
-        children: [new d.TextRun({ text: it.email, size: pxToHalfPt(fs.body), color: accentColor })],
-        spacing: { line: LS.normal, after: itemAfter },
-      }));
+      // Same lines as the preview (referenceLines): name, "title, company",
+      // "email · phone", relationship — empty ones dropped. Phone and
+      // relationship used to be missing from the DOCX.
+      const ref = referenceLines(it);
+      const lines: Array<{ text: string; run: Record<string, unknown> }> = [];
+      if (ref.name)         lines.push({ text: ref.name,         run: { bold: true, size: pxToHalfPt(fs.headline), color: textColor } });
+      if (ref.role)         lines.push({ text: ref.role,         run: { size: pxToHalfPt(fs.name), color: dimColor } });
+      if (ref.contact)      lines.push({ text: ref.contact,      run: { size: pxToHalfPt(fs.body), color: accentColor } });
+      if (ref.relationship) lines.push({ text: ref.relationship, run: { size: pxToHalfPt(fs.body), italics: true, color: metaColor } });
+      lines.forEach((line, idx) => paras.push(para(d, {
+        children: [new d.TextRun({ text: line.text, ...line.run })],
+        spacing: idx === 0
+          ? { line: LS.normal, before: pxToTwips(sp.item), after: itemAfter }
+          : { line: LS.normal, after: itemAfter },
+      })));
     } else {
       // custom / awards / publications
       paras.push(para(d, {

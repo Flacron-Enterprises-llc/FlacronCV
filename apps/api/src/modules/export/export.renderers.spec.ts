@@ -131,7 +131,7 @@ describe('ExportService server renderers (mobile export parity)', () => {
       expect(html).toContain('<div class="item-date">Expires Mar 2027</div>');
       expect(html).toContain('<div class="item-date">https://cert.example/abc</div>');
       expect(html).toContain('<div class="item-subtitle">Former manager</div>');
-      expect(html).toContain('<div class="item"><span class="item-title">Sam Lee</span><div class="item-subtitle">Colleague</div></div>');
+      expect(html).toContain('<div class="item"><span class="item-title">Sam Lee</span><div class="item-subtitle">Peer</div><div class="item-subtitle">Colleague</div></div>');
       expect(html).toContain(
         '<div class="item-header"><span class="item-title">Hackathon winner</span><span class="item-date">Nov 2023</span></div><div class="item-subtitle">Global Fintech Week</div>',
       );

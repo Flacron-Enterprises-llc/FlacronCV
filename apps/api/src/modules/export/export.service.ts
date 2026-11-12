@@ -88,10 +88,28 @@ function genericItemExtras(
     const expiry = formatCVDate(item.expiryDate);
     if (expiry) out.lines.push(`Expires ${expiry}`);
     if (hasText(item.url)) out.lines.push(item.url.trim());
-  } else if (sectionType === 'references') {
-    if (hasText(item.relationship)) out.subtitle = item.relationship.trim();
   }
   return out;
+}
+
+/**
+ * A reference entry's lines, empty ones dropped — the same as the web's
+ * `referenceLines`: name, "title, company", "email · phone", relationship.
+ */
+export function referenceLines(item: Record<string, unknown> | null | undefined): {
+  name: string;
+  role: string;
+  contact: string;
+  relationship: string;
+} {
+  const it = item ?? {};
+  const txt = (v: unknown) => (hasText(v) ? v.trim() : '');
+  return {
+    name: txt(it.name),
+    role: [txt(it.title), txt(it.company)].filter(Boolean).join(', '),
+    contact: [txt(it.email), txt(it.phone)].filter(Boolean).join(' · '),
+    relationship: txt(it.relationship),
+  };
 }
 
 /** Cadence follows the plan: Free never resets, paid numeric caps are monthly. */
@@ -475,7 +493,17 @@ export class ExportService {
 
       for (const item of section.items) {
         const itemRecord = item as unknown as Record<string, unknown>;
-        if (itemRecord.company) {
+        if (section.type === 'references') {
+          // Before the experience branch: a reference has a company and would
+          // otherwise print "undefined at Acme" / "undefined - Present".
+          const ref = referenceLines(itemRecord);
+          if (ref.name) children.push(new Paragraph({ children: [new TextRun({ text: ref.name, bold: true })] }));
+          if (ref.role) children.push(new Paragraph({ children: [new TextRun({ text: ref.role })] }));
+          if (ref.contact) children.push(new Paragraph({ children: [new TextRun({ text: ref.contact, size: 20 })] }));
+          if (ref.relationship) {
+            children.push(new Paragraph({ children: [new TextRun({ text: ref.relationship, italics: true })] }));
+          }
+        } else if (itemRecord.company) {
           children.push(
             new Paragraph({
               children: [
@@ -497,11 +525,6 @@ export class ExportService {
           }
           for (const highlight of textList(itemRecord.highlights)) {
             children.push(new Paragraph({ children: [new TextRun({ text: `• ${highlight}` })] }));
-          }
-          // A reference with a company lands in this branch (pre-existing
-          // routing); its relationship still has to be shown.
-          if (section.type === 'references' && hasText(itemRecord.relationship)) {
-            children.push(new Paragraph({ children: [new TextRun({ text: itemRecord.relationship.trim(), italics: true })] }));
           }
         } else if (itemRecord.institution) {
           children.push(
@@ -598,6 +621,19 @@ export class ExportService {
     return `<div class="item">${head}${subtitle}${lines}</div>`;
   }
 
+  /**
+   * A reference: name (title style), "title, company" and relationship
+   * (subtitle style), "email · phone" (date/meta style). Empty lines dropped.
+   */
+  private referenceItemHtml(item: any): string {
+    const ref = referenceLines(item);
+    const name = ref.name ? `<span class="item-title">${this.esc(ref.name)}</span>` : '';
+    const role = ref.role ? `<div class="item-subtitle">${this.esc(ref.role)}</div>` : '';
+    const contact = ref.contact ? `<div class="item-date">${this.esc(ref.contact)}</div>` : '';
+    const relationship = ref.relationship ? `<div class="item-subtitle">${this.esc(ref.relationship)}</div>` : '';
+    return `<div class="item">${name}${role}${contact}${relationship}</div>`;
+  }
+
   private renderCVHTML(cv: any, sections: any[], photo: CvPhoto | null = null): string {
     const template = this.templates.get(cv.templateId);
     if (template) {
@@ -656,11 +692,15 @@ export class ExportService {
       } else {
         itemsHtml = section.items
           .map((item: any) => {
+            // Before the experience branch: a reference has a company too.
+            if (section.type === 'references') {
+              return this.referenceItemHtml(item);
+            }
             if (item.company) {
               return `<div class="item">
               <div class="item-header"><span class="item-title">${this.esc(item.position)}</span><span class="item-date">${this.esc(item.startDate)} - ${this.esc(item.endDate || 'Present')}</span></div>
               <div class="item-subtitle">${this.esc(item.company)}${item.location ? ` | ${this.esc(item.location)}` : ''}</div>
-              ${item.description ? `<div class="item-desc">${this.esc(item.description)}</div>` : ''}${this.highlightsHtml(item)}${section.type === 'references' && hasText(item.relationship) ? `<div class="item-subtitle">${this.esc(item.relationship.trim())}</div>` : ''}
+              ${item.description ? `<div class="item-desc">${this.esc(item.description)}</div>` : ''}${this.highlightsHtml(item)}
             </div>`;
             }
             if (item.institution) {

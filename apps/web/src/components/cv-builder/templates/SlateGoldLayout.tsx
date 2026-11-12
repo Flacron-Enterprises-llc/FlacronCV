@@ -17,7 +17,7 @@ import type { LayoutProps } from './shared';
 import {
   getTokens, hexToRgba, readableOn, INK,
   splitSections, formatCVDate, formatDegree, SkillList, SkillLines,
-  contactSidebarLines,
+  contactSidebarLines, referenceLines,
 } from './shared';
 
 /* ─── Palette ────────────────────────────────────────────────────────────────── */
@@ -428,13 +428,35 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
               ) : (
                 /* Generic sections */
                 section.items.map((item: any, i: number) => {
+                  const rowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' };
+                  const labelStyle: React.CSSProperties = { fontFamily: headingFont, fontSize: `${fs.name}px`, fontWeight: 600, color: SLATE };
+                  const detailStyle: React.CSSProperties = { fontFamily: bodyFont, fontSize: `${fs.body}px`, color: INK.body, marginTop: '3px', lineHeight: 1.6, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' };
+
+                  // References: name, "title, company", "email · phone",
+                  // relationship — plain text in the generic styles, no date.
+                  if (section.type === 'references') {
+                    const ref = referenceLines(item);
+                    return (
+                      <div key={i} style={{ marginBottom: `${sp.item}px` }}>
+                        {ref.name && (
+                          <div style={rowStyle}>
+                            <span style={labelStyle}>{ref.name}</span>
+                          </div>
+                        )}
+                        {ref.details.map((line, j) => (
+                          <p key={j} style={detailStyle}>{line}</p>
+                        ))}
+                      </div>
+                    );
+                  }
+
                   const label  = item.name || item.title || '';
                   const detail = item.description || item.issuer || item.proficiency || '';
                   const date   = formatCVDate(item.date || item.startDate);
                   return (
                     <div key={i} style={{ marginBottom: `${sp.item}px` }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
-                        <span style={{ fontFamily: headingFont, fontSize: `${fs.name}px`, fontWeight: 600, color: SLATE }}>
+                      <div style={rowStyle}>
+                        <span style={labelStyle}>
                           {label}
                         </span>
                         {date && (
@@ -444,7 +466,7 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
                         )}
                       </div>
                       {detail && (
-                        <p style={{ fontFamily: bodyFont, fontSize: `${fs.body}px`, color: INK.body, marginTop: '3px', lineHeight: 1.6, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
+                        <p style={detailStyle}>
                           {detail}
                         </p>
                       )}

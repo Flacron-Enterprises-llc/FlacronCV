@@ -1,0 +1,55 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ExportService — other section types are byte-identical (pinned before the reference fix) DOCX word/document.xml 1`] = `"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" xmlns:cx="http://schemas.microsoft.com/office/drawing/2014/chartex" xmlns:cx1="http://schemas.microsoft.com/office/drawing/2015/9/8/chartex" xmlns:cx2="http://schemas.microsoft.com/office/drawing/2015/10/21/chartex" xmlns:cx3="http://schemas.microsoft.com/office/drawing/2016/5/9/chartex" xmlns:cx4="http://schemas.microsoft.com/office/drawing/2016/5/10/chartex" xmlns:cx5="http://schemas.microsoft.com/office/drawing/2016/5/11/chartex" xmlns:cx6="http://schemas.microsoft.com/office/drawing/2016/5/12/chartex" xmlns:cx7="http://schemas.microsoft.com/office/drawing/2016/5/13/chartex" xmlns:cx8="http://schemas.microsoft.com/office/drawing/2016/5/14/chartex" xmlns:aink="http://schemas.microsoft.com/office/drawing/2016/ink" xmlns:am3d="http://schemas.microsoft.com/office/drawing/2017/model3d" xmlns:w16cex="http://schemas.microsoft.com/office/word/2018/wordml/cex" xmlns:w16cid="http://schemas.microsoft.com/office/word/2016/wordml/cid" xmlns:w16="http://schemas.microsoft.com/office/word/2018/wordml" xmlns:w16sdtdh="http://schemas.microsoft.com/office/word/2020/wordml/sdtdatahash" xmlns:w16se="http://schemas.microsoft.com/office/word/2015/wordml/symex" mc:Ignorable="w14 w15 wp14"><w:body><w:p><w:pPr><w:pStyle w:val="Title"/></w:pPr><w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="32"/><w:szCs w:val="32"/></w:rPr><w:t xml:space="preserve">Amara Okafor</w:t></w:r></w:p><w:p><w:r><w:rPr><w:i/><w:iCs/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Engineer</w:t></w:r></w:p><w:p><w:r><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t xml:space="preserve">amara@example.com | +234 1 | Lagos, Nigeria</w:t></w:r></w:p><w:p/><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Professional Summary</w:t></w:r></w:p><w:p><w:r><w:t xml:space="preserve">Builds things.</w:t></w:r></w:p><w:p/><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Experience</w:t></w:r></w:p><w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">Lead</w:t></w:r><w:r><w:t xml:space="preserve"> at Acme</w:t></w:r></w:p><w:p><w:r><w:rPr><w:i/><w:iCs/></w:rPr><w:t xml:space="preserve">2020-01 - Present</w:t></w:r></w:p><w:p><w:r><w:t xml:space="preserve">Ran the team</w:t></w:r></w:p><w:p><w:r><w:t xml:space="preserve">• Cut latency</w:t></w:r></w:p><w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">Engineer</w:t></w:r><w:r><w:t xml:space="preserve"> at Initech</w:t></w:r></w:p><w:p><w:r><w:rPr><w:i/><w:iCs/></w:rPr><w:t xml:space="preserve">2017-03 - 2019-12</w:t></w:r></w:p><w:p/><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Education</w:t></w:r></w:p><w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">BSc in CS</w:t></w:r><w:r><w:t xml:space="preserve"> - State University</w:t></w:r></w:p><w:p/><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Skills</w:t></w:r></w:p><w:p><w:r><w:t xml:space="preserve">TypeScript (expert)</w:t></w:r></w:p><w:p><w:r><w:t xml:space="preserve">Go</w:t></w:r></w:p><w:p/><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Projects</w:t></w:r></w:p><w:p><w:r><w:t xml:space="preserve">OpenThing</w:t></w:r></w:p><w:p/><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Certifications</w:t></w:r></w:p><w:p><w:r><w:t xml:space="preserve">AWS SA</w:t></w:r></w:p><w:p><w:r><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t xml:space="preserve">Expires Mar 2027</w:t></w:r></w:p><w:p><w:r><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t xml:space="preserve">https://cert.example/abc</w:t></w:r></w:p><w:p/><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Languages</w:t></w:r></w:p><w:p><w:r><w:t xml:space="preserve">English</w:t></w:r></w:p><w:p/><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Awards</w:t></w:r></w:p><w:p/><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Volunteer</w:t></w:r></w:p><w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">Organiser</w:t></w:r><w:r><w:t xml:space="preserve"> at Food Bank</w:t></w:r></w:p><w:p><w:r><w:rPr><w:i/><w:iCs/></w:rPr><w:t xml:space="preserve">2019 - 2020</w:t></w:r></w:p><w:p><w:r><w:t xml:space="preserve">Weekly drives</w:t></w:r></w:p><w:p/><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Custom</w:t></w:r></w:p><w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">Side note</w:t></w:r><w:r><w:t xml:space="preserve">  •  Sub</w:t></w:r><w:r><w:rPr><w:i/><w:iCs/></w:rPr><w:t xml:space="preserve">  |  Feb 2024</w:t></w:r></w:p><w:p/><w:sectPr><w:pgSz w:w="11906" w:h="16838" w:orient="portrait"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="708" w:footer="708" w:gutter="0"/><w:pgNumType/><w:docGrid w:linePitch="360"/></w:sectPr></w:body></w:document>"`;
+
+exports[`ExportService — other section types are byte-identical (pinned before the reference fix) HTML 1`] = `
+"<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Inter, sans-serif; color: #1a1a1a; line-height: 1.6; padding: 40px; }
+  h1 { color: #2563eb; font-size: 28px; margin-bottom: 4px; }
+  h2 { color: #2563eb; font-size: 18px; border-bottom: 2px solid #2563eb; padding-bottom: 4px; margin: 20px 0 10px; }
+  .header { text-align: center; margin-bottom: 24px; }
+  .headline { font-size: 16px; color: #555; margin-bottom: 8px; }
+  .contact { font-size: 13px; color: #666; }
+  .summary { margin-bottom: 16px; font-size: 14px; }
+  .section { margin-bottom: 16px; }
+  .item { margin-bottom: 12px; }
+  .item-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .item-title { font-weight: 600; font-size: 15px; }
+  .item-subtitle { color: #555; font-size: 14px; }
+  .item-date { color: #888; font-size: 13px; }
+  .item-desc { font-size: 14px; margin-top: 4px; }
+  .skills-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .skill-tag { background: #2563eb15; color: #2563eb; padding: 4px 12px; border-radius: 4px; font-size: 13px; white-space: nowrap; }
+  .skill-level { opacity: 0.7; font-size: 11px; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>Amara Okafor</h1>
+    <div class="headline">Engineer</div>
+    <div class="contact">amara@example.com | +234 1 | Lagos, Nigeria</div>
+  </div>
+  <div class="summary"><h2>Professional Summary</h2><p>Builds things.</p></div>
+  <div class="section"><h2>Experience</h2><div class="item">
+              <div class="item-header"><span class="item-title">Lead</span><span class="item-date">2020-01 - Present</span></div>
+              <div class="item-subtitle">Acme | Remote</div>
+              <div class="item-desc">Ran the team</div><ul style="margin: 4px 0 0 18px; font-size: 14px;"><li>Cut latency</li></ul>
+            </div><div class="item">
+              <div class="item-header"><span class="item-title">Engineer</span><span class="item-date">2017-03 - 2019-12</span></div>
+              <div class="item-subtitle">Initech</div>
+              
+            </div></div><div class="section"><h2>Education</h2><div class="item">
+              <div class="item-header"><span class="item-title">BSc in CS</span><span class="item-date">2013 - 2017</span></div>
+              <div class="item-subtitle">State University</div>
+            </div></div><div class="section"><h2>Skills</h2><div class="skills-list"><span class="skill-tag">TypeScript <span class="skill-level">expert</span></span><span class="skill-tag">Go</span></div></div><div class="section"><h2>Projects</h2><div class="item"><span class="item-title">OpenThing</span></div></div><div class="section"><h2>Certifications</h2><div class="item"><span class="item-title">AWS SA</span><div class="item-date">Expires Mar 2027</div><div class="item-date">https://cert.example/abc</div></div></div><div class="section"><h2>Languages</h2><div class="item"><span class="item-title">English</span></div></div><div class="section"><h2>Awards</h2><div class="item"><span class="item-title">Hackathon winner</span></div></div><div class="section"><h2>Volunteer</h2><div class="item">
+              <div class="item-header"><span class="item-title">Organiser</span><span class="item-date">2019 - 2020</span></div>
+              <div class="item-subtitle">Food Bank</div>
+              <div class="item-desc">Weekly drives</div>
+            </div></div><div class="section"><h2>Custom</h2><div class="item"><div class="item-header"><span class="item-title">Side note</span><span class="item-date">Feb 2024</span></div><div class="item-subtitle">Sub</div></div><div class="item"><span class="item-title">Plain</span></div></div>
+</body>
+</html>"
+`;

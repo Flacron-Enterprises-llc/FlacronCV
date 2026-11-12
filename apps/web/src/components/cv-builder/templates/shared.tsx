@@ -220,6 +220,32 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
     flexShrink: 0,
   };
 
+  // Generic item lines (project, certification, language, custom, award…, and
+  // references). One definition so a reference reads exactly like the other
+  // name-plus-detail entries on the page.
+  const genericRowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' };
+  const genericLabelStyle: React.CSSProperties = { fontSize: `${fs.name}px`, fontWeight: 600, color: titleColor, lineHeight: 1.3 };
+  const genericDetailStyle: React.CSSProperties = { fontSize: `${fs.body}px`, color: textColor, marginTop: '3px', marginBottom: 0, lineHeight: 1.55, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' };
+
+  // References are keyed on the section type, before the experience branch: a
+  // reference has a `company` and would otherwise render as a job (no name, a
+  // "Present" date). Plain text lines only — no new boxes for html2canvas.
+  if (sectionType === 'references') {
+    const lines = referenceLines(item);
+    return (
+      <div style={cardWrapper}>
+        {lines.name && (
+          <div style={genericRowStyle}>
+            <span style={genericLabelStyle}>{lines.name}</span>
+          </div>
+        )}
+        {lines.details.map((line, i) => (
+          <p key={i} style={genericDetailStyle}>{line}</p>
+        ))}
+      </div>
+    );
+  }
+
   if (item.position || item.company) {
     const start = formatCVDate(item.startDate);
     const end   = item.isCurrent ? 'Present' : formatCVDate(item.endDate) || 'Present';
@@ -277,17 +303,38 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
   const date = formatCVDate(item.date || item.startDate);
   return (
     <div style={cardWrapper}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' }}>
-        <span style={{ fontSize: `${fs.name}px`, fontWeight: 600, color: titleColor, lineHeight: 1.3 }}>
+      <div style={genericRowStyle}>
+        <span style={genericLabelStyle}>
           {label}
         </span>
         {date && <span style={dateStyle}>{date}</span>}
       </div>
       {detail && (
-        <p style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '3px', marginBottom: 0, lineHeight: 1.55, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>{detail}</p>
+        <p style={genericDetailStyle}>{detail}</p>
       )}
     </div>
   );
+}
+
+// ─── Reference lines ─────────────────────────────────────────────────────────
+
+/**
+ * The text lines of a reference entry, empty ones dropped:
+ * name, then "title, company", then "email · phone", then relationship.
+ * Shared by every layout and the DOCX export so they agree on what a
+ * reference says.
+ */
+export function referenceLines(item: {
+  name?: unknown; title?: unknown; company?: unknown;
+  email?: unknown; phone?: unknown; relationship?: unknown;
+} | null | undefined): { name: string; role: string; contact: string; relationship: string; details: string[] } {
+  const txt = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+  const it = item ?? {};
+  const name = txt(it.name);
+  const role = [txt(it.title), txt(it.company)].filter(Boolean).join(', ');
+  const contact = [txt(it.email), txt(it.phone)].filter(Boolean).join(' · ');
+  const relationship = txt(it.relationship);
+  return { name, role, contact, relationship, details: [role, contact, relationship].filter(Boolean) };
 }
 
 // ─── Degree + field ──────────────────────────────────────────────────────────
