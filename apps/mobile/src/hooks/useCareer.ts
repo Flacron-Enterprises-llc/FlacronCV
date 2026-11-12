@@ -11,7 +11,7 @@ import { useAuthStore } from '../store/auth-store';
  * Authorization and quotas are the career API's; these hooks only read and
  * write through it.
  */
-function useUid(): string | null {
+export function useUid(): string | null {
   return useAuthStore((s) => s.firebaseUser?.uid ?? null);
 }
 
@@ -39,7 +39,7 @@ export function useCareerSubscription() {
   });
 }
 
-function useEntitled(): { uid: string | null; entitled: boolean } {
+export function useEntitled(): { uid: string | null; entitled: boolean } {
   const uid = useUid();
   const access = useCareerAccess();
   return { uid, entitled: access.data?.enabled === true };

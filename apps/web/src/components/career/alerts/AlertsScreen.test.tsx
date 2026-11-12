@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError, type AlertList } from '@flacroncv/career-api-client';
@@ -112,5 +112,24 @@ describe('AlertsScreen saved searches', () => {
     expect(await screen.findByText('SQL analyst')).toBeTruthy();
     expect(await screen.findByText(/saved searches could not be loaded/)).toBeTruthy();
     expect(screen.getAllByText(/Not connected yet/).length).toBe(2);
+  });
+
+  it('limits a new saved search to a chosen place and shows the place on the search', async () => {
+    const leeds = { id: 'loc-1', place: 'Leeds', radiusMiles: 25 };
+    const createSavedSearch = vi.fn().mockResolvedValue({ ...searches[0], id: 's3', locationProfileId: 'loc-1' });
+    const api = testApi({
+      alerts: vi.fn().mockResolvedValue(center),
+      savedSearches: vi.fn().mockResolvedValue({ items: [{ ...searches[0], locationProfileId: 'loc-1' }] }),
+      alertLocations: vi.fn().mockResolvedValue({ items: [leeds] }),
+      followedCompanies: vi.fn().mockResolvedValue({ items: [] }),
+      createSavedSearch,
+    });
+    renderAlerts(api);
+    // Shown on the saved search, in the place list and as a form option.
+    expect((await screen.findAllByText('Leeds · within 25 miles')).length).toBe(3);
+    fireEvent.change(screen.getByLabelText('Saved search'), { target: { value: 'analyst' } });
+    fireEvent.change(screen.getByLabelText('Limit to a place (optional)'), { target: { value: 'loc-1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save search' }));
+    await waitFor(() => expect(createSavedSearch).toHaveBeenCalledWith({ q: 'analyst', locationProfileId: 'loc-1' }));
   });
 });

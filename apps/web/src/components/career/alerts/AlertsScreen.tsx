@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
-import { isApiError, type AlertItem, type AlertList, type ApiClient, type SavedSearch } from '@flacroncv/career-api-client';
+import { isApiError, type AlertItem, type AlertList, type AlertLocation, type ApiClient, type SavedSearch } from '@flacroncv/career-api-client';
 import {
   Button,
   Card,
@@ -16,6 +16,7 @@ import {
 } from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { profileLoadFailure } from '@/lib/career/profile-load';
+import { AlertTargets } from './AlertTargets';
 
 export function AlertsScreen({
   api,
@@ -39,6 +40,8 @@ export function AlertsScreen({
   // Saved searches load separately: a failure here must not hide the alert centre.
   const [searches, setSearches] = useState<SavedSearch[] | 'error' | null>(null);
   const [searchBusy, setSearchBusy] = useState<string | null>(null);
+  const [locations, setLocations] = useState<AlertLocation[]>([]);
+  const [searchLocation, setSearchLocation] = useState('');
 
   const loadSearches = useCallback(async () => {
     try {
@@ -106,9 +109,10 @@ export function AlertsScreen({
     setPending(true);
     setNote(null);
     try {
-      await api.createSavedSearch({ q: query });
+      await api.createSavedSearch({ q: query, ...(searchLocation ? { locationProfileId: searchLocation } : {}) });
       setNote('saved');
       setQuery('');
+      setSearchLocation('');
       void loadSearches();
     } catch (error) {
       if (isApiError(error, 'capacity_exceeded')) setNote('capacity');
@@ -197,6 +201,26 @@ export function AlertsScreen({
         <Card>
           <form className="space-y-3" onSubmit={(event) => void saveSearch(event)}>
             <Input label={t('search_label')} value={query} onChange={(event) => setQuery(event.target.value)} />
+            {locations.length > 0 ? (
+              <>
+                <label className="block text-sm font-semibold" htmlFor="search-location">
+                  {t('search_location')}
+                </label>
+                <select
+                  id="search-location"
+                  value={searchLocation}
+                  onChange={(event) => setSearchLocation(event.target.value)}
+                  className="min-h-career-touch w-full rounded-md border px-3"
+                >
+                  <option value="">{t('search_location_any')}</option>
+                  {locations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {t('location_line', { place: location.place, miles: location.radiusMiles })}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : null}
             <Button type="submit" disabled={pending}>
               {t('save_search')}
             </Button>
@@ -221,7 +245,10 @@ export function AlertsScreen({
             <ul className="mt-3 space-y-2">
               {searches.map((search) => (
                 <li key={search.id} className="flex flex-wrap items-center gap-2 rounded-md border border-career-line p-3 text-sm">
-                  <span className="min-w-0 flex-1 break-words font-semibold">{search.q || t('searches_any')}</span>
+                  <span className="min-w-0 flex-1 break-words font-semibold">
+                    {search.q || t('searches_any')}
+                    {search.locationProfileId ? <SearchPlace id={search.locationProfileId} locations={locations} /> : null}
+                  </span>
                   {search.paused ? <span className="text-xs font-semibold uppercase text-slate">{t('searches_paused')}</span> : null}
                   <Button type="button" disabled={searchBusy === search.id} onClick={() => void togglePaused(search)}>
                     {search.paused ? t('searches_resume') : t('searches_pause')}
@@ -234,6 +261,7 @@ export function AlertsScreen({
             </ul>
           )}
         </Card>
+        <AlertTargets api={api} onLocations={setLocations} />
         <Card>
           <form className="space-y-3" onSubmit={(event) => void saveSettings(event)}>
             <h2 className="text-lg font-semibold text-career-navy dark:text-white">{t('settings_title')}</h2>
@@ -274,6 +302,12 @@ export function AlertsScreen({
       </section>
     </div>
   );
+}
+
+function SearchPlace({ id, locations }: { id: string; locations: AlertLocation[] }) {
+  const t = useTranslations('career.alerts');
+  const place = locations.find((location) => location.id === id);
+  return <span className="block text-xs font-normal text-slate">{place ? t('location_line', { place: place.place, miles: place.radiusMiles }) : t('search_location_set')}</span>;
 }
 
 function AlertCard({ item, locale }: { item: AlertItem; locale: string }) {

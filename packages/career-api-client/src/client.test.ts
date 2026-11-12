@@ -103,3 +103,24 @@ describe('fieldErrors', () => {
     expect(fieldErrors(new ApiError(403, 'permission_denied', { code: 'permission_denied' }))).toEqual([]);
   });
 });
+
+describe('alert locations and followed companies', () => {
+  it('calls the alert routes with encoded ids and the saved-search location', async () => {
+    const calls: Call[] = [];
+    const api = createApiClient({ baseUrl: 'http://localhost:3000', getToken: async () => 't', fetch: fakeFetch(200, { ok: true }, calls) });
+    await api.createAlertLocation({ place: 'Leeds', radiusMiles: 25 });
+    await api.deleteAlertLocation('a/b');
+    await api.followCompany({ name: 'Northwind' });
+    await api.unfollowCompany('c 1');
+    await api.createSavedSearch({ q: 'analyst', locationProfileId: 'loc-1' });
+    expect(calls.map((c) => `${c.init.method} ${c.url}`)).toEqual([
+      'POST http://localhost:3000/api/career/v1/location-profiles',
+      'DELETE http://localhost:3000/api/career/v1/location-profiles/a%2Fb',
+      'POST http://localhost:3000/api/career/v1/followed-companies',
+      'DELETE http://localhost:3000/api/career/v1/followed-companies/c%201',
+      'POST http://localhost:3000/api/career/v1/saved-searches',
+    ]);
+    expect(JSON.parse(String(calls[0].init.body))).toEqual({ place: 'Leeds', radiusMiles: 25 });
+    expect(JSON.parse(String(calls[4].init.body))).toEqual({ q: 'analyst', locationProfileId: 'loc-1' });
+  });
+});

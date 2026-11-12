@@ -428,6 +428,19 @@ export interface SavedSearch {
   paused: boolean;
 }
 
+/** A place a saved search can be limited to (alerts; distinct from career-mode relocation profiles). */
+export interface AlertLocation {
+  id: string;
+  place: string;
+  radiusMiles: number;
+}
+
+export interface FollowedCompany {
+  id: string;
+  name: string;
+  sourceUrl: string | null;
+}
+
 export interface AlertSettings {
   email: boolean;
   push: boolean;

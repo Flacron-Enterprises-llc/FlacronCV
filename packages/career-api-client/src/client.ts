@@ -28,7 +28,9 @@ import type {
   PaidMatch,
   MatchResult,
   AlertList,
+  AlertLocation,
   AlertSettings,
+  FollowedCompany,
   SavedSearch,
   ApplicationItem,
   ApplicationStatus,
@@ -291,11 +293,27 @@ export function createApiClient(options: ApiClientOptions) {
     alerts: () => request<AlertList>('GET', '/alerts'),
     updateAlertSettings: (patch: Partial<AlertSettings>) => request<AlertSettings>('PATCH', '/alert-settings', { body: patch }),
     savedSearches: () => request<{ items: SavedSearch[] }>('GET', '/saved-searches'),
-    createSavedSearch: (input: { q?: string; category?: string; schedule?: SavedSearch['schedule']; radiusMiles?: number }) =>
+    createSavedSearch: (input: {
+      q?: string;
+      category?: string;
+      schedule?: SavedSearch['schedule'];
+      locationProfileId?: string;
+      radiusMiles?: number;
+    }) =>
       request<SavedSearch>('POST', '/saved-searches', { body: input }),
     updateSavedSearch: (searchId: string, patch: { q?: string; paused?: boolean; schedule?: SavedSearch['schedule'] }) =>
       request<SavedSearch>('PATCH', `/saved-searches/${id(searchId)}`, { body: patch }),
     deleteSavedSearch: (searchId: string) => request<{ ok: true }>('DELETE', `/saved-searches/${id(searchId)}`),
+    alertLocations: () => request<{ items: AlertLocation[] }>('GET', '/location-profiles'),
+    createAlertLocation: (input: { place: string; radiusMiles?: number }) =>
+      request<AlertLocation>('POST', '/location-profiles', { body: input }),
+    updateAlertLocation: (locationId: string, patch: { place?: string; radiusMiles?: number }) =>
+      request<AlertLocation>('PATCH', `/location-profiles/${id(locationId)}`, { body: patch }),
+    deleteAlertLocation: (locationId: string) => request<{ ok: true }>('DELETE', `/location-profiles/${id(locationId)}`),
+    followedCompanies: () => request<{ items: FollowedCompany[] }>('GET', '/followed-companies'),
+    followCompany: (input: { name: string; sourceUrl?: string }) =>
+      request<FollowedCompany>('POST', '/followed-companies', { body: input }),
+    unfollowCompany: (companyId: string) => request<{ ok: true }>('DELETE', `/followed-companies/${id(companyId)}`),
 
     applications: () => request<{ items: ApplicationItem[] }>('GET', '/applications'),
     application: (applicationId: string) => request<ApplicationItem>('GET', `/applications/${id(applicationId)}`),
