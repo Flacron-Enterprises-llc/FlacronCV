@@ -170,8 +170,9 @@ export function OpportunityDetailScreen({
           <h2 className="text-lg font-semibold text-career-ink">{t(`fit_${match.fit}`)}</h2>
           <p className="mt-1 text-sm text-career-muted">{t('compare_not_a_score')}</p>
           <ul className="mt-2 flex flex-col gap-1">
-            {match.reasons.map((reason) => (
-              <li key={`${reason.factId}-${reason.token}`} className="text-sm text-career-ink">{t('reason_overlap', { token: reason.token })}</li>
+            {/* One reason per matching fact from the API; the same word on two facts is one line. */}
+            {[...new Set(match.reasons.map((reason) => reason.token))].map((token) => (
+              <li key={token} className="text-sm text-career-ink">{t('reason_overlap', { token })}</li>
             ))}
             {match.gaps.map((gap) => (
               <li key={gap.token} className="text-sm text-career-ink">{t('gap_word', { token: gap.token })}</li>

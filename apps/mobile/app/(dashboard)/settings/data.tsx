@@ -87,7 +87,7 @@ export default function AccountDataScreen() {
             <Text className="font-bold text-stone-900 text-base">Download your data</Text>
             <Text className="text-stone-500 text-sm mt-1 leading-5">
               A copy of your account, CVs, cover letters and job applications as a JSON file. The file is shared from a temporary copy that is removed afterwards.
-              {CAREER_ENABLED ? ' Career-tool data is exported from the career data page on the website.' : ''}
+              {CAREER_ENABLED ? ' Career-tool data is exported separately from Career tools > Career data.' : ''}
             </Text>
             <View className="mt-4 self-start">
               <Button variant="outline" onPress={() => void onDownload()} loading={exporting}>

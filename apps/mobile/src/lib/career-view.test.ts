@@ -1,6 +1,17 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../../../packages/career-api-client/src/client';
-import { careerAccessState, careerErrorMessage, describeAccess, documentCredits, visibleAreas, type CareerSubscriptionView } from './career-view';
+import {
+  CAREER_AREAS,
+  careerAccessState,
+  careerErrorMessage,
+  describeAccess,
+  documentCredits,
+  visibleAreas,
+  type CareerSubscriptionView,
+} from './career-view';
 
 const writes: string[] = [];
 const deletes: string[] = [];
@@ -126,6 +137,19 @@ describe('visibleAreas', () => {
 
   it('marks the browser extension as desktop only', () => {
     expect(visibleAreas({}).find((a) => a.key === 'forms')?.where).toBe('desktop');
+  });
+
+  it('points every in-app area at a screen file that exists', () => {
+    const appDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'app');
+    const exists = (route: string) =>
+      [`${route}.tsx`, `${route}/index.tsx`].some((candidate) => fs.existsSync(path.join(appDir, candidate)));
+    const inApp = CAREER_AREAS.filter((area) => area.where === 'app');
+    expect(inApp.length).toBeGreaterThan(15);
+    for (const area of inApp) {
+      expect(area.route, area.key).toBeTruthy();
+      expect(exists(area.route as string), `${area.key} → ${area.route}`).toBe(true);
+    }
+    expect(new Set(CAREER_AREAS.map((area) => area.key)).size).toBe(CAREER_AREAS.length);
   });
 });
 

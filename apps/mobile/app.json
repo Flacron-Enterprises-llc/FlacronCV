@@ -47,7 +47,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "FlacronCV uses your photo library so you can choose a profile photo.",
+          "photosPermission": "FlacronCV uses your photo library so you can choose a profile photo and attach photos of certificates or other proof of your work.",
           "cameraPermission": false,
           "microphonePermission": false
         }
