@@ -139,7 +139,9 @@ export function safeFontSize(value: unknown, fallback = '16px'): string {
 
 /**
  * Subresources a print page may load. Remote font files are not referenced
- * by these templates, so a font URL is not an exception.
+ * by these templates, so a font URL is not an exception. The CV photo is not
+ * an exception either: the server fetches it under the `cv-photo.ts` rules and
+ * inlines it as `data:`, so Chromium makes no network request for it.
  */
 export function allowPrintSubresource(url: string): boolean {
   return url.startsWith('data:');

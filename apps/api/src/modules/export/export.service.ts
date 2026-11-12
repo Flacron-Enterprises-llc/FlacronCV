@@ -22,6 +22,77 @@ import {
   safeFontSize,
   sanitizePrintHtml,
 } from './print-html';
+import {
+  type CvPhoto,
+  cvPhotoDataUri,
+  cvPhotoDimensions,
+  fetchCvPhoto,
+} from './cv-photo';
+
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** Same as the web's `formatCVDate`: "2021-01" → "Jan 2021"; other text unchanged. */
+export function formatCVDate(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  const s = value.trim();
+  if (!s) return '';
+  if (s.toLowerCase() === 'present') return 'Present';
+  const ym = /^(\d{4})-(\d{2})$/.exec(s);
+  if (ym) {
+    const m = parseInt(ym[2], 10);
+    if (m >= 1 && m <= 12) return `${MONTH_NAMES[m - 1]} ${ym[1]}`;
+  }
+  return s;
+}
+
+function hasText(v: unknown): v is string {
+  return typeof v === 'string' && v.trim().length > 0;
+}
+
+/**
+ * Address, "city postal" and country — the web's `locationLine`. Returns null
+ * when the CV has neither address nor postal code, so callers keep the old
+ * "city, country" text byte-for-byte for those CVs.
+ */
+function extendedLocation(pi: Record<string, unknown> | undefined): string | null {
+  if (!pi || (!hasText(pi.address) && !hasText(pi.postalCode))) return null;
+  const cityPostal = [pi.city, pi.postalCode].filter(hasText).join(' ');
+  return [pi.address, cityPostal, pi.country].filter(hasText).join(', ');
+}
+
+function textList(v: unknown): string[] {
+  return Array.isArray(v) ? v.filter(hasText).map((s) => s.trim()) : [];
+}
+
+/** Hex colour for docx (no '#', 6 digits), or undefined when not a valid colour. */
+function docxColor(value: unknown): string | undefined {
+  const c = safeColor(value, '');
+  if (!c) return undefined;
+  const hex = c.slice(1);
+  return hex.length === 3 ? hex.split('').map((ch) => ch + ch).join('') : hex;
+}
+
+/**
+ * The extra lines a generic (name/title-only) item gains from fields the
+ * mobile app edits. Empty for items without them, so their output is unchanged.
+ */
+function genericItemExtras(
+  sectionType: unknown,
+  item: Record<string, unknown>,
+): { date: string; subtitle: string; lines: string[] } {
+  const out = { date: '', subtitle: '', lines: [] as string[] };
+  if (sectionType === 'custom') {
+    out.date = formatCVDate(item.date);
+    if (hasText(item.subtitle)) out.subtitle = item.subtitle.trim();
+  } else if (sectionType === 'certifications') {
+    const expiry = formatCVDate(item.expiryDate);
+    if (expiry) out.lines.push(`Expires ${expiry}`);
+    if (hasText(item.url)) out.lines.push(item.url.trim());
+  } else if (sectionType === 'references') {
+    if (hasText(item.relationship)) out.subtitle = item.relationship.trim();
+  }
+  return out;
+}
 
 /** Cadence follows the plan: Free never resets, paid numeric caps are monthly. */
 export function exportLimitReachedMessage(
@@ -250,8 +321,10 @@ export class ExportService {
     const cv = await this.cvService.findByIdOrThrow(cvId, userId);
     const sections = await this.cvService.getSections(cvId);
 
-    // Build HTML from template
-    const html = this.renderCVHTML(cv, sections);
+    // Build HTML from template. The photo is fetched here (allow-listed hosts
+    // only) and inlined as data:, so Chromium itself never touches the network.
+    const photo = await this.loadCvPhoto(cv);
+    const html = this.renderCVHTML(cv, sections, photo);
 
     // Use Puppeteer for PDF generation — semaphore caps concurrent instances
     await this.exportSemaphore.acquire();
@@ -299,9 +372,69 @@ export class ExportService {
     const cv = await this.cvService.findByIdOrThrow(cvId, userId);
     const sections = await this.cvService.getSections(cvId);
 
-    const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import('docx');
+    const photo = await this.loadCvPhoto(cv);
+    const buffer = await this.buildCVDocx(cv, sections, photo);
 
-    const children: any[] = [
+    const fileName = `exports/${userId}/${uuidv4()}.docx`;
+    const file = this.firebaseAdmin.bucket.file(fileName);
+    await file.save(Buffer.from(buffer), {
+      metadata: { contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
+    });
+
+    const [url] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 60 * 60 * 1000,
+    });
+
+    await this.usersService.incrementUsage(userId, 'exportsThisMonth');
+
+    return { downloadUrl: url, expiresAt: new Date(Date.now() + 60 * 60 * 1000) };
+  }
+
+  /**
+   * The CV photo, when the CV shows one and it can be fetched safely.
+   * Never throws: any refusal or failure means "export without the photo".
+   */
+  private async loadCvPhoto(cv: any): Promise<CvPhoto | null> {
+    if (!cv?.styling?.showPhoto || !hasText(cv?.personalInfo?.photoURL)) return null;
+    try {
+      const result = await fetchCvPhoto(cv.personalInfo.photoURL);
+      if (result.ok) return { data: result.data, contentType: result.contentType };
+      // The URL is not logged: Firebase download URLs carry an access token.
+      this.logger.warn(`CV photo omitted from export (${result.reason})`);
+    } catch {
+      this.logger.warn('CV photo omitted from export (unexpected)');
+    }
+    return null;
+  }
+
+  private async buildCVDocx(cv: any, sections: any[], photo: CvPhoto | null = null): Promise<Buffer> {
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun } = await import('docx');
+
+    const location = extendedLocation(cv.personalInfo);
+    const children: any[] = [];
+
+    // Word cannot be relied on for WebP, so only JPEG/PNG are embedded.
+    if (photo && (photo.contentType === 'image/jpeg' || photo.contentType === 'image/png')) {
+      const dims = cvPhotoDimensions(photo);
+      const box = 96;
+      const scale = dims ? box / Math.max(dims.width, dims.height) : 1;
+      children.push(
+        new Paragraph({
+          children: [
+            new ImageRun({
+              type: photo.contentType === 'image/png' ? 'png' : 'jpg',
+              data: photo.data,
+              transformation: dims
+                ? { width: Math.max(1, Math.round(dims.width * scale)), height: Math.max(1, Math.round(dims.height * scale)) }
+                : { width: box, height: box },
+            }),
+          ],
+        }),
+      );
+    }
+
+    children.push(
       new Paragraph({
         children: [
           new TextRun({
@@ -318,13 +451,13 @@ export class ExportService {
       new Paragraph({
         children: [
           new TextRun({
-            text: `${cv.personalInfo.email} | ${cv.personalInfo.phone} | ${cv.personalInfo.city}, ${cv.personalInfo.country}`,
+            text: `${cv.personalInfo.email} | ${cv.personalInfo.phone} | ${location ?? `${cv.personalInfo.city}, ${cv.personalInfo.country}`}`,
             size: 20,
           }),
         ],
       }),
       new Paragraph({ text: '' }),
-    ];
+    );
 
     if (cv.personalInfo.summary) {
       children.push(
@@ -362,6 +495,14 @@ export class ExportService {
           if (itemRecord.description) {
             children.push(new Paragraph({ text: itemRecord.description as string }));
           }
+          for (const highlight of textList(itemRecord.highlights)) {
+            children.push(new Paragraph({ children: [new TextRun({ text: `• ${highlight}` })] }));
+          }
+          // A reference with a company lands in this branch (pre-existing
+          // routing); its relationship still has to be shown.
+          if (section.type === 'references' && hasText(itemRecord.relationship)) {
+            children.push(new Paragraph({ children: [new TextRun({ text: itemRecord.relationship.trim(), italics: true })] }));
+          }
         } else if (itemRecord.institution) {
           children.push(
             new Paragraph({
@@ -377,28 +518,36 @@ export class ExportService {
               children: [new TextRun({ text: `${itemRecord.name}${itemRecord.level ? ` (${itemRecord.level})` : ''}` })],
             }),
           );
+          const extras = genericItemExtras(section.type, itemRecord);
+          if (extras.subtitle) {
+            children.push(new Paragraph({ children: [new TextRun({ text: extras.subtitle, italics: true })] }));
+          }
+          for (const line of extras.lines) {
+            children.push(new Paragraph({ children: [new TextRun({ text: line, size: 20 })] }));
+          }
+        } else if (hasText(itemRecord.title)) {
+          // Custom entries (title, subtitle, date) — the web DOCX's
+          // "title  •  subtitle  |  date". Title-only entries were never in
+          // this export, so they stay out to keep existing files unchanged.
+          const extras = genericItemExtras(section.type, itemRecord);
+          if (extras.subtitle || extras.date) {
+            children.push(
+              new Paragraph({
+                children: [
+                  new TextRun({ text: itemRecord.title.trim(), bold: true }),
+                  ...(extras.subtitle ? [new TextRun({ text: `  •  ${extras.subtitle}` })] : []),
+                  ...(extras.date ? [new TextRun({ text: `  |  ${extras.date}`, italics: true })] : []),
+                ],
+              }),
+            );
+          }
         }
       }
       children.push(new Paragraph({ text: '' }));
     }
 
     const doc = new Document({ sections: [{ properties: {}, children }] });
-    const buffer = await Packer.toBuffer(doc);
-
-    const fileName = `exports/${userId}/${uuidv4()}.docx`;
-    const file = this.firebaseAdmin.bucket.file(fileName);
-    await file.save(Buffer.from(buffer), {
-      metadata: { contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
-    });
-
-    const [url] = await file.getSignedUrl({
-      action: 'read',
-      expires: Date.now() + 60 * 60 * 1000,
-    });
-
-    await this.usersService.incrementUsage(userId, 'exportsThisMonth');
-
-    return { downloadUrl: url, expiresAt: new Date(Date.now() + 60 * 60 * 1000) };
+    return Packer.toBuffer(doc);
   }
 
   /**
@@ -425,7 +574,31 @@ export class ExportService {
       .replace(/'/g, '&#39;');
   }
 
-  private renderCVHTML(cv: any, sections: any[]): string {
+  /** Experience highlights as a bullet list; '' when there are none. */
+  private highlightsHtml(item: any): string {
+    const highlights = textList(item?.highlights);
+    if (!highlights.length) return '';
+    return `<ul style="margin: 4px 0 0 18px; font-size: 14px;">${highlights
+      .map((h) => `<li>${this.esc(h)}</li>`)
+      .join('')}</ul>`;
+  }
+
+  /** A name/title-only item, plus the extra fields the mobile app edits. */
+  private genericItemHtml(sectionType: unknown, item: any): string {
+    const label = this.esc(item.name || item.title || '');
+    const extras = genericItemExtras(sectionType, item ?? {});
+    if (!extras.date && !extras.subtitle && !extras.lines.length) {
+      return `<div class="item"><span class="item-title">${label}</span></div>`;
+    }
+    const head = extras.date
+      ? `<div class="item-header"><span class="item-title">${label}</span><span class="item-date">${this.esc(extras.date)}</span></div>`
+      : `<span class="item-title">${label}</span>`;
+    const subtitle = extras.subtitle ? `<div class="item-subtitle">${this.esc(extras.subtitle)}</div>` : '';
+    const lines = extras.lines.map((l) => `<div class="item-date">${this.esc(l)}</div>`).join('');
+    return `<div class="item">${head}${subtitle}${lines}</div>`;
+  }
+
+  private renderCVHTML(cv: any, sections: any[], photo: CvPhoto | null = null): string {
     const template = this.templates.get(cv.templateId);
     if (template) {
       return template({ cv, sections });
@@ -435,6 +608,12 @@ export class ExportService {
     // allowlisted so a styling value cannot close the <style> block.
     const fontFamily = safeFontFamily(cv.styling?.fontFamily);
     const primaryColor = safeColor(cv.styling?.primaryColor);
+    const location = extendedLocation(cv.personalInfo);
+    // Same placement as the web Classic layout: a 76px circle above the name.
+    const photoHtml =
+      photo && cv.styling?.showPhoto
+        ? `<img src="${this.esc(cvPhotoDataUri(photo))}" alt="" style="width: 76px; height: 76px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 12px; border: 3px solid ${primaryColor};">`
+        : '';
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -461,9 +640,9 @@ export class ExportService {
 </head>
 <body>
   <div class="header">
-    <h1>${this.esc(cv.personalInfo.firstName)} ${this.esc(cv.personalInfo.lastName)}</h1>
+    ${photoHtml}<h1>${this.esc(cv.personalInfo.firstName)} ${this.esc(cv.personalInfo.lastName)}</h1>
     <div class="headline">${this.esc(cv.personalInfo.headline)}</div>
-    <div class="contact">${this.esc(cv.personalInfo.email)} | ${this.esc(cv.personalInfo.phone)} | ${this.esc(cv.personalInfo.city)}, ${this.esc(cv.personalInfo.country)}</div>
+    <div class="contact">${this.esc(cv.personalInfo.email)} | ${this.esc(cv.personalInfo.phone)} | ${location !== null ? this.esc(location) : `${this.esc(cv.personalInfo.city)}, ${this.esc(cv.personalInfo.country)}`}</div>
   </div>
   ${cv.personalInfo.summary ? `<div class="summary"><h2>Professional Summary</h2><p>${this.esc(cv.personalInfo.summary)}</p></div>` : ''}
   ${sections
@@ -481,7 +660,7 @@ export class ExportService {
               return `<div class="item">
               <div class="item-header"><span class="item-title">${this.esc(item.position)}</span><span class="item-date">${this.esc(item.startDate)} - ${this.esc(item.endDate || 'Present')}</span></div>
               <div class="item-subtitle">${this.esc(item.company)}${item.location ? ` | ${this.esc(item.location)}` : ''}</div>
-              ${item.description ? `<div class="item-desc">${this.esc(item.description)}</div>` : ''}
+              ${item.description ? `<div class="item-desc">${this.esc(item.description)}</div>` : ''}${this.highlightsHtml(item)}${section.type === 'references' && hasText(item.relationship) ? `<div class="item-subtitle">${this.esc(item.relationship.trim())}</div>` : ''}
             </div>`;
             }
             if (item.institution) {
@@ -490,7 +669,7 @@ export class ExportService {
               <div class="item-subtitle">${this.esc(item.institution)}</div>
             </div>`;
             }
-            return `<div class="item"><span class="item-title">${this.esc(item.name || item.title || '')}</span></div>`;
+            return this.genericItemHtml(section.type, item);
           })
           .join('');
       }
@@ -553,9 +732,44 @@ export class ExportService {
     await this.checkExportLimit(userId);
     const coverLetter = await this.coverLetterService.findByIdOrThrow(coverLetterId, userId);
 
+    const buffer = await this.buildCoverLetterDocx(coverLetter);
+
+    const fileName = `exports/${userId}/${uuidv4()}.docx`;
+    const file = this.firebaseAdmin.bucket.file(fileName);
+    await file.save(Buffer.from(buffer), {
+      metadata: { contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
+    });
+
+    const [url] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 60 * 60 * 1000,
+    });
+
+    await this.usersService.incrementUsage(userId, 'exportsThisMonth');
+
+    return { downloadUrl: url, expiresAt: new Date(Date.now() + 60 * 60 * 1000) };
+  }
+
+  private async buildCoverLetterDocx(coverLetter: any): Promise<Buffer> {
     const { Document, Packer, Paragraph, TextRun, AlignmentType } = await import('docx');
 
     const children: any[] = [];
+    const accent = docxColor(coverLetter.styling?.primaryColor);
+    const senderName = hasText(coverLetter.styling?.senderName) ? coverLetter.styling.senderName.trim() : '';
+    const senderEmail = hasText(coverLetter.styling?.senderEmail) ? coverLetter.styling.senderEmail.trim() : '';
+
+    // Letterhead (web: sender name in the accent, email below in grey).
+    if (senderName) {
+      children.push(new Paragraph({
+        children: [new TextRun({ text: senderName, bold: true, size: 28, ...(accent ? { color: accent } : {}) })],
+      }));
+    }
+    if (senderEmail) {
+      children.push(new Paragraph({
+        children: [new TextRun({ text: senderEmail, size: 20, color: '555555' })],
+      }));
+    }
+    if (senderName || senderEmail) children.push(new Paragraph({ text: '' }));
 
     // Add date (top-right aligned)
     const currentDate = new Date().toLocaleDateString('en-US', {
@@ -571,8 +785,9 @@ export class ExportService {
       new Paragraph({ text: '' })
     );
 
-    // Add recipient info if available
-    if (coverLetter.recipientName || coverLetter.companyName) {
+    // Add recipient info if available. Title or address alone also counts (as on
+    // the web) — they were silently dropped when name and company were empty.
+    if (coverLetter.recipientName || coverLetter.companyName || coverLetter.recipientTitle || coverLetter.companyAddress) {
       if (coverLetter.recipientName) {
         children.push(new Paragraph({
           children: [new TextRun({ text: coverLetter.recipientName, size: 22 })]
@@ -600,14 +815,14 @@ export class ExportService {
     if (coverLetter.jobTitle) {
       children.push(
         new Paragraph({
-          children: [new TextRun({ text: `RE: ${coverLetter.jobTitle}`, bold: true, size: 22 })],
+          children: [new TextRun({ text: `RE: ${coverLetter.jobTitle}`, bold: true, size: 22, ...(accent ? { color: accent } : {}) })],
         }),
         new Paragraph({ text: '' })
       );
     }
 
     // Parse HTML content and convert to paragraphs
-    const contentText = coverLetter.content
+    const contentText: string = coverLetter.content
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<\/p>/gi, '\n\n')
       .replace(/<[^>]+>/g, '')
@@ -623,23 +838,22 @@ export class ExportService {
       );
     });
 
+    // Sign-off (web SignatureBlock). Only with a sender name, so letters
+    // without one keep their existing ending.
+    if (senderName) {
+      children.push(
+        new Paragraph({ children: [new TextRun({ text: 'Sincerely,', size: 22 })], spacing: { before: 240, after: 400 } }),
+        new Paragraph({
+          children: [new TextRun({ text: senderName, bold: true, size: 22, ...(accent ? { color: accent } : {}) })],
+        }),
+      );
+      if (senderEmail) {
+        children.push(new Paragraph({ children: [new TextRun({ text: senderEmail, size: 20, color: '555555' })] }));
+      }
+    }
+
     const doc = new Document({ sections: [{ properties: {}, children }] });
-    const buffer = await Packer.toBuffer(doc);
-
-    const fileName = `exports/${userId}/${uuidv4()}.docx`;
-    const file = this.firebaseAdmin.bucket.file(fileName);
-    await file.save(Buffer.from(buffer), {
-      metadata: { contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
-    });
-
-    const [url] = await file.getSignedUrl({
-      action: 'read',
-      expires: Date.now() + 60 * 60 * 1000,
-    });
-
-    await this.usersService.incrementUsage(userId, 'exportsThisMonth');
-
-    return { downloadUrl: url, expiresAt: new Date(Date.now() + 60 * 60 * 1000) };
+    return Packer.toBuffer(doc);
   }
 
   private renderCoverLetterHTML(coverLetter: any): string {
@@ -652,6 +866,18 @@ export class ExportService {
     const fontSize = safeFontSize(coverLetter.styling?.fontSize);
     const primaryColor = safeColor(coverLetter.styling?.primaryColor);
     const content = sanitizePrintHtml(coverLetter.content);
+    const senderName = hasText(coverLetter.styling?.senderName) ? coverLetter.styling.senderName.trim() : '';
+    const senderEmail = hasText(coverLetter.styling?.senderEmail) ? coverLetter.styling.senderEmail.trim() : '';
+    // Inline styles so letters without a sender keep their existing HTML.
+    const letterhead = senderName || senderEmail
+      ? `<div style="margin-bottom: 28px;">${senderName ? `<div style="font-weight: 700; font-size: 1.25em; color: ${primaryColor};">${this.esc(senderName)}</div>` : ''}${senderEmail ? `<div style="color: #666; font-size: 0.9em; margin-top: 2px;">${this.esc(senderEmail)}</div>` : ''}</div>`
+      : '';
+    const signature = senderName
+      ? `<div>Sincerely,</div><div style="height: 38px;"></div><div style="font-weight: 600; color: ${primaryColor};">${this.esc(senderName)}</div>${senderEmail ? `<div style="color: #666; font-size: 0.9em; margin-top: 3px;">${this.esc(senderEmail)}</div>` : ''}`
+      : '';
+    const hasRecipient = Boolean(
+      coverLetter.recipientName || coverLetter.companyName || coverLetter.recipientTitle || coverLetter.companyAddress,
+    );
 
     return `<!DOCTYPE html>
 <html>
@@ -674,8 +900,8 @@ export class ExportService {
 </style>
 </head>
 <body>
-  <div class="date">${currentDate}</div>
-  ${coverLetter.recipientName || coverLetter.companyName ? `
+  ${letterhead}<div class="date">${currentDate}</div>
+  ${hasRecipient ? `
   <div class="recipient">
     ${coverLetter.recipientName ? `<div class="recipient-line">${this.esc(coverLetter.recipientName)}</div>` : ''}
     ${coverLetter.recipientTitle ? `<div class="recipient-line">${this.esc(coverLetter.recipientTitle)}</div>` : ''}
@@ -684,7 +910,7 @@ export class ExportService {
   </div>
   ` : ''}
   ${coverLetter.jobTitle ? `<div class="subject">RE: ${this.esc(coverLetter.jobTitle)}</div>` : ''}
-  <div class="content">${content}</div>
+  <div class="content">${content}</div>${signature}
 </body>
 </html>`;
   }
