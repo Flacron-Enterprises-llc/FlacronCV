@@ -127,6 +127,12 @@ export class UserPreferencesDto implements Partial<UserPreferences> {
   @ValidateNested()
   @Type(() => AppTourPreferenceDto)
   appTour?: AppTourPreferenceDto;
+
+  /** Mobile app tour — separate record so web and mobile progress never collide. */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AppTourPreferenceDto)
+  mobileAppTour?: AppTourPreferenceDto;
 }
 
 export class UpdateUserDto implements UpdateUserData {

@@ -10,6 +10,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AnnouncementBanner } from '../../src/components/app/AnnouncementBanner';
+import { PaymentIssueNotice } from '../../src/components/app/PaymentIssueNotice';
 import { RecentDocuments } from '../../src/components/dashboard/RecentDocuments';
 import { StatsCard } from '../../src/components/dashboard/StatsCard';
 import { ErrorState } from '../../src/components/ui/ErrorState';
@@ -177,6 +179,8 @@ export default function DashboardScreen() {
 
         {/* Stats Grid */}
         <View className="px-5 pt-5">
+          <PaymentIssueNotice className="mb-3" />
+          <AnnouncementBanner className="mb-3" />
           <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">
             Overview
           </Text>

@@ -12,6 +12,8 @@ import { CVSectionType } from '../../../types/enums';
 import { LanguageItem } from '../../../types/cv.types';
 import { generateId } from '../../../lib/utils';
 import { colors } from '../../../theme/colors';
+import { useStepSection } from '../useStepSection';
+import { SectionSwitcher } from '../SectionSwitcher';
 
 const PROFICIENCY_LEVELS = ['Native', 'Fluent', 'Advanced', 'Intermediate', 'Basic'];
 
@@ -26,7 +28,7 @@ export function LanguagesStep({ onValidChange }: { onValidChange: (v: boolean) =
   const { sections, updateSection, addSection } = useCVStore();
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<LanguageItem | null>(null);
-  const langSection = sections.find((s) => s.type === CVSectionType.LANGUAGES);
+  const { section: langSection, sectionsForType, selectSection } = useStepSection(CVSectionType.LANGUAGES);
   const items = (langSection?.items ?? []) as LanguageItem[];
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
@@ -93,6 +95,7 @@ export function LanguagesStep({ onValidChange }: { onValidChange: (v: boolean) =
       <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
         <Text className="text-lg font-semibold text-stone-900 mb-1">Languages</Text>
         <Text className="text-stone-500 mb-5 text-sm">List the languages you speak and your proficiency levels.</Text>
+        <SectionSwitcher sections={sectionsForType} selected={langSection} onSelect={selectSection} />
         {items.length === 0 ? (
           <View className="items-center py-8">
             <Ionicons name="language-outline" size={36} color={colors.stone[400]} />
@@ -108,10 +111,10 @@ export function LanguagesStep({ onValidChange }: { onValidChange: (v: boolean) =
                 <Text className="text-sm font-medium text-brand-700">
                   {item.name} · {item.proficiency}
                 </Text>
-                <TouchableOpacity onPress={() => openEdit(item)} className="ml-1.5 p-0.5">
+                <TouchableOpacity onPress={() => openEdit(item)} className="ml-1.5 p-0.5" accessibilityRole="button" accessibilityLabel="Edit entry" hitSlop={12}>
                   <Ionicons name="pencil-outline" size={14} color={colors.stone[500]} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDelete(item.id)} className="ml-0.5">
+                <TouchableOpacity onPress={() => handleDelete(item.id)} className="ml-0.5" accessibilityRole="button" accessibilityLabel="Delete entry" hitSlop={12}>
                   <Ionicons name="close-circle" size={14} color={colors.error.DEFAULT} />
                 </TouchableOpacity>
               </View>

@@ -1,15 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Alert, FlatList, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../src/components/ui/Skeleton';
-import { useCoverLetterList, useDeleteCoverLetter } from '../../../src/hooks/useCoverLetters';
+import {
+  useCoverLetterList,
+  useDeleteCoverLetter,
+  useDuplicateCoverLetter,
+} from '../../../src/hooks/useCoverLetters';
+import { useAuthStore } from '../../../src/store/auth-store';
+import { canCreateCoverLetter, effectivePlanForCopy } from '../../../src/lib/entitlements';
+import { alertIfUnverifiedEmail } from '../../../src/lib/email-verification';
+import {
+  coverLetterLimitReachedMessage,
+  upgradeAlertButtons,
+} from '../../../src/config/paid-upgrades';
 import { CoverLetter } from '../../../src/types/cover-letter.types';
 import { formatDate } from '../../../src/lib/utils';
-import { requestFailureMessage } from '../../../src/lib/api-errors';
+import { isLimitRejection, isNetworkFailure, requestFailureMessage } from '../../../src/lib/api-errors';
 import { colors } from '../../../src/theme/colors';
 import { CoverLetterStatus } from '../../../src/types/enums';
 
@@ -17,6 +28,8 @@ export default function CoverLettersScreen() {
   const router = useRouter();
   const { data, isLoading, error, refetch, isRefetching } = useCoverLetterList();
   const deleteCL = useDeleteCoverLetter();
+  const duplicateCL = useDuplicateCoverLetter();
+  const { user } = useAuthStore();
 
   const coverLetters = data?.items ?? [];
 
@@ -43,7 +56,42 @@ export default function CoverLettersScreen() {
     );
   };
 
+  const alertLimitReached = () => {
+    Alert.alert(
+      'Cover Letter Limit Reached',
+      coverLetterLimitReachedMessage(effectivePlanForCopy(user?.subscription)),
+      upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+    );
+  };
+
+  /** Web list "Duplicate": the copy counts as a cover letter creation. */
+  const handleDuplicate = (cl: CoverLetter) => {
+    if (duplicateCL.isPending) return;
+    if (user?.usage && !canCreateCoverLetter(user.subscription, user.usage.coverLettersCreated)) {
+      alertLimitReached();
+      return;
+    }
+    duplicateCL.mutate(cl.id, {
+      onSuccess: (copy) =>
+        Alert.alert('Duplicated', copy?.title ? `Cover letter duplicated as "${copy.title}".` : 'Cover letter duplicated'),
+      onError: (err) => {
+        if (alertIfUnverifiedEmail(err)) return;
+        if (isLimitRejection(err)) {
+          alertLimitReached();
+          return;
+        }
+        Alert.alert(
+          'Could not duplicate',
+          isNetworkFailure(err)
+            ? requestFailureMessage(err, '')
+            : 'We couldn’t duplicate that cover letter. Please try again.',
+        );
+      },
+    });
+  };
+
   const renderItem = ({ item }: { item: CoverLetter }) => {
+    const duplicating = duplicateCL.isPending && duplicateCL.variables === item.id;
     const subtitle = [item.companyName, item.jobTitle].filter(Boolean).join(' · ');
     return (
       <TouchableOpacity
@@ -66,7 +114,7 @@ export default function CoverLettersScreen() {
               <View className="flex-row items-center mt-1.5 gap-2">
                 <View className={['px-2 py-0.5 rounded-full', item.status === CoverLetterStatus.FINAL ? 'bg-success-bg' : 'bg-stone-100'].join(' ')}>
                   <Text className={['text-xs font-medium', item.status === CoverLetterStatus.FINAL ? 'text-success' : 'text-stone-500'].join(' ')}>
-                    {item.status}
+                    {item.status === CoverLetterStatus.FINAL ? 'Final' : 'Draft'}
                   </Text>
                 </View>
                 <Text className="text-xs text-stone-400">Updated {formatDate(item.updatedAt)}</Text>
@@ -74,9 +122,25 @@ export default function CoverLettersScreen() {
             </View>
           </View>
           <TouchableOpacity
+            onPress={() => handleDuplicate(item)}
+            disabled={duplicateCL.isPending}
+            accessibilityRole="button"
+            accessibilityLabel={`Duplicate ${item.title}`}
+            accessibilityState={{ disabled: duplicateCL.isPending, busy: duplicating }}
+            className="w-11 h-11 items-center justify-center rounded-xl bg-stone-50 ml-2"
+          >
+            {duplicating ? (
+              <ActivityIndicator size="small" color={colors.brand[600]} />
+            ) : (
+              <Ionicons name="copy-outline" size={16} color={colors.stone[700]} />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => handleDelete(item)}
             disabled={deleteCL.isPending}
-            className="p-2 rounded-xl bg-stone-50 ml-2"
+            accessibilityRole="button"
+            accessibilityLabel={`Delete ${item.title}`}
+            className="w-11 h-11 items-center justify-center rounded-xl bg-stone-50 ml-2"
           >
             <Ionicons
               name={deleteCL.isPending ? 'time-outline' : 'trash-outline'}

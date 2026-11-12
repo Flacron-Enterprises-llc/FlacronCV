@@ -45,3 +45,12 @@ export interface CreateTicketData {
   category: TicketCategory;
   priority?: TicketPriority;
 }
+
+/** Website `support.statusLabels` wording. */
+export const TICKET_STATUS_LABEL: Record<TicketStatus, string> = {
+  [TicketStatus.OPEN]: 'Awaiting support reply',
+  [TicketStatus.IN_PROGRESS]: 'In progress',
+  [TicketStatus.WAITING_ON_CUSTOMER]: 'Awaiting customer reply',
+  [TicketStatus.RESOLVED]: 'Resolved',
+  [TicketStatus.CLOSED]: 'Closed',
+};

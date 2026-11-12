@@ -2,12 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TemplateCard } from '../../../src/components/templates/TemplateCard';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../src/components/ui/Skeleton';
 import { Button } from '../../../src/components/ui/Button';
+import { Input } from '../../../src/components/ui/Input';
+import { CV_TITLE_MAX, CV_TITLE_SUGGESTIONS, validateCvTitle } from '../../../src/lib/cv-editor';
 import { useTemplates } from '../../../src/hooks/useTemplates';
 import { useCreateCV } from '../../../src/hooks/useCVs';
 import { useAuthStore } from '../../../src/store/auth-store';
@@ -42,7 +44,8 @@ export default function NewCVScreen() {
   const createCV = useCreateCV();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(queryTemplate ?? null);
   const [step, setStep] = useState<'template' | 'title'>('template');
-  const [cvTitle, setCvTitle] = useState('My Professional CV');
+  const [cvTitle, setCvTitle] = useState('');
+  const [titleError, setTitleError] = useState<string | undefined>();
 
   const subscription = user?.subscription;
 
@@ -75,6 +78,13 @@ export default function NewCVScreen() {
   };
 
   const handleCreate = async () => {
+    // Same rule as the website's "Start from scratch": a non-blank title, at most 200 characters.
+    const titleCheck = validateCvTitle(cvTitle);
+    if (!titleCheck.ok) {
+      setTitleError(titleCheck.error);
+      return;
+    }
+
     if (!user?.usage) {
       Alert.alert(
         'Could not create CV',
@@ -110,7 +120,7 @@ export default function NewCVScreen() {
         return;
       }
       const newCV = await createCV.mutateAsync({
-        title: cvTitle,
+        title: titleCheck.title,
         templateId: selectedTemplate?.id ?? 'modern',
         status: CVStatus.DRAFT,
         isPublic: false,
@@ -205,42 +215,79 @@ export default function NewCVScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <View className="px-5 pt-4">
-        <TouchableOpacity onPress={() => setStep('template')} className="flex-row items-center mb-6">
-          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
-          <Text className="text-stone-700 ml-2 font-medium">Back to Templates</Text>
-        </TouchableOpacity>
-
-        <Text className="text-2xl font-black text-stone-900 mb-2">Name your CV</Text>
-        <Text className="text-stone-500 mb-6">Give it a memorable name to find it easily later.</Text>
-
-        <View className="border-2 border-brand-500 rounded-xl px-4 py-3 mb-8">
-          <Text className="text-lg font-semibold text-stone-900">{cvTitle}</Text>
-        </View>
-
-        {['My Professional CV', 'Software Engineer CV', 'Product Manager CV', 'Marketing CV', 'Designer CV'].map((suggestion) => (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1"
+      >
+        <ScrollView className="flex-1 px-5 pt-4" keyboardShouldPersistTaps="handled">
           <TouchableOpacity
-            key={suggestion}
-            onPress={() => setCvTitle(suggestion)}
-            className={['flex-row items-center px-4 py-3 rounded-xl border mb-2', cvTitle === suggestion ? 'border-brand-500 bg-brand-50' : 'border-stone-200'].join(' ')}
+            onPress={() => setStep('template')}
+            accessibilityRole="button"
+            className="flex-row items-center mb-6"
+            style={{ minHeight: 44 }}
           >
-            <Text className={cvTitle === suggestion ? 'text-brand-700 font-semibold' : 'text-stone-700'}>
-              {suggestion}
-            </Text>
+            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+            <Text className="text-stone-700 ml-2 font-medium">Back to Templates</Text>
           </TouchableOpacity>
-        ))}
 
-        <Button
-          variant="primary"
-          size="lg"
-          fullWidth
-          loading={createCV.isPending}
-          className="mt-6"
-          onPress={handleCreate}
-        >
-          Create CV
-        </Button>
-      </View>
+          <Text className="text-2xl font-black text-stone-900 mb-2">Name your CV</Text>
+          <Text className="text-stone-500 mb-6">Give your CV a descriptive name so it’s easy to find later.</Text>
+
+          <Input
+            label="CV title"
+            placeholder="e.g. Software Engineer CV 2025"
+            value={cvTitle}
+            onChangeText={(text) => {
+              setCvTitle(text);
+              if (titleError) setTitleError(undefined);
+            }}
+            maxLength={CV_TITLE_MAX}
+            error={titleError}
+            hint={`${cvTitle.length}/${CV_TITLE_MAX}`}
+            autoFocus
+            returnKeyType="done"
+            onSubmitEditing={() => void handleCreate()}
+            accessibilityLabel="CV title"
+          />
+
+          <Text className="text-sm font-medium text-stone-500 mb-2">Suggestions</Text>
+          <View className="flex-row flex-wrap gap-2 mb-2">
+            {CV_TITLE_SUGGESTIONS.map((suggestion) => {
+              const active = cvTitle === suggestion;
+              return (
+                <TouchableOpacity
+                  key={suggestion}
+                  onPress={() => {
+                    setCvTitle(suggestion);
+                    setTitleError(undefined);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={`Use title ${suggestion}`}
+                  className={['px-4 rounded-full border justify-center', active ? 'border-brand-500 bg-brand-50' : 'border-stone-200'].join(' ')}
+                  style={{ minHeight: 44 }}
+                >
+                  <Text className={active ? 'text-brand-700 font-semibold' : 'text-stone-700'}>
+                    {suggestion}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            loading={createCV.isPending}
+            className="mt-6"
+            onPress={handleCreate}
+          >
+            Create CV
+          </Button>
+          <View className="h-8" />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

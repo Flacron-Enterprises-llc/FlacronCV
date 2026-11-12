@@ -6,8 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../src/components/ui/Skeleton';
+import { useAppTourReplay } from '../../../src/hooks/useAppTour';
 import { useSupportTickets } from '../../../src/hooks/useSupport';
-import { SupportTicket } from '../../../src/types/support.types';
+import { SupportTicket, TICKET_STATUS_LABEL } from '../../../src/types/support.types';
 import { formatDate } from '../../../src/lib/utils';
 import { requestFailureMessage } from '../../../src/lib/api-errors';
 import { TicketStatus } from '../../../src/types/enums';
@@ -23,6 +24,7 @@ const STATUS_COLORS: Record<TicketStatus, { bg: string; text: string }> = {
 
 export default function SupportScreen() {
   const router = useRouter();
+  const replayTour = useAppTourReplay();
   const { data, isLoading, error, refetch, isRefetching } = useSupportTickets();
 
   const tickets = data ?? [];
@@ -42,7 +44,7 @@ export default function SupportScreen() {
           </View>
           <View className="px-2 py-0.5 rounded-full ml-2" style={{ backgroundColor: statusColor.bg }}>
             <Text className="text-xs font-medium" style={{ color: statusColor.text }}>
-              {item.status.replace(/_/g, ' ')}
+              {TICKET_STATUS_LABEL[item.status] ?? item.status.replace(/_/g, ' ')}
             </Text>
           </View>
         </View>
@@ -55,7 +57,12 @@ export default function SupportScreen() {
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
       <View className="px-5 pt-4 pb-4 bg-white border-b border-stone-100">
         <View className="flex-row items-center justify-between">
-          <Text className="text-xl font-black text-stone-900">Support</Text>
+          <View>
+            <Text className="text-xl font-black text-stone-900">Support</Text>
+            <TouchableOpacity onPress={replayTour} accessibilityRole="button" className="min-h-[44px] justify-center">
+              <Text className="text-brand-700 text-sm font-semibold">Replay App Tour</Text>
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity onPress={() => router.push('/(dashboard)/support/new')} className="flex-row items-center bg-brand-600 px-4 py-2 rounded-xl">
             <Ionicons name="add" size={18} color={colors.white} />
             <Text className="text-white font-bold ml-1">New Ticket</Text>

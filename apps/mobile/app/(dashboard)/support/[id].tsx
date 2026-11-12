@@ -4,8 +4,10 @@ import axios from 'axios';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSupportTicket, useAddTicketMessage } from '../../../src/hooks/useSupport';
-import { TicketMessage } from '../../../src/types/support.types';
+import { useSupportTicket, useAddTicketMessage, useCloseTicket } from '../../../src/hooks/useSupport';
+import { TICKET_STATUS_LABEL, TicketMessage } from '../../../src/types/support.types';
+import { TicketStatus } from '../../../src/types/enums';
+import { requestFailureMessage as apiFailureMessage } from '../../../src/lib/api-errors';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { formatDate } from '../../../src/lib/utils';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
@@ -31,6 +33,7 @@ export default function TicketDetailScreen() {
   const { firebaseUser } = useAuthStore();
   const { data: ticket, isLoading, isError, error, refetch } = useSupportTicket(id);
   const addMessage = useAddTicketMessage(id!);
+  const closeTicket = useCloseTicket(id!);
   const [messageText, setMessageText] = useState('');
 
   const messages = ticket?.messages ?? [];
@@ -44,6 +47,26 @@ export default function TicketDetailScreen() {
     } catch (err) {
       Alert.alert('Could not send', requestFailureMessage(err));
     }
+  };
+
+  const handleClose = () => {
+    Alert.alert(
+      'Close ticket',
+      'Close this ticket? You will not be able to reply to it. Create a new ticket if you need further help.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Close ticket',
+          style: 'destructive',
+          onPress: () =>
+            closeTicket.mutate(undefined, {
+              onSuccess: () => Alert.alert('Ticket closed'),
+              onError: (err) =>
+                Alert.alert('Could not close', apiFailureMessage(err, 'Failed to close ticket')),
+            }),
+        },
+      ],
+    );
   };
 
   const renderMessage = ({ item }: { item: TicketMessage }) => {
@@ -76,7 +99,12 @@ export default function TicketDetailScreen() {
     return (
       <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
         <View className="flex-row items-center px-4 py-3 border-b border-stone-100">
-          <TouchableOpacity onPress={() => router.back()} className="mr-3">
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="mr-3"
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
             <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
           </TouchableOpacity>
           <Text className="font-bold text-stone-900">Support</Text>
@@ -89,16 +117,42 @@ export default function TicketDetailScreen() {
     );
   }
 
+  const isClosed = ticket.status === TicketStatus.CLOSED;
+
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-4 py-3 border-b border-stone-100">
-        <TouchableOpacity onPress={() => router.back()} className="mr-3">
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="mr-3"
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
         </TouchableOpacity>
         <View className="flex-1">
           <Text className="font-bold text-stone-900" numberOfLines={1}>{ticket.subject}</Text>
-          <Text className="text-stone-400 text-xs capitalize">{ticket.status?.replace(/_/g, ' ')}</Text>
+          <Text className="text-stone-400 text-xs">
+            {TICKET_STATUS_LABEL[ticket.status] ?? ticket.status?.replace(/_/g, ' ')}
+          </Text>
         </View>
+        {!isClosed ? (
+          <TouchableOpacity
+            onPress={handleClose}
+            disabled={closeTicket.isPending}
+            className="ml-2 flex-row items-center px-3 min-h-[44px] rounded-xl"
+            accessibilityRole="button"
+            accessibilityLabel="Close ticket"
+            accessibilityState={{ disabled: closeTicket.isPending, busy: closeTicket.isPending }}
+          >
+            {closeTicket.isPending ? (
+              <ActivityIndicator size="small" color={colors.error.DEFAULT} />
+            ) : (
+              <Ionicons name="close-circle-outline" size={18} color={colors.error.DEFAULT} />
+            )}
+            <Text className="text-red-600 font-semibold text-sm ml-1">Close</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
@@ -119,29 +173,40 @@ export default function TicketDetailScreen() {
           }
         />
 
-        <View className="flex-row items-end px-4 py-3 border-t border-stone-100 gap-2">
-          <View className="flex-1 border border-stone-200 rounded-2xl px-4 py-3 max-h-28">
-            <TextInput
-              value={messageText}
-              onChangeText={setMessageText}
-              placeholder="Type your message..."
-              placeholderTextColor={colors.stone[400]}
-              multiline
-              className="text-stone-900 text-base"
-            />
+        {isClosed ? (
+          <View className="px-4 py-4 border-t border-stone-100 bg-stone-50">
+            <Text className="text-sm font-medium text-stone-500 text-center">
+              This ticket is closed. Create a new ticket if you need further help.
+            </Text>
           </View>
-          <TouchableOpacity
-            onPress={() => void handleSend()}
-            disabled={!messageText.trim() || addMessage.isPending}
-            className={['w-11 h-11 rounded-full items-center justify-center', messageText.trim() ? 'bg-brand-600' : 'bg-stone-200'].join(' ')}
-          >
-            {addMessage.isPending ? (
-              <ActivityIndicator size="small" color={colors.white} />
-            ) : (
-              <Ionicons name="send" size={18} color={messageText.trim() ? colors.white : colors.stone[400]} />
-            )}
-          </TouchableOpacity>
-        </View>
+        ) : (
+          <View className="flex-row items-end px-4 py-3 border-t border-stone-100 gap-2">
+            <View className="flex-1 border border-stone-200 rounded-2xl px-4 py-3 max-h-28">
+              <TextInput
+                value={messageText}
+                onChangeText={setMessageText}
+                placeholder="Type your message..."
+                placeholderTextColor={colors.stone[400]}
+                multiline
+                className="text-stone-900 text-base"
+              />
+            </View>
+            <TouchableOpacity
+              onPress={() => void handleSend()}
+              disabled={!messageText.trim() || addMessage.isPending}
+              accessibilityRole="button"
+              accessibilityLabel="Send reply"
+              accessibilityState={{ disabled: !messageText.trim() || addMessage.isPending }}
+              className={['w-11 h-11 rounded-full items-center justify-center', messageText.trim() ? 'bg-brand-600' : 'bg-stone-200'].join(' ')}
+            >
+              {addMessage.isPending ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Ionicons name="send" size={18} color={messageText.trim() ? colors.white : colors.stone[400]} />
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

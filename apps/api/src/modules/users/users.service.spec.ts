@@ -44,6 +44,16 @@ describe('UsersService', () => {
         skippedAt: null,
         updatedAt: null,
       });
+      // Separate mobile record: finishing the web tour must not suppress it.
+      expect(user.preferences.mobileAppTour).toEqual({
+        version: 1,
+        status: 'unseen',
+        stepId: null,
+        completedAt: null,
+        skippedAt: null,
+        updatedAt: null,
+      });
+      expect(user.preferences.mobileAppTour).not.toBe(user.preferences.appTour);
       expect(user.createdAt).toBeInstanceOf(Date);
     });
   });
@@ -191,6 +201,65 @@ describe('UsersService', () => {
           preferences: {
             appTour: { version: 1, status: 'skipped', stepId: '../secret', completedAt: null, skippedAt: null, updatedAt: null },
           },
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('stores the mobile app tour without touching the web tour or other preferences', async () => {
+      await service.create({ uid: 'mtour-1', email: 'mt@b.com', displayName: 'MT', photoURL: null });
+      const updated = await service.update('mtour-1', {
+        preferences: {
+          mobileAppTour: {
+            version: 1,
+            status: 'in_progress',
+            stepId: 'cover-letters',
+            completedAt: null,
+            skippedAt: null,
+            updatedAt: '2026-11-13T12:00:00.000Z',
+          },
+        },
+      });
+      expect(updated.preferences.mobileAppTour?.status).toBe('in_progress');
+      expect(updated.preferences.mobileAppTour?.stepId).toBe('cover-letters');
+      expect(updated.preferences.appTour?.status).toBe('unseen');
+      expect(updated.preferences.emailNotifications).toBe(true);
+
+      const webDone = await service.update('mtour-1', {
+        preferences: {
+          appTour: {
+            version: 1,
+            status: 'completed',
+            stepId: null,
+            completedAt: '2026-11-13T12:05:00.000Z',
+            skippedAt: null,
+            updatedAt: '2026-11-13T12:05:00.000Z',
+          },
+        },
+      });
+      expect(webDone.preferences.appTour?.status).toBe('completed');
+      expect(webDone.preferences.mobileAppTour?.status).toBe('in_progress');
+    });
+
+    it('rejects a malformed mobile app tour record with 400', async () => {
+      await service.create({ uid: 'mtour-2', email: 'mt2@b.com', displayName: 'MT2', photoURL: null });
+      await expect(
+        service.update('mtour-2', {
+          preferences: { mobileAppTour: { version: 1, status: 'done', stepId: null } } as any,
+        }),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.update('mtour-2', {
+          preferences: {
+            mobileAppTour: { version: 1, status: 'skipped', stepId: '../secret', completedAt: null, skippedAt: null, updatedAt: null },
+          },
+        }),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.update('mtour-2', { preferences: { mobileAppTour: null } as any }),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.update('mtour-2', {
+          preferences: { mobileAppTour: { version: 1, status: 'unseen', extra: true } } as any,
         }),
       ).rejects.toThrow(BadRequestException);
     });

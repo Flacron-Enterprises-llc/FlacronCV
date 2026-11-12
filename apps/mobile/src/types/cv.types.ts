@@ -12,18 +12,28 @@ export interface PersonalInfo {
   website?: string;
   linkedin?: string;
   github?: string;
-  photoURL?: string;
+  /** https Storage URL; empty string or null when there is no photo. */
+  photoURL?: string | null;
   headline?: string;
   summary?: string;
 }
 
+export type CVLayout = 'classic' | 'sidebar' | 'top-bar' | 'compact' | 'slate-gold';
+export type SectionStyle = 'underline' | 'card' | 'left-border' | 'minimal';
+export type BorderRadiusStyle = 'none' | 'small' | 'medium' | 'large';
+
 export interface CVStyling {
   primaryColor: string;
+  secondaryColor?: string;
   fontFamily: string;
   headingFontFamily?: string;
   fontSize: FontSize;
   spacing: Spacing;
   showPhoto: boolean;
+  /** Set by the API from the template; edited only by the design screen. */
+  layout?: CVLayout;
+  sectionStyle?: SectionStyle;
+  borderRadius?: BorderRadiusStyle;
 }
 
 export interface ExperienceItem {
@@ -32,10 +42,11 @@ export interface ExperienceItem {
   position: string;
   location?: string;
   startDate: string;
-  endDate?: string;
+  endDate?: string | null;
   isCurrent: boolean;
   description?: string;
   highlights?: string[];
+  order?: number;
 }
 
 export interface EducationItem {
@@ -45,9 +56,10 @@ export interface EducationItem {
   field: string;
   location?: string;
   startDate: string;
-  endDate?: string;
+  endDate?: string | null;
   gpa?: string;
   description?: string;
+  order?: number;
 }
 
 export interface SkillItem {
@@ -55,6 +67,7 @@ export interface SkillItem {
   name: string;
   level: SkillLevel;
   category?: string;
+  order?: number;
 }
 
 export interface ProjectItem {
@@ -64,7 +77,8 @@ export interface ProjectItem {
   url?: string;
   technologies?: string[];
   startDate?: string;
-  endDate?: string;
+  endDate?: string | null;
+  order?: number;
 }
 
 export interface CertificationItem {
@@ -72,15 +86,17 @@ export interface CertificationItem {
   name: string;
   issuer: string;
   date: string;
-  expiryDate?: string;
+  expiryDate?: string | null;
   credentialId?: string;
   url?: string;
+  order?: number;
 }
 
 export interface LanguageItem {
   id: string;
   name: string;
   proficiency: string;
+  order?: number;
 }
 
 export interface ReferenceItem {
@@ -91,14 +107,21 @@ export interface ReferenceItem {
   email?: string;
   phone?: string;
   relationship?: string;
+  order?: number;
 }
 
+/**
+ * CUSTOM section entry. Web also writes `name` = `title`, and uses the same
+ * shape (title/name + description) for awards, publications and volunteer.
+ */
 export interface CustomItem {
   id: string;
   title: string;
+  name?: string;
   subtitle?: string;
   date?: string;
   description?: string;
+  order?: number;
 }
 
 export type CVSectionItem =
@@ -156,13 +179,13 @@ export interface CreateCVPayload {
   sectionOrder?: string[];
 }
 
-/** Update body — Nest UpdateCvDto whitelist. */
+/** Update body — Nest UpdateCvDto whitelist. personalInfo/styling merge per key server-side. */
 export interface UpdateCVPayload {
   title?: string;
   templateId?: string;
-  personalInfo?: PersonalInfo;
+  personalInfo?: Partial<PersonalInfo>;
   sectionOrder?: string[];
-  styling?: CVStyling;
+  styling?: Partial<CVStyling>;
   status?: CVStatus;
   isPublic?: boolean;
 }

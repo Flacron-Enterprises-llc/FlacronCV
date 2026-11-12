@@ -11,6 +11,19 @@ export interface UserProfile {
   github?: string;
 }
 
+export type AppTourStatus = 'unseen' | 'in_progress' | 'skipped' | 'completed';
+
+/** Product-tour progress (shared-types AppTourPreference). */
+export interface AppTourPreference {
+  version: number;
+  status: AppTourStatus;
+  /** Step to resume while `in_progress`. Null otherwise. */
+  stepId: string | null;
+  completedAt: string | null;
+  skippedAt: string | null;
+  updatedAt: string | null;
+}
+
 export interface UserPreferences {
   language: Locale;
   theme: Theme;
@@ -18,6 +31,10 @@ export interface UserPreferences {
   marketingEmails: boolean;
   defaultCVTemplate?: string;
   pushNotifications?: boolean;
+  /** Website tour. Read-only for the app — mobile never writes it. */
+  appTour?: AppTourPreference;
+  /** Mobile tour (src/lib/app-tour.ts). Omitted on accounts created before it shipped. */
+  mobileAppTour?: AppTourPreference;
 }
 
 export interface UserSubscription {

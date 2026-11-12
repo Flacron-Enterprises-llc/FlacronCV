@@ -29,6 +29,11 @@ import {
   useUploadProfilePhoto,
 } from '../../../src/hooks/useUser';
 import { requestFailureMessage } from '../../../src/lib/api-errors';
+import {
+  FIX_LINKS_MESSAGE,
+  PROFILE_LINK_FIELDS,
+  validateProfileLink,
+} from '../../../src/lib/profile-links';
 import { UpdateUserPayload, User } from '../../../src/types/user.types';
 import { colors } from '../../../src/theme/colors';
 
@@ -47,7 +52,8 @@ const schema = z.object({
   'profile.headline': z.string().optional(),
   'profile.bio': z.string().optional(),
   'profile.location': z.string().optional(),
-  // Profile website is a plain string on the API — do not require https://.
+  // LinkedIn / GitHub / Website are checked on save with the website's
+  // validateProfileLink rule (src/lib/profile-links.ts), which also adds https://.
   'profile.website': z.string().optional().or(z.literal('')),
   'profile.linkedin': z.string().optional(),
   'profile.github': z.string().optional(),
@@ -135,7 +141,14 @@ export default function ProfileScreen() {
   const [hydratedUid, setHydratedUid] = useState<string | null>(null);
   const photoBusy = uploadPhoto.isPending || removePhoto.isPending;
 
-  const { control, handleSubmit, reset, formState: { errors, dirtyFields, isDirty } } = useForm<FormData>({
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setError,
+    clearErrors,
+    formState: { errors, dirtyFields, isDirty },
+  } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: EMPTY_VALUES,
   });
@@ -159,7 +172,29 @@ export default function ProfileScreen() {
   const onSubmit = async (data: FormData) => {
     if (!user || hydratedUid !== user.uid) return;
 
-    const payload = payloadFromDirty(data, dirtyFields);
+    // Same rule and normalisation as the website (and the API): errors show
+    // under the field; a valid value is saved normalised, e.g.
+    // "github.com/name" -> "https://github.com/name". Only edited links are
+    // checked — untouched stored values are not sent, so cannot be rejected.
+    const normalised: FormData = { ...data };
+    let linkError = false;
+    for (const field of PROFILE_LINK_FIELDS) {
+      const formKey = `profile.${field}` as const;
+      if (!dirtyFields[formKey]) continue;
+      const result = validateProfileLink(field, data[formKey] ?? '');
+      if (result.error) {
+        linkError = true;
+        setError(formKey, { type: 'manual', message: result.error });
+      } else {
+        normalised[formKey] = result.value;
+      }
+    }
+    if (linkError) {
+      Alert.alert('Check your links', FIX_LINKS_MESSAGE);
+      return;
+    }
+
+    const payload = payloadFromDirty(normalised, dirtyFields);
     if (!payload.displayName && !payload.profile) {
       router.back();
       return;
@@ -168,7 +203,7 @@ export default function ProfileScreen() {
     try {
       await updateProfile.mutateAsync(payload);
       // Clear dirty before leave so usePreventRemove does not re-prompt.
-      reset(data);
+      reset(normalised);
       Alert.alert('Success', 'Profile updated successfully!');
       router.back();
     } catch (err) {
@@ -325,14 +360,50 @@ export default function ProfileScreen() {
           <Controller control={control} name="profile.location" render={({ field }) => (
             <Input label="Location" placeholder="San Francisco, CA" value={field.value} onChangeText={field.onChange} />
           )} />
-          <Controller control={control} name="profile.website" render={({ field }) => (
-            <Input label="Website" placeholder="https://yoursite.com" keyboardType="url" autoCapitalize="none" value={field.value} onChangeText={field.onChange} error={errors['profile.website']?.message} />
-          )} />
           <Controller control={control} name="profile.linkedin" render={({ field }) => (
-            <Input label="LinkedIn" placeholder="linkedin.com/in/yourprofile" autoCapitalize="none" value={field.value} onChangeText={field.onChange} />
+            <Input
+              label="LinkedIn"
+              placeholder="https://linkedin.com/in/username"
+              keyboardType="url"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={field.value}
+              onChangeText={(v) => {
+                field.onChange(v);
+                clearErrors('profile.linkedin');
+              }}
+              error={errors['profile.linkedin']?.message}
+            />
           )} />
           <Controller control={control} name="profile.github" render={({ field }) => (
-            <Input label="GitHub" placeholder="github.com/yourusername" autoCapitalize="none" value={field.value} onChangeText={field.onChange} />
+            <Input
+              label="GitHub"
+              placeholder="https://github.com/username"
+              keyboardType="url"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={field.value}
+              onChangeText={(v) => {
+                field.onChange(v);
+                clearErrors('profile.github');
+              }}
+              error={errors['profile.github']?.message}
+            />
+          )} />
+          <Controller control={control} name="profile.website" render={({ field }) => (
+            <Input
+              label="Website"
+              placeholder="https://yoursite.com"
+              keyboardType="url"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={field.value}
+              onChangeText={(v) => {
+                field.onChange(v);
+                clearErrors('profile.website');
+              }}
+              error={errors['profile.website']?.message}
+            />
           )} />
 
           <Button

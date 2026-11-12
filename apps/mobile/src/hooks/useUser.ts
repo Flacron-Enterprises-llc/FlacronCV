@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { getFirebaseAuth, getFirebaseStorage } from '../lib/firebase';
 import { useAuthStore } from '../store/auth-store';
-import { UpdateUserPayload, User } from '../types/user.types';
+import { UpdateUserPayload, User, UserPreferences } from '../types/user.types';
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
@@ -30,6 +30,27 @@ export function useUpdateProfile() {
       await useAuthStore.getState().syncUser();
     },
   });
+}
+
+/**
+ * `PATCH /users/me/preferences` with only the keys being changed (the API merges
+ * per key, so the push toggle's `pushNotifications` is never overwritten).
+ */
+export function useUpdatePreferences() {
+  const qc = useQueryClient();
+  const { firebaseUser } = useAuthStore();
+  return useMutation({
+    mutationFn: (data: Partial<UserPreferences>) => api.patch<User>('/users/me/preferences', data),
+    onSuccess: async (updated) => {
+      qc.setQueryData(['user', firebaseUser?.uid], updated);
+      await useAuthStore.getState().syncUser();
+    },
+  });
+}
+
+/** Revokes every refresh token for this account (all devices). Caller signs out locally. */
+export function revokeAllSessions(): Promise<{ revokedAt: string }> {
+  return api.post<{ revokedAt: string }>('/users/me/sign-out-everywhere');
 }
 
 export type ProfilePhotoAsset = {

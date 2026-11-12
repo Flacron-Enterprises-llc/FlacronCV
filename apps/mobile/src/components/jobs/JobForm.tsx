@@ -17,9 +17,21 @@ import {
 import { z } from 'zod';
 import { useCoverLetterList } from '../../hooks/useCoverLetters';
 import { useCVList } from '../../hooks/useCVs';
-import { useCreateJob, useDeleteJob, useUpdateJob } from '../../hooks/useJobs';
+import {
+  findDuplicateJob,
+  useArchiveJob,
+  useCreateJob,
+  useDeleteJob,
+  useUpdateJob,
+} from '../../hooks/useJobs';
 import { requestFailureMessage } from '../../lib/api-errors';
 import { cancelJobReminders, syncJobReminder } from '../../lib/job-reminders';
+import {
+  duplicateConfirmMessage,
+  isValidContactEmail,
+  JOB_FIELD_MAX,
+  optionalJobField,
+} from '../../lib/job-tracker';
 import { maybeAskPushAfterFollowUpSave, type PushPromptResult } from '../../lib/push';
 import { toDate } from '../../lib/utils';
 import { colors } from '../../theme/colors';
@@ -31,6 +43,7 @@ import { Button } from '../ui/Button';
 import { ErrorState } from '../ui/ErrorState';
 import { Input } from '../ui/Input';
 import { Modal } from '../ui/Modal';
+import { shareInterviewIcs } from './share-interview-ics';
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
@@ -83,6 +96,13 @@ const schema = z.object({
   followUpDate: z
     .string()
     .refine((s) => s === '' || isValidDateOnly(s), 'Use YYYY-MM-DD'),
+  location: z.string().max(JOB_FIELD_MAX.location, 'Keep it under 200 characters'),
+  salaryRange: z.string().max(JOB_FIELD_MAX.salaryRange, 'Keep it under 100 characters'),
+  contactName: z.string().max(JOB_FIELD_MAX.contactName, 'Keep it under 200 characters'),
+  contactEmail: z
+    .string()
+    .max(JOB_FIELD_MAX.contactEmail)
+    .refine((s) => isValidContactEmail(s), 'Enter a valid email address'),
   jobUrl: z.string().max(2048),
   linkedCVId: z.string(),
   linkedCoverLetterId: z.string(),
@@ -98,6 +118,10 @@ const EMPTY: FormData = {
   appliedDate: '',
   interviewDate: '',
   followUpDate: '',
+  location: '',
+  salaryRange: '',
+  contactName: '',
+  contactEmail: '',
   jobUrl: '',
   linkedCVId: '',
   linkedCoverLetterId: '',
@@ -137,6 +161,10 @@ function valuesFromJob(job: JobApplication): FormData {
     appliedDate: toDateOnlyInput(job.appliedDate),
     interviewDate: toDateTimeInput(job.interviewDate),
     followUpDate: toDateOnlyInput(job.followUpDate),
+    location: job.location ?? '',
+    salaryRange: job.salaryRange ?? '',
+    contactName: job.contactName ?? '',
+    contactEmail: job.contactEmail ?? '',
     jobUrl: job.jobUrl ?? '',
     linkedCVId: job.linkedCVId ?? '',
     linkedCoverLetterId: job.linkedCoverLetterId ?? '',
@@ -144,24 +172,22 @@ function valuesFromJob(job: JobApplication): FormData {
   };
 }
 
-function optionalField(value: string, clearWithNull: boolean): string | null | undefined {
-  const trimmed = value.trim();
-  if (trimmed) return trimmed;
-  return clearWithNull ? null : undefined;
-}
-
 function toPayload(data: FormData, isEdit: boolean): JobWritePayload {
   return {
     company: data.company.trim(),
     position: data.position.trim(),
     status: data.status,
-    jobUrl: optionalField(data.jobUrl, isEdit),
-    appliedDate: optionalField(data.appliedDate, isEdit),
-    interviewDate: optionalField(data.interviewDate, isEdit),
-    followUpDate: optionalField(data.followUpDate, isEdit),
-    notes: optionalField(data.notes, isEdit),
-    linkedCVId: optionalField(data.linkedCVId, isEdit),
-    linkedCoverLetterId: optionalField(data.linkedCoverLetterId, isEdit),
+    jobUrl: optionalJobField(data.jobUrl, isEdit),
+    location: optionalJobField(data.location, isEdit),
+    salaryRange: optionalJobField(data.salaryRange, isEdit),
+    contactName: optionalJobField(data.contactName, isEdit),
+    contactEmail: optionalJobField(data.contactEmail, isEdit),
+    appliedDate: optionalJobField(data.appliedDate, isEdit),
+    interviewDate: optionalJobField(data.interviewDate, isEdit),
+    followUpDate: optionalJobField(data.followUpDate, isEdit),
+    notes: optionalJobField(data.notes, isEdit),
+    linkedCVId: optionalJobField(data.linkedCVId, isEdit),
+    linkedCoverLetterId: optionalJobField(data.linkedCoverLetterId, isEdit),
   };
 }
 
@@ -170,6 +196,16 @@ function saveFailureMessage(err: unknown): string {
     return 'No connection. Check your network and try again.';
   }
   return requestFailureMessage(err, 'Could not save. Please try again.');
+}
+
+/** Website parity: applying to the same role twice is allowed, just never unnoticed. */
+function confirmDuplicate(dup: JobApplication): Promise<boolean> {
+  return new Promise((resolve) => {
+    Alert.alert('Already tracked', duplicateConfirmMessage(dup), [
+      { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+      { text: 'Add anyway', onPress: () => resolve(true) },
+    ], { cancelable: true, onDismiss: () => resolve(false) });
+  });
 }
 
 function confirmUnsavedLeave(onLeave: () => void) {
@@ -194,6 +230,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
   const createJob = useCreateJob();
   const updateJob = useUpdateJob(jobId ?? '');
   const deleteJob = useDeleteJob();
+  const archiveJob = useArchiveJob();
   const cvsQuery = useCVList(1, 100);
   const lettersQuery = useCoverLetterList(1, 100);
   const [picker, setPicker] = useState<PickerKind>(null);
@@ -226,6 +263,15 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
     setSaving(true);
     try {
       const payload = toPayload(data, isEdit);
+      if (!isEdit) {
+        let duplicate: JobApplication | null = null;
+        try {
+          duplicate = await findDuplicateJob(payload.company, payload.position);
+        } catch {
+          // A failed check must not block the user from saving.
+        }
+        if (duplicate && !(await confirmDuplicate(duplicate))) return;
+      }
       const saved = isEdit
         ? await updateJob.mutateAsync(payload)
         : await createJob.mutateAsync(payload);
@@ -289,6 +335,22 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
             }),
         },
       ],
+    );
+  };
+
+  const onToggleArchive = () => {
+    if (!initialJob) return;
+    const archived = !initialJob.archived;
+    archiveJob.mutate(
+      { job: initialJob, archived },
+      {
+        onSuccess: () => {
+          Alert.alert(archived ? 'Application archived' : 'Application restored');
+          router.back();
+        },
+        onError: (err) =>
+          Alert.alert('Could not save', requestFailureMessage(err, "Couldn't save. Please try again.")),
+      },
     );
   };
 
@@ -380,6 +442,78 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
         />
         <Controller
           control={control}
+          name="location"
+          render={({ field }) => (
+            <Input
+              label="Location"
+              placeholder="e.g. Remote / New York"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.location?.message}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="jobUrl"
+          render={({ field }) => (
+            <Input
+              label="Job posting URL"
+              placeholder="https://"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.jobUrl?.message}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="salaryRange"
+          render={({ field }) => (
+            <Input
+              label="Salary range"
+              placeholder="e.g. $90k – $110k"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.salaryRange?.message}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="contactName"
+          render={({ field }) => (
+            <Input
+              label="Recruiter / contact"
+              placeholder="e.g. Jane Doe"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.contactName?.message}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="contactEmail"
+          render={({ field }) => (
+            <Input
+              label="Contact email"
+              placeholder="recruiter@company.com"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.contactEmail?.message}
+            />
+          )}
+        />
+        <Controller
+          control={control}
           name="interviewDate"
           render={({ field }) => (
             <Input
@@ -431,22 +565,6 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
 
         <Controller
           control={control}
-          name="jobUrl"
-          render={({ field }) => (
-            <Input
-              label="Job URL"
-              placeholder="https://"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              value={field.value}
-              onChangeText={field.onChange}
-              error={errors.jobUrl?.message}
-            />
-          )}
-        />
-        <Controller
-          control={control}
           name="notes"
           render={({ field }) => (
             <Input
@@ -471,6 +589,31 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
         >
           Save
         </Button>
+
+        {isEdit && initialJob ? (
+          <View className="mt-4 gap-3">
+            {initialJob.interviewDate ? (
+              <Button
+                variant="outline"
+                fullWidth
+                icon={<Ionicons name="calendar-outline" size={18} color={colors.stone[700]} />}
+                onPress={() => void shareInterviewIcs(initialJob)}
+                accessibilityLabel="Add interview to calendar"
+              >
+                Add to calendar
+              </Button>
+            ) : null}
+            <Button
+              variant="outline"
+              fullWidth
+              loading={archiveJob.isPending}
+              icon={<Ionicons name={initialJob.archived ? 'arrow-undo-outline' : 'archive-outline'} size={18} color={colors.stone[700]} />}
+              onPress={onToggleArchive}
+            >
+              {initialJob.archived ? 'Restore' : 'Archive'}
+            </Button>
+          </View>
+        ) : null}
 
         {isEdit ? (
           <View className="mt-4">

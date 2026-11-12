@@ -13,6 +13,7 @@ import {
   Locale,
   Theme,
   APP_TOUR_VERSION,
+  MOBILE_APP_TOUR_VERSION,
   AppTourPreference,
   AppTourStatus,
   PLAN_CONFIGS,
@@ -107,6 +108,7 @@ export class UsersService {
         pushNotifications: false,
         defaultCVTemplate: 'modern',
         appTour: UsersService.freshAppTour(),
+        mobileAppTour: UsersService.freshAppTour(MOBILE_APP_TOUR_VERSION),
       },
       pushTokens: [],
       subscription: {
@@ -266,15 +268,18 @@ export class UsersService {
         return this.assertString('defaultCVTemplate', value, 100);
       case 'appTour':
         return this.validateAppTour(value);
+      case 'mobileAppTour':
+        // Same shape and rules as the web tour; its own record and step ids.
+        return this.validateAppTour(value);
       default:
         return undefined; // unknown preference key — dropped by the caller
     }
   }
 
   /** New accounts only. Older documents omit the field and are not backfilled. */
-  private static freshAppTour(): AppTourPreference {
+  private static freshAppTour(version: number = APP_TOUR_VERSION): AppTourPreference {
     return {
-      version: APP_TOUR_VERSION,
+      version,
       status: 'unseen',
       stepId: null,
       completedAt: null,
@@ -552,6 +557,7 @@ export class UsersService {
     'pushNotifications',
     'defaultCVTemplate',
     'appTour',
+    'mobileAppTour',
   ] as const;
 
   private static readonly EXPORTED_USAGE_FIELDS = [

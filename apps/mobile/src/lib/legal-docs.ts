@@ -14,6 +14,9 @@ export const LEGAL_PATHS = {
   terms: '/terms-of-service',
   privacy: '/privacy-policy',
   disclaimer: '/disclaimer',
+  // Linked from the website footer and checkout terms. Read-only page; it has
+  // no version stamp because POST /legal/acceptances does not record it.
+  refund: '/refund-policy',
 } as const;
 
 export type LegalDocKind = keyof typeof LEGAL_PATHS;

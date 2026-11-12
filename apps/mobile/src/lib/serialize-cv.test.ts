@@ -137,4 +137,21 @@ describe('serializeCVToText', () => {
     expect(text).toContain('Shipped it.');
     expect(text).not.toMatch(/- App \(beginner\)/);
   });
+it('includes custom sections in sectionOrder and skips hidden sections', () => {
+    const hidden = { ...section('h1', CVSectionType.SKILLS, [{ id: 's', name: 'Secret skill', level: 'expert' as never }]), isVisible: false };
+    const text = serializeCVToText(makeCv(['c1', 'e1', 'h1']), [
+      section('e1', CVSectionType.EXPERIENCE, [
+        { id: 'x', company: 'Acme', position: 'Dev', startDate: '2020', isCurrent: true, highlights: ['Led team'] },
+      ], 'Work'),
+      hidden,
+      section('c1', CVSectionType.CUSTOM, [
+        { id: 'i', title: 'Chess', name: 'Chess', subtitle: 'Club captain', date: '2022', description: 'Regional finals' },
+      ], 'Interests'),
+    ]);
+    expect(text.indexOf('Interests:')).toBeLessThan(text.indexOf('Work:'));
+    expect(text).toContain('- Chess');
+    expect(text).toContain('Club captain');
+    expect(text).toContain('  - Led team');
+    expect(text).not.toContain('Secret skill');
+  });
 });

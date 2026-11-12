@@ -49,6 +49,27 @@ export function yearlySavingsPercent(plan: SubscriptionPlan): number {
   return sharedYearlySavingsPercent(plan as unknown as Parameters<typeof sharedYearlySavingsPercent>[0]);
 }
 
+/**
+ * One row of `GET /payments/invoices` (API `PaymentService.getInvoices`,
+ * shared-types `BillingInvoice`). Amounts are in the smallest currency unit.
+ * The two URL fields are returned but the app must not link to them (store
+ * rules: no external payment pages) — they are typed only to mirror the API.
+ */
+export interface BillingInvoice {
+  id: string;
+  number: string | null;
+  /** Stripe status: draft | open | paid | uncollectible | void. */
+  status: string;
+  amountPaid: number;
+  amountDue: number;
+  /** Lower-case ISO-4217 code, e.g. "usd". */
+  currency: string;
+  /** ISO-8601. */
+  created: string;
+  hostedInvoiceUrl: string | null;
+  invoicePdf: string | null;
+}
+
 export interface Subscription {
   id: string;
   userId: string;

@@ -62,3 +62,18 @@ export function useAddTicketMessage(ticketId: string) {
     },
   });
 }
+
+/**
+ * PATCH /support/tickets/:id/close — the customer closes their own ticket
+ * (website "Close ticket"). Returns the updated ticket; the API sends no email.
+ */
+export function useCloseTicket(ticketId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.patch<SupportTicket>(`/support/tickets/${ticketId}/close`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['support-ticket', ticketId] });
+      qc.invalidateQueries({ queryKey: ['support-tickets'] });
+    },
+  });
+}

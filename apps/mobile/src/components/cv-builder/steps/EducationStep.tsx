@@ -12,6 +12,8 @@ import { CVSectionType } from '../../../types/enums';
 import { EducationItem } from '../../../types/cv.types';
 import { generateId } from '../../../lib/utils';
 import { colors } from '../../../theme/colors';
+import { useStepSection } from '../useStepSection';
+import { SectionSwitcher } from '../SectionSwitcher';
 
 const schema = z.object({
   institution: z.string().min(1, 'Institution is required'),
@@ -35,7 +37,7 @@ export function EducationStep({ onValidChange }: EducationStepProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<EducationItem | null>(null);
 
-  const educationSection = sections.find((s) => s.type === CVSectionType.EDUCATION);
+  const { section: educationSection, sectionsForType, selectSection } = useStepSection(CVSectionType.EDUCATION);
   const items = (educationSection?.items ?? []) as EducationItem[];
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
@@ -141,6 +143,7 @@ export function EducationStep({ onValidChange }: EducationStepProps) {
         <Text className="text-stone-500 mb-5 text-sm">
           Add your academic background and qualifications.
         </Text>
+        <SectionSwitcher sections={sectionsForType} selected={educationSection} onSelect={selectSection} />
 
         {items.length === 0 ? (
           <View className="items-center py-10">
@@ -162,10 +165,10 @@ export function EducationStep({ onValidChange }: EducationStepProps) {
                   {item.gpa && <Text className="text-stone-400 text-xs">GPA: {item.gpa}</Text>}
                 </View>
                 <View className="flex-row gap-2 ml-2">
-                  <TouchableOpacity onPress={() => openEdit(item)} className="p-1">
+                  <TouchableOpacity onPress={() => openEdit(item)} className="p-1" accessibilityRole="button" accessibilityLabel="Edit entry" hitSlop={12}>
                     <Ionicons name="pencil-outline" size={18} color={colors.stone[500]} />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1">
+                  <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1" accessibilityRole="button" accessibilityLabel="Delete entry" hitSlop={12}>
                     <Ionicons name="trash-outline" size={18} color={colors.error.DEFAULT} />
                   </TouchableOpacity>
                 </View>

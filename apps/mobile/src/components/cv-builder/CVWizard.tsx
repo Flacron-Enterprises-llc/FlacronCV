@@ -5,6 +5,14 @@ import React, { useCallback, useRef, useState } from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 import { api } from '../../lib/api';
+import {
+  buildCvRootUpdate,
+  buildSectionCreate,
+  buildSectionUpdate,
+  planSectionSave,
+  shouldRecreateSection,
+} from '../../lib/cv-editor';
+import { Modal } from '../ui/Modal';
 import { useCVStore } from '../../store/cv-store';
 import { colors } from '../../theme/colors';
 import { PersonalInfoStep } from './steps/PersonalInfoStep';
@@ -16,6 +24,8 @@ import { ProjectsStep } from './steps/ProjectsStep';
 import { CertificationsStep } from './steps/CertificationsStep';
 import { LanguagesStep } from './steps/LanguagesStep';
 import { ReferencesStep } from './steps/ReferencesStep';
+import { CustomSectionsStep } from './steps/CustomSectionsStep';
+import { ArrangeSectionsStep } from './steps/ArrangeSectionsStep';
 
 const STEPS = [
   { id: 'personal', label: 'Personal Info', icon: 'person-outline' },
@@ -27,6 +37,8 @@ const STEPS = [
   { id: 'certifications', label: 'Certifications', icon: 'ribbon-outline' },
   { id: 'languages', label: 'Languages', icon: 'language-outline' },
   { id: 'references', label: 'References', icon: 'people-outline' },
+  { id: 'custom', label: 'Custom Sections', icon: 'albums-outline' },
+  { id: 'arrange', label: 'Arrange Sections', icon: 'swap-vertical-outline' },
 ] as const;
 
 /** E2 — network (no response) vs rejected request. Do not treat them as one error. */
@@ -45,6 +57,7 @@ interface CVWizardProps {
 export function CVWizard({ cvId, onFinish }: CVWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [stepValid, setStepValid] = useState(false);
+  const [stepPickerOpen, setStepPickerOpen] = useState(false);
   const queryClient = useQueryClient();
   const isSavingRef = useRef(false);
 
@@ -64,45 +77,28 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
     setIsSaving(true);
 
     const snapshot = { cv, sections, persistedSectionIds };
-    const newSections = snapshot.sections.filter(
-      (s) => !snapshot.persistedSectionIds.includes(s.id),
-    );
-    const existingSections = snapshot.sections.filter(
-      (s) => snapshot.persistedSectionIds.includes(s.id),
-    );
-    const deletedIds = snapshot.persistedSectionIds.filter(
-      (id) => !snapshot.sections.some((s) => s.id === id),
-    );
+    const plan = planSectionSave(snapshot.sections, snapshot.persistedSectionIds);
 
     try {
-      // E1 — UpdateCvDto whitelist. Same subset as web cv/[id]/page.tsx autosave.
-      await api.put(`/cvs/${cvId}`, {
-        title: snapshot.cv.title,
-        personalInfo: snapshot.cv.personalInfo,
-        styling: snapshot.cv.styling,
-        sectionOrder: snapshot.cv.sectionOrder,
-      });
+      // E1 — UpdateCvDto whitelist, same keys as web autosave. styling carries
+      // only showPhoto so the design screen's colours/fonts are never overwritten.
+      await api.put(`/cvs/${cvId}`, buildCvRootUpdate(snapshot.cv));
 
       // E3 — same order as web: POST new, PUT existing, DELETE removed.
-      for (const section of newSections) {
-        await api.post(`/cvs/${cvId}/sections`, {
-          id: section.id,
-          type: section.type,
-          title: section.title,
-          order: section.order,
-          isVisible: section.isVisible,
-          items: section.items,
-        });
+      for (const section of plan.create) {
+        await api.post(`/cvs/${cvId}/sections`, buildSectionCreate(section));
       }
-      for (const section of existingSections) {
-        await api.put(`/cvs/${cvId}/sections/${section.id}`, {
-          title: section.title,
-          isVisible: section.isVisible,
-          items: section.items,
-          order: section.order,
-        });
+      for (const section of plan.update) {
+        try {
+          await api.put(`/cvs/${cvId}/sections/${section.id}`, buildSectionUpdate(section));
+        } catch (err) {
+          // Web autosave: a missing section doc fails 404/500 — re-POST the same id.
+          const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+          if (!shouldRecreateSection(status)) throw err;
+          await api.post(`/cvs/${cvId}/sections`, buildSectionCreate(section));
+        }
       }
-      for (const id of deletedIds) {
+      for (const id of plan.remove) {
         await api.delete(`/cvs/${cvId}/sections/${id}`);
       }
 
@@ -133,6 +129,19 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
     }
   };
 
+  /** Save first (like Continue), then jump — never leaves unsaved edits behind. */
+  const handleJump = async (index: number) => {
+    setStepPickerOpen(false);
+    if (index === currentStep) return;
+    // Personal info must be valid before leaving step 1, same as Continue.
+    if (currentStep === 0 && !stepValid) {
+      Alert.alert('Personal Info', 'Complete the required fields before moving on.');
+      return;
+    }
+    const saved = await saveProgress();
+    if (saved) setCurrentStep(index);
+  };
+
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep((s) => s - 1);
@@ -150,6 +159,8 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
       case 'certifications': return <CertificationsStep onValidChange={handleValidChange} />;
       case 'languages': return <LanguagesStep onValidChange={handleValidChange} />;
       case 'references': return <ReferencesStep onValidChange={handleValidChange} />;
+      case 'custom': return <CustomSectionsStep onValidChange={handleValidChange} />;
+      case 'arrange': return <ArrangeSectionsStep onValidChange={handleValidChange} />;
       default: return null;
     }
   };
@@ -160,14 +171,23 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
     <View className="flex-1 bg-stone-50">
       {/* Progress Header */}
       <View className="px-5 pt-4 pb-3 bg-white border-b border-stone-100">
-        <View className="flex-row items-center justify-between mb-2">
+        <TouchableOpacity
+          onPress={() => setStepPickerOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={`Step ${currentStep + 1} of ${STEPS.length}, ${STEPS[currentStep].label}. Go to another step`}
+          className="flex-row items-center justify-between mb-2"
+          style={{ minHeight: 32 }}
+        >
           <Text className="text-sm font-semibold text-stone-600">
             Step {currentStep + 1} of {STEPS.length}
           </Text>
-          <Text className="text-sm text-stone-400">
-            {STEPS[currentStep].label}
-          </Text>
-        </View>
+          <View className="flex-row items-center">
+            <Text className="text-sm text-stone-500 mr-1">
+              {STEPS[currentStep].label}
+            </Text>
+            <Ionicons name="chevron-down" size={14} color={colors.stone[500]} />
+          </View>
+        </TouchableOpacity>
         {/* Progress bar */}
         <View className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
           <View
@@ -201,6 +221,30 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
       >
         {renderStep()}
       </Animated.View>
+
+      <Modal visible={stepPickerOpen} onClose={() => setStepPickerOpen(false)} title="Go to step" size="lg">
+        {STEPS.map((step, index) => {
+          const active = index === currentStep;
+          return (
+            <TouchableOpacity
+              key={step.id}
+              onPress={() => void handleJump(index)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              className={[
+                'flex-row items-center px-4 rounded-xl border mb-2',
+                active ? 'border-brand-500 bg-brand-50' : 'border-stone-200',
+              ].join(' ')}
+              style={{ minHeight: 48 }}
+            >
+              <Ionicons name={step.icon} size={18} color={active ? colors.brand[600] : colors.stone[500]} />
+              <Text className={['ml-3 flex-1', active ? 'text-brand-700 font-semibold' : 'text-stone-700'].join(' ')}>
+                {index + 1}. {step.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </Modal>
 
       {/* Navigation Buttons */}
       <View className="flex-row gap-3 px-5 py-4 bg-white border-t border-stone-100">

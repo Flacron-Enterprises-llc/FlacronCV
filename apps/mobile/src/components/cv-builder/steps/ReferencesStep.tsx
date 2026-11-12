@@ -12,6 +12,8 @@ import { CVSectionType } from '../../../types/enums';
 import { ReferenceItem } from '../../../types/cv.types';
 import { generateId } from '../../../lib/utils';
 import { colors } from '../../../theme/colors';
+import { useStepSection } from '../useStepSection';
+import { SectionSwitcher } from '../SectionSwitcher';
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -19,6 +21,7 @@ const schema = z.object({
   company: z.string().min(1, 'Company is required'),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
   phone: z.string().optional(),
+  relationship: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -27,16 +30,16 @@ export function ReferencesStep({ onValidChange }: { onValidChange: (v: boolean) 
   const { sections, updateSection, addSection } = useCVStore();
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<ReferenceItem | null>(null);
-  const refSection = sections.find((s) => s.type === CVSectionType.REFERENCES);
+  const { section: refSection, sectionsForType, selectSection } = useStepSection(CVSectionType.REFERENCES);
   const items = (refSection?.items ?? []) as ReferenceItem[];
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', title: '', company: '', email: '', phone: '' },
+    defaultValues: { name: '', title: '', company: '', email: '', phone: '', relationship: '' },
   });
 
   const openAdd = () => {
-    reset({ name: '', title: '', company: '', email: '', phone: '' });
+    reset({ name: '', title: '', company: '', email: '', phone: '', relationship: '' });
     setEditingItem(null);
     setModalVisible(true);
     onValidChange(true);
@@ -49,13 +52,14 @@ export function ReferencesStep({ onValidChange }: { onValidChange: (v: boolean) 
       company: item.company,
       email: item.email ?? '',
       phone: item.phone ?? '',
+      relationship: item.relationship ?? '',
     });
     setEditingItem(item);
     setModalVisible(true);
   };
 
   const onSubmit = (data: FormData) => {
-    // Spread first so web-only keys (relationship, order, description, …) survive; form fields overlay so clears win.
+    // Spread first so other keys (order, …) survive; form fields overlay so clears win.
     const newItem: ReferenceItem = {
       ...(editingItem ?? {}),
       id: editingItem?.id ?? generateId(),
@@ -64,6 +68,7 @@ export function ReferencesStep({ onValidChange }: { onValidChange: (v: boolean) 
       company: data.company,
       email: data.email || undefined,
       phone: data.phone,
+      relationship: (data.relationship ?? '').trim(),
     };
     if (refSection) {
       const updatedItems = editingItem
@@ -100,6 +105,7 @@ export function ReferencesStep({ onValidChange }: { onValidChange: (v: boolean) 
       <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
         <Text className="text-lg font-semibold text-stone-900 mb-1">References</Text>
         <Text className="text-stone-500 mb-5 text-sm">Add professional references who can vouch for your work.</Text>
+        <SectionSwitcher sections={sectionsForType} selected={refSection} onSelect={selectSection} />
         {items.length === 0 ? (
           <View className="items-center py-10">
             <View className="w-16 h-16 rounded-full bg-stone-100 items-center justify-center mb-3">
@@ -114,13 +120,14 @@ export function ReferencesStep({ onValidChange }: { onValidChange: (v: boolean) 
                 <View className="flex-1">
                   <Text className="font-bold text-stone-900">{item.name}</Text>
                   <Text className="text-stone-500 text-sm">{item.title} at {item.company}</Text>
+                  {item.relationship ? <Text className="text-stone-400 text-xs mt-0.5">{item.relationship}</Text> : null}
                   {item.email && <Text className="text-stone-400 text-xs mt-0.5">{item.email}</Text>}
                 </View>
                 <View className="flex-row gap-2 ml-2">
-                  <TouchableOpacity onPress={() => openEdit(item)} className="p-1">
+                  <TouchableOpacity onPress={() => openEdit(item)} className="p-1" accessibilityRole="button" accessibilityLabel="Edit entry" hitSlop={12}>
                     <Ionicons name="pencil-outline" size={18} color={colors.stone[500]} />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1">
+                  <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1" accessibilityRole="button" accessibilityLabel="Delete entry" hitSlop={12}>
                     <Ionicons name="trash-outline" size={18} color={colors.error.DEFAULT} />
                   </TouchableOpacity>
                 </View>
@@ -148,6 +155,9 @@ export function ReferencesStep({ onValidChange }: { onValidChange: (v: boolean) 
         )} />
         <Controller control={control} name="phone" render={({ field }) => (
           <Input label="Phone" placeholder="+1 (555) 000-0000" keyboardType="phone-pad" value={field.value} onChangeText={field.onChange} />
+        )} />
+        <Controller control={control} name="relationship" render={({ field }) => (
+          <Input label="Relationship" placeholder="Former manager" value={field.value} onChangeText={field.onChange} />
         )} />
         <Button variant="primary" fullWidth onPress={handleSubmit(onSubmit)}>{editingItem ? 'Update' : 'Add Reference'}</Button>
       </Modal>

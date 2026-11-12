@@ -6,6 +6,17 @@ import { Alert, Linking, Platform, ScrollView, Text, TouchableOpacity, View } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PlanCard } from '../../../src/components/subscription/PlanCard';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
+import { Badge } from '../../../src/components/ui/Badge';
+import { Skeleton } from '../../../src/components/ui/Skeleton';
+import { useInvoices } from '../../../src/hooks/useInvoices';
+import {
+  BILLING_HISTORY_COPY,
+  invoiceAccessibilityLabel,
+  invoiceAmount,
+  invoiceStatusLabel,
+  invoiceStatusVariant,
+  invoiceSubtitle,
+} from '../../../src/lib/billing-history';
 import { useCreateCheckoutSession, useCreatePortalSession } from '../../../src/hooks/usePayment';
 import { useCurrentUser } from '../../../src/hooks/useUser';
 import { useAuthStore } from '../../../src/store/auth-store';
@@ -209,6 +220,8 @@ export default function BillingScreen() {
           </View>
         ) : null}
 
+        <BillingHistory storeBilled={storeLive} />
+
         {PAID_UPGRADES_ENABLED && (
           <>
             <View className="mx-4 mb-4">
@@ -266,6 +279,82 @@ export default function BillingScreen() {
         <CareerAddonCard />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/**
+ * Website "Billing History", read-only: amount, date, invoice number, status.
+ * No invoice / PDF / portal links — store rules forbid sending users to an
+ * external payment page from the app.
+ */
+function BillingHistory({ storeBilled }: { storeBilled: boolean }) {
+  const { data: invoices, isLoading, isError, refetch, isRefetching } = useInvoices();
+
+  return (
+    <View className="mx-4 mb-4 bg-white rounded-2xl border border-stone-100 p-4">
+      <View className="flex-row items-center mb-1">
+        <Ionicons name="receipt-outline" size={18} color={colors.stone[400]} />
+        <Text className="font-bold text-stone-800 ml-2" accessibilityRole="header">
+          {BILLING_HISTORY_COPY.title}
+        </Text>
+      </View>
+      {isLoading ? (
+        <View className="mt-3" accessibilityLabel="Loading billing history">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} height={44} className="mb-2 rounded-xl" />
+          ))}
+        </View>
+      ) : isError ? (
+        <View className="items-center py-6">
+          <Ionicons name="alert-circle-outline" size={28} color={colors.error.DEFAULT} />
+          <Text className="text-stone-500 text-sm mt-2 text-center">{BILLING_HISTORY_COPY.loadError}</Text>
+          <TouchableOpacity
+            onPress={() => void refetch()}
+            disabled={isRefetching}
+            className="mt-2 px-4 py-3"
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isRefetching }}
+          >
+            <Text className="text-brand-600 font-semibold">
+              {isRefetching ? 'Loading…' : BILLING_HISTORY_COPY.retry}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : invoices && invoices.length > 0 ? (
+        <View className="mt-2">
+          {invoices.map((inv, index) => (
+            <View
+              key={inv.id}
+              className={['flex-row items-center justify-between py-3', index > 0 ? 'border-t border-stone-100' : ''].join(' ')}
+              accessible
+              accessibilityLabel={invoiceAccessibilityLabel(inv, formatDate)}
+            >
+              <View className="flex-1 mr-3">
+                <Text className="text-stone-900 font-semibold text-sm">{invoiceAmount(inv)}</Text>
+                <Text className="text-stone-500 text-xs mt-0.5" numberOfLines={1}>
+                  {invoiceSubtitle(inv, formatDate)}
+                </Text>
+              </View>
+              <Badge variant={invoiceStatusVariant(inv.status)} size="sm">
+                {invoiceStatusLabel(inv.status)}
+              </Badge>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <View className="items-center py-6">
+          <View className="w-12 h-12 rounded-full bg-stone-100 items-center justify-center mb-2">
+            <Ionicons name="receipt-outline" size={22} color={colors.stone[400]} />
+          </View>
+          <Text className="text-stone-500 text-sm text-center">{BILLING_HISTORY_COPY.empty}</Text>
+          {storeBilled ? (
+            <Text className="text-stone-400 text-xs text-center mt-1">
+              {BILLING_HISTORY_COPY.storeNote}
+            </Text>
+          ) : null}
+        </View>
+      )}
+    </View>
   );
 }
 

@@ -12,6 +12,8 @@ import { CVSectionType } from '../../../types/enums';
 import { ProjectItem } from '../../../types/cv.types';
 import { generateId } from '../../../lib/utils';
 import { colors } from '../../../theme/colors';
+import { useStepSection } from '../useStepSection';
+import { SectionSwitcher } from '../SectionSwitcher';
 
 const schema = z.object({
   name: z.string().min(1, 'Project name is required'),
@@ -34,7 +36,7 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<ProjectItem | null>(null);
 
-  const projectsSection = sections.find((s) => s.type === CVSectionType.PROJECTS);
+  const { section: projectsSection, sectionsForType, selectSection } = useStepSection(CVSectionType.PROJECTS);
   const items = (projectsSection?.items ?? []) as ProjectItem[];
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
@@ -130,6 +132,7 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
         <Text className="text-stone-500 mb-5 text-sm">
           Showcase your notable projects and side work.
         </Text>
+        <SectionSwitcher sections={sectionsForType} selected={projectsSection} onSelect={selectSection} />
 
         {items.length === 0 ? (
           <View className="items-center py-10">
@@ -158,10 +161,10 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
                   )}
                 </View>
                 <View className="flex-row gap-2 ml-2">
-                  <TouchableOpacity onPress={() => openEdit(item)} className="p-1">
+                  <TouchableOpacity onPress={() => openEdit(item)} className="p-1" accessibilityRole="button" accessibilityLabel="Edit entry" hitSlop={12}>
                     <Ionicons name="pencil-outline" size={18} color={colors.stone[500]} />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1">
+                  <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1" accessibilityRole="button" accessibilityLabel="Delete entry" hitSlop={12}>
                     <Ionicons name="trash-outline" size={18} color={colors.error.DEFAULT} />
                   </TouchableOpacity>
                 </View>

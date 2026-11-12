@@ -12,6 +12,8 @@ import { CVSectionType, SkillLevel } from '../../../types/enums';
 import { SkillItem } from '../../../types/cv.types';
 import { generateId } from '../../../lib/utils';
 import { colors } from '../../../theme/colors';
+import { useStepSection } from '../useStepSection';
+import { SectionSwitcher } from '../SectionSwitcher';
 
 const schema = z.object({
   name: z.string().min(1, 'Skill name is required'),
@@ -37,7 +39,7 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<SkillItem | null>(null);
 
-  const skillsSection = sections.find((s) => s.type === CVSectionType.SKILLS);
+  const { section: skillsSection, sectionsForType, selectSection } = useStepSection(CVSectionType.SKILLS);
   const items = (skillsSection?.items ?? []) as SkillItem[];
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
@@ -114,6 +116,7 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
         <Text className="text-stone-500 mb-5 text-sm">
           Add your technical and soft skills with proficiency levels.
         </Text>
+        <SectionSwitcher sections={sectionsForType} selected={skillsSection} onSelect={selectSection} />
 
         {items.length > 0 && (
           <View className="flex-row flex-wrap gap-2 mb-4">
@@ -125,10 +128,10 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
                 <Text className="text-sm font-medium text-brand-700">
                   {item.name}
                 </Text>
-                <TouchableOpacity onPress={() => openEdit(item)} className="ml-1.5 p-0.5">
+                <TouchableOpacity onPress={() => openEdit(item)} className="ml-1.5 p-0.5" accessibilityRole="button" accessibilityLabel="Edit entry" hitSlop={12}>
                   <Ionicons name="pencil-outline" size={14} color={colors.stone[500]} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDelete(item.id)} className="ml-0.5">
+                <TouchableOpacity onPress={() => handleDelete(item.id)} className="ml-0.5" accessibilityRole="button" accessibilityLabel="Delete entry" hitSlop={12}>
                   <Ionicons name="close-circle" size={14} color={colors.error.DEFAULT} />
                 </TouchableOpacity>
               </View>

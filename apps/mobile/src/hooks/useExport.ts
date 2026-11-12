@@ -26,7 +26,7 @@ type ServerExportBody = { downloadUrl: string; expiresAt: string | Date };
 /**
  * Filename choice (reported for the record):
  * 1. Last path segment of the signed URL (server stores `exports/{uid}/{uuid}.pdf|docx`).
- * 2. Fallback `cv-{id}.{format}` / `cover-letter-{id}.pdf` if the URL has no usable name.
+ * 2. Fallback `cv-{id}.{format}` / `cover-letter-{id}.{format}` if the URL has no usable name.
  * We do not invent a pretty title from the document — the API does not return one.
  */
 function filenameFromDownloadUrl(
@@ -210,12 +210,24 @@ export function useExportCV() {
   });
 }
 
+/**
+ * POST /cover-letters/:id/export/pdf|docx, then download and open the share
+ * sheet — same flow as useExportCV. The server renders the SAVED letter, so
+ * callers save pending edits first. DOCX is paid-only server-side (403 handled
+ * by alertExportRequestError).
+ */
 export function useExportCoverLetter() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (clId: string) => {
-      const raw = await api.post<unknown>(`/cover-letters/${clId}/export/pdf`);
-      return normalizeExportPayload(raw, `cover-letter-${clId}.pdf`);
+    mutationFn: async ({
+      clId,
+      format,
+    }: {
+      clId: string;
+      format: 'pdf' | 'docx';
+    }) => {
+      const raw = await api.post<unknown>(`/cover-letters/${clId}/export/${format}`);
+      return normalizeExportPayload(raw, `cover-letter-${clId}.${format}`);
     },
     onSuccess: async (data) => {
       qc.invalidateQueries({ queryKey: ['user'] });
@@ -226,7 +238,9 @@ export function useExportCoverLetter() {
           data.url,
           data.filename,
           'Save or Share your Cover Letter',
-          'application/pdf',
+          data.filename.endsWith('.docx')
+            ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            : 'application/pdf',
         );
       } catch {
         alertDownloadError();

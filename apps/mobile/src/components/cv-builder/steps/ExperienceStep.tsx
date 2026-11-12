@@ -11,7 +11,10 @@ import { useCVStore } from '../../../store/cv-store';
 import { CVSectionType } from '../../../types/enums';
 import { ExperienceItem } from '../../../types/cv.types';
 import { generateId } from '../../../lib/utils';
+import { formatHighlights, ITEM_ARRAY_MAX, parseHighlights } from '../../../lib/cv-editor';
 import { colors } from '../../../theme/colors';
+import { useStepSection } from '../useStepSection';
+import { SectionSwitcher } from '../SectionSwitcher';
 
 const schema = z.object({
   company: z.string().min(1, 'Company name is required'),
@@ -21,6 +24,8 @@ const schema = z.object({
   endDate: z.string().optional(),
   isCurrent: z.boolean(),
   description: z.string().optional(),
+  /** One highlight per line (ExperienceItem.highlights). */
+  highlights: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -34,7 +39,7 @@ export function ExperienceStep({ onValidChange }: ExperienceStepProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<ExperienceItem | null>(null);
 
-  const experienceSection = sections.find((s) => s.type === CVSectionType.EXPERIENCE);
+  const { section: experienceSection, sectionsForType, selectSection } = useStepSection(CVSectionType.EXPERIENCE);
   const items = (experienceSection?.items ?? []) as ExperienceItem[];
 
   const { control, handleSubmit, reset, watch, formState: { errors } } = useForm<FormData>({
@@ -53,6 +58,7 @@ export function ExperienceStep({ onValidChange }: ExperienceStepProps) {
       endDate: '',
       isCurrent: false,
       description: '',
+      highlights: '',
     });
     setEditingItem(null);
     setModalVisible(true);
@@ -68,13 +74,14 @@ export function ExperienceStep({ onValidChange }: ExperienceStepProps) {
       endDate: item.endDate ?? '',
       isCurrent: item.isCurrent,
       description: item.description ?? '',
+      highlights: formatHighlights(item.highlights),
     });
     setEditingItem(item);
     setModalVisible(true);
   };
 
   const onSubmit = (data: FormData) => {
-    // Spread first so web-only keys (highlights, order, …) survive; form fields overlay so clears win.
+    // Spread first so other keys (order, …) survive; form fields overlay so clears win.
     const newItem: ExperienceItem = {
       ...(editingItem ?? {}),
       id: editingItem?.id ?? generateId(),
@@ -85,6 +92,7 @@ export function ExperienceStep({ onValidChange }: ExperienceStepProps) {
       endDate: data.isCurrent ? undefined : data.endDate,
       isCurrent: data.isCurrent,
       description: data.description,
+      highlights: parseHighlights(data.highlights),
     };
 
     if (experienceSection) {
@@ -131,6 +139,7 @@ export function ExperienceStep({ onValidChange }: ExperienceStepProps) {
         <Text className="text-stone-500 mb-5 text-sm">
           Add your work history, starting with the most recent position.
         </Text>
+        <SectionSwitcher sections={sectionsForType} selected={experienceSection} onSelect={selectSection} />
 
         {items.length === 0 ? (
           <View className="items-center py-10">
@@ -157,12 +166,17 @@ export function ExperienceStep({ onValidChange }: ExperienceStepProps) {
                   {item.location && (
                     <Text className="text-stone-400 text-xs">{item.location}</Text>
                   )}
+                  {(item.highlights?.length ?? 0) > 0 && (
+                    <Text className="text-stone-400 text-xs">
+                      {item.highlights!.length} {item.highlights!.length === 1 ? 'highlight' : 'highlights'}
+                    </Text>
+                  )}
                 </View>
                 <View className="flex-row gap-2 ml-2">
-                  <TouchableOpacity onPress={() => openEdit(item)} className="p-1">
+                  <TouchableOpacity onPress={() => openEdit(item)} className="p-1" accessibilityRole="button" accessibilityLabel="Edit entry" hitSlop={12}>
                     <Ionicons name="pencil-outline" size={18} color={colors.stone[500]} />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1">
+                  <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1" accessibilityRole="button" accessibilityLabel="Delete entry" hitSlop={12}>
                     <Ionicons name="trash-outline" size={18} color={colors.error.DEFAULT} />
                   </TouchableOpacity>
                 </View>
@@ -282,6 +296,24 @@ export function ExperienceStep({ onValidChange }: ExperienceStepProps) {
               onChangeText={field.onChange}
               multiline
               numberOfLines={4}
+              className="min-h-24"
+            />
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="highlights"
+          render={({ field }) => (
+            <Input
+              label="Key highlights"
+              placeholder={'Led a team of 5 engineers\nCut page load time by 40%'}
+              hint={`One per line, up to ${ITEM_ARRAY_MAX}.`}
+              value={field.value}
+              onChangeText={field.onChange}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
               className="min-h-24"
             />
           )}

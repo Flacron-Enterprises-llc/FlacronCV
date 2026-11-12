@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Alert, FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TemplateCard } from '../../../src/components/templates/TemplateCard';
+import { TemplatePreviewModal } from '../../../src/components/templates/TemplatePreviewModal';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../src/components/ui/Skeleton';
@@ -33,6 +34,7 @@ export default function TemplatesScreen() {
   const { user } = useAuthStore();
   const { data: templates, isLoading, error, refetch } = useTemplates(TemplateCategory.CV);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
+  const [previewing, setPreviewing] = useState<Template | null>(null);
   const subscription = user?.subscription;
 
   const catalogFailed = !!error;
@@ -119,11 +121,32 @@ export default function TemplatesScreen() {
                 template={item}
                 isLocked={!canAccessTemplate(subscription, item.tier)}
                 onSelect={() => handleSelectTemplate(item)}
+                onPreview={() => setPreviewing(item)}
               />
             </View>
           )}
         />
       )}
+
+      <TemplatePreviewModal
+        template={previewing}
+        onClose={() => setPreviewing(null)}
+        userCanAccess={previewing ? canAccessTemplate(subscription, previewing.tier) : true}
+        lockedMessage={
+          previewing
+            ? lockedTemplateMessage(previewing.name, previewing.tier, effectivePlanForCopy(subscription))
+            : undefined
+        }
+        onSelect={() => {
+          const chosen = previewing;
+          setPreviewing(null);
+          if (chosen) handleSelectTemplate(chosen);
+        }}
+        onUpgrade={() => {
+          setPreviewing(null);
+          router.push('/(dashboard)/settings/billing');
+        }}
+      />
     </SafeAreaView>
   );
 }

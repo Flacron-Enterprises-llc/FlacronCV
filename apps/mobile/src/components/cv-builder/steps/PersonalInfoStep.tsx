@@ -5,6 +5,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { z } from 'zod';
 import { Input } from '../../ui/Input';
 import { useCVStore } from '../../../store/cv-store';
+import { CVPhotoPicker } from '../CVPhotoPicker';
 
 const schema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -16,6 +17,7 @@ const schema = z.object({
   address: z.string().optional(),
   city: z.string().optional(),
   country: z.string().optional(),
+  postalCode: z.string().optional(),
   // PersonalInfoDto is a plain string — do not require https:// (blocks Continue).
   website: z.string().optional().or(z.literal('')),
   linkedin: z.string().optional(),
@@ -52,6 +54,7 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
       address: cv?.personalInfo.address ?? '',
       city: cv?.personalInfo.city ?? '',
       country: cv?.personalInfo.country ?? '',
+      postalCode: cv?.personalInfo.postalCode ?? '',
       website: cv?.personalInfo.website ?? '',
       linkedin: cv?.personalInfo.linkedin ?? '',
       github: cv?.personalInfo.github ?? '',
@@ -83,6 +86,8 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
         Add your basic contact details and professional headline.
       </Text>
 
+      <CVPhotoPicker />
+
       <View className="flex-row gap-3">
         <View className="flex-1">
           <Controller
@@ -91,6 +96,7 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
             render={({ field }) => (
               <Input
                 label="First Name *"
+                maxLength={100}
                 placeholder="John"
                 value={field.value}
                 onChangeText={field.onChange}
@@ -106,6 +112,7 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
             render={({ field }) => (
               <Input
                 label="Last Name *"
+                maxLength={100}
                 placeholder="Doe"
                 value={field.value}
                 onChangeText={field.onChange}
@@ -122,6 +129,7 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
         render={({ field }) => (
           <Input
             label="Email Address *"
+            maxLength={320}
             placeholder="john@example.com"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -138,6 +146,7 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
         render={({ field }) => (
           <Input
             label="Phone Number *"
+            maxLength={40}
             placeholder="+1 (555) 000-0000"
             keyboardType="phone-pad"
             value={field.value}
@@ -153,6 +162,7 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
         render={({ field }) => (
           <Input
             label="Professional Headline"
+            maxLength={200}
             placeholder="Senior Software Engineer at Google"
             value={field.value}
             onChangeText={field.onChange}
@@ -166,6 +176,7 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
         render={({ field }) => (
           <Input
             label="City"
+            maxLength={100}
             placeholder="San Francisco"
             value={field.value}
             onChangeText={field.onChange}
@@ -180,6 +191,38 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
           <Input
             label="Country"
             placeholder="United States"
+            maxLength={100}
+            value={field.value}
+            onChangeText={field.onChange}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="address"
+        render={({ field }) => (
+          <Input
+            label="Street address"
+            placeholder="Street and number"
+            autoComplete="street-address"
+            maxLength={200}
+            value={field.value}
+            onChangeText={field.onChange}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="postalCode"
+        render={({ field }) => (
+          <Input
+            label="Postal code"
+            placeholder="ZIP / postal code"
+            autoComplete="postal-code"
+            autoCapitalize="characters"
+            maxLength={20}
             value={field.value}
             onChangeText={field.onChange}
           />
@@ -192,6 +235,7 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
         render={({ field }) => (
           <Input
             label="Website"
+            maxLength={500}
             placeholder="https://johndoe.com"
             keyboardType="url"
             autoCapitalize="none"
@@ -208,6 +252,7 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
         render={({ field }) => (
           <Input
             label="LinkedIn"
+            maxLength={500}
             placeholder="linkedin.com/in/johndoe"
             autoCapitalize="none"
             value={field.value}
@@ -222,6 +267,7 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
         render={({ field }) => (
           <Input
             label="GitHub"
+            maxLength={500}
             placeholder="github.com/johndoe"
             autoCapitalize="none"
             value={field.value}

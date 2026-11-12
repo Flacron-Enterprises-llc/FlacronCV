@@ -73,4 +73,30 @@ describe('User write DTOs (ValidationPipe)', () => {
       appTour: { version: 1, status: 'skipped', stepId: 'Welcome' },
     });
   });
+
+  it('accepts a mobile app tour record with the same rules', async () => {
+    const result = await transformBody(UpdatePreferencesDto, {
+      mobileAppTour: {
+        version: 1,
+        status: 'in_progress',
+        stepId: 'cover-letters',
+        completedAt: null,
+        skippedAt: null,
+        updatedAt: '2026-11-13T12:00:00.000Z',
+      },
+    });
+    expect(result.mobileAppTour?.status).toBe('in_progress');
+    expect(result.mobileAppTour?.stepId).toBe('cover-letters');
+    expect(result.appTour).toBeUndefined();
+
+    await expectReject(UpdatePreferencesDto, {
+      mobileAppTour: { version: 1, status: 'finished', stepId: null },
+    });
+    await expectReject(UpdatePreferencesDto, {
+      mobileAppTour: { version: 1, status: 'skipped', stepId: 'Welcome' },
+    });
+    await expectReject(UpdatePreferencesDto, {
+      mobileAppTour: { version: 0, status: 'skipped', stepId: null },
+    });
+  });
 });

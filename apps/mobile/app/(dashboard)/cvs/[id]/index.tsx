@@ -6,7 +6,12 @@ import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CVWizard } from '../../../../src/components/cv-builder/CVWizard';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
-import { useCV, useCVSections } from '../../../../src/hooks/useCVs';
+import { useCV, useCVSections, useUpdateCV } from '../../../../src/hooks/useCVs';
+import { Button } from '../../../../src/components/ui/Button';
+import { Input } from '../../../../src/components/ui/Input';
+import { Modal } from '../../../../src/components/ui/Modal';
+import { CV_TITLE_MAX, validateCvTitle } from '../../../../src/lib/cv-editor';
+import { requestFailureMessage } from '../../../../src/lib/api-errors';
 import { useExportCV } from '../../../../src/hooks/useExport';
 import { useCVStore } from '../../../../src/store/cv-store';
 import { useAuthStore } from '../../../../src/store/auth-store';
@@ -27,8 +32,38 @@ export default function CVEditorScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { user } = useAuthStore();
-  const { setCV, setSections, cv: storeCV, isDirty } = useCVStore();
+  const { setCV, setSections, cv: storeCV, isDirty, applySavedTitle } = useCVStore();
   const exportCV = useExportCV();
+  const updateCV = useUpdateCV(id ?? '');
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
+  const [renameError, setRenameError] = useState<string | undefined>();
+
+  const openRename = () => {
+    setRenameValue(storeCV?.title ?? cv?.title ?? '');
+    setRenameError(undefined);
+    setRenameOpen(true);
+  };
+
+  /** Rename saves at once with PUT /cvs/:id { title } (web toolbar title field, same 200-char cap). */
+  const submitRename = async () => {
+    const check = validateCvTitle(renameValue);
+    if (!check.ok) {
+      setRenameError(check.error);
+      return;
+    }
+    if (check.title === (storeCV?.title ?? cv?.title)) {
+      setRenameOpen(false);
+      return;
+    }
+    try {
+      const saved = await updateCV.mutateAsync({ title: check.title });
+      applySavedTitle(saved?.title ?? check.title);
+      setRenameOpen(false);
+    } catch (err) {
+      setRenameError(requestFailureMessage(err, 'Could not rename the CV. Please try again.'));
+    }
+  };
 
   const { data: cv, isLoading: cvLoading, error: cvError } = useCV(id);
   const {
@@ -100,14 +135,24 @@ export default function CVEditorScreen() {
           <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
         </TouchableOpacity>
 
-        <View className="flex-1 px-3">
-          <Text className="font-bold text-stone-900 text-center" numberOfLines={1}>
-            {storeCV?.title ?? cv?.title ?? 'Editing CV'}
-          </Text>
+        <TouchableOpacity
+          onPress={openRename}
+          accessibilityRole="button"
+          accessibilityLabel={`CV title: ${storeCV?.title ?? cv?.title ?? ''}. Rename`}
+          accessibilityHint="Opens a field to change the CV title"
+          className="flex-1 px-3 justify-center"
+          style={{ minHeight: 44 }}
+        >
+          <View className="flex-row items-center justify-center">
+            <Text className="font-bold text-stone-900 text-center flex-shrink" numberOfLines={1}>
+              {storeCV?.title ?? cv?.title ?? 'Editing CV'}
+            </Text>
+            <Ionicons name="pencil" size={13} color={colors.stone[400]} style={{ marginLeft: 4 }} />
+          </View>
           {isDirty && (
             <Text className="text-xs text-brand-400 text-center">Unsaved changes</Text>
           )}
-        </View>
+        </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => router.push('./ats-check')}
@@ -119,9 +164,24 @@ export default function CVEditorScreen() {
         <TouchableOpacity
           onPress={() => router.push('./interview-prep')}
           accessibilityLabel="Interview Prep"
-          className="mr-2 p-2"
+          className="mr-1 p-2"
         >
           <Ionicons name="chatbubbles-outline" size={22} color={colors.stone[700]} />
+        </TouchableOpacity>
+        {/* One button for the less frequent tools keeps the title readable on narrow phones. */}
+        <TouchableOpacity
+          onPress={() =>
+            Alert.alert('More tools', undefined, [
+              { text: 'Design: layout, colours, fonts', onPress: () => router.push('./design') },
+              { text: 'LinkedIn Optimizer', onPress: () => router.push('./linkedin') },
+              { text: 'Cancel', style: 'cancel' },
+            ])
+          }
+          accessibilityRole="button"
+          accessibilityLabel="More tools: design and LinkedIn Optimizer"
+          className="mr-2 p-2"
+        >
+          <Ionicons name="ellipsis-horizontal" size={22} color={colors.stone[700]} />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => Alert.alert('Export', 'Choose format:', [
@@ -142,6 +202,27 @@ export default function CVEditorScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      <Modal visible={renameOpen} onClose={() => setRenameOpen(false)} title="Rename CV" closeDisabled={updateCV.isPending}>
+        <Input
+          label="CV title"
+          placeholder="e.g. Software Engineer CV 2025"
+          value={renameValue}
+          onChangeText={(t) => {
+            setRenameValue(t);
+            if (renameError) setRenameError(undefined);
+          }}
+          maxLength={CV_TITLE_MAX}
+          error={renameError}
+          hint={`${renameValue.length}/${CV_TITLE_MAX}`}
+          autoFocus
+          returnKeyType="done"
+          onSubmitEditing={() => void submitRename()}
+        />
+        <Button variant="primary" fullWidth loading={updateCV.isPending} onPress={() => void submitRename()}>
+          Save
+        </Button>
+      </Modal>
 
       {/* CV Wizard */}
       <CVWizard

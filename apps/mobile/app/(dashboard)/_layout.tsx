@@ -1,6 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs, useSegments } from 'expo-router';
 import React from 'react';
+import { View } from 'react-native';
+import { MaintenanceGate } from '../../src/components/app/MaintenanceGate';
+import { AppTour, AppTourProvider } from '../../src/components/tour/AppTour';
 import { useAuthStore } from '../../src/store/auth-store';
 import { colors } from '../../src/theme/colors';
 
@@ -25,7 +28,11 @@ export default function DashboardLayout() {
     return <Redirect href="/(auth)/login" />;
   }
 
+  // Maintenance mode blocks the signed-in app (admins pass); the tour card floats above the tabs.
   return (
+    <MaintenanceGate>
+      <AppTourProvider>
+        <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -103,5 +110,9 @@ export default function DashboardLayout() {
         options={{ href: null }}
       />
     </Tabs>
+          <AppTour />
+        </View>
+      </AppTourProvider>
+    </MaintenanceGate>
   );
 }

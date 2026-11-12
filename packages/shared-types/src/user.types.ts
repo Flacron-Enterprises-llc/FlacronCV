@@ -21,6 +21,13 @@ export interface UserProfile {
  */
 export const APP_TOUR_VERSION = 1;
 
+/**
+ * Version of the mobile app tour (`preferences.mobileAppTour`). Independent of
+ * the website tour: the two have different steps, and finishing one must not
+ * suppress the other. Same "never restart a completed/skipped tour" rule.
+ */
+export const MOBILE_APP_TOUR_VERSION = 1;
+
 export type AppTourStatus = 'unseen' | 'in_progress' | 'skipped' | 'completed';
 
 export interface AppTourPreference {
@@ -49,6 +56,12 @@ export interface UserPreferences {
    * Omitted on older accounts.
    */
   appTour?: AppTourPreference;
+  /**
+   * Mobile app (iOS/Android) tour. Same shape and rules as `appTour`, with
+   * mobile step ids. Set to `unseen` only when the account is created;
+   * omitted on older accounts, which therefore never auto-start it.
+   */
+  mobileAppTour?: AppTourPreference;
 }
 
 export interface UserSubscription {

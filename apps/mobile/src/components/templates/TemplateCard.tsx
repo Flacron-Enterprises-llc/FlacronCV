@@ -74,6 +74,9 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
   return (
     <Pressable
       onPress={onSelect}
+      accessibilityRole="button"
+      accessibilityLabel={`${template.name} template${isLocked ? ', locked' : ''}`}
+      accessibilityState={{ selected: !!isSelected }}
       className={[
         'rounded-2xl overflow-hidden border-2',
         isSelected ? 'border-brand-500' : 'border-stone-100',
@@ -105,6 +108,18 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
             </View>
           </View>
         )}
+
+        {/* Preview (web: "Preview" on hover) — own touch target inside the card */}
+        {onPreview ? (
+          <Pressable
+            onPress={onPreview}
+            accessibilityRole="button"
+            accessibilityLabel={`Preview ${template.name} template`}
+            className="absolute bottom-2 right-2 w-11 h-11 rounded-full bg-white/95 items-center justify-center"
+          >
+            <Ionicons name="eye-outline" size={20} color={colors.stone[700]} />
+          </Pressable>
+        ) : null}
 
         {/* Selected checkmark */}
         {isSelected && (

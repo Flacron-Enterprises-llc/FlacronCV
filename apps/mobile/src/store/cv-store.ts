@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { CV, CVSection } from '../types/cv.types';
 import { FontSize, Spacing } from '../types/enums';
+import { moveSectionId } from '../lib/cv-editor';
 
 const MAX_HISTORY = 50;
 
@@ -24,12 +25,18 @@ interface CVStoreState {
   reset: () => void;
   setCV: (cv: CV) => void;
   setSections: (sections: CVSection[]) => void;
+  /** Rename in the editor; saved with the next Continue (web toolbar `updateTitle`). */
+  updateTitle: (title: string) => void;
+  /** Title already saved by PUT /cvs/:id — update the store without marking it dirty. */
+  applySavedTitle: (title: string) => void;
   updatePersonalInfo: (field: string, value: string) => void;
   updateStyling: (field: string, value: string | boolean | FontSize | Spacing) => void;
   updateSection: (sectionId: string, data: Partial<CVSection>) => void;
   addSection: (section: CVSection) => void;
   removeSection: (sectionId: string) => void;
   reorderSections: (newOrder: string[]) => void;
+  /** Move a section one place up (-1) or down (+1) in display order. */
+  moveSection: (sectionId: string, delta: -1 | 1) => void;
   setIsSaving: (value: boolean) => void;
   setLastSavedAt: (date: Date) => void;
   /**
@@ -79,6 +86,19 @@ export const useCVStore = create<CVStoreState>((set, get) => ({
       sections,
       persistedSectionIds: sections.map((s) => s.id),
     });
+  },
+
+  updateTitle: (title) => {
+    const { cv } = get();
+    if (!cv || cv.title === title) return;
+    get().pushHistory();
+    set({ cv: { ...cv, title }, isDirty: true });
+  },
+
+  applySavedTitle: (title) => {
+    const { cv } = get();
+    if (!cv || cv.title === title) return;
+    set({ cv: { ...cv, title } });
   },
 
   updatePersonalInfo: (field, value) => {
@@ -153,6 +173,12 @@ export const useCVStore = create<CVStoreState>((set, get) => ({
       cv: { ...cv, sectionOrder: newOrder },
       isDirty: true,
     });
+  },
+
+  moveSection: (sectionId, delta) => {
+    const ids = get().sections.map((s) => s.id);
+    const next = moveSectionId(ids, sectionId, delta);
+    if (next) get().reorderSections(next);
   },
 
   setIsSaving: (value) => set({ isSaving: value }),
