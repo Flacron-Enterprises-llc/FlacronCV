@@ -72,6 +72,7 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
   const tier = tierClasses[template.tier] ?? FALLBACK_TIER;
 
   return (
+    <View className="relative">
     <Pressable
       onPress={onSelect}
       accessibilityRole="button"
@@ -109,18 +110,6 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
           </View>
         )}
 
-        {/* Preview (web: "Preview" on hover) — own touch target inside the card */}
-        {onPreview ? (
-          <Pressable
-            onPress={onPreview}
-            accessibilityRole="button"
-            accessibilityLabel={`Preview ${template.name} template`}
-            className="absolute bottom-2 right-2 w-11 h-11 rounded-full bg-white/95 items-center justify-center"
-          >
-            <Ionicons name="eye-outline" size={20} color={colors.stone[700]} />
-          </Pressable>
-        ) : null}
-
         {/* Selected checkmark */}
         {isSelected && (
           <View className="absolute top-2 right-2 w-7 h-7 rounded-full bg-brand-500 items-center justify-center">
@@ -153,5 +142,22 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
         </View>
       </View>
     </Pressable>
+      {/* Preview (web: "Preview" on hover). A sibling over the thumbnail, not nested in the card:
+          a touchable groups its children for VoiceOver/TalkBack, so a nested button is unreachable. */}
+      {onPreview ? (
+        <Pressable
+          onPress={onPreview}
+          accessibilityRole="button"
+          accessibilityLabel={`Preview ${template.name} template`}
+          style={{ position: 'absolute', top: THUMB_HEIGHT - 44 - 8, right: 8 }}
+          className="w-11 h-11 rounded-full bg-white/95 items-center justify-center"
+        >
+          <Ionicons name="eye-outline" size={20} color={colors.stone[700]} />
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
+
+/** Height of the thumbnail area (`h-48`, 12rem = 192 dp); the preview button sits on its bottom edge. */
+const THUMB_HEIGHT = 192;

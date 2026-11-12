@@ -1,0 +1,199 @@
+{
+  "header": {
+    "userFallback": "Usuario",
+    "unavailable": "No disponible"
+  },
+  "plans": {
+    "free": "Gratis",
+    "pro": "Pro",
+    "enterprise": "Enterprise"
+  },
+  "usage": {
+    "title": "Uso mensual",
+    "credits": "Créditos",
+    "exports": "Exportaciones",
+    "loadError": "No se pudo cargar el uso. Inténtalo de nuevo."
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "description": "Recordatorios de seguimiento y avisos de la cuenta",
+    "deniedTitle": "Las notificaciones están desactivadas",
+    "deniedBody": "Puedes activarlas más tarde en los Ajustes del sistema o desde aquí.",
+    "updateError": "No se pudieron actualizar las notificaciones"
+  },
+  "preferences": {
+    "emailNotifications": "Notificaciones por email",
+    "emailNotificationsDescription": "Recibe actualizaciones y consejos por email",
+    "marketingEmails": "Correos de marketing",
+    "marketingEmailsDescription": "Novedades, consejos y ofertas especiales",
+    "saveError": "Error al guardar las preferencias"
+  },
+  "language": {
+    "title": "Idioma",
+    "description": "Elige tu idioma preferido",
+    "restartTitle": "Reinicia para terminar",
+    "restartBody": "El nuevo idioma ya está activo. Cierra y vuelve a abrir FlacronCV para cambiar la dirección del diseño.",
+    "restartNow": "Reiniciar ahora"
+  },
+  "sections": {
+    "account": "Cuenta",
+    "security": "Seguridad",
+    "subscription": "Suscripción",
+    "support": "Soporte"
+  },
+  "menu": {
+    "profile": "Perfil",
+    "jobTracker": "Seguimiento de empleos",
+    "careerTools": "Herramientas profesionales",
+    "yourData": "Tus datos y eliminación de la cuenta",
+    "billingPlans": "Facturación y planes",
+    "planUsage": "Plan y uso",
+    "helpSupport": "Ayuda y soporte",
+    "replayTour": "Repetir la visita",
+    "replayTourDescription": "Recorre de nuevo las partes principales de FlacronCV.",
+    "terms": "Términos de servicio",
+    "privacy": "Política de privacidad",
+    "disclaimer": "Descargo de responsabilidad",
+    "refund": "Política de reembolso"
+  },
+  "password": {
+    "rowLabel": "Cambiar contraseña",
+    "rowDescription": "Cambiar la contraseña de tu cuenta",
+    "sending": "Enviando…",
+    "confirmTitle": "Cambiar contraseña",
+    "confirmBody": "Te enviaremos un correo con un enlace para restablecer tu contraseña. Haz clic en el enlace del correo para crear una contraseña nueva.",
+    "confirmAction": "Enviar enlace",
+    "sentTitle": "Revisa tu correo",
+    "sentBody": "Enviamos un enlace de restablecimiento a {email}",
+    "failedTitle": "Error al enviar el correo de restablecimiento"
+  },
+  "signOutEverywhere": {
+    "rowLabel": "Cerrar sesión en todos los dispositivos",
+    "rowDescription": "Cierra la sesión de tu cuenta en todos los lugares donde esté iniciada, incluido este dispositivo. Los demás dispositivos pierden el acceso la próxima vez que se actualice su sesión, en menos de una hora.",
+    "signingOut": "Cerrando sesión…",
+    "confirmTitle": "¿Cerrar sesión en todos los dispositivos?",
+    "confirmBody": "También se cerrará la sesión en este dispositivo y tendrás que volver a iniciarla.",
+    "confirmAction": "Cerrar sesión en todas partes",
+    "success": "Sesión cerrada en todos los dispositivos",
+    "errorTitle": "No se cerró la sesión",
+    "error": "No se ha podido cerrar la sesión en todos los dispositivos. Inténtalo de nuevo."
+  },
+  "signOut": {
+    "button": "Cerrar sesión",
+    "confirmTitle": "Cerrar sesión",
+    "confirmBody": "¿Seguro que quieres cerrar sesión?"
+  },
+  "profile": {
+    "title": "Editar perfil",
+    "loadError": "No se pudo cargar el perfil",
+    "loading": "Cargando perfil...",
+    "changePhoto": "Cambiar foto de perfil",
+    "tapToChoose": "Toca para elegir de tu galería",
+    "removePhoto": "Quitar foto",
+    "removePhotoA11y": "Quitar foto de perfil",
+    "removePhotoBody": "Tu perfil mostrará tus iniciales en su lugar.",
+    "photoErrorTitle": "No se pudo actualizar la foto",
+    "photoError": "No se pudo actualizar la foto. Inténtalo de nuevo.",
+    "photosUnavailableTitle": "Fotos no disponibles",
+    "photosUnavailableBody": "Permite el acceso a la galería en Ajustes para elegir una foto de perfil.",
+    "displayName": "Nombre visible *",
+    "displayNameTooShort": "El nombre debe tener al menos 2 caracteres",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "headline": "Título profesional",
+    "headlinePlaceholder": "Desarrolladora sénior en Google",
+    "bio": "Biografía",
+    "bioPlaceholder": "Una breve biografía sobre ti...",
+    "location": "Ubicación",
+    "locationPlaceholder": "Madrid, España",
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "website": "Sitio web",
+    "save": "Guardar perfil",
+    "checkLinksTitle": "Revisa tus enlaces",
+    "fixLinks": "Corrige los enlaces marcados antes de guardar.",
+    "savedTitle": "Listo",
+    "savedBody": "¡Perfil actualizado correctamente!",
+    "saveErrorTitle": "No se pudo guardar",
+    "saveError": "No se pudo actualizar el perfil. Inténtalo de nuevo."
+  },
+  "billing": {
+    "titlePaid": "Facturación y planes",
+    "titleFree": "Plan y uso",
+    "subtitlePaid": "Gestiona tu suscripción",
+    "subtitleFree": "Tu plan actual",
+    "currentPlan": "Plan actual",
+    "plan": "Plan",
+    "status": "Estado",
+    "ends": "Finaliza",
+    "renews": "Se renueva",
+    "opening": "Abriendo…",
+    "manageSubscription": "Gestionar suscripción",
+    "manageBilling": "Gestionar facturación",
+    "monthly": "Mensual",
+    "yearly": "Anual",
+    "stripeNote": "Todos los pagos se procesan de forma segura con Stripe. Puedes cancelar o cambiar tu plan en cualquier momento.",
+    "checkoutUnavailable": "Pago no disponible",
+    "checkoutError": "No se pudo crear la sesión de pago. Inténtalo de nuevo.",
+    "storeErrorTitle": "No se pudieron abrir las suscripciones",
+    "storeError": "Abre tu cuenta de App Store o Google Play para gestionar esta suscripción.",
+    "portalUnavailable": "Portal de facturación no disponible",
+    "portalError": "No se pudo abrir el portal de facturación. Inténtalo de nuevo.",
+    "usage": {
+      "cvs": "CVs",
+      "coverLetters": "Cartas de presentación",
+      "credits": "Créditos",
+      "exportsThisMonth": "Exportaciones este mes"
+    },
+    "subscriptionStatus": {
+      "active": "Activo",
+      "trialing": "En prueba",
+      "past_due": "Vencido",
+      "canceled": "Cancelado",
+      "incomplete": "Incompleto",
+      "unpaid": "Sin pagar"
+    },
+    "history": {
+      "title": "Historial de facturación",
+      "loading": "Cargando el historial de facturación",
+      "empty": "Aún no hay historial de facturación",
+      "loadError": "No se pudo cargar tu historial de facturación.",
+      "retry": "Reintentar",
+      "storeNote": "Las compras realizadas a través de App Store o Google Play aparecen en tu cuenta de la tienda.",
+      "invoiceNumber": "factura {number}",
+      "status": {
+        "paid": "Pagada",
+        "open": "Pendiente",
+        "void": "Anulada",
+        "uncollectible": "Incobrable",
+        "draft": "Borrador"
+      }
+    }
+  },
+  "data": {
+    "title": "Tus datos",
+    "downloadTitle": "Descarga tus datos",
+    "downloadBody": "Una copia de tu cuenta, CVs, cartas de presentación y candidaturas como archivo JSON. El archivo se comparte desde una copia temporal que se elimina después.",
+    "downloadCareerNote": "Los datos de las herramientas profesionales se exportan por separado desde Herramientas profesionales > Datos profesionales.",
+    "downloadButton": "Descargar mis datos",
+    "sharingUnavailableTitle": "No se puede compartir",
+    "sharingUnavailableBody": "Este dispositivo no puede abrir el menú para compartir.",
+    "downloadFailedTitle": "Error en la descarga",
+    "downloadError": "No se han podido preparar tus datos. Inténtalo de nuevo.",
+    "deleteTitle": "Eliminar cuenta",
+    "deleteBody": "Tu cuenta se cierra y se cierra tu sesión. Las suscripciones de pago compradas en el sitio web, incluido un complemento profesional, se cancelan.",
+    "deleteCareerNote": "Los datos de tus herramientas profesionales se borran.",
+    "deleteStoreNote": "Las suscripciones compradas a través de App Store o Google Play deben cancelarse en la tienda.",
+    "confirmLabel": "Escribe {keyword} para confirmar",
+    "keyword": "ELIMINAR",
+    "deleteButton": "Eliminar mi cuenta",
+    "confirmTitle": "¿Eliminar tu cuenta?",
+    "confirmBody": "Esta acción no se puede deshacer.",
+    "deletedTitle": "Cuenta eliminada",
+    "deletedBody": "Tu cuenta se ha eliminado y se ha cerrado tu sesión.",
+    "signInAgainTitle": "Vuelve a iniciar sesión",
+    "signInAgainBody": "Por tu seguridad, cierra sesión, vuelve a iniciarla y luego elimina tu cuenta. No se ha eliminado nada.",
+    "notDeletedTitle": "No eliminada",
+    "notDeletedError": "Tu cuenta no se ha eliminado. Inténtalo de nuevo."
+  }
+}

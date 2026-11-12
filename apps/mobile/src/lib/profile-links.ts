@@ -29,9 +29,6 @@ const FIELD_LABEL: Record<ProfileLinkField, string> = {
   website: 'Website',
 };
 
-/** Website wording (`settings.profile.fixLinks`). */
-export const FIX_LINKS_MESSAGE = 'Please fix the highlighted links before saving.';
-
 export interface ProfileLinkResult {
   /** The value to store — normalised, or '' when the field was cleared. */
   value: string;

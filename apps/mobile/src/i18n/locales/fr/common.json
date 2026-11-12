@@ -1,0 +1,20 @@
+{
+  "cancel": "Annuler",
+  "save": "Enregistrer",
+  "delete": "Supprimer",
+  "remove": "Retirer",
+  "close": "Fermer",
+  "back": "Retour",
+  "ok": "OK",
+  "later": "Plus tard",
+  "retry": "Réessayer",
+  "loading": "Chargement…",
+  "pleaseTryAgain": "Veuillez réessayer.",
+  "noConnection": "Pas de connexion. Vérifiez votre réseau et réessayez.",
+  "unsaved": {
+    "title": "Modifications non enregistrées",
+    "body": "Vous avez des modifications non enregistrées. Quitter quand même ?",
+    "stay": "Rester",
+    "leave": "Quitter"
+  }
+}

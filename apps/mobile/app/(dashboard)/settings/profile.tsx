@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, usePreventRemove } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
@@ -29,24 +29,23 @@ import {
   useUploadProfilePhoto,
 } from '../../../src/hooks/useUser';
 import { requestFailureMessage } from '../../../src/lib/api-errors';
-import {
-  FIX_LINKS_MESSAGE,
-  PROFILE_LINK_FIELDS,
-  validateProfileLink,
-} from '../../../src/lib/profile-links';
+import { PROFILE_LINK_FIELDS, validateProfileLink } from '../../../src/lib/profile-links';
 import { UpdateUserPayload, User } from '../../../src/types/user.types';
 import { colors } from '../../../src/theme/colors';
+import { t as tNow, useT } from '../../../src/i18n';
+import { RTL_FLIP } from '../../../src/i18n/native';
 
 /** Same prompt as CV / cover letter / jobs — in-app back, hardware Back, gesture. */
 function confirmUnsavedLeave(onLeave: () => void) {
-  Alert.alert('Unsaved Changes', 'You have unsaved changes. Leave anyway?', [
-    { text: 'Stay', style: 'cancel' },
-    { text: 'Leave', style: 'destructive', onPress: onLeave },
+  Alert.alert(tNow('common.unsaved.title'), tNow('common.unsaved.body'), [
+    { text: tNow('common.unsaved.stay'), style: 'cancel' },
+    { text: tNow('common.unsaved.leave'), style: 'destructive', onPress: onLeave },
   ]);
 }
 
-const schema = z.object({
-  displayName: z.string().min(2, 'Name must be at least 2 characters'),
+/** Built per language so the validation message is translated. */
+const makeSchema = (nameTooShort: string) => z.object({
+  displayName: z.string().min(2, nameTooShort),
   'profile.firstName': z.string().optional(),
   'profile.lastName': z.string().optional(),
   'profile.headline': z.string().optional(),
@@ -59,7 +58,7 @@ const schema = z.object({
   'profile.github': z.string().optional(),
 });
 
-type FormData = z.infer<typeof schema>;
+type FormData = z.infer<ReturnType<typeof makeSchema>>;
 
 const EMPTY_VALUES: FormData = {
   displayName: '',
@@ -123,15 +122,17 @@ function payloadFromDirty(
 
 function photoFailureMessage(err: unknown): string {
   if (axios.isAxiosError(err)) {
-    return requestFailureMessage(err, 'Failed to update photo. Please try again.');
+    return requestFailureMessage(err, tNow('settings.profile.photoError'));
   }
   if (err instanceof Error && err.message) {
     return err.message;
   }
-  return requestFailureMessage(err, 'Failed to update photo. Please try again.');
+  return requestFailureMessage(err, tNow('settings.profile.photoError'));
 }
 
 export default function ProfileScreen() {
+  const t = useT('settings.profile');
+  const tc = useT('common');
   const router = useRouter();
   const navigation = useNavigation();
   const { data: user, isError, refetch } = useCurrentUser();
@@ -141,6 +142,7 @@ export default function ProfileScreen() {
   const [hydratedUid, setHydratedUid] = useState<string | null>(null);
   const photoBusy = uploadPhoto.isPending || removePhoto.isPending;
 
+  const schema = useMemo(() => makeSchema(t('displayNameTooShort')), [t]);
   const {
     control,
     handleSubmit,
@@ -190,7 +192,7 @@ export default function ProfileScreen() {
       }
     }
     if (linkError) {
-      Alert.alert('Check your links', FIX_LINKS_MESSAGE);
+      Alert.alert(t('checkLinksTitle'), t('fixLinks'));
       return;
     }
 
@@ -204,23 +206,17 @@ export default function ProfileScreen() {
       await updateProfile.mutateAsync(payload);
       // Clear dirty before leave so usePreventRemove does not re-prompt.
       reset(normalised);
-      Alert.alert('Success', 'Profile updated successfully!');
+      Alert.alert(t('savedTitle'), t('savedBody'));
       router.back();
     } catch (err) {
-      Alert.alert(
-        'Could not save',
-        requestFailureMessage(err, 'Failed to update profile. Please try again.'),
-      );
+      Alert.alert(t('saveErrorTitle'), requestFailureMessage(err, t('saveError')));
     }
   };
 
   const onPickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert(
-        'Photos unavailable',
-        'Allow photo library access in Settings to choose a profile photo.',
-      );
+      Alert.alert(t('photosUnavailableTitle'), t('photosUnavailableBody'));
       return;
     }
 
@@ -242,19 +238,19 @@ export default function ProfileScreen() {
         fileSize: asset.fileSize,
       });
     } catch (err) {
-      Alert.alert('Could not update photo', photoFailureMessage(err));
+      Alert.alert(t('photoErrorTitle'), photoFailureMessage(err));
     }
   };
 
   const onRemovePhoto = () => {
-    Alert.alert('Remove photo', 'Your profile will show initials instead.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('removePhoto'), t('removePhotoBody'), [
+      { text: tc('cancel'), style: 'cancel' },
       {
-        text: 'Remove',
+        text: tc('remove'),
         style: 'destructive',
         onPress: () => {
           void removePhoto.mutateAsync().catch((err) => {
-            Alert.alert('Could not update photo', photoFailureMessage(err));
+            Alert.alert(t('photoErrorTitle'), photoFailureMessage(err));
           });
         },
       },
@@ -265,12 +261,12 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView className="flex-1 bg-white">
         <View className="flex-row items-center px-5 pt-4 pb-3 border-b border-stone-100">
-          <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+          <TouchableOpacity onPress={() => router.back()} className="me-3" accessibilityRole="button" accessibilityLabel={tc('back')}>
+            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
           </TouchableOpacity>
-          <Text className="text-xl font-black text-stone-900">Edit Profile</Text>
+          <Text className="text-xl font-black text-stone-900">{t('title')}</Text>
         </View>
-        <ErrorState message="Failed to load profile" onRetry={() => void refetch()} />
+        <ErrorState message={t('loadError')} onRetry={() => void refetch()} />
       </SafeAreaView>
     );
   }
@@ -279,7 +275,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView className="flex-1 bg-white items-center justify-center">
         <ActivityIndicator size="large" color={colors.brand[600]} />
-        <Text className="text-stone-500 mt-3">Loading profile...</Text>
+        <Text className="text-stone-500 mt-3">{t('loading')}</Text>
       </SafeAreaView>
     );
   }
@@ -288,10 +284,10 @@ export default function ProfileScreen() {
     <SafeAreaView className="flex-1 bg-white">
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
         <View className="flex-row items-center px-5 pt-4 pb-3 border-b border-stone-100">
-          <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+          <TouchableOpacity onPress={() => router.back()} className="me-3" accessibilityRole="button" accessibilityLabel={tc('back')}>
+            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
           </TouchableOpacity>
-          <Text className="text-xl font-black text-stone-900">Edit Profile</Text>
+          <Text className="text-xl font-black text-stone-900">{t('title')}</Text>
         </View>
 
         <ScrollView className="flex-1 px-5 pt-4" keyboardShouldPersistTaps="handled">
@@ -301,7 +297,7 @@ export default function ProfileScreen() {
               disabled={photoBusy}
               activeOpacity={0.7}
               accessibilityRole="button"
-              accessibilityLabel="Change profile photo"
+              accessibilityLabel={t('changePhoto')}
             >
               <View style={{ width: 80, height: 80 }}>
                 <Avatar
@@ -317,52 +313,52 @@ export default function ProfileScreen() {
                     </View>
                   ) : null}
                 </View>
-                <View className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-brand-600 items-center justify-center border-2 border-white">
+                <View className="absolute bottom-0 w-7 h-7 rounded-full bg-brand-600 items-center justify-center border-2 border-white" style={{ end: 0 }}>
                   <Ionicons name="images-outline" size={14} color="#fff" />
                 </View>
               </View>
             </TouchableOpacity>
-            <Text className="text-stone-500 text-sm mt-2">Tap to choose from your library</Text>
+            <Text className="text-stone-500 text-sm mt-2">{t('tapToChoose')}</Text>
             {user.photoURL ? (
               <TouchableOpacity
                 onPress={onRemovePhoto}
                 disabled={photoBusy}
                 className="mt-2"
                 accessibilityRole="button"
-                accessibilityLabel="Remove profile photo"
+                accessibilityLabel={t('removePhotoA11y')}
               >
-                <Text className="text-stone-600 text-sm font-medium">Remove photo</Text>
+                <Text className="text-stone-600 text-sm font-medium">{t('removePhoto')}</Text>
               </TouchableOpacity>
             ) : null}
           </View>
 
           <Controller control={control} name="displayName" render={({ field }) => (
-            <Input label="Display Name *" value={field.value} onChangeText={field.onChange} error={errors.displayName?.message} />
+            <Input label={t('displayName')} value={field.value} onChangeText={field.onChange} error={errors.displayName?.message} />
           )} />
           <View className="flex-row gap-3">
             <View className="flex-1">
               <Controller control={control} name="profile.firstName" render={({ field }) => (
-                <Input label="First Name" value={field.value} onChangeText={field.onChange} />
+                <Input label={t('firstName')} value={field.value} onChangeText={field.onChange} />
               )} />
             </View>
             <View className="flex-1">
               <Controller control={control} name="profile.lastName" render={({ field }) => (
-                <Input label="Last Name" value={field.value} onChangeText={field.onChange} />
+                <Input label={t('lastName')} value={field.value} onChangeText={field.onChange} />
               )} />
             </View>
           </View>
           <Controller control={control} name="profile.headline" render={({ field }) => (
-            <Input label="Professional Headline" placeholder="Senior Developer at Google" value={field.value} onChangeText={field.onChange} />
+            <Input label={t('headline')} placeholder={t('headlinePlaceholder')} value={field.value} onChangeText={field.onChange} />
           )} />
           <Controller control={control} name="profile.bio" render={({ field }) => (
-            <Input label="Bio" placeholder="A brief bio about yourself..." value={field.value} onChangeText={field.onChange} multiline numberOfLines={3} />
+            <Input label={t('bio')} placeholder={t('bioPlaceholder')} value={field.value} onChangeText={field.onChange} multiline numberOfLines={3} />
           )} />
           <Controller control={control} name="profile.location" render={({ field }) => (
-            <Input label="Location" placeholder="San Francisco, CA" value={field.value} onChangeText={field.onChange} />
+            <Input label={t('location')} placeholder={t('locationPlaceholder')} value={field.value} onChangeText={field.onChange} />
           )} />
           <Controller control={control} name="profile.linkedin" render={({ field }) => (
             <Input
-              label="LinkedIn"
+              label={t('linkedin')}
               placeholder="https://linkedin.com/in/username"
               keyboardType="url"
               autoCapitalize="none"
@@ -377,7 +373,7 @@ export default function ProfileScreen() {
           )} />
           <Controller control={control} name="profile.github" render={({ field }) => (
             <Input
-              label="GitHub"
+              label={t('github')}
               placeholder="https://github.com/username"
               keyboardType="url"
               autoCapitalize="none"
@@ -392,7 +388,7 @@ export default function ProfileScreen() {
           )} />
           <Controller control={control} name="profile.website" render={({ field }) => (
             <Input
-              label="Website"
+              label={t('website')}
               placeholder="https://yoursite.com"
               keyboardType="url"
               autoCapitalize="none"
@@ -415,7 +411,7 @@ export default function ProfileScreen() {
             onPress={handleSubmit(onSubmit)}
             className="mt-2"
           >
-            Save Profile
+            {t('save')}
           </Button>
           <View className="h-8" />
         </ScrollView>

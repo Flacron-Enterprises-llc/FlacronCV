@@ -1,0 +1,199 @@
+{
+  "header": {
+    "userFallback": "مستخدم",
+    "unavailable": "غير متاح"
+  },
+  "plans": {
+    "free": "مجاني",
+    "pro": "احترافي",
+    "enterprise": "مؤسسي"
+  },
+  "usage": {
+    "title": "الاستخدام الشهري",
+    "credits": "الأرصدة",
+    "exports": "عمليات التصدير",
+    "loadError": "تعذّر تحميل الاستخدام. يُرجى المحاولة مرة أخرى."
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "description": "تذكيرات المتابعة وتنبيهات الحساب",
+    "deniedTitle": "الإشعارات متوقفة",
+    "deniedBody": "يمكنك تفعيلها لاحقًا من إعدادات النظام أو من هنا.",
+    "updateError": "تعذّر تحديث الإشعارات"
+  },
+  "preferences": {
+    "emailNotifications": "إشعارات البريد الإلكتروني",
+    "emailNotificationsDescription": "استقبل التحديثات والنصائح عبر البريد الإلكتروني",
+    "marketingEmails": "رسائل تسويقية",
+    "marketingEmailsDescription": "أخبار المنتج والنصائح والعروض الخاصة",
+    "saveError": "فشل حفظ التفضيلات"
+  },
+  "language": {
+    "title": "اللغة",
+    "description": "اختر لغة الواجهة المفضلة لديك",
+    "restartTitle": "أعد التشغيل لإكمال التغيير",
+    "restartBody": "تم تفعيل اللغة الجديدة. أغلق FlacronCV ثم افتحه مجددًا لتغيير اتجاه التخطيط.",
+    "restartNow": "إعادة التشغيل الآن"
+  },
+  "sections": {
+    "account": "الحساب",
+    "security": "الأمان",
+    "subscription": "الاشتراك",
+    "support": "الدعم"
+  },
+  "menu": {
+    "profile": "الملف الشخصي",
+    "jobTracker": "متتبع الوظائف",
+    "careerTools": "الأدوات المهنية",
+    "yourData": "بياناتك وحذف الحساب",
+    "billingPlans": "الفواتير والخطط",
+    "planUsage": "الخطة والاستخدام",
+    "helpSupport": "المساعدة والدعم",
+    "replayTour": "إعادة جولة التطبيق",
+    "replayTourDescription": "تعرّف مرة أخرى على الأجزاء الرئيسية في FlacronCV.",
+    "terms": "شروط الخدمة",
+    "privacy": "سياسة الخصوصية",
+    "disclaimer": "إخلاء المسؤولية",
+    "refund": "سياسة الاسترداد"
+  },
+  "password": {
+    "rowLabel": "تغيير كلمة المرور",
+    "rowDescription": "تغيير كلمة مرور حسابك",
+    "sending": "جارٍ الإرسال…",
+    "confirmTitle": "تغيير كلمة المرور",
+    "confirmBody": "سنرسل لك بريدًا إلكترونيًا برابط لإعادة تعيين كلمة المرور. انقر على الرابط في البريد لإنشاء كلمة مرور جديدة.",
+    "confirmAction": "إرسال الرابط",
+    "sentTitle": "تحقق من بريدك الإلكتروني",
+    "sentBody": "أرسلنا رابط إعادة التعيين إلى {email}",
+    "failedTitle": "فشل إرسال بريد إعادة التعيين"
+  },
+  "signOutEverywhere": {
+    "rowLabel": "تسجيل الخروج من جميع الأجهزة",
+    "rowDescription": "يسجّل خروج حسابك من كل مكان مسجّل فيه حاليًا، بما في ذلك هذا الجهاز. تفقد الأجهزة الأخرى الوصول عند تحديث جلستها التالي، خلال ساعة واحدة.",
+    "signingOut": "جارٍ تسجيل الخروج…",
+    "confirmTitle": "تسجيل الخروج من جميع الأجهزة؟",
+    "confirmBody": "سيتم تسجيل خروجك من هذا الجهاز أيضًا وستحتاج إلى تسجيل الدخول مجددًا.",
+    "confirmAction": "تسجيل الخروج من كل مكان",
+    "success": "تم تسجيل الخروج من جميع الأجهزة",
+    "errorTitle": "لم يتم تسجيل الخروج",
+    "error": "تعذّر تسجيل الخروج من جميع الأجهزة. يُرجى المحاولة مرة أخرى."
+  },
+  "signOut": {
+    "button": "تسجيل الخروج",
+    "confirmTitle": "تسجيل الخروج",
+    "confirmBody": "هل تريد تسجيل الخروج بالتأكيد؟"
+  },
+  "profile": {
+    "title": "تعديل الملف الشخصي",
+    "loadError": "فشل تحميل الملف الشخصي",
+    "loading": "جارٍ تحميل الملف الشخصي...",
+    "changePhoto": "تغيير صورة الملف الشخصي",
+    "tapToChoose": "اضغط للاختيار من مكتبة الصور",
+    "removePhoto": "إزالة الصورة",
+    "removePhotoA11y": "إزالة صورة الملف الشخصي",
+    "removePhotoBody": "سيعرض ملفك الشخصي الأحرف الأولى من اسمك بدلًا منها.",
+    "photoErrorTitle": "تعذّر تحديث الصورة",
+    "photoError": "فشل تحديث الصورة. يُرجى المحاولة مرة أخرى.",
+    "photosUnavailableTitle": "الصور غير متاحة",
+    "photosUnavailableBody": "اسمح بالوصول إلى مكتبة الصور من الإعدادات لاختيار صورة للملف الشخصي.",
+    "displayName": "الاسم المعروض *",
+    "displayNameTooShort": "يجب ألا يقل الاسم عن حرفين",
+    "firstName": "الاسم الأول",
+    "lastName": "اسم العائلة",
+    "headline": "العنوان المهني",
+    "headlinePlaceholder": "مطوّر أول في Google",
+    "bio": "نبذة شخصية",
+    "bioPlaceholder": "نبذة قصيرة عنك...",
+    "location": "الموقع",
+    "locationPlaceholder": "دبي، الإمارات",
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "website": "الموقع الإلكتروني",
+    "save": "حفظ الملف الشخصي",
+    "checkLinksTitle": "تحقّق من روابطك",
+    "fixLinks": "يرجى تصحيح الروابط المميزة قبل الحفظ.",
+    "savedTitle": "تم بنجاح",
+    "savedBody": "تم تحديث الملف الشخصي بنجاح!",
+    "saveErrorTitle": "تعذّر الحفظ",
+    "saveError": "فشل تحديث الملف الشخصي. يُرجى المحاولة مرة أخرى."
+  },
+  "billing": {
+    "titlePaid": "الفواتير والخطط",
+    "titleFree": "الخطة والاستخدام",
+    "subtitlePaid": "إدارة اشتراكك",
+    "subtitleFree": "خطتك الحالية",
+    "currentPlan": "الخطة الحالية",
+    "plan": "الخطة",
+    "status": "الحالة",
+    "ends": "تنتهي في",
+    "renews": "تتجدد في",
+    "opening": "جارٍ الفتح…",
+    "manageSubscription": "إدارة الاشتراك",
+    "manageBilling": "إدارة الفوترة",
+    "monthly": "شهري",
+    "yearly": "سنوي",
+    "stripeNote": "تتم معالجة جميع المدفوعات بأمان عبر Stripe. يمكنك إلغاء خطتك أو تغييرها في أي وقت.",
+    "checkoutUnavailable": "الدفع غير متاح",
+    "checkoutError": "فشل إنشاء جلسة الدفع. يُرجى المحاولة مرة أخرى.",
+    "storeErrorTitle": "تعذّر فتح الاشتراكات",
+    "storeError": "افتح حسابك في App Store أو Google Play لإدارة هذا الاشتراك.",
+    "portalUnavailable": "بوابة الفوترة غير متاحة",
+    "portalError": "فشل فتح بوابة الفوترة. يُرجى المحاولة مرة أخرى.",
+    "usage": {
+      "cvs": "السير الذاتية",
+      "coverLetters": "خطابات التقديم",
+      "credits": "الأرصدة",
+      "exportsThisMonth": "عمليات التصدير هذا الشهر"
+    },
+    "subscriptionStatus": {
+      "active": "نشط",
+      "trialing": "في الفترة التجريبية",
+      "past_due": "متأخر السداد",
+      "canceled": "ملغى",
+      "incomplete": "غير مكتمل",
+      "unpaid": "غير مدفوع"
+    },
+    "history": {
+      "title": "سجل الفوترة",
+      "loading": "جارٍ تحميل سجل الفوترة",
+      "empty": "لا يوجد سجل فوترة بعد",
+      "loadError": "تعذّر تحميل سجل الفوترة.",
+      "retry": "أعد المحاولة",
+      "storeNote": "تظهر المشتريات التي تمت عبر App Store أو Google Play في حسابك على المتجر.",
+      "invoiceNumber": "فاتورة {number}",
+      "status": {
+        "paid": "مدفوعة",
+        "open": "مستحقة",
+        "void": "ملغاة",
+        "uncollectible": "غير قابلة للتحصيل",
+        "draft": "مسودة"
+      }
+    }
+  },
+  "data": {
+    "title": "بياناتك",
+    "downloadTitle": "تنزيل بياناتك",
+    "downloadBody": "نسخة من حسابك وسيرك الذاتية وخطابات التقديم وطلبات التوظيف في ملف JSON. تتم مشاركة الملف من نسخة مؤقتة تُحذف بعد ذلك.",
+    "downloadCareerNote": "تُصدَّر بيانات الأدوات المهنية بشكل منفصل من الأدوات المهنية > البيانات المهنية.",
+    "downloadButton": "تنزيل بياناتي",
+    "sharingUnavailableTitle": "المشاركة غير متاحة",
+    "sharingUnavailableBody": "لا يمكن لهذا الجهاز فتح قائمة المشاركة.",
+    "downloadFailedTitle": "فشل التنزيل",
+    "downloadError": "تعذّر تجهيز بياناتك. يُرجى المحاولة مرة أخرى.",
+    "deleteTitle": "حذف الحساب",
+    "deleteBody": "يُغلق حسابك ويتم تسجيل خروجك. تُلغى الاشتراكات المدفوعة التي اشتريتها من الموقع، بما فيها الإضافة المهنية.",
+    "deleteCareerNote": "تُمحى بيانات أدواتك المهنية.",
+    "deleteStoreNote": "يجب إلغاء الاشتراكات التي اشتريتها عبر App Store أو Google Play من المتجر.",
+    "confirmLabel": "اكتب {keyword} للتأكيد",
+    "keyword": "حذف",
+    "deleteButton": "حذف حسابي",
+    "confirmTitle": "حذف حسابك؟",
+    "confirmBody": "لا يمكن التراجع عن هذا الإجراء.",
+    "deletedTitle": "تم حذف الحساب",
+    "deletedBody": "تم حذف حسابك وتسجيل خروجك.",
+    "signInAgainTitle": "سجّل الدخول مجددًا",
+    "signInAgainBody": "حفاظًا على أمانك، سجّل الخروج ثم سجّل الدخول مجددًا ثم احذف حسابك. لم يُحذف أي شيء.",
+    "notDeletedTitle": "لم يتم الحذف",
+    "notDeletedError": "لم يتم حذف حسابك. يُرجى المحاولة مرة أخرى."
+  }
+}

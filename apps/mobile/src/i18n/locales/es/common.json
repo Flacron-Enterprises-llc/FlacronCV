@@ -1,0 +1,20 @@
+{
+  "cancel": "Cancelar",
+  "save": "Guardar",
+  "delete": "Eliminar",
+  "remove": "Quitar",
+  "close": "Cerrar",
+  "back": "Volver",
+  "ok": "Aceptar",
+  "later": "Más tarde",
+  "retry": "Reintentar",
+  "loading": "Cargando…",
+  "pleaseTryAgain": "Inténtalo de nuevo.",
+  "noConnection": "Sin conexión. Comprueba tu red e inténtalo de nuevo.",
+  "unsaved": {
+    "title": "Cambios sin guardar",
+    "body": "Tienes cambios sin guardar. ¿Salir de todos modos?",
+    "stay": "Quedarme",
+    "leave": "Salir"
+  }
+}

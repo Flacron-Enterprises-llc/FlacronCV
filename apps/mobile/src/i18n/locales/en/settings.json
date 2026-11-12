@@ -1,0 +1,199 @@
+{
+  "header": {
+    "userFallback": "User",
+    "unavailable": "Unavailable"
+  },
+  "plans": {
+    "free": "Free",
+    "pro": "Pro",
+    "enterprise": "Enterprise"
+  },
+  "usage": {
+    "title": "Monthly Usage",
+    "credits": "Credits",
+    "exports": "Exports",
+    "loadError": "Could not load usage. Please try again."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Follow-up reminders and account alerts",
+    "deniedTitle": "Notifications are off",
+    "deniedBody": "You can enable them later from system Settings, or from here.",
+    "updateError": "Could not update notifications"
+  },
+  "preferences": {
+    "emailNotifications": "Email Notifications",
+    "emailNotificationsDescription": "Receive updates and tips via email",
+    "marketingEmails": "Marketing Emails",
+    "marketingEmailsDescription": "Product news, tips, and special offers",
+    "saveError": "Failed to save preferences"
+  },
+  "language": {
+    "title": "Language",
+    "description": "Choose your preferred interface language",
+    "restartTitle": "Restart to finish",
+    "restartBody": "The new language is on. Close and reopen FlacronCV to switch the layout direction.",
+    "restartNow": "Restart now"
+  },
+  "sections": {
+    "account": "Account",
+    "security": "Security",
+    "subscription": "Subscription",
+    "support": "Support"
+  },
+  "menu": {
+    "profile": "Profile",
+    "jobTracker": "Job Tracker",
+    "careerTools": "Career tools",
+    "yourData": "Your data & account deletion",
+    "billingPlans": "Billing & Plans",
+    "planUsage": "Plan & usage",
+    "helpSupport": "Help & Support",
+    "replayTour": "Replay App Tour",
+    "replayTourDescription": "Walk through the main parts of FlacronCV again.",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "disclaimer": "Disclaimer",
+    "refund": "Refund Policy"
+  },
+  "password": {
+    "rowLabel": "Change Password",
+    "rowDescription": "Change your account password",
+    "sending": "Sending…",
+    "confirmTitle": "Change Password",
+    "confirmBody": "We'll send you an email with a link to reset your password. Click the link in the email to create a new password.",
+    "confirmAction": "Send Reset Link",
+    "sentTitle": "Check your email",
+    "sentBody": "We sent a password reset link to {email}",
+    "failedTitle": "Failed to send reset email"
+  },
+  "signOutEverywhere": {
+    "rowLabel": "Sign out of all devices",
+    "rowDescription": "Signs your account out everywhere it is currently signed in, including this device. Other devices lose access the next time their session refreshes, within one hour.",
+    "signingOut": "Signing out…",
+    "confirmTitle": "Sign out of all devices?",
+    "confirmBody": "You will be signed out on this device too and will need to sign in again.",
+    "confirmAction": "Sign out everywhere",
+    "success": "Signed out of all devices",
+    "errorTitle": "Not signed out",
+    "error": "Could not sign out of all devices. Please try again."
+  },
+  "signOut": {
+    "button": "Sign Out",
+    "confirmTitle": "Sign Out",
+    "confirmBody": "Are you sure you want to sign out?"
+  },
+  "profile": {
+    "title": "Edit Profile",
+    "loadError": "Failed to load profile",
+    "loading": "Loading profile...",
+    "changePhoto": "Change profile photo",
+    "tapToChoose": "Tap to choose from your library",
+    "removePhoto": "Remove photo",
+    "removePhotoA11y": "Remove profile photo",
+    "removePhotoBody": "Your profile will show initials instead.",
+    "photoErrorTitle": "Could not update photo",
+    "photoError": "Failed to update photo. Please try again.",
+    "photosUnavailableTitle": "Photos unavailable",
+    "photosUnavailableBody": "Allow photo library access in Settings to choose a profile photo.",
+    "displayName": "Display Name *",
+    "displayNameTooShort": "Name must be at least 2 characters",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "headline": "Professional Headline",
+    "headlinePlaceholder": "Senior Developer at Google",
+    "bio": "Bio",
+    "bioPlaceholder": "A brief bio about yourself...",
+    "location": "Location",
+    "locationPlaceholder": "San Francisco, CA",
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "website": "Website",
+    "save": "Save Profile",
+    "checkLinksTitle": "Check your links",
+    "fixLinks": "Please fix the highlighted links before saving.",
+    "savedTitle": "Success",
+    "savedBody": "Profile updated successfully!",
+    "saveErrorTitle": "Could not save",
+    "saveError": "Failed to update profile. Please try again."
+  },
+  "billing": {
+    "titlePaid": "Billing & Plans",
+    "titleFree": "Plan & usage",
+    "subtitlePaid": "Manage your subscription",
+    "subtitleFree": "Your current plan",
+    "currentPlan": "Current Plan",
+    "plan": "Plan",
+    "status": "Status",
+    "ends": "Ends",
+    "renews": "Renews",
+    "opening": "Opening…",
+    "manageSubscription": "Manage subscription",
+    "manageBilling": "Manage Billing",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "stripeNote": "All payments are securely processed by Stripe. You can cancel or change your plan at any time.",
+    "checkoutUnavailable": "Checkout unavailable",
+    "checkoutError": "Failed to create checkout session. Please try again.",
+    "storeErrorTitle": "Could not open subscriptions",
+    "storeError": "Open your App Store or Google Play account to manage this subscription.",
+    "portalUnavailable": "Billing portal unavailable",
+    "portalError": "Failed to open billing portal. Please try again.",
+    "usage": {
+      "cvs": "CVs",
+      "coverLetters": "Cover letters",
+      "credits": "Credits",
+      "exportsThisMonth": "Exports this month"
+    },
+    "subscriptionStatus": {
+      "active": "active",
+      "trialing": "trialing",
+      "past_due": "past_due",
+      "canceled": "canceled",
+      "incomplete": "incomplete",
+      "unpaid": "unpaid"
+    },
+    "history": {
+      "title": "Billing History",
+      "loading": "Loading billing history",
+      "empty": "No billing history yet",
+      "loadError": "Couldn't load your billing history.",
+      "retry": "Try again",
+      "storeNote": "Purchases made through the App Store or Google Play are listed in your store account.",
+      "invoiceNumber": "invoice {number}",
+      "status": {
+        "paid": "Paid",
+        "open": "Open",
+        "void": "Void",
+        "uncollectible": "Uncollectible",
+        "draft": "Draft"
+      }
+    }
+  },
+  "data": {
+    "title": "Your data",
+    "downloadTitle": "Download your data",
+    "downloadBody": "A copy of your account, CVs, cover letters and job applications as a JSON file. The file is shared from a temporary copy that is removed afterwards.",
+    "downloadCareerNote": "Career-tool data is exported separately from Career tools > Career data.",
+    "downloadButton": "Download my data",
+    "sharingUnavailableTitle": "Sharing unavailable",
+    "sharingUnavailableBody": "This device cannot open the share sheet.",
+    "downloadFailedTitle": "Download failed",
+    "downloadError": "Could not prepare your data. Please try again.",
+    "deleteTitle": "Delete account",
+    "deleteBody": "Your account is closed and you are signed out. Paid subscriptions bought on the website, including a career add-on, are cancelled.",
+    "deleteCareerNote": "Your career-tool data is erased.",
+    "deleteStoreNote": "Subscriptions bought through the App Store or Google Play must be cancelled in the store.",
+    "confirmLabel": "Type {keyword} to confirm",
+    "keyword": "DELETE",
+    "deleteButton": "Delete my account",
+    "confirmTitle": "Delete your account?",
+    "confirmBody": "This cannot be undone.",
+    "deletedTitle": "Account deleted",
+    "deletedBody": "Your account has been deleted and you are signed out.",
+    "signInAgainTitle": "Sign in again",
+    "signInAgainBody": "For your security, sign out, sign in again and then delete your account. Nothing was deleted.",
+    "notDeletedTitle": "Not deleted",
+    "notDeletedError": "Your account was not deleted. Please try again."
+  }
+}

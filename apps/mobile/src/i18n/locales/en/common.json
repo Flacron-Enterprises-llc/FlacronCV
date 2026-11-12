@@ -1,0 +1,20 @@
+{
+  "cancel": "Cancel",
+  "save": "Save",
+  "delete": "Delete",
+  "remove": "Remove",
+  "close": "Close",
+  "back": "Back",
+  "ok": "OK",
+  "later": "Later",
+  "retry": "Try again",
+  "loading": "Loading…",
+  "pleaseTryAgain": "Please try again.",
+  "noConnection": "No connection. Check your network and try again.",
+  "unsaved": {
+    "title": "Unsaved Changes",
+    "body": "You have unsaved changes. Leave anyway?",
+    "stay": "Stay",
+    "leave": "Leave"
+  }
+}

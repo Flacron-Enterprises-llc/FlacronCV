@@ -6,6 +6,7 @@ import { MaintenanceGate } from '../../src/components/app/MaintenanceGate';
 import { AppTour, AppTourProvider } from '../../src/components/tour/AppTour';
 import { useAuthStore } from '../../src/store/auth-store';
 import { colors } from '../../src/theme/colors';
+import { useT } from '../../src/i18n';
 
 const TAB_ROOTS = new Set(['index', 'cvs', 'cover-letters', 'templates', 'settings']);
 
@@ -20,6 +21,7 @@ function hideTabBarOnNested(segments: readonly string[]): boolean {
 }
 
 export default function DashboardLayout() {
+  const t = useT('tabs');
   const { firebaseUser, isInitialized, legalGate } = useAuthStore();
   const segments = useSegments();
   const hideTabBar = hideTabBarOnNested(segments);
@@ -53,7 +55,7 @@ export default function DashboardLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title: t('dashboard'),
           tabBarIcon: ({ color }) => (
             <Ionicons name="grid-outline" size={22} color={color} />
           ),
@@ -62,7 +64,7 @@ export default function DashboardLayout() {
       <Tabs.Screen
         name="cvs"
         options={{
-          title: 'My CVs',
+          title: t('cvs'),
           tabBarIcon: ({ color }) => (
             <Ionicons name="document-text-outline" size={22} color={color} />
           ),
@@ -71,7 +73,7 @@ export default function DashboardLayout() {
       <Tabs.Screen
         name="cover-letters"
         options={{
-          title: 'Cover Letters',
+          title: t('coverLetters'),
           tabBarIcon: ({ color }) => (
             <Ionicons name="mail-outline" size={22} color={color} />
           ),
@@ -80,7 +82,7 @@ export default function DashboardLayout() {
       <Tabs.Screen
         name="templates"
         options={{
-          title: 'Templates',
+          title: t('templates'),
           tabBarIcon: ({ color }) => (
             <Ionicons name="layers-outline" size={22} color={color} />
           ),
@@ -89,7 +91,7 @@ export default function DashboardLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: t('settings'),
           tabBarIcon: ({ color }) => (
             <Ionicons name="settings-outline" size={22} color={color} />
           ),

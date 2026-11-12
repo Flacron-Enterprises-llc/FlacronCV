@@ -9,7 +9,8 @@
     "web": "expo start --web",
     "lint": "eslint . --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "i18n:index": "node scripts/gen-i18n-index.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

@@ -12,6 +12,7 @@ import { careerApi, freshIdToken } from '../../../src/lib/career-api';
 import { shareTextFile } from '../../../src/lib/career-files';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { colors } from '../../../src/theme/colors';
+import { t as tNow, useT } from '../../../src/i18n';
 
 /**
  * Your data: download a copy (same export as the website) and delete the
@@ -19,11 +20,16 @@ import { colors } from '../../../src/theme/colors';
  * server path as the website, so billing is cancelled and career data erased.
  */
 export default function AccountDataScreen() {
+  const t = useT('settings.data');
+  const tc = useT('common');
   const router = useRouter();
   const logout = useAuthStore((s) => s.logout);
   const [exporting, setExporting] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
+  // The website localises the confirmation word (settings.account.deleteKeyword).
+  const keyword = t('keyword');
+  const confirmed = confirmText.trim() === keyword;
 
   const onDownload = async () => {
     if (exporting) return;
@@ -37,20 +43,20 @@ export default function AccountDataScreen() {
         `flacroncv-data-${new Date().toISOString().slice(0, 10)}.json`,
         'application/json',
       );
-      if (outcome === 'sharing_unavailable') Alert.alert('Sharing unavailable', 'This device cannot open the share sheet.');
+      if (outcome === 'sharing_unavailable') Alert.alert(t('sharingUnavailableTitle'), t('sharingUnavailableBody'));
     } catch (error) {
-      Alert.alert('Download failed', requestFailureMessage(error, 'Could not prepare your data. Please try again.'));
+      Alert.alert(t('downloadFailedTitle'), requestFailureMessage(error, t('downloadError')));
     } finally {
       setExporting(false);
     }
   };
 
   const onDelete = () => {
-    if (confirmText.trim() !== 'DELETE' || deleting) return;
-    Alert.alert('Delete your account?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
+    if (!confirmed || deleting) return;
+    Alert.alert(t('confirmTitle'), t('confirmBody'), [
+      { text: tc('cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: tc('delete'),
         style: 'destructive',
         onPress: async () => {
           setDeleting(true);
@@ -63,12 +69,12 @@ export default function AccountDataScreen() {
               signOutLocally: logout,
             });
             router.replace('/(auth)/login');
-            Alert.alert('Account deleted', 'Your account has been deleted and you are signed out.');
+            Alert.alert(tNow('settings.data.deletedTitle'), tNow('settings.data.deletedBody'));
           } catch (error) {
             if (error instanceof CareerErasureNeedsFreshSignIn) {
-              Alert.alert('Sign in again', 'For your security, sign out, sign in again and then delete your account. Nothing was deleted.');
+              Alert.alert(tNow('settings.data.signInAgainTitle'), tNow('settings.data.signInAgainBody'));
             } else {
-              Alert.alert('Not deleted', requestFailureMessage(error, 'Your account was not deleted. Please try again.'));
+              Alert.alert(tNow('settings.data.notDeletedTitle'), requestFailureMessage(error, tNow('settings.data.notDeletedError')));
             }
           } finally {
             setDeleting(false);
@@ -80,42 +86,40 @@ export default function AccountDataScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title="Your data" />
+      <CareerHeader title={t('title')} />
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
           <View className="bg-white rounded-2xl border border-stone-100 p-5">
-            <Text className="font-bold text-stone-900 text-base">Download your data</Text>
+            <Text className="font-bold text-stone-900 text-base">{t('downloadTitle')}</Text>
             <Text className="text-stone-500 text-sm mt-1 leading-5">
-              A copy of your account, CVs, cover letters and job applications as a JSON file. The file is shared from a temporary copy that is removed afterwards.
-              {CAREER_ENABLED ? ' Career-tool data is exported separately from Career tools > Career data.' : ''}
+              {[t('downloadBody'), CAREER_ENABLED ? t('downloadCareerNote') : null].filter(Boolean).join(' ')}
             </Text>
             <View className="mt-4 self-start">
               <Button variant="outline" onPress={() => void onDownload()} loading={exporting}>
-                Download my data
+                {t('downloadButton')}
               </Button>
             </View>
           </View>
 
           <View className="bg-white rounded-2xl border border-red-100 p-5 mt-4">
-            <Text className="font-bold text-red-700 text-base">Delete account</Text>
+            <Text className="font-bold text-red-700 text-base">{t('deleteTitle')}</Text>
             <Text className="text-stone-600 text-sm mt-1 leading-5">
-              Your account is closed and you are signed out. Paid subscriptions bought on the website, including a career add-on, are cancelled.
-              {CAREER_ENABLED ? ' Your career-tool data is erased.' : ''} Subscriptions bought through the App Store or Google Play must be cancelled in the store.
+              {[t('deleteBody'), CAREER_ENABLED ? t('deleteCareerNote') : null, t('deleteStoreNote')].filter(Boolean).join(' ')}
             </Text>
-            <Text className="text-stone-700 text-sm mt-4 font-semibold">Type DELETE to confirm</Text>
+            <Text className="text-stone-700 text-sm mt-4 font-semibold">{t('confirmLabel', { keyword })}</Text>
             <TextInput
               value={confirmText}
               onChangeText={setConfirmText}
               autoCapitalize="characters"
               autoCorrect={false}
-              accessibilityLabel="Type DELETE to confirm"
+              accessibilityLabel={t('confirmLabel', { keyword })}
               className="bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 mt-2 text-base text-stone-900"
-              placeholder="DELETE"
+              placeholder={keyword}
               placeholderTextColor={colors.stone[400]}
             />
             <View className="mt-4 self-start">
-              <Button variant="danger" onPress={onDelete} loading={deleting} disabled={confirmText.trim() !== 'DELETE'}>
-                Delete my account
+              <Button variant="danger" onPress={onDelete} loading={deleting} disabled={!confirmed}>
+                {t('deleteButton')}
               </Button>
             </View>
           </View>

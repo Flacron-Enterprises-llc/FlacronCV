@@ -8,11 +8,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { revokeAllSessions, useCurrentUser, useUpdatePreferences } from '../../../src/hooks/useUser';
 import {
-  EMAIL_PREFERENCES,
+  EMAIL_PREFERENCE_KEYS,
   EmailPreferenceKey,
-  PASSWORD_COPY,
-  PREFERENCES_SAVE_ERROR,
-  SIGN_OUT_EVERYWHERE_COPY,
   emailPreferencePatch,
   emailPreferenceValue,
   sendPasswordResetToSelf,
@@ -22,16 +19,34 @@ import { requestFailureMessage } from '../../../src/lib/api-errors';
 import { effectivePlanForCopy } from '../../../src/lib/entitlements';
 import { PLAN_CONFIGS } from '../../../src/types/subscription.types';
 import { JobApplication } from '../../../src/types/job.types';
+import { Locale, SubscriptionPlan } from '../../../src/types/enums';
 import { openLegalDocument } from '../../../src/lib/legal-acceptance';
 import { PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
 import { CAREER_ENABLED } from '../../../src/config/career';
 import { Avatar } from '../../../src/components/ui/Avatar';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
+import { Modal } from '../../../src/components/ui/Modal';
 import { colors } from '../../../src/theme/colors';
 import { api } from '../../../src/lib/api';
 import { cancelAllJobReminders, reconcileJobReminders } from '../../../src/lib/job-reminders';
 import { disablePushNotifications, enablePushNotifications } from '../../../src/lib/push';
 import { useAppTourReplay } from '../../../src/hooks/useAppTour';
+import {
+  LANGUAGE_NAMES,
+  SUPPORTED_LOCALES,
+  isRTLLocale,
+  t as tNow,
+  useLocale,
+  useT,
+  type AppLocale,
+  type TFunction,
+} from '../../../src/i18n';
+import {
+  RTL_FLIP,
+  canReloadForDirection,
+  changeLanguage,
+  reloadForDirection,
+} from '../../../src/i18n/native';
 
 type SettingsMenuItem = {
   icon: string;
@@ -42,14 +57,23 @@ type SettingsMenuItem = {
   disabled?: boolean;
 };
 
-function loadFailureMessage(err: unknown): string {
+function loadFailureMessage(err: unknown, t: TFunction, tc: TFunction): string {
   if (axios.isAxiosError(err) && !err.response) {
-    return 'No connection. Check your network and try again.';
+    return tc('noConnection');
   }
-  return 'Could not load usage. Please try again.';
+  return t('usage.loadError');
+}
+
+function planName(plan: SubscriptionPlan, t: TFunction): string {
+  if (plan === SubscriptionPlan.PRO) return t('plans.pro');
+  if (plan === SubscriptionPlan.ENTERPRISE) return t('plans.enterprise');
+  return t('plans.free');
 }
 
 export default function SettingsScreen() {
+  const t = useT('settings');
+  const tc = useT('common');
+  const locale = useLocale();
   const router = useRouter();
   const replayTour = useAppTourReplay();
   const queryClient = useQueryClient();
@@ -61,6 +85,8 @@ export default function SettingsScreen() {
   const [emailPending, setEmailPending] = useState<Partial<Record<EmailPreferenceKey, boolean>>>({});
   const [sendingReset, setSendingReset] = useState(false);
   const [signingOutAll, setSigningOutAll] = useState(false);
+  const [languageOpen, setLanguageOpen] = useState(false);
+  const [languageBusy, setLanguageBusy] = useState(false);
 
   const currentUser = user ?? authUser;
   const usage = currentUser?.usage;
@@ -70,6 +96,17 @@ export default function SettingsScreen() {
   const plan = currentUser ? effectivePlanForCopy(currentUser.subscription) : null;
   const planConfig = plan ? PLAN_CONFIGS[plan] : null;
   const pushOn = currentUser?.preferences?.pushNotifications === true;
+
+  const emailCopy: Record<EmailPreferenceKey, { label: string; description: string }> = {
+    emailNotifications: {
+      label: t('preferences.emailNotifications'),
+      description: t('preferences.emailNotificationsDescription'),
+    },
+    marketingEmails: {
+      label: t('preferences.marketingEmails'),
+      description: t('preferences.marketingEmailsDescription'),
+    },
+  };
 
   const emailOn = (key: EmailPreferenceKey) =>
     emailPending[key] ?? emailPreferenceValue(currentUser?.preferences, key);
@@ -82,7 +119,7 @@ export default function SettingsScreen() {
     try {
       await updatePreferences.mutateAsync(emailPreferencePatch(key, next));
     } catch (err) {
-      Alert.alert(PREFERENCES_SAVE_ERROR, requestFailureMessage(err, 'Please try again.'));
+      Alert.alert(t('preferences.saveError'), requestFailureMessage(err, tc('pleaseTryAgain')));
     } finally {
       setEmailPending((p) => {
         const rest = { ...p };
@@ -92,16 +129,56 @@ export default function SettingsScreen() {
     }
   };
 
+  // Website: Settings > Preferences > Language. The profile's
+  // preferences.language is the source of truth; the device keeps a copy for
+  // before sign-in. Alerts after the switch use tNow, which reads the NEW
+  // language (this render's `t` still holds the old one).
+  const onPickLanguage = async (next: AppLocale) => {
+    setLanguageOpen(false);
+    if (next === locale || languageBusy) return;
+    setLanguageBusy(true);
+    const previous = locale;
+    try {
+      const { needsRestart } = await changeLanguage(next);
+      if (currentUser) {
+        try {
+          await updatePreferences.mutateAsync({ language: next as Locale });
+        } catch (err) {
+          await changeLanguage(previous);
+          Alert.alert(
+            tNow('settings.preferences.saveError'),
+            requestFailureMessage(err, tNow('common.pleaseTryAgain')),
+          );
+          return;
+        }
+      }
+      if (needsRestart) {
+        Alert.alert(
+          tNow('settings.language.restartTitle'),
+          tNow('settings.language.restartBody'),
+          canReloadForDirection
+            ? [
+                { text: tNow('common.later'), style: 'cancel' },
+                { text: tNow('settings.language.restartNow'), onPress: reloadForDirection },
+              ]
+            : [{ text: tNow('common.ok') }],
+        );
+      }
+    } finally {
+      setLanguageBusy(false);
+    }
+  };
+
   const sendReset = async () => {
     if (sendingReset) return;
     setSendingReset(true);
     try {
       const address = await sendPasswordResetToSelf(currentUser?.email, resetPassword);
-      Alert.alert(PASSWORD_COPY.sentTitle, PASSWORD_COPY.sentBody(address));
+      Alert.alert(t('password.sentTitle'), t('password.sentBody', { email: address }));
     } catch (err) {
       Alert.alert(
-        PASSWORD_COPY.failedTitle,
-        err instanceof Error && err.message ? err.message : 'Please try again.',
+        t('password.failedTitle'),
+        err instanceof Error && err.message ? err.message : tc('pleaseTryAgain'),
       );
     } finally {
       setSendingReset(false);
@@ -112,9 +189,9 @@ export default function SettingsScreen() {
   // the signed-in address.
   const handleChangePassword = () => {
     if (sendingReset) return;
-    Alert.alert(PASSWORD_COPY.confirmTitle, PASSWORD_COPY.confirmBody, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: PASSWORD_COPY.confirmAction, onPress: () => void sendReset() },
+    Alert.alert(t('password.confirmTitle'), t('password.confirmBody'), [
+      { text: tc('cancel'), style: 'cancel' },
+      { text: t('password.confirmAction'), onPress: () => void sendReset() },
     ]);
   };
 
@@ -123,11 +200,11 @@ export default function SettingsScreen() {
     setSigningOutAll(true);
     try {
       await signOutEverywhere({ revokeAllSessions, signOutLocally: logout });
-      Alert.alert(SIGN_OUT_EVERYWHERE_COPY.success);
+      Alert.alert(t('signOutEverywhere.success'));
     } catch (err) {
       Alert.alert(
-        SIGN_OUT_EVERYWHERE_COPY.errorTitle,
-        requestFailureMessage(err, SIGN_OUT_EVERYWHERE_COPY.error),
+        t('signOutEverywhere.errorTitle'),
+        requestFailureMessage(err, t('signOutEverywhere.error')),
       );
     } finally {
       setSigningOutAll(false);
@@ -136,10 +213,10 @@ export default function SettingsScreen() {
 
   const handleSignOutEverywhere = () => {
     if (signingOutAll) return;
-    Alert.alert(SIGN_OUT_EVERYWHERE_COPY.confirmTitle, SIGN_OUT_EVERYWHERE_COPY.confirmBody, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('signOutEverywhere.confirmTitle'), t('signOutEverywhere.confirmBody'), [
+      { text: tc('cancel'), style: 'cancel' },
       {
-        text: SIGN_OUT_EVERYWHERE_COPY.confirmAction,
+        text: t('signOutEverywhere.confirmAction'),
         style: 'destructive',
         onPress: () => void runSignOutEverywhere(),
       },
@@ -147,9 +224,9 @@ export default function SettingsScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: logout },
+    Alert.alert(t('signOut.confirmTitle'), t('signOut.confirmBody'), [
+      { text: tc('cancel'), style: 'cancel' },
+      { text: t('signOut.button'), style: 'destructive', onPress: logout },
     ]);
   };
 
@@ -160,10 +237,7 @@ export default function SettingsScreen() {
       if (next) {
         const result = await enablePushNotifications();
         if (result === 'permission_denied') {
-          Alert.alert(
-            'Notifications are off',
-            'You can enable them later from system Settings, or from here.',
-          );
+          Alert.alert(t('notifications.deniedTitle'), t('notifications.deniedBody'));
         } else if (result === 'granted') {
           try {
             const jobs =
@@ -185,7 +259,7 @@ export default function SettingsScreen() {
       await syncUser();
       void refetch();
     } catch {
-      Alert.alert('Could not update notifications', 'Please try again.');
+      Alert.alert(t('notifications.updateError'), tc('pleaseTryAgain'));
     } finally {
       setPushBusy(false);
     }
@@ -193,50 +267,55 @@ export default function SettingsScreen() {
 
   const MENU_SECTIONS: { title: string; items: SettingsMenuItem[] }[] = [
     {
-      title: 'Account',
+      title: t('sections.account'),
       items: [
-        { icon: 'person-outline', label: 'Profile', onPress: () => router.push('/(dashboard)/settings/profile') },
-        { icon: 'briefcase-outline', label: 'Job Tracker', onPress: () => router.push('../jobs') },
+        { icon: 'person-outline', label: t('menu.profile'), onPress: () => router.push('/(dashboard)/settings/profile') },
+        { icon: 'briefcase-outline', label: t('menu.jobTracker'), onPress: () => router.push('../jobs') },
         ...(CAREER_ENABLED
-          ? [{ icon: 'compass-outline', label: 'Career tools', onPress: () => router.push('/(dashboard)/career') }]
+          ? [{ icon: 'compass-outline', label: t('menu.careerTools'), onPress: () => router.push('/(dashboard)/career') }]
           : []),
-        { icon: 'shield-checkmark-outline', label: 'Your data & account deletion', onPress: () => router.push('/(dashboard)/settings/data') },
+        { icon: 'shield-checkmark-outline', label: t('menu.yourData'), onPress: () => router.push('/(dashboard)/settings/data') },
       ],
     },
     {
-      title: 'Security',
+      title: t('sections.security'),
       items: [
         {
           icon: 'key-outline',
-          label: sendingReset ? 'Sending…' : PASSWORD_COPY.rowLabel,
-          description: PASSWORD_COPY.rowDescription,
+          label: sendingReset ? t('password.sending') : t('password.rowLabel'),
+          description: t('password.rowDescription'),
           onPress: handleChangePassword,
           disabled: sendingReset || !currentUser?.email,
         },
         {
           icon: 'phone-portrait-outline',
-          label: signingOutAll ? 'Signing out…' : SIGN_OUT_EVERYWHERE_COPY.rowLabel,
-          description: SIGN_OUT_EVERYWHERE_COPY.rowDescription,
+          label: signingOutAll ? t('signOutEverywhere.signingOut') : t('signOutEverywhere.rowLabel'),
+          description: t('signOutEverywhere.rowDescription'),
           onPress: handleSignOutEverywhere,
           disabled: signingOutAll,
         },
       ],
     },
     {
-      title: 'Subscription',
+      title: t('sections.subscription'),
       items: [
-        { icon: 'card-outline', label: PAID_UPGRADES_ENABLED ? 'Billing & Plans' : 'Plan & usage', onPress: () => router.push('/(dashboard)/settings/billing'), badge: planConfig ? planConfig.plan.toUpperCase() : undefined },
+        {
+          icon: 'card-outline',
+          label: PAID_UPGRADES_ENABLED ? t('menu.billingPlans') : t('menu.planUsage'),
+          onPress: () => router.push('/(dashboard)/settings/billing'),
+          badge: planConfig ? planName(planConfig.plan, t).toLocaleUpperCase() : undefined,
+        },
       ],
     },
     {
-      title: 'Support',
+      title: t('sections.support'),
       items: [
-        { icon: 'help-circle-outline', label: 'Help & Support', onPress: () => router.push('/(dashboard)/support') },
-        { icon: 'map-outline', label: 'Replay App Tour', description: 'Walk through the main parts of FlacronCV again.', onPress: replayTour },
-        { icon: 'document-text-outline', label: 'Terms of Service', onPress: () => void openLegalDocument('terms') },
-        { icon: 'lock-closed-outline', label: 'Privacy Policy', onPress: () => void openLegalDocument('privacy') },
-        { icon: 'alert-circle-outline', label: 'Disclaimer', onPress: () => void openLegalDocument('disclaimer') },
-        { icon: 'receipt-outline', label: 'Refund Policy', onPress: () => void openLegalDocument('refund') },
+        { icon: 'help-circle-outline', label: t('menu.helpSupport'), onPress: () => router.push('/(dashboard)/support') },
+        { icon: 'map-outline', label: t('menu.replayTour'), description: t('menu.replayTourDescription'), onPress: replayTour },
+        { icon: 'document-text-outline', label: t('menu.terms'), onPress: () => void openLegalDocument('terms') },
+        { icon: 'lock-closed-outline', label: t('menu.privacy'), onPress: () => void openLegalDocument('privacy') },
+        { icon: 'alert-circle-outline', label: t('menu.disclaimer'), onPress: () => void openLegalDocument('disclaimer') },
+        { icon: 'receipt-outline', label: t('menu.refund'), onPress: () => void openLegalDocument('refund') },
       ],
     },
   ];
@@ -257,17 +336,17 @@ export default function SettingsScreen() {
               size={64}
               textClassName="text-brand-700 text-xl font-black"
             />
-            <View className="ml-4 flex-1">
-              <Text className="text-lg font-black text-stone-900">{currentUser?.displayName ?? 'User'}</Text>
+            <View className="ms-4 flex-1">
+              <Text className="text-lg font-black text-stone-900">{currentUser?.displayName ?? t('header.userFallback')}</Text>
               <Text className="text-stone-500 text-sm">{currentUser?.email}</Text>
               <View className="flex-row items-center mt-1.5">
                 {!currentUser && (userError || userSyncError) ? (
                   <View className="bg-warning-bg px-2.5 py-0.5 rounded-full">
-                    <Text className="text-warning text-xs font-bold">Unavailable</Text>
+                    <Text className="text-warning text-xs font-bold">{t('header.unavailable')}</Text>
                   </View>
                 ) : plan ? (
                   <View className="bg-brand-100 px-2.5 py-0.5 rounded-full">
-                    <Text className="text-brand-700 text-xs font-bold capitalize">{plan}</Text>
+                    <Text className="text-brand-700 text-xs font-bold">{planName(plan, t)}</Text>
                   </View>
                 ) : (
                   <View className="bg-stone-100 px-2.5 py-0.5 rounded-full">
@@ -276,16 +355,16 @@ export default function SettingsScreen() {
                 )}
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} />
+            <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} style={RTL_FLIP} />
             </TouchableOpacity>
         </View>
 
         {/* Usage Stats */}
         <View className="bg-white mx-4 my-4 rounded-2xl border border-stone-100 p-4">
-          <Text className="font-bold text-stone-800 mb-3">Monthly Usage</Text>
+          <Text className="font-bold text-stone-800 mb-3">{t('usage.title')}</Text>
           {usageFailed ? (
             <ErrorState
-              message={userError ? loadFailureMessage(userError) : (userSyncError ?? 'Could not load usage. Please try again.')}
+              message={userError ? loadFailureMessage(userError, t, tc) : (userSyncError ?? t('usage.loadError'))}
               onRetry={() => {
                 void syncUser();
                 void refetch();
@@ -299,13 +378,13 @@ export default function SettingsScreen() {
           ) : (
             <>
               <UsageBar
-                label="Credits"
+                label={t('usage.credits')}
                 used={usage.aiCreditsUsed}
                 limit={usage.aiCreditsLimit}
                 color={colors.brand[600]}
               />
               <UsageBar
-                label="Exports"
+                label={t('usage.exports')}
                 used={usage.exportsThisMonth}
                 limit={typeof planConfig.limits.exports === 'number' ? planConfig.limits.exports : 999}
                 color={colors.brand[600]}
@@ -316,13 +395,13 @@ export default function SettingsScreen() {
         </View>
 
         <View className="bg-white mx-4 mb-4 rounded-2xl border border-stone-100 px-4 py-3 flex-row items-center">
-          <View className="w-8 h-8 rounded-xl bg-stone-100 items-center justify-center mr-3">
+          <View className="w-8 h-8 rounded-xl bg-stone-100 items-center justify-center me-3">
             <Ionicons name="notifications-outline" size={18} color={colors.stone[500]} />
           </View>
-          <View className="flex-1 mr-3">
-            <Text className="text-stone-800 font-medium">Notifications</Text>
+          <View className="flex-1 me-3">
+            <Text className="text-stone-800 font-medium">{t('notifications.title')}</Text>
             <Text className="text-stone-500 text-xs mt-0.5">
-              Follow-up reminders and account alerts
+              {t('notifications.description')}
             </Text>
           </View>
           <Switch
@@ -330,38 +409,62 @@ export default function SettingsScreen() {
             disabled={pushBusy}
             onValueChange={(v) => void onTogglePush(v)}
             trackColor={{ true: colors.brand[600] }}
-            accessibilityLabel="Notifications"
+            accessibilityLabel={t('notifications.title')}
           />
         </View>
 
         {/* Email preferences — website Settings > Preferences */}
         <View className="bg-white mx-4 mb-4 rounded-2xl border border-stone-100 overflow-hidden">
-          {EMAIL_PREFERENCES.map((pref, index) => (
+          {EMAIL_PREFERENCE_KEYS.map((key, index) => (
             <View
-              key={pref.key}
+              key={key}
               className={['px-4 py-3 flex-row items-center', index > 0 ? 'border-t border-stone-50' : ''].join(' ')}
             >
-              <View className="w-8 h-8 rounded-xl bg-stone-100 items-center justify-center mr-3">
+              <View className="w-8 h-8 rounded-xl bg-stone-100 items-center justify-center me-3">
                 <Ionicons
-                  name={pref.key === 'emailNotifications' ? 'mail-outline' : 'megaphone-outline'}
+                  name={key === 'emailNotifications' ? 'mail-outline' : 'megaphone-outline'}
                   size={18}
                   color={colors.stone[500]}
                 />
               </View>
-              <View className="flex-1 mr-3">
-                <Text className="text-stone-800 font-medium">{pref.label}</Text>
-                <Text className="text-stone-500 text-xs mt-0.5">{pref.description}</Text>
+              <View className="flex-1 me-3">
+                <Text className="text-stone-800 font-medium">{emailCopy[key].label}</Text>
+                <Text className="text-stone-500 text-xs mt-0.5">{emailCopy[key].description}</Text>
               </View>
               <Switch
-                value={emailOn(pref.key)}
-                disabled={!currentUser || emailPending[pref.key] !== undefined}
-                onValueChange={(v) => void onToggleEmail(pref.key, v)}
+                value={emailOn(key)}
+                disabled={!currentUser || emailPending[key] !== undefined}
+                onValueChange={(v) => void onToggleEmail(key, v)}
                 trackColor={{ true: colors.brand[600] }}
-                accessibilityLabel={pref.label}
-                accessibilityHint={pref.description}
+                accessibilityLabel={emailCopy[key].label}
+                accessibilityHint={emailCopy[key].description}
               />
             </View>
           ))}
+        </View>
+
+        {/* Language — website Settings > Preferences > Language */}
+        <View className="bg-white mx-4 mb-4 rounded-2xl border border-stone-100 overflow-hidden">
+          <TouchableOpacity
+            onPress={() => setLanguageOpen(true)}
+            disabled={languageBusy}
+            className={['px-4 py-3 flex-row items-center', languageBusy ? 'opacity-60' : ''].join(' ')}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${t('language.title')}: ${LANGUAGE_NAMES[locale]}`}
+            accessibilityHint={t('language.description')}
+            accessibilityState={{ disabled: languageBusy }}
+          >
+            <View className="w-8 h-8 rounded-xl bg-stone-100 items-center justify-center me-3">
+              <Ionicons name="language-outline" size={18} color={colors.stone[500]} />
+            </View>
+            <View className="flex-1 me-3">
+              <Text className="text-stone-800 font-medium">{t('language.title')}</Text>
+              <Text className="text-stone-500 text-xs mt-0.5">{t('language.description')}</Text>
+            </View>
+            <Text className="text-stone-600 text-sm me-2">{LANGUAGE_NAMES[locale]}</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.stone[300]} style={RTL_FLIP} />
+          </TouchableOpacity>
         </View>
 
         {/* Menu Sections */}
@@ -387,7 +490,7 @@ export default function SettingsScreen() {
                   accessibilityHint={item.description}
                   accessibilityState={{ disabled: !!item.disabled }}
                 >
-                  <View className="w-8 h-8 rounded-xl bg-stone-100 items-center justify-center mr-3">
+                  <View className="w-8 h-8 rounded-xl bg-stone-100 items-center justify-center me-3">
                     <Ionicons name={item.icon as any} size={18} color={colors.stone[500]} />
                   </View>
                   <View className="flex-1">
@@ -397,11 +500,11 @@ export default function SettingsScreen() {
                     ) : null}
                   </View>
                   {item.badge && (
-                    <View className="bg-brand-100 px-2 py-0.5 rounded-full mr-2">
+                    <View className="bg-brand-100 px-2 py-0.5 rounded-full me-2">
                       <Text className="text-brand-600 text-xs font-bold">{item.badge}</Text>
                     </View>
                   )}
-                  <Ionicons name="chevron-forward" size={16} color={colors.stone[300]} />
+                  <Ionicons name="chevron-forward" size={16} color={colors.stone[300]} style={RTL_FLIP} />
                 </TouchableOpacity>
               ))}
             </View>
@@ -414,14 +517,40 @@ export default function SettingsScreen() {
             onPress={handleLogout}
             className="bg-error-bg border border-red-100 rounded-2xl p-4 flex-row items-center justify-center"
           >
-            <Ionicons name="log-out-outline" size={20} color={colors.error.DEFAULT} />
-            <Text className="text-error font-semibold ml-2">Sign Out</Text>
+            <Ionicons name="log-out-outline" size={20} color={colors.error.DEFAULT} style={RTL_FLIP} />
+            <Text className="text-error font-semibold ms-2">{t('signOut.button')}</Text>
           </TouchableOpacity>
           <Text className="text-center text-stone-300 text-xs mt-3">
             FlacronCV v1.0.0
           </Text>
         </View>
       </ScrollView>
+
+      <Modal visible={languageOpen} onClose={() => setLanguageOpen(false)} title={t('language.title')}>
+        {SUPPORTED_LOCALES.map((option) => {
+          const selected = option === locale;
+          return (
+            <TouchableOpacity
+              key={option}
+              onPress={() => void onPickLanguage(option)}
+              className="flex-row items-center py-3.5 border-b border-stone-100"
+              activeOpacity={0.7}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: selected }}
+              accessibilityLabel={LANGUAGE_NAMES[option]}
+            >
+              {/* Each name is in its own script; writingDirection keeps ar/ur readable in an LTR layout. */}
+              <Text
+                className={['flex-1 text-base', selected ? 'text-brand-700 font-bold' : 'text-stone-800'].join(' ')}
+                style={{ writingDirection: isRTLLocale(option) ? 'rtl' : 'ltr' }}
+              >
+                {LANGUAGE_NAMES[option]}
+              </Text>
+              {selected ? <Ionicons name="checkmark" size={20} color={colors.brand[600]} /> : null}
+            </TouchableOpacity>
+          );
+        })}
+      </Modal>
     </SafeAreaView>
   );
 }

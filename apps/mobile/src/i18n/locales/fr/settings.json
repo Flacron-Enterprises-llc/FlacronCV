@@ -1,0 +1,199 @@
+{
+  "header": {
+    "userFallback": "Utilisateur",
+    "unavailable": "Indisponible"
+  },
+  "plans": {
+    "free": "Gratuit",
+    "pro": "Pro",
+    "enterprise": "Enterprise"
+  },
+  "usage": {
+    "title": "Utilisation mensuelle",
+    "credits": "Crédits",
+    "exports": "Exportations",
+    "loadError": "Impossible de charger l'utilisation. Veuillez réessayer."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Rappels de suivi et alertes du compte",
+    "deniedTitle": "Les notifications sont désactivées",
+    "deniedBody": "Vous pourrez les activer plus tard dans les Réglages du système ou ici.",
+    "updateError": "Impossible de mettre à jour les notifications"
+  },
+  "preferences": {
+    "emailNotifications": "Notifications par email",
+    "emailNotificationsDescription": "Recevez des mises à jour et des conseils par email",
+    "marketingEmails": "E-mails marketing",
+    "marketingEmailsDescription": "Actualités produit, conseils et offres spéciales",
+    "saveError": "Échec de l'enregistrement des préférences"
+  },
+  "language": {
+    "title": "Langue",
+    "description": "Choisissez votre langue préférée",
+    "restartTitle": "Redémarrez pour terminer",
+    "restartBody": "La nouvelle langue est active. Fermez puis rouvrez FlacronCV pour changer le sens de la mise en page.",
+    "restartNow": "Redémarrer maintenant"
+  },
+  "sections": {
+    "account": "Compte",
+    "security": "Sécurité",
+    "subscription": "Abonnement",
+    "support": "Assistance"
+  },
+  "menu": {
+    "profile": "Profil",
+    "jobTracker": "Suivi des candidatures",
+    "careerTools": "Outils de carrière",
+    "yourData": "Vos données et suppression du compte",
+    "billingPlans": "Facturation et forfaits",
+    "planUsage": "Forfait et utilisation",
+    "helpSupport": "Aide et assistance",
+    "replayTour": "Revoir la visite",
+    "replayTourDescription": "Parcourez à nouveau les principales parties de FlacronCV.",
+    "terms": "Conditions d'utilisation",
+    "privacy": "Politique de confidentialité",
+    "disclaimer": "Avertissement",
+    "refund": "Politique de remboursement"
+  },
+  "password": {
+    "rowLabel": "Changer le mot de passe",
+    "rowDescription": "Changer votre mot de passe",
+    "sending": "Envoi…",
+    "confirmTitle": "Changer le mot de passe",
+    "confirmBody": "Nous vous enverrons un email avec un lien pour réinitialiser votre mot de passe. Cliquez sur le lien dans l'email pour créer un nouveau mot de passe.",
+    "confirmAction": "Envoyer le lien",
+    "sentTitle": "Vérifiez votre email",
+    "sentBody": "Nous avons envoyé un lien de réinitialisation à {email}",
+    "failedTitle": "Échec de l'envoi de l'email de réinitialisation"
+  },
+  "signOutEverywhere": {
+    "rowLabel": "Se déconnecter de tous les appareils",
+    "rowDescription": "Déconnecte votre compte partout où il est connecté, y compris sur cet appareil. Les autres appareils perdent l'accès au prochain rafraîchissement de leur session, sous une heure.",
+    "signingOut": "Déconnexion…",
+    "confirmTitle": "Se déconnecter de tous les appareils ?",
+    "confirmBody": "Vous serez également déconnecté de cet appareil et devrez vous reconnecter.",
+    "confirmAction": "Se déconnecter partout",
+    "success": "Déconnecté de tous les appareils",
+    "errorTitle": "Pas de déconnexion",
+    "error": "Impossible de se déconnecter de tous les appareils. Veuillez réessayer."
+  },
+  "signOut": {
+    "button": "Se déconnecter",
+    "confirmTitle": "Se déconnecter",
+    "confirmBody": "Voulez-vous vraiment vous déconnecter ?"
+  },
+  "profile": {
+    "title": "Modifier le profil",
+    "loadError": "Impossible de charger le profil",
+    "loading": "Chargement du profil...",
+    "changePhoto": "Changer la photo de profil",
+    "tapToChoose": "Touchez pour choisir dans votre photothèque",
+    "removePhoto": "Retirer la photo",
+    "removePhotoA11y": "Retirer la photo de profil",
+    "removePhotoBody": "Votre profil affichera vos initiales à la place.",
+    "photoErrorTitle": "Impossible de mettre à jour la photo",
+    "photoError": "Impossible de mettre à jour la photo. Veuillez réessayer.",
+    "photosUnavailableTitle": "Photos indisponibles",
+    "photosUnavailableBody": "Autorisez l'accès à la photothèque dans les Réglages pour choisir une photo de profil.",
+    "displayName": "Nom affiché *",
+    "displayNameTooShort": "Le nom doit comporter au moins 2 caractères",
+    "firstName": "Prénom",
+    "lastName": "Nom de famille",
+    "headline": "Titre professionnel",
+    "headlinePlaceholder": "Développeuse senior chez Google",
+    "bio": "Biographie",
+    "bioPlaceholder": "Une courte présentation de vous...",
+    "location": "Localisation",
+    "locationPlaceholder": "Lyon, France",
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "website": "Site web",
+    "save": "Enregistrer le profil",
+    "checkLinksTitle": "Vérifiez vos liens",
+    "fixLinks": "Corrigez les liens signalés avant d'enregistrer.",
+    "savedTitle": "C'est fait",
+    "savedBody": "Profil mis à jour avec succès !",
+    "saveErrorTitle": "Enregistrement impossible",
+    "saveError": "Impossible de mettre à jour le profil. Veuillez réessayer."
+  },
+  "billing": {
+    "titlePaid": "Facturation et forfaits",
+    "titleFree": "Forfait et utilisation",
+    "subtitlePaid": "Gérez votre abonnement",
+    "subtitleFree": "Votre forfait actuel",
+    "currentPlan": "Forfait actuel",
+    "plan": "Forfait",
+    "status": "Statut",
+    "ends": "Se termine le",
+    "renews": "Renouvellement le",
+    "opening": "Ouverture…",
+    "manageSubscription": "Gérer l'abonnement",
+    "manageBilling": "Gérer la facturation",
+    "monthly": "Mensuel",
+    "yearly": "Annuel",
+    "stripeNote": "Tous les paiements sont traités de manière sécurisée par Stripe. Vous pouvez annuler ou changer de forfait à tout moment.",
+    "checkoutUnavailable": "Paiement indisponible",
+    "checkoutError": "Impossible de créer la session de paiement. Veuillez réessayer.",
+    "storeErrorTitle": "Impossible d'ouvrir les abonnements",
+    "storeError": "Ouvrez votre compte App Store ou Google Play pour gérer cet abonnement.",
+    "portalUnavailable": "Portail de facturation indisponible",
+    "portalError": "Impossible d'ouvrir le portail de facturation. Veuillez réessayer.",
+    "usage": {
+      "cvs": "CV",
+      "coverLetters": "Lettres de motivation",
+      "credits": "Crédits",
+      "exportsThisMonth": "Exportations ce mois-ci"
+    },
+    "subscriptionStatus": {
+      "active": "Actif",
+      "trialing": "En essai",
+      "past_due": "En retard",
+      "canceled": "Annulé",
+      "incomplete": "Incomplet",
+      "unpaid": "Impayé"
+    },
+    "history": {
+      "title": "Historique de facturation",
+      "loading": "Chargement de l'historique de facturation",
+      "empty": "Aucun historique de facturation",
+      "loadError": "Impossible de charger votre historique de facturation.",
+      "retry": "Réessayer",
+      "storeNote": "Les achats effectués via l'App Store ou Google Play figurent dans votre compte de la boutique.",
+      "invoiceNumber": "facture {number}",
+      "status": {
+        "paid": "Payée",
+        "open": "En attente de paiement",
+        "void": "Annulée",
+        "uncollectible": "Irrécouvrable",
+        "draft": "Brouillon"
+      }
+    }
+  },
+  "data": {
+    "title": "Vos données",
+    "downloadTitle": "Téléchargez vos données",
+    "downloadBody": "Une copie de votre compte, de vos CV, lettres de motivation et candidatures dans un fichier JSON. Le fichier est partagé à partir d'une copie temporaire supprimée ensuite.",
+    "downloadCareerNote": "Les données des outils de carrière s'exportent séparément depuis Outils de carrière > Données de carrière.",
+    "downloadButton": "Télécharger mes données",
+    "sharingUnavailableTitle": "Partage indisponible",
+    "sharingUnavailableBody": "Cet appareil ne peut pas ouvrir la feuille de partage.",
+    "downloadFailedTitle": "Échec du téléchargement",
+    "downloadError": "Impossible de préparer vos données. Veuillez réessayer.",
+    "deleteTitle": "Supprimer le compte",
+    "deleteBody": "Votre compte est fermé et vous êtes déconnecté. Les abonnements payants achetés sur le site web, y compris une option carrière, sont annulés.",
+    "deleteCareerNote": "Les données de vos outils de carrière sont effacées.",
+    "deleteStoreNote": "Les abonnements achetés via l'App Store ou Google Play doivent être annulés dans la boutique.",
+    "confirmLabel": "Tapez {keyword} pour confirmer",
+    "keyword": "SUPPRIMER",
+    "deleteButton": "Supprimer mon compte",
+    "confirmTitle": "Supprimer votre compte ?",
+    "confirmBody": "Cette action est irréversible.",
+    "deletedTitle": "Compte supprimé",
+    "deletedBody": "Votre compte a été supprimé et vous êtes déconnecté.",
+    "signInAgainTitle": "Reconnectez-vous",
+    "signInAgainBody": "Pour votre sécurité, déconnectez-vous, reconnectez-vous puis supprimez votre compte. Rien n'a été supprimé.",
+    "notDeletedTitle": "Non supprimé",
+    "notDeletedError": "Votre compte n'a pas été supprimé. Veuillez réessayer."
+  }
+}

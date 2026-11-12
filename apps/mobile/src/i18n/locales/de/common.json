@@ -1,0 +1,20 @@
+{
+  "cancel": "Abbrechen",
+  "save": "Speichern",
+  "delete": "Löschen",
+  "remove": "Entfernen",
+  "close": "Schließen",
+  "back": "Zurück",
+  "ok": "OK",
+  "later": "Später",
+  "retry": "Erneut versuchen",
+  "loading": "Wird geladen…",
+  "pleaseTryAgain": "Bitte erneut versuchen.",
+  "noConnection": "Keine Verbindung. Prüfe dein Netzwerk und versuche es erneut.",
+  "unsaved": {
+    "title": "Ungespeicherte Änderungen",
+    "body": "Du hast ungespeicherte Änderungen. Trotzdem verlassen?",
+    "stay": "Bleiben",
+    "leave": "Verlassen"
+  }
+}

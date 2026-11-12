@@ -1,0 +1,199 @@
+{
+  "header": {
+    "userFallback": "Nutzer",
+    "unavailable": "Nicht verfügbar"
+  },
+  "plans": {
+    "free": "Kostenlos",
+    "pro": "Pro",
+    "enterprise": "Enterprise"
+  },
+  "usage": {
+    "title": "Monatliche Nutzung",
+    "credits": "Credits",
+    "exports": "Exporte",
+    "loadError": "Nutzung konnte nicht geladen werden. Bitte erneut versuchen."
+  },
+  "notifications": {
+    "title": "Mitteilungen",
+    "description": "Erinnerungen zum Nachfassen und Kontohinweise",
+    "deniedTitle": "Mitteilungen sind aus",
+    "deniedBody": "Du kannst sie später in den Systemeinstellungen oder hier aktivieren.",
+    "updateError": "Mitteilungen konnten nicht aktualisiert werden"
+  },
+  "preferences": {
+    "emailNotifications": "E-Mail-Benachrichtigungen",
+    "emailNotificationsDescription": "Erhalte Updates und Tipps per E-Mail",
+    "marketingEmails": "Marketing-E-Mails",
+    "marketingEmailsDescription": "Produktneuigkeiten, Tipps und Sonderangebote",
+    "saveError": "Einstellungen konnten nicht gespeichert werden"
+  },
+  "language": {
+    "title": "Sprache",
+    "description": "Wähle deine bevorzugte Sprache",
+    "restartTitle": "Zum Abschließen neu starten",
+    "restartBody": "Die neue Sprache ist aktiv. Schließe FlacronCV und öffne die App erneut, um die Layoutrichtung zu wechseln.",
+    "restartNow": "Jetzt neu starten"
+  },
+  "sections": {
+    "account": "Konto",
+    "security": "Sicherheit",
+    "subscription": "Abonnement",
+    "support": "Hilfe"
+  },
+  "menu": {
+    "profile": "Profil",
+    "jobTracker": "Bewerbungs-Tracker",
+    "careerTools": "Karrieretools",
+    "yourData": "Deine Daten & Kontolöschung",
+    "billingPlans": "Abrechnung und Tarife",
+    "planUsage": "Tarif & Nutzung",
+    "helpSupport": "Hilfe & Support",
+    "replayTour": "App-Tour wiederholen",
+    "replayTourDescription": "Gehe die wichtigsten Bereiche von FlacronCV noch einmal durch.",
+    "terms": "Nutzungsbedingungen",
+    "privacy": "Datenschutzrichtlinie",
+    "disclaimer": "Haftungsausschluss",
+    "refund": "Rückerstattungsrichtlinie"
+  },
+  "password": {
+    "rowLabel": "Passwort ändern",
+    "rowDescription": "Dein Kontopasswort ändern",
+    "sending": "Wird gesendet…",
+    "confirmTitle": "Passwort ändern",
+    "confirmBody": "Wir senden dir eine E-Mail mit einem Link zum Zurücksetzen deines Passworts. Klicke auf den Link in der E-Mail, um ein neues Passwort festzulegen.",
+    "confirmAction": "Reset-Link senden",
+    "sentTitle": "Überprüfe deine E-Mail",
+    "sentBody": "Wir haben einen Reset-Link an {email} gesendet",
+    "failedTitle": "Fehler beim Senden der Reset-E-Mail"
+  },
+  "signOutEverywhere": {
+    "rowLabel": "Von allen Geräten abmelden",
+    "rowDescription": "Meldet dein Konto überall ab, wo es gerade angemeldet ist, auch auf diesem Gerät. Andere Geräte verlieren den Zugriff beim nächsten Aktualisieren ihrer Sitzung, innerhalb einer Stunde.",
+    "signingOut": "Wird abgemeldet…",
+    "confirmTitle": "Von allen Geräten abmelden?",
+    "confirmBody": "Du wirst auch auf diesem Gerät abgemeldet und musst dich erneut anmelden.",
+    "confirmAction": "Überall abmelden",
+    "success": "Von allen Geräten abgemeldet",
+    "errorTitle": "Nicht abgemeldet",
+    "error": "Abmelden von allen Geräten nicht möglich. Bitte erneut versuchen."
+  },
+  "signOut": {
+    "button": "Abmelden",
+    "confirmTitle": "Abmelden",
+    "confirmBody": "Möchtest du dich wirklich abmelden?"
+  },
+  "profile": {
+    "title": "Profil bearbeiten",
+    "loadError": "Profil konnte nicht geladen werden",
+    "loading": "Profil wird geladen...",
+    "changePhoto": "Profilbild ändern",
+    "tapToChoose": "Tippe, um ein Foto aus deiner Mediathek zu wählen",
+    "removePhoto": "Foto entfernen",
+    "removePhotoA11y": "Profilbild entfernen",
+    "removePhotoBody": "Dein Profil zeigt stattdessen deine Initialen.",
+    "photoErrorTitle": "Foto konnte nicht aktualisiert werden",
+    "photoError": "Foto konnte nicht aktualisiert werden. Bitte erneut versuchen.",
+    "photosUnavailableTitle": "Fotos nicht verfügbar",
+    "photosUnavailableBody": "Erlaube in den Einstellungen den Zugriff auf die Mediathek, um ein Profilbild zu wählen.",
+    "displayName": "Anzeigename *",
+    "displayNameTooShort": "Der Name muss mindestens 2 Zeichen lang sein",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
+    "headline": "Berufsbezeichnung",
+    "headlinePlaceholder": "Senior-Entwicklerin bei Google",
+    "bio": "Biografie",
+    "bioPlaceholder": "Ein paar Worte über dich...",
+    "location": "Standort",
+    "locationPlaceholder": "Berlin, Deutschland",
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "website": "Webseite",
+    "save": "Profil speichern",
+    "checkLinksTitle": "Links prüfen",
+    "fixLinks": "Bitte korrigiere die markierten Links vor dem Speichern.",
+    "savedTitle": "Gespeichert",
+    "savedBody": "Profil erfolgreich aktualisiert!",
+    "saveErrorTitle": "Speichern nicht möglich",
+    "saveError": "Profil konnte nicht aktualisiert werden. Bitte erneut versuchen."
+  },
+  "billing": {
+    "titlePaid": "Abrechnung und Tarife",
+    "titleFree": "Tarif & Nutzung",
+    "subtitlePaid": "Verwalte dein Abonnement",
+    "subtitleFree": "Dein aktueller Tarif",
+    "currentPlan": "Aktueller Tarif",
+    "plan": "Tarif",
+    "status": "Status",
+    "ends": "Endet am",
+    "renews": "Verlängert am",
+    "opening": "Wird geöffnet…",
+    "manageSubscription": "Abonnement verwalten",
+    "manageBilling": "Abrechnung verwalten",
+    "monthly": "Monatlich",
+    "yearly": "Jährlich",
+    "stripeNote": "Alle Zahlungen werden sicher über Stripe abgewickelt. Du kannst deinen Tarif jederzeit kündigen oder ändern.",
+    "checkoutUnavailable": "Bezahlung nicht verfügbar",
+    "checkoutError": "Bezahlsitzung konnte nicht erstellt werden. Bitte erneut versuchen.",
+    "storeErrorTitle": "Abonnements konnten nicht geöffnet werden",
+    "storeError": "Öffne dein App Store- oder Google Play-Konto, um dieses Abonnement zu verwalten.",
+    "portalUnavailable": "Abrechnungsportal nicht verfügbar",
+    "portalError": "Abrechnungsportal konnte nicht geöffnet werden. Bitte erneut versuchen.",
+    "usage": {
+      "cvs": "Lebensläufe",
+      "coverLetters": "Anschreiben",
+      "credits": "Credits",
+      "exportsThisMonth": "Exporte in diesem Monat"
+    },
+    "subscriptionStatus": {
+      "active": "Aktiv",
+      "trialing": "Testphase",
+      "past_due": "Überfällig",
+      "canceled": "Gekündigt",
+      "incomplete": "Unvollständig",
+      "unpaid": "Unbezahlt"
+    },
+    "history": {
+      "title": "Abrechnungshistorie",
+      "loading": "Abrechnungshistorie wird geladen",
+      "empty": "Noch keine Abrechnungshistorie",
+      "loadError": "Deine Abrechnungshistorie konnte nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "storeNote": "Käufe über den App Store oder Google Play findest du in deinem Store-Konto.",
+      "invoiceNumber": "Rechnung {number}",
+      "status": {
+        "paid": "Bezahlt",
+        "open": "Offen",
+        "void": "Storniert",
+        "uncollectible": "Uneinbringlich",
+        "draft": "Entwurf"
+      }
+    }
+  },
+  "data": {
+    "title": "Deine Daten",
+    "downloadTitle": "Deine Daten herunterladen",
+    "downloadBody": "Eine Kopie deines Kontos, deiner Lebensläufe, Anschreiben und Bewerbungen als JSON-Datei. Die Datei wird aus einer temporären Kopie geteilt, die danach gelöscht wird.",
+    "downloadCareerNote": "Daten der Karrieretools werden separat unter Karrieretools > Karrieredaten exportiert.",
+    "downloadButton": "Meine Daten herunterladen",
+    "sharingUnavailableTitle": "Teilen nicht verfügbar",
+    "sharingUnavailableBody": "Dieses Gerät kann das Teilen-Menü nicht öffnen.",
+    "downloadFailedTitle": "Download fehlgeschlagen",
+    "downloadError": "Deine Daten konnten nicht vorbereitet werden. Bitte erneut versuchen.",
+    "deleteTitle": "Konto löschen",
+    "deleteBody": "Dein Konto wird geschlossen und du wirst abgemeldet. Auf der Website gekaufte kostenpflichtige Abonnements, auch ein Karriere-Add-on, werden gekündigt.",
+    "deleteCareerNote": "Die Daten deiner Karrieretools werden gelöscht.",
+    "deleteStoreNote": "Über den App Store oder Google Play gekaufte Abonnements müssen im Store gekündigt werden.",
+    "confirmLabel": "Gib {keyword} ein, um zu bestätigen",
+    "keyword": "LÖSCHEN",
+    "deleteButton": "Mein Konto löschen",
+    "confirmTitle": "Konto löschen?",
+    "confirmBody": "Das kann nicht rückgängig gemacht werden.",
+    "deletedTitle": "Konto gelöscht",
+    "deletedBody": "Dein Konto wurde gelöscht und du bist abgemeldet.",
+    "signInAgainTitle": "Erneut anmelden",
+    "signInAgainBody": "Melde dich zu deiner Sicherheit ab, wieder an und lösche dann dein Konto. Es wurde nichts gelöscht.",
+    "notDeletedTitle": "Nicht gelöscht",
+    "notDeletedError": "Dein Konto wurde nicht gelöscht. Bitte erneut versuchen."
+  }
+}

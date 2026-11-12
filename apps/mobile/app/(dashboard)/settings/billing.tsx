@@ -10,7 +10,6 @@ import { Badge } from '../../../src/components/ui/Badge';
 import { Skeleton } from '../../../src/components/ui/Skeleton';
 import { useInvoices } from '../../../src/hooks/useInvoices';
 import {
-  BILLING_HISTORY_COPY,
   invoiceAccessibilityLabel,
   invoiceAmount,
   invoiceStatusLabel,
@@ -29,20 +28,39 @@ import {
   hasLiveStripeSubscription,
 } from '../../../src/lib/entitlements';
 import { skuForPlan } from '../../../src/config/iap-products';
-import { formatDate, toDate } from '../../../src/lib/utils';
+import { toDate } from '../../../src/lib/utils';
 import { PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
 import { colors } from '../../../src/theme/colors';
 import { CareerAddonCard } from '../../../src/components/career/CareerAddonCard';
+import { formatDate, hasKey, useT, type TFunction } from '../../../src/i18n';
+import { RTL_FLIP } from '../../../src/i18n/native';
+
+/** A stored date (ISO string, Firestore timestamp, …) in the app language; "—" when absent. */
+function formatStoredDate(value: unknown): string {
+  return formatDate(toDate(value));
+}
+
+function planName(plan: SubscriptionPlan, t: TFunction): string {
+  if (plan === SubscriptionPlan.PRO) return t('plans.pro');
+  if (plan === SubscriptionPlan.ENTERPRISE) return t('plans.enterprise');
+  return t('plans.free');
+}
 
 function formatLimit(limit: number | 'unlimited'): string {
   return limit === 'unlimited' ? '∞' : String(limit);
 }
 
-function loadFailureMessage(err: unknown): string {
+function loadFailureMessage(err: unknown, t: TFunction, tc: TFunction): string {
   if (axios.isAxiosError(err) && !err.response) {
-    return 'No connection. Check your network and try again.';
+    return tc('noConnection');
   }
-  return 'Could not load usage. Please try again.';
+  return t('usage.loadError');
+}
+
+/** Raw status as sent when the app has no label for it. */
+function subscriptionStatusLabel(status: string, t: TFunction): string {
+  const key = `billing.subscriptionStatus.${status}`;
+  return hasKey(`settings.${key}`) ? t(key) : status;
 }
 
 const nativeStoreBilling =
@@ -76,6 +94,8 @@ async function openNativeStoreSubscriptions(skuAndroid?: string | null) {
 }
 
 export default function BillingScreen() {
+  const t = useT('settings');
+  const tc = useT('common');
   const router = useRouter();
   const { user: authUser, syncUser, userSyncError } = useAuthStore();
   const { data: userData, error: userError, refetch } = useCurrentUser();
@@ -107,10 +127,7 @@ export default function BillingScreen() {
       const session = await createCheckout.mutateAsync({ plan: targetPlan, interval });
       await Linking.openURL(session.url);
     } catch (err) {
-      Alert.alert(
-        'Checkout unavailable',
-        requestFailureMessage(err, 'Failed to create checkout session. Please try again.'),
-      );
+      Alert.alert(t('billing.checkoutUnavailable'), requestFailureMessage(err, t('billing.checkoutError')));
     }
   };
 
@@ -119,10 +136,7 @@ export default function BillingScreen() {
       try {
         await openNativeStoreSubscriptions(skuForPlan(plan, interval));
       } catch (err) {
-        Alert.alert(
-          'Could not open subscriptions',
-          requestFailureMessage(err, 'Open your App Store or Google Play account to manage this subscription.'),
-        );
+        Alert.alert(t('billing.storeErrorTitle'), requestFailureMessage(err, t('billing.storeError')));
       }
       return;
     }
@@ -131,10 +145,7 @@ export default function BillingScreen() {
       const portal = await createPortal.mutateAsync();
       await Linking.openURL(portal.url);
     } catch (err) {
-      Alert.alert(
-        'Billing portal unavailable',
-        requestFailureMessage(err, 'Failed to open billing portal. Please try again.'),
-      );
+      Alert.alert(t('billing.portalUnavailable'), requestFailureMessage(err, t('billing.portalError')));
     }
   };
 
@@ -143,15 +154,15 @@ export default function BillingScreen() {
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
-        <TouchableOpacity onPress={() => router.back()} className="mr-3">
-          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+        <TouchableOpacity onPress={() => router.back()} className="me-3" accessibilityRole="button" accessibilityLabel={tc('back')}>
+          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
         </TouchableOpacity>
         <View>
           <Text className="text-xl font-black text-stone-900">
-            {PAID_UPGRADES_ENABLED ? 'Billing & Plans' : 'Plan & usage'}
+            {PAID_UPGRADES_ENABLED ? t('billing.titlePaid') : t('billing.titleFree')}
           </Text>
           <Text className="text-stone-400 text-sm">
-            {PAID_UPGRADES_ENABLED ? 'Manage your subscription' : 'Your current plan'}
+            {PAID_UPGRADES_ENABLED ? t('billing.subtitlePaid') : t('billing.subtitleFree')}
           </Text>
         </View>
       </View>
@@ -160,7 +171,7 @@ export default function BillingScreen() {
         {usageFailed ? (
           <View className="mx-4 my-4 bg-white rounded-2xl border border-stone-100">
             <ErrorState
-              message={userError ? loadFailureMessage(userError) : (userSyncError ?? 'Could not load usage. Please try again.')}
+              message={userError ? loadFailureMessage(userError, t, tc) : (userSyncError ?? t('usage.loadError'))}
               onRetry={() => {
                 void syncUser();
                 void refetch();
@@ -171,25 +182,25 @@ export default function BillingScreen() {
           <View className="mx-4 my-4 bg-white rounded-2xl border border-stone-100 p-4 h-32" />
         ) : usage ? (
           <View className="mx-4 my-4 bg-white rounded-2xl border border-stone-100 p-4">
-            <Text className="font-bold text-stone-800 mb-3">Current Plan</Text>
+            <Text className="font-bold text-stone-800 mb-3">{t('billing.currentPlan')}</Text>
             <View className="flex-row items-center justify-between mb-2">
-              <Text className="text-stone-600">Plan</Text>
-              <Text className="font-semibold text-stone-900 capitalize">{plan}</Text>
+              <Text className="text-stone-600">{t('billing.plan')}</Text>
+              <Text className="font-semibold text-stone-900">{planName(plan, t)}</Text>
             </View>
             {status ? (
               <View className="flex-row items-center justify-between mb-2">
-                <Text className="text-stone-600">Status</Text>
+                <Text className="text-stone-600">{t('billing.status')}</Text>
                 <View className={['px-2 py-0.5 rounded-full', status === SubscriptionStatus.ACTIVE ? 'bg-success-bg' : 'bg-warning-bg'].join(' ')}>
                   <Text className={status === SubscriptionStatus.ACTIVE ? 'text-success font-medium text-sm' : 'text-warning font-medium text-sm'}>
-                    {status}
+                    {subscriptionStatusLabel(status, t)}
                   </Text>
                 </View>
               </View>
             ) : null}
             {toDate(periodEnd) && (
               <View className="flex-row items-center justify-between">
-                <Text className="text-stone-600">{cancelAtPeriodEnd ? 'Ends' : 'Renews'}</Text>
-                <Text className="font-semibold text-stone-900">{formatDate(periodEnd)}</Text>
+                <Text className="text-stone-600">{cancelAtPeriodEnd ? t('billing.ends') : t('billing.renews')}</Text>
+                <Text className="font-semibold text-stone-900">{formatStoredDate(periodEnd)}</Text>
               </View>
             )}
             {(canManageStore || canManageStripe) && (
@@ -200,22 +211,22 @@ export default function BillingScreen() {
               >
                 <Text className="text-stone-700 font-semibold">
                   {createPortal.isPending
-                    ? 'Opening…'
+                    ? t('billing.opening')
                     : canManageStore
-                      ? 'Manage subscription'
-                      : 'Manage Billing'}
+                      ? t('billing.manageSubscription')
+                      : t('billing.manageBilling')}
                 </Text>
               </TouchableOpacity>
             )}
             <View className="mt-3 pt-3 border-t border-stone-100">
-              <UsageRow label="CVs" used={usage.cvsCreated} limit={limits.cvs} />
-              <UsageRow label="Cover letters" used={usage.coverLettersCreated} limit={limits.coverLetters} />
+              <UsageRow label={t('billing.usage.cvs')} used={usage.cvsCreated} limit={limits.cvs} />
+              <UsageRow label={t('billing.usage.coverLetters')} used={usage.coverLettersCreated} limit={limits.coverLetters} />
               <UsageRow
-                label="Credits"
+                label={t('billing.usage.credits')}
                 used={usage.aiCreditsUsed}
                 limit={usage.aiCreditsLimit}
               />
-              <UsageRow label="Exports this month" used={usage.exportsThisMonth} limit={limits.exports} last />
+              <UsageRow label={t('billing.usage.exportsThisMonth')} used={usage.exportsThisMonth} limit={limits.exports} last />
             </View>
           </View>
         ) : null}
@@ -233,7 +244,7 @@ export default function BillingScreen() {
                     className={['flex-1 py-2.5 rounded-xl items-center flex-row justify-center gap-2', interval === int ? 'bg-brand-600' : ''].join(' ')}
                   >
                     <Text className={interval === int ? 'text-white font-bold' : 'text-stone-600 font-medium'}>
-                      {int === BillingInterval.MONTH ? 'Monthly' : 'Yearly'}
+                      {int === BillingInterval.MONTH ? t('billing.monthly') : t('billing.yearly')}
                     </Text>
                     {int === BillingInterval.YEAR && (
                       <View className="bg-success px-1.5 rounded-full">
@@ -269,7 +280,7 @@ export default function BillingScreen() {
                   ))}
 
                   <Text className="text-stone-400 text-xs text-center mt-4 leading-4">
-                    All payments are securely processed by Stripe. You can cancel or change your plan at any time.
+                    {t('billing.stripeNote')}
                   </Text>
                 </>
               )}
@@ -288,18 +299,20 @@ export default function BillingScreen() {
  * external payment page from the app.
  */
 function BillingHistory({ storeBilled }: { storeBilled: boolean }) {
+  const t = useT('settings.billing.history');
+  const tc = useT('common');
   const { data: invoices, isLoading, isError, refetch, isRefetching } = useInvoices();
 
   return (
     <View className="mx-4 mb-4 bg-white rounded-2xl border border-stone-100 p-4">
       <View className="flex-row items-center mb-1">
         <Ionicons name="receipt-outline" size={18} color={colors.stone[400]} />
-        <Text className="font-bold text-stone-800 ml-2" accessibilityRole="header">
-          {BILLING_HISTORY_COPY.title}
+        <Text className="font-bold text-stone-800 ms-2" accessibilityRole="header">
+          {t('title')}
         </Text>
       </View>
       {isLoading ? (
-        <View className="mt-3" accessibilityLabel="Loading billing history">
+        <View className="mt-3" accessibilityLabel={t('loading')}>
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} height={44} className="mb-2 rounded-xl" />
           ))}
@@ -307,7 +320,7 @@ function BillingHistory({ storeBilled }: { storeBilled: boolean }) {
       ) : isError ? (
         <View className="items-center py-6">
           <Ionicons name="alert-circle-outline" size={28} color={colors.error.DEFAULT} />
-          <Text className="text-stone-500 text-sm mt-2 text-center">{BILLING_HISTORY_COPY.loadError}</Text>
+          <Text className="text-stone-500 text-sm mt-2 text-center">{t('loadError')}</Text>
           <TouchableOpacity
             onPress={() => void refetch()}
             disabled={isRefetching}
@@ -316,7 +329,7 @@ function BillingHistory({ storeBilled }: { storeBilled: boolean }) {
             accessibilityState={{ disabled: isRefetching }}
           >
             <Text className="text-brand-600 font-semibold">
-              {isRefetching ? 'Loading…' : BILLING_HISTORY_COPY.retry}
+              {isRefetching ? tc('loading') : t('retry')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -327,12 +340,12 @@ function BillingHistory({ storeBilled }: { storeBilled: boolean }) {
               key={inv.id}
               className={['flex-row items-center justify-between py-3', index > 0 ? 'border-t border-stone-100' : ''].join(' ')}
               accessible
-              accessibilityLabel={invoiceAccessibilityLabel(inv, formatDate)}
+              accessibilityLabel={invoiceAccessibilityLabel(inv, formatStoredDate)}
             >
-              <View className="flex-1 mr-3">
+              <View className="flex-1 me-3">
                 <Text className="text-stone-900 font-semibold text-sm">{invoiceAmount(inv)}</Text>
                 <Text className="text-stone-500 text-xs mt-0.5" numberOfLines={1}>
-                  {invoiceSubtitle(inv, formatDate)}
+                  {invoiceSubtitle(inv, formatStoredDate)}
                 </Text>
               </View>
               <Badge variant={invoiceStatusVariant(inv.status)} size="sm">
@@ -346,10 +359,10 @@ function BillingHistory({ storeBilled }: { storeBilled: boolean }) {
           <View className="w-12 h-12 rounded-full bg-stone-100 items-center justify-center mb-2">
             <Ionicons name="receipt-outline" size={22} color={colors.stone[400]} />
           </View>
-          <Text className="text-stone-500 text-sm text-center">{BILLING_HISTORY_COPY.empty}</Text>
+          <Text className="text-stone-500 text-sm text-center">{t('empty')}</Text>
           {storeBilled ? (
             <Text className="text-stone-400 text-xs text-center mt-1">
-              {BILLING_HISTORY_COPY.storeNote}
+              {t('storeNote')}
             </Text>
           ) : null}
         </View>

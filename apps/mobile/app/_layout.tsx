@@ -9,11 +9,15 @@ import {
   jobHref,
   jobIdFromNotificationResponse,
 } from '../src/lib/job-reminders';
+import { bootstrapI18n, useProfileLanguageSync } from '../src/i18n/native';
 import { AuthProvider } from '../src/providers/AuthProvider';
 import { QueryProvider } from '../src/providers/QueryProvider';
 import { useAuthStore } from '../src/store/auth-store';
 
 SplashScreen.preventAutoHideAsync();
+
+// Language + layout direction (RTL for ar/ur) before the first screen; see src/i18n/README.md.
+void bootstrapI18n();
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -57,6 +61,12 @@ function NotificationRoutes() {
   return null;
 }
 
+/** The signed-in profile's preferences.language wins over the device copy, as on the website. */
+function LanguageSync() {
+  useProfileLanguageSync(useAuthStore((s) => s.user?.preferences?.language));
+  return null;
+}
+
 export default function RootLayout() {
   useEffect(() => {
     const timer = setTimeout(() => SplashScreen.hideAsync(), 400);
@@ -67,6 +77,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryProvider>
         <AuthProvider>
+          <LanguageSync />
           <NotificationRoutes />
           <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
             <Stack.Screen name="index" />
