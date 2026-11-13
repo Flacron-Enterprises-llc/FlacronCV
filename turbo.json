@@ -38,7 +38,11 @@
       "persistent": true
     },
 
-    "lint": {},
+    "lint": {
+      // The career packages lint with `tsc --noEmit`, which resolves
+      // @flacroncv/shared-types through its compiled dist (same as type-check).
+      "dependsOn": ["^build"]
+    },
 
     "type-check": {
       // shared-types resolves through its compiled `dist` (see its package.json
