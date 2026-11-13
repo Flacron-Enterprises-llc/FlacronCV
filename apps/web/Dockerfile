@@ -11,6 +11,10 @@ COPY packages/shared-types/package.json ./packages/shared-types/
 COPY packages/tsconfig/package.json ./packages/tsconfig/
 COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
+# The web app imports the career tools' shared catalog and API client (workspace
+# packages, compiled from source through next.config transpilePackages).
+COPY packages/career-shared/package.json ./packages/career-shared/
+COPY packages/career-api-client/package.json ./packages/career-api-client/
 
 # No --frozen-lockfile: lockfile was generated with mobile; omitting it causes mismatch
 RUN pnpm install
@@ -29,12 +33,19 @@ COPY apps/web/ ./apps/web/
 # /app/node_modules left @flacroncv/shared-types unresolvable, so `next build`
 # below could never succeed.
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
+# career-api-client imports @flacroncv/career-shared through its OWN node_modules
+# link (same pnpm rule as above), so that tree has to come across too.
+COPY --from=deps /app/packages/career-api-client/node_modules ./packages/career-api-client/node_modules
 
 # Fail fast on a broken layout rather than after a long compile. This directory
 # holds the symlinks for every direct dependency of the web app — next, react,
 # firebase, @tanstack — not only the workspace package.
-RUN test -f apps/web/node_modules/@flacroncv/shared-types/package.json \
-      || (echo "ERROR: apps/web/node_modules is missing the @flacroncv/shared-types workspace link" && exit 1)
+RUN for link in apps/web/node_modules/@flacroncv/shared-types \
+                apps/web/node_modules/@flacroncv/career-shared \
+                apps/web/node_modules/@flacroncv/career-api-client \
+                packages/career-api-client/node_modules/@flacroncv/career-shared; do \
+      test -f "$link/package.json" || { echo "ERROR: missing workspace link $link"; exit 1; }; \
+    done
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
