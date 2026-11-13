@@ -43,7 +43,7 @@
     "saveItem": "Enregistrer l’élément",
     "saveChanges": "Enregistrer les modifications",
     "saved": "Enregistré",
-    "attachAfterSave": "Vous pourrez joindre une photo une fois l’élément enregistré.",
+    "attachAfterSave": "Vous pourrez joindre un fichier une fois l’élément enregistré.",
     "deleteItem": "Supprimer l’élément"
   },
   "form": {
@@ -73,10 +73,12 @@
     "storedFallback": "Fichier stocké",
     "open": "Ouvrir le fichier",
     "replace": "Remplacer par une photo",
+    "replaceFile": "Remplacer par un fichier",
     "remove": "Retirer le fichier",
     "linkNote": "L’ouverture utilise un lien privé valable cinq minutes.",
-    "hint": "Joignez une photo PNG ou JPEG, comme le scan d’un certificat. Les fichiers sont privés : vous seul pouvez les ouvrir, et leur stockage n’utilise pas de crédit de document. Pour joindre un PDF ou un fichier Word, importez-le sur le site web FlacronCV.",
-    "attach": "Joindre une photo"
+    "hint": "Joignez un fichier PDF, Word (.docx), PNG ou JPEG de 10 Mo maximum, comme le scan d’un certificat. Les fichiers sont privés : vous seul pouvez les ouvrir, et leur stockage n’utilise pas de crédit de document.",
+    "attach": "Joindre une photo",
+    "attachFile": "Choisir un fichier"
   },
   "alerts": {
     "notSaved": "Non enregistré",
@@ -98,7 +100,8 @@
   },
   "errors": {
     "tooLarge": "Ce fichier dépasse la taille maximale autorisée (10 Mo).",
-    "wrongType": "Choisissez une photo PNG ou JPEG. Importez les PDF et fichiers Word sur le site web FlacronCV.",
+    "wrongType": "Choisissez une photo PNG ou JPEG.",
+    "wrongFileType": "Choisissez un fichier PDF, Word (.docx), PNG ou JPEG.",
     "empty": "Ce fichier est vide.",
     "fileType": "Utilisez un fichier PDF, PNG, JPEG ou DOCX. Le fichier doit vraiment être de ce type.",
     "storageFull": "L’espace de stockage de votre forfait est plein. Retirez un fichier pour en ajouter un autre.",

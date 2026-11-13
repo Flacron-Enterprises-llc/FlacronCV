@@ -9,6 +9,7 @@ import { ErrorState } from '../../../../../src/components/ui/ErrorState';
 import { Modal } from '../../../../../src/components/ui/Modal';
 import { SkeletonCard } from '../../../../../src/components/ui/Skeleton';
 import { usePaidResume, useReadability, useResumeVersionPatch, useResumeVersions } from '../../../../../src/hooks/career/documents';
+import { useCopyToV1 } from '../../../../../src/hooks/career/to-v1';
 import { useCareerOpportunities, useCareerResume, useCareerResumes, useSaveResumeLines } from '../../../../../src/hooks/useCareer';
 import { careerApi } from '../../../../../src/lib/career-api';
 import {
@@ -53,6 +54,8 @@ export default function CareerResumeScreen() {
   const patch = useResumeVersionPatch(id);
   const paid = usePaidResume(id);
   const readability = useReadability();
+  const th = useT('careerHub.copy');
+  const copier = useCopyToV1();
   const [edits, setEdits] = useState<Record<string, string>>(() => careerDrafts.get(uid, `resume:${id}`) ?? {});
   const [restored] = useState(() => Boolean(careerDrafts.get(uid, `resume:${id}`)));
   const [exporting, setExporting] = useState<'pdf' | 'docx' | null>(null);
@@ -153,6 +156,15 @@ export default function CareerResumeScreen() {
       { text: tk('shared.leave'), style: 'cancel' },
       { text: t('resume.useOneCredit'), onPress: () => runPaid(opportunityId) },
     ]);
+  };
+
+  /** One-way copy into a new V1 CV, made from the saved version; then the V1 editor opens. */
+  const onCopyToV1 = () => {
+    if (dirty) {
+      Alert.alert(tk('shared.saveFirst'), th('saveFirst'));
+      return;
+    }
+    void copier.copyResume(id as string);
   };
 
   const onTailorPick = (opportunityId: string) => {
@@ -285,6 +297,23 @@ export default function CareerResumeScreen() {
               <Text className="text-warning text-sm mt-1">{failure.body}</Text>
             </View>
           ) : null}
+        </View>
+
+        <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-5">
+          <Text className="font-semibold text-stone-900">{th('title')}</Text>
+          <Text className="text-stone-500 text-xs mt-0.5 mb-3 leading-4">{th('body')}</Text>
+          <View className="self-start">
+            <Button
+              size="sm"
+              variant="outline"
+              onPress={onCopyToV1}
+              loading={copier.busy === id}
+              disabled={copier.busy !== null || busy}
+              icon={<Ionicons name="copy-outline" size={16} color={colors.stone[700]} />}
+            >
+              {th('cvButton')}
+            </Button>
+          </View>
         </View>
 
         {version.document ? (

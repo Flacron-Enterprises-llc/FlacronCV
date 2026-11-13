@@ -214,11 +214,6 @@
       "openLink": "Abrir enlace de descarga",
       "failed": "No se pudo preparar la exportación. Inténtalo de nuevo en unos minutos.",
       "nothing": "No hay datos profesionales para exportar."
-    },
-    "erase": {
-      "title": "Borrar datos profesionales",
-      "a11y": "Borrar datos profesionales: abre la eliminación de la cuenta en Configuración",
-      "body": "Al eliminar tu cuenta en Configuración › Tus datos también se borran todos los datos profesionales."
     }
   },
   "services": {

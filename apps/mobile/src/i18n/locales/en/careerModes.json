@@ -214,11 +214,6 @@
       "openLink": "Open download link",
       "failed": "The export could not be prepared. Try again in a few minutes.",
       "nothing": "There is no career data to export."
-    },
-    "erase": {
-      "title": "Erase career data",
-      "a11y": "Erase career data: open account deletion in Settings",
-      "body": "Deleting your account in Settings › Your data also erases all career data."
     }
   },
   "services": {

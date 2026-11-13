@@ -4,7 +4,9 @@ import type { CareerEvidence } from '../../../../../packages/career-api-client/s
 import {
   EMPTY_EVIDENCE_FORM,
   EVIDENCE_TYPE_OPTIONS,
+  EVIDENCE_PICKER_TYPES,
   EVIDENCE_UPLOAD_MAX_BYTES,
+  MOBILE_UPLOAD_TYPES,
   UPLOAD_TOO_LARGE,
   UPLOAD_WRONG_TYPE,
   checkUploadSize,
@@ -15,10 +17,12 @@ import {
   formFromEvidence,
   formatBytes,
   parseSkills,
+  planFileUpload,
   planImageUpload,
   toCreateEvidenceInput,
   toUpdateEvidenceInput,
   uploadFileName,
+  uploadWrongFileTypeMessage,
   validateEvidenceForm,
 } from './evidence';
 
@@ -139,10 +143,12 @@ describe('photo upload checks', () => {
     expect(planImageUpload({ uri: 'file:///a/photo.heic' })).toEqual({ ok: false, message: UPLOAD_WRONG_TYPE });
   });
 
-  it('refuses HEIC, GIF and video, pointing PDFs to the website', () => {
+  it('refuses HEIC, GIF and video from the photo picker', () => {
     expect(planImageUpload({ uri: 'file:///a/x.heic', mimeType: 'image/heic' })).toEqual({ ok: false, message: UPLOAD_WRONG_TYPE });
     expect(planImageUpload({ uri: 'file:///a/x.png', mimeType: 'image/gif' }).ok).toBe(false);
-    expect(UPLOAD_WRONG_TYPE).toMatch(/website/);
+    expect(planImageUpload({ uri: 'file:///a/x.pdf', mimeType: 'application/pdf' }).ok).toBe(false);
+    expect(UPLOAD_WRONG_TYPE).toBe('Choose a PNG or JPEG photo.');
+    expect(UPLOAD_WRONG_TYPE).not.toMatch(/website/);
   });
 
   it('refuses files over the 10 MiB API default', () => {
@@ -156,6 +162,42 @@ describe('photo upload checks', () => {
   it('cleans the display name and sets the matching extension', () => {
     expect(uploadFileName('../dir/my "cert".jpeg', 'image/jpeg')).toBe('my cert.jpg');
     expect(uploadFileName('', 'image/png')).toBe('evidence.png');
+    expect(uploadFileName('Offer letter.PDF', 'application/pdf')).toBe('Offer letter.pdf');
+    expect(uploadFileName('ref', DOCX)).toBe('ref.docx');
+  });
+});
+
+const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+describe('document upload checks', () => {
+  it('offers and accepts the API and website list: PDF, PNG, JPEG, DOCX', () => {
+    expect([...MOBILE_UPLOAD_TYPES].sort()).toEqual(['application/pdf', DOCX, 'image/jpeg', 'image/png'].sort());
+    expect(EVIDENCE_PICKER_TYPES).toEqual([...MOBILE_UPLOAD_TYPES]);
+    expect(planFileUpload({ uri: 'file:///c/cert.pdf', name: 'cert.pdf', mimeType: 'application/pdf', size: 2000 })).toEqual({
+      ok: true,
+      contentType: 'application/pdf',
+      fileName: 'cert.pdf',
+    });
+    expect(planFileUpload({ uri: 'file:///c/x', name: 'Reference.docx', mimeType: DOCX })).toMatchObject({ ok: true, contentType: DOCX, fileName: 'Reference.docx' });
+    expect(planFileUpload({ uri: 'file:///c/x', name: 'scan.jpg', mimeType: 'image/jpg' })).toMatchObject({ ok: true, contentType: 'image/jpeg', fileName: 'scan.jpg' });
+  });
+
+  it('uses the extension only when the picker type is missing or generic', () => {
+    expect(planFileUpload({ uri: 'file:///c/a.docx', name: 'a.docx', mimeType: 'application/octet-stream' })).toMatchObject({ ok: true, contentType: DOCX });
+    expect(planFileUpload({ uri: 'file:///c/a.pdf', name: 'a.pdf' })).toMatchObject({ ok: true, contentType: 'application/pdf' });
+    expect(planFileUpload({ uri: 'file:///c/a.pdf', name: 'a.pdf', mimeType: 'text/plain' })).toEqual({ ok: false, message: uploadWrongFileTypeMessage() });
+  });
+
+  it('refuses other types and files over 10 MiB, without pointing to the website', () => {
+    expect(planFileUpload({ uri: 'file:///c/a.doc', name: 'a.doc', mimeType: 'application/msword' })).toEqual({ ok: false, message: uploadWrongFileTypeMessage() });
+    expect(planFileUpload({ uri: 'file:///c/a.heic', name: 'a.heic', mimeType: 'image/heic' }).ok).toBe(false);
+    expect(uploadWrongFileTypeMessage()).toBe('Choose a PDF, Word (.docx), PNG or JPEG file.');
+    expect(planFileUpload({ uri: 'file:///c/a.pdf', name: 'a.pdf', mimeType: 'application/pdf', size: EVIDENCE_UPLOAD_MAX_BYTES + 1 })).toEqual({
+      ok: false,
+      message: UPLOAD_TOO_LARGE,
+    });
+    expect(planFileUpload({ uri: 'file:///c/a.pdf', name: 'a.pdf', mimeType: 'application/pdf', size: EVIDENCE_UPLOAD_MAX_BYTES }).ok).toBe(true);
+    expect(EVIDENCE_UPLOAD_MAX_BYTES).toBe(10 * 1024 * 1024);
   });
 });
 

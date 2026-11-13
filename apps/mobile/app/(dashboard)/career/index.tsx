@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { useRouter, type Href } from 'expo-router';
 import React from 'react';
 import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -6,23 +7,41 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../../src/components/ui/Button';
 import { CareerHeader, Pill } from '../../../src/components/career/CareerHeader';
 import { CAREER_ENABLED } from '../../../src/config/career';
-import { useCareerAccess, useCareerSubscription, useCareerUsage } from '../../../src/hooks/useCareer';
+import {
+  useCareerAccess,
+  useCareerFacts,
+  useCareerResumes,
+  useCareerSubscription,
+  useCareerUsage,
+  useUid,
+} from '../../../src/hooks/useCareer';
+import { api } from '../../../src/lib/api';
+import { careerApi } from '../../../src/lib/career-api';
+import { actionLabel, actionRoute, careerOverview, unitLabel, type CareerOverview } from '../../../src/lib/career/overview';
+import { utcDateOnly } from '../../../../../packages/career-shared/src/dashboard';
+import type { JobApplication } from '../../../src/types/job.types';
 import {
   careerAccessState,
   describeAccess,
   documentCredits,
+  FACT_TYPE_LABEL,
   formatDay,
   visibleAreas,
   WHERE_LABEL,
   type CareerArea,
 } from '../../../src/lib/career-view';
-import { useT } from '../../../src/i18n';
+import { formatNumber, useT } from '../../../src/i18n';
 import { RTL_FLIP } from '../../../src/i18n/native';
 import { colors } from '../../../src/theme/colors';
 
 /**
- * Career tools overview: entitlement, career credits and what is available in
- * the app. No prices or purchase links (store rules; see career-view.ts).
+ * Career tools overview: entitlement, career credits, the website dashboard's
+ * summary (recent draft, confirmed facts and missing sections, saved
+ * opportunities and the next deadline from the Job Tracker, interviews left,
+ * usage per unit) with its single suggested next action, and what is available
+ * in the app. The summary logic is career-shared's (src/lib/career/overview.ts).
+ * No prices or purchase links (store rules; see career-view.ts); the plans
+ * comparison it links to is information only.
  */
 export default function CareerOverviewScreen() {
   const router = useRouter();
@@ -31,6 +50,7 @@ export default function CareerOverviewScreen() {
   const access = useCareerAccess();
   const subscription = useCareerSubscription();
   const usage = useCareerUsage();
+  const uid = useUid();
 
   const state = careerAccessState({
     enabled: CAREER_ENABLED,
@@ -44,12 +64,38 @@ export default function CareerOverviewScreen() {
   const active = state.kind === 'active';
   const credits = active ? documentCredits(usage.data, state.plan) : null;
   const renewal = formatDay(usage.data?.renewalDate ?? null);
-  const refreshing = access.isRefetching || usage.isRefetching;
+  const features = access.data?.features;
+  const facts = useCareerFacts();
+  const resumes = useCareerResumes();
+  // Same key and request as the alerts screen; only read when that area is switched on.
+  const alertsOn = active && features?.alertItems === true;
+  const alerts = useQuery({ queryKey: ['career', uid, 'alerts'], queryFn: () => careerApi.alerts(), enabled: alertsOn, retry: false });
+  // V1's Job Tracker is the only application tracker (same as the website's overview); same key as the Jobs tab.
+  const jobs = useQuery({ queryKey: ['jobs'], queryFn: () => api.get<JobApplication[]>('/jobs'), enabled: active, staleTime: 30_000 });
+  const overview: CareerOverview | null =
+    active && facts.data
+      ? careerOverview({
+          facts: facts.data.items,
+          jobs: jobs.data ?? [],
+          alertCount: alertsOn ? (alerts.data?.items.length ?? 0) : 0,
+          usage: usage.data ?? null,
+          resumes: resumes.data?.items ?? [],
+          today: utcDateOnly(new Date()),
+        })
+      : null;
+  const partialError = active && Boolean(facts.error || resumes.error || jobs.error || usage.error);
+  const refreshing = access.isRefetching || usage.isRefetching || facts.isRefetching || jobs.isRefetching;
 
   const refresh = () => {
     void access.refetch();
     void subscription.refetch();
-    if (active) void usage.refetch();
+    if (active) {
+      void usage.refetch();
+      void facts.refetch();
+      void resumes.refetch();
+      void jobs.refetch();
+      if (alertsOn) void alerts.refetch();
+    }
   };
 
   return (
@@ -95,6 +141,17 @@ export default function CareerOverviewScreen() {
           </View>
         ) : null}
 
+        {active ? (
+          <OverviewSummary
+            overview={overview}
+            loading={facts.isLoading}
+            partialError={partialError}
+            onOpen={(route) => router.push(route as Href)}
+          />
+        ) : null}
+
+        {CAREER_ENABLED ? <PlansLink onOpen={() => router.push('/(dashboard)/career/plans' as Href)} /> : null}
+
         <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mt-6 mb-3">{t('overview.whatYouCanDo')}</Text>
         {visibleAreas(access.data?.features).map((area) => (
           <AreaRow key={area.key} area={area} enabled={active || area.key === 'tracker'} onOpen={(route) => router.push(route as Href)} />
@@ -134,4 +191,141 @@ function AreaRow({ area, enabled, onOpen }: { area: CareerArea; enabled: boolean
   }
   // Not a control: plain information, styled flatter so it does not look tappable.
   return <View className="bg-stone-100/60 rounded-2xl p-4 mb-3 flex-row items-center">{content}</View>;
+}
+
+/** A date-only deadline (YYYY-MM-DD) shown as a day in the current language. */
+function day(dateOnly: string | null): string | null {
+  return dateOnly ? formatDay(`${dateOnly}T00:00:00Z`) : null;
+}
+
+function OverviewSummary({
+  overview,
+  loading,
+  partialError,
+  onOpen,
+}: {
+  overview: CareerOverview | null;
+  loading: boolean;
+  partialError: boolean;
+  onOpen: (route: string) => void;
+}) {
+  const t = useT('careerHub.overview');
+  const tc = useT('common');
+  if (!overview) {
+    return (
+      <View className="bg-white rounded-2xl border border-stone-100 p-5 mt-4">
+        <Text className="text-stone-500 text-sm">{loading ? tc('loading') : t('loadError')}</Text>
+      </View>
+    );
+  }
+  const { action, counts, deadline, recent } = overview;
+  const label = actionLabel(action, day(action.deadline));
+  const deadlineDay = day(deadline?.deadline ?? null);
+  const created = recent ? formatDay(recent.createdAt) : null;
+  const missing = counts.missingCore.map((type) => FACT_TYPE_LABEL[type] ?? type).join(', ');
+  return (
+    <>
+      <TouchableOpacity
+        onPress={() => onOpen(actionRoute(action))}
+        className="bg-brand-600 rounded-2xl p-5 mt-4 flex-row items-center"
+        accessibilityRole="button"
+        accessibilityLabel={t('nextA11y', { action: label })}
+        accessibilityHint={t('nextBody')}
+        activeOpacity={0.85}
+      >
+        <View className="flex-1 me-3">
+          <Text className="text-brand-100 text-xs font-semibold uppercase tracking-wide">{t('nextTitle')}</Text>
+          <Text className="text-white text-lg font-black mt-1">{label}</Text>
+          <Text className="text-brand-100 text-xs mt-1 leading-4">{t('nextBody')}</Text>
+        </View>
+        <Ionicons name="arrow-forward" size={22} color="#ffffff" style={RTL_FLIP} />
+      </TouchableOpacity>
+
+      {partialError ? (
+        <View className="bg-warning-bg rounded-xl p-3 mt-3" accessibilityLiveRegion="polite">
+          <Text className="text-warning text-sm">{t('loadError')}</Text>
+        </View>
+      ) : null}
+
+      <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mt-6 mb-3">{t('summaryHeading')}</Text>
+
+      {recent ? (
+        <TouchableOpacity
+          onPress={() => onOpen(`/(dashboard)/career/documents/resume/${recent.id}`)}
+          className="bg-white rounded-2xl border border-stone-100 p-4 mb-3 flex-row items-center min-h-[56px]"
+          accessibilityRole="button"
+          accessibilityLabel={t('openDraftA11y', { title: recent.title })}
+          activeOpacity={0.8}
+        >
+          <View className="flex-1 me-2">
+            <Text className="text-xs font-semibold text-stone-500 uppercase tracking-wide">{t('recentDraft')}</Text>
+            <Text className="font-bold text-stone-900 mt-1" numberOfLines={2}>
+              {recent.title}
+            </Text>
+            {created ? <Text className="text-stone-500 text-xs mt-0.5">{t('recentDraftMeta', { date: created })}</Text> : null}
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} style={RTL_FLIP} />
+        </TouchableOpacity>
+      ) : null}
+
+      <SummaryCard title={t('profileTitle')}>
+        <Text className="text-stone-900 text-sm">{t('confirmedCount', { count: counts.confirmed })}</Text>
+        {counts.missingCore.length > 0 ? <Text className="text-stone-500 text-sm mt-1">{t('missingCore', { sections: missing })}</Text> : null}
+      </SummaryCard>
+
+      <SummaryCard title={t('savedTitle')}>
+        <Text className="text-stone-900 text-sm">{t('savedCount', { count: overview.saved })}</Text>
+        <Text className="text-stone-500 text-sm mt-1">
+          {deadline && deadlineDay ? t('nextDeadline', { title: deadline.title, date: deadlineDay }) : t('noDeadline')}
+        </Text>
+      </SummaryCard>
+
+      <SummaryCard title={t('interviewTitle')}>
+        <Text className="text-stone-900 text-sm">{t('interviewRemaining', { count: overview.interviewsLeft })}</Text>
+      </SummaryCard>
+
+      {overview.units.length > 0 ? (
+        <SummaryCard title={t('usageTitle')}>
+          {overview.units.map((unit) => (
+            <View key={unit.unit} className="flex-row items-center justify-between py-1">
+              <Text className="text-stone-700 text-sm flex-1 me-2">{unitLabel(unit.unit)}</Text>
+              <Text className={`text-sm font-semibold ${unit.remaining === 0 ? 'text-stone-400' : 'text-stone-900'}`}>
+                {unit.remaining === 0 ? t('noneLeft') : formatNumber(unit.remaining)}
+              </Text>
+            </View>
+          ))}
+        </SummaryCard>
+      ) : null}
+    </>
+  );
+}
+
+function SummaryCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View className="bg-white rounded-2xl border border-stone-100 p-4 mb-3">
+      <Text className="font-bold text-stone-900 mb-1.5" accessibilityRole="header">
+        {title}
+      </Text>
+      {children}
+    </View>
+  );
+}
+
+/** Information only: what each career plan includes. Never a purchase or upgrade action. */
+function PlansLink({ onOpen }: { onOpen: () => void }) {
+  const t = useT('careerHub.overview');
+  return (
+    <TouchableOpacity
+      onPress={onOpen}
+      className="bg-white rounded-2xl border border-stone-100 p-4 mt-3 flex-row items-center min-h-[56px]"
+      accessibilityRole="link"
+      activeOpacity={0.8}
+    >
+      <View className="flex-1 me-2">
+        <Text className="font-bold text-stone-900">{t('plansLink')}</Text>
+        <Text className="text-stone-500 text-sm mt-0.5">{t('plansLinkBody')}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} style={RTL_FLIP} />
+    </TouchableOpacity>
+  );
 }

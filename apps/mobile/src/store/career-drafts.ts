@@ -21,6 +21,10 @@ export const careerDrafts = {
   clear(uid: string, docId: string): void {
     edits.delete(key(uid, docId));
   },
+  /** Drops every unsaved edit of one account (after its career data is erased). */
+  clearUser(uid: string): void {
+    for (const stored of [...edits.keys()]) if (stored.startsWith(`${uid}:`)) edits.delete(stored);
+  },
   clearAll(): void {
     edits.clear();
   },

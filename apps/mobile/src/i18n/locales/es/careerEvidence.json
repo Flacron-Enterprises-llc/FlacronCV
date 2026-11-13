@@ -43,7 +43,7 @@
     "saveItem": "Guardar elemento",
     "saveChanges": "Guardar cambios",
     "saved": "Guardado",
-    "attachAfterSave": "Podrás adjuntar una foto cuando el elemento esté guardado.",
+    "attachAfterSave": "Podrás adjuntar un archivo cuando el elemento esté guardado.",
     "deleteItem": "Eliminar elemento"
   },
   "form": {
@@ -73,10 +73,12 @@
     "storedFallback": "Archivo guardado",
     "open": "Abrir archivo",
     "replace": "Reemplazar con foto",
+    "replaceFile": "Reemplazar con un archivo",
     "remove": "Quitar archivo",
     "linkNote": "Se abre con un enlace privado que funciona durante cinco minutos.",
-    "hint": "Adjunta una foto PNG o JPEG, como el escaneo de un certificado. Los archivos son privados: solo tú puedes abrirlos, y guardar uno no usa créditos de documentos. Para adjuntar un PDF o un archivo de Word, súbelo en el sitio web de FlacronCV.",
-    "attach": "Adjuntar una foto"
+    "hint": "Adjunta un archivo PDF, Word (.docx), PNG o JPEG de hasta 10 MB, como el escaneo de un certificado. Los archivos son privados: solo tú puedes abrirlos, y guardar uno no usa créditos de documentos.",
+    "attach": "Adjuntar una foto",
+    "attachFile": "Elegir un archivo"
   },
   "alerts": {
     "notSaved": "No guardado",
@@ -98,7 +100,8 @@
   },
   "errors": {
     "tooLarge": "Ese archivo supera el límite de subida (10 MB).",
-    "wrongType": "Elige una foto PNG o JPEG. Sube los PDF y archivos de Word en el sitio web de FlacronCV.",
+    "wrongType": "Elige una foto PNG o JPEG.",
+    "wrongFileType": "Elige un archivo PDF, Word (.docx), PNG o JPEG.",
     "empty": "Ese archivo está vacío.",
     "fileType": "Usa un archivo PDF, PNG, JPEG o DOCX. El archivo debe ser realmente de ese tipo.",
     "storageFull": "El almacenamiento de tu plan está lleno. Quita un archivo para añadir otro.",

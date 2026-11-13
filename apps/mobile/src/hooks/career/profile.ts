@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { careerApi } from '../../lib/career-api';
 import { useEntitled, useUid } from '../useCareer';
 import type { CareerPreferences, FactValue } from '../../../../../packages/career-shared/src/facts';
-import type { NewFact } from '../../../../../packages/career-api-client/src/types';
+import type { ImportRequest, NewFact } from '../../../../../packages/career-api-client/src/types';
 
 /**
  * Career profile data beyond the fact list (which is `useCareerFacts` in
@@ -81,7 +81,9 @@ export function useImportResume() {
   const uid = useUid();
   const refresh = useRefreshProfile();
   return useMutation({
-    mutationFn: (text: string) => careerApi.importResume({ text, format: 'text' }),
+    /** Pasted text, or text read from a file with its name and format (as the website sends it). */
+    mutationFn: (input: string | ImportRequest) =>
+      careerApi.importResume(typeof input === 'string' ? { text: input, format: 'text' } : input),
     onSettled: () => {
       refresh();
       void queryClient.invalidateQueries({ queryKey: ['career', uid, 'import-allowance'] });

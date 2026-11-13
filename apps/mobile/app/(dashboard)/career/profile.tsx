@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
+import { File as DeviceFile } from 'expo-file-system';
 import { useRouter, type Href } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, FlatList, RefreshControl, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -19,6 +21,7 @@ import {
   checkImportText,
   checkPreferences,
   countsLine,
+  extractResumeFile,
   FACT_TYPES,
   importFailure,
   missingSectionsLine,
@@ -27,6 +30,9 @@ import {
   preferenceErrorMessage,
   preferencesDraftsEqual,
   preferencesSummary,
+  RESUME_PICKER_TYPES,
+  resumeFileErrorMessage,
+  ResumeFileError,
   SCHEDULE_LABEL,
   SCHEDULES,
   SENIORITIES,
@@ -35,6 +41,7 @@ import {
   toPreferencesDraft,
   typeLabel,
   WORK_ARRANGEMENTS,
+  type ExtractedResumeFile,
   type ImportOutcome,
   type PreferencesDraft,
 } from '../../../src/lib/career/profile';
@@ -48,8 +55,10 @@ import type { Fact, ImportAllowance } from '../../../../../packages/career-api-c
 /**
  * Career profile on mobile, matching the website's profile screen: the facts
  * drafts are built from (add, edit, confirm = consent, remove; history on the
- * fact screen), résumé import from pasted text with the daily allowance, and
- * the career preferences matching reads.
+ * fact screen), résumé import from pasted text or a Word / text file with the
+ * daily allowance, and the career preferences matching reads. As on the web,
+ * a file is read on the device and only its text is sent; PDF needs a text
+ * engine the phone does not have, so it is explained instead.
  */
 export default function CareerProfileScreen() {
   const router = useRouter();
@@ -143,7 +152,7 @@ export default function CareerProfileScreen() {
                 <Text className="font-bold text-stone-900 ms-2">{t('import.title')}</Text>
               </View>
               <Text className="text-stone-500 text-sm leading-5">
-                {t('import.cardBody')}
+                {[t('import.cardBody'), t('import.cardFileNote')].join(' ')}
               </Text>
               <Text className="text-stone-700 text-sm mt-2">
                 {allowance.data
@@ -310,12 +319,45 @@ function ImportSheet({
   const t = useT('careerProfile');
   const [problem, setProblem] = useState<ImportOutcome | null>(null);
   const [inputError, setInputError] = useState<string | null>(null);
+  // Text read from a file; sent with its name and format while the box still holds exactly that text.
+  const [fromFile, setFromFile] = useState<ExtractedResumeFile | null>(null);
+  const [reading, setReading] = useState(false);
+  const fileApplies = fromFile !== null && fromFile.text === text;
 
   const close = () => {
-    if (run.isPending) return;
+    if (run.isPending || reading) return;
     setProblem(null);
     setInputError(null);
     onClose();
+  };
+
+  const pickFile = async () => {
+    setInputError(null);
+    setProblem(null);
+    let asset: DocumentPicker.DocumentPickerAsset | undefined;
+    try {
+      const picked = await DocumentPicker.getDocumentAsync({ type: RESUME_PICKER_TYPES, copyToCacheDirectory: true, multiple: false });
+      if (picked.canceled) return;
+      asset = picked.assets[0];
+    } catch {
+      setInputError(resumeFileErrorMessage('failed'));
+      return;
+    }
+    if (!asset) return;
+    const uri = asset.uri;
+    setReading(true);
+    try {
+      const extracted = await extractResumeFile(
+        { name: asset.name, mimeType: asset.mimeType, size: asset.size },
+        { bytes: () => new DeviceFile(uri).bytes(), text: () => new DeviceFile(uri).text() },
+      );
+      onText(extracted.text);
+      setFromFile(extracted);
+    } catch (error) {
+      setInputError(resumeFileErrorMessage(error instanceof ResumeFileError ? error.code : 'failed'));
+    } finally {
+      setReading(false);
+    }
   };
 
   const submit = () => {
@@ -326,9 +368,14 @@ function ImportSheet({
     }
     setInputError(null);
     setProblem(null);
-    run.mutate(checked.text, {
+    const input =
+      fromFile && fromFile.text === checked.text
+        ?{ text: checked.text, fileName: fromFile.fileName, format: fromFile.format }
+        : checked.text;
+    run.mutate(input, {
       onSuccess: (result) => {
         onText('');
+        setFromFile(null);
         setProblem(null);
         onClose();
         const missing = missingSectionsLine(result.missing);
@@ -351,7 +398,7 @@ function ImportSheet({
   const shown = allowance && problem?.kind === 'limit' ? { ...allowance, limit: problem.limit, remaining: 0, resetsAt: problem.resetsAt || allowance.resetsAt } : allowance;
   const limited = shown !== undefined && shown.remaining <= 0;
   return (
-    <Modal visible={visible} onClose={close} title={t('import.title')} size="full" closeDisabled={run.isPending}>
+    <Modal visible={visible} onClose={close} title={t('import.title')} size="full" closeDisabled={run.isPending || reading}>
       <Text className="text-stone-500 text-sm leading-5 mb-2">{t('import.sheetBody')}</Text>
       {shown ? <Text className="text-stone-700 text-sm mb-3">{allowanceLine(shown)}</Text> : null}
       {problem && problem.kind !== 'limit' ? (
@@ -359,6 +406,23 @@ function ImportSheet({
           <Text className={`${problem.kind === 'unavailable' ? 'text-warning' : 'text-error'} font-semibold`}>{problem.title}</Text>
           <Text className="text-stone-700 text-sm mt-1 leading-5">{problem.body}</Text>
         </View>
+      ) : null}
+      <View className="self-start">
+        <Button
+          variant="outline"
+          size="sm"
+          className="min-h-[44px]"
+          onPress={() => void pickFile()}
+          loading={reading}
+          disabled={run.isPending || reading || limited}
+          icon={<Ionicons name="document-attach-outline" size={18} color={colors.stone[700]} />}
+        >
+          {t('import.file.choose')}
+        </Button>
+      </View>
+      <Text className="text-stone-400 text-xs mt-1 mb-3 leading-4">{t('import.file.hint')}</Text>
+      {fileApplies && fromFile?.fileName ? (
+        <Text className="text-stone-700 text-sm mb-2 leading-5">{t('import.file.readFrom', { name: fromFile.fileName })}</Text>
       ) : null}
       <TextInput
         value={text}
@@ -371,16 +435,18 @@ function ImportSheet({
         placeholder={t('import.placeholder')}
         placeholderTextColor={colors.stone[400]}
         accessibilityLabel={t('import.textA11y')}
-        editable={!run.isPending}
+        editable={!run.isPending && !reading}
         className={`bg-white border ${inputError ? 'border-red-400' : 'border-stone-200'} rounded-xl px-3 py-3 text-base text-stone-900 min-h-[220px]`}
       />
       {inputError ? (
-        <Text className="mt-1 text-xs text-red-500">{inputError}</Text>
+        <Text className="mt-1 text-xs text-red-500" accessibilityRole="alert">
+          {inputError}
+        </Text>
       ) : (
         <Text className="mt-1 text-xs text-stone-400">{t('import.characters', { count: formatNumber(text.length) })}</Text>
       )}
       <View className="mt-4 mb-8">
-        <Button fullWidth onPress={submit} loading={run.isPending} disabled={limited || text.trim().length === 0}>
+        <Button fullWidth onPress={submit} loading={run.isPending} disabled={limited || reading || text.trim().length === 0}>
           {t('import.submit')}
         </Button>
       </View>

@@ -214,11 +214,6 @@
       "openLink": "Download-Link öffnen",
       "failed": "Der Export konnte nicht vorbereitet werden. Versuche es in ein paar Minuten erneut.",
       "nothing": "Es gibt keine Karrieredaten zum Exportieren."
-    },
-    "erase": {
-      "title": "Karrieredaten löschen",
-      "a11y": "Karrieredaten löschen: Kontolöschung in den Einstellungen öffnen",
-      "body": "Wenn du dein Konto unter Einstellungen › Deine Daten löschst, werden auch alle Karrieredaten gelöscht."
     }
   },
   "services": {

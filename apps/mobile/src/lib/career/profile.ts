@@ -20,6 +20,7 @@ import {
   type Seniority,
   type WorkArrangement,
 } from '../../../../../packages/career-shared/src/facts';
+import JSZip from 'jszip';
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type { Fact, ImportAllowance } from '../../../../../packages/career-api-client/src/types';
 import { hasKey, t } from '../../i18n';
@@ -303,6 +304,205 @@ export function importFailure(error: unknown, allowance: Pick<ImportAllowance, '
 export function missingSectionsLine(missing: readonly string[]): string | null {
   if (missing.length === 0) return null;
   return t('careerProfile.import.missingSections', { sections: missing.map(typeLabel).join(', ') });
+}
+
+// ---------------------------------------------------------------- import from a file
+
+/**
+ * Same ceiling as the website's file import (`RESUME_UPLOAD_MAX_BYTES` in
+ * apps/web/src/lib/career/extract-resume.ts). Like the web, the phone reads
+ * the file itself and sends only the text; the API never receives the file.
+ */
+export const RESUME_FILE_MAX_BYTES = 5 * 1024 * 1024;
+
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+/**
+ * What the document picker offers. PDF is offered so choosing one explains
+ * why it cannot be read here instead of the file being greyed out.
+ */
+export const RESUME_PICKER_TYPES = [DOCX_MIME, 'text/plain', 'application/pdf'];
+
+/** `format` as the import API takes it (`IsIn(['pdf', 'docx', 'text'])`). */
+export type ResumeFileFormat = 'docx' | 'text';
+
+export type ResumeFileCode = 'unsupported' | 'pdf' | 'too_large' | 'empty' | 'failed' | 'too_long';
+
+export class ResumeFileError extends Error {
+  constructor(readonly code: ResumeFileCode) {
+    super(code);
+    this.name = 'ResumeFileError';
+  }
+}
+
+export interface PickedResumeFile {
+  name?: string | null;
+  mimeType?: string | null;
+  size?: number | null;
+}
+
+/** DOCX or plain text by name or MIME type (as the web's `importFormat`); PDF is recognised so it can be explained. */
+export function resumeFileKind(file: PickedResumeFile): ResumeFileFormat | 'pdf' | null {
+  const name = (file.name ?? '').toLowerCase();
+  const type = (file.mimeType ?? '').split(';')[0].trim().toLowerCase();
+  if (name.endsWith('.pdf') || type === 'application/pdf') return 'pdf';
+  if (name.endsWith('.docx') || type === DOCX_MIME) return 'docx';
+  if (name.endsWith('.txt') || type === 'text/plain') return 'text';
+  return null;
+}
+
+/** Checks before reading, in the web's order: size first, then type. */
+export function checkResumeFile(file: PickedResumeFile): { ok: true; format: ResumeFileFormat } | { ok: false; code: ResumeFileCode } {
+  if (typeof file.size === 'number' && file.size > RESUME_FILE_MAX_BYTES) return { ok: false, code: 'too_large' };
+  const kind = resumeFileKind(file);
+  if (kind === 'pdf') return { ok: false, code: 'pdf' };
+  if (!kind) return { ok: false, code: 'unsupported' };
+  return { ok: true, format: kind };
+}
+
+export function resumeFileErrorMessage(code: ResumeFileCode): string {
+  switch (code) {
+    case 'pdf':
+      return t('careerProfile.import.file.pdf');
+    case 'too_large':
+      return t('careerProfile.import.file.tooLarge');
+    case 'empty':
+      return t('careerProfile.import.file.empty');
+    case 'too_long':
+      return t('careerProfile.import.file.tooLong');
+    case 'unsupported':
+      return t('careerProfile.import.file.unsupported');
+    default:
+      return t('careerProfile.import.file.failed');
+  }
+}
+
+/** The web's clean-up of extracted text. */
+export function cleanResumeText(text: string): string {
+  return text.replace(/\r\n/g, '\n').replace(/[ \t]+\n/g, '\n').trim();
+}
+
+const XML_ENTITIES: Record<string, string> = { lt: '<', gt: '>', amp: '&', quot: '"', apos: "'" };
+
+function safeCodePoint(code: number, fallback: string): string {
+  try {
+    return String.fromCodePoint(code);
+  } catch {
+    return fallback;
+  }
+}
+
+function decodeXml(text: string): string {
+  return text.replace(/&(#x[0-9a-fA-F]+|#[0-9]+|[a-z]+);/g, (whole, entity: string) => {
+    if (entity.startsWith('#x')) return safeCodePoint(parseInt(entity.slice(2), 16), whole);
+    if (entity.startsWith('#')) return safeCodePoint(parseInt(entity.slice(1), 10), whole);
+    return XML_ENTITIES[entity] ?? whole;
+  });
+}
+
+/**
+ * Plain text of a WordprocessingML body, the way mammoth's `extractRawText`
+ * (the website's DOCX reader) produces it: each paragraph's text followed by
+ * a blank line, `w:tab` as a tab. One deliberate difference: `w:br`/`w:cr`
+ * become a line break (mammoth's raw text drops them, running the words
+ * on either side together). Paragraph
+ * and run properties (tab stops), deleted text (`w:delText`), field codes
+ * (`w:instrText`) and the duplicate `mc:Choice` branch are not text.
+ */
+export function docxXmlToText(xml: string): string {
+  const body = xml
+    .replace(/<mc:Choice\b[\s\S]*?<\/mc:Choice>/g, '')
+    .replace(/<w:(pPr|rPr)\b[^>]*\/>/g, '')
+    .replace(/<w:(pPr|rPr)\b[^>]*>[\s\S]*?<\/w:\1>/g, '');
+  const token = /<w:(p|t|tab|br|cr)\b([^>]*?)(\/?)>|<\/w:(p|t)>/g;
+  const stack: string[] = [];
+  let out = '';
+  let textStart = -1;
+  let match: RegExpExecArray | null;
+  while ((match = token.exec(body)) !== null) {
+    const [, open, , selfClosing, close] = match;
+    if (close === 't') {
+      if (textStart >= 0 && stack.length > 0) stack[stack.length - 1] += decodeXml(body.slice(textStart, match.index));
+      textStart = -1;
+    } else if (close === 'p') {
+      out += `${stack.pop() ?? ''}\n\n`;
+    } else if (open === 'p') {
+      if (selfClosing) out += '\n\n';
+      else stack.push('');
+    } else if (open === 't') {
+      if (!selfClosing) textStart = token.lastIndex;
+    } else if (stack.length > 0 && textStart < 0) {
+      stack[stack.length - 1] += open === 'tab' ? '\t' : '\n';
+    }
+  }
+  return out;
+}
+
+/** The main document part named in `_rels/.rels`, else the usual `word/document.xml`. */
+function mainPartPath(rels: string | null): string {
+  if (!rels) return 'word/document.xml';
+  for (const [element] of rels.matchAll(/<Relationship\b[^>]*>/g)) {
+    if (!/Type="[^"]*\/officeDocument"/.test(element)) continue;
+    const target = /Target="([^"]+)"/.exec(element)?.[1];
+    if (target) return target.replace(/^\//, '');
+  }
+  return 'word/document.xml';
+}
+
+/** Text of a DOCX file (a zip). Throws `ResumeFileError('failed')` when it is not a readable DOCX. */
+export async function extractDocxText(data: Uint8Array | ArrayBuffer): Promise<string> {
+  let xml: string | undefined;
+  try {
+    const zip = await JSZip.loadAsync(data);
+    const rels = (await zip.file('_rels/.rels')?.async('string')) ?? null;
+    xml = await (zip.file(mainPartPath(rels)) ?? zip.file('word/document.xml'))?.async('string');
+  } catch {
+    throw new ResumeFileError('failed');
+  }
+  if (xml === undefined) throw new ResumeFileError('failed');
+  return docxXmlToText(xml);
+}
+
+/** How the screen reads the picked file (expo-file-system on the phone, buffers in tests). */
+export interface ResumeFileReader {
+  bytes: () => Promise<Uint8Array>;
+  text: () => Promise<string>;
+}
+
+export interface ExtractedResumeFile {
+  text: string;
+  format: ResumeFileFormat;
+  fileName?: string;
+}
+
+/**
+ * Reads a picked résumé on the phone: DOCX through its main document part,
+ * plain text as is. PDF is refused with its own message (no PDF text engine
+ * on the phone). Errors are `ResumeFileError`, with the web's codes plus
+ * `pdf` and `too_long`.
+ */
+export async function extractResumeFile(file: PickedResumeFile, reader: ResumeFileReader): Promise<ExtractedResumeFile> {
+  const checked = checkResumeFile(file);
+  if (!checked.ok) throw new ResumeFileError(checked.code);
+  let raw: string;
+  try {
+    if (checked.format === 'docx') {
+      const bytes = await reader.bytes();
+      if (bytes.byteLength > RESUME_FILE_MAX_BYTES) throw new ResumeFileError('too_large');
+      raw = await extractDocxText(bytes);
+    } else {
+      raw = await reader.text();
+      if (raw.length > RESUME_FILE_MAX_BYTES) throw new ResumeFileError('too_large');
+    }
+  } catch (error) {
+    if (error instanceof ResumeFileError) throw error;
+    throw new ResumeFileError('failed');
+  }
+  const text = cleanResumeText(raw.replace(/^\uFEFF/, ''));
+  if (!text) throw new ResumeFileError('empty');
+  if (text.length > IMPORT_TEXT_MAX) throw new ResumeFileError('too_long');
+  const fileName = (file.name ?? '').trim().slice(0, 255) || undefined;
+  return { text, format: checked.format, fileName };
 }
 
 // ---------------------------------------------------------------- preferences

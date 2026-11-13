@@ -37,6 +37,12 @@ import fr_careerEvidence from './locales/fr/careerEvidence.json';
 import de_careerEvidence from './locales/de/careerEvidence.json';
 import ar_careerEvidence from './locales/ar/careerEvidence.json';
 import ur_careerEvidence from './locales/ur/careerEvidence.json';
+import en_careerHub from './locales/en/careerHub.json';
+import es_careerHub from './locales/es/careerHub.json';
+import fr_careerHub from './locales/fr/careerHub.json';
+import de_careerHub from './locales/de/careerHub.json';
+import ar_careerHub from './locales/ar/careerHub.json';
+import ur_careerHub from './locales/ur/careerHub.json';
 import en_careerInterviews from './locales/en/careerInterviews.json';
 import es_careerInterviews from './locales/es/careerInterviews.json';
 import fr_careerInterviews from './locales/fr/careerInterviews.json';
@@ -196,6 +202,7 @@ export const MESSAGES = {
     "careerAlerts": en_careerAlerts,
     "careerDocuments": en_careerDocuments,
     "careerEvidence": en_careerEvidence,
+    "careerHub": en_careerHub,
     "careerInterviews": en_careerInterviews,
     "careerJobs": en_careerJobs,
     "careerModes": en_careerModes,
@@ -229,6 +236,7 @@ export const MESSAGES = {
     "careerAlerts": es_careerAlerts,
     "careerDocuments": es_careerDocuments,
     "careerEvidence": es_careerEvidence,
+    "careerHub": es_careerHub,
     "careerInterviews": es_careerInterviews,
     "careerJobs": es_careerJobs,
     "careerModes": es_careerModes,
@@ -262,6 +270,7 @@ export const MESSAGES = {
     "careerAlerts": fr_careerAlerts,
     "careerDocuments": fr_careerDocuments,
     "careerEvidence": fr_careerEvidence,
+    "careerHub": fr_careerHub,
     "careerInterviews": fr_careerInterviews,
     "careerJobs": fr_careerJobs,
     "careerModes": fr_careerModes,
@@ -295,6 +304,7 @@ export const MESSAGES = {
     "careerAlerts": de_careerAlerts,
     "careerDocuments": de_careerDocuments,
     "careerEvidence": de_careerEvidence,
+    "careerHub": de_careerHub,
     "careerInterviews": de_careerInterviews,
     "careerJobs": de_careerJobs,
     "careerModes": de_careerModes,
@@ -328,6 +338,7 @@ export const MESSAGES = {
     "careerAlerts": ar_careerAlerts,
     "careerDocuments": ar_careerDocuments,
     "careerEvidence": ar_careerEvidence,
+    "careerHub": ar_careerHub,
     "careerInterviews": ar_careerInterviews,
     "careerJobs": ar_careerJobs,
     "careerModes": ar_careerModes,
@@ -361,6 +372,7 @@ export const MESSAGES = {
     "careerAlerts": ur_careerAlerts,
     "careerDocuments": ur_careerDocuments,
     "careerEvidence": ur_careerEvidence,
+    "careerHub": ur_careerHub,
     "careerInterviews": ur_careerInterviews,
     "careerJobs": ur_careerJobs,
     "careerModes": ur_careerModes,

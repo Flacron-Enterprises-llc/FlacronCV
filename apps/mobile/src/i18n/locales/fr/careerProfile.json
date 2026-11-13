@@ -140,6 +140,7 @@
     "missingSections": "Le CV ne contenait pas : {sections}. Rien n’a été ajouté pour ces parties.",
     "title": "Importer un CV",
     "cardBody": "Collez le texte de votre CV ; les faits trouvés arrivent en brouillon pour que vous les relisiez. Cela n’utilise pas de crédit de document.",
+    "cardFileNote": "Vous pouvez aussi choisir un fichier Word (.docx) ou texte.",
     "checking": "Vérification des imports du jour…",
     "checkFailed": "Impossible de vérifier les imports du jour.",
     "paste": "Coller le texte du CV",
@@ -149,7 +150,18 @@
     "placeholder": "Collez ici le texte de votre CV",
     "textA11y": "Texte du CV",
     "characters": "{count} caractères",
-    "submit": "Importer"
+    "submit": "Importer",
+    "file": {
+      "choose": "Choisir un fichier",
+      "hint": "Word (.docx) ou texte brut (.txt), 5 Mo maximum. Le texte est lu sur ce téléphone ; seul le texte est envoyé.",
+      "readFrom": "Lu depuis {name}. Vérifiez le texte, puis touchez Importer.",
+      "unsupported": "Choisissez un fichier DOCX ou texte brut (.txt).",
+      "pdf": "Les fichiers PDF ne peuvent pas être lus sur le téléphone. Importez le PDF sur le site web FlacronCV, ou copiez son texte et collez-le ici.",
+      "tooLarge": "Ce fichier dépasse 5 Mo.",
+      "empty": "Aucun texte n'a pu être lu dans ce fichier.",
+      "failed": "Ce fichier n'a pas pu être lu.",
+      "tooLong": "Ce fichier contient plus de 100 000 caractères de texte. Collez plutôt la partie la plus pertinente."
+    }
   },
   "screen": {
     "title": "Profil de carrière",

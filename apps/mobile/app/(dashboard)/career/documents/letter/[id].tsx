@@ -9,6 +9,7 @@ import { ErrorState } from '../../../../../src/components/ui/ErrorState';
 import { Modal } from '../../../../../src/components/ui/Modal';
 import { SkeletonCard } from '../../../../../src/components/ui/Skeleton';
 import { useLetterTemplate } from '../../../../../src/hooks/career/documents';
+import { useCopyToV1 } from '../../../../../src/hooks/career/to-v1';
 import { useCareerWriting, useSaveWriting } from '../../../../../src/hooks/useCareer';
 import { isRevisionConflict, LETTER_TEMPLATE_OPTIONS, letterTemplateName } from '../../../../../src/lib/career/documents';
 import { careerApi } from '../../../../../src/lib/career-api';
@@ -35,6 +36,8 @@ export default function CareerLetterScreen() {
   const doc = useCareerWriting(id);
   const save = useSaveWriting(id);
   const layout = useLetterTemplate(id);
+  const th = useT('careerHub.copy');
+  const copier = useCopyToV1();
   const [picking, setPicking] = useState(false);
   const stored = careerDrafts.get(uid, `writing:${id}`)?.body;
   const [body, setBody] = useState<string | null>(stored ?? null);
@@ -87,6 +90,15 @@ export default function CareerLetterScreen() {
           ),
       },
     );
+  };
+
+  /** One-way copy of the saved letter into a new V1 cover letter; then the V1 editor opens. */
+  const onCopyToV1 = () => {
+    if (dirty) {
+      Alert.alert(tk('shared.saveFirst'), th('saveFirst'));
+      return;
+    }
+    void copier.copyLetter(id as string);
   };
 
   const onExport = async (format: 'pdf' | 'docx') => {
@@ -156,6 +168,25 @@ export default function CareerLetterScreen() {
           placeholderTextColor={colors.stone[400]}
         />
         <Text className="text-stone-500 text-xs mt-3 leading-4">{t('letter.noCreditsNote')}</Text>
+        {doc.data.type === 'cover_letter' ? (
+          // Website: only cover letters can be copied into V1's cover-letter editor.
+          <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-4">
+            <Text className="font-semibold text-stone-900">{th('title')}</Text>
+            <Text className="text-stone-500 text-xs mt-0.5 mb-3 leading-4">{th('body')}</Text>
+            <View className="self-start">
+              <Button
+                size="sm"
+                variant="outline"
+                onPress={onCopyToV1}
+                loading={copier.busy === id}
+                disabled={copier.busy !== null || save.isPending || layout.isPending}
+                icon={<Ionicons name="copy-outline" size={16} color={colors.stone[700]} />}
+              >
+                {th('letterButton')}
+              </Button>
+            </View>
+          </View>
+        ) : null}
       </ScrollView>
     );
   }

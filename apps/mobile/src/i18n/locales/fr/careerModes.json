@@ -214,11 +214,6 @@
       "openLink": "Ouvrir le lien de téléchargement",
       "failed": "L’export n’a pas pu être préparé. Réessayez dans quelques minutes.",
       "nothing": "Il n’y a aucune donnée de carrière à exporter."
-    },
-    "erase": {
-      "title": "Effacer les données de carrière",
-      "a11y": "Effacer les données de carrière : ouvrir la suppression du compte dans Paramètres",
-      "body": "Supprimer votre compte dans Paramètres › Vos données efface aussi toutes les données de carrière."
     }
   },
   "services": {

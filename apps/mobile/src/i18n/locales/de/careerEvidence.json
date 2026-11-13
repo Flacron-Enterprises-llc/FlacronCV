@@ -43,7 +43,7 @@
     "saveItem": "Eintrag speichern",
     "saveChanges": "Änderungen speichern",
     "saved": "Gespeichert",
-    "attachAfterSave": "Du kannst ein Foto anhängen, sobald der Eintrag gespeichert ist.",
+    "attachAfterSave": "Du kannst eine Datei anhängen, sobald der Eintrag gespeichert ist.",
     "deleteItem": "Eintrag löschen"
   },
   "form": {
@@ -73,10 +73,12 @@
     "storedFallback": "Gespeicherte Datei",
     "open": "Datei öffnen",
     "replace": "Durch Foto ersetzen",
+    "replaceFile": "Durch Datei ersetzen",
     "remove": "Datei entfernen",
     "linkNote": "Zum Öffnen wird ein privater Link verwendet, der fünf Minuten gültig ist.",
-    "hint": "Hänge ein PNG- oder JPEG-Foto an, z. B. den Scan eines Zertifikats. Dateien sind privat: Nur du kannst sie öffnen, und das Speichern verbraucht keinen Dokument-Credit. Um eine PDF- oder Word-Datei anzuhängen, lade sie auf der FlacronCV-Website hoch.",
-    "attach": "Foto anhängen"
+    "hint": "Hänge eine PDF-, Word- (.docx), PNG- oder JPEG-Datei bis 10 MB an, z. B. den Scan eines Zertifikats. Dateien sind privat: Nur du kannst sie öffnen, und das Speichern verbraucht keinen Dokument-Credit.",
+    "attach": "Foto anhängen",
+    "attachFile": "Datei wählen"
   },
   "alerts": {
     "notSaved": "Nicht gespeichert",
@@ -98,7 +100,8 @@
   },
   "errors": {
     "tooLarge": "Diese Datei überschreitet das Upload-Limit (10 MB).",
-    "wrongType": "Wähle ein PNG- oder JPEG-Foto. Lade PDF- und Word-Dateien auf der FlacronCV-Website hoch.",
+    "wrongType": "Wähle ein PNG- oder JPEG-Foto.",
+    "wrongFileType": "Wähle eine PDF-, Word- (.docx), PNG- oder JPEG-Datei.",
     "empty": "Diese Datei ist leer.",
     "fileType": "Verwende eine PDF-, PNG-, JPEG- oder DOCX-Datei. Die Datei muss tatsächlich diesen Typ haben.",
     "storageFull": "Der Speicher deines Tarifs ist voll. Entferne eine Datei, um eine weitere hinzuzufügen.",

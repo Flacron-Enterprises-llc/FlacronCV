@@ -70,3 +70,48 @@ export function formatExportText(text: string): string {
     return text;
   }
 }
+
+/**
+ * Erase career data only (website: /career/data, CareerDataScreen `erase`).
+ * The FlacronCV account, CVs, cover letters, Job Tracker and subscription are
+ * not touched. Same request as the website: `POST /account/delete` on the
+ * career API with the typed word `DELETE` (not translated, so the same word
+ * works on both sites) and a freshly fetched ID token; the career service
+ * refuses an erase from an old sign-in (`validation_error`, reason `stale`).
+ */
+export const ERASE_CONFIRM_WORD = 'DELETE';
+
+export type CareerEraseResult = 'erased' | 'none' | 'stale' | 'failed';
+
+export function eraseConfirmed(typed: string): boolean {
+  return typed === ERASE_CONFIRM_WORD;
+}
+
+export async function eraseCareerData(deps: {
+  deleteAccount: (input: { idToken: string; confirm: string }) => Promise<unknown>;
+  freshIdToken: () => Promise<string>;
+}): Promise<CareerEraseResult> {
+  let idToken: string;
+  try {
+    idToken = await deps.freshIdToken();
+  } catch {
+    // No session to refresh: the person has to sign in again.
+    return 'stale';
+  }
+  try {
+    await deps.deleteAccount({ idToken, confirm: ERASE_CONFIRM_WORD });
+    return 'erased';
+  } catch (error) {
+    if (error instanceof ApiError && error.code === 'not_found') return 'none';
+    if (error instanceof ApiError && error.code === 'validation_error' && error.body.reason === 'stale') return 'stale';
+    return 'failed';
+  }
+}
+
+/** Website wording (`career.data.erased` / `nothing_to_erase` / `sign_in_again` / `erase_failed`). */
+export function eraseResultMessage(result: CareerEraseResult): string {
+  if (result === 'erased') return t('careerHub.erase.erased');
+  if (result === 'none') return t('careerHub.erase.nothing');
+  if (result === 'stale') return t('careerHub.erase.signInAgain');
+  return t('careerHub.erase.failed');
+}

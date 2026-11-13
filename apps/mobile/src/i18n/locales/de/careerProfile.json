@@ -140,6 +140,7 @@
     "missingSections": "Der Lebenslauf enthielt keine Angaben zu {sections}. Dafür wurde nichts hinzugefügt.",
     "title": "Lebenslauf importieren",
     "cardBody": "Füge den Text deines Lebenslaufs ein; die gefundenen Fakten kommen als Entwürfe zur Prüfung an. Das verbraucht keinen Dokument-Credit.",
+    "cardFileNote": "Du kannst auch eine Word- (.docx) oder Textdatei wählen.",
     "checking": "Heutige Importe werden geprüft…",
     "checkFailed": "Die heutigen Importe konnten nicht geprüft werden.",
     "paste": "Lebenslauftext einfügen",
@@ -149,7 +150,18 @@
     "placeholder": "Füge hier den Text deines Lebenslaufs ein",
     "textA11y": "Lebenslauftext",
     "characters": "{count} Zeichen",
-    "submit": "Importieren"
+    "submit": "Importieren",
+    "file": {
+      "choose": "Datei wählen",
+      "hint": "Word (.docx) oder reiner Text (.txt), bis 5 MB. Der Text wird auf diesem Telefon gelesen; nur der Text wird gesendet.",
+      "readFrom": "Aus {name} gelesen. Prüfe den Text und tippe dann auf Importieren.",
+      "unsupported": "Wähle eine DOCX- oder reine Textdatei (.txt).",
+      "pdf": "PDF-Dateien können auf dem Telefon nicht gelesen werden. Importiere die PDF auf der FlacronCV-Website oder kopiere ihren Text und füge ihn hier ein.",
+      "tooLarge": "Diese Datei ist größer als 5 MB.",
+      "empty": "Aus dieser Datei konnte kein Text gelesen werden.",
+      "failed": "Diese Datei konnte nicht gelesen werden.",
+      "tooLong": "Diese Datei enthält mehr als 100.000 Zeichen Text. Füge stattdessen den wichtigsten Teil ein."
+    }
   },
   "screen": {
     "title": "Karriereprofil",

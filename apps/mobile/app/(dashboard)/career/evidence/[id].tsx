@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -17,6 +18,7 @@ import { useLeaveGuard } from '../../../../src/hooks/useLeaveGuard';
 import {
   EMPTY_EVIDENCE_FORM,
   EVIDENCE_LIMITS,
+  EVIDENCE_PICKER_TYPES,
   EVIDENCE_TYPE_OPTIONS,
   evidenceFileErrorMessage,
   evidenceFormDirty,
@@ -25,12 +27,14 @@ import {
   evidenceTypeLabel,
   formatBytes,
   formFromEvidence,
+  planFileUpload,
   planImageUpload,
   toCreateEvidenceInput,
   toUpdateEvidenceInput,
   validateEvidenceForm,
   type EvidenceForm,
   type EvidenceFormErrors,
+  type UploadPlan,
 } from '../../../../src/lib/career/evidence';
 import { careerErrorMessage } from '../../../../src/lib/career-view';
 import { colors } from '../../../../src/theme/colors';
@@ -39,9 +43,9 @@ import type { CareerEvidence } from '../../../../../../packages/career-api-clien
 
 /**
  * One evidence item: create (route id "new") or edit, delete, and its private
- * file (attach a photo, open through a five-minute link, replace, remove).
- * Same fields and limits as the website; PDFs and Word files are uploaded on
- * the website because the app only has a photo picker.
+ * file (attach a photo or a PDF / Word / image file, open through a
+ * five-minute link, replace, remove). Same fields, file types and 10 MiB
+ * limit as the website and the API.
  */
 export default function EvidenceItemScreen() {
   const { id: rawId } = useLocalSearchParams<{ id: string }>();
@@ -140,12 +144,33 @@ export default function EvidenceItemScreen() {
     const asset = result.assets[0];
     if (!asset) return;
     const plan = planImageUpload({ uri: asset.uri, mimeType: asset.mimeType, fileName: asset.fileName, fileSize: asset.fileSize });
+    upload(evidence, asset.uri, plan);
+  };
+
+  const onPickFile = async (evidence: CareerEvidence) => {
+    if (needsSaveFirst()) return;
+    let asset: DocumentPicker.DocumentPickerAsset | undefined;
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: EVIDENCE_PICKER_TYPES, copyToCacheDirectory: true, multiple: false });
+      if (result.canceled) return;
+      asset = result.assets[0];
+    } catch {
+      Alert.alert(t('alerts.notAttached'), t('errors.fileFailed'));
+      return;
+    }
+    if (!asset) return;
+    const plan = planFileUpload({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType, size: asset.size });
+    upload(evidence, asset.uri, plan);
+  };
+
+  /** Shared by both pickers: the hook reads the file (`fetch(uri).blob()`), re-checks its size and re-types it to the checked MIME. */
+  const upload = (evidence: CareerEvidence, uri: string, plan: UploadPlan) => {
     if (!plan.ok) {
       Alert.alert(t('alerts.notAttached'), plan.message);
       return;
     }
     actions.upload.mutate(
-      { id: evidence.id, uri: asset.uri, contentType: plan.contentType, fileName: plan.fileName },
+      { id: evidence.id, uri, contentType: plan.contentType, fileName: plan.fileName },
       {
         onError: (error) =>
           Alert.alert(t('alerts.notAttached'), error instanceof UploadRefused ? error.message : evidenceFileErrorMessage(error)),
@@ -339,6 +364,9 @@ export default function EvidenceItemScreen() {
                     <Button variant="outline" size="sm" className="min-h-[44px]" disabled={fileBusy} loading={actions.upload.isPending} onPress={() => void onPickPhoto(evidence)}>
                       {t('file.replace')}
                     </Button>
+                    <Button variant="outline" size="sm" className="min-h-[44px]" disabled={fileBusy} loading={actions.upload.isPending} onPress={() => void onPickFile(evidence)}>
+                      {t('file.replaceFile')}
+                    </Button>
                     <Button variant="ghost" size="sm" className="min-h-[44px]" disabled={fileBusy} loading={actions.removeFile.isPending} onPress={() => onRemoveFile(evidence)}>
                       {t('file.remove')}
                     </Button>
@@ -350,16 +378,28 @@ export default function EvidenceItemScreen() {
                   <Text className="text-stone-500 text-sm leading-5 mb-3">
                     {t('file.hint')}
                   </Text>
-                  <Button
-                    variant="outline"
-                    className="min-h-[44px]"
-                    disabled={fileBusy}
-                    loading={actions.upload.isPending}
-                    onPress={() => void onPickPhoto(evidence)}
-                    icon={<Ionicons name="image-outline" size={18} color={colors.stone[700]} />}
-                  >
-                    {t('file.attach')}
-                  </Button>
+                  <View className="flex-row flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      className="min-h-[44px]"
+                      disabled={fileBusy}
+                      loading={actions.upload.isPending}
+                      onPress={() => void onPickPhoto(evidence)}
+                      icon={<Ionicons name="image-outline" size={18} color={colors.stone[700]} />}
+                    >
+                      {t('file.attach')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="min-h-[44px]"
+                      disabled={fileBusy}
+                      loading={actions.upload.isPending}
+                      onPress={() => void onPickFile(evidence)}
+                      icon={<Ionicons name="document-attach-outline" size={18} color={colors.stone[700]} />}
+                    >
+                      {t('file.attachFile')}
+                    </Button>
+                  </View>
                 </>
               )}
             </View>

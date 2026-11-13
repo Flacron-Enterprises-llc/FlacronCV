@@ -43,7 +43,7 @@
     "saveItem": "Save item",
     "saveChanges": "Save changes",
     "saved": "Saved",
-    "attachAfterSave": "You can attach a photo once the item is saved.",
+    "attachAfterSave": "You can attach a file once the item is saved.",
     "deleteItem": "Delete item"
   },
   "form": {
@@ -73,10 +73,12 @@
     "storedFallback": "Stored file",
     "open": "Open file",
     "replace": "Replace with photo",
+    "replaceFile": "Replace with a file",
     "remove": "Remove file",
     "linkNote": "Opening uses a private link that works for five minutes.",
-    "hint": "Attach a PNG or JPEG photo, such as a certificate scan. Files are private: only you can open them, and storing one does not use a document credit. To attach a PDF or Word file, upload it on the FlacronCV website.",
-    "attach": "Attach a photo"
+    "hint": "Attach a PDF, Word (.docx), PNG or JPEG file up to 10 MB, such as a certificate scan. Files are private: only you can open them, and storing one does not use a document credit.",
+    "attach": "Attach a photo",
+    "attachFile": "Choose a file"
   },
   "alerts": {
     "notSaved": "Not saved",
@@ -98,7 +100,8 @@
   },
   "errors": {
     "tooLarge": "That file is larger than the upload limit (10 MB).",
-    "wrongType": "Choose a PNG or JPEG photo. Upload PDFs and Word files on the FlacronCV website.",
+    "wrongType": "Choose a PNG or JPEG photo.",
+    "wrongFileType": "Choose a PDF, Word (.docx), PNG or JPEG file.",
     "empty": "That file is empty.",
     "fileType": "Use a PDF, PNG, JPEG, or DOCX file. The file must really be that type.",
     "storageFull": "Your plan’s storage is full. Remove a file to add another.",

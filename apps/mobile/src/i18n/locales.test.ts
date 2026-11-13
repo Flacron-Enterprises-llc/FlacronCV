@@ -136,6 +136,16 @@ const SAME_AS_ENGLISH: Record<string, string> = {
   'fr:careerInterviews.story.fields.action': 'same word in French (website career.interviews.action)',
   'de:careerInterviews.stages.recruiter': 'German UI word (website career.interviews.stage_recruiter)',
   'de:careerInterviews.story.fields.situation': 'same word in German (website career.interviews.situation)',
+  // careerHub: career plan names as the website shows them (career.plans.plan.*); French "Usage" (career.dashboard.usage_title).
+  'careerHub.plans.plan.careerPro': 'plan name (website career.plans.plan.career_pro)',
+  'es:careerHub.plans.plan.starter': 'plan name (website career.plans.plan.starter)',
+  'fr:careerHub.plans.plan.starter': 'plan name (website career.plans.plan.starter)',
+  'de:careerHub.plans.plan.starter': 'plan name (website career.plans.plan.starter)',
+  'de:careerHub.plans.plan.professional': 'plan name (website career.plans.plan.professional)',
+  'de:careerHub.plans.plan.business': 'plan name (website career.plans.plan.business)',
+  'fr:careerHub.overview.usageTitle': 'same word in French (website career.dashboard.usage_title)',
+  'fr:careerHub.plans.miles': 'same word in French (website career_pricing.miles)',
+  'de:careerHub.plans.levels.trends': 'same word in German (website career_pricing.levels.trends)',
 };
 
 type Tree = Record<string, unknown>;

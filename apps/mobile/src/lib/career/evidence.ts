@@ -188,13 +188,21 @@ export function toUpdateEvidenceInput(form: EvidenceForm, attachmentStored: bool
 
 /* ---------- Private file upload ---------- */
 
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
 /**
- * The API stores PDF, PNG, JPEG and DOCX. The app can only pick photos (no
- * document picker is installed), so it sends PNG or JPEG; PDFs and DOCX are
- * uploaded on the website.
+ * The types the API stores (packages/career-server evidence-files.ts
+ * `EVIDENCE_FILE_TYPES`) and the website's file input accepts: PDF, PNG,
+ * JPEG and DOCX. The document picker offers all four; the photo picker
+ * offers PNG and JPEG (`PHOTO_UPLOAD_TYPES`).
  */
-export const MOBILE_UPLOAD_TYPES = ['image/png', 'image/jpeg'] as const;
+export const MOBILE_UPLOAD_TYPES = ['application/pdf', 'image/png', 'image/jpeg', DOCX_MIME] as const;
 export type MobileUploadType = (typeof MOBILE_UPLOAD_TYPES)[number];
+export const PHOTO_UPLOAD_TYPES = ['image/png', 'image/jpeg'] as const;
+type PhotoUploadType = (typeof PHOTO_UPLOAD_TYPES)[number];
+
+/** `type` for expo-document-picker's `getDocumentAsync`. */
+export const EVIDENCE_PICKER_TYPES: string[] = [...MOBILE_UPLOAD_TYPES];
 
 /** The API's default cap (EVIDENCE_UPLOAD_MAX_BYTES unset): 10 MiB. */
 export const EVIDENCE_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
@@ -202,6 +210,7 @@ export const EVIDENCE_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
 /** Refusal messages in the current language. */
 export const uploadTooLargeMessage = (): string => t('careerEvidence.errors.tooLarge');
 export const uploadWrongTypeMessage = (): string => t('careerEvidence.errors.wrongType');
+export const uploadWrongFileTypeMessage = (): string => t('careerEvidence.errors.wrongFileType');
 
 /**
  * The same messages as read when this module loaded (English unless a language
@@ -211,7 +220,17 @@ export const uploadWrongTypeMessage = (): string => t('careerEvidence.errors.wro
 export const UPLOAD_TOO_LARGE = uploadTooLargeMessage();
 export const UPLOAD_WRONG_TYPE = uploadWrongTypeMessage();
 
-const EXT_TYPE: Record<string, MobileUploadType> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' };
+const EXT_TYPE: Record<string, PhotoUploadType> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' };
+const FILE_EXT_TYPE: Record<string, MobileUploadType> = { ...EXT_TYPE, pdf: 'application/pdf', docx: DOCX_MIME };
+const TYPE_EXT: Record<MobileUploadType, string> = {
+  'application/pdf': 'pdf',
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  [DOCX_MIME]: 'docx',
+};
+
+/** MIME types a picker may report that say nothing about the file; the extension decides then. */
+const GENERIC_TYPES = new Set(['', 'application/octet-stream', 'binary/octet-stream', 'application/zip', 'application/x-zip-compressed']);
 
 function extensionOf(name: string | null | undefined): string {
   const match = /\.([A-Za-z0-9]{1,8})(?:[?#].*)?$/.exec(name ?? '');
@@ -235,13 +254,34 @@ export function planImageUpload(asset: {
 }): UploadPlan {
   const declared = (asset.mimeType ?? '').split(';')[0].trim().toLowerCase();
   const fromMime = declared === 'image/jpg' ? 'image/jpeg' : declared;
-  let contentType: MobileUploadType | undefined = (MOBILE_UPLOAD_TYPES as readonly string[]).includes(fromMime)
-    ? (fromMime as MobileUploadType)
+  let contentType: PhotoUploadType | undefined = (PHOTO_UPLOAD_TYPES as readonly string[]).includes(fromMime)
+    ? (fromMime as PhotoUploadType)
     : undefined;
   if (!contentType && !declared) contentType = EXT_TYPE[extensionOf(asset.fileName)] ?? EXT_TYPE[extensionOf(asset.uri)];
   if (!contentType) return { ok: false, message: uploadWrongTypeMessage() };
   if (typeof asset.fileSize === 'number' && asset.fileSize > EVIDENCE_UPLOAD_MAX_BYTES) return { ok: false, message: uploadTooLargeMessage() };
   return { ok: true, contentType, fileName: uploadFileName(asset.fileName ?? asset.uri.split('/').pop() ?? '', contentType) };
+}
+
+/**
+ * Decides whether a file from the document picker may be sent, and as what:
+ * PDF, DOCX, PNG or JPEG (the API's list), up to the 10 MiB API default.
+ * The picker's MIME type decides; when it is missing or generic
+ * (`application/octet-stream`, some Android providers) the name's extension
+ * does. The API still checks the file's signature against the type.
+ */
+export function planFileUpload(asset: { uri: string; name?: string | null; mimeType?: string | null; size?: number | null }): UploadPlan {
+  const declared = (asset.mimeType ?? '').split(';')[0].trim().toLowerCase();
+  const fromMime = declared === 'image/jpg' ? 'image/jpeg' : declared;
+  let contentType: MobileUploadType | undefined = (MOBILE_UPLOAD_TYPES as readonly string[]).includes(fromMime)
+    ? (fromMime as MobileUploadType)
+    : undefined;
+  if (!contentType && GENERIC_TYPES.has(declared)) {
+    contentType = FILE_EXT_TYPE[extensionOf(asset.name)] ?? FILE_EXT_TYPE[extensionOf(asset.uri)];
+  }
+  if (!contentType) return { ok: false, message: uploadWrongFileTypeMessage() };
+  if (typeof asset.size === 'number' && asset.size > EVIDENCE_UPLOAD_MAX_BYTES) return { ok: false, message: uploadTooLargeMessage() };
+  return { ok: true, contentType, fileName: uploadFileName(asset.name ?? asset.uri.split('/').pop() ?? '', contentType) };
 }
 
 /** Byte count check once the file is read (the picker does not always report a size). */
@@ -260,7 +300,7 @@ export function uploadFileName(raw: string, contentType: MobileUploadType): stri
     .replace(/\.[A-Za-z0-9]{1,8}$/, '')
     .trim()
     .slice(0, 120);
-  return `${base || 'evidence'}.${contentType === 'image/png' ? 'png' : 'jpg'}`;
+  return `${base || 'evidence'}.${TYPE_EXT[contentType]}`;
 }
 
 /** Same wording as the website's file errors. */

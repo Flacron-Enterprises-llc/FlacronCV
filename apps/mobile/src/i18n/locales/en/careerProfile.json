@@ -140,6 +140,7 @@
     "missingSections": "The resume had no {sections}. Nothing was added for them.",
     "title": "Import a resume",
     "cardBody": "Paste your resume text; the facts it finds arrive as drafts for you to review. This does not use a document credit.",
+    "cardFileNote": "You can also choose a Word (.docx) or text file.",
     "checking": "Checking today’s imports…",
     "checkFailed": "Could not check today’s imports.",
     "paste": "Paste resume text",
@@ -149,7 +150,18 @@
     "placeholder": "Paste the text of your resume here",
     "textA11y": "Resume text",
     "characters": "{count} characters",
-    "submit": "Import"
+    "submit": "Import",
+    "file": {
+      "choose": "Choose a file",
+      "hint": "Word (.docx) or plain text (.txt), up to 5 MB. The text is read on this phone; only the text is sent.",
+      "readFrom": "Read from {name}. Check the text, then tap Import.",
+      "unsupported": "Choose a DOCX or plain text (.txt) file.",
+      "pdf": "PDF files can’t be read on the phone. Import the PDF on the FlacronCV website, or copy its text and paste it here.",
+      "tooLarge": "That file is over 5 MB.",
+      "empty": "No text could be read from that file.",
+      "failed": "That file could not be read.",
+      "tooLong": "That file has more than 100,000 characters of text. Paste the most relevant part instead."
+    }
   },
   "screen": {
     "title": "Career profile",
