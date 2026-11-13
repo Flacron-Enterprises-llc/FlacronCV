@@ -12,7 +12,6 @@ import { __testables } from './export-cv';
 import { buildSampleCV } from './previewSampleCV';
 // docx's own zip dependency (also what the API export tests use) — reads
 // word/document.xml out of the generated file.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const JSZip = require('jszip');
 
 const { buildCVDocx } = __testables;

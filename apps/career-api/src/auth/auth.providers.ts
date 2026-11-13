@@ -11,6 +11,7 @@ import {
 } from '@flacroncv/career-server';
 import { readAuthConfig } from '../config/auth';
 import { DatabaseService } from '../database/database.service';
+import { ACCESS_CLOCK } from '../integration/career-access.service';
 
 export const ID_TOKEN_VERIFIER = Symbol('ID_TOKEN_VERIFIER');
 
@@ -31,7 +32,9 @@ export const authProviders: Provider[] = [
   },
   {
     provide: IdentityService,
-    inject: [DatabaseService],
-    useFactory: (database: DatabaseService) => new IdentityService(database.connectionPool, CATALOG_VERSION),
+    // Same clock as the V1 plan bridge, so a new account's allowance period and its renewals agree.
+    inject: [DatabaseService, ACCESS_CLOCK],
+    useFactory: (database: DatabaseService, clock: { now(): Date }) =>
+      new IdentityService(database.connectionPool, CATALOG_VERSION, clock),
   },
 ];
