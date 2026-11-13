@@ -1,6 +1,6 @@
 # Mobile device checklist (V1 app + career tools)
 
-Nothing below has been run on a phone or simulator. Code-level checks only so far: type-check, lint, 48 unit tests, and a local Android JavaScript bundle. Use fictional accounts from `demo-credentials.txt` against the local stack, or staging. Setup: `C:\Users\win 11\FlacronCV-integration-local\README.txt` → "Mobile". Build with `EXPO_PUBLIC_CAREER_ENABLED=true` for the career rows and `false` once to confirm they disappear.
+Nothing below has been run on a phone or simulator. Code-level checks only so far: type-check, lint, 48 unit tests, and a local Android JavaScript bundle. Use fictional accounts from `demo-credentials.txt` against the local stack, or staging. Setup: `README.txt` in the local integration folder (outside the repository) → "Mobile". Build with `EXPO_PUBLIC_CAREER_ENABLED=true` for the career rows and `false` once to confirm they disappear.
 
 | # | Check | Expected result |
 |---|---|---|

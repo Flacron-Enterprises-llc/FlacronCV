@@ -1,6 +1,6 @@
 # Local review walkthrough (V1 + Career integration)
 
-Local only: http://localhost:3100/en (production build) with Firebase emulators and a private local database. Accounts are fictional; their passwords are in the ignored local file `C:\Users\win 11\FlacronCV-integration-local\demo-credentials.txt`.
+Local only: http://localhost:3100/en (production build) with Firebase emulators and a private local database. Accounts are fictional; their passwords are in `demo-credentials.txt` in the local integration folder (outside the repository, never committed).
 
 | Account | What it shows |
 |---|---|
@@ -24,7 +24,7 @@ No phone simulator is available on this laptop, so the app was not run. What exi
 - Career tools (overview, profile facts, drafts with editing and export/share, saved opportunities), behind a build switch that is **off** by default for store builds.
 - Settings → **Your data & account deletion** (new for all builds: download data, delete account in the app).
 - Billing shows the Career add-on status only (no price, no purchase button, per App Store / Google Play rules).
-To try it on a device: see "Mobile" in `C:\Users\win 11\FlacronCV-integration-local\README.txt`.
+To try it on a device: see "Mobile" in `README.txt` in the local integration folder (outside the repository).
 
 ## What each part is (3 Nov 2026)
 - **Working locally:** homepage (hero, product and template showcases); V1 CVs, letters, Job Tracker and templates; Career profile, drafts (edit, save, reopen, layout change, PDF/DOCX), evidence files, portfolios (public page shows only items marked "share on portfolio"), alerts with saved searches, data export and account deletion; operator tools; local test entitlement for the career account.
