@@ -19,18 +19,20 @@ import {
   upgradeAlertButtons,
 } from '../../../src/config/paid-upgrades';
 import { Template } from '../../../src/types/template.types';
+import { t as tNow, useT } from '../../../src/i18n';
 
 type FilterTab = 'all' | 'free' | 'pro';
 
 function loadFailureMessage(err: unknown): string {
   if (axios.isAxiosError(err) && !err.response) {
-    return 'No connection. Check your network and try again.';
+    return tNow('common.noConnection');
   }
-  return 'Could not load templates. Please try again.';
+  return tNow('templates.loadError');
 }
 
 export default function TemplatesScreen() {
   const router = useRouter();
+  const t = useT('templates');
   const { user } = useAuthStore();
   const { data: templates, isLoading, error, refetch } = useTemplates(TemplateCategory.CV);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
@@ -69,8 +71,8 @@ export default function TemplatesScreen() {
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top']}>
       <View className="px-5 pt-4 pb-3 bg-white border-b border-stone-100">
-        <Text className="text-xl font-black text-stone-900">Templates</Text>
-        <Text className="text-stone-400 text-sm mt-0.5">Choose a professional design</Text>
+        <Text className="text-xl font-black text-stone-900">{t('title')}</Text>
+        <Text className="text-stone-400 text-sm mt-0.5">{t('subtitle')}</Text>
       </View>
 
       {/* Filter Tabs */}
@@ -82,7 +84,7 @@ export default function TemplatesScreen() {
             className={['px-4 py-2 rounded-full capitalize', activeFilter === tab ? 'bg-brand-500' : 'bg-stone-100'].join(' ')}
           >
             <Text className={['text-sm font-semibold capitalize', activeFilter === tab ? 'text-white' : 'text-stone-600'].join(' ')}>
-              {tab}
+              {tab === 'all' ? t('filters.all') : tab === 'free' ? t('filters.free') : t('filters.pro')}
             </Text>
           </TouchableOpacity>
         ))}
@@ -97,13 +99,15 @@ export default function TemplatesScreen() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon="layers-outline"
-          title={activeFilter === 'all' ? 'No templates' : `No ${activeFilter} templates`}
-          description={
+          title={
             activeFilter === 'all'
-              ? 'No templates are available right now.'
-              : 'Try another filter to see available designs.'
+              ? t('empty.allTitle')
+              : activeFilter === 'free'
+                ? t('empty.freeTitle')
+                : t('empty.proTitle')
           }
-          actionLabel={activeFilter === 'all' ? undefined : 'Show all'}
+          description={activeFilter === 'all' ? t('empty.allBody') : t('empty.filteredBody')}
+          actionLabel={activeFilter === 'all' ? undefined : t('empty.showAll')}
           onAction={activeFilter === 'all' ? undefined : () => setActiveFilter('all')}
         />
       ) : (

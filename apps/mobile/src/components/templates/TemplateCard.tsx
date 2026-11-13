@@ -4,6 +4,8 @@ import { Image, LayoutChangeEvent, Pressable, Text, View } from 'react-native';
 import { Template } from '../../types/template.types';
 import { SubscriptionPlan } from '../../types/enums';
 import { colors } from '../../theme/colors';
+import { useT } from '../../i18n';
+import { tierLabel } from '../../lib/cv-design';
 
 interface TemplateCardProps {
   template: Template;
@@ -13,13 +15,13 @@ interface TemplateCardProps {
   onPreview?: () => void;
 }
 
-const tierClasses: Record<SubscriptionPlan, { bg: string; text: string; label: string }> = {
-  [SubscriptionPlan.FREE]: { bg: 'bg-stone-100', text: 'text-stone-700', label: 'Free' },
-  [SubscriptionPlan.PRO]: { bg: 'bg-brand-100', text: 'text-brand-700', label: 'Pro' },
-  [SubscriptionPlan.ENTERPRISE]: { bg: 'bg-stone-100', text: 'text-chrome', label: 'Enterprise' },
+const tierClasses: Record<SubscriptionPlan, { bg: string; text: string; tier: string }> = {
+  [SubscriptionPlan.FREE]: { bg: 'bg-stone-100', text: 'text-stone-700', tier: 'free' },
+  [SubscriptionPlan.PRO]: { bg: 'bg-brand-100', text: 'text-brand-700', tier: 'pro' },
+  [SubscriptionPlan.ENTERPRISE]: { bg: 'bg-stone-100', text: 'text-chrome', tier: 'enterprise' },
 };
 
-const FALLBACK_TIER = { bg: 'bg-stone-100', text: 'text-stone-700', label: 'Pro' };
+const FALLBACK_TIER = { bg: 'bg-stone-100', text: 'text-stone-700', tier: 'pro' };
 
 /** Storage thumbs are 800×480 top-of-page crops (width/height). */
 const THUMB_ASPECT = 800 / 480;
@@ -56,7 +58,7 @@ function TopCoverThumb({ uri }: { uri: string }) {
           style={{
             position: 'absolute',
             top: 0,
-            left: (box.w - imgW) / 2,
+            start: (box.w - imgW) / 2,
             width: imgW,
             height: imgH,
           }}
@@ -70,13 +72,14 @@ function TopCoverThumb({ uri }: { uri: string }) {
 export function TemplateCard({ template, isSelected, isLocked, onSelect, onPreview }: TemplateCardProps) {
   // API may send tiers mobile enum omits (e.g. career_accelerator) — never crash the grid.
   const tier = tierClasses[template.tier] ?? FALLBACK_TIER;
+  const t = useT('templates');
 
   return (
     <View className="relative">
     <Pressable
       onPress={onSelect}
       accessibilityRole="button"
-      accessibilityLabel={`${template.name} template${isLocked ? ', locked' : ''}`}
+      accessibilityLabel={isLocked ? t('card.a11yLocked', { name: template.name }) : t('card.a11y', { name: template.name })}
       accessibilityState={{ selected: !!isSelected }}
       className={[
         'rounded-2xl overflow-hidden border-2',
@@ -95,9 +98,9 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
         )}
 
         {/* Tier Badge */}
-        <View className={['absolute top-2 left-2 px-2 py-0.5 rounded-full', tier.bg].join(' ')}>
+        <View className={['absolute top-2 start-2 px-2 py-0.5 rounded-full', tier.bg].join(' ')}>
           <Text className={['text-xs font-bold', tier.text].join(' ')}>
-            {tier.label}
+            {tierLabel(tier.tier)}
           </Text>
         </View>
 
@@ -112,7 +115,7 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
 
         {/* Selected checkmark */}
         {isSelected && (
-          <View className="absolute top-2 right-2 w-7 h-7 rounded-full bg-brand-500 items-center justify-center">
+          <View className="absolute top-2 end-2 w-7 h-7 rounded-full bg-brand-500 items-center justify-center">
             <Ionicons name="checkmark" size={16} color={colors.white} />
           </View>
         )}
@@ -148,8 +151,8 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
         <Pressable
           onPress={onPreview}
           accessibilityRole="button"
-          accessibilityLabel={`Preview ${template.name} template`}
-          style={{ position: 'absolute', top: THUMB_HEIGHT - 44 - 8, right: 8 }}
+          accessibilityLabel={t('card.preview', { name: template.name })}
+          style={{ position: 'absolute', top: THUMB_HEIGHT - 44 - 8, end: 8 }}
           className="w-11 h-11 rounded-full bg-white/95 items-center justify-center"
         >
           <Ionicons name="eye-outline" size={20} color={colors.stone[700]} />

@@ -1,0 +1,145 @@
+{
+  "channelNotConnected": "Pas encore connecté : ces alertes s’affichent uniquement ici, dans l’application.",
+  "notAScore": "Ce n'est pas une probabilité d'embauche.",
+  "reason": {
+    "saved_search": "Cette annonce correspond à une recherche enregistrée.",
+    "followed_company": "Cette annonce vient d'une entreprise que vous suivez.",
+    "material_update": "L'annonce a changé. Cette mise à jour a utilisé une alerte."
+  },
+  "fit": {
+    "blocked": "Bloquée",
+    "none": "Aucun recoupement avec vos faits confirmés",
+    "partial": "Recoupement partiel avec vos faits confirmés",
+    "strong": "Fort recoupement avec vos faits confirmés"
+  },
+  "digest": {
+    "weekly": "E-mail hebdomadaire",
+    "daily": "E-mail quotidien",
+    "immediate": "Dès qu'elles sont trouvées"
+  },
+  "schedule": {
+    "weekly": "Hebdomadaire",
+    "daily": "Quotidienne",
+    "every_6_hours": "Toutes les 6 heures",
+    "hourly": "Toutes les heures"
+  },
+  "scheduleLower": {
+    "weekly": "hebdomadaire",
+    "daily": "quotidienne",
+    "every_6_hours": "toutes les 6 heures",
+    "hourly": "toutes les heures"
+  },
+  "quietInvalid": "Les heures calmes nécessitent un début et une fin (HH:MM, UTC), qui ne peuvent pas être identiques.",
+  "anySearch": "Toutes les offres",
+  "savedLocation": "Lieu enregistré",
+  "locationWithin": "{place} · dans un rayon de {miles} mi",
+  "radius": {
+    "format": "Saisissez le rayon en miles entiers, par exemple 25.",
+    "max": "Le rayon peut être de {max} miles au maximum."
+  },
+  "sourceUrlInvalid": "Saisissez une adresse web complète commençant par https://, ou laissez vide.",
+  "errors": {
+    "settingsPlan": "Ce choix ne fait pas partie de votre forfait. Votre forfait inclut l’e-mail hebdomadaire. Rien n’a été modifié.",
+    "plan": "Votre forfait carrière n’inclut pas cela. Rien n’a été modifié.",
+    "capacitySearch": "Cette offre n'a plus de place pour une recherche enregistrée.",
+    "capacityLocation": "Ce forfait n’a pas de place pour un autre lieu d’alerte.",
+    "capacityCompany": "Ce forfait n’a pas de place pour une autre entreprise suivie.",
+    "scheduleAbove": "Cette fréquence est plus élevée que ce que permet votre forfait.",
+    "scheduleAboveLimit": "Cette fréquence est plus élevée que ce que permet votre forfait (jusqu’à {limit}).",
+    "radiusAbove": "Ce rayon est plus grand que ce que permet votre forfait.",
+    "radiusAboveLimit": "Ce rayon est plus grand que ce que permet votre forfait (jusqu’à {limit} miles).",
+    "q": "Saisissez ce que vous voulez chercher.",
+    "place": "Saisissez un lieu.",
+    "name": "Saisissez le nom d’une entreprise.",
+    "digest": "Choisissez un récapitulatif.",
+    "check": "Vérifiez les détails et réessayez. Rien n’a été modifié."
+  },
+  "fallback": {
+    "settings": "Les paramètres d’alerte n’ont pas été enregistrés. Réessayez.",
+    "search": "La recherche enregistrée n’a pas été modifiée. Réessayez.",
+    "location": "Le lieu d’alerte n’a pas été modifié. Réessayez.",
+    "company": "L’entreprise suivie n’a pas été modifiée. Réessayez.",
+    "load": "Les alertes n’ont pas pu être chargées. Rien n’a été modifié. Réessayez."
+  },
+  "screen": {
+    "offTitle": "Les alertes ne sont pas encore ouvertes",
+    "offBody": "Elles sont désactivées dans cet aperçu. Rien n’a été modifié.",
+    "intro": "Les recherches enregistrées et les entreprises suivies font remonter ici les nouvelles annonces. Une nouvelle alerte utilise un élément d’alerte ; pas la recherche.",
+    "yourAlerts": "Vos alertes",
+    "emptyTitle": "Pas encore d'alerte",
+    "emptyBody": "Une recherche enregistrée affichera une annonce plus tard. Chercher maintenant n'utilise pas d'alerte.",
+    "openA11y": "{name}. Ouvrir l’annonce"
+  },
+  "balance": {
+    "none": "Plus d’éléments d’alerte. Les nouvelles alertes attendent le renouvellement du solde. La recherche fonctionne toujours.",
+    "noneRenews": "Plus d’éléments d’alerte. Les nouvelles alertes attendent le renouvellement du solde le {date}. La recherche fonctionne toujours.",
+    "left": "{count, plural, one {# élément d’alerte restant} other {# éléments d’alerte restants}}",
+    "renews": "renouvellement le {date}"
+  },
+  "searches": {
+    "title": "Recherches enregistrées",
+    "hint": "Vérifiées selon un calendrier. Une annonce trouvée plus tard devient une alerte.",
+    "label": "Recherche enregistrée",
+    "placeholder": "ex. analyste de données",
+    "howOften": "Fréquence de vérification",
+    "planDefault": "Par défaut du forfait",
+    "location": "Lieu",
+    "anywhere": "Partout",
+    "save": "Enregistrer la recherche",
+    "saved": "Recherche enregistrée. Elle n'utilise pas d'alerte.",
+    "loadFailed": "Vos recherches enregistrées n’ont pas pu être chargées. Rien n’a été modifié.",
+    "empty": "Aucune recherche enregistrée pour l’instant.",
+    "paused": "EN PAUSE",
+    "resume": "Reprendre",
+    "pause": "Mettre en pause",
+    "schedule": "Fréquence",
+    "deleteA11y": "Supprimer la recherche enregistrée {query}",
+    "deleteTitle": "Supprimer la recherche enregistrée ?",
+    "deleteBody": "« {title} » ne fera plus remonter de nouvelles annonces. Les alertes déjà affichées restent.",
+    "scheduleNote": "Votre forfait fixe la fréquence des recherches. Un choix plus rapide que ce qu’il permet est refusé."
+  },
+  "locations": {
+    "title": "Lieux d’alerte",
+    "hint": "Un lieu et un rayon auxquels limiter une recherche enregistrée.",
+    "place": "Lieu",
+    "placePlaceholder": "ex. Leeds",
+    "radius": "Rayon (miles)",
+    "add": "Ajouter un lieu",
+    "saved": "Lieu enregistré. Choisissez-le en enregistrant une recherche.",
+    "loadFailed": "Vos lieux d’alerte n’ont pas pu être chargés. Rien n’a été modifié.",
+    "empty": "Aucun lieu d’alerte pour l’instant.",
+    "editA11y": "Modifier le lieu {place}",
+    "deleteA11y": "Supprimer le lieu {place}",
+    "deleteTitle": "Supprimer le lieu d’alerte ?",
+    "deleteBody": "« {place} » sera supprimé. Les recherches enregistrées qui l’utilisent n’y seront plus limitées.",
+    "editTitle": "Modifier le lieu d’alerte",
+    "save": "Enregistrer le lieu"
+  },
+  "companies": {
+    "title": "Entreprises suivies",
+    "hint": "Les nouvelles annonces d’une entreprise suivie deviennent des alertes.",
+    "name": "Nom de l’entreprise",
+    "url": "Page carrières (facultatif)",
+    "follow": "Suivre l’entreprise",
+    "followed": "Entreprise suivie. Ses nouvelles annonces deviennent des alertes.",
+    "loadFailed": "Vos entreprises suivies n’ont pas pu être chargées. Rien n’a été modifié.",
+    "empty": "Vous ne suivez encore aucune entreprise.",
+    "unfollowA11y": "Ne plus suivre {name}",
+    "unfollowTitle": "Ne plus suivre l’entreprise ?",
+    "unfollowBody": "Les nouvelles annonces de « {name} » ne deviendront plus des alertes.",
+    "unfollow": "Ne plus suivre"
+  },
+  "settings": {
+    "title": "Comment les alertes arrivent",
+    "email": "E-mail",
+    "push": "Push",
+    "telegram": "Telegram",
+    "digest": "Récapitulatif",
+    "quietStart": "Début des heures calmes (UTC)",
+    "quietEnd": "Fin des heures calmes (UTC)",
+    "quietHint": "Format 24 h HH:MM. Laissez les deux vides pour aucune heure calme.",
+    "paused": "Suspendre les nouvelles alertes",
+    "save": "Enregistrer les réglages",
+    "saved": "Paramètres d’alerte enregistrés."
+  }
+}

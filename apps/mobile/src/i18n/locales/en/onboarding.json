@@ -1,0 +1,21 @@
+{
+  "slides": {
+    "build": {
+      "title": "Build a\nStandout CV",
+      "subtitle": "Choose from professionally designed templates. Every line is yours to edit."
+    },
+    "engine": {
+      "title": "Flacron Engine\nContent",
+      "subtitle": "Let the Flacron Engine write compelling summaries, bullet points and cover letters tailored to your role.",
+      "badge": "Powered by the Flacron Engine"
+    },
+    "export": {
+      "title": "Export &\nTake It With You",
+      "subtitle": "Download as PDF or DOCX in one tap and share the file from your device. Your career, your way."
+    }
+  },
+  "getStarted": "Get Started — It's Free",
+  "continue": "Continue",
+  "haveAccount": "Already have an account?",
+  "signIn": "Sign in"
+}

@@ -1,0 +1,15 @@
+{
+  "announcement": {
+    "dismiss": "Cerrar anuncio"
+  },
+  "maintenance": {
+    "defaultMessage": "Estamos realizando tareas de mantenimiento. Vuelve a intentarlo en unos minutos.",
+    "checkAgain": "Comprobar de nuevo"
+  },
+  "paymentIssue": {
+    "title": "Problema de pago",
+    "bodyApple": "Tu último pago no se procesó. Actualiza tu método de pago en los ajustes de suscripción de la App Store para mantener tu suscripción activa.",
+    "bodyGoogle": "Tu último pago no se procesó. Actualiza tu método de pago en los ajustes de suscripción de Google Play para mantener tu suscripción activa.",
+    "bodyWeb": "Tu último pago no se procesó. Actualiza tu método de pago en el sitio web de FlacronCV (Configuración → Facturación) para mantener tu suscripción activa."
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "header": {
+    "welcomeBack": "Hola de nuevo,",
+    "planBadge": {
+      "free": "Plan Gratis",
+      "pro": "Plan Pro"
+    }
+  },
+  "loadError": "No se pudo cargar. Inténtalo de nuevo.",
+  "verifyEmail": {
+    "title": "Verifica tu correo",
+    "body": "Confirma tu dirección para crear nuevos CV y cartas de presentación. Los archivos existentes se pueden seguir editando y exportando.",
+    "resend": "Reenviar correo",
+    "confirm": "Ya lo verifiqué"
+  },
+  "stats": {
+    "title": "Resumen",
+    "cvsCreated": "CVs creados",
+    "coverLetters": "Cartas de presentación",
+    "downloads": "Descargas",
+    "thisMonth": "Este mes",
+    "usedThisMonth": "Usados este mes"
+  },
+  "quickActions": {
+    "title": "Acciones rápidas",
+    "newCv": "Nuevo CV",
+    "coverLetter": "Carta de presentación",
+    "templates": "Plantillas",
+    "jobTracker": "Seguimiento de empleos",
+    "jobTrackerDescription": "Registra tus postulaciones después de enviarlas",
+    "careerTools": "Herramientas profesionales",
+    "careerToolsDescription": "Perfil profesional, borradores y oportunidades"
+  },
+  "recent": {
+    "title": "Documentos recientes",
+    "viewAll": "Ver todo",
+    "loadError": "No se pudieron cargar los documentos. Inténtalo de nuevo.",
+    "empty": "Aún no hay documentos. ¡Crea tu primer CV!",
+    "meta": "{kind, select, cv {CV} other {Carta de presentación}} · {date}"
+  },
+  "upgrade": {
+    "title": "Mejorar a Pro",
+    "body": "Desbloquea {cvs} CVs, {credits} créditos Engine y más",
+    "cta": "Mejorar ahora — {price}/mes"
+  }
+}

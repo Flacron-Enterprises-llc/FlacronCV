@@ -41,6 +41,7 @@ import {
   type LocationDraft,
 } from '../../../../src/lib/career/modes';
 import { careerErrorMessage } from '../../../../src/lib/career-view';
+import { useT } from '../../../../src/i18n';
 import { colors } from '../../../../src/theme/colors';
 
 /**
@@ -49,6 +50,8 @@ import { colors } from '../../../../src/theme/colors';
  * profiles are enforced by the career API.
  */
 export default function CareerLocationEditorScreen() {
+  const t = useT('careerModes');
+  const tc = useT('common');
   const params = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const isNew = params.id === 'new';
@@ -110,10 +113,10 @@ export default function CareerLocationEditorScreen() {
 
   const onDelete = () => {
     if (!location) return;
-    Alert.alert('Delete this location profile?', `${location.place} will no longer be used for matching.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('relocation.deleteConfirm.title'), t('relocation.deleteConfirm.body', { place: location.place }), [
+      { text: tc('cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: tc('delete'),
         style: 'destructive',
         onPress: () => remove.mutate(location.id, { onSuccess: done, onError: (e) => setError(locationDeleteError(e)) }),
       },
@@ -122,9 +125,9 @@ export default function CareerLocationEditorScreen() {
 
   let content: React.ReactNode;
   if (access.data && !access.data.enabled) {
-    content = <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" />;
+    content = <EmptyState icon="lock-closed-outline" title={t('common.locked')} />;
   } else if (access.data && !featureOn) {
-    content = <EmptyState icon="lock-closed-outline" title="Location profiles are not included in your plan" />;
+    content = <EmptyState icon="lock-closed-outline" title={t('relocation.locationsLocked')} />;
   } else if (leave || access.isLoading || list.isLoading) {
     content = (
       <View className="p-5">
@@ -135,18 +138,18 @@ export default function CareerLocationEditorScreen() {
   } else if (access.error || list.error || !list.data) {
     content = (
       <ErrorState
-        message={careerErrorMessage(list.error ?? access.error, 'Could not connect to the career modes service. Please try again.')}
+        message={careerErrorMessage(list.error ?? access.error, t('relocation.serviceUnavailable'))}
         onRetry={() => void list.refetch()}
       />
     );
   } else if (!isNew && !location) {
-    content = <ErrorState message="This location profile no longer exists." onRetry={() => void list.refetch()} />;
+    content = <ErrorState message={t('editor.notFound')} onRetry={() => void list.refetch()} />;
   } else if (isNew && !canAddLocation(list.data.items.length, list.data.capacity)) {
     content = (
       <EmptyState
         icon="location-outline"
-        title="All location profiles are in use"
-        description="Delete a location profile to add another."
+        title={t('editor.allInUse.title')}
+        description={t('editor.allInUse.body')}
       />
     );
   } else {
@@ -160,50 +163,46 @@ export default function CareerLocationEditorScreen() {
           ) : null}
           <View className="bg-white border border-stone-100 rounded-2xl p-4">
             <Input
-              label="Location (City, State / Metro) *"
+              label={t('editor.placeLabel')}
               value={current.place}
               onChangeText={(v) => set('place', v)}
-              placeholder="e.g. Austin, TX or Seattle, WA"
+              placeholder={t('editor.placePlaceholder')}
               maxLength={PLACE_MAX}
               autoCorrect={false}
             />
             <Stepper
-              label="Search radius"
-              value={current.radiusMiles}
-              unit="miles"
-              hint={`Plan maximum radius: ${allowed} miles`}
+              label={t('editor.radiusLabel')}
+              valueText={t('editor.radiusValue', { value: current.radiusMiles })}
+              hint={t('editor.radiusHint', { radius: allowed })}
               onChange={(d) => set('radiusMiles', stepValue(current.radiusMiles, d * RADIUS_STEP, RADIUS_MIN, allowed))}
               canDecrease={current.radiusMiles > RADIUS_MIN}
               canIncrease={current.radiusMiles < allowed}
             />
             <Stepper
-              label="Maximum daily commute"
-              value={current.commuteMinutesMax}
-              unit="min"
+              label={t('editor.commuteLabel')}
+              valueText={t('editor.commuteValue', { value: current.commuteMinutesMax })}
               onChange={(d) => set('commuteMinutesMax', stepValue(current.commuteMinutesMax, d * COMMUTE_STEP, COMMUTE_MIN, COMMUTE_MAX))}
               canDecrease={current.commuteMinutesMax > COMMUTE_MIN}
               canIncrease={current.commuteMinutesMax < COMMUTE_MAX}
             />
             <View className="flex-row items-center justify-between min-h-[44px] mb-4">
-              <Text className="text-sm font-medium text-stone-700 flex-1 mr-3">
-                This is a target relocation destination (not my current home)
-              </Text>
+              <Text className="text-sm font-medium text-stone-700 flex-1 me-3">{t('editor.relocationLabel')}</Text>
               <Switch
                 value={current.isRelocation}
                 onValueChange={(v) => set('isRelocation', v)}
-                accessibilityLabel="This is a target relocation destination"
+                accessibilityLabel={t('editor.relocationA11y')}
                 accessibilityState={{ checked: current.isRelocation }}
                 trackColor={{ true: colors.brand[600], false: colors.stone[300] }}
               />
             </View>
-            <Choices label="Target move timeline" options={TIMELINE_OPTIONS} value={current.targetTimeline} onChange={(v) => set('targetTimeline', v)} />
-            <Choices label="Work authorization in area" options={WORK_AUTH_OPTIONS} value={current.workAuthorization} onChange={(v) => set('workAuthorization', v)} />
-            <Choices label="Work arrangement flexibility" options={REMOTE_OPTIONS} value={current.remoteFlexibility} onChange={(v) => set('remoteFlexibility', v)} />
+            <Choices label={t('editor.timelineLabel')} options={TIMELINE_OPTIONS} value={current.targetTimeline} onChange={(v) => set('targetTimeline', v)} />
+            <Choices label={t('editor.workAuthLabel')} options={WORK_AUTH_OPTIONS} value={current.workAuthorization} onChange={(v) => set('workAuthorization', v)} />
+            <Choices label={t('editor.remoteLabel')} options={REMOTE_OPTIONS} value={current.remoteFlexibility} onChange={(v) => set('remoteFlexibility', v)} />
             <Input
-              label="Relocation / location notes (optional)"
+              label={t('editor.notesLabel')}
               value={current.notes}
               onChangeText={(v) => set('notes', v)}
-              placeholder="e.g. Relocating Q4; preference for north suburbs near transit."
+              placeholder={t('editor.notesPlaceholder')}
               multiline
               maxLength={NOTES_MAX}
               style={{ minHeight: 80, textAlignVertical: 'top' }}
@@ -211,13 +210,13 @@ export default function CareerLocationEditorScreen() {
           </View>
           <View className="mt-4">
             <Button onPress={onSave} loading={create.isPending || update.isPending} disabled={pending || !current.place.trim()} fullWidth>
-              Save location profile
+              {t('editor.save')}
             </Button>
           </View>
           {location ? (
             <View className="mt-3">
               <Button variant="ghost" onPress={onDelete} loading={remove.isPending} disabled={pending} fullWidth>
-                Delete location profile
+                {t('editor.delete')}
               </Button>
             </View>
           ) : null}
@@ -228,7 +227,7 @@ export default function CareerLocationEditorScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title={isNew ? 'Add location profile' : 'Edit location profile'} />
+      <CareerHeader title={isNew ? t('editor.titleAdd') : t('editor.titleEdit')} />
       {content}
     </SafeAreaView>
   );
@@ -236,25 +235,25 @@ export default function CareerLocationEditorScreen() {
 
 function Stepper({
   label,
-  value,
-  unit,
+  valueText,
   hint,
   onChange,
   canDecrease,
   canIncrease,
 }: {
   label: string;
-  value: number;
-  unit: string;
+  /** The value with its unit, as shown ("25 miles"). */
+  valueText: string;
   hint?: string;
   onChange: (direction: 1 | -1) => void;
   canDecrease: boolean;
   canIncrease: boolean;
 }) {
+  const t = useT('careerModes');
   return (
     <View className="mb-4">
       <Text className="text-sm font-medium text-stone-700 mb-1.5">{label}</Text>
-      <View className="flex-row items-center" accessibilityRole="adjustable" accessibilityLabel={label} accessibilityValue={{ text: `${value} ${unit}` }}
+      <View className="flex-row items-center" accessibilityRole="adjustable" accessibilityLabel={label} accessibilityValue={{ text: valueText }}
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
         onAccessibilityAction={(e) => {
           if (e.nativeEvent.actionName === 'increment' && canIncrease) onChange(1);
@@ -266,19 +265,19 @@ function Stepper({
           disabled={!canDecrease}
           className={`h-11 w-11 rounded-xl border border-stone-200 items-center justify-center ${canDecrease ? '' : 'opacity-40'}`}
           accessibilityRole="button"
-          accessibilityLabel={`Decrease ${label.toLowerCase()}`}
+          accessibilityLabel={t('editor.decrease', { label: label.toLowerCase() })}
         >
           <Ionicons name="remove" size={20} color={colors.stone[700]} />
         </TouchableOpacity>
         <Text className="mx-4 text-base font-semibold text-stone-900 min-w-[90px] text-center">
-          {value} {unit}
+          {valueText}
         </Text>
         <TouchableOpacity
           onPress={() => onChange(1)}
           disabled={!canIncrease}
           className={`h-11 w-11 rounded-xl border border-stone-200 items-center justify-center ${canIncrease ? '' : 'opacity-40'}`}
           accessibilityRole="button"
-          accessibilityLabel={`Increase ${label.toLowerCase()}`}
+          accessibilityLabel={t('editor.increase', { label: label.toLowerCase() })}
         >
           <Ionicons name="add" size={20} color={colors.stone[700]} />
         </TouchableOpacity>

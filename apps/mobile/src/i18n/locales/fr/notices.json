@@ -1,0 +1,15 @@
+{
+  "announcement": {
+    "dismiss": "Fermer l'annonce"
+  },
+  "maintenance": {
+    "defaultMessage": "Une maintenance est en cours. Merci de revenir dans quelques instants.",
+    "checkAgain": "Vérifier à nouveau"
+  },
+  "paymentIssue": {
+    "title": "Problème de paiement",
+    "bodyApple": "Votre dernier paiement n'a pas abouti. Mettez à jour votre moyen de paiement dans les réglages d'abonnement de l'App Store pour conserver votre abonnement.",
+    "bodyGoogle": "Votre dernier paiement n'a pas abouti. Mettez à jour votre moyen de paiement dans les paramètres d'abonnement de Google Play pour conserver votre abonnement.",
+    "bodyWeb": "Votre dernier paiement n'a pas abouti. Mettez à jour votre moyen de paiement sur le site FlacronCV (Paramètres → Facturation) pour conserver votre abonnement."
+  }
+}

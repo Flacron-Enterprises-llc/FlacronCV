@@ -29,15 +29,19 @@ import {
   resendVerificationEmail,
 } from '../../src/lib/email-verification';
 import { colors } from '../../src/theme/colors';
+import { formatCurrency, t as tNow, useT } from '../../src/i18n';
+import { RTL_FLIP } from '../../src/i18n/native';
 
 function loadFailureMessage(err: unknown): string {
   if (axios.isAxiosError(err) && !err.response) {
-    return 'No connection. Check your network and try again.';
+    return tNow('common.noConnection');
   }
-  return 'Could not load. Please try again.';
+  return tNow('dashboard.loadError');
 }
 
 export default function DashboardScreen() {
+  const t = useT('dashboard');
+  const ts = useT('settings');
   const router = useRouter();
   const { user: authUser, syncUser, userSyncError, emailVerified } = useAuthStore();
   const {
@@ -85,17 +89,17 @@ export default function DashboardScreen() {
   const plan = user ? effectivePlanForCopy(user.subscription) : null;
   const planBadge = {
     [SubscriptionPlan.FREE]: {
-      label: 'Free Plan',
+      label: t('header.planBadge.free'),
       textClass: 'text-stone-600',
       bgClass: 'bg-stone-100',
     },
     [SubscriptionPlan.PRO]: {
-      label: 'Pro Plan',
+      label: t('header.planBadge.pro'),
       textClass: 'text-brand-700',
       bgClass: 'bg-brand-100',
     },
     [SubscriptionPlan.ENTERPRISE]: {
-      label: 'Enterprise',
+      label: ts('plans.enterprise'),
       textClass: 'text-brand-700',
       bgClass: 'bg-brand-100',
     },
@@ -125,15 +129,15 @@ export default function DashboardScreen() {
         <View className="px-5 pt-4 pb-6 bg-white border-b border-stone-100">
           <View className="flex-row items-center justify-between">
             <View className="flex-1">
-              <Text className="text-stone-400 text-sm">Welcome back,</Text>
+              <Text className="text-stone-400 text-sm">{t('header.welcomeBack')}</Text>
               <Text className="text-xl font-bold text-stone-900" numberOfLines={1}>
-                {user?.displayName ?? user?.profile?.firstName ?? 'User'} 👋
+                {user?.displayName ?? user?.profile?.firstName ?? ts('header.userFallback')} 👋
               </Text>
             </View>
             <View className="flex-row items-center gap-2">
               {accountFailed ? (
                 <View className="px-3 py-1 rounded-full bg-warning-bg">
-                  <Text className="text-xs font-bold text-warning">Unavailable</Text>
+                  <Text className="text-xs font-bold text-warning">{ts('header.unavailable')}</Text>
                 </View>
               ) : accountLoading || !badge ? (
                 <View className="px-3 py-1 rounded-full bg-stone-100">
@@ -155,23 +159,22 @@ export default function DashboardScreen() {
             className="mx-4 mt-4 rounded-2xl border p-4"
             style={{ borderColor: colors.warning.DEFAULT, backgroundColor: colors.warning.bg }}
           >
-            <Text className="font-bold text-stone-900 mb-1">Verify your email</Text>
+            <Text className="font-bold text-stone-900 mb-1">{t('verifyEmail.title')}</Text>
             <Text className="text-stone-600 text-sm leading-5 mb-3">
-              Confirm your address to create new CVs and cover letters. Existing files stay
-              editable and exportable.
+              {t('verifyEmail.body')}
             </Text>
             <View className="flex-row gap-2">
               <TouchableOpacity
                 onPress={() => void resendVerificationEmail()}
                 className="flex-1 rounded-xl bg-white border border-stone-200 py-2.5 items-center"
               >
-                <Text className="text-stone-800 font-semibold text-sm">Resend email</Text>
+                <Text className="text-stone-800 font-semibold text-sm">{t('verifyEmail.resend')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => void confirmVerifiedEmail()}
                 className="flex-1 rounded-xl bg-brand-600 py-2.5 items-center"
               >
-                <Text className="text-white font-semibold text-sm">I've verified</Text>
+                <Text className="text-white font-semibold text-sm">{t('verifyEmail.confirm')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -182,11 +185,11 @@ export default function DashboardScreen() {
           <PaymentIssueNotice className="mb-3" />
           <AnnouncementBanner className="mb-3" />
           <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">
-            Overview
+            {t('stats.title')}
           </Text>
           {usageFailed ? (
             <ErrorState
-              message={userError ? loadFailureMessage(userError) : (userSyncError ?? 'Could not load. Please try again.')}
+              message={userError ? loadFailureMessage(userError) : (userSyncError ?? t('loadError'))}
               onRetry={() => {
                 void syncUser();
                 void refetchUser();
@@ -201,28 +204,28 @@ export default function DashboardScreen() {
             <>
               <View className="flex-row gap-3 mb-3">
                 <StatsCard
-                  label="CVs Created"
+                  label={t('stats.cvsCreated')}
                   value={usage.cvsCreated}
                   icon="document-text"
                 />
                 <StatsCard
-                  label="Cover Letters"
+                  label={t('stats.coverLetters')}
                   value={usage.coverLettersCreated}
                   icon="mail"
                 />
               </View>
               <View className="flex-row gap-3 mb-6">
                 <StatsCard
-                  label="Downloads"
+                  label={t('stats.downloads')}
                   value={usage.exportsThisMonth}
                   icon="download"
-                  subtitle="This month"
+                  subtitle={t('stats.thisMonth')}
                 />
                 <StatsCard
-                  label="Credits"
+                  label={ts('usage.credits')}
                   value={`${usage.aiCreditsUsed}/${usage.aiCreditsLimit}`}
                   icon="sparkles"
-                  subtitle="Used this month"
+                  subtitle={t('stats.usedThisMonth')}
                 />
               </View>
             </>
@@ -232,7 +235,7 @@ export default function DashboardScreen() {
         {/* Quick Actions — all brand-600; same geometry as before */}
         <View className="px-5 mb-6">
           <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">
-            Quick Actions
+            {t('quickActions.title')}
           </Text>
           <View className="flex-row gap-3">
             <TouchableOpacity
@@ -240,21 +243,21 @@ export default function DashboardScreen() {
               className="flex-1 bg-brand-600 rounded-2xl p-4 items-center"
             >
               <Ionicons name="add-circle" size={28} color={colors.white} />
-              <Text className="text-white font-bold mt-1.5 text-sm">New CV</Text>
+              <Text className="text-white font-bold mt-1.5 text-sm">{t('quickActions.newCv')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push('/(dashboard)/cover-letters/new')}
               className="flex-1 bg-brand-600 rounded-2xl p-4 items-center"
             >
               <Ionicons name="mail" size={28} color={colors.white} />
-              <Text className="text-white font-bold mt-1.5 text-sm">Cover Letter</Text>
+              <Text className="text-white font-bold mt-1.5 text-sm">{t('quickActions.coverLetter')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push('/(dashboard)/templates')}
               className="flex-1 bg-brand-600 rounded-2xl p-4 items-center"
             >
               <Ionicons name="layers" size={28} color={colors.white} />
-              <Text className="text-white font-bold mt-1.5 text-sm">Templates</Text>
+              <Text className="text-white font-bold mt-1.5 text-sm">{t('quickActions.templates')}</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity
@@ -262,14 +265,14 @@ export default function DashboardScreen() {
             className="mt-3 bg-white rounded-2xl border border-stone-100 p-4 flex-row items-center"
             activeOpacity={0.8}
           >
-            <View className="w-10 h-10 rounded-xl bg-brand-50 items-center justify-center mr-3">
+            <View className="w-10 h-10 rounded-xl bg-brand-50 items-center justify-center me-3">
               <Ionicons name="briefcase-outline" size={20} color={colors.brand[600]} />
             </View>
             <View className="flex-1">
-              <Text className="font-bold text-stone-900">Job Tracker</Text>
-              <Text className="text-stone-500 text-sm mt-0.5">Log applications after you apply</Text>
+              <Text className="font-bold text-stone-900">{t('quickActions.jobTracker')}</Text>
+              <Text className="text-stone-500 text-sm mt-0.5">{t('quickActions.jobTrackerDescription')}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} />
+            <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} style={RTL_FLIP} />
           </TouchableOpacity>
           {CAREER_ENABLED ? (
             <TouchableOpacity
@@ -278,14 +281,14 @@ export default function DashboardScreen() {
               activeOpacity={0.8}
               accessibilityRole="button"
             >
-              <View className="w-10 h-10 rounded-xl bg-brand-50 items-center justify-center mr-3">
+              <View className="w-10 h-10 rounded-xl bg-brand-50 items-center justify-center me-3">
                 <Ionicons name="compass-outline" size={20} color={colors.brand[600]} />
               </View>
               <View className="flex-1">
-                <Text className="font-bold text-stone-900">Career tools</Text>
-                <Text className="text-stone-500 text-sm mt-0.5">Career profile, drafts and opportunities</Text>
+                <Text className="font-bold text-stone-900">{t('quickActions.careerTools')}</Text>
+                <Text className="text-stone-500 text-sm mt-0.5">{t('quickActions.careerToolsDescription')}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} />
+              <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} style={RTL_FLIP} />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -294,10 +297,10 @@ export default function DashboardScreen() {
         <View className="px-5 mb-8">
           <View className="flex-row items-center justify-between mb-3">
             <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide">
-              Recent Documents
+              {t('recent.title')}
             </Text>
             <TouchableOpacity onPress={() => router.push('/(dashboard)/cvs')}>
-              <Text className="text-brand-600 text-sm font-semibold">View all</Text>
+              <Text className="text-brand-600 text-sm font-semibold">{t('recent.viewAll')}</Text>
             </TouchableOpacity>
           </View>
           <RecentDocuments
@@ -320,9 +323,9 @@ export default function DashboardScreen() {
             <View className="bg-brand-600 rounded-2xl p-5 overflow-hidden">
               <View className="flex-row items-center justify-between">
                 <View className="flex-1">
-                  <Text className="text-white font-bold text-lg">Upgrade to Pro</Text>
+                  <Text className="text-white font-bold text-lg">{t('upgrade.title')}</Text>
                   <Text className="text-brand-100 text-sm mt-0.5">
-                    {`Unlock ${PLAN_CONFIGS[SubscriptionPlan.PRO].limits.cvs} CVs, ${PLAN_CONFIGS[SubscriptionPlan.PRO].limits.aiCredits} Engine credits & more`}
+                    {t('upgrade.body', { cvs: PLAN_CONFIGS[SubscriptionPlan.PRO].limits.cvs, credits: PLAN_CONFIGS[SubscriptionPlan.PRO].limits.aiCredits })}
                   </Text>
                 </View>
                 <Ionicons name="sparkles" size={36} color="rgba(255,255,255,0.6)" />
@@ -332,7 +335,7 @@ export default function DashboardScreen() {
                 className="bg-white mt-4 rounded-xl py-2.5 items-center"
               >
                 <Text className="text-brand-600 font-bold">
-                  {`Upgrade Now — $${PLAN_CONFIGS[SubscriptionPlan.PRO].priceMonthly.toFixed(2)}/mo`}
+                  {t('upgrade.cta', { price: formatCurrency(PLAN_CONFIGS[SubscriptionPlan.PRO].priceMonthly, 'usd') })}
                 </Text>
               </TouchableOpacity>
             </View>

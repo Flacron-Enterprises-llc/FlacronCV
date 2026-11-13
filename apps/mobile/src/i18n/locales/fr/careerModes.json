@@ -1,0 +1,234 @@
+{
+  "common": {
+    "locked": "Les outils de carrière ne sont pas inclus dans votre forfait",
+    "loadFailed": "Cette page n'a pas pu être chargée. Rien n'a été modifié.",
+    "edit": "Modifier"
+  },
+  "relocation": {
+    "title": "Relocalisation & modes de carrière",
+    "subtitle": "Localisations cibles et optique de carrière pour vos brouillons",
+    "loadFailed": "Impossible de charger vos outils de carrière.",
+    "locationsLocked": "Les profils de localisation ne sont pas inclus dans votre forfait",
+    "specialistLocked": "Les modes spécialisés ne sont pas inclus dans votre forfait",
+    "leave": {
+      "title": "Quitter sans enregistrer ?",
+      "body": "Les modifications de votre mode spécialisé ne sont pas enregistrées.",
+      "discard": "Abandonner"
+    },
+    "tabs": {
+      "locations": "Localisations",
+      "locationsCount": "Localisations ({used}/{capacity})",
+      "specialist": "Mode spécialisé"
+    },
+    "serviceUnavailable": "Impossible de contacter le service de localisation. Veuillez réessayer.",
+    "deleteConfirm": {
+      "title": "Supprimer ce profil de localisation ?",
+      "body": "{place} ne sera plus utilisé pour les correspondances."
+    },
+    "removed": "Profil de localisation supprimé.",
+    "add": "Ajouter un profil de localisation",
+    "allInUse": "Tous les profils de localisation de votre forfait sont utilisés. Supprimez-en un pour en ajouter un autre.",
+    "empty": {
+      "title": "Aucun profil de localisation configuré",
+      "body": "Ajoutez votre localisation principale ou vos villes cibles pour activer les correspondances basées sur le rayon."
+    },
+    "editA11y": "Modifier {place}",
+    "deleteA11y": "Supprimer {place}"
+  },
+  "specialist": {
+    "upgrade": {
+      "title": "Les modes spécialisés ne sont pas inclus dans votre forfait actuel",
+      "body": "Les modes spécialisés adaptent les brouillons pour l'ingénierie, la direction générale, le design, la recherche et la reconversion."
+    },
+    "loadFailed": "Impossible de charger votre mode spécialisé.",
+    "guidelinesTooLong": "Les directives personnalisées doivent faire moins de {max} caractères.",
+    "saved": "Mode de carrière spécialisé mis à jour.",
+    "intro": "Choisissez une optique de carrière pour adapter la valorisation de votre CV, les invites de génération et l'analyse d'adéquation à votre discipline.",
+    "activeMode": "MODE ACTIF",
+    "recommendedFocus": "POINTS D'ATTENTION RECOMMANDÉS",
+    "guidelinesTitle": "Directives personnalisées pour votre discipline",
+    "guidelinesLabel": "Directives personnalisées (optionnel)",
+    "guidelinesPlaceholder": "Ajoutez un contexte sectoriel, des méthodologies ou des axes personnels pour orienter les brouillons.",
+    "save": "Enregistrer le mode spécialisé",
+    "upgradeRequired": "Les modes de carrière spécialisés ne sont pas inclus dans votre forfait actuel.",
+    "saveFailed": "Échec de l'enregistrement du mode spécialisé. Veuillez réessayer.",
+    "modes": {
+      "general": {
+        "name": "Profil professionnel standard",
+        "description": "Présentation équilibrée des compétences fonctionnelles, du parcours et des résultats concrets.",
+        "focus1": "Compétences clés",
+        "focus2": "Réalisations clés",
+        "focus3": "Collaboration d'équipe",
+        "promptModifier": "Met en avant des résultats vérifiés, un impact clair et une solide maîtrise fonctionnelle."
+      },
+      "technical_engineering": {
+        "name": "Technique & ingénierie",
+        "description": "Met l'accent sur les choix d'architecture, l'échelle, la maîtrise technique et les performances chiffrées.",
+        "focus1": "Architecture système",
+        "focus2": "Maîtrise des langages & frameworks",
+        "focus3": "Métriques de charge & latence",
+        "focus4": "Logiciel libre",
+        "promptModifier": "Met l'accent sur la rigueur technique, la complexité des systèmes, les métriques de fiabilité et les décisions d'ingénierie concrètes."
+      },
+      "executive_leadership": {
+        "name": "Direction & leadership",
+        "description": "Met en valeur la responsabilité du compte de résultat, la transformation organisationnelle, les échanges avec le conseil et la vision de direction.",
+        "focus1": "Gestion du compte de résultat",
+        "focus2": "Croissance de l'organisation",
+        "focus3": "Feuilles de route stratégiques",
+        "focus4": "Alignement des parties prenantes",
+        "promptModifier": "Présente les expériences sous l’angle du leadership stratégique, de la croissance du chiffre d’affaires, du développement des talents et de la gouvernance."
+      },
+      "creative_design": {
+        "name": "Création & design",
+        "description": "S'appuie sur l'empathie produit, les études de cas du portfolio, les méthodes de recherche utilisateur et le savoir-faire de marque.",
+        "focus1": "Systèmes de design",
+        "focus2": "Recherche utilisateur & découverte",
+        "focus3": "Études de cas",
+        "focus4": "Critique transverse",
+        "promptModifier": "Met en avant le processus de design, la formulation des problèmes utilisateurs, le prototypage et l’impact sur les indicateurs métier."
+      },
+      "academic_research": {
+        "name": "Académique & recherche",
+        "description": "Met en avant les publications à comité de lecture, les financements obtenus, l’enseignement et la méthodologie expérimentale.",
+        "focus1": "Publications à comité de lecture",
+        "focus2": "Financements de recherche",
+        "focus3": "Direction de laboratoire",
+        "focus4": "Actes de conférences",
+        "promptModifier": "Met en avant la méthodologie de recherche, l’impact des citations, la gestion des financements et les contributions théoriques."
+      },
+      "career_transition": {
+        "name": "Reconversion / premier poste",
+        "description": "Relie les compétences transférables de vos domaines précédents aux secteurs visés grâce à des récits ciblés.",
+        "focus1": "Compétences transférables",
+        "focus2": "Preuves de montée en compétences rapide",
+        "focus3": "Analogies entre domaines",
+        "focus4": "Projets personnels",
+        "promptModifier": "Traduit l’expertise acquise dans le langage du secteur visé, avec des preuves claires d’une maîtrise rapide."
+      }
+    }
+  },
+  "location": {
+    "timeline": {
+      "immediate": "Immédiate (Déménagement en cours)",
+      "1_to_3_months": "1 à 3 mois",
+      "3_to_6_months": "3 à 6 mois",
+      "exploring": "En exploration",
+      "not_relocating": "Localisation actuelle (Pas de déménagement)"
+    },
+    "workAuth": {
+      "citizen": "Citoyen",
+      "permanent_resident": "Résident permanent / Carte verte",
+      "visa_holder": "Visa de travail valide",
+      "needs_sponsorship": "Nécessite un parrainage de visa",
+      "authorized": "Autorisé à travailler"
+    },
+    "remote": {
+      "hybrid": "Hybride souhaité",
+      "remote_only": "Télétravail exclusif",
+      "onsite_only": "Présentiel uniquement",
+      "any": "Toute modalité"
+    },
+    "validation": {
+      "enterLocation": "Saisissez une localisation.",
+      "placeTooLong": "La localisation doit faire moins de {max} caractères.",
+      "radiusTooLarge": "Votre forfait autorise un rayon jusqu'à {radius} miles.",
+      "notesTooLong": "Les notes doivent faire moins de {max} caractères.",
+      "placeInvalid": "Saisissez une localisation de moins de {max} caractères."
+    },
+    "quotaHint": "{used} sur {capacity} profils utilisés. Rayon de recherche local : jusqu'à {radius} miles.",
+    "line": {
+      "radius": "Rayon : ~{radius} miles",
+      "timeline": "Échéance : {value}",
+      "workAuth": "Autorisation : {value}",
+      "commute": "Trajet max : ≤ {minutes} minutes · {remote}"
+    },
+    "badge": {
+      "relocation": "CIBLE DE RELOCALISATION",
+      "current": "RÉSIDENCE ACTUELLE"
+    },
+    "error": {
+      "capacity": "Nombre maximal de profils de localisation atteint pour votre forfait. Supprimez un profil pour en ajouter un autre.",
+      "radius": "Le rayon dépasse la limite de votre forfait.",
+      "saveFailed": "Échec de l'enregistrement de la localisation. Veuillez vérifier vos données et réessayer.",
+      "deleteFailed": "Échec de suppression de la localisation."
+    }
+  },
+  "editor": {
+    "titleAdd": "Ajouter un profil de localisation",
+    "titleEdit": "Modifier le profil de localisation",
+    "notFound": "Ce profil de localisation n'existe plus.",
+    "allInUse": {
+      "title": "Tous les profils de localisation sont utilisés",
+      "body": "Supprimez un profil de localisation pour en ajouter un autre."
+    },
+    "placeLabel": "Localisation (Ville, État / Région) *",
+    "placePlaceholder": "ex. Austin, TX ou Paris, France",
+    "radiusLabel": "Rayon de recherche",
+    "radiusValue": "{value} mi",
+    "radiusHint": "Rayon maximal de votre offre : {radius} miles",
+    "commuteLabel": "Temps de trajet maximal quotidien",
+    "commuteValue": "{value} minutes",
+    "relocationLabel": "Il s'agit d'une cible de relocalisation (pas de mon domicile actuel)",
+    "relocationA11y": "Il s'agit d'une cible de relocalisation",
+    "timelineLabel": "Échéance de relocalisation",
+    "workAuthLabel": "Autorisation de travail dans la région",
+    "remoteLabel": "Flexibilité télétravail",
+    "notesLabel": "Remarques sur la relocalisation (Optionnel)",
+    "notesPlaceholder": "ex. Déménagement prévu au 4e trimestre ; préférence pour la banlieue nord près des transports.",
+    "save": "Enregistrer la localisation",
+    "delete": "Supprimer le profil de localisation",
+    "decrease": "Diminuer : {label}",
+    "increase": "Augmenter : {label}"
+  },
+  "recruiting": {
+    "title": "Accord de recrutement",
+    "help": "La recherche ne montre que les personnes qui ont accepté, et elle ne montre pas leur e-mail.",
+    "consent": "Les employeurs peuvent voir que j'ai accepté. Mon e-mail reste privé.",
+    "save": "Enregistrer le choix",
+    "saved": "Choix enregistré.",
+    "closed": "L'accès employeur n'est pas en vente. Il reste fermé tant que les conditions commerciales ne sont pas fixées.",
+    "status": {
+      "unknown": "Votre choix actuel n'a pas pu être lu. L'enregistrement le définit.",
+      "on": "Vous êtes visible : les employeurs peuvent voir que vous avez accepté.",
+      "off": "Vous n’êtes pas visible. Les employeurs ne peuvent pas vous voir."
+    },
+    "saveFailed": "Cette modification n'a pas été enregistrée. Réessayez.",
+    "discoverableTitle": "Visible par les employeurs",
+    "optedIn": "ACCEPTÉ",
+    "notOptedIn": "NON ACCEPTÉ",
+    "footer": "Vous pouvez modifier ce choix à tout moment. Le désactiver vous retire de la recherche des employeurs."
+  },
+  "data": {
+    "title": "Données de carrière",
+    "intro": "Cette page concerne uniquement les outils de carrière : votre profil de carrière, vos fichiers de preuve, vos brouillons, vos séances d’entraînement et vos autres données de carrière. Votre compte FlacronCV, vos CV, lettres de motivation, votre suivi de candidatures et votre abonnement se gèrent dans Paramètres.",
+    "export": {
+      "title": "Exporter les données de carrière",
+      "body": "Une copie de toutes les données et de tous les fichiers de carrière que nous conservons pour vous, au format JSON. Elle est partagée depuis une copie temporaire supprimée ensuite. La préparation peut prendre jusqu’à trente secondes.",
+      "button": "Préparer l’export",
+      "a11y": "Préparer l’export des données de carrière",
+      "preparing": "Préparation de votre export…",
+      "shared": "Votre fichier de données de carrière est prêt. La copie temporaire sur cet appareil a été supprimée.",
+      "sharingUnavailable": "Cet appareil ne peut pas ouvrir le menu de partage. Ouvrez plutôt le lien de téléchargement ; il expire rapidement.",
+      "downloadFailed": "Le fichier est prêt mais n'a pas pu être téléchargé dans l'app. Ouvrez plutôt le lien de téléchargement ; il expire rapidement.",
+      "openLink": "Ouvrir le lien de téléchargement",
+      "failed": "L’export n’a pas pu être préparé. Réessayez dans quelques minutes.",
+      "nothing": "Il n’y a aucune donnée de carrière à exporter."
+    },
+    "erase": {
+      "title": "Effacer les données de carrière",
+      "a11y": "Effacer les données de carrière : ouvrir la suppression du compte dans Paramètres",
+      "body": "Supprimer votre compte dans Paramètres › Vos données efface aussi toutes les données de carrière."
+    }
+  },
+  "services": {
+    "title": "Relecture humaine",
+    "subtitle": "Pas encore réservable",
+    "intro": "Une personne relirait une sélection. Ce n'est pas un retour d'IA.",
+    "closedLabel": "RÉSERVATION FERMÉE",
+    "closedBody": "La réservation reste fermée tant que les conditions commerciales ne sont pas fixées. Rien ne peut encore être réservé ni acheté.",
+    "empty": "Aucun service de relecture humaine n'est encore proposé.",
+    "offTitle": "Cet outil n'est pas encore ouvert",
+    "offBody": "Rien n'a été modifié."
+  }
+}

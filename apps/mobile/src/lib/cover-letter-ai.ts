@@ -1,3 +1,4 @@
+import { getLocale, t } from '../i18n';
 import { nestErrorCode } from './api-errors';
 import type {
   CoverLetterLength,
@@ -10,7 +11,12 @@ import { escapeHtml } from './letter-html';
 /** Same shape as useAI.ts GenerateJobDescriptionRequest (GenerateJobDescriptionDto). */
 export type JobDescriptionRequest = { jobTitle: string; companyName?: string; language?: string };
 
-/** The app is English-only; the website sends the locale's language name. */
+/** English name of the app language, as the website sends it (its LOCALE_LANGUAGE_NAMES). */
+const LANGUAGE_NAMES: Record<string, string> = { en: 'English', es: 'Spanish', fr: 'French', de: 'German', ar: 'Arabic', ur: 'Urdu' };
+export function aiLanguage(): string {
+  return LANGUAGE_NAMES[getLocale()] ?? 'English';
+}
+/** The default (English app) value. */
 export const AI_LANGUAGE = 'English';
 
 /** DTO caps (GenerateAiCoverLetterDto, RegenerateParagraphDto, GenerateJobDescriptionDto). */
@@ -37,7 +43,7 @@ export function buildJobDescriptionRequest(
   return {
     jobTitle: clamp(jobTitle, AI_LIMITS.jobTitle),
     ...(company ? { companyName: company } : {}),
-    language: AI_LANGUAGE,
+    language: aiLanguage(),
   };
 }
 
@@ -60,7 +66,7 @@ export function buildDraftRequest(input: {
     candidateSummary: clamp(input.candidateSummary, AI_LIMITS.candidateSummary),
     tone: input.tone,
     length: input.length,
-    language: AI_LANGUAGE,
+    language: aiLanguage(),
   };
 }
 
@@ -73,7 +79,7 @@ export function buildParagraphRequest(letterText: string, paragraph: string): Re
   return {
     letter: clamp(letterText, AI_LIMITS.letter),
     paragraph: clamp(paragraph, AI_LIMITS.paragraph),
-    language: AI_LANGUAGE,
+    language: aiLanguage(),
   };
 }
 
@@ -84,7 +90,7 @@ export function readAiContent(response: unknown): string {
       ? (response as { content?: unknown }).content
       : undefined;
   if (typeof content !== 'string' || !content.trim()) {
-    throw new Error('The Flacron Engine returned an empty result.');
+    throw new Error(t('coverLetters.ai.emptyResult'));
   }
   return content.trim();
 }
@@ -110,13 +116,13 @@ export function draftToHtml(text: string): string {
  */
 export function aiChargeNote(err: unknown): string {
   return nestErrorCode(err) === 'AI_CREDIT_NOT_REFUNDED'
-    ? 'An Engine credit may have been used for this failed attempt. Contact support if your balance looks wrong.'
-    : 'No Engine credit was used — you can safely try again.';
+    ? t('coverLetters.ai.chargeUnconfirmed')
+    : t('coverLetters.ai.noCharge');
 }
 
 /** Create-page wording (nothing is saved on failure). */
 export function draftChargeNote(err: unknown): string {
   return nestErrorCode(err) === 'AI_CREDIT_NOT_REFUNDED'
-    ? 'No draft was saved, but an Engine credit may have been used. Contact support if your balance looks wrong.'
-    : 'No Engine credit was used and no draft was saved — you can safely try again.';
+    ? t('coverLetters.ai.draftChargeUnconfirmed')
+    : t('coverLetters.ai.draftNoCharge');
 }

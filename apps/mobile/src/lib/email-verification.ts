@@ -5,26 +5,24 @@ import {
   nestErrorMessage,
   requestFailureMessage,
 } from './api-errors';
+import { t } from '../i18n';
 import { useAuthStore } from '../store/auth-store';
-
-const DEFAULT_UNVERIFIED_MESSAGE =
-  'Verify your email to create new documents. Your existing files stay readable, editable, and exportable.';
 
 async function handleResend(): Promise<void> {
   try {
     await useAuthStore.getState().resendVerification();
-    Alert.alert('Email sent', 'Check your inbox for a verification link.');
+    Alert.alert(t('auth.emailVerification.sentTitle'), t('auth.emailVerification.sentBody'));
   } catch (err) {
     if (isTooManyRequests(err)) {
       Alert.alert(
-        'Too many attempts',
-        'You have tried to resend too many times. Wait a few minutes, then try again.',
+        t('auth.emailVerification.tooManyTitle'),
+        t('auth.emailVerification.tooManyBody'),
       );
       return;
     }
     Alert.alert(
-      'Could not resend',
-      requestFailureMessage(err, 'Could not send verification email. Please try again.'),
+      t('auth.emailVerification.resendFailedTitle'),
+      requestFailureMessage(err, t('auth.emailVerification.resendFailedBody')),
     );
   }
 }
@@ -33,17 +31,17 @@ async function handleConfirmVerified(): Promise<void> {
   try {
     const verified = await useAuthStore.getState().confirmEmailVerified();
     if (verified) {
-      Alert.alert('Email verified', 'You can create documents and use the Flacron Engine now.');
+      Alert.alert(t('auth.emailVerification.verifiedTitle'), t('auth.emailVerification.verifiedBody'));
     } else {
       Alert.alert(
-        'Not verified yet',
-        'Open the link in your verification email, then tap I\'ve verified again.',
+        t('auth.emailVerification.notYetTitle'),
+        t('auth.emailVerification.notYetBody'),
       );
     }
   } catch (err) {
     Alert.alert(
-      'Could not check',
-      requestFailureMessage(err, 'Could not refresh verification status. Please try again.'),
+      t('auth.emailVerification.checkFailedTitle'),
+      requestFailureMessage(err, t('auth.emailVerification.checkFailedBody')),
     );
   }
 }
@@ -51,13 +49,18 @@ async function handleConfirmVerified(): Promise<void> {
 /**
  * Wall UI for ABUSE_EMAIL_UNVERIFIED — Resend + I’ve verified at the failure
  * site (create / duplicate / AI), not buried in settings.
+ * A server-provided `message` is shown as received.
  */
 export function presentUnverifiedEmailAlert(message?: string): void {
-  Alert.alert('Verify your email', message?.trim() || DEFAULT_UNVERIFIED_MESSAGE, [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Resend email', onPress: () => void handleResend() },
-    { text: "I've verified", onPress: () => void handleConfirmVerified() },
-  ]);
+  Alert.alert(
+    t('auth.emailVerification.title'),
+    message?.trim() || t('auth.emailVerification.defaultMessage'),
+    [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('auth.emailVerification.resend'), onPress: () => void handleResend() },
+      { text: t('auth.emailVerification.verified'), onPress: () => void handleConfirmVerified() },
+    ],
+  );
 }
 
 /** @returns true when the error was the unverified wall and an alert was shown. */

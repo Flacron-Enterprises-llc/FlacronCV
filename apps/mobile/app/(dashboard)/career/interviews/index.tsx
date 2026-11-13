@@ -14,14 +14,16 @@ import { useCreateInterview, useInterviews } from '../../../../src/hooks/career/
 import { useCareerAccess, useCareerOpportunities } from '../../../../src/hooks/useCareer';
 import {
   INTERVIEW_STAGES,
-  NOT_A_SCORE,
   STAGE_LABEL,
   interviewErrorMessage,
   interviewsLeft,
+  notAScore,
   sessionStatus,
 } from '../../../../src/lib/career/interviews';
 import { formatDay } from '../../../../src/lib/career-view';
 import { colors } from '../../../../src/theme/colors';
+import { useT } from '../../../../src/i18n';
+import { RTL_FLIP } from '../../../../src/i18n/native';
 
 /**
  * Text interview practice, as on the website (career/interviews): the
@@ -32,6 +34,7 @@ import { colors } from '../../../../src/theme/colors';
  * configured locally: that refusal is shown as such and nothing is charged.
  */
 export default function InterviewsScreen() {
+  const t = useT('careerInterviews');
   const router = useRouter();
   const access = useCareerAccess();
   const list = useInterviews();
@@ -70,18 +73,18 @@ export default function InterviewsScreen() {
   const confirmStart = () => {
     if (!selected) return;
     Alert.alert(
-      'Start this session',
-      `This uses 1 text interview. ${remaining} left. You get up to ten questions, feedback, and a summary.`,
+      t('list.confirmTitle'),
+      t('list.confirmBody', { count: remaining }),
       [
-        { text: 'Not now', style: 'cancel' },
-        { text: 'Use 1 text interview', onPress: start },
+        { text: t('list.notNow'), style: 'cancel' },
+        { text: t('list.confirmGo'), onPress: start },
       ],
     );
   };
 
   let content: React.ReactNode;
   if (access.data && (!access.data.enabled || features?.textInterviewSessions === false)) {
-    content = <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" />;
+    content = <EmptyState icon="lock-closed-outline" title={t('list.locked')} />;
   } else if (access.isLoading || list.isLoading) {
     content = (
       <View className="p-5">
@@ -115,21 +118,21 @@ export default function InterviewsScreen() {
           />
         }
       >
-        <Text className="text-stone-900 font-semibold">{`Text interviews left: ${remaining}`}</Text>
-        <Text className="text-stone-500 text-sm mt-1 leading-5">{NOT_A_SCORE}</Text>
+        <Text className="text-stone-900 font-semibold">{t('list.allowance', { remaining })}</Text>
+        <Text className="text-stone-500 text-sm mt-1 leading-5">{notAScore()}</Text>
 
         <View className="mt-4 gap-3">
           <LinkRow
             icon="star-outline"
-            title="STAR stories"
-            body="Situation, task, action, result from your confirmed facts. Saving a story does not use a text interview."
+            title={t('list.storiesTitle')}
+            body={t('list.storiesBody')}
             onPress={() => router.push('/(dashboard)/career/interviews/stories' as Href)}
           />
           {voiceOn ? (
             <LinkRow
               icon="mic-outline"
-              title="Voice practice"
-              body="Practice out loud and type what you said. This app does not record audio."
+              title={t('list.voiceTitle')}
+              body={t('list.voiceBody')}
               onPress={() => router.push('/(dashboard)/career/interviews/voice' as Href)}
             />
           ) : null}
@@ -137,27 +140,27 @@ export default function InterviewsScreen() {
 
         <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-5">
           <Text className="font-bold text-stone-900 text-base" accessibilityRole="header">
-            {sessions.length > 0 ? 'Start another session' : 'Start a practice session'}
+            {sessions.length > 0 ? t('list.startAnother') : t('list.start')}
           </Text>
           <Text className="text-stone-500 text-sm mt-1 leading-5">
-            One text interview covers up to ten questions, feedback, and a summary.
+            {t('list.startHelp')}
           </Text>
 
-          <Text className="text-sm font-medium text-stone-700 mt-4 mb-2">Opportunity</Text>
+          <Text className="text-sm font-medium text-stone-700 mt-4 mb-2">{t('list.opportunity')}</Text>
           {opportunities.isLoading ? (
             <SkeletonCard />
           ) : openings.length === 0 ? (
             <View>
-              <Text className="text-stone-500 text-sm leading-5">Open a listing to practice against it. Save or paste one on the website first.</Text>
+              <Text className="text-stone-500 text-sm leading-5">{t('list.noOpportunities')}</Text>
               <Button variant="outline" className="mt-3 self-start" onPress={() => router.push('/(dashboard)/career/opportunities' as Href)}>
-                Saved opportunities
+                {t('list.savedOpportunities')}
               </Button>
             </View>
           ) : (
             <OpportunityPicker items={openings} selectedId={opportunityId} onSelect={setOpportunityId} />
           )}
 
-          <Text className="text-sm font-medium text-stone-700 mt-4 mb-2">Stage</Text>
+          <Text className="text-sm font-medium text-stone-700 mt-4 mb-2">{t('list.stage')}</Text>
           <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup">
             {INTERVIEW_STAGES.map((item) => {
               const on = item === stage;
@@ -167,7 +170,7 @@ export default function InterviewsScreen() {
                   onPress={() => setStage(item)}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: on, checked: on }}
-                  accessibilityLabel={`${STAGE_LABEL[item]} stage`}
+                  accessibilityLabel={t('list.stageA11y', { stage: STAGE_LABEL[item] })}
                   className={`min-h-[44px] px-4 justify-center rounded-full border ${on ? 'bg-brand-600 border-brand-600' : 'bg-white border-stone-200'}`}
                 >
                   <Text className={`text-sm font-semibold ${on ? 'text-white' : 'text-stone-700'}`}>{STAGE_LABEL[item]}</Text>
@@ -182,21 +185,21 @@ export default function InterviewsScreen() {
             </View>
           ) : null}
           {remaining < 1 ? (
-            <Text className="text-stone-500 text-sm mt-4">No text interviews left. A session cannot be started now.</Text>
+            <Text className="text-stone-500 text-sm mt-4">{t('list.noneLeft')}</Text>
           ) : null}
 
           <Button className="mt-4" fullWidth onPress={confirmStart} loading={create.isPending} disabled={!selected || remaining < 1}>
-            {sessions.length > 0 ? 'Start another session' : 'Start a practice session'}
+            {sessions.length > 0 ? t('list.startAnother') : t('list.start')}
           </Button>
         </View>
 
         <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mt-6 mb-2" accessibilityRole="header">
-          Your sessions
+          {t('list.yourSessions')}
         </Text>
         {sessions.length === 0 ? (
           <View className="bg-white border border-stone-100 rounded-2xl p-4">
-            <Text className="font-semibold text-stone-800">No session yet</Text>
-            <Text className="text-stone-500 text-sm mt-1">Start one above for a saved opportunity.</Text>
+            <Text className="font-semibold text-stone-800">{t('list.emptyTitle')}</Text>
+            <Text className="text-stone-500 text-sm mt-1">{t('list.emptyBody')}</Text>
           </View>
         ) : (
           sessions.map((session) => (
@@ -204,15 +207,15 @@ export default function InterviewsScreen() {
               key={session.id}
               onPress={() => router.push(`/(dashboard)/career/interviews/${session.id}` as Href)}
               accessibilityRole="button"
-              accessibilityLabel={`${session.title}, ${STAGE_LABEL[session.stage]} stage, ${sessionStatus(session)}`}
+              accessibilityLabel={t('list.sessionA11y', { title: session.title, stage: STAGE_LABEL[session.stage], status: sessionStatus(session) })}
               className="bg-white border border-stone-100 rounded-2xl p-4 mb-3 active:bg-stone-50"
             >
               <View className="flex-row items-start justify-between">
-                <Text className="font-bold text-stone-900 flex-1 mr-2">{session.title}</Text>
+                <Text className="font-bold text-stone-900 flex-1 me-2">{session.title}</Text>
                 <Pill label={STAGE_LABEL[session.stage].toUpperCase()} tone="brand" />
               </View>
               <Text className="text-stone-500 text-sm mt-1">{sessionStatus(session)}</Text>
-              <Text className="text-stone-400 text-xs mt-1">{`Started ${formatDay(session.createdAt) ?? ''}`}</Text>
+              <Text className="text-stone-400 text-xs mt-1">{t('list.started', { date: formatDay(session.createdAt) ?? '' })}</Text>
             </Pressable>
           ))
         )}
@@ -222,7 +225,7 @@ export default function InterviewsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title="Interview practice" />
+      <CareerHeader title={t('list.title')} />
       {content}
     </SafeAreaView>
   );
@@ -237,14 +240,14 @@ function LinkRow({ icon, title, body, onPress }: { icon: keyof typeof Ionicons.g
       accessibilityHint={body}
       className="bg-white border border-stone-100 rounded-2xl p-4 flex-row items-center active:bg-stone-50"
     >
-      <View className="w-10 h-10 rounded-full bg-brand-100 items-center justify-center mr-3">
+      <View className="w-10 h-10 rounded-full bg-brand-100 items-center justify-center me-3">
         <Ionicons name={icon} size={20} color={colors.brand[600]} />
       </View>
       <View className="flex-1">
         <Text className="font-bold text-stone-900">{title}</Text>
         <Text className="text-stone-500 text-xs mt-0.5 leading-4">{body}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.stone[400]} />
+      <Ionicons name="chevron-forward" size={18} color={colors.stone[400]} style={RTL_FLIP} />
     </Pressable>
   );
 }
@@ -258,6 +261,7 @@ function OpportunityPicker({
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
+  const t = useT('careerInterviews');
   return (
     <View accessibilityRole="radiogroup">
       {items.map((item) => {
@@ -272,11 +276,11 @@ function OpportunityPicker({
             className={`min-h-[44px] flex-row items-center rounded-xl border px-3 py-2.5 mb-2 ${on ? 'border-brand-400 bg-brand-50' : 'border-stone-200 bg-white'}`}
           >
             <Ionicons name={on ? 'radio-button-on' : 'radio-button-off'} size={20} color={on ? colors.brand[600] : colors.stone[400]} />
-            <View className="flex-1 ml-2">
+            <View className="flex-1 ms-2">
               <Text className="text-stone-900 text-sm font-semibold">{item.title}</Text>
               {item.organization ? <Text className="text-stone-500 text-xs">{item.organization}</Text> : null}
             </View>
-            {item.label === 'expired' ? <Pill label="EXPIRED" /> : null}
+            {item.label === 'expired' ? <Pill label={t('list.expired')} /> : null}
           </Pressable>
         );
       })}

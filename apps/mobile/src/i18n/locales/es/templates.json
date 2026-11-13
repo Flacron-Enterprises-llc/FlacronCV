@@ -1,0 +1,45 @@
+{
+  "title": "Plantillas",
+  "subtitle": "Elige un diseño profesional",
+  "filters": {
+    "all": "Todas",
+    "free": "Gratis",
+    "pro": "Pro"
+  },
+  "loadError": "No se pudieron cargar las plantillas. Inténtalo de nuevo.",
+  "empty": {
+    "allTitle": "No hay plantillas",
+    "freeTitle": "No hay plantillas gratis",
+    "proTitle": "No hay plantillas Pro",
+    "allBody": "No hay plantillas disponibles en este momento.",
+    "filteredBody": "Prueba otro filtro para ver los diseños disponibles.",
+    "showAll": "Mostrar todo"
+  },
+  "tiers": {
+    "free": "Gratis",
+    "pro": "Pro",
+    "enterprise": "Enterprise",
+    "careerAccelerator": "Career Accelerator"
+  },
+  "card": {
+    "a11y": "Plantilla {name}",
+    "a11yLocked": "Plantilla {name}, bloqueada",
+    "preview": "Vista previa de la plantilla {name}"
+  },
+  "preview": {
+    "title": "Vista previa de la plantilla",
+    "imageA11y": "Vista previa de la plantilla {name} con datos de ejemplo",
+    "unavailable": "Vista previa no disponible",
+    "lockedUpgrade": "Esta es una plantilla {tier}. Mejora tu plan para usarla con tus propios datos.",
+    "lockedShort": "Esta es una plantilla {tier}.",
+    "unlocked": "Esta vista previa usa datos de ejemplo. Selecciona esta plantilla para empezar a crear tu propio CV.",
+    "accentColor": "Color de acento",
+    "layout": "Disposición",
+    "readOnly": "Esta vista previa es de solo lectura. Todo el contenido son datos de ejemplo.",
+    "upgradeTo": "Mejorar a {tier}",
+    "select": "Seleccionar plantilla",
+    "useFree": "Usar gratis",
+    "maybeLater": "Quizás más tarde",
+    "backToGallery": "Volver a la galería"
+  }
+}

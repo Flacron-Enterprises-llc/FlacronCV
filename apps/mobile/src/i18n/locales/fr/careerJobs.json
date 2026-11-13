@@ -1,0 +1,160 @@
+{
+  "notStated": "Non indiqué",
+  "sponsorshipYes": "Parrainage de visa indiqué",
+  "sponsorshipNo": "Aucun parrainage de visa indiqué",
+  "paste": {
+    "empty": "Collez d’abord le texte de l’offre d’emploi.",
+    "tooLong": "L’offre est trop longue. Restez sous {max} caractères.",
+    "badUrl": "Le lien doit commencer par http:// ou https://, ou laissez-le vide."
+  },
+  "trust": {
+    "disclaimer": "Ces contrôles montrent la fraîcheur, les contradictions et les signalements. Ils ne promettent pas qu'une annonce est sûre.",
+    "none": "Aucun avertissement supplémentaire sur le texte enregistré. Cela ne promet pas que l'annonce est sûre.",
+    "multiple": "Rapprochée de {count} sources. Un rapprochement n'est pas un contrôle de sûreté.",
+    "candidate": "Source : texte que vous avez collé. FlacronCV ne l'a pas recueilli dans un flux d'employeur.",
+    "provider": "Source : une fiche de flux d'offres. Le flux n'est pas un contrôle de sûreté.",
+    "title": "Contrôles de l'annonce",
+    "expired": "Le statut enregistré indique que cette annonce est expirée."
+  },
+  "signals": {
+    "verified_employer": "Un modérateur a confirmé cette annonce. Cela ne promet pas que le poste est ouvert ou sûr.",
+    "stale_listing": "Dernière vérification il y a plus de 30 jours. Le site de l'employeur a pu changer.",
+    "suspicious_fee": "Le texte mentionne des frais ou un paiement anticipé. Vérifiez l'annonce d'origine avant de postuler.",
+    "conflicting_compensation": "La fourchette de salaire enregistrée se contredit : le minimum est plus élevé que le maximum.",
+    "duplicate_sources": "Cette annonce a été rapprochée de {count} sources.",
+    "user_flagged": "{count} signalements ouverts attendent une revue. Ce n'est pas un constat confirmé.",
+    "suppressed_listing": "Retirée de la recherche après revue."
+  },
+  "reportStatus": {
+    "pending": "Votre signalement attend une revue.",
+    "suppress": "Un réviseur a retiré cette annonce de la recherche.",
+    "verify": "Un réviseur a confirmé l'annonce après votre signalement. Cela ne promet pas qu'elle est sûre.",
+    "dismiss": "Un réviseur a examiné votre signalement. L'annonce reste dans la recherche."
+  },
+  "report": {
+    "invalid": "Choisissez un motif.",
+    "network": "Pas de connexion. Le signalement n’a pas été enregistré.",
+    "failed": "Le signalement n'a pas été enregistré.",
+    "update": "Mettre à jour votre signalement",
+    "open": "Signaler un problème",
+    "title": "Signaler cette annonce",
+    "reason": "Motif",
+    "notes": "Notes, facultatives",
+    "hint": "Un signalement ouvert par personne. Un nouvel envoi met à jour ce signalement.",
+    "submit": "Envoyer le signalement"
+  },
+  "fit": {
+    "blocked": "Bloquée",
+    "none": "Aucun recoupement avec vos faits confirmés",
+    "partial": "Recoupement partiel avec vos faits confirmés",
+    "strong": "Fort recoupement avec vos faits confirmés"
+  },
+  "notAScore": "Ce n'est pas un score d'employeur et ce n'est pas une probabilité d'embauche.",
+  "match": {
+    "reason": "Vos faits confirmés incluent {token}.",
+    "gap": "Dans l'annonce, pas dans vos faits confirmés : {token}.",
+    "unconfirmed": "{token} est seulement sur un fait que vous n'avez pas confirmé.",
+    "pay": "Le salaire n'était pas indiqué.",
+    "sponsorship": "Le parrainage n'était pas indiqué.",
+    "location": "Le lieu n'était pas indiqué.",
+    "overlap": "Recoupement du vocabulaire avec vos faits confirmés : {value} sur une échelle de 0 (aucun) à 1 (formulation identique).",
+    "compared": "Comparé le {date}"
+  },
+  "remaining": "{count, plural, one {# analyse de CV restante} other {# analyses de CV restantes}}.",
+  "compareErrors": {
+    "quota": "Plus d'analyses de CV. L'annonce est toujours là.",
+    "notInPlan": "Votre forfait carrière n’inclut pas d’analyses de CV.",
+    "off": "L’analyse de CV est désactivée.",
+    "provider": "Nécessite le fournisseur d’IA, qui n’est pas configuré dans cet environnement. Rien n’a été facturé.",
+    "notFound": "Cette version du CV ou cette annonce n’existe plus. Aucune analyse n’a été utilisée.",
+    "network": "Pas de connexion. Réessayez ; relancer la même comparaison ne sera pas facturé deux fois.",
+    "failed": "La comparaison n'a pas été enregistrée."
+  },
+  "map": {
+    "noTiles": "Aucun fond de carte n’est connecté. Les emplacements restent approximatifs, les annonces s’affichent donc en liste.",
+    "errors": {
+      "upgrade": "Les sessions carte commencent avec un forfait supérieur. Rien n’a été enregistré.",
+      "quota": "L’allocation de sessions carte est épuisée. La liste reste disponible.",
+      "off": "Les sessions carte sont désactivées. Rien n’a été modifié.",
+      "network": "Pas de connexion. Réessayez ; relancer le même démarrage ne sera pas facturé deux fois.",
+      "failed": "Cette session n’a pas démarré. Rien de plus n’a été utilisé."
+    },
+    "notIncluded": "Les sessions carte ne sont pas incluses dans votre forfait",
+    "stillInJobSearch": "Vos annonces enregistrées sont toujours dans Recherche d’emploi.",
+    "start": "Démarrer 15 minutes",
+    "sessionIs": "Cette session dure {minutes} minutes.",
+    "listingsHeading": "Annonces (emplacements approximatifs)",
+    "emptyBody": "Collez une offre d’emploi dans Recherche d’emploi pour la voir ici.",
+    "subtitle": "Vue en liste : aucun fond de carte n’est connecté"
+  },
+  "list": {
+    "discardTitle": "Ignorer cette offre ?",
+    "discardBody": "Le texte collé n’est pas encore enregistré.",
+    "savedTitle": "Offre enregistrée",
+    "savedBody": "« {title} » est enregistrée dans vos annonces. Vous seul pouvez la voir.",
+    "stayHere": "Rester ici",
+    "openIt": "L’ouvrir",
+    "saveFailed": "L’offre n’a pas été enregistrée. Votre texte est toujours là ; réessayez.",
+    "mapA11y": "Ouvrir la liste de la session carte",
+    "loadFailed": "Les annonces n’ont pas pu être chargées. Rien n’a été modifié.",
+    "intro": "Cherchez dans vos annonces ou collez une offre d’emploi. Le salaire et le parrainage manquants restent non indiqués. Une offre collée n’appartient qu’à vous.",
+    "search": "Recherche",
+    "searchPlaceholder": "Intitulé, employeur ou mot-clé",
+    "pasteAdvert": "Coller une offre",
+    "clearA11y": "Effacer la recherche « {query} »",
+    "resultsFor": "Résultats pour « {query} »",
+    "clear": "Effacer",
+    "refreshFailed": "La liste n’a pas pu être actualisée.",
+    "noResultsBody": "Essayez une autre recherche, ou collez l'offre.",
+    "emptyTitle": "Aucune annonce enregistrée pour l’instant",
+    "emptyBody": "Collez une offre d’emploi pour la garder ici et la comparer à votre CV carrière.",
+    "expiredA11y": "expirée",
+    "pastedByYou": "Collée par vous",
+    "pasteTitle": "Coller une offre d’emploi",
+    "pasteBody": "Collez le texte complet de l’offre. Il est enregistré uniquement sur votre compte. Le salaire, le parrainage et les lieux que le texte n’indique pas restent non indiqués.",
+    "advertText": "Texte de l’offre",
+    "pastePlaceholder": "Collez l’offre d’emploi ici",
+    "link": "Lien vers l'original, si vous en avez un",
+    "savePasted": "Enregistrer l’offre collée"
+  },
+  "detail": {
+    "goneTitle": "Cette annonce n'est pas dans FlacronCV",
+    "goneBody": "Elle a peut-être été retirée.",
+    "loadFailed": "Cette annonce n’a pas pu être chargée. Rien n’a été modifié.",
+    "fallbackTitle": "Annonce",
+    "linkFailedTitle": "Impossible d’ouvrir le lien",
+    "linkFailedBody": "Aucune application de cet appareil ne peut l’ouvrir.",
+    "openOriginalA11y": "Ouvrir l’annonce d’origine dans le navigateur",
+    "original": "Annonce d'origine",
+    "staleTitle": "Cette annonce n'a pas été vérifiée récemment",
+    "staleBody": "Le texte enregistré est toujours là. Ouvrez l'annonce d'origine pour la confirmer.",
+    "locations": "Lieux",
+    "pay": "Salaire",
+    "sponsorship": "Parrainage",
+    "deadline": "Date limite",
+    "lastChecked": "Dernière vérification {date}"
+  },
+  "compare": {
+    "title": "Comparer avec mon CV",
+    "notInPlan": "L’analyse de CV n’est pas incluse dans votre forfait carrière.",
+    "confirmTitle": "Cela utilise 1 analyse de CV",
+    "confirmAgain": "Si vos faits et l’annonce n’ont pas changé, la comparaison enregistrée revient sans frais. Ce n’est pas une probabilité d’embauche.",
+    "confirmFirst": "Cela compare l’annonce à votre CV. Ce n’est pas une probabilité d’embauche.",
+    "useOne": "Utiliser 1 analyse",
+    "loadingCvs": "Chargement de vos CV carrière…",
+    "cvsFailed": "Vos CV carrière n’ont pas pu être chargés.",
+    "noResume": "Créez d'abord un CV. Aucune analyse n'a été utilisée.",
+    "cvToCompare": "CV carrière à comparer",
+    "again": "Comparer à nouveau",
+    "retryA11y": "Relancer la même comparaison",
+    "retry": "Réessayer (pas facturé deux fois)"
+  },
+  "reasons": {
+    "suspicious_fee": "Demande des frais",
+    "misleading": "Détails trompeurs",
+    "expired_closed": "Expirée ou fermée",
+    "duplicate": "Annonce en double",
+    "scam": "Demande suspecte",
+    "other": "Autre chose"
+  }
+}

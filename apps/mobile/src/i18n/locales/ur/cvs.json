@@ -1,0 +1,57 @@
+{
+  "list": {
+    "title": "میرے CVs",
+    "newCv": "نیا CV",
+    "createdCount": "{count, plural, one {آپ کے پلان پر # CV بنایا گیا} other {آپ کے پلان پر # CV بنائے گئے}}",
+    "noHeadline": "کوئی ہیڈ لائن نہیں",
+    "updated": "اپ ڈیٹ شدہ {date}",
+    "meta": "v{version} · {count, plural, one {# ڈاؤن لوڈ} other {# ڈاؤن لوڈز}}",
+    "status": {
+      "draft": "ڈرافٹ",
+      "published": "شائع شدہ"
+    },
+    "emptyTitle": "ابھی کوئی CV نہیں",
+    "emptyDescription": "اپنا پہلا پروفیشنل CV بنائیں اور اپنی خوابوں کی نوکری حاصل کریں۔",
+    "emptyAction": "اپنا پہلا CV بنائیں",
+    "loadError": "CVs لوڈ نہیں ہو سکے"
+  },
+  "delete": {
+    "title": "سی وی حذف کریں",
+    "body": "کیا آپ واقعی \"{title}\" حذف کرنا چاہتے ہیں؟ یہ واپس نہیں ہو سکتا۔ حذف کرنے سے آپ کے پلان پر CV بنانے کی گنتی واپس نہیں ہوتی۔",
+    "done": "حذف ہو گیا",
+    "doneBody": "\"{title}\" حذف کر دیا گیا ہے۔",
+    "failedTitle": "حذف نہیں ہو سکا",
+    "failed": "سی وی حذف کرنے میں ناکام۔ دوبارہ کوشش کریں۔"
+  },
+  "duplicate": {
+    "done": "نقل بن گئی",
+    "doneBody": "\"{title} (کاپی)\" بنا دیا گیا ہے۔",
+    "failedTitle": "نقل نہیں بن سکی",
+    "failed": "سی وی کی نقل بنانے میں ناکام۔ دوبارہ کوشش کریں۔"
+  },
+  "limitTitle": "CV کی حد پوری ہو گئی",
+  "new": {
+    "chooseTitle": "ٹیمپلیٹ منتخب کریں",
+    "chooseSubtitle": "شروع کرنے کے لیے ڈیزائن چنیں",
+    "continue": "اس ٹیمپلیٹ کے ساتھ جاری رکھیں",
+    "backToTemplates": "ٹیمپلیٹس پر واپس",
+    "back": "واپس جائیں",
+    "nameTitle": "اپنے CV کا نام رکھیں",
+    "nameBody": "اپنے CV کو ایک واضح نام دیں تاکہ بعد میں آسانی سے مل جائے۔",
+    "titleLabel": "CV کا عنوان",
+    "titlePlaceholder": "مثلاً سافٹ ویئر انجینئر CV 2025",
+    "suggestions": "تجاویز",
+    "suggestion": {
+      "professional": "میرا پروفیشنل CV",
+      "softwareEngineer": "سافٹ ویئر انجینئر CV",
+      "productManager": "پروڈکٹ مینیجر CV",
+      "marketing": "مارکیٹنگ CV",
+      "designer": "ڈیزائنر CV"
+    },
+    "useSuggestion": "عنوان {title} استعمال کریں",
+    "create": "CV بنائیں",
+    "createFailedTitle": "CV نہیں بن سکا",
+    "usageFailed": "آپ کا استعمال لوڈ نہیں ہو سکا۔ براہ کرم دوبارہ کوشش کریں۔",
+    "createFailed": "سی وی بنانے میں ناکامی۔ براہ کرم دوبارہ کوشش کریں۔"
+  }
+}

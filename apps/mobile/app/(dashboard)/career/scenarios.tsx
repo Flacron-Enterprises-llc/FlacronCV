@@ -28,6 +28,7 @@ import {
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { careerErrorMessage } from '../../../src/lib/career-view';
 import { colors } from '../../../src/theme/colors';
+import { useT } from '../../../src/i18n';
 
 /**
  * Scenario planner, as on the website (career/scenarios): compare up to three
@@ -36,6 +37,7 @@ import { colors } from '../../../src/theme/colors';
  * scenario-report credit per comparison.
  */
 export default function ScenariosScreen() {
+  const t = useT('careerPlans');
   const access = useCareerAccess();
   const usage = useCareerUsage();
   const create = useCreateScenario();
@@ -80,9 +82,9 @@ export default function ScenariosScreen() {
 
   let content: React.ReactNode;
   if (access.data && !access.data.enabled) {
-    content = <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" />;
+    content = <EmptyState icon="lock-closed-outline" title={t('lockedTitle')} />;
   } else if (featureOff) {
-    content = <EmptyState icon="lock-closed-outline" title="The scenario planner is not open yet" description="Nothing was changed and no credit was used." />;
+    content = <EmptyState icon="lock-closed-outline" title={t('scenarios.notOpen')} description={t('nothingChangedNoCredit')} />;
   } else if (access.isLoading) {
     content = (
       <View className="p-5">
@@ -90,12 +92,12 @@ export default function ScenariosScreen() {
       </View>
     );
   } else if (access.error) {
-    content = <ErrorState message={careerErrorMessage(access.error, 'Could not load the scenario planner.')} onRetry={() => void access.refetch()} />;
+    content = <ErrorState message={careerErrorMessage(access.error, t('scenarios.loadError'))} onRetry={() => void access.refetch()} />;
   } else {
     content = (
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         <Text className="text-stone-500 text-sm mb-4 leading-5">
-          Compare up to three routes. Missing pay stays unknown. The comparison is not a promise of earnings or employment.
+          {t('scenarios.intro')}
         </Text>
         {routes.map((route, index) => (
           <View
@@ -103,40 +105,40 @@ export default function ScenariosScreen() {
             className={`bg-white border rounded-2xl p-4 mb-3 ${formError?.index === index ? 'border-red-300' : 'border-stone-100'}`}
           >
             <View className="flex-row items-center justify-between mb-2">
-              <Text className="text-base font-bold text-stone-900" accessibilityRole="header">{`Route ${index + 1}`}</Text>
+              <Text className="text-base font-bold text-stone-900" accessibilityRole="header">{t('scenarios.route', { number: index + 1 })}</Text>
               {routes.length > 1 ? (
                 <TouchableOpacity
                   onPress={() => change(removeRoute(routes, index))}
                   disabled={create.isPending}
-                  className="h-11 w-11 items-center justify-center -mr-2"
+                  className="h-11 w-11 items-center justify-center -me-2"
                   accessibilityRole="button"
-                  accessibilityLabel={`Remove route ${index + 1}`}
+                  accessibilityLabel={t('scenarios.removeRoute', { number: index + 1 })}
                 >
                   <Ionicons name="trash-outline" size={20} color={colors.stone[500]} />
                 </TouchableOpacity>
               ) : null}
             </View>
             <Input
-              label="Route name"
+              label={t('scenarios.routeName')}
               value={route.name}
               onChangeText={(name) => change(updateRoute(routes, index, { name }))}
               maxLength={120}
               editable={!create.isPending}
             />
             <Input
-              label="Destination"
+              label={t('scenarios.destination')}
               value={route.destination}
               onChangeText={(destination) => change(updateRoute(routes, index, { destination }))}
               maxLength={120}
               editable={!create.isPending}
             />
             <Input
-              label="Pay in cents"
+              label={t('scenarios.pay')}
               value={route.wage}
               onChangeText={(wage) => change(updateRoute(routes, index, { wage: wage.replace(/[^0-9]/g, '') }))}
               keyboardType="number-pad"
               maxLength={12}
-              hint="Leave this blank when the pay is unknown."
+              hint={t('scenarios.payHint')}
               editable={!create.isPending}
             />
           </View>
@@ -147,7 +149,7 @@ export default function ScenariosScreen() {
           disabled={create.isPending || routes.length >= MAX_ROUTES}
           icon={<Ionicons name="add" size={18} color={colors.stone[700]} />}
         >
-          {routes.length >= MAX_ROUTES ? 'Up to three routes' : 'Add a route'}
+          {routes.length >= MAX_ROUTES ? t('scenarios.maxRoutes') : t('scenarios.addRoute')}
         </Button>
         {formError ? (
           <View className="bg-error-bg rounded-xl p-3 mt-4" accessibilityLiveRegion="polite">
@@ -155,15 +157,17 @@ export default function ScenariosScreen() {
           </View>
         ) : null}
         <Text className="text-stone-500 text-xs mt-4 mb-2">
-          {`Uses 1 scenario report credit.${credits ? ` Credits left: ${credits.includedRemaining + credits.packRemaining}.` : ''}`}
+          {[t('scenarios.cost'), credits ? t('scenarios.creditsLeft', { count: credits.includedRemaining + credits.packRemaining }) : null]
+            .filter(Boolean)
+            .join(' ')}
         </Text>
         <Button fullWidth onPress={onCompare} loading={create.isPending}>
-          Compare
+          {t('scenarios.compare')}
         </Button>
 
         {result ? (
           <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-5" accessibilityLiveRegion="polite">
-            <Text className="text-base font-bold text-stone-900 mb-1">Comparison</Text>
+            <Text className="text-base font-bold text-stone-900 mb-1">{t('scenarios.comparison')}</Text>
             <Text className="text-stone-600 text-sm leading-5 mb-3">{result.tradeoff}</Text>
             {result.options.map((option, i) => (
               <View key={`${option.name}-${i}`} className="border-t border-stone-100 py-3">
@@ -180,7 +184,7 @@ export default function ScenariosScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title="Scenario planner" subtitle="Compare up to three routes" />
+      <CareerHeader title={t('scenarios.title')} subtitle={t('scenarios.subtitle')} />
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {content}
       </KeyboardAvoidingView>

@@ -1,0 +1,145 @@
+{
+  "channelNotConnected": "Aún no conectado: estas alertas solo se muestran aquí, en la aplicación.",
+  "notAScore": "Esto no es una probabilidad de contratación.",
+  "reason": {
+    "saved_search": "Esta oferta coincide con una búsqueda guardada.",
+    "followed_company": "Esta oferta es de una empresa que sigues.",
+    "material_update": "La oferta cambió. Esta actualización usó una alerta."
+  },
+  "fit": {
+    "blocked": "Bloqueada",
+    "none": "Sin coincidencias con tus datos confirmados",
+    "partial": "Coincidencia parcial con tus datos confirmados",
+    "strong": "Gran coincidencia con tus datos confirmados"
+  },
+  "digest": {
+    "weekly": "Correo semanal",
+    "daily": "Correo diario",
+    "immediate": "En cuanto se encuentren"
+  },
+  "schedule": {
+    "weekly": "Semanal",
+    "daily": "Diaria",
+    "every_6_hours": "Cada 6 horas",
+    "hourly": "Cada hora"
+  },
+  "scheduleLower": {
+    "weekly": "semanal",
+    "daily": "diaria",
+    "every_6_hours": "cada 6 horas",
+    "hourly": "cada hora"
+  },
+  "quietInvalid": "Las horas de silencio necesitan un inicio y un fin (HH:MM, UTC), y no pueden ser la misma hora.",
+  "anySearch": "Todas las ofertas",
+  "savedLocation": "Ubicación guardada",
+  "locationWithin": "{place} · a {miles} mi",
+  "radius": {
+    "format": "Escribe el radio en millas enteras, por ejemplo 25.",
+    "max": "El radio puede ser como máximo de {max} millas."
+  },
+  "sourceUrlInvalid": "Escribe una dirección web completa que empiece por https://, o déjalo vacío.",
+  "errors": {
+    "settingsPlan": "Esa opción no está en tu plan. Tu plan incluye el correo semanal. No se cambió nada.",
+    "plan": "Tu plan profesional no incluye esto. No se cambió nada.",
+    "capacitySearch": "Este plan no tiene espacio para otra búsqueda guardada.",
+    "capacityLocation": "Este plan no tiene espacio para otra ubicación de alertas.",
+    "capacityCompany": "Este plan no tiene espacio para otra empresa seguida.",
+    "scheduleAbove": "Esa frecuencia es mayor de la que permite tu plan.",
+    "scheduleAboveLimit": "Esa frecuencia es mayor de la que permite tu plan (hasta {limit}).",
+    "radiusAbove": "Ese radio es mayor del que permite tu plan.",
+    "radiusAboveLimit": "Ese radio es mayor del que permite tu plan (hasta {limit} millas).",
+    "q": "Escribe qué quieres buscar.",
+    "place": "Escribe un lugar.",
+    "name": "Escribe el nombre de una empresa.",
+    "digest": "Elige un resumen.",
+    "check": "Revisa los datos e inténtalo de nuevo. No se cambió nada."
+  },
+  "fallback": {
+    "settings": "La configuración de alertas no se guardó. Inténtalo de nuevo.",
+    "search": "La búsqueda guardada no cambió. Inténtalo de nuevo.",
+    "location": "La ubicación de alertas no cambió. Inténtalo de nuevo.",
+    "company": "La empresa seguida no cambió. Inténtalo de nuevo.",
+    "load": "No se pudieron cargar las alertas. No se cambió nada. Inténtalo de nuevo."
+  },
+  "screen": {
+    "offTitle": "Las alertas aún no están disponibles",
+    "offBody": "Están desactivadas en esta versión preliminar. No se cambió nada.",
+    "intro": "Las búsquedas guardadas y las empresas que sigues muestran aquí nuevas ofertas. Una nueva alerta usa un elemento de alerta; buscar no.",
+    "yourAlerts": "Tus alertas",
+    "emptyTitle": "Aún no hay alertas",
+    "emptyBody": "Una búsqueda guardada te mostrará ofertas más adelante. Buscar ahora no usa ninguna alerta.",
+    "openA11y": "{name}. Abrir oferta"
+  },
+  "balance": {
+    "none": "No te quedan elementos de alerta. Las nuevas alertas esperan a que se renueve el saldo. La búsqueda sigue funcionando.",
+    "noneRenews": "No te quedan elementos de alerta. Las nuevas alertas esperan a que se renueve el saldo el {date}. La búsqueda sigue funcionando.",
+    "left": "{count, plural, one {Queda # elemento de alerta} other {Quedan # elementos de alerta}}",
+    "renews": "se renueva el {date}"
+  },
+  "searches": {
+    "title": "Búsquedas guardadas",
+    "hint": "Se revisan según una frecuencia. Una oferta encontrada más tarde se convierte en alerta.",
+    "label": "Búsqueda guardada",
+    "placeholder": "p. ej. analista de datos",
+    "howOften": "Con qué frecuencia revisar",
+    "planDefault": "Predeterminado del plan",
+    "location": "Ubicación",
+    "anywhere": "Cualquier lugar",
+    "save": "Guardar búsqueda",
+    "saved": "Búsqueda guardada. No usa ninguna alerta.",
+    "loadFailed": "No se pudieron cargar tus búsquedas guardadas. No se ha cambiado nada.",
+    "empty": "Todavía no tienes búsquedas guardadas.",
+    "paused": "EN PAUSA",
+    "resume": "Reanudar",
+    "pause": "Pausar",
+    "schedule": "Frecuencia",
+    "deleteA11y": "Eliminar la búsqueda guardada {query}",
+    "deleteTitle": "¿Eliminar la búsqueda guardada?",
+    "deleteBody": "«{title}» dejará de mostrar nuevas ofertas. Las alertas ya mostradas se mantienen.",
+    "scheduleNote": "Tu plan define con qué frecuencia pueden ejecutarse las búsquedas. Se rechaza una opción más rápida de la que permite tu plan."
+  },
+  "locations": {
+    "title": "Ubicaciones de alertas",
+    "hint": "Un lugar y un radio a los que se puede limitar una búsqueda guardada.",
+    "place": "Lugar",
+    "placePlaceholder": "p. ej. Leeds",
+    "radius": "Radio (millas)",
+    "add": "Añadir ubicación",
+    "saved": "Ubicación guardada. Elígela al guardar una búsqueda.",
+    "loadFailed": "No se pudieron cargar tus ubicaciones de alertas. No se cambió nada.",
+    "empty": "Aún no hay ubicaciones de alertas.",
+    "editA11y": "Editar ubicación {place}",
+    "deleteA11y": "Eliminar ubicación {place}",
+    "deleteTitle": "¿Eliminar la ubicación de alertas?",
+    "deleteBody": "Se eliminará «{place}». Las búsquedas guardadas que lo usan dejarán de limitarse a él.",
+    "editTitle": "Editar ubicación de alertas",
+    "save": "Guardar ubicación"
+  },
+  "companies": {
+    "title": "Empresas que sigues",
+    "hint": "Las nuevas ofertas de una empresa que sigues se convierten en alertas.",
+    "name": "Nombre de la empresa",
+    "url": "Página de empleo (opcional)",
+    "follow": "Seguir empresa",
+    "followed": "Sigues a la empresa. Sus nuevas ofertas se convertirán en alertas.",
+    "loadFailed": "No se pudieron cargar las empresas que sigues. No se cambió nada.",
+    "empty": "Aún no sigues a ninguna empresa.",
+    "unfollowA11y": "Dejar de seguir a {name}",
+    "unfollowTitle": "¿Dejar de seguir a la empresa?",
+    "unfollowBody": "Las nuevas ofertas de «{name}» ya no se convertirán en alertas.",
+    "unfollow": "Dejar de seguir"
+  },
+  "settings": {
+    "title": "Cómo llegan las alertas",
+    "email": "Correo electrónico",
+    "push": "Notificaciones push",
+    "telegram": "Telegram",
+    "digest": "Resumen",
+    "quietStart": "Inicio de las horas de silencio (UTC)",
+    "quietEnd": "Fin de las horas de silencio (UTC)",
+    "quietHint": "Formato de 24 horas HH:MM. Deja ambos vacíos para no tener horas de silencio.",
+    "paused": "Pausar nuevas alertas",
+    "save": "Guardar la configuración de alertas",
+    "saved": "Configuración de alertas guardada."
+  }
+}

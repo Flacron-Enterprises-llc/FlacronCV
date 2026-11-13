@@ -27,8 +27,8 @@ import {
   isStale,
   locationsText,
   matchLines,
-  NOT_A_SCORE,
-  NOT_STATED,
+  notAScore,
+  notStated,
   openableUrl,
   overlapText,
   payText,
@@ -41,11 +41,12 @@ import {
   reportStatusText,
   signalText,
   sponsorshipText,
-  TRUST_DISCLAIMER,
-  TRUST_NONE,
+  trustDisclaimer,
+  trustNone,
   versionChoices,
 } from '../../../../src/lib/career/opportunities';
 import { careerErrorMessage, formatDay } from '../../../../src/lib/career-view';
+import { t as tNow, useT } from '../../../../src/i18n';
 import { colors } from '../../../../src/theme/colors';
 
 /**
@@ -57,6 +58,8 @@ import { colors } from '../../../../src/theme/colors';
  */
 export default function OpportunityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const t = useT('careerJobs');
+  const tk = useT('career');
   const access = useCareerAccess();
   const detail = useOpportunity(id);
   const trust = useOpportunityTrust(id);
@@ -64,7 +67,7 @@ export default function OpportunityDetailScreen() {
 
   let content: React.ReactNode;
   if (access.data && !access.data.enabled) {
-    content = <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" />;
+    content = <EmptyState icon="lock-closed-outline" title={tk('shared.notIncluded')} />;
   } else if (access.isLoading || detail.isLoading) {
     content = (
       <View className="p-5">
@@ -73,11 +76,11 @@ export default function OpportunityDetailScreen() {
       </View>
     );
   } else if (detail.error && (detail.error as { status?: number }).status === 404) {
-    content = <EmptyState icon="briefcase-outline" title="That listing is not in FlacronCV" description="It may have been removed." />;
+    content = <EmptyState icon="briefcase-outline" title={t('detail.goneTitle')} description={t('detail.goneBody')} />;
   } else if (access.error || detail.error || !detail.data) {
     content = (
       <ErrorState
-        message={careerErrorMessage(detail.error ?? access.error, 'This listing could not be loaded. Nothing was changed.')}
+        message={careerErrorMessage(detail.error ?? access.error, t('detail.loadFailed'))}
         onRetry={() => void detail.refetch()}
       />
     );
@@ -106,7 +109,7 @@ export default function OpportunityDetailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title={detail.data?.title ?? 'Listing'} subtitle={detail.data?.organization ?? undefined} />
+      <CareerHeader title={detail.data?.title ?? t('detail.fallbackTitle')} subtitle={detail.data?.organization ?? undefined} />
       {content}
     </SafeAreaView>
   );
@@ -115,19 +118,20 @@ export default function OpportunityDetailScreen() {
 function openSource(url: string | null) {
   const safe = openableUrl(url);
   if (!safe) return;
-  Linking.openURL(safe).catch(() => Alert.alert('Could not open the link', 'No app on this device can open it.'));
+  Linking.openURL(safe).catch(() => Alert.alert(tNow('careerJobs.detail.linkFailedTitle'), tNow('careerJobs.detail.linkFailedBody')));
 }
 
 function SourceLink({ url }: { url: string }) {
+  const t = useT('careerJobs');
   return (
     <TouchableOpacity
       onPress={() => openSource(url)}
       className="flex-row items-center min-h-[44px] mt-2"
       accessibilityRole="link"
-      accessibilityLabel="Open the original listing in the browser"
+      accessibilityLabel={t('detail.openOriginalA11y')}
     >
       <Ionicons name="open-outline" size={16} color={colors.brand[600]} />
-      <Text className="text-brand-600 font-semibold text-sm ml-1.5">Original listing</Text>
+      <Text className="text-brand-600 font-semibold text-sm ms-1.5">{t('detail.original')}</Text>
     </TouchableOpacity>
   );
 }
@@ -143,25 +147,27 @@ function Field({ label, value }: { label: string; value: string }) {
 
 function ListingCard({ item, stale }: { item: OpportunityDetail; stale: boolean }) {
   const source = openableUrl(item.sourceUrl);
+  const t = useT('careerJobs');
+  const tk = useT('career');
   return (
     <>
       {stale ? (
         <View className="bg-warning-bg rounded-2xl p-4 mb-4">
-          <Text className="text-warning font-semibold">This listing has not been checked recently</Text>
-          <Text className="text-warning text-sm mt-1 leading-5">The saved text is still here. Open the original listing to confirm it.</Text>
+          <Text className="text-warning font-semibold">{t('detail.staleTitle')}</Text>
+          <Text className="text-warning text-sm mt-1 leading-5">{t('detail.staleBody')}</Text>
           {source ? <SourceLink url={source} /> : null}
         </View>
       ) : null}
       <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
         <View className="flex-row items-start justify-between">
-          <Text className="text-stone-500 text-sm flex-1 mr-2">{item.organization ?? NOT_STATED}</Text>
-          <Pill label={item.label === 'expired' ? 'EXPIRED' : 'OPEN'} tone={item.label === 'expired' ? 'default' : 'success'} />
+          <Text className="text-stone-500 text-sm flex-1 me-2">{item.organization ?? notStated()}</Text>
+          <Pill label={item.label === 'expired' ? tk('shared.expiredPill') : tk('shared.openPill')} tone={item.label === 'expired' ? 'default' : 'success'} />
         </View>
-        <Field label="Locations" value={locationsText(item.locations)} />
-        <Field label="Pay" value={payText(item.compensation)} />
-        <Field label="Sponsorship" value={sponsorshipText(item.sponsorship)} />
-        <Field label="Deadline" value={formatDay(item.deadline) ?? NOT_STATED} />
-        <Text className="text-stone-400 text-xs mt-3">{`Last checked ${item.checkedAt.slice(0, 10)}`}</Text>
+        <Field label={t('detail.locations')} value={locationsText(item.locations)} />
+        <Field label={t('detail.pay')} value={payText(item.compensation)} />
+        <Field label={t('detail.sponsorship')} value={sponsorshipText(item.sponsorship)} />
+        <Field label={t('detail.deadline')} value={formatDay(item.deadline) ?? notStated()} />
+        <Text className="text-stone-400 text-xs mt-3">{t('detail.lastChecked', { date: item.checkedAt.slice(0, 10) })}</Text>
         <Text className="text-stone-900 text-sm mt-4 leading-5" selectable>
           {item.description}
         </Text>
@@ -175,6 +181,8 @@ const SIGNAL_TONE = { info: 'text-stone-700', warning: 'text-warning', alert: 't
 
 function TrustCard({ item, trust }: { item: OpportunityDetail; trust: ReturnType<typeof pickTrust> }) {
   const report = useReportOpportunity(item.id);
+  const t = useT('careerJobs');
+  const tc = useT('common');
   const busy = useRef(false);
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<ReportReason | null>(null);
@@ -188,7 +196,7 @@ function TrustCard({ item, trust }: { item: OpportunityDetail; trust: ReturnType
   const submit = () => {
     if (busy.current) return;
     if (!reason) {
-      setError('Choose a reason.');
+      setError(t('report.invalid'));
       return;
     }
     busy.current = true;
@@ -213,12 +221,12 @@ function TrustCard({ item, trust }: { item: OpportunityDetail; trust: ReturnType
   return (
     <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
       <Text className="font-bold text-stone-900 text-base" accessibilityRole="header">
-        Listing checks
+        {t('trust.title')}
       </Text>
-      <Text className="text-stone-500 text-sm mt-1 leading-5">{TRUST_DISCLAIMER}</Text>
-      <Text className="text-stone-700 text-sm mt-3">{`Last checked ${item.checkedAt.slice(0, 10)}`}</Text>
+      <Text className="text-stone-500 text-sm mt-1 leading-5">{trustDisclaimer()}</Text>
+      <Text className="text-stone-700 text-sm mt-3">{t('detail.lastChecked', { date: item.checkedAt.slice(0, 10) })}</Text>
       <Text className="text-stone-700 text-sm mt-2 leading-5">{confidenceText(item, trust)}</Text>
-      {item.label === 'expired' ? <Text className="text-warning text-sm mt-2">The saved status says this listing is expired.</Text> : null}
+      {item.label === 'expired' ? <Text className="text-warning text-sm mt-2">{t('trust.expired')}</Text> : null}
       {trust && trust.signals.length > 0 ? (
         <View className="mt-3">
           {trust.signals.map((signal) => (
@@ -228,14 +236,14 @@ function TrustCard({ item, trust }: { item: OpportunityDetail; trust: ReturnType
                 size={16}
                 color={signal.severity === 'alert' ? colors.error.DEFAULT : signal.severity === 'warning' ? colors.warning.DEFAULT : colors.stone[500]}
               />
-              <Text className={`${SIGNAL_TONE[signal.severity]} text-sm ml-1.5 flex-1 leading-5`}>
+              <Text className={`${SIGNAL_TONE[signal.severity]} text-sm ms-1.5 flex-1 leading-5`}>
                 {signalText(signal, trust.sourcesCount, trust.reportCount)}
               </Text>
             </View>
           ))}
         </View>
       ) : (
-        <Text className="text-stone-700 text-sm mt-3 leading-5">{TRUST_NONE}</Text>
+        <Text className="text-stone-700 text-sm mt-3 leading-5">{trustNone()}</Text>
       )}
       {status ? (
         <Text className="text-stone-900 text-sm mt-3" accessibilityLiveRegion="polite">
@@ -251,12 +259,12 @@ function TrustCard({ item, trust }: { item: OpportunityDetail; trust: ReturnType
           }}
           icon={<Ionicons name="flag-outline" size={16} color={colors.stone[700]} />}
         >
-          {viewerReport?.status === 'pending' ? 'Update your report' : 'Report an issue'}
+          {viewerReport?.status === 'pending' ? t('report.update') : t('report.open')}
         </Button>
       </View>
 
-      <Modal visible={open} onClose={() => setOpen(false)} title="Report this listing" size="lg" closeDisabled={report.isPending}>
-        <Text className="text-sm font-medium text-stone-700 mb-2">Reason</Text>
+      <Modal visible={open} onClose={() => setOpen(false)} title={t('report.title')} size="lg" closeDisabled={report.isPending}>
+        <Text className="text-sm font-medium text-stone-700 mb-2">{t('report.reason')}</Text>
         <View accessibilityRole="radiogroup">
           {REPORT_REASONS.map((option) => {
             const selected = reason === option.value;
@@ -270,34 +278,34 @@ function TrustCard({ item, trust }: { item: OpportunityDetail; trust: ReturnType
                 accessibilityLabel={option.label}
               >
                 <Ionicons name={selected ? 'radio-button-on' : 'radio-button-off'} size={18} color={selected ? colors.brand[600] : colors.stone[400]} />
-                <Text className="text-stone-900 text-sm ml-2">{option.label}</Text>
+                <Text className="text-stone-900 text-sm ms-2">{option.label}</Text>
               </TouchableOpacity>
             );
           })}
         </View>
-        <Text className="text-sm font-medium text-stone-700 mt-2 mb-1.5">Notes, optional</Text>
+        <Text className="text-sm font-medium text-stone-700 mt-2 mb-1.5">{t('report.notes')}</Text>
         <TextInput
           value={notes}
           onChangeText={setNotes}
           multiline
           maxLength={REPORT_NOTES_MAX}
           textAlignVertical="top"
-          accessibilityLabel="Notes, optional"
+          accessibilityLabel={t('report.notes')}
           className="bg-white border border-stone-200 rounded-xl px-3 py-2.5 text-base text-stone-900 min-h-[96px]"
           placeholderTextColor={colors.stone[400]}
         />
-        <Text className="text-stone-400 text-xs mt-1 mb-3">One open report per person. Sending again updates that report.</Text>
+        <Text className="text-stone-400 text-xs mt-1 mb-3">{t('report.hint')}</Text>
         {error ? (
           <Text className="text-red-500 text-sm mb-3" accessibilityRole="alert">
             {error}
           </Text>
         ) : null}
         <Button fullWidth onPress={submit} loading={report.isPending}>
-          Submit report
+          {t('report.submit')}
         </Button>
         <View className="mt-2">
           <Button fullWidth variant="ghost" onPress={() => setOpen(false)} disabled={report.isPending}>
-            Cancel
+            {tc('cancel')}
           </Button>
         </View>
       </Modal>
@@ -307,6 +315,8 @@ function TrustCard({ item, trust }: { item: OpportunityDetail; trust: ReturnType
 
 function CompareCard({ item }: { item: OpportunityDetail }) {
   const feature = useCareerFeature('resumeAnalyses');
+  const t = useT('careerJobs');
+  const tk = useT('career');
   const resumes = useCareerResumes();
   const choices = versionChoices(resumes.data);
   const [versionId, setVersionId] = useState<string | null>(null);
@@ -322,8 +332,8 @@ function CompareCard({ item }: { item: OpportunityDetail }) {
   if (!feature.on) {
     return (
       <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
-        <Text className="font-bold text-stone-900 text-base">Compare with my resume</Text>
-        <Text className="text-stone-500 text-sm mt-1">Resume analysis is not included in your career plan.</Text>
+        <Text className="font-bold text-stone-900 text-base">{t('compare.title')}</Text>
+        <Text className="text-stone-500 text-sm mt-1">{t('compare.notInPlan')}</Text>
       </View>
     );
   }
@@ -350,13 +360,11 @@ function CompareCard({ item }: { item: OpportunityDetail }) {
 
   const confirm = () => {
     Alert.alert(
-      'This uses 1 resume analysis',
-      match
-        ? `${remainingText(item.resumeAnalysis)} If your facts and the listing have not changed, the saved comparison comes back at no cost. It is not a hiring probability.`
-        : `${remainingText(item.resumeAnalysis)} This compares the listing with your resume. It is not a hiring probability.`,
+      t('compare.confirmTitle'),
+      [remainingText(item.resumeAnalysis), match ? t('compare.confirmAgain') : t('compare.confirmFirst')].join(' '),
       [
-        { text: 'Leave', style: 'cancel' },
-        { text: 'Use 1 analysis', onPress: run },
+        { text: tk('shared.leave'), style: 'cancel' },
+        { text: t('compare.useOne'), onPress: run },
       ],
     );
   };
@@ -364,19 +372,19 @@ function CompareCard({ item }: { item: OpportunityDetail }) {
   return (
     <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
       <Text className="font-bold text-stone-900 text-base" accessibilityRole="header">
-        Compare with my resume
+        {t('compare.title')}
       </Text>
       <Text className="text-stone-500 text-sm mt-1 leading-5">{remainingText(item.resumeAnalysis)}</Text>
 
       {resumes.isLoading ? (
-        <Text className="text-stone-400 text-sm mt-3">Loading your career CVs…</Text>
+        <Text className="text-stone-400 text-sm mt-3">{t('compare.loadingCvs')}</Text>
       ) : resumes.error ? (
-        <Text className="text-red-500 text-sm mt-3">{careerErrorMessage(resumes.error, 'Your career CVs could not be loaded.')}</Text>
+        <Text className="text-red-500 text-sm mt-3">{careerErrorMessage(resumes.error, t('compare.cvsFailed'))}</Text>
       ) : choices.length === 0 ? (
-        <Text className="text-stone-700 text-sm mt-3">Create a resume first. No analysis was used.</Text>
+        <Text className="text-stone-700 text-sm mt-3">{t('compare.noResume')}</Text>
       ) : (
         <View className="mt-3" accessibilityRole="radiogroup">
-          <Text className="text-sm font-medium text-stone-700 mb-2">Career CV to compare</Text>
+          <Text className="text-sm font-medium text-stone-700 mb-2">{t('compare.cvToCompare')}</Text>
           {choices.map((choice) => {
             const on = choice.versionId === selected;
             return (
@@ -390,7 +398,7 @@ function CompareCard({ item }: { item: OpportunityDetail }) {
                 accessibilityLabel={`${choice.title}, ${choice.language}`}
               >
                 <Ionicons name={on ? 'radio-button-on' : 'radio-button-off'} size={18} color={on ? colors.brand[600] : colors.stone[400]} />
-                <Text className="text-stone-900 text-sm ml-2 flex-1" numberOfLines={1}>
+                <Text className="text-stone-900 text-sm ms-2 flex-1" numberOfLines={1}>
                   {choice.title}
                 </Text>
                 <Text className="text-stone-400 text-xs">{choice.language}</Text>
@@ -403,9 +411,9 @@ function CompareCard({ item }: { item: OpportunityDetail }) {
       {choices.length > 0 ? (
         <View className="mt-2">
           <Button onPress={confirm} loading={create.isPending} disabled={!selected || (remaining === 0 && !match)}>
-            {match ? 'Compare again' : 'Compare with my resume'}
+            {match ? t('compare.again') : t('compare.title')}
           </Button>
-          {remaining === 0 && !match ? <Text className="text-stone-500 text-sm mt-2">No resume analyses left. The listing is still here.</Text> : null}
+          {remaining === 0 && !match ? <Text className="text-stone-500 text-sm mt-2">{t('compareErrors.quota')}</Text> : null}
         </View>
       ) : null}
 
@@ -414,8 +422,8 @@ function CompareCard({ item }: { item: OpportunityDetail }) {
           <Text className="text-red-500 text-sm" accessibilityRole="alert">
             {error}
           </Text>
-          <TouchableOpacity onPress={run} className="min-h-[44px] justify-center" accessibilityRole="button" accessibilityLabel="Try the same comparison again">
-            <Text className="text-brand-600 font-semibold text-sm">Try again (not charged twice)</Text>
+          <TouchableOpacity onPress={run} className="min-h-[44px] justify-center" accessibilityRole="button" accessibilityLabel={t('compare.retryA11y')}>
+            <Text className="text-brand-600 font-semibold text-sm">{t('compare.retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -427,20 +435,21 @@ function CompareCard({ item }: { item: OpportunityDetail }) {
 
 function MatchView({ match }: { match: MatchResult }) {
   const lines = matchLines(match);
+  const t = useT('careerJobs');
   const icon = { reason: 'checkmark-circle-outline', gap: 'remove-circle-outline', unknown: 'help-circle-outline' } as const;
   const tint = { reason: colors.success.DEFAULT, gap: colors.warning.DEFAULT, unknown: colors.stone[500] };
   return (
     <View className="mt-4 pt-4 border-t border-stone-100" accessibilityLiveRegion="polite">
       <Text className="font-bold text-stone-900">{FIT_LABEL[match.fit]}</Text>
-      <Text className="text-stone-500 text-xs mt-1 leading-4">{NOT_A_SCORE}</Text>
+      <Text className="text-stone-500 text-xs mt-1 leading-4">{notAScore()}</Text>
       <Text className="text-stone-700 text-sm mt-2">{overlapText(match.overlap)}</Text>
       {lines.map((line) => (
         <View key={line.key} className="flex-row mt-2">
           <Ionicons name={icon[line.kind]} size={16} color={tint[line.kind]} />
-          <Text className="text-stone-800 text-sm ml-1.5 flex-1 leading-5">{line.text}</Text>
+          <Text className="text-stone-800 text-sm ms-1.5 flex-1 leading-5">{line.text}</Text>
         </View>
       ))}
-      <Text className="text-stone-400 text-xs mt-3">{`Compared ${formatDay(match.createdAt) ?? ''}`}</Text>
+      <Text className="text-stone-400 text-xs mt-3">{t('match.compared', { date: formatDay(match.createdAt) ?? '' })}</Text>
     </View>
   );
 }

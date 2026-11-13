@@ -1,0 +1,160 @@
+{
+  "notStated": "Nicht angegeben",
+  "sponsorshipYes": "Visa-Sponsoring angegeben",
+  "sponsorshipNo": "Kein Visa-Sponsoring angegeben",
+  "paste": {
+    "empty": "Füge zuerst den Text der Stellenanzeige ein.",
+    "tooLong": "Die Anzeige ist zu lang. Bleib unter {max} Zeichen.",
+    "badUrl": "Der Link muss mit http:// oder https:// beginnen, oder lass ihn leer."
+  },
+  "trust": {
+    "disclaimer": "Diese Prüfungen zeigen Aktualität, Widersprüche und Meldungen. Sie garantieren nicht, dass eine Stellenanzeige sicher ist.",
+    "none": "Keine zusätzlichen Warnungen zum gespeicherten Text. Das ist keine Garantie, dass die Stellenanzeige sicher ist.",
+    "multiple": "In {count} Quellen gefunden. Eine Übereinstimmung ist keine Sicherheitsprüfung.",
+    "candidate": "Quelle: von dir eingefügter Text. FlacronCV hat ihn nicht aus einem Arbeitgeber-Feed übernommen.",
+    "provider": "Quelle: ein Eintrag aus einem Job-Feed. Der Feed ist keine Sicherheitsprüfung.",
+    "title": "Prüfungen der Stellenanzeige",
+    "expired": "Laut gespeichertem Status ist diese Stellenanzeige abgelaufen."
+  },
+  "signals": {
+    "verified_employer": "Ein Moderator hat diese Anzeige bestätigt. Das garantiert nicht, dass die Stelle offen oder sicher ist.",
+    "stale_listing": "Zuletzt vor mehr als 30 Tagen geprüft. Die Website des Arbeitgebers hat sich möglicherweise geändert.",
+    "suspicious_fee": "Der Text erwähnt eine Vorabgebühr oder Zahlung. Prüfe die Original-Stellenanzeige, bevor du dich bewirbst.",
+    "conflicting_compensation": "Die gespeicherte Gehaltsspanne widerspricht sich: Das Minimum ist höher als das Maximum.",
+    "duplicate_sources": "Diese Stellenanzeige wurde in {count} Quellen gefunden.",
+    "user_flagged": "{count} offene Meldungen warten auf Prüfung. Dies ist kein bestätigter Befund.",
+    "suppressed_listing": "Nach Prüfung aus der Suche entfernt."
+  },
+  "reportStatus": {
+    "pending": "Deine Meldung wartet auf Prüfung.",
+    "suppress": "Diese Stellenanzeige wurde nach Prüfung aus der Suche entfernt.",
+    "verify": "Nach deiner Meldung wurde die Anzeige bei der Prüfung bestätigt. Das ist keine Sicherheitsgarantie.",
+    "dismiss": "Deine Meldung wurde geprüft. Die Stellenanzeige bleibt in der Suche."
+  },
+  "report": {
+    "invalid": "Wähle einen Grund.",
+    "network": "Keine Verbindung. Die Meldung wurde nicht gespeichert.",
+    "failed": "Die Meldung wurde nicht gespeichert.",
+    "update": "Deine Meldung aktualisieren",
+    "open": "Problem melden",
+    "title": "Diese Stellenanzeige melden",
+    "reason": "Grund",
+    "notes": "Notizen, optional",
+    "hint": "Eine offene Meldung pro Person. Erneutes Senden aktualisiert diese Meldung.",
+    "submit": "Meldung senden"
+  },
+  "fit": {
+    "blocked": "Blockiert",
+    "none": "Keine Überschneidung mit deinen bestätigten Fakten",
+    "partial": "Teilweise Überschneidung mit deinen bestätigten Fakten",
+    "strong": "Starke Überschneidung mit deinen bestätigten Fakten"
+  },
+  "notAScore": "Dies ist weder eine Arbeitgeberbewertung noch eine Einstellungswahrscheinlichkeit.",
+  "match": {
+    "reason": "Deine bestätigten Fakten enthalten {token}.",
+    "gap": "In der Stellenanzeige, aber nicht in deinen bestätigten Fakten: {token}.",
+    "unconfirmed": "{token} steht nur in einem Fakt, den du noch nicht bestätigt hast.",
+    "pay": "Gehalt wurde nicht angegeben.",
+    "sponsorship": "Sponsoring wurde nicht angegeben.",
+    "location": "Standort wurde nicht angegeben.",
+    "overlap": "Wortüberschneidung mit deinen bestätigten Fakten: {value} auf einer Skala von 0 (keine) bis 1 (gleicher Wortlaut).",
+    "compared": "Verglichen am {date}"
+  },
+  "remaining": "{count, plural, one {# Lebenslaufanalyse} other {# Lebenslaufanalysen}} übrig.",
+  "compareErrors": {
+    "quota": "Keine Lebenslauf-Analysen mehr übrig. Die Stellenanzeige bleibt erhalten.",
+    "notInPlan": "Dein Karrieretarif enthält keine Lebenslaufanalysen.",
+    "off": "Die Lebenslaufanalyse ist ausgeschaltet.",
+    "provider": "Benötigt den KI-Anbieter, der in dieser Umgebung nicht eingerichtet ist. Es wurde nichts berechnet.",
+    "notFound": "Diese Lebenslaufversion oder Stellenanzeige existiert nicht mehr. Es wurde keine Analyse verbraucht.",
+    "network": "Keine Verbindung. Versuche es erneut; derselbe Vergleich wird nicht doppelt berechnet.",
+    "failed": "Der Vergleich wurde nicht gespeichert."
+  },
+  "map": {
+    "noTiles": "Es sind keine Kartenkacheln verbunden. Die Orte bleiben ungefähr, daher werden die Stellenanzeigen als Liste gezeigt.",
+    "errors": {
+      "upgrade": "Kartensitzungen gibt es ab einem höheren Tarif. Es wurde nichts gespeichert.",
+      "quota": "Das Kontingent für Kartensitzungen ist aufgebraucht. Die Liste bleibt verfügbar.",
+      "off": "Kartensitzungen sind ausgeschaltet. Es wurde nichts geändert.",
+      "network": "Keine Verbindung. Versuche es erneut; derselbe Start wird nicht doppelt berechnet.",
+      "failed": "Diese Sitzung wurde nicht gestartet. Es wurde nichts zusätzlich verbraucht."
+    },
+    "notIncluded": "Kartensitzungen sind in deinem Tarif nicht enthalten",
+    "stillInJobSearch": "Deine gespeicherten Stellenanzeigen sind weiterhin in der Jobsuche.",
+    "start": "15 Minuten starten",
+    "sessionIs": "Diese Sitzung dauert {minutes} Minuten.",
+    "listingsHeading": "Stellenanzeigen (ungefähre Orte)",
+    "emptyBody": "Füge in der Jobsuche eine Stellenanzeige ein, um sie hier zu sehen.",
+    "subtitle": "Listenansicht: Es sind keine Kartenkacheln verbunden"
+  },
+  "list": {
+    "discardTitle": "Diese Anzeige verwerfen?",
+    "discardBody": "Der eingefügte Text ist noch nicht gespeichert.",
+    "savedTitle": "Anzeige gespeichert",
+    "savedBody": "„{title}“ ist in deinen Stellenanzeigen gespeichert. Nur du kannst sie sehen.",
+    "stayHere": "Hier bleiben",
+    "openIt": "Öffnen",
+    "saveFailed": "Die Anzeige wurde nicht gespeichert. Dein Text ist noch da; versuche es erneut.",
+    "mapA11y": "Liste der Kartensitzung öffnen",
+    "loadFailed": "Die Stellenanzeigen konnten nicht geladen werden. Es wurde nichts geändert.",
+    "intro": "Durchsuche deine Stellenanzeigen oder füge eine Anzeige ein. Fehlendes Gehalt und Sponsoring bleiben als nicht angegeben. Eine eingefügte Anzeige gehört nur dir.",
+    "search": "Suche",
+    "searchPlaceholder": "Titel, Arbeitgeber oder Stichwort",
+    "pasteAdvert": "Anzeige einfügen",
+    "clearA11y": "Suche nach {query} löschen",
+    "resultsFor": "Ergebnisse für „{query}“",
+    "clear": "Löschen",
+    "refreshFailed": "Die Liste konnte nicht aktualisiert werden.",
+    "noResultsBody": "Versuche eine andere Suche oder füge die Stelle ein.",
+    "emptyTitle": "Noch keine gespeicherten Stellenanzeigen",
+    "emptyBody": "Füge eine Stellenanzeige ein, um sie hier zu behalten und mit deinem Karriere-Lebenslauf zu vergleichen.",
+    "expiredA11y": "abgelaufen",
+    "pastedByYou": "Von dir eingefügt",
+    "pasteTitle": "Stellenanzeige einfügen",
+    "pasteBody": "Füge den vollständigen Anzeigentext ein. Er wird nur in deinem Konto gespeichert. Gehalt, Sponsoring und Orte, die der Text nicht nennt, bleiben als nicht angegeben.",
+    "advertText": "Anzeigentext",
+    "pastePlaceholder": "Füge die Stellenanzeige hier ein",
+    "link": "Link zum Original, falls vorhanden",
+    "savePasted": "Eingefügte Anzeige speichern"
+  },
+  "detail": {
+    "goneTitle": "Diese Stellenanzeige ist nicht in FlacronCV",
+    "goneBody": "Sie wurde möglicherweise entfernt.",
+    "loadFailed": "Diese Stellenanzeige konnte nicht geladen werden. Es wurde nichts geändert.",
+    "fallbackTitle": "Stellenanzeige",
+    "linkFailedTitle": "Der Link konnte nicht geöffnet werden",
+    "linkFailedBody": "Keine App auf diesem Gerät kann ihn öffnen.",
+    "openOriginalA11y": "Original-Stellenanzeige im Browser öffnen",
+    "original": "Original-Stellenanzeige",
+    "staleTitle": "Diese Stellenanzeige wurde länger nicht geprüft",
+    "staleBody": "Der gespeicherte Text ist noch vorhanden. Öffne die Original-Stellenanzeige, um sie zu überprüfen.",
+    "locations": "Orte",
+    "pay": "Gehalt",
+    "sponsorship": "Sponsoring",
+    "deadline": "Frist",
+    "lastChecked": "Zuletzt geprüft am {date}"
+  },
+  "compare": {
+    "title": "Mit meinem Lebenslauf vergleichen",
+    "notInPlan": "Die Lebenslaufanalyse ist in deinem Karrieretarif nicht enthalten.",
+    "confirmTitle": "Dies verbraucht 1 Lebenslauf-Analyse",
+    "confirmAgain": "Wenn sich deine Fakten und die Anzeige nicht geändert haben, kommt der gespeicherte Vergleich kostenlos zurück. Es ist keine Einstellungswahrscheinlichkeit.",
+    "confirmFirst": "Damit wird die Anzeige mit deinem Lebenslauf verglichen. Es ist keine Einstellungswahrscheinlichkeit.",
+    "useOne": "1 Analyse verwenden",
+    "loadingCvs": "Deine Karriere-Lebensläufe werden geladen…",
+    "cvsFailed": "Deine Karriere-Lebensläufe konnten nicht geladen werden.",
+    "noResume": "Erstelle zuerst einen Lebenslauf. Es wurde keine Analyse verbraucht.",
+    "cvToCompare": "Karriere-Lebenslauf zum Vergleichen",
+    "again": "Erneut vergleichen",
+    "retryA11y": "Denselben Vergleich erneut versuchen",
+    "retry": "Erneut versuchen (nicht doppelt berechnet)"
+  },
+  "reasons": {
+    "suspicious_fee": "Verlangt eine Gebühr",
+    "misleading": "Irreführende Angaben",
+    "expired_closed": "Abgelaufen oder geschlossen",
+    "duplicate": "Doppelte Stellenanzeige",
+    "scam": "Verdächtige Anfrage",
+    "other": "Sonstiges"
+  }
+}

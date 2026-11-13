@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useAppConfig } from '../../hooks/useAppConfig';
+import { useT } from '../../i18n';
 import { colors } from '../../theme/colors';
 import { activeAnnouncement, type AnnouncementType } from './app-notices';
 
@@ -50,6 +51,7 @@ let dismissedThisSession: string | null = null;
  * The message is operator-authored free text and is shown verbatim.
  */
 export function AnnouncementBanner({ className = '' }: { className?: string }) {
+  const t = useT('notices.announcement');
   const { data } = useAppConfig();
   const [dismissed, setDismissed] = useState<string | null>(dismissedThisSession);
 
@@ -69,12 +71,12 @@ export function AnnouncementBanner({ className = '' }: { className?: string }) {
       className={`flex-row items-start rounded-2xl border px-4 py-3 ${style.wrap} ${className}`}
     >
       <Ionicons name={style.icon} size={20} color={style.iconColor} style={{ marginTop: 1 }} />
-      <Text className={`flex-1 text-sm ml-3 ${style.text}`}>{announcement.message}</Text>
+      <Text className={`flex-1 text-sm ms-3 ${style.text}`}>{announcement.message}</Text>
       <TouchableOpacity
         onPress={dismiss}
-        className="w-11 h-11 -mr-3 -my-2.5 items-center justify-center"
+        className="w-11 h-11 -me-3 -my-2.5 items-center justify-center"
         accessibilityRole="button"
-        accessibilityLabel="Dismiss announcement"
+        accessibilityLabel={t('dismiss')}
       >
         <Ionicons name="close" size={18} color={style.iconColor} />
       </TouchableOpacity>

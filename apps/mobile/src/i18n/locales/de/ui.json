@@ -1,0 +1,12 @@
+{
+  "errorState": {
+    "title": "Hoppla!",
+    "message": "Etwas ist schiefgelaufen",
+    "retry": "Erneut versuchen"
+  },
+  "leaveGuard": {
+    "title": "Ohne Speichern verlassen?",
+    "body": "Deine Änderungen sind nicht gespeichert. Sie bleiben auf diesem Gerät, bis du dich abmeldest oder die App schließt.",
+    "stay": "Auf dieser Seite bleiben"
+  }
+}

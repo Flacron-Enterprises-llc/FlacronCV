@@ -3,6 +3,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppConfig } from '../../hooks/useAppConfig';
+import { useT } from '../../i18n';
 import { useAuthStore } from '../../store/auth-store';
 import { colors } from '../../theme/colors';
 import { Button } from '../ui/Button';
@@ -18,6 +19,8 @@ import { maintenanceMessage } from './app-notices';
  * comes back on its own once maintenance ends — there is no page reload on mobile.
  */
 export function MaintenanceGate({ children }: { children: React.ReactNode }) {
+  // Subscribing re-renders on a language change, so the fallback message follows it.
+  const t = useT('notices.maintenance');
   const role = useAuthStore((s) => s.user?.role);
   const { data, refetch, isFetching } = useAppConfig({
     // Poll only while this user is blocked.
@@ -38,7 +41,7 @@ export function MaintenanceGate({ children }: { children: React.ReactNode }) {
         </Text>
         <View className="mt-6">
           <Button variant="outline" loading={isFetching} onPress={() => void refetch()}>
-            Check again
+            {t('checkAgain')}
           </Button>
         </View>
       </View>

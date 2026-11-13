@@ -1,0 +1,12 @@
+{
+  "errorState": {
+    "title": "Oops!",
+    "message": "Something went wrong",
+    "retry": "Try Again"
+  },
+  "leaveGuard": {
+    "title": "Leave without saving?",
+    "body": "Your changes are not saved. They stay on this device until you sign out or close the app.",
+    "stay": "Stay on this page"
+  }
+}

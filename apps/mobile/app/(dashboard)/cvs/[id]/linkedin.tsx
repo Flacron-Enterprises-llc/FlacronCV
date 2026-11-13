@@ -23,6 +23,8 @@ import {
   skillsCopyText,
 } from '../../../../src/lib/linkedin';
 import { serializeCVToText } from '../../../../src/lib/serialize-cv';
+import { useT } from '../../../../src/i18n';
+import { RTL_FLIP } from '../../../../src/i18n/native';
 import { useAuthStore } from '../../../../src/store/auth-store';
 import { useCVStore } from '../../../../src/store/cv-store';
 import { colors } from '../../../../src/theme/colors';
@@ -37,16 +39,17 @@ async function shareText(text: string, title: string) {
 }
 
 function CopyButton({ text, label }: { text: string; label: string }) {
+  const t = useT('aiTools');
   return (
     <Pressable
       onPress={() => void shareText(text, label)}
       accessibilityRole="button"
-      accessibilityLabel={`Copy ${label}`}
-      accessibilityHint="Opens the share sheet, where you can copy the text"
+      accessibilityLabel={t('linkedin.copyLabel', { label })}
+      accessibilityHint={t('linkedin.copyHint')}
       className="min-h-[44px] flex-row items-center px-2 rounded-lg active:bg-brand-50"
     >
       <Ionicons name="copy-outline" size={16} color={colors.brand[600]} />
-      <Text className="text-xs font-semibold text-brand-600 ml-1">Copy</Text>
+      <Text className="text-xs font-semibold text-brand-600 ms-1">{t('linkedin.copy')}</Text>
     </Pressable>
   );
 }
@@ -54,6 +57,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 export default function LinkedInScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const t = useT('aiTools');
   const queryClient = useQueryClient();
   const { user, syncUser } = useAuthStore();
   const storeCv = useCVStore((s) => s.cv);
@@ -77,16 +81,16 @@ export default function LinkedInScreen() {
 
   const runOptimize = async () => {
     if (emptyCv) {
-      Alert.alert('Empty CV', 'Add some content to your CV first.');
+      Alert.alert(t('shared.emptyCvTitle'), t('linkedin.emptyCvBody'));
       return;
     }
     if (!user) {
-      Alert.alert('Account not loaded', 'Your account has not loaded yet. Check your connection and try again.');
+      Alert.alert(t('shared.accountNotLoadedTitle'), t('shared.accountNotLoadedBody'));
       return;
     }
     if (!canUseAI(user.subscription, user.usage?.aiCreditsUsed ?? 0, user.usage?.aiCreditsLimit)) {
       Alert.alert(
-        'Credits Exhausted',
+        t('shared.creditsExhaustedTitle'),
         aiCreditsExhaustedMessage('summary'),
         upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
       );
@@ -98,19 +102,13 @@ export default function LinkedInScreen() {
       await syncUser();
       await queryClient.invalidateQueries({ queryKey: ['user'] });
       if (!parsed) {
-        Alert.alert(
-          'Could not read the result',
-          'The optimizer finished but the response could not be read. A credit may have been used. Check your balance and try again.',
-        );
+        Alert.alert(t('shared.readErrorTitle'), t('linkedin.readErrorBody'));
         return;
       }
       setResult(parsed);
     } catch (err: unknown) {
       if (alertIfUnverifiedEmail(err)) return;
-      Alert.alert(
-        'Could not optimize',
-        engineFailureMessage(err, 'Could not optimize your profile. Please try again.'),
-      );
+      Alert.alert(t('linkedin.errorTitle'), engineFailureMessage(err, t('linkedin.error')));
     }
   };
 
@@ -118,15 +116,15 @@ export default function LinkedInScreen() {
     <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
       <TouchableOpacity
         onPress={() => router.back()}
-        className="mr-3 w-11 h-11 items-center justify-center -ml-3"
+        className="me-3 w-11 h-11 items-center justify-center -ms-3"
         accessibilityRole="button"
-        accessibilityLabel="Go back"
+        accessibilityLabel={t('shared.goBack')}
       >
-        <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+        <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
       </TouchableOpacity>
       <Ionicons name="logo-linkedin" size={20} color={colors.brand[600]} />
-      <Text className="text-xl font-black text-stone-900 flex-1 ml-2" numberOfLines={1}>
-        LinkedIn Optimizer
+      <Text className="text-xl font-black text-stone-900 flex-1 ms-2" numberOfLines={1}>
+        {t('linkedin.title')}
       </Text>
     </View>
   );
@@ -136,7 +134,7 @@ export default function LinkedInScreen() {
       <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
         {header}
         <ErrorState
-          message={requestFailureMessage(loadError, 'Could not load this CV. Please try again.')}
+          message={requestFailureMessage(loadError, t('shared.loadCvError'))}
           onRetry={() => {
             void cvQuery.refetch();
             void sectionsQuery.refetch();
@@ -170,12 +168,10 @@ export default function LinkedInScreen() {
       >
         {!result ? (
           <>
-            <Text className="text-stone-500 text-sm mb-4">
-              Turn your CV into an optimized LinkedIn profile. Uses 1 Engine credit.
-            </Text>
+            <Text className="text-stone-500 text-sm mb-4">{t('linkedin.intro')}</Text>
             <Input
-              label="Target role (optional)"
-              placeholder="e.g. Product Manager"
+              label={t('linkedin.roleLabel')}
+              placeholder={t('linkedin.rolePlaceholder')}
               value={targetRole}
               maxLength={LINKEDIN_TARGET_ROLE_MAX}
               onChangeText={setTargetRole}
@@ -183,7 +179,7 @@ export default function LinkedInScreen() {
               onSubmitEditing={() => {
                 if (!optimize.isPending) void runOptimize();
               }}
-              hint={emptyCv ? 'Add some content to your CV first.' : undefined}
+              hint={emptyCv ? t('linkedin.emptyCvBody') : undefined}
             />
             <Button
               variant="primary"
@@ -192,11 +188,11 @@ export default function LinkedInScreen() {
               disabled={optimize.isPending || emptyCv}
               onPress={() => void runOptimize()}
             >
-              {optimize.isPending ? 'Optimizing…' : 'Optimize'}
+              {optimize.isPending ? t('linkedin.optimizing') : t('linkedin.optimize')}
             </Button>
             {user ? (
               <Text className="text-xs text-stone-400 text-center mt-3">
-                {creditsLeft > 0 ? `${creditsLeft} credits left` : 'No Engine credits remaining'}
+                {creditsLeft > 0 ? t('linkedin.creditsLeft', { count: creditsLeft }) : t('linkedin.noCredits')}
               </Text>
             ) : null}
           </>
@@ -205,8 +201,8 @@ export default function LinkedInScreen() {
             {result.headline ? (
               <View className="mb-5">
                 <View className="flex-row items-center justify-between mb-1">
-                  <Text className="text-sm font-semibold text-stone-800">Headline</Text>
-                  <CopyButton text={result.headline} label="Headline" />
+                  <Text className="text-sm font-semibold text-stone-800">{t('linkedin.headline')}</Text>
+                  <CopyButton text={result.headline} label={t('linkedin.headline')} />
                 </View>
                 <Text selectable className="rounded-xl border border-stone-200 bg-white p-3 text-sm text-stone-700">
                   {result.headline}
@@ -217,8 +213,8 @@ export default function LinkedInScreen() {
             {result.about ? (
               <View className="mb-5">
                 <View className="flex-row items-center justify-between mb-1">
-                  <Text className="text-sm font-semibold text-stone-800">About section</Text>
-                  <CopyButton text={result.about} label="About section" />
+                  <Text className="text-sm font-semibold text-stone-800">{t('linkedin.about')}</Text>
+                  <CopyButton text={result.about} label={t('linkedin.about')} />
                 </View>
                 <Text selectable className="rounded-xl border border-stone-200 bg-white p-3 text-sm text-stone-700">
                   {result.about}
@@ -229,8 +225,8 @@ export default function LinkedInScreen() {
             {result.skills.length > 0 ? (
               <View className="mb-5">
                 <View className="flex-row items-center justify-between mb-2">
-                  <Text className="text-sm font-semibold text-stone-800">Skills & keywords</Text>
-                  <CopyButton text={skillsCopyText(result)} label="Skills & keywords" />
+                  <Text className="text-sm font-semibold text-stone-800">{t('linkedin.skills')}</Text>
+                  <CopyButton text={skillsCopyText(result)} label={t('linkedin.skills')} />
                 </View>
                 <View className="flex-row flex-wrap gap-1.5">
                   {result.skills.map((s, i) => (
@@ -246,7 +242,7 @@ export default function LinkedInScreen() {
 
             {result.tips.length > 0 ? (
               <View className="mb-5">
-                <Text className="text-sm font-semibold text-stone-800 mb-2">Tips</Text>
+                <Text className="text-sm font-semibold text-stone-800 mb-2">{t('linkedin.tips')}</Text>
                 {result.tips.map((tip, i) => (
                   <Text key={`${tip}-${i}`} selectable className="text-sm text-stone-600 mb-1.5">
                     • {tip}
@@ -255,16 +251,16 @@ export default function LinkedInScreen() {
               </View>
             ) : null}
 
-            <Text className="text-xs text-stone-400 mb-4">Tip: press and hold any text to select it.</Text>
+            <Text className="text-xs text-stone-400 mb-4">{t('linkedin.selectTip')}</Text>
 
             <View className="gap-3">
               <Button
                 variant="outline"
                 fullWidth
                 icon={<Ionicons name="share-outline" size={18} color={colors.stone[700]} />}
-                onPress={() => void shareText(linkedInShareText(result), 'LinkedIn profile')}
+                onPress={() => void shareText(linkedInShareText(result), t('linkedin.shareTitle'))}
               >
-                Share all
+                {t('linkedin.shareAll')}
               </Button>
               <Button
                 variant="ghost"
@@ -272,7 +268,7 @@ export default function LinkedInScreen() {
                 icon={<Ionicons name="refresh" size={18} color={colors.stone[700]} />}
                 onPress={() => setResult(null)}
               >
-                Start over
+                {t('linkedin.startOver')}
               </Button>
             </View>
           </>

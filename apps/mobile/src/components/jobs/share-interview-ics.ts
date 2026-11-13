@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
+import { t } from '../../i18n';
 import { interviewCalendarFile } from '../../lib/job-tracker';
 import type { JobApplication } from '../../types/job.types';
 
@@ -15,22 +16,22 @@ export async function shareInterviewIcs(
 ): Promise<void> {
   const file = interviewCalendarFile(job);
   if (!file) {
-    Alert.alert('Could not add to calendar', "Couldn't create the calendar event. Please try again.");
+    Alert.alert(t('jobs.calendar.errorTitle'), t('jobs.calendar.error'));
     return;
   }
   try {
     const uri = `${FileSystem.cacheDirectory}${file.filename}`;
     await FileSystem.writeAsStringAsync(uri, file.content, { encoding: FileSystem.EncodingType.UTF8 });
     if (!(await Sharing.isAvailableAsync())) {
-      Alert.alert('Sharing unavailable', 'Sharing is not available on this device.');
+      Alert.alert(t('jobs.calendar.unavailableTitle'), t('jobs.calendar.unavailable'));
       return;
     }
     await Sharing.shareAsync(uri, {
       mimeType: 'text/calendar',
       UTI: 'com.apple.ical.ics',
-      dialogTitle: 'Add interview to calendar',
+      dialogTitle: t('jobs.calendar.dialogTitle'),
     });
   } catch {
-    Alert.alert('Could not add to calendar', "Couldn't create the calendar event. Please try again.");
+    Alert.alert(t('jobs.calendar.errorTitle'), t('jobs.calendar.error'));
   }
 }

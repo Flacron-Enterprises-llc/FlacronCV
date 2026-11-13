@@ -12,6 +12,7 @@ import { useCareerAccess } from '../../../../src/hooks/useCareer';
 import { portfolioLoadState, visibilityPill, visitsText } from '../../../../src/lib/career/portfolios';
 import { careerErrorMessage, formatDay } from '../../../../src/lib/career-view';
 import { colors } from '../../../../src/theme/colors';
+import { useT } from '../../../../src/i18n';
 
 /**
  * Portfolio pages: a stable page of chosen evidence, published publicly or as
@@ -19,6 +20,7 @@ import { colors } from '../../../../src/theme/colors';
  */
 export default function PortfolioListScreen() {
   const router = useRouter();
+  const t = useT('careerPortfolios');
   const access = useCareerAccess();
   const gate = usePortfolioGate();
   const list = usePortfolios();
@@ -30,7 +32,7 @@ export default function PortfolioListScreen() {
       onPress={() => router.push('/(dashboard)/career/portfolios/new' as Href)}
       className="h-11 w-11 items-center justify-center rounded-full bg-brand-600"
       accessibilityRole="button"
-      accessibilityLabel="Create portfolio page"
+      accessibilityLabel={t('list.createA11y')}
     >
       <Ionicons name="add" size={24} color={colors.white} />
     </TouchableOpacity>
@@ -38,15 +40,15 @@ export default function PortfolioListScreen() {
 
   let content: React.ReactNode;
   if (gate === 'locked') {
-    content = <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" />;
+    content = <EmptyState icon="lock-closed-outline" title={t('gate.locked')} />;
   } else if (gate === 'off' || loadState === 'off') {
-    content = <EmptyState icon="lock-closed-outline" title="Portfolio pages are not open yet" description="They are switched off right now. Your evidence and documents are unchanged." />;
+    content = <EmptyState icon="lock-closed-outline" title={t('gate.offTitle')} description={t('gate.offBody')} />;
   } else if (loadState === 'upgrade') {
     content = (
       <EmptyState
         icon="lock-closed-outline"
-        title="A public portfolio is not included in your current plan"
-        description="You can keep evidence private in your Evidence vault."
+        title={t('gate.upgradeTitle')}
+        description={t('gate.upgradeBody')}
       />
     );
   } else if (gate === 'loading' || list.isLoading) {
@@ -59,7 +61,7 @@ export default function PortfolioListScreen() {
   } else if (gate === 'error' || list.error) {
     content = (
       <ErrorState
-        message={careerErrorMessage(list.error ?? access.error, 'The portfolio could not be loaded. Nothing was published.')}
+        message={careerErrorMessage(list.error ?? access.error, t('gate.loadFailed'))}
         onRetry={() => void (list.error ? list.refetch() : access.refetch())}
       />
     );
@@ -72,22 +74,26 @@ export default function PortfolioListScreen() {
         refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} tintColor={colors.brand[600]} />}
         ListHeaderComponent={
           <Text className="text-stone-500 text-sm mb-4 leading-5">
-            Share selected work with a stable page and a QR code. Unpublishing removes public access.
+            {t('list.intro')}
           </Text>
         }
         ListEmptyComponent={
           <EmptyState
             icon="globe-outline"
-            title="No portfolio page yet"
-            description="Create a page, choose work to show, then publish it or make a private link."
-            actionLabel="Create page"
+            title={t('list.emptyTitle')}
+            description={t('list.emptyBody')}
+            actionLabel={t('list.createPage')}
             onAction={() => router.push('/(dashboard)/career/portfolios/new' as Href)}
           />
         }
         renderItem={({ item }) => {
           const pill = visibilityPill(item.visibility);
           const visits = visitsText(item.visitCount);
-          const meta = [item.evidenceIds.length === 1 ? '1 item' : `${item.evidenceIds.length} items`, visits, item.publishedAt ? `Published ${formatDay(item.publishedAt) ?? ''}` : null]
+          const meta = [
+            t('list.itemCount', { count: item.evidenceIds.length }),
+            visits,
+            item.publishedAt ? t('list.publishedOn', { date: formatDay(item.publishedAt) ?? '' }) : null,
+          ]
             .filter(Boolean)
             .join(' · ');
           return (
@@ -96,10 +102,10 @@ export default function PortfolioListScreen() {
               className="bg-white border border-stone-100 rounded-2xl p-4 mb-3"
               accessibilityRole="button"
               accessibilityLabel={`${item.title}, ${pill.label.toLowerCase()}${visits ? `, ${visits}` : ''}`}
-              accessibilityHint="Opens the page to edit, publish or share it"
+              accessibilityHint={t('list.openHint')}
             >
               <View className="flex-row items-start justify-between">
-                <View className="flex-1 mr-2">
+                <View className="flex-1 me-2">
                   <Text className="font-bold text-stone-900">{item.title}</Text>
                   {item.headline ? (
                     <Text className="text-stone-500 text-sm mt-0.5" numberOfLines={2}>
@@ -119,7 +125,7 @@ export default function PortfolioListScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title="Portfolio pages" subtitle="Share chosen work with a link or QR code" right={addButton} />
+      <CareerHeader title={t('list.title')} subtitle={t('list.subtitle')} right={addButton} />
       {content}
     </SafeAreaView>
   );

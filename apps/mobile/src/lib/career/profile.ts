@@ -22,13 +22,15 @@ import {
 } from '../../../../../packages/career-shared/src/facts';
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type { Fact, ImportAllowance } from '../../../../../packages/career-api-client/src/types';
+import { hasKey, t } from '../../i18n';
+import { FACT_TYPE_LABEL, labelMap } from '../career-view';
 
 /**
  * Pure logic for the mobile career profile (facts, import, preferences).
  * Mirrors the website's profile screen (apps/web/src/components/career/profile
  * and apps/web/src/lib/career/fact-draft.ts) so a value the phone accepts is
- * a value the website and the API accept. English copy matches the web's
- * `career.profile` strings.
+ * a value the website and the API accept. Copy lives in the
+ * `careerProfile` namespace (English matches the web's `career.profile` strings).
  */
 
 export { FACT_TYPES, PAY_PERIODS, SCHEDULES, SENIORITIES, WORK_ARRANGEMENTS };
@@ -37,116 +39,53 @@ export type { FactType };
 /** The career API's ceiling for pasted resume text (`RESUME_TEXT_MAX`). */
 export const IMPORT_TEXT_MAX = 100_000;
 
-export const FIELD_LABEL: Record<string, string> = {
-  fullName: 'Full name',
-  headline: 'Headline',
-  email: 'Email',
-  phone: 'Phone',
-  city: 'City',
-  country: 'Country',
-  website: 'Website',
-  linkedin: 'LinkedIn',
-  github: 'GitHub',
-  text: 'Text',
-  position: 'Position',
-  company: 'Employer',
-  location: 'Location',
-  startDate: 'Start',
-  endDate: 'End',
-  current: 'Current role',
-  responsibilities: 'Responsibilities',
-  institution: 'Institution',
-  degree: 'Degree',
-  field: 'Field',
-  details: 'Details',
-  name: 'Name',
-  category: 'Category',
-  description: 'Description',
-  url: 'Link',
-  technologies: 'Technologies',
-  statement: 'Statement',
-  metric: 'Number, if you have one',
-  experienceFactId: 'Linked role',
-  date: 'Date',
-  issuer: 'Issuer',
-  issueDate: 'Issued',
-  expiryDate: 'Expires',
-  credentialId: 'Credential id',
-  proficiency: 'Proficiency',
-  title: 'Title',
-  relationship: 'Relationship',
-};
+export const FIELD_LABEL: Record<string, string> = labelMap('careerProfile.fields', [
+  'fullName', 'headline', 'email', 'phone', 'city', 'country', 'website', 'linkedin', 'github', 'text', 'position', 'company',
+  'location', 'startDate', 'endDate', 'current', 'responsibilities', 'institution', 'degree', 'field', 'details', 'name',
+  'category', 'description', 'url', 'technologies', 'statement', 'metric', 'experienceFactId', 'date', 'issuer', 'issueDate',
+  'expiryDate', 'credentialId', 'proficiency', 'title', 'relationship',
+] as const);
 
-export const REASON_TEXT: Record<string, string> = {
-  required: 'This is needed.',
-  too_long: 'This is too long.',
-  invalid_date: 'Use YYYY, YYYY-MM, or YYYY-MM-DD.',
-  date_order: 'The end is before the start.',
-  invalid_email: 'Enter a valid email address.',
-  invalid_url: 'Enter a web address.',
-  invalid_type: 'This value is not usable.',
-  too_many_items: 'There are too many items.',
-  current_with_end_date: 'A current role has no end date.',
-  unknown_field: 'This field is not part of the fact.',
-};
+export const REASON_TEXT: Record<string, string> = labelMap('careerProfile.reasons', [
+  'required', 'too_long', 'invalid_date', 'date_order', 'invalid_email', 'invalid_url', 'invalid_type', 'too_many_items',
+  'current_with_end_date', 'unknown_field',
+] as const);
 
-export const UNCERTAIN_TEXT: Record<string, string> = {
-  model_flagged: 'The import was unsure about this.',
-  unparsed_date: 'The date could not be stored as written.',
-  date_order: 'The dates were out of order, so one was left empty.',
-  not_found_in_source: 'This was not found in the resume text.',
-  number_not_in_source: 'A number here is not in the resume text.',
-  truncated: 'This was cut to fit the field.',
-  invalid_format: 'The format was not usable, so the value was left empty.',
-};
+export const UNCERTAIN_TEXT: Record<string, string> = labelMap('careerProfile.uncertain', [
+  'model_flagged', 'unparsed_date', 'date_order', 'not_found_in_source', 'number_not_in_source', 'truncated', 'invalid_format',
+] as const);
 
-export const SOURCE_LABEL: Record<string, string> = {
-  manual: 'Typed',
-  paste: 'Pasted',
-  import: 'Imported',
-  migrated: 'Copied from the previous account',
-};
+export const SOURCE_LABEL: Record<string, string> = labelMap('careerProfile.sources', ['manual', 'paste', 'import', 'migrated'] as const);
 
-export const CHANGE_LABEL: Record<string, string> = { created: 'created', edited: 'edited', confirmed: 'confirmed' };
+export const CHANGE_LABEL: Record<string, string> = labelMap('careerProfile.changes', ['created', 'edited', 'confirmed'] as const);
 
-export const ARRANGEMENT_LABEL: Record<WorkArrangement, string> = { onsite: 'On-site', hybrid: 'Hybrid', remote: 'Remote' };
-export const SCHEDULE_LABEL: Record<Schedule, string> = {
-  full_time: 'Full time',
-  part_time: 'Part time',
-  contract: 'Contract',
-  temporary: 'Temporary',
-  internship: 'Internship',
-};
-export const SENIORITY_LABEL: Record<Seniority, string> = { entry: 'Entry', mid: 'Mid', senior: 'Senior', lead: 'Lead', executive: 'Executive' };
-export const PERIOD_LABEL: Record<PayPeriod, string> = { hour: 'Hour', month: 'Month', year: 'Year' };
+export const ARRANGEMENT_LABEL: Record<WorkArrangement, string> = labelMap('careerProfile.arrangement', ['onsite', 'hybrid', 'remote'] as const);
+export const SCHEDULE_LABEL: Record<Schedule, string> = labelMap('careerProfile.schedule', [
+  'full_time',
+  'part_time',
+  'contract',
+  'temporary',
+  'internship',
+] as const);
+export const SENIORITY_LABEL: Record<Seniority, string> = labelMap('careerProfile.seniority', ['entry', 'mid', 'senior', 'lead', 'executive'] as const);
+export const PERIOD_LABEL: Record<PayPeriod, string> = labelMap('careerProfile.period', ['hour', 'month', 'year'] as const);
+/** The period inside a sentence ("60000 EUR a year"). */
+const PERIOD_LOWER: Record<PayPeriod, string> = labelMap('careerProfile.periodLower', ['hour', 'month', 'year'] as const);
 
-export const PREFERENCE_FIELD_LABEL: Record<string, string> = {
-  targetRoles: 'Target roles',
-  locations: 'Locations',
-  arrangements: 'Work arrangement',
-  schedules: 'Schedule',
-  seniority: 'Seniority',
-  minimumPay: 'Minimum pay',
-  learningHoursPerWeek: 'Learning hours a week',
-  careerGoals: 'Career goals',
-  preferences: 'preferences',
-};
-
-const TYPE_LABEL: Record<FactType, string> = {
-  contact: 'Contact',
-  summary: 'Summary',
-  experience: 'Experience',
-  education: 'Education',
-  skill: 'Skill',
-  project: 'Project',
-  achievement: 'Achievement',
-  certification: 'Certification',
-  language: 'Language',
-  reference: 'Reference',
-};
+export const PREFERENCE_FIELD_LABEL: Record<string, string> = labelMap('careerProfile.prefFields', [
+  'targetRoles',
+  'locations',
+  'arrangements',
+  'schedules',
+  'seniority',
+  'minimumPay',
+  'learningHoursPerWeek',
+  'careerGoals',
+  'preferences',
+] as const);
 
 export function typeLabel(type: string): string {
-  return TYPE_LABEL[type as FactType] ?? type;
+  return FACT_TYPE_LABEL[type] ?? type;
 }
 
 export function isFactType(value: unknown): value is FactType {
@@ -158,14 +97,14 @@ export function factFields(type: FactType): Array<{ field: string; spec: FieldSp
   return Object.entries(FACT_FIELDS[type]).map(([field, spec]) => ({
     field,
     spec,
-    label: `${FIELD_LABEL[field] ?? field}${spec.required ? ' (required)' : ''}`,
+    label: spec.required ? t('careerProfile.fieldRequired', { label: FIELD_LABEL[field] ?? field }) : (FIELD_LABEL[field] ?? field),
   }));
 }
 
 /** Form hint per field kind (same hints as the web form). */
 export function fieldHint(spec: FieldSpec): string | undefined {
-  if (spec.kind === 'date') return 'YYYY, YYYY-MM, or YYYY-MM-DD';
-  if (spec.kind === 'list') return 'Separate items with commas';
+  if (spec.kind === 'date') return t('careerProfile.hints.date');
+  if (spec.kind === 'list') return t('careerProfile.hints.list');
   return undefined;
 }
 
@@ -285,12 +224,12 @@ export function unplacedErrors(type: FactType, errors: Record<string, string>): 
 
 export function uncertainNote(reason: string, raw?: string): string {
   const text = UNCERTAIN_TEXT[reason] ?? UNCERTAIN_TEXT.model_flagged;
-  return raw ? `${text} The resume said “${raw}”.` : text;
+  return raw ? [text, t('careerProfile.uncertainRaw', { raw })].join(' ') : text;
 }
 
 export function missingFieldsLine(fields: readonly string[]): string | null {
   if (fields.length === 0) return null;
-  return `Still needed before you can confirm: ${fields.map((f) => FIELD_LABEL[f] ?? f).join(', ')}`;
+  return t('careerProfile.missingFields', { fields: fields.map((f) => FIELD_LABEL[f] ?? f).join(', ') });
 }
 
 /** "3 confirmed, 2 still to review" plus the core sections with no confirmed fact (web `counts` + `missing_core`). */
@@ -305,29 +244,30 @@ export function countsLine(facts: ReadonlyArray<Pick<Fact, 'factType' | 'confirm
     } else draft += 1;
   }
   const missing = CORE_FACT_TYPES.filter((type) => !confirmedTypes.has(type));
-  const head = `${confirmed} confirmed, ${draft} still to review`;
-  return missing.length > 0 ? `${head}. Still to confirm: ${missing.map(typeLabel).join(', ')}` : head;
+  const head = t('careerProfile.counts', { confirmed, draft });
+  return missing.length > 0 ? `${head}. ${t('careerProfile.missingCore', { sections: missing.map(typeLabel).join(', ') })}` : head;
 }
 
 /** Revision row text (web `revision`). */
 export function revisionLine(revision: { revision: number; change: string }): string {
-  return `Version ${revision.revision}: ${CHANGE_LABEL[revision.change] ?? revision.change}`;
+  const change = hasKey(`careerProfile.changes.${revision.change}`) ? CHANGE_LABEL[revision.change] : revision.change;
+  return t('careerProfile.revision', { revision: revision.revision, change });
 }
 
 // ---------------------------------------------------------------- import
 
 export function allowanceLine(allowance: Pick<ImportAllowance, 'limit' | 'remaining' | 'resetsAt'>): string {
   if (allowance.remaining <= 0) {
-    return `The daily import limit is ${allowance.limit}. It resets on ${allowance.resetsAt.slice(0, 10)} UTC.`;
+    return t('careerProfile.import.limit', { limit: allowance.limit, date: allowance.resetsAt.slice(0, 10) });
   }
-  return `${allowance.remaining} ${allowance.remaining === 1 ? 'import' : 'imports'} left today`;
+  return t('careerProfile.import.remaining', { count: allowance.remaining });
 }
 
 /** Pasted text, cleaned the way the web cleans extracted text, or why it cannot be sent. */
 export function checkImportText(text: string): { ok: true; text: string } | { ok: false; message: string } {
   const cleaned = text.replace(/\r\n/g, '\n').replace(/[ \t]+\n/g, '\n').trim();
-  if (cleaned.length === 0) return { ok: false, message: 'Paste the text of your resume first.' };
-  if (cleaned.length > IMPORT_TEXT_MAX) return { ok: false, message: 'That text is too long. Paste at most 100,000 characters.' };
+  if (cleaned.length === 0) return { ok: false, message: t('careerProfile.import.empty') };
+  if (cleaned.length > IMPORT_TEXT_MAX) return { ok: false, message: t('careerProfile.import.tooLong') };
   return { ok: true, text: cleaned };
 }
 
@@ -341,8 +281,8 @@ export function importFailure(error: unknown, allowance: Pick<ImportAllowance, '
   if (error instanceof ApiError && error.code === 'provider_unavailable') {
     return {
       kind: 'unavailable',
-      title: 'Import is unavailable',
-      body: 'Needs the AI provider, which is not configured in this environment. The daily import was not counted, and no document credit was used.',
+      title: t('careerProfile.import.unavailableTitle'),
+      body: t('careerProfile.import.unavailableBody'),
     };
   }
   if (error instanceof ApiError && error.code === 'import_daily_limit') {
@@ -351,18 +291,18 @@ export function importFailure(error: unknown, allowance: Pick<ImportAllowance, '
     return { kind: 'limit', limit, resetsAt };
   }
   if (error instanceof ApiError && error.code === 'network_error') {
-    return { kind: 'failed', title: 'No connection', body: 'Nothing was imported and the daily import was not counted. Your text is still here.' };
+    return { kind: 'failed', title: t('careerProfile.import.noConnectionTitle'), body: t('careerProfile.import.noConnectionBody') };
   }
   return {
     kind: 'failed',
-    title: 'The import did not finish',
-    body: 'The daily import was not counted, and no document credit was used. What you pasted is still here.',
+    title: t('careerProfile.import.failedTitle'),
+    body: t('careerProfile.import.failedBody'),
   };
 }
 
 export function missingSectionsLine(missing: readonly string[]): string | null {
   if (missing.length === 0) return null;
-  return `The resume had no ${missing.map(typeLabel).join(', ')}. Nothing was added for them.`;
+  return t('careerProfile.import.missingSections', { sections: missing.map(typeLabel).join(', ') });
 }
 
 // ---------------------------------------------------------------- preferences
@@ -427,25 +367,30 @@ export function checkPreferences(draft: PreferencesDraft): { ok: true; value: Ca
 }
 
 export function preferenceErrorMessage(field: string): string {
-  if (field === 'minimumPay') return 'Check minimum pay: a whole amount above 0 and a 3-letter currency code such as USD.';
-  if (field === 'learningHoursPerWeek') return 'Check learning hours a week: a whole number from 0 to 80.';
-  return `Check ${PREFERENCE_FIELD_LABEL[field] ?? field}.`;
+  if (field === 'minimumPay') return t('careerProfile.prefErrors.pay');
+  if (field === 'learningHoursPerWeek') return t('careerProfile.prefErrors.hours');
+  const label = hasKey(`careerProfile.prefFields.${field}`) ? PREFERENCE_FIELD_LABEL[field] : field;
+  return t('careerProfile.prefErrors.field', { field: label });
 }
 
 /** Read-only lines for the preferences card; empty when nothing is set. */
 export function preferencesSummary(value: CareerPreferences | undefined): string[] {
   if (!value) return [];
   const lines: string[] = [];
-  if (value.targetRoles.length > 0) lines.push(`Target roles: ${value.targetRoles.join(', ')}`);
-  if (value.locations.length > 0) lines.push(`Locations: ${value.locations.join(', ')}`);
-  if (value.arrangements.length > 0) lines.push(`Work arrangement: ${value.arrangements.map((a) => ARRANGEMENT_LABEL[a]).join(', ')}`);
-  if (value.schedules.length > 0) lines.push(`Schedule: ${value.schedules.map((s) => SCHEDULE_LABEL[s]).join(', ')}`);
-  if (value.seniority) lines.push(`Seniority: ${SENIORITY_LABEL[value.seniority]}`);
+  const line = (field: string, text: string | number) => lines.push(`${PREFERENCE_FIELD_LABEL[field]}: ${text}`);
+  if (value.targetRoles.length > 0) line('targetRoles', value.targetRoles.join(', '));
+  if (value.locations.length > 0) line('locations', value.locations.join(', '));
+  if (value.arrangements.length > 0) line('arrangements', value.arrangements.map((a) => ARRANGEMENT_LABEL[a]).join(', '));
+  if (value.schedules.length > 0) line('schedules', value.schedules.map((s) => SCHEDULE_LABEL[s]).join(', '));
+  if (value.seniority) line('seniority', SENIORITY_LABEL[value.seniority]);
   if (value.minimumPay) {
-    lines.push(`Minimum pay: ${value.minimumPay.amount} ${value.minimumPay.currency} a ${PERIOD_LABEL[value.minimumPay.period].toLowerCase()}`);
+    line(
+      'minimumPay',
+      t('careerProfile.payValue', { amount: value.minimumPay.amount, currency: value.minimumPay.currency, period: PERIOD_LOWER[value.minimumPay.period] }),
+    );
   }
-  if (value.learningHoursPerWeek !== null) lines.push(`Learning hours a week: ${value.learningHoursPerWeek}`);
-  if (value.careerGoals) lines.push(`Career goals: ${value.careerGoals}`);
+  if (value.learningHoursPerWeek !== null) line('learningHoursPerWeek', value.learningHoursPerWeek);
+  if (value.careerGoals) line('careerGoals', value.careerGoals);
   return lines;
 }
 

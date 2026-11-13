@@ -1,0 +1,45 @@
+{
+  "title": "Modèles",
+  "subtitle": "Choisissez un design professionnel",
+  "filters": {
+    "all": "Tous",
+    "free": "Gratuit",
+    "pro": "Pro"
+  },
+  "loadError": "Impossible de charger les modèles. Veuillez réessayer.",
+  "empty": {
+    "allTitle": "Aucun modèle",
+    "freeTitle": "Aucun modèle gratuit",
+    "proTitle": "Aucun modèle Pro",
+    "allBody": "Aucun modèle n’est disponible pour le moment.",
+    "filteredBody": "Essayez un autre filtre pour voir les designs disponibles.",
+    "showAll": "Tout afficher"
+  },
+  "tiers": {
+    "free": "Gratuit",
+    "pro": "Pro",
+    "enterprise": "Enterprise",
+    "careerAccelerator": "Career Accelerator"
+  },
+  "card": {
+    "a11y": "Modèle {name}",
+    "a11yLocked": "Modèle {name}, verrouillé",
+    "preview": "Aperçu du modèle {name}"
+  },
+  "preview": {
+    "title": "Aperçu du modèle",
+    "imageA11y": "Aperçu du modèle {name} avec des données d’exemple",
+    "unavailable": "Aperçu indisponible",
+    "lockedUpgrade": "Ceci est un modèle {tier}. Améliorez votre abonnement pour l’utiliser avec vos propres données.",
+    "lockedShort": "Ceci est un modèle {tier}.",
+    "unlocked": "Cet aperçu utilise des données d’exemple. Sélectionnez ce modèle pour commencer à créer votre propre CV.",
+    "accentColor": "Couleur d’accent",
+    "layout": "Mise en page",
+    "readOnly": "Cet aperçu est en lecture seule. Tout le contenu est un exemple.",
+    "upgradeTo": "Passer à {tier}",
+    "select": "Sélectionner le modèle",
+    "useFree": "Utiliser gratuitement",
+    "maybeLater": "Plus tard",
+    "backToGallery": "Retour à la galerie"
+  }
+}

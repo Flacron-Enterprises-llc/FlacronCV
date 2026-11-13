@@ -9,6 +9,7 @@ import {
   UpdateCVSectionPayload,
 } from '../types/cv.types';
 import { CVSectionType } from '../types/enums';
+import { t } from '../i18n';
 
 /**
  * Pure helpers for the CV editor (title, sections, item payloads). Limits are
@@ -25,12 +26,13 @@ export const ITEM_ARRAY_MAX = 50;
 /** AddSectionDto / UpdateSectionDto `order` is an int in [0, 1000]. */
 export const SECTION_ORDER_MAX = 1000;
 
+/** English copy (tests). The validators return the current language (cvEditor.validation.*). */
 export const CV_TITLE_REQUIRED = 'Please enter a title for your CV.';
 export const CV_TITLE_TOO_LONG = `Title must be ${CV_TITLE_MAX} characters or fewer.`;
 export const SECTION_TITLE_REQUIRED = 'Please enter a section title.';
 export const SECTION_TITLE_TOO_LONG = `Section title must be ${SECTION_TITLE_MAX} characters or fewer.`;
 
-/** Quick-fill names offered under the free-text title field. */
+/** Quick-fill names offered under the free-text title field (saved as CV data). */
 export const CV_TITLE_SUGGESTIONS = [
   'My Professional CV',
   'Software Engineer CV',
@@ -47,16 +49,20 @@ export type TitleCheck = { ok: true; title: string } | { ok: false; error: strin
  */
 export function validateCvTitle(raw: string | null | undefined): TitleCheck {
   const title = (raw ?? '').trim();
-  if (!title) return { ok: false, error: CV_TITLE_REQUIRED };
-  if (title.length > CV_TITLE_MAX) return { ok: false, error: CV_TITLE_TOO_LONG };
+  if (!title) return { ok: false, error: t('cvEditor.validation.titleRequired') };
+  if (title.length > CV_TITLE_MAX) {
+    return { ok: false, error: t('cvEditor.validation.titleTooLong', { max: CV_TITLE_MAX }) };
+  }
   return { ok: true, title };
 }
 
 /** AddSectionDto requires a non-blank title (`Matches(/\S/)`). */
 export function validateSectionTitle(raw: string | null | undefined): TitleCheck {
   const title = (raw ?? '').trim();
-  if (!title) return { ok: false, error: SECTION_TITLE_REQUIRED };
-  if (title.length > SECTION_TITLE_MAX) return { ok: false, error: SECTION_TITLE_TOO_LONG };
+  if (!title) return { ok: false, error: t('cvEditor.validation.sectionTitleRequired') };
+  if (title.length > SECTION_TITLE_MAX) {
+    return { ok: false, error: t('cvEditor.validation.sectionTitleTooLong', { max: SECTION_TITLE_MAX }) };
+  }
   return { ok: true, title };
 }
 
@@ -75,35 +81,46 @@ export function isStandardSectionType(type: string): boolean {
   return (STANDARD_SECTION_TYPES as readonly string[]).includes(type);
 }
 
-/** Web AddSectionButton list, same order and default titles. */
-export const ADDABLE_SECTION_TYPES: readonly { type: CVSectionType; label: string }[] = [
-  { type: CVSectionType.EXPERIENCE, label: 'Work Experience' },
-  { type: CVSectionType.EDUCATION, label: 'Education' },
-  { type: CVSectionType.SKILLS, label: 'Skills' },
-  { type: CVSectionType.PROJECTS, label: 'Projects' },
-  { type: CVSectionType.CERTIFICATIONS, label: 'Certifications' },
-  { type: CVSectionType.LANGUAGES, label: 'Languages' },
-  { type: CVSectionType.REFERENCES, label: 'References' },
-  { type: CVSectionType.CUSTOM, label: 'Custom Section' },
-];
-
-const TYPE_LABELS: Record<string, string> = {
-  [CVSectionType.EXPERIENCE]: 'Work Experience',
-  [CVSectionType.EDUCATION]: 'Education',
-  [CVSectionType.SKILLS]: 'Skills',
-  [CVSectionType.PROJECTS]: 'Projects',
-  [CVSectionType.CERTIFICATIONS]: 'Certifications',
-  [CVSectionType.LANGUAGES]: 'Languages',
-  [CVSectionType.REFERENCES]: 'References',
-  [CVSectionType.AWARDS]: 'Awards',
-  [CVSectionType.PUBLICATIONS]: 'Publications',
-  [CVSectionType.VOLUNTEER]: 'Volunteer',
-  [CVSectionType.CUSTOM]: 'Custom Section',
+/**
+ * Type labels in the current language. They are also the default title of a
+ * new section, like the web AddSectionButton (translated cv_builder.experience
+ * …). A title already saved on a CV is data and is never translated.
+ */
+const TYPE_LABEL_KEYS: Record<string, string> = {
+  [CVSectionType.EXPERIENCE]: 'cvEditor.sectionTypes.experience',
+  [CVSectionType.EDUCATION]: 'cvEditor.sectionTypes.education',
+  [CVSectionType.SKILLS]: 'cvEditor.sectionTypes.skills',
+  [CVSectionType.PROJECTS]: 'cvEditor.sectionTypes.projects',
+  [CVSectionType.CERTIFICATIONS]: 'cvEditor.sectionTypes.certifications',
+  [CVSectionType.LANGUAGES]: 'cvEditor.sectionTypes.languages',
+  [CVSectionType.REFERENCES]: 'cvEditor.sectionTypes.references',
+  [CVSectionType.AWARDS]: 'cvEditor.sectionTypes.awards',
+  [CVSectionType.PUBLICATIONS]: 'cvEditor.sectionTypes.publications',
+  [CVSectionType.VOLUNTEER]: 'cvEditor.sectionTypes.volunteer',
+  [CVSectionType.CUSTOM]: 'cvEditor.sectionTypes.custom',
 };
 
 export function sectionTypeLabel(type: string): string {
-  return TYPE_LABELS[type] ?? 'Section';
+  const key = TYPE_LABEL_KEYS[type];
+  return key ? t(key) : t('cvEditor.sectionTypes.fallback');
 }
+
+/** Web AddSectionButton list, same order. `label` is read in the current language. */
+export const ADDABLE_SECTION_TYPES: readonly { readonly type: CVSectionType; readonly label: string }[] = [
+  CVSectionType.EXPERIENCE,
+  CVSectionType.EDUCATION,
+  CVSectionType.SKILLS,
+  CVSectionType.PROJECTS,
+  CVSectionType.CERTIFICATIONS,
+  CVSectionType.LANGUAGES,
+  CVSectionType.REFERENCES,
+  CVSectionType.CUSTOM,
+].map((type) => ({
+  type,
+  get label() {
+    return sectionTypeLabel(type);
+  },
+}));
 
 /** Sections of one type, in display order (the sections array order). */
 export function sectionsOfType(sections: CVSection[], type: CVSectionType): CVSection[] {

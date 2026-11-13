@@ -4,6 +4,7 @@ import {
   planMeetsTier,
 } from '../../../../packages/shared-types/src/template.tiers';
 import type { SubscriptionPlan as SharedPlan } from '../../../../packages/shared-types/src/enums';
+import { hasKey, t } from '../i18n';
 
 /**
  * CV design options — the same values the website's editor offers
@@ -24,41 +25,42 @@ export interface LayoutOption {
   description: string;
 }
 
+// Labels are getters so they read the current language each time (`cvDesign.*`).
 export const LAYOUT_OPTIONS: readonly LayoutOption[] = [
-  { key: 'classic', label: 'Classic', description: 'Modern minimal' },
-  { key: 'sidebar', label: 'Sidebar', description: 'Corporate professional' },
-  { key: 'top-bar', label: 'Top bar', description: 'Creative and bold' },
-  { key: 'compact', label: 'Compact', description: 'Executive, dense' },
-  { key: 'slate-gold', label: 'Slate Gold', description: 'High-impact minimalist' },
+  { key: 'classic', get label() { return t('cvDesign.layouts.classic'); }, get description() { return t('cvDesign.layouts.classicDesc'); } },
+  { key: 'sidebar', get label() { return t('cvDesign.layouts.sidebar'); }, get description() { return t('cvDesign.layouts.sidebarDesc'); } },
+  { key: 'top-bar', get label() { return t('cvDesign.layouts.topBar'); }, get description() { return t('cvDesign.layouts.topBarDesc'); } },
+  { key: 'compact', get label() { return t('cvDesign.layouts.compact'); }, get description() { return t('cvDesign.layouts.compactDesc'); } },
+  { key: 'slate-gold', get label() { return t('cvDesign.layouts.slateGold'); }, get description() { return t('cvDesign.layouts.slateGoldDesc'); } },
 ];
 
 export const ACCENT_COLORS: readonly { label: string; value: string }[] = [
-  { label: 'Indigo', value: '#4f46e5' },
-  { label: 'Blue', value: '#2563eb' },
-  { label: 'Cyan', value: '#0891b2' },
-  { label: 'Emerald', value: '#059669' },
-  { label: 'Teal', value: '#0d9488' },
-  { label: 'Rose', value: '#e11d48' },
-  { label: 'Orange', value: '#ea580c' },
-  { label: 'Amber', value: '#d97706' },
-  { label: 'Violet', value: '#7c3aed' },
-  { label: 'Slate', value: '#475569' },
-  { label: 'Stone', value: '#78716c' },
-  { label: 'Zinc', value: '#3f3f46' },
+  { get label() { return t('cvDesign.colors.indigo'); }, value: '#4f46e5' },
+  { get label() { return t('cvDesign.colors.blue'); }, value: '#2563eb' },
+  { get label() { return t('cvDesign.colors.cyan'); }, value: '#0891b2' },
+  { get label() { return t('cvDesign.colors.emerald'); }, value: '#059669' },
+  { get label() { return t('cvDesign.colors.teal'); }, value: '#0d9488' },
+  { get label() { return t('cvDesign.colors.rose'); }, value: '#e11d48' },
+  { get label() { return t('cvDesign.colors.orange'); }, value: '#ea580c' },
+  { get label() { return t('cvDesign.colors.amber'); }, value: '#d97706' },
+  { get label() { return t('cvDesign.colors.violet'); }, value: '#7c3aed' },
+  { get label() { return t('cvDesign.colors.slate'); }, value: '#475569' },
+  { get label() { return t('cvDesign.colors.stone'); }, value: '#78716c' },
+  { get label() { return t('cvDesign.colors.zinc'); }, value: '#3f3f46' },
 ];
 
 export const SECTION_STYLE_OPTIONS: readonly { key: SectionStyle; label: string }[] = [
-  { key: 'underline', label: 'Underline' },
-  { key: 'left-border', label: 'Side border' },
-  { key: 'card', label: 'Badge' },
-  { key: 'minimal', label: 'Minimal' },
+  { key: 'underline', get label() { return t('cvDesign.sectionStyles.underline'); } },
+  { key: 'left-border', get label() { return t('cvDesign.sectionStyles.leftBorder'); } },
+  { key: 'card', get label() { return t('cvDesign.sectionStyles.card'); } },
+  { key: 'minimal', get label() { return t('cvDesign.sectionStyles.minimal'); } },
 ];
 
 export const BORDER_RADIUS_OPTIONS: readonly { key: BorderRadiusStyle; label: string }[] = [
-  { key: 'none', label: 'Sharp' },
-  { key: 'small', label: 'Subtle' },
-  { key: 'medium', label: 'Rounded' },
-  { key: 'large', label: 'Soft' },
+  { key: 'none', get label() { return t('cvDesign.corners.none'); } },
+  { key: 'small', get label() { return t('cvDesign.corners.small'); } },
+  { key: 'medium', get label() { return t('cvDesign.corners.medium'); } },
+  { key: 'large', get label() { return t('cvDesign.corners.large'); } },
 ];
 
 export const FONT_OPTIONS: readonly string[] = [
@@ -72,9 +74,9 @@ export const FONT_OPTIONS: readonly string[] = [
 ];
 
 export const FONT_SIZE_OPTIONS: readonly { key: DesignFontSize; label: string }[] = [
-  { key: 'small', label: 'Small' },
-  { key: 'medium', label: 'Medium' },
-  { key: 'large', label: 'Large' },
+  { key: 'small', get label() { return t('cvDesign.fontSizes.small'); } },
+  { key: 'medium', get label() { return t('cvDesign.fontSizes.medium'); } },
+  { key: 'large', get label() { return t('cvDesign.fontSizes.large'); } },
 ];
 
 /** Website fallbacks when a stored CV lacks a key (TemplatePanel / FontPanel). */
@@ -199,11 +201,11 @@ export function normalizeHex(input: string): string | null {
 
 export function accentLabel(value: string): string {
   const preset = ACCENT_COLORS.find((c) => c.value.toLowerCase() === value.toLowerCase());
-  return preset ? preset.label : 'Custom';
+  return preset ? preset.label : t('cvDesign.colors.custom');
 }
 
 export function layoutLabel(layout: string): string {
-  return LAYOUT_OPTIONS.find((l) => l.key === layout)?.label ?? 'Classic';
+  return LAYOUT_OPTIONS.find((l) => l.key === layout)?.label ?? t('cvDesign.layouts.classic');
 }
 
 /** Required plan for a layout (`CV_LAYOUT_TIER`, unknown → free). */
@@ -271,4 +273,15 @@ export function buildDesignUpdate(original: DesignDraft, draft: DesignDraft): De
   if (draft.templateId && draft.templateId !== original.templateId) payload.templateId = draft.templateId;
   if (Object.keys(styling).length) payload.styling = styling;
   return Object.keys(payload).length ? payload : null;
+}
+
+/**
+ * Display name of a plan tier ("free" → "Free", "career_accelerator" →
+ * "Career accelerator") in the current language; unknown tiers are title-cased.
+ */
+export function tierLabel(tier: string): string {
+  if (!tier) return t('templates.tiers.pro');
+  const key = `templates.tiers.${tier.replace(/_(\w)/g, (_, c: string) => c.toUpperCase())}`;
+  if (hasKey(key)) return t(key);
+  return tier.charAt(0).toUpperCase() + tier.slice(1).replace(/_/g, ' ');
 }

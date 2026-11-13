@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import type {
   CoverLetter,
   CoverLetterStyling,
@@ -99,9 +100,9 @@ export function buildCreatePayload(form: NewLetterForm): CreateCoverLetterPayloa
 
 /** Website validation copy (coverLetters.title_required / ai_fields_required). */
 export function validateNewLetter(form: NewLetterForm, mode: 'blank' | 'ai'): string | null {
-  if (!form.title.trim()) return 'Title is required';
+  if (!form.title.trim()) return t('coverLetters.validation.titleRequired');
   if (mode === 'ai' && (!form.jobTitle.trim() || !form.companyName.trim())) {
-    return 'Company name and job title are required for AI generation';
+    return t('coverLetters.validation.aiFieldsRequired');
   }
   return null;
 }

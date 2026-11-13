@@ -17,6 +17,8 @@ import {
 import { z } from 'zod';
 import { useCoverLetterList } from '../../hooks/useCoverLetters';
 import { useCVList } from '../../hooks/useCVs';
+import { t as tNow, useT } from '../../i18n';
+import { RTL_FLIP } from '../../i18n/native';
 import {
   findDuplicateJob,
   useArchiveJob,
@@ -30,7 +32,9 @@ import {
   duplicateConfirmMessage,
   isValidContactEmail,
   JOB_FIELD_MAX,
+  jobStatusLabel,
   optionalJobField,
+  STATUS_ORDER,
 } from '../../lib/job-tracker';
 import { maybeAskPushAfterFollowUpSave, type PushPromptResult } from '../../lib/push';
 import { toDate } from '../../lib/utils';
@@ -47,15 +51,6 @@ import { shareInterviewIcs } from './share-interview-ics';
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
-
-const STATUS_OPTIONS: { value: JobStatus; label: string }[] = [
-  { value: JobStatus.WISHLIST, label: 'Wishlist' },
-  { value: JobStatus.APPLIED, label: 'Applied' },
-  { value: JobStatus.INTERVIEWING, label: 'Interviewing' },
-  { value: JobStatus.OFFER, label: 'Offer' },
-  { value: JobStatus.REJECTED, label: 'Rejected' },
-  { value: JobStatus.ACCEPTED, label: 'Accepted' },
-];
 
 function isValidDateOnly(value: string): boolean {
   if (!DATE_ONLY.test(value)) return false;
@@ -83,33 +78,36 @@ function isValidDateTime(value: string): boolean {
   );
 }
 
-const schema = z.object({
-  position: z.string().trim().min(1, 'Job title is required').max(200),
-  company: z.string().trim().min(1, 'Company is required').max(200),
-  status: z.nativeEnum(JobStatus),
-  appliedDate: z
-    .string()
-    .refine((s) => s === '' || isValidDateOnly(s), 'Use YYYY-MM-DD'),
-  interviewDate: z
-    .string()
-    .refine((s) => s === '' || isValidDateTime(s), 'Use YYYY-MM-DDTHH:mm'),
-  followUpDate: z
-    .string()
-    .refine((s) => s === '' || isValidDateOnly(s), 'Use YYYY-MM-DD'),
-  location: z.string().max(JOB_FIELD_MAX.location, 'Keep it under 200 characters'),
-  salaryRange: z.string().max(JOB_FIELD_MAX.salaryRange, 'Keep it under 100 characters'),
-  contactName: z.string().max(JOB_FIELD_MAX.contactName, 'Keep it under 200 characters'),
-  contactEmail: z
-    .string()
-    .max(JOB_FIELD_MAX.contactEmail)
-    .refine((s) => isValidContactEmail(s), 'Enter a valid email address'),
-  jobUrl: z.string().max(2048),
-  linkedCVId: z.string(),
-  linkedCoverLetterId: z.string(),
-  notes: z.string().max(5000),
-});
+/** Built per language (zod messages are fixed when the schema is made). */
+function makeSchema(t: (key: string) => string) {
+  return z.object({
+    position: z.string().trim().min(1, t('form.jobTitleRequired')).max(200),
+    company: z.string().trim().min(1, t('form.companyRequired')).max(200),
+    status: z.nativeEnum(JobStatus),
+    appliedDate: z
+      .string()
+      .refine((s) => s === '' || isValidDateOnly(s), t('form.dateFormat')),
+    interviewDate: z
+      .string()
+      .refine((s) => s === '' || isValidDateTime(s), t('form.dateTimeFormat')),
+    followUpDate: z
+      .string()
+      .refine((s) => s === '' || isValidDateOnly(s), t('form.dateFormat')),
+    location: z.string().max(JOB_FIELD_MAX.location, t('form.tooLong200')),
+    salaryRange: z.string().max(JOB_FIELD_MAX.salaryRange, t('form.tooLong100')),
+    contactName: z.string().max(JOB_FIELD_MAX.contactName, t('form.tooLong200')),
+    contactEmail: z
+      .string()
+      .max(JOB_FIELD_MAX.contactEmail)
+      .refine((s) => isValidContactEmail(s), t('form.invalidEmail')),
+    jobUrl: z.string().max(2048),
+    linkedCVId: z.string(),
+    linkedCoverLetterId: z.string(),
+    notes: z.string().max(5000),
+  });
+}
 
-type FormData = z.infer<typeof schema>;
+type FormData = z.infer<ReturnType<typeof makeSchema>>;
 
 const EMPTY: FormData = {
   position: '',
@@ -193,25 +191,25 @@ function toPayload(data: FormData, isEdit: boolean): JobWritePayload {
 
 function saveFailureMessage(err: unknown): string {
   if (axios.isAxiosError(err) && !err.response) {
-    return 'No connection. Check your network and try again.';
+    return tNow('common.noConnection');
   }
-  return requestFailureMessage(err, 'Could not save. Please try again.');
+  return requestFailureMessage(err, tNow('jobs.form.saveError'));
 }
 
 /** Website parity: applying to the same role twice is allowed, just never unnoticed. */
 function confirmDuplicate(dup: JobApplication): Promise<boolean> {
   return new Promise((resolve) => {
-    Alert.alert('Already tracked', duplicateConfirmMessage(dup), [
-      { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-      { text: 'Add anyway', onPress: () => resolve(true) },
+    Alert.alert(tNow('jobs.form.duplicateTitle'), duplicateConfirmMessage(dup), [
+      { text: tNow('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
+      { text: tNow('jobs.form.addAnyway'), onPress: () => resolve(true) },
     ], { cancelable: true, onDismiss: () => resolve(false) });
   });
 }
 
 function confirmUnsavedLeave(onLeave: () => void) {
-  Alert.alert('Unsaved Changes', 'You have unsaved changes. Leave anyway?', [
-    { text: 'Stay', style: 'cancel' },
-    { text: 'Leave', style: 'destructive', onPress: onLeave },
+  Alert.alert(tNow('common.unsaved.title'), tNow('common.unsaved.body'), [
+    { text: tNow('common.unsaved.stay'), style: 'cancel' },
+    { text: tNow('common.unsaved.leave'), style: 'destructive', onPress: onLeave },
   ]);
 }
 
@@ -224,6 +222,9 @@ interface JobFormProps {
 }
 
 export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
+  const t = useT('jobs');
+  const tc = useT('common');
+  const schema = useMemo(() => makeSchema(t), [t]);
   const router = useRouter();
   const navigation = useNavigation();
   const isEdit = mode === 'edit';
@@ -306,7 +307,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
         await afterSave('already');
       }
     } catch (err) {
-      Alert.alert('Could not save', saveFailureMessage(err));
+      Alert.alert(t('form.saveErrorTitle'), saveFailureMessage(err));
     } finally {
       setSaving(false);
     }
@@ -315,12 +316,12 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
   const onDelete = () => {
     if (!jobId || !initialJob) return;
     Alert.alert(
-      'Delete application',
-      `Delete “${initialJob.position}” at ${initialJob.company}? This cannot be undone.`,
+      t('form.deleteTitle'),
+      t('form.deleteBody', { position: initialJob.position, company: initialJob.company }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: tc('cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: tc('delete'),
           style: 'destructive',
           onPress: () =>
             deleteJob.mutate(jobId, {
@@ -329,8 +330,8 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
               },
               onError: (err) =>
                 Alert.alert(
-                  'Could not delete',
-                  requestFailureMessage(err, 'Failed to delete. Please try again.'),
+                  t('form.deleteErrorTitle'),
+                  requestFailureMessage(err, t('form.deleteError')),
                 ),
             }),
         },
@@ -345,11 +346,11 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
       { job: initialJob, archived },
       {
         onSuccess: () => {
-          Alert.alert(archived ? 'Application archived' : 'Application restored');
+          Alert.alert(archived ? t('archive.archived') : t('archive.restored'));
           router.back();
         },
         onError: (err) =>
-          Alert.alert('Could not save', requestFailureMessage(err, "Couldn't save. Please try again.")),
+          Alert.alert(t('form.saveErrorTitle'), requestFailureMessage(err, t('form.archiveError'))),
       },
     );
   };
@@ -362,13 +363,13 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
       <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
         <TouchableOpacity
           onPress={() => router.back()}
-          className="mr-3"
-          accessibilityLabel="Go back"
+          className="me-3"
+          accessibilityLabel={t('goBack')}
         >
-          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
         </TouchableOpacity>
         <Text className="text-xl font-black text-stone-900 flex-1" numberOfLines={1}>
-          {isEdit ? 'Edit application' : 'Log a job'}
+          {isEdit ? t('form.editTitle') : t('form.newTitle')}
         </Text>
       </View>
 
@@ -382,8 +383,8 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           name="position"
           render={({ field }) => (
             <Input
-              label="Job title"
-              placeholder="e.g. Product designer"
+              label={t('form.jobTitle')}
+              placeholder={t('form.jobTitlePh')}
               value={field.value}
               onChangeText={field.onChange}
               error={errors.position?.message}
@@ -395,8 +396,8 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           name="company"
           render={({ field }) => (
             <Input
-              label="Company"
-              placeholder="e.g. Acme"
+              label={t('form.company')}
+              placeholder={t('form.companyPh')}
               value={field.value}
               onChangeText={field.onChange}
               error={errors.company?.message}
@@ -404,21 +405,21 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           )}
         />
 
-        <Text className="text-sm font-medium text-stone-700 mb-1.5">Status</Text>
+        <Text className="text-sm font-medium text-stone-700 mb-1.5">{t('form.status')}</Text>
         <View className="flex-row flex-wrap gap-2 mb-4">
-          {STATUS_OPTIONS.map((opt) => {
-            const selected = values.status === opt.value;
+          {STATUS_ORDER.map((status) => {
+            const selected = values.status === status;
             return (
               <TouchableOpacity
-                key={opt.value}
-                onPress={() => setValue('status', opt.value, { shouldDirty: true })}
+                key={status}
+                onPress={() => setValue('status', status, { shouldDirty: true })}
                 className={[
                   'px-3 py-2 rounded-xl border',
                   selected ? 'bg-brand-600 border-brand-600' : 'bg-white border-stone-200',
                 ].join(' ')}
               >
                 <Text className={selected ? 'text-white font-semibold text-sm' : 'text-stone-700 text-sm'}>
-                  {opt.label}
+                  {jobStatusLabel(status)}
                 </Text>
               </TouchableOpacity>
             );
@@ -430,9 +431,9 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           name="appliedDate"
           render={({ field }) => (
             <Input
-              label="Applied date"
+              label={t('form.appliedDate')}
               placeholder="YYYY-MM-DD"
-              hint="Optional. Example: 2026-09-08"
+              hint={t('form.optionalExample', { example: '2026-09-08' })}
               autoCapitalize="none"
               value={field.value}
               onChangeText={field.onChange}
@@ -445,8 +446,8 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           name="location"
           render={({ field }) => (
             <Input
-              label="Location"
-              placeholder="e.g. Remote / New York"
+              label={t('form.location')}
+              placeholder={t('form.locationPh')}
               value={field.value}
               onChangeText={field.onChange}
               error={errors.location?.message}
@@ -458,7 +459,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           name="jobUrl"
           render={({ field }) => (
             <Input
-              label="Job posting URL"
+              label={t('form.jobUrl')}
               placeholder="https://"
               autoCapitalize="none"
               autoCorrect={false}
@@ -474,8 +475,8 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           name="salaryRange"
           render={({ field }) => (
             <Input
-              label="Salary range"
-              placeholder="e.g. $90k – $110k"
+              label={t('form.salaryRange')}
+              placeholder={t('form.salaryRangePh')}
               value={field.value}
               onChangeText={field.onChange}
               error={errors.salaryRange?.message}
@@ -487,8 +488,8 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           name="contactName"
           render={({ field }) => (
             <Input
-              label="Recruiter / contact"
-              placeholder="e.g. Jane Doe"
+              label={t('form.contactName')}
+              placeholder={t('form.contactNamePh')}
               value={field.value}
               onChangeText={field.onChange}
               error={errors.contactName?.message}
@@ -500,7 +501,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           name="contactEmail"
           render={({ field }) => (
             <Input
-              label="Contact email"
+              label={t('form.contactEmail')}
               placeholder="recruiter@company.com"
               autoCapitalize="none"
               autoCorrect={false}
@@ -517,9 +518,9 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           name="interviewDate"
           render={({ field }) => (
             <Input
-              label="Interview"
+              label={t('form.interview')}
               placeholder="YYYY-MM-DDTHH:mm"
-              hint="Optional. Example: 2026-09-12T14:30"
+              hint={t('form.optionalExample', { example: '2026-09-12T14:30' })}
               autoCapitalize="none"
               value={field.value}
               onChangeText={field.onChange}
@@ -532,9 +533,9 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           name="followUpDate"
           render={({ field }) => (
             <Input
-              label="Follow-up date"
+              label={t('form.followUpDate')}
               placeholder="YYYY-MM-DD"
-              hint="Optional. Example: 2026-09-20"
+              hint={t('form.optionalExample', { example: '2026-09-20' })}
               autoCapitalize="none"
               value={field.value}
               onChangeText={field.onChange}
@@ -543,23 +544,23 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           )}
         />
 
-        <Text className="text-sm font-medium text-stone-700 mb-1.5">CV used</Text>
+        <Text className="text-sm font-medium text-stone-700 mb-1.5">{t('form.cvUsed')}</Text>
         <TouchableOpacity
           onPress={() => setPicker('cv')}
           className="bg-white border border-stone-200 rounded-xl px-3 py-3 mb-4"
         >
           <Text className={selectedCv ? 'text-stone-900 text-base' : 'text-stone-400 text-base'}>
-            {selectedCv?.title ?? 'None'}
+            {selectedCv?.title ?? t('form.none')}
           </Text>
         </TouchableOpacity>
 
-        <Text className="text-sm font-medium text-stone-700 mb-1.5">Cover letter used</Text>
+        <Text className="text-sm font-medium text-stone-700 mb-1.5">{t('form.letterUsed')}</Text>
         <TouchableOpacity
           onPress={() => setPicker('letter')}
           className="bg-white border border-stone-200 rounded-xl px-3 py-3 mb-4"
         >
           <Text className={selectedLetter ? 'text-stone-900 text-base' : 'text-stone-400 text-base'}>
-            {selectedLetter?.title ?? 'None'}
+            {selectedLetter?.title ?? t('form.none')}
           </Text>
         </TouchableOpacity>
 
@@ -568,8 +569,8 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           name="notes"
           render={({ field }) => (
             <Input
-              label="Notes"
-              placeholder="Anything to remember"
+              label={t('form.notes')}
+              placeholder={t('form.notesPh')}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -587,7 +588,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           loading={saving}
           onPress={handleSubmit(onSubmit)}
         >
-          Save
+          {tc('save')}
         </Button>
 
         {isEdit && initialJob ? (
@@ -598,9 +599,9 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
                 fullWidth
                 icon={<Ionicons name="calendar-outline" size={18} color={colors.stone[700]} />}
                 onPress={() => void shareInterviewIcs(initialJob)}
-                accessibilityLabel="Add interview to calendar"
+                accessibilityLabel={t('form.addToCalendarA11y')}
               >
-                Add to calendar
+                {t('form.addToCalendar')}
               </Button>
             ) : null}
             <Button
@@ -610,7 +611,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
               icon={<Ionicons name={initialJob.archived ? 'arrow-undo-outline' : 'archive-outline'} size={18} color={colors.stone[700]} />}
               onPress={onToggleArchive}
             >
-              {initialJob.archived ? 'Restore' : 'Archive'}
+              {initialJob.archived ? t('form.restore') : t('form.archive')}
             </Button>
           </View>
         ) : null}
@@ -623,7 +624,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
               loading={deleteJob.isPending}
               onPress={onDelete}
             >
-              Delete
+              {tc('delete')}
             </Button>
           </View>
         ) : null}
@@ -668,6 +669,8 @@ function DocumentPicker({
   onSelectCv: (id: string) => void;
   onSelectLetter: (id: string) => void;
 }) {
+  const t = useT('jobs');
+  const tc = useT('common');
   const isCv = kind === 'cv';
   const query = isCv ? cvsQuery : lettersQuery;
   const items = isCv ? cvs : letters;
@@ -676,28 +679,28 @@ function DocumentPicker({
     <Modal
       visible={kind != null}
       onClose={onClose}
-      title={isCv ? 'Choose a CV' : 'Choose a cover letter'}
+      title={isCv ? t('picker.chooseCv') : t('picker.chooseLetter')}
       size="md"
     >
       <TouchableOpacity
         onPress={() => (isCv ? onSelectCv('') : onSelectLetter(''))}
         className="py-3 border-b border-stone-100"
       >
-        <Text className="text-stone-500">None</Text>
+        <Text className="text-stone-500">{t('form.none')}</Text>
       </TouchableOpacity>
       {query.error ? (
         <ErrorState
           message={requestFailureMessage(
             query.error,
-            isCv ? 'Could not load CVs. Please try again.' : 'Could not load cover letters. Please try again.',
+            isCv ? t('picker.loadCvsError') : t('picker.loadLettersError'),
           )}
           onRetry={() => void query.refetch()}
         />
       ) : query.isLoading ? (
-        <Text className="text-stone-400 py-4">Loading…</Text>
+        <Text className="text-stone-400 py-4">{tc('loading')}</Text>
       ) : items.length === 0 ? (
         <Text className="text-stone-400 py-4">
-          {isCv ? 'No CVs yet.' : 'No cover letters yet.'}
+          {isCv ? t('picker.noCvs') : t('picker.noLetters')}
         </Text>
       ) : (
         items.map((item) => (

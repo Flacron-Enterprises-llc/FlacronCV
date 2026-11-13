@@ -1,0 +1,57 @@
+{
+  "dialogLabel": "App tour",
+  "progress": "Step {current} of {total}",
+  "announce": "App tour. {progress}. {title}",
+  "minimizedLabel": "App tour, {progress}: {title}",
+  "continue": "Continue tour",
+  "skip": "Skip",
+  "skipTour": "Skip tour",
+  "next": "Next",
+  "finish": "Finish",
+  "finishTour": "Finish tour",
+  "showMeHint": "Opens this part of the app. The tour stays available at the bottom of the screen.",
+  "saveError": "We could not save your tour progress. You can keep using FlacronCV.",
+  "welcomeTitleNamed": "Welcome, {name}",
+  "steps": {
+    "welcome": {
+      "show": "Show dashboard",
+      "title": "Welcome to FlacronCV",
+      "body": "This short tour shows where to build a CV, write a cover letter, and track jobs. You can leave at any time."
+    },
+    "usage": {
+      "show": "Show dashboard",
+      "title": "Your plan and usage",
+      "body": "CVs, AI credits, and exports follow your current plan. These counts update as you work. Nothing here starts a payment."
+    },
+    "cvs": {
+      "show": "Show My CVs",
+      "title": "My CVs",
+      "body": "Every CV you save is listed here. Tap New CV when you are ready: you pick a template, then edit your own content. This tour does not create a CV for you."
+    },
+    "coverLetters": {
+      "show": "Show Cover Letters",
+      "title": "Cover letters",
+      "body": "Write a letter for a role and, if you want, improve a draft with AI later. Opening this tab does not spend credits."
+    },
+    "jobs": {
+      "show": "Show Job Tracker",
+      "title": "Job tracker",
+      "body": "Keep companies and stages in one list, from wishlist to offer. A job is added only when you choose to. Open it from the dashboard."
+    },
+    "templates": {
+      "show": "Show Templates",
+      "title": "Templates",
+      "body": "Browse CV layouts here. Some designs are part of a paid plan. This tour does not select one."
+    },
+    "career": {
+      "show": "Show Career tools",
+      "title": "Career tools",
+      "body": "Career tools is an optional add-on for planning your next move. Open it from the dashboard. This tour does not start anything there."
+    },
+    "settings": {
+      "show": "Show Settings",
+      "title": "Replay anytime",
+      "body": "Replay App Tour is in Settings and on the Support page. Finish now and it will not start by itself again."
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "limitTitle": "Export-Limit erreicht",
+  "failedTitle": "Export nicht möglich",
+  "failed": "Export nicht möglich. Bitte versuche es erneut.",
+  "docxRequiresPro": "Der DOCX-Export erfordert einen Pro-Plan oder höher.",
+  "docxNotIncluded": "Der DOCX-Export ist in deinem aktuellen Plan nicht enthalten.",
+  "downloadFailed": "Die Datei konnte nicht heruntergeladen werden. Bitte versuche es erneut.",
+  "downloadCompleteTitle": "Download abgeschlossen",
+  "downloadCompleteBody": "Teilen ist auf diesem Gerät nicht verfügbar. Die Datei ist im App-Cache gespeichert.",
+  "shareCvTitle": "Lebenslauf speichern oder teilen",
+  "shareCoverLetterTitle": "Anschreiben speichern oder teilen"
+}

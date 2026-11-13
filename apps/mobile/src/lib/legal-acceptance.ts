@@ -1,4 +1,5 @@
 import { Alert } from 'react-native';
+import { t } from '../i18n';
 import * as WebBrowser from 'expo-web-browser';
 import { api } from './api';
 import { getFirebaseAuth } from './firebase';
@@ -76,6 +77,11 @@ export async function retryPendingLegalAcceptance(): Promise<boolean> {
   }
 }
 
+/** Shown when the agreement could not be recorded (in the current app language). */
+export const legalPostFailedTitle = (): string => t('auth.legal.postFailedTitle');
+export const legalPostFailedMessage = (): string => t('auth.legal.postFailedMessage');
+
+/** English text, kept for existing callers/tests. */
 export const LEGAL_POST_FAILED_TITLE = 'Could not save your agreement';
 export const LEGAL_POST_FAILED_MESSAGE =
   'We could not record your agreement to Terms, Privacy, and the Disclaimer. Check your connection and tap Agree and continue again.';

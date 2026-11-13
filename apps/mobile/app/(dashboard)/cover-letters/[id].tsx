@@ -52,21 +52,23 @@ import { nestErrorCode, nestErrorMessage, requestFailureMessage } from '../../..
 import { alertIfUnverifiedEmail } from '../../../src/lib/email-verification';
 import { CoverLetterStatus } from '../../../src/types/enums';
 import type { CoverLetter, CoverLetterTone } from '../../../src/types/cover-letter.types';
+import { t, useT, type TFunction } from '../../../src/i18n';
+import { RTL_FLIP } from '../../../src/i18n/native';
 
 /** Same copy as cvs/[id] — one Unsaved Changes dialog in the app. */
 function confirmUnsavedLeave(onLeave: () => void) {
-  Alert.alert('Unsaved Changes', 'You have unsaved changes. Leave anyway?', [
-    { text: 'Stay', style: 'cancel' },
-    { text: 'Leave', style: 'destructive', onPress: onLeave },
+  Alert.alert(t('common.unsaved.title'), t('common.unsaved.body'), [
+    { text: t('common.unsaved.stay'), style: 'cancel' },
+    { text: t('common.unsaved.leave'), style: 'destructive', onPress: onLeave },
   ]);
 }
 
 /** Same split as CVWizard saveFailureMessage — do not extract (E1–E7 frozen). */
 function saveFailureMessage(err: unknown): string {
   if (axios.isAxiosError(err) && !err.response) {
-    return 'No connection. Check your network and try again.';
+    return t('common.noConnection');
   }
-  return 'Could not save. Please try again.';
+  return t('coverLetters.editor.saveError');
 }
 
 function generateFailureMessage(err: unknown): string {
@@ -74,26 +76,31 @@ function generateFailureMessage(err: unknown): string {
   const message = nestErrorMessage(err);
 
   if (code === 'AI_CREDIT_NOT_REFUNDED') {
-    return 'Could not generate. A credit may have been used. Check your balance and try again.';
+    return t('coverLetters.editor.generateChargeUnconfirmed');
   }
   if (/credit/i.test(message) || code.startsWith('ABUSE_')) {
     return message || aiCreditsExhaustedMessage('coverLetter');
   }
-  return requestFailureMessage(err, 'Generation failed. Try again.');
+  return requestFailureMessage(err, t('coverLetters.ai.generationFailed'));
 }
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
-const DETAIL_FIELDS: readonly { field: 'recipientName' | 'recipientTitle' | 'companyName' | 'jobTitle' | 'companyAddress'; label: string }[] = [
-  { field: 'recipientName', label: 'Recipient name' },
-  { field: 'recipientTitle', label: 'Their job title (optional)' },
-  { field: 'companyName', label: 'Company name' },
-  { field: 'jobTitle', label: 'Role you are applying for' },
-  { field: 'companyAddress', label: 'Company address (optional)' },
+type DetailField = 'recipientName' | 'recipientTitle' | 'companyName' | 'jobTitle' | 'companyAddress';
+
+/** Field labels are read at render (TFunction bound to 'coverLetters'). */
+const DETAIL_FIELDS: readonly { field: DetailField; label: (tr: TFunction) => string }[] = [
+  { field: 'recipientName', label: (tr) => tr('editor.recipientName') },
+  { field: 'recipientTitle', label: (tr) => tr('editor.recipientTitle') },
+  { field: 'companyName', label: (tr) => tr('editor.companyName') },
+  { field: 'jobTitle', label: (tr) => tr('editor.jobTitle') },
+  { field: 'companyAddress', label: (tr) => tr('editor.companyAddress') },
 ];
 
 export default function CoverLetterEditorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const tl = useT('coverLetters');
+  const tc = useT('common');
   const router = useRouter();
   const navigation = useNavigation();
   const { user, syncUser } = useAuthStore();
@@ -156,7 +163,7 @@ export default function CoverLetterEditorScreen() {
 
   const ensureAICredits = (): boolean => {
     if (!canUseAI(user?.subscription, user?.usage?.aiCreditsUsed ?? 0, user?.usage?.aiCreditsLimit)) {
-      Alert.alert('Credits Exhausted', aiCreditsExhaustedMessage('coverLetter'), upgradeAlertButtons(goToBilling));
+      Alert.alert(tl('ai.creditsExhausted'), aiCreditsExhaustedMessage('coverLetter'), upgradeAlertButtons(goToBilling));
       return false;
     }
     return true;
@@ -188,7 +195,7 @@ export default function CoverLetterEditorScreen() {
         axios.isAxiosError(err) && err.response?.status === 403 && nestErrorMessage(err)
           ? nestErrorMessage(err)
           : saveFailureMessage(err);
-      Alert.alert('Could not save', message);
+      Alert.alert(tl('editor.saveErrorTitle'), message);
       return false;
     } finally {
       setIsSaving(false);
@@ -199,7 +206,7 @@ export default function CoverLetterEditorScreen() {
     const exports = user?.usage?.exportsThisMonth ?? 0;
 
     if (!canExport(user?.subscription, exports)) {
-      Alert.alert('Export Limit Reached', exportLimitReachedMessage(), upgradeAlertButtons(goToBilling));
+      Alert.alert(tl('editor.exportLimitTitle'), exportLimitReachedMessage(), upgradeAlertButtons(goToBilling));
       return;
     }
     // The server renders the saved letter, so pending edits go first.
@@ -208,10 +215,10 @@ export default function CoverLetterEditorScreen() {
   };
 
   const handleExport = () => {
-    Alert.alert('Export', 'Choose format:', [
+    Alert.alert(tl('editor.exportTitle'), tl('editor.exportChooseFormat'), [
       { text: 'PDF', onPress: () => void runExport('pdf') },
       { text: 'DOCX', onPress: () => void runExport('docx') },
-      { text: 'Cancel', style: 'cancel' },
+      { text: tc('cancel'), style: 'cancel' },
     ]);
   };
 
@@ -221,7 +228,7 @@ export default function CoverLetterEditorScreen() {
     setStatus.mutate(next, {
       onSuccess: () => patchClean({ status: next }),
       onError: (err) =>
-        Alert.alert('Could not update status', requestFailureMessage(err, "Couldn't update the status. Please try again.")),
+        Alert.alert(tl('editor.statusErrorTitle'), requestFailureMessage(err, tl('editor.statusError'))),
     });
   };
 
@@ -245,7 +252,7 @@ export default function CoverLetterEditorScreen() {
       await queryClient.invalidateQueries({ queryKey: ['user'] });
     } catch (err) {
       if (alertIfUnverifiedEmail(err)) return;
-      Alert.alert('Could not generate', generateFailureMessage(err));
+      Alert.alert(tl('ai.couldNotGenerate'), generateFailureMessage(err));
     }
   };
 
@@ -255,11 +262,11 @@ export default function CoverLetterEditorScreen() {
     // It replaces the whole letter, so confirm when there is something to lose (web).
     if (coverLetter.content.trim()) {
       Alert.alert(
-        'Replace your letter?',
-        'Generating a new letter will replace everything you have written so far. This can’t be undone.',
+        tl('editor.replaceLetterTitle'),
+        tl('editor.replaceLetterBody'),
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Replace', style: 'destructive', onPress: () => void runGenerate() },
+          { text: tc('cancel'), style: 'cancel' },
+          { text: tl('editor.replace'), style: 'destructive', onPress: () => void runGenerate() },
         ],
       );
       return;
@@ -270,7 +277,7 @@ export default function CoverLetterEditorScreen() {
   const openRewrite = () => {
     if (!coverLetter) return;
     if (splitParagraphs(coverLetter.content).length === 0) {
-      Alert.alert('Nothing to rewrite', 'Write or generate your letter first, then choose a paragraph to rewrite.');
+      Alert.alert(tl('editor.nothingToRewriteTitle'), tl('editor.nothingToRewriteBody'));
       return;
     }
     setParagraphDraft(null);
@@ -287,8 +294,8 @@ export default function CoverLetterEditorScreen() {
         onError: (err) => {
           if (alertIfUnverifiedEmail(err)) return;
           Alert.alert(
-            'Could not rewrite',
-            `${requestFailureMessage(err, 'Generation failed. Try again.')}\n\n${aiChargeNote(err)}`,
+            tl('editor.rewriteErrorTitle'),
+            [requestFailureMessage(err, tl('ai.generationFailed')), aiChargeNote(err)].join('\n\n'),
           );
         },
       },
@@ -312,13 +319,10 @@ export default function CoverLetterEditorScreen() {
     } else if (result.kind === 'text') {
       setContent(result.text);
     } else if (result.kind === 'locked') {
-      Alert.alert(
-        'Could not replace',
-        'This paragraph is inside formatting the app cannot edit (for example a list). Edit it on the website, or tap "Edit as plain text" first.',
-      );
+      Alert.alert(tl('editor.replaceErrorTitle'), tl('editor.replaceLocked'));
       return;
     } else {
-      Alert.alert('Could not replace', 'That paragraph has changed since it was rewritten, so nothing was replaced.');
+      Alert.alert(tl('editor.replaceErrorTitle'), tl('editor.replaceNotFound'));
     }
     setParagraphDraft(null);
     setRewriteOpen(false);
@@ -332,11 +336,11 @@ export default function CoverLetterEditorScreen() {
 
   const confirmPlainEdit = () => {
     Alert.alert(
-      'Edit as plain text?',
-      'This app edits letters as plain text. When you save, bold, italics, lists and alignment added on the website are removed from this letter.',
+      tl('editor.plainEditTitle'),
+      tl('editor.plainEditBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Edit as plain text', style: 'destructive', onPress: () => setPlainUnlocked(true) },
+        { text: tc('cancel'), style: 'cancel' },
+        { text: tl('editor.plainEditAction'), style: 'destructive', onPress: () => setPlainUnlocked(true) },
       ],
     );
   };
@@ -361,7 +365,7 @@ export default function CoverLetterEditorScreen() {
   const applyCustomColor = () => {
     const value = customColor.trim();
     if (!HEX_COLOR.test(value)) {
-      Alert.alert('Custom color', 'Enter a colour as # followed by six hex digits, for example #2563eb.');
+      Alert.alert(tl('editor.customColor'), tl('editor.customColorInvalid'));
       return;
     }
     updateStyling('primaryColor', value.toLowerCase());
@@ -372,13 +376,13 @@ export default function CoverLetterEditorScreen() {
     return (
       <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
         <View className="flex-row items-center px-4 py-3 border-b border-stone-100">
-          <TouchableOpacity onPress={() => router.back()} className="mr-3" accessibilityRole="button" accessibilityLabel="Back">
-            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+          <TouchableOpacity onPress={() => router.back()} className="me-3" accessibilityRole="button" accessibilityLabel={tc('back')}>
+            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
           </TouchableOpacity>
-          <Text className="font-bold text-stone-900">Cover Letter</Text>
+          <Text className="font-bold text-stone-900">{tl('editor.fallbackTitle')}</Text>
         </View>
         <ErrorState
-          message={requestFailureMessage(error, 'Could not load this cover letter. Please try again.')}
+          message={requestFailureMessage(error, tl('editor.loadError'))}
           onRetry={() => void refetch()}
         />
       </SafeAreaView>
@@ -405,17 +409,17 @@ export default function CoverLetterEditorScreen() {
         <TouchableOpacity
           onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel="Back"
-          className="w-11 h-11 items-center justify-center -ml-2"
+          accessibilityLabel={tc('back')}
+          className="w-11 h-11 items-center justify-center -ms-2"
         >
-          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
         </TouchableOpacity>
         <View className="flex-1 px-2">
           <Text className="font-bold text-stone-900 text-center" numberOfLines={1}>
-            {coverLetter.title || 'Cover Letter'}
+            {coverLetter.title || tl('editor.fallbackTitle')}
           </Text>
           {isDirty && (
-            <Text className="text-xs text-brand-400 text-center">Unsaved changes</Text>
+            <Text className="text-xs text-brand-400 text-center">{tl('editor.unsaved')}</Text>
           )}
         </View>
         <View className="flex-row gap-2">
@@ -424,17 +428,17 @@ export default function CoverLetterEditorScreen() {
               onPress={() => void handleSave()}
               disabled={isSaving}
               accessibilityRole="button"
-              accessibilityLabel="Save"
+              accessibilityLabel={tc('save')}
               className="bg-brand-600 px-3 min-h-11 justify-center rounded-xl"
             >
-              {isSaving ? <ActivityIndicator size="small" color={colors.white} /> : <Text className="text-white font-semibold text-sm">Save</Text>}
+              {isSaving ? <ActivityIndicator size="small" color={colors.white} /> : <Text className="text-white font-semibold text-sm">{tc('save')}</Text>}
             </TouchableOpacity>
           )}
           <TouchableOpacity
             onPress={handleExport}
             disabled={exportCL.isPending || isSaving}
             accessibilityRole="button"
-            accessibilityLabel="Export as PDF or DOCX"
+            accessibilityLabel={tl('editor.exportA11y')}
             accessibilityState={{ disabled: exportCL.isPending || isSaving, busy: exportCL.isPending }}
             className="bg-brand-600 w-11 h-11 items-center justify-center rounded-xl"
           >
@@ -449,7 +453,7 @@ export default function CoverLetterEditorScreen() {
           <View className="flex-row items-center flex-wrap gap-2 mb-4">
             <View className={['px-3 py-1 rounded-full', isFinal ? 'bg-success-bg' : 'bg-stone-100'].join(' ')}>
               <Text className={['text-xs font-semibold', isFinal ? 'text-success' : 'text-stone-500'].join(' ')}>
-                {isFinal ? 'Final' : 'Draft'}
+                {isFinal ? tl('status.final') : tl('status.draft')}
               </Text>
             </View>
             <TouchableOpacity
@@ -464,17 +468,17 @@ export default function CoverLetterEditorScreen() {
               ) : (
                 <Ionicons name={isFinal ? 'arrow-undo-outline' : 'checkmark-done-outline'} size={16} color={colors.stone[700]} />
               )}
-              <Text className="ml-1.5 text-sm font-medium text-stone-700">{isFinal ? 'Revert to draft' : 'Mark as final'}</Text>
+              <Text className="ms-1.5 text-sm font-medium text-stone-700">{isFinal ? tl('editor.markDraft') : tl('editor.markFinal')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setTemplateOpen(true)}
               accessibilityRole="button"
-              accessibilityLabel={`Template: ${currentTemplate?.name ?? 'Modern'}. Change template or accent color`}
+              accessibilityLabel={tl('editor.templateA11y', { name: currentTemplate?.name ?? tl('templates.modern.name') })}
               className="flex-row items-center px-3 min-h-11 rounded-xl border border-stone-200"
             >
               <View className="w-4 h-4 rounded-full" style={{ backgroundColor: accent }} />
-              <Text className="ml-1.5 text-sm font-medium text-stone-700">{currentTemplate?.name ?? 'Template'}</Text>
-              <Ionicons name="chevron-down" size={14} color={colors.stone[500]} style={{ marginLeft: 4 }} />
+              <Text className="ms-1.5 text-sm font-medium text-stone-700">{currentTemplate?.name ?? tl('editor.template')}</Text>
+              <Ionicons name="chevron-down" size={14} color={colors.stone[500]} style={{ marginStart: 4 }} />
             </TouchableOpacity>
           </View>
 
@@ -484,46 +488,51 @@ export default function CoverLetterEditorScreen() {
               onPress={() => setDetailsOpen((v) => !v)}
               accessibilityRole="button"
               accessibilityState={{ expanded: detailsOpen }}
-              accessibilityLabel={`Letter details. ${summary || 'Not addressed yet'}`}
+              accessibilityLabel={tl('editor.letterDetailsA11y', { summary: summary || tl('editor.notAddressed') })}
               className="flex-row items-center px-3 min-h-11 bg-stone-50"
             >
-              <Ionicons name={detailsOpen ? 'chevron-down' : 'chevron-forward'} size={16} color={colors.stone[500]} />
-              <Text className="ml-2 font-medium text-stone-700">Letter details</Text>
-              <Text className="ml-2 flex-1 text-xs text-stone-400" numberOfLines={1}>
-                {summary || 'Not addressed yet'}
+              <Ionicons
+                name={detailsOpen ? 'chevron-down' : 'chevron-forward'}
+                size={16}
+                color={colors.stone[500]}
+                style={detailsOpen ? undefined : RTL_FLIP}
+              />
+              <Text className="ms-2 font-medium text-stone-700">{tl('editor.letterDetails')}</Text>
+              <Text className="ms-2 flex-1 text-xs text-stone-400" numberOfLines={1}>
+                {summary || tl('editor.notAddressed')}
               </Text>
             </TouchableOpacity>
             {detailsOpen && (
               <View className="px-3 pt-3">
                 <Text className="text-xs text-stone-500 mb-3">
-                  Who this letter is addressed to. These appear in the letterhead.
+                  {tl('editor.letterDetailsHint')}
                 </Text>
                 <Input
-                  label="Title"
+                  label={tl('editor.titleLabel')}
                   value={coverLetter.title ?? ''}
                   onChangeText={(v) => updateField('title', v)}
-                  placeholder="Untitled cover letter"
+                  placeholder={tl('editor.titlePlaceholder')}
                   maxLength={COVER_LETTER_MAX.title}
                 />
                 {DETAIL_FIELDS.map(({ field, label }) => (
                   <Input
                     key={field}
-                    label={label}
+                    label={label(tl)}
                     value={(coverLetter[field] as string | undefined) ?? ''}
                     onChangeText={(v) => updateField(field as keyof CoverLetter, v)}
                     maxLength={COVER_LETTER_MAX[field]}
                   />
                 ))}
-                <Text className="text-sm font-semibold text-stone-700 mb-2">Your details</Text>
+                <Text className="text-sm font-semibold text-stone-700 mb-2">{tl('editor.yourDetails')}</Text>
                 <Input
-                  label="Your name"
+                  label={tl('editor.yourName')}
                   value={coverLetter.styling?.senderName ?? ''}
                   onChangeText={(v) => updateStyling('senderName', v)}
                   maxLength={COVER_LETTER_MAX.senderName}
                   autoComplete="name"
                 />
                 <Input
-                  label="Your email (optional)"
+                  label={tl('editor.yourEmail')}
                   value={coverLetter.styling?.senderEmail ?? ''}
                   onChangeText={(v) => updateStyling('senderEmail', v)}
                   maxLength={COVER_LETTER_MAX.senderEmail}
@@ -535,7 +544,7 @@ export default function CoverLetterEditorScreen() {
             )}
           </View>
 
-          <Text className="text-sm font-medium text-stone-700 mb-2">Writing Tone</Text>
+          <Text className="text-sm font-medium text-stone-700 mb-2">{tl('editor.writingTone')}</Text>
           <View className="flex-row flex-wrap gap-2 mb-4" accessibilityRole="radiogroup">
             {TONE_OPTIONS.map((option) => (
               <TouchableOpacity
@@ -546,7 +555,7 @@ export default function CoverLetterEditorScreen() {
                 className={['flex-row items-center px-4 min-h-11 rounded-xl border', tone === option.value ? 'border-brand-600 bg-brand-50' : 'border-stone-200'].join(' ')}
               >
                 <Ionicons name={option.icon as any} size={16} color={tone === option.value ? colors.brand[600] : colors.stone[500]} />
-                <Text className={['ml-2 font-medium', tone === option.value ? 'text-brand-700' : 'text-stone-600'].join(' ')}>{option.label}</Text>
+                <Text className={['ms-2 font-medium', tone === option.value ? 'text-brand-700' : 'text-stone-600'].join(' ')}>{option.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -563,31 +572,31 @@ export default function CoverLetterEditorScreen() {
             ) : (
               <Ionicons name="sparkles" size={18} color={colors.brand[600]} />
             )}
-            <Text className="text-brand-600 font-semibold ml-2">
-              {generateCL.isPending ? 'Generating...' : coverLetter.content ? 'Regenerate' : 'Generate'}
+            <Text className="text-brand-600 font-semibold ms-2">
+              {generateCL.isPending ? tl('ai.generating') : coverLetter.content ? tl('ai.regenerate') : tl('ai.generate')}
             </Text>
           </TouchableOpacity>
 
           <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-sm font-medium text-stone-700">Letter Content</Text>
+            <Text className="text-sm font-medium text-stone-700">{tl('editor.letterContent')}</Text>
             <TouchableOpacity
               onPress={openRewrite}
               accessibilityRole="button"
-              accessibilityLabel="Rewrite one paragraph with the Flacron Engine"
+              accessibilityLabel={tl('editor.rewriteA11y')}
               className="flex-row items-center px-2 min-h-11"
             >
               <Ionicons name="color-wand-outline" size={16} color={colors.brand[600]} />
-              <Text className="text-brand-600 text-sm font-semibold ml-1.5">Rewrite paragraph</Text>
+              <Text className="text-brand-600 text-sm font-semibold ms-1.5">{tl('editor.rewriteParagraph')}</Text>
             </TouchableOpacity>
           </View>
 
           {richLocked && (
             <View className="bg-warning-bg rounded-xl p-3 mb-3">
               <Text className="text-sm text-stone-700">
-                This letter has formatting from the website (such as bold, lists or alignment) that the app can&apos;t show. You can read it here and rewrite paragraphs; to type changes, edit it as plain text — that removes the formatting when you save.
+                {tl('editor.richLocked')}
               </Text>
               <TouchableOpacity onPress={confirmPlainEdit} accessibilityRole="button" className="min-h-11 justify-center">
-                <Text className="text-brand-600 font-semibold text-sm">Edit as plain text</Text>
+                <Text className="text-brand-600 font-semibold text-sm">{tl('editor.plainEditAction')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -598,8 +607,8 @@ export default function CoverLetterEditorScreen() {
               onChangeText={setContent}
               editable={!richLocked}
               multiline
-              accessibilityLabel="Letter content"
-              placeholder="Write your cover letter here, or generate one with the Flacron Engine..."
+              accessibilityLabel={tl('editor.letterContentA11y')}
+              placeholder={tl('editor.contentPlaceholder')}
               placeholderTextColor={colors.stone[400]}
               className="p-4 text-base text-stone-900 min-h-96"
               textAlignVertical="top"
@@ -611,7 +620,7 @@ export default function CoverLetterEditorScreen() {
       </KeyboardAvoidingView>
 
       {/* Template + accent colour (web toolbar "Template" menu). */}
-      <Modal visible={templateOpen} onClose={() => setTemplateOpen(false)} title="Choose a template" size="lg">
+      <Modal visible={templateOpen} onClose={() => setTemplateOpen(false)} title={tl('editor.chooseTemplate')} size="lg">
         {COVER_LETTER_TEMPLATES.map((template) => {
           const active = activeTemplateId(coverLetter.templateId) === template.id;
           const locked = !canAccessTemplate(user?.subscription, template.tier);
@@ -622,7 +631,9 @@ export default function CoverLetterEditorScreen() {
               onPress={() => handlePickTemplate(template)}
               accessibilityRole="radio"
               accessibilityState={{ checked: active }}
-              accessibilityLabel={`${template.name}. ${template.description}${locked ? '. Locked' : ''}`}
+              accessibilityLabel={[template.name, template.description, locked ? tl('editor.locked') : '']
+                .filter(Boolean)
+                .join('. ')}
               className={[
                 'flex-row items-center p-3 rounded-xl border-2 mb-2 min-h-11',
                 active ? 'border-brand-500 bg-brand-50' : 'border-stone-200',
@@ -632,7 +643,7 @@ export default function CoverLetterEditorScreen() {
               <View className="w-8 h-8 rounded-lg items-center justify-center" style={{ backgroundColor: swatch }}>
                 {active ? <Ionicons name="checkmark" size={16} color={colors.white} /> : null}
               </View>
-              <View className="ml-3 flex-1">
+              <View className="ms-3 flex-1">
                 <Text className="font-semibold text-stone-900">{template.name}</Text>
                 <Text className="text-xs text-stone-500">{template.description}</Text>
               </View>
@@ -641,7 +652,7 @@ export default function CoverLetterEditorScreen() {
           );
         })}
 
-        <Text className="text-sm font-medium text-stone-700 mt-3 mb-2">Accent color</Text>
+        <Text className="text-sm font-medium text-stone-700 mt-3 mb-2">{tl('editor.accentColor')}</Text>
         <View className="flex-row flex-wrap">
           {ACCENT_COLORS.map((color) => {
             const selected = isSameColor(coverLetter.styling?.primaryColor, color);
@@ -651,7 +662,7 @@ export default function CoverLetterEditorScreen() {
                 onPress={() => updateStyling('primaryColor', color)}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: selected }}
-                accessibilityLabel={`Accent color ${color}`}
+                accessibilityLabel={tl('editor.accentColorA11y', { color })}
                 className="w-11 h-11 items-center justify-center"
               >
                 <View
@@ -665,9 +676,9 @@ export default function CoverLetterEditorScreen() {
           })}
         </View>
         <View className="flex-row items-end mt-2">
-          <View className="flex-1 mr-2">
+          <View className="flex-1 me-2">
             <Input
-              label="Custom color"
+              label={tl('editor.customColor')}
               placeholder="#2563eb"
               value={customColor}
               onChangeText={setCustomColor}
@@ -679,15 +690,15 @@ export default function CoverLetterEditorScreen() {
           </View>
           <View className="mb-4">
             <Button variant="outline" onPress={applyCustomColor} disabled={!customColor.trim()}>
-              Apply
+              {tl('editor.apply')}
             </Button>
           </View>
         </View>
         <Text className="text-xs text-stone-500 mb-4">
-          Changes are saved when you tap Save. A preview is available on the website and in your exported file.
+          {tl('editor.templateNote')}
         </Text>
         <Button variant="primary" fullWidth onPress={() => setTemplateOpen(false)}>
-          Done
+          {tl('editor.done')}
         </Button>
         <View className="h-6" />
       </Modal>
@@ -697,19 +708,19 @@ export default function CoverLetterEditorScreen() {
         visible={rewriteOpen}
         onClose={closeRewrite}
         closeDisabled={rewrite.isPending}
-        title="Rewrite this paragraph"
+        title={tl('editor.rewriteTitle')}
         size="lg"
       >
         {paragraphDraft ? (
           <View>
-            <Text className="text-xs font-semibold uppercase text-stone-400 mb-1.5">Current paragraph</Text>
+            <Text className="text-xs font-semibold uppercase text-stone-400 mb-1.5">{tl('editor.currentParagraph')}</Text>
             <Text className="text-sm text-stone-600 bg-stone-50 rounded-lg p-3 mb-4">{paragraphDraft.original}</Text>
-            <Text className="text-xs font-semibold uppercase text-stone-400 mb-1.5">Suggested replacement</Text>
+            <Text className="text-xs font-semibold uppercase text-stone-400 mb-1.5">{tl('editor.suggestedReplacement')}</Text>
             <TextInput
               value={paragraphDraft.suggestion}
               onChangeText={(v) => setParagraphDraft((d) => (d ? { ...d, suggestion: v } : d))}
               multiline
-              accessibilityLabel="Suggested replacement"
+              accessibilityLabel={tl('editor.suggestedReplacement')}
               textAlignVertical="top"
               className="border border-stone-200 rounded-xl p-3 text-base text-stone-900 min-h-40 mb-4"
             />
@@ -721,29 +732,29 @@ export default function CoverLetterEditorScreen() {
                 onPress={applyRewrite}
                 icon={<Ionicons name="checkmark" size={18} color={colors.white} />}
               >
-                Replace paragraph
+                {tl('editor.replaceParagraph')}
               </Button>
               <Button variant="ghost" fullWidth onPress={closeRewrite}>
-                Cancel
+                {tc('cancel')}
               </Button>
             </View>
           </View>
         ) : rewrite.isPending ? (
           <View className="items-center py-10" accessibilityLiveRegion="polite">
             <ActivityIndicator size="large" color={colors.brand[600]} />
-            <Text className="text-stone-500 mt-3">Rewriting paragraph...</Text>
+            <Text className="text-stone-500 mt-3">{tl('editor.rewriting')}</Text>
           </View>
         ) : (
           <View>
             <Text className="text-sm text-stone-500 mb-3">
-              Choose the paragraph to rewrite. The rest of your letter is sent as context and stays unchanged. Uses 1 Engine credit.
+              {tl('editor.rewriteHint')}
             </Text>
             {paragraphs.map((paragraph, index) => (
               <TouchableOpacity
                 key={`${index}-${paragraph.slice(0, 16)}`}
                 onPress={() => requestRewrite(paragraph)}
                 accessibilityRole="button"
-                accessibilityLabel={`Rewrite paragraph ${index + 1}`}
+                accessibilityLabel={tl('editor.rewriteParagraphA11y', { number: index + 1 })}
                 className="border border-stone-200 rounded-xl p-3 mb-2 min-h-11"
               >
                 <Text className="text-sm text-stone-700" numberOfLines={4}>{paragraph}</Text>

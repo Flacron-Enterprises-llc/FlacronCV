@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -14,39 +14,41 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../src/components/ui/Button';
+import { useT } from '../src/i18n';
 import { colors } from '../src/theme/colors';
 
 const { width, height } = Dimensions.get('window');
 
 const ONBOARDING_SEEN_KEY = 'flacroncv_onboarding_seen';
 
-const slides = [
-  {
-    id: '1',
-    title: 'Build a\nStandout CV',
-    subtitle:
-      'Choose from professionally designed templates. Every line is yours to edit.',
-  },
-  {
-    id: '2',
-    icon: '✨',
-    title: 'Flacron Engine\nContent',
-    subtitle:
-      'Let the Flacron Engine write compelling summaries, bullet points and cover letters tailored to your role.',
-    badge: 'Powered by the Flacron Engine',
-  },
-  {
-    id: '3',
-    icon: '🚀',
-    title: 'Export &\nTake It With You',
-    subtitle:
-      'Download as PDF or DOCX in one tap and share the file from your device. Your career, your way.',
-    badge: 'PDF · DOCX',
-  },
-];
-
 export default function OnboardingScreen() {
   const router = useRouter();
+  const t = useT('onboarding');
+  const slides = useMemo(
+    () => [
+      {
+        id: '1',
+        title: t('slides.build.title'),
+        subtitle: t('slides.build.subtitle'),
+      },
+      {
+        id: '2',
+        icon: '✨',
+        title: t('slides.engine.title'),
+        subtitle: t('slides.engine.subtitle'),
+        badge: t('slides.engine.badge'),
+      },
+      {
+        id: '3',
+        icon: '🚀',
+        title: t('slides.export.title'),
+        subtitle: t('slides.export.subtitle'),
+        // File format names; the same in every language.
+        badge: 'PDF · DOCX',
+      },
+    ],
+    [t],
+  );
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -205,7 +207,7 @@ export default function OnboardingScreen() {
 
           <View style={{ marginBottom: 14 }}>
             <Button variant="primary" size="lg" fullWidth onPress={handleNext}>
-              {currentIndex === slides.length - 1 ? "Get Started — It's Free" : 'Continue'}
+              {currentIndex === slides.length - 1 ? t('getStarted') : t('continue')}
             </Button>
           </View>
 
@@ -215,8 +217,8 @@ export default function OnboardingScreen() {
             style={{ alignItems: 'center', paddingVertical: 10 }}
           >
             <Text style={{ fontSize: 15, fontWeight: '500' }} className="text-stone-500">
-              Already have an account?{' '}
-              <Text className="font-bold text-stone-900">Sign in</Text>
+              {t('haveAccount')}{' '}
+              <Text className="font-bold text-stone-900">{t('signIn')}</Text>
             </Text>
           </TouchableOpacity>
         </View>

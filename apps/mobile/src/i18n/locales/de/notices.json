@@ -1,0 +1,15 @@
+{
+  "announcement": {
+    "dismiss": "Ankündigung schließen"
+  },
+  "maintenance": {
+    "defaultMessage": "Wir führen gerade Wartungsarbeiten durch. Bitte schau in Kürze wieder vorbei.",
+    "checkAgain": "Erneut prüfen"
+  },
+  "paymentIssue": {
+    "title": "Zahlungsproblem",
+    "bodyApple": "Deine letzte Zahlung ist fehlgeschlagen. Aktualisiere deine Zahlungsmethode in deinen App-Store-Abo-Einstellungen, um dein Abo aktiv zu halten.",
+    "bodyGoogle": "Deine letzte Zahlung ist fehlgeschlagen. Aktualisiere deine Zahlungsmethode in deinen Google-Play-Abo-Einstellungen, um dein Abo aktiv zu halten.",
+    "bodyWeb": "Deine letzte Zahlung ist fehlgeschlagen. Aktualisiere deine Zahlungsmethode auf der FlacronCV-Website (Einstellungen → Abrechnung), um dein Abo aktiv zu halten."
+  }
+}

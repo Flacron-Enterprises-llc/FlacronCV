@@ -19,12 +19,15 @@ import {
   upgradeAlertButtons,
 } from '../../../src/config/paid-upgrades';
 import { CoverLetter } from '../../../src/types/cover-letter.types';
-import { formatDate } from '../../../src/lib/utils';
+import { toDate } from '../../../src/lib/utils';
+import { formatDate, useT } from '../../../src/i18n';
 import { isLimitRejection, isNetworkFailure, requestFailureMessage } from '../../../src/lib/api-errors';
 import { colors } from '../../../src/theme/colors';
 import { CoverLetterStatus } from '../../../src/types/enums';
 
 export default function CoverLettersScreen() {
+  const t = useT('coverLetters');
+  const tc = useT('common');
   const router = useRouter();
   const { data, isLoading, error, refetch, isRefetching } = useCoverLetterList();
   const deleteCL = useDeleteCoverLetter();
@@ -35,20 +38,20 @@ export default function CoverLettersScreen() {
 
   const handleDelete = (cl: CoverLetter) => {
     Alert.alert(
-      'Delete Cover Letter',
-      `Are you sure you want to delete "${cl.title}"? This cannot be undone. Deleting it does not restore a cover letter creation on your plan.`,
+      t('list.deleteTitle'),
+      t('list.deleteBody', { title: cl.title }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: tc('cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: tc('delete'),
           style: 'destructive',
           onPress: () =>
             deleteCL.mutate(cl.id, {
-              onSuccess: () => Alert.alert('Deleted', `"${cl.title}" has been deleted.`),
+              onSuccess: () => Alert.alert(t('list.deletedTitle'), t('list.deletedBody', { title: cl.title })),
               onError: (err) =>
                 Alert.alert(
-                  'Could not delete',
-                  requestFailureMessage(err, 'Failed to delete cover letter. Please try again.'),
+                  t('list.deleteErrorTitle'),
+                  requestFailureMessage(err, t('list.deleteError')),
                 ),
             }),
         },
@@ -58,7 +61,7 @@ export default function CoverLettersScreen() {
 
   const alertLimitReached = () => {
     Alert.alert(
-      'Cover Letter Limit Reached',
+      t('limitReachedTitle'),
       coverLetterLimitReachedMessage(effectivePlanForCopy(user?.subscription)),
       upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
     );
@@ -73,7 +76,10 @@ export default function CoverLettersScreen() {
     }
     duplicateCL.mutate(cl.id, {
       onSuccess: (copy) =>
-        Alert.alert('Duplicated', copy?.title ? `Cover letter duplicated as "${copy.title}".` : 'Cover letter duplicated'),
+        Alert.alert(
+          t('list.duplicatedTitle'),
+          copy?.title ? t('list.duplicatedAs', { title: copy.title }) : t('list.duplicated'),
+        ),
       onError: (err) => {
         if (alertIfUnverifiedEmail(err)) return;
         if (isLimitRejection(err)) {
@@ -81,10 +87,10 @@ export default function CoverLettersScreen() {
           return;
         }
         Alert.alert(
-          'Could not duplicate',
+          t('list.duplicateErrorTitle'),
           isNetworkFailure(err)
             ? requestFailureMessage(err, '')
-            : 'We couldn’t duplicate that cover letter. Please try again.',
+            : t('list.duplicateError'),
         );
       },
     });
@@ -101,7 +107,7 @@ export default function CoverLettersScreen() {
       >
         <View className="flex-row items-start justify-between">
           <View className="flex-row items-center flex-1">
-            <View className="w-12 h-12 rounded-xl bg-brand-50 items-center justify-center mr-3">
+            <View className="w-12 h-12 rounded-xl bg-brand-50 items-center justify-center me-3">
               <Ionicons name="mail" size={22} color={colors.brand[600]} />
             </View>
             <View className="flex-1">
@@ -114,10 +120,10 @@ export default function CoverLettersScreen() {
               <View className="flex-row items-center mt-1.5 gap-2">
                 <View className={['px-2 py-0.5 rounded-full', item.status === CoverLetterStatus.FINAL ? 'bg-success-bg' : 'bg-stone-100'].join(' ')}>
                   <Text className={['text-xs font-medium', item.status === CoverLetterStatus.FINAL ? 'text-success' : 'text-stone-500'].join(' ')}>
-                    {item.status === CoverLetterStatus.FINAL ? 'Final' : 'Draft'}
+                    {item.status === CoverLetterStatus.FINAL ? t('status.final') : t('status.draft')}
                   </Text>
                 </View>
-                <Text className="text-xs text-stone-400">Updated {formatDate(item.updatedAt)}</Text>
+                <Text className="text-xs text-stone-400">{t('list.updated', { date: formatDate(toDate(item.updatedAt)) })}</Text>
               </View>
             </View>
           </View>
@@ -125,9 +131,9 @@ export default function CoverLettersScreen() {
             onPress={() => handleDuplicate(item)}
             disabled={duplicateCL.isPending}
             accessibilityRole="button"
-            accessibilityLabel={`Duplicate ${item.title}`}
+            accessibilityLabel={t('list.duplicateA11y', { title: item.title })}
             accessibilityState={{ disabled: duplicateCL.isPending, busy: duplicating }}
-            className="w-11 h-11 items-center justify-center rounded-xl bg-stone-50 ml-2"
+            className="w-11 h-11 items-center justify-center rounded-xl bg-stone-50 ms-2"
           >
             {duplicating ? (
               <ActivityIndicator size="small" color={colors.brand[600]} />
@@ -139,8 +145,8 @@ export default function CoverLettersScreen() {
             onPress={() => handleDelete(item)}
             disabled={deleteCL.isPending}
             accessibilityRole="button"
-            accessibilityLabel={`Delete ${item.title}`}
-            className="w-11 h-11 items-center justify-center rounded-xl bg-stone-50 ml-2"
+            accessibilityLabel={t('list.deleteA11y', { title: item.title })}
+            className="w-11 h-11 items-center justify-center rounded-xl bg-stone-50 ms-2"
           >
             <Ionicons
               name={deleteCL.isPending ? 'time-outline' : 'trash-outline'}
@@ -152,7 +158,7 @@ export default function CoverLettersScreen() {
         {item.aiGenerated && (
           <View className="flex-row items-center mt-2">
             <Ionicons name="sparkles" size={12} color={colors.brand[600]} />
-            <Text className="text-brand-600 text-xs ml-1">Generated</Text>
+            <Text className="text-brand-600 text-xs ms-1">{t('list.generated')}</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -162,7 +168,7 @@ export default function CoverLettersScreen() {
   if (error) {
     return (
       <ErrorState
-        message={requestFailureMessage(error, 'Failed to load cover letters')}
+        message={requestFailureMessage(error, t('list.loadError'))}
         onRetry={refetch}
       />
     );
@@ -172,10 +178,10 @@ export default function CoverLettersScreen() {
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top']}>
       <View className="px-5 pt-4 pb-4 bg-white border-b border-stone-100">
         <View className="flex-row items-center justify-between">
-          <Text className="text-xl font-black text-stone-900">Cover Letters</Text>
+          <Text className="text-xl font-black text-stone-900">{t('list.title')}</Text>
           <TouchableOpacity onPress={() => router.push('/(dashboard)/cover-letters/new')} className="flex-row items-center bg-brand-600 px-4 py-2 rounded-xl">
             <Ionicons name="add" size={18} color={colors.white} />
-            <Text className="text-white font-bold ml-1">New</Text>
+            <Text className="text-white font-bold ms-1">{t('list.new')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -191,9 +197,9 @@ export default function CoverLettersScreen() {
         >
           <EmptyState
             icon="mail-outline"
-            title="No cover letters yet"
-            description="Create tailored cover letters with the Flacron Engine."
-            actionLabel="Create Cover Letter"
+            title={t('list.emptyTitle')}
+            description={t('list.emptyDescription')}
+            actionLabel={t('list.emptyAction')}
             onAction={() => router.push('/(dashboard)/cover-letters/new')}
           />
         </ScrollView>

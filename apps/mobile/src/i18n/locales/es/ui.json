@@ -1,0 +1,12 @@
+{
+  "errorState": {
+    "title": "¡Ups!",
+    "message": "Algo salió mal",
+    "retry": "Intentar de nuevo"
+  },
+  "leaveGuard": {
+    "title": "¿Salir sin guardar?",
+    "body": "Tus cambios no están guardados. Se conservan en este dispositivo hasta que cierres sesión o cierres la app.",
+    "stay": "Quedarme en esta página"
+  }
+}

@@ -1,0 +1,234 @@
+{
+  "common": {
+    "locked": "Career tools are not included in your plan",
+    "loadFailed": "This page could not be loaded. Nothing was changed.",
+    "edit": "Edit"
+  },
+  "relocation": {
+    "title": "Relocation & career modes",
+    "subtitle": "Target locations and the career lens for your drafts",
+    "loadFailed": "Could not load your career tools.",
+    "locationsLocked": "Location profiles are not included in your plan",
+    "specialistLocked": "Specialist modes are not included in your plan",
+    "leave": {
+      "title": "Leave without saving?",
+      "body": "Your specialist mode changes are not saved.",
+      "discard": "Discard"
+    },
+    "tabs": {
+      "locations": "Locations",
+      "locationsCount": "Locations ({used}/{capacity})",
+      "specialist": "Specialist mode"
+    },
+    "serviceUnavailable": "Could not connect to the career modes service. Please try again.",
+    "deleteConfirm": {
+      "title": "Delete this location profile?",
+      "body": "{place} will no longer be used for matching."
+    },
+    "removed": "Location profile removed.",
+    "add": "Add location profile",
+    "allInUse": "All location profiles in your plan are in use. Delete one to add another.",
+    "empty": {
+      "title": "No location profiles configured",
+      "body": "Add your primary location or target relocation cities to power radius-aware opportunity matching."
+    },
+    "editA11y": "Edit {place}",
+    "deleteA11y": "Delete {place}"
+  },
+  "specialist": {
+    "upgrade": {
+      "title": "Specialist modes are not included in your current plan",
+      "body": "Specialist career modes adapt drafts for Engineering, Executive Leadership, Design, Research, and Career Pivots."
+    },
+    "loadFailed": "Could not load your specialist mode.",
+    "guidelinesTooLong": "Keep the custom guidelines under {max} characters.",
+    "saved": "Specialist career mode updated.",
+    "intro": "Select a career lens to adapt resume emphasis, prompt weighting, and fit analysis to your specific discipline.",
+    "activeMode": "ACTIVE MODE",
+    "recommendedFocus": "RECOMMENDED FOCUS",
+    "guidelinesTitle": "Discipline guidelines & custom focus",
+    "guidelinesLabel": "Custom guidelines (optional)",
+    "guidelinesPlaceholder": "Add any specific industry context, methodologies, or personal focus areas to guide drafts.",
+    "save": "Save specialist mode",
+    "upgradeRequired": "Specialist career modes are not included in your current plan.",
+    "saveFailed": "Failed to save specialist mode. Please try again.",
+    "modes": {
+      "general": {
+        "name": "Standard Professional",
+        "description": "Balanced presentation across functional skills, career trajectory, and practical outcomes.",
+        "focus1": "Core Competencies",
+        "focus2": "Key Achievements",
+        "focus3": "Team Collaboration",
+        "promptModifier": "Emphasize verified outcomes, clarity of impact, and strong functional mastery."
+      },
+      "technical_engineering": {
+        "name": "Technical & Engineering",
+        "description": "Prioritizes architecture decisions, scale, technical stack depth, and quantitative performance.",
+        "focus1": "System Architecture",
+        "focus2": "Language & Framework Depth",
+        "focus3": "Scale & Latency Metrics",
+        "focus4": "Open Source",
+        "promptModifier": "Focus on technical rigor, system complexity, reliability metrics, and concrete engineering decisions."
+      },
+      "executive_leadership": {
+        "name": "Executive & Leadership",
+        "description": "Highlights P&L ownership, organizational transformation, board interactions, and executive vision.",
+        "focus1": "P&L Management",
+        "focus2": "Organizational Scaling",
+        "focus3": "Strategic Roadmaps",
+        "focus4": "Stakeholder Alignment",
+        "promptModifier": "Frame experiences through strategic leadership, revenue growth, talent development, and governance."
+      },
+      "creative_design": {
+        "name": "Creative & Design",
+        "description": "Centers on product empathy, portfolio case studies, user research methodologies, and brand craft.",
+        "focus1": "Design Systems",
+        "focus2": "User Research & Discovery",
+        "focus3": "Case Studies",
+        "focus4": "Cross-functional Critique",
+        "promptModifier": "Highlight design process, user problem framing, prototyping craft, and business metric impact."
+      },
+      "academic_research": {
+        "name": "Academic & Research",
+        "description": "Emphasizes peer-reviewed publications, grant awards, teaching, and experimental methodology.",
+        "focus1": "Peer-reviewed Publications",
+        "focus2": "Grant Funding",
+        "focus3": "Lab Direction",
+        "focus4": "Conference Proceedings",
+        "promptModifier": "Highlight research methodology, citation impact, grant management, and theoretical contributions."
+      },
+      "career_transition": {
+        "name": "Career Pivot / Entry",
+        "description": "Bridges transferable capabilities from prior domains into target industries with focused narratives.",
+        "focus1": "Transferable Skills",
+        "focus2": "Rapid Upskilling Evidence",
+        "focus3": "Domain Analogies",
+        "focus4": "Self-directed Projects",
+        "promptModifier": "Translate previous domain expertise into target industry language with clear evidence of rapid mastery."
+      }
+    }
+  },
+  "location": {
+    "timeline": {
+      "immediate": "Immediate (Active Move)",
+      "1_to_3_months": "1 to 3 Months",
+      "3_to_6_months": "3 to 6 Months",
+      "exploring": "Exploring Possibilities",
+      "not_relocating": "Current Location (Not Relocating)"
+    },
+    "workAuth": {
+      "citizen": "Citizen",
+      "permanent_resident": "Permanent Resident / Green Card",
+      "visa_holder": "Current Work Visa",
+      "needs_sponsorship": "Requires Visa Sponsorship",
+      "authorized": "Authorized to Work"
+    },
+    "remote": {
+      "hybrid": "Hybrid Preferred",
+      "remote_only": "Remote Only",
+      "onsite_only": "Onsite Only",
+      "any": "Any Arrangement"
+    },
+    "validation": {
+      "enterLocation": "Enter a location.",
+      "placeTooLong": "Keep the location under {max} characters.",
+      "radiusTooLarge": "Your plan allows a radius of up to {radius} miles.",
+      "notesTooLong": "Keep the notes under {max} characters.",
+      "placeInvalid": "Enter a location under {max} characters."
+    },
+    "quotaHint": "Using {used} of {capacity} location profiles. Plan local search radius: up to {radius} miles.",
+    "line": {
+      "radius": "Radius: ~{radius} miles",
+      "timeline": "Timeline: {value}",
+      "workAuth": "Work auth: {value}",
+      "commute": "Max commute: ≤ {minutes} min · {remote}"
+    },
+    "badge": {
+      "relocation": "RELOCATION TARGET",
+      "current": "CURRENT LOCATION"
+    },
+    "error": {
+      "capacity": "Plan location profile capacity reached. Delete a location profile to add another.",
+      "radius": "Radius exceeds your plan allowance.",
+      "saveFailed": "Failed to save location profile. Please check inputs and try again.",
+      "deleteFailed": "Failed to delete location profile."
+    }
+  },
+  "editor": {
+    "titleAdd": "Add location profile",
+    "titleEdit": "Edit location profile",
+    "notFound": "This location profile no longer exists.",
+    "allInUse": {
+      "title": "All location profiles are in use",
+      "body": "Delete a location profile to add another."
+    },
+    "placeLabel": "Location (City, State / Metro) *",
+    "placePlaceholder": "e.g. Austin, TX or Seattle, WA",
+    "radiusLabel": "Search radius",
+    "radiusValue": "{value} miles",
+    "radiusHint": "Plan maximum radius: {radius} miles",
+    "commuteLabel": "Maximum daily commute",
+    "commuteValue": "{value} min",
+    "relocationLabel": "This is a target relocation destination (not my current home)",
+    "relocationA11y": "This is a target relocation destination",
+    "timelineLabel": "Target move timeline",
+    "workAuthLabel": "Work authorization in area",
+    "remoteLabel": "Work arrangement flexibility",
+    "notesLabel": "Relocation / location notes (optional)",
+    "notesPlaceholder": "e.g. Relocating Q4; preference for north suburbs near transit.",
+    "save": "Save location profile",
+    "delete": "Delete location profile",
+    "decrease": "Decrease {label}",
+    "increase": "Increase {label}"
+  },
+  "recruiting": {
+    "title": "Recruiting opt-in",
+    "help": "Search shows only people who opted in, and it does not show their email.",
+    "consent": "Employers may see that I opted in. My email stays private.",
+    "save": "Save preference",
+    "saved": "Preference saved.",
+    "closed": "Employer access is not for sale. It stays closed until commercial terms are set.",
+    "status": {
+      "unknown": "Your current choice could not be read. Saving sets it.",
+      "on": "You are discoverable: employers may see that you opted in.",
+      "off": "You are not discoverable. Employers cannot see you."
+    },
+    "saveFailed": "That change was not saved. Try again.",
+    "discoverableTitle": "Discoverable to employers",
+    "optedIn": "OPTED IN",
+    "notOptedIn": "NOT OPTED IN",
+    "footer": "You can change this at any time. Turning it off removes you from employer search."
+  },
+  "data": {
+    "title": "Career data",
+    "intro": "This page covers only the career tools: your career profile, evidence files, drafts, practice sessions and other career records. Your FlacronCV account, CVs, cover letters, job tracker and subscription are managed in Settings.",
+    "export": {
+      "title": "Export career data",
+      "body": "A copy of every career record and file we hold for you, as a JSON file. It is shared from a temporary copy that is removed afterwards. Preparing it can take up to half a minute.",
+      "button": "Prepare export",
+      "a11y": "Prepare career data export",
+      "preparing": "Preparing your export…",
+      "shared": "Your career data file is ready. The temporary copy on this device was removed.",
+      "sharingUnavailable": "This device cannot open the share sheet. Open the download link instead; it expires after a short time.",
+      "downloadFailed": "The file is ready but could not be downloaded in the app. Open the download link instead; it expires after a short time.",
+      "openLink": "Open download link",
+      "failed": "The export could not be prepared. Try again in a few minutes.",
+      "nothing": "There is no career data to export."
+    },
+    "erase": {
+      "title": "Erase career data",
+      "a11y": "Erase career data: open account deletion in Settings",
+      "body": "Deleting your account in Settings › Your data also erases all career data."
+    }
+  },
+  "services": {
+    "title": "Human review",
+    "subtitle": "Not bookable yet",
+    "intro": "A person would review selected material. This is not AI feedback.",
+    "closedLabel": "BOOKING CLOSED",
+    "closedBody": "Booking stays closed until commercial terms are set. Nothing can be booked or bought yet.",
+    "empty": "No human review services are listed yet.",
+    "offTitle": "This tool is not open yet",
+    "offBody": "Nothing was changed."
+  }
+}

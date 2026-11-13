@@ -1,0 +1,348 @@
+{
+  "editor": {
+    "renameFailed": "تعذّر إعادة تسمية السيرة الذاتية. يُرجى المحاولة مرة أخرى.",
+    "exportLimitTitle": "تم بلوغ حد التصدير",
+    "loadError": "تعذّر تحميل السيرة الذاتية",
+    "loading": "جارٍ تحميل السيرة الذاتية...",
+    "titleA11y": "عنوان السيرة الذاتية: {title}. إعادة تسمية",
+    "titleHint": "يفتح حقلًا لتغيير عنوان السيرة الذاتية",
+    "editingFallback": "تحرير السيرة الذاتية",
+    "unsavedChanges": "تغييرات غير محفوظة",
+    "atsCheck": "فحص ATS",
+    "interviewPrep": "التحضير للمقابلة",
+    "moreTools": "أدوات أخرى",
+    "designTool": "التصميم: التخطيط والألوان والخطوط",
+    "linkedinTool": "محسّن LinkedIn",
+    "moreToolsA11y": "أدوات أخرى: التصميم ومحسّن LinkedIn",
+    "export": "تصدير",
+    "chooseFormat": "اختر الصيغة:",
+    "renameTitle": "إعادة تسمية السيرة الذاتية",
+    "titleLabel": "عنوان السيرة الذاتية",
+    "titlePlaceholder": "مثال: سيرة ذاتية مهندس برمجيات 2025"
+  },
+  "wizard": {
+    "steps": {
+      "personal": "المعلومات الشخصية",
+      "experience": "الخبرة",
+      "education": "التعليم",
+      "skills": "المهارات",
+      "summary": "الملخص",
+      "projects": "المشاريع",
+      "certifications": "الشهادات",
+      "languages": "اللغات",
+      "references": "المراجع",
+      "custom": "أقسام مخصصة",
+      "arrange": "ترتيب الأقسام"
+    },
+    "saveFailedTitle": "تعذّر الحفظ",
+    "saveFailed": "تعذّر الحفظ. يُرجى المحاولة مرة أخرى.",
+    "personalRequired": "أكمل الحقول المطلوبة قبل المتابعة.",
+    "stepA11y": "الخطوة {current} من {total}، {label}. الانتقال إلى خطوة أخرى",
+    "stepOf": "الخطوة {current} من {total}",
+    "goToStep": "الانتقال إلى خطوة",
+    "finish": "إنهاء",
+    "continue": "متابعة"
+  },
+  "photo": {
+    "upload": "رفع صورة",
+    "change": "تغيير الصورة",
+    "remove": "إزالة الصورة",
+    "uploading": "جارٍ الرفع…",
+    "hint": "JPG أو PNG أو WebP · بحد أقصى 5 ميجابايت · تُستخدم كصورة لسيرتك الذاتية",
+    "invalid": "ملفات «.{ext}» غير مدعومة. يرجى رفع صورة بصيغة JPG أو PNG أو WebP.",
+    "unknownType": "غير معروف",
+    "tooLarge": "هذا الملف كبير جدًا ({size} ميجابايت). الحد الأقصى هو 5 ميجابايت.",
+    "uploadFailed": "تعذّر رفع الصورة. يُرجى المحاولة مرة أخرى.",
+    "unavailable": "رفع الصور غير متاح الآن. يُرجى تسجيل الدخول مرة أخرى.",
+    "deniedTitle": "الصور غير متاحة",
+    "deniedBody": "اسمح بالوصول إلى مكتبة الصور من الإعدادات لاختيار صورة للسيرة الذاتية.",
+    "updateFailedTitle": "تعذّر تحديث الصورة",
+    "removeBody": "هل تريد إزالة الصورة من هذه السيرة الذاتية؟"
+  },
+  "sections": {
+    "editA11y": "تحرير القسم {title}",
+    "hiddenNote": "هذا القسم مخفي في سيرتك الذاتية. أظهره مجددًا في خطوة ترتيب الأقسام.",
+    "titleLabel": "عنوان القسم"
+  },
+  "validation": {
+    "titleRequired": "يرجى إدخال عنوان لسيرتك الذاتية.",
+    "titleTooLong": "يجب ألا يزيد العنوان عن {max} حرفًا.",
+    "sectionTitleRequired": "يرجى إدخال عنوان للقسم.",
+    "sectionTitleTooLong": "يجب ألا يزيد عنوان القسم عن {max} حرفًا."
+  },
+  "sectionTypes": {
+    "experience": "الخبرة العملية",
+    "education": "التعليم",
+    "skills": "المهارات",
+    "projects": "المشاريع",
+    "certifications": "الشهادات",
+    "languages": "اللغات",
+    "references": "المراجع",
+    "awards": "الجوائز",
+    "publications": "المنشورات",
+    "volunteer": "العمل التطوعي",
+    "custom": "قسم مخصص",
+    "fallback": "قسم"
+  },
+  "entry": {
+    "edit": "تحرير الإدخال",
+    "delete": "حذف الإدخال",
+    "update": "تحديث",
+    "present": "حتى الآن"
+  },
+  "fields": {
+    "startDate": "تاريخ البدء *",
+    "endDate": "تاريخ الانتهاء",
+    "description": "الوصف",
+    "company": "الشركة *",
+    "jobTitle": "المسمى الوظيفي *",
+    "proficiency": "مستوى الإتقان *",
+    "website": "الموقع الإلكتروني",
+    "websitePlaceholder": "موقعك.com"
+  },
+  "errors": {
+    "startDateRequired": "تاريخ البدء مطلوب"
+  },
+  "personal": {
+    "title": "المعلومات الشخصية",
+    "subtitle": "أضف بيانات الاتصال الأساسية وعنوانك المهني.",
+    "firstName": "الاسم الأول *",
+    "lastName": "اسم العائلة *",
+    "email": "البريد الإلكتروني *",
+    "phone": "رقم الهاتف *",
+    "headline": "العنوان المهني",
+    "headlinePlaceholder": "مهندس برمجيات أول في Google",
+    "city": "المدينة",
+    "cityPlaceholder": "دبي",
+    "country": "الدولة",
+    "countryPlaceholder": "الإمارات العربية المتحدة",
+    "address": "العنوان",
+    "addressPlaceholder": "الشارع والرقم",
+    "postalCode": "الرمز البريدي",
+    "postalCodePlaceholder": "الرمز البريدي / ZIP",
+    "errors": {
+      "firstNameRequired": "الاسم الأول مطلوب",
+      "lastNameRequired": "اسم العائلة مطلوب",
+      "invalidEmail": "عنوان بريد إلكتروني غير صالح",
+      "phoneRequired": "رقم الهاتف مطلوب"
+    }
+  },
+  "summary": {
+    "title": "الملخص المهني",
+    "subtitle": "اكتب ملخصًا مقنعًا يبرز خبرتك وأهدافك المهنية.",
+    "placeholder": "مهندس برمجيات يركّز على النتائج بخبرة تزيد عن 5 سنوات في بناء تطبيقات ويب قابلة للتوسع...",
+    "characters": "عدد الأحرف: {count}",
+    "recommended": "الموصى به: 150-300 حرف",
+    "generate": "إنشاء",
+    "generating": "جارٍ الإنشاء...",
+    "creditsRemaining": "الرصيد المتبقي: {count}",
+    "accountNotLoadedTitle": "لم يتم تحميل الحساب",
+    "accountNotLoadedBody": "لم يتم تحميل حسابك بعد. تحقق من اتصالك وحاول مرة أخرى.",
+    "creditsExhaustedTitle": "نفد الرصيد",
+    "generateFailedTitle": "تعذّر الإنشاء",
+    "generateFailed": "تعذّر الإنشاء. يُرجى المحاولة مرة أخرى.",
+    "creditMaybeUsed": "تعذّر الإنشاء. ربما تم استخدام رصيد. تحقق من رصيدك وحاول مرة أخرى.",
+    "missing": {
+      "headline": "أضف عنوانًا مهنيًا قبل الإنشاء.",
+      "experience": "أضف الخبرة قبل الإنشاء.",
+      "skills": "أضف المهارات قبل الإنشاء.",
+      "headlineExperience": "أضف عنوانًا مهنيًا والخبرة قبل الإنشاء.",
+      "headlineSkills": "أضف عنوانًا مهنيًا والمهارات قبل الإنشاء.",
+      "experienceSkills": "أضف الخبرة والمهارات قبل الإنشاء.",
+      "all": "أضف عنوانًا مهنيًا والخبرة والمهارات قبل الإنشاء."
+    }
+  },
+  "experience": {
+    "title": "الخبرة العملية",
+    "subtitle": "أضف سجلك المهني بدءًا من أحدث وظيفة.",
+    "empty": "لم تتم إضافة أي خبرة عملية بعد.",
+    "add": "إضافة خبرة",
+    "edit": "تحرير الخبرة",
+    "deleteTitle": "حذف الخبرة",
+    "deleteBody": "هل أنت متأكد أنك تريد إزالة هذا الإدخال؟",
+    "highlightsCount": "{count, plural, zero {لا توجد إنجازات بارزة} one {إنجاز بارز واحد} two {إنجازان بارزان} few {# إنجازات بارزة} many {# إنجازًا بارزًا} other {# إنجاز بارز}}",
+    "jobTitlePlaceholder": "مهندس برمجيات أول",
+    "location": "الموقع",
+    "locationPlaceholder": "دبي، الإمارات",
+    "startPlaceholder": "يناير 2020",
+    "endPlaceholder": "ديسمبر 2023",
+    "current": "أعمل هنا حاليًا",
+    "descriptionPlaceholder": "صف مسؤولياتك وإنجازاتك...",
+    "highlights": "أبرز الإنجازات",
+    "highlightsPlaceholder": "قيادة فريق من 5 مهندسين\nتقليل زمن تحميل الصفحة بنسبة 40%",
+    "highlightsHint": "واحد في كل سطر، حتى {max}.",
+    "errors": {
+      "companyRequired": "اسم الشركة مطلوب",
+      "positionRequired": "المسمى الوظيفي مطلوب"
+    }
+  },
+  "education": {
+    "title": "التعليم",
+    "subtitle": "أضف خلفيتك الأكاديمية ومؤهلاتك.",
+    "empty": "لم تتم إضافة أي تعليم بعد.",
+    "add": "إضافة تعليم",
+    "edit": "تحرير التعليم",
+    "deleteTitle": "حذف التعليم",
+    "deleteBody": "هل تريد إزالة هذا الإدخال التعليمي؟",
+    "degreeIn": "{degree} في {field}",
+    "gpa": "المعدل التراكمي: {gpa}",
+    "institution": "المؤسسة التعليمية *",
+    "degree": "الدرجة العلمية *",
+    "degreePlaceholder": "بكالوريوس العلوم",
+    "field": "مجال الدراسة *",
+    "fieldPlaceholder": "علوم الحاسوب",
+    "startPlaceholder": "سبتمبر 2018",
+    "endPlaceholder": "مايو 2022",
+    "gpaLabel": "المعدل التراكمي (اختياري)",
+    "errors": {
+      "institutionRequired": "المؤسسة التعليمية مطلوبة",
+      "degreeRequired": "الدرجة العلمية مطلوبة",
+      "fieldRequired": "مجال الدراسة مطلوب"
+    }
+  },
+  "skills": {
+    "title": "المهارات",
+    "subtitle": "أضف مهاراتك التقنية والشخصية مع مستويات الإتقان.",
+    "empty": "لم تتم إضافة أي مهارات بعد.",
+    "add": "إضافة مهارة",
+    "edit": "تحرير المهارة",
+    "deleteTitle": "حذف المهارة",
+    "deleteBody": "هل تريد إزالة هذه المهارة؟",
+    "name": "اسم المهارة *",
+    "category": "الفئة (اختياري)",
+    "categoryPlaceholder": "الواجهة الأمامية، الخلفية، الأدوات...",
+    "levels": {
+      "beginner": "مبتدئ",
+      "intermediate": "متوسط",
+      "advanced": "متقدم",
+      "expert": "خبير"
+    },
+    "errors": {
+      "nameRequired": "اسم المهارة مطلوب"
+    }
+  },
+  "projects": {
+    "title": "المشاريع",
+    "subtitle": "اعرض مشاريعك البارزة وأعمالك الجانبية.",
+    "empty": "لم تتم إضافة أي مشاريع بعد.",
+    "add": "إضافة مشروع",
+    "edit": "تحرير المشروع",
+    "deleteTitle": "حذف المشروع",
+    "deleteBody": "هل تريد إزالة هذا المشروع؟",
+    "name": "اسم المشروع *",
+    "namePlaceholder": "تطبيقي الرائع",
+    "descriptionPlaceholder": "وصف موجز لما قمت ببنائه...",
+    "technologies": "التقنيات (مفصولة بفواصل)",
+    "url": "رابط المشروع",
+    "errors": {
+      "nameRequired": "اسم المشروع مطلوب"
+    }
+  },
+  "certifications": {
+    "title": "الشهادات",
+    "subtitle": "أضف شهاداتك وتراخيصك المهنية.",
+    "empty": "لم تتم إضافة أي شهادات بعد.",
+    "add": "إضافة شهادة",
+    "edit": "تحرير الشهادة",
+    "deleteTitle": "حذف الشهادة",
+    "deleteBody": "هل تريد إزالة هذه الشهادة؟",
+    "expires": "تنتهي في {date}",
+    "name": "اسم الشهادة *",
+    "issuer": "الجهة المانحة *",
+    "issueDate": "تاريخ الإصدار *",
+    "issuePlaceholder": "يناير 2023",
+    "expiry": "تاريخ الانتهاء",
+    "expiryPlaceholder": "يناير 2026",
+    "credentialId": "معرّف الشهادة",
+    "credentialPlaceholder": "مثل: AWS-123",
+    "errors": {
+      "nameRequired": "اسم الشهادة مطلوب",
+      "issuerRequired": "الجهة المانحة مطلوبة",
+      "dateRequired": "التاريخ مطلوب"
+    }
+  },
+  "languages": {
+    "title": "اللغات",
+    "subtitle": "اذكر اللغات التي تتحدثها ومستوى إتقانك لها.",
+    "empty": "لم تتم إضافة أي لغات بعد.",
+    "add": "إضافة لغة",
+    "edit": "تحرير اللغة",
+    "deleteTitle": "حذف اللغة",
+    "deleteBody": "هل تريد إزالة هذه اللغة؟",
+    "name": "اللغة *",
+    "namePlaceholder": "الإنجليزية",
+    "levels": {
+      "Native": "اللغة الأم",
+      "Fluent": "بطلاقة",
+      "Advanced": "متقدم",
+      "Intermediate": "متوسط",
+      "Basic": "أساسي"
+    },
+    "errors": {
+      "nameRequired": "اسم اللغة مطلوب",
+      "proficiencyRequired": "مستوى الإتقان مطلوب"
+    }
+  },
+  "references": {
+    "title": "المراجع",
+    "subtitle": "أضف مراجع مهنية يمكنها أن تشهد على عملك.",
+    "empty": "لم تتم إضافة أي مراجع بعد.",
+    "add": "إضافة مرجع",
+    "edit": "تحرير المرجع",
+    "deleteTitle": "حذف المرجع",
+    "deleteBody": "هل تريد إزالة هذا المرجع؟",
+    "titleAtCompany": "{title} في {company}",
+    "fullName": "الاسم الكامل *",
+    "jobTitlePlaceholder": "مدير الهندسة",
+    "email": "البريد الإلكتروني",
+    "phone": "الهاتف",
+    "relationship": "العلاقة",
+    "relationshipPlaceholder": "المدير السابق",
+    "errors": {
+      "nameRequired": "الاسم مطلوب",
+      "titleRequired": "المسمى مطلوب",
+      "companyRequired": "الشركة مطلوبة",
+      "invalidEmail": "بريد إلكتروني غير صالح"
+    }
+  },
+  "custom": {
+    "title": "أقسام مخصصة",
+    "subtitle": "أضف أي شيء آخر تريده في سيرتك الذاتية — الجوائز والعمل التطوعي والمنشورات والاهتمامات.",
+    "empty": "لا توجد أقسام مخصصة بعد.",
+    "noEntries": "لا توجد إدخالات بعد — أضف أول إدخال بالأسفل.",
+    "untitled": "إدخال بلا عنوان",
+    "addItem": "إضافة عنصر",
+    "addSection": "إضافة قسم مخصص",
+    "newHeading": "قسم مخصص جديد",
+    "addSectionConfirm": "إضافة قسم",
+    "addEntry": "إضافة إدخال",
+    "editEntry": "تحرير الإدخال",
+    "deleteTitle": "حذف الإدخال",
+    "deleteBody": "هل تريد إزالة هذا الإدخال؟",
+    "titleLabel": "العنوان *",
+    "subtitleLabel": "العنوان الفرعي",
+    "date": "التاريخ",
+    "descriptionPlaceholder": "الوصف…",
+    "errors": {
+      "titleRequired": "العنوان مطلوب"
+    }
+  },
+  "arrange": {
+    "title": "ترتيب الأقسام",
+    "subtitle": "غيّر ترتيب أقسام سيرتك الذاتية، وأعد تسميتها، واختر ما يظهر منها. تبقى الأقسام المخفية محفوظة لكنها لا تظهر في سيرتك الذاتية.",
+    "empty": "لا توجد أقسام بعد. أضف قسمًا بالأسفل.",
+    "meta": "{type} · {count, plural, zero {لا عناصر} one {عنصر واحد} two {عنصران} few {# عناصر} many {# عنصرًا} other {# عنصر}}",
+    "metaHidden": "{type} · {count, plural, zero {لا عناصر} one {عنصر واحد} two {عنصران} few {# عناصر} many {# عنصرًا} other {# عنصر}} · مخفي",
+    "moveUp": "نقل {title} لأعلى",
+    "moveDown": "نقل {title} لأسفل",
+    "hide": "إخفاء القسم {title}",
+    "show": "إظهار القسم {title}",
+    "rename": "إعادة تسمية القسم {title}",
+    "remove": "إزالة القسم {title}",
+    "addSection": "إضافة قسم",
+    "removeTitle": "إزالة القسم",
+    "removeBodyEntries": "هل تريد إزالة «{title}» و{count, plural, zero {إدخالاته} one {إدخاله الوحيد} two {إدخاليه} few {إدخالاته الـ#} many {إدخالاته الـ#} other {إدخالاته الـ#}} من هذه السيرة الذاتية؟",
+    "removeBody": "هل تريد إزالة «{title}» من هذه السيرة الذاتية؟",
+    "renameHeading": "إعادة تسمية القسم"
+  }
+}

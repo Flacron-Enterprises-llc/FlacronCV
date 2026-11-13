@@ -1,0 +1,46 @@
+{
+  "header": {
+    "welcomeBack": "Willkommen zurück,",
+    "planBadge": {
+      "free": "Kostenloser Plan",
+      "pro": "Pro-Plan"
+    }
+  },
+  "loadError": "Laden fehlgeschlagen. Bitte versuche es erneut.",
+  "verifyEmail": {
+    "title": "Bestätige deine E-Mail-Adresse",
+    "body": "Bestätige deine Adresse, um neue Lebensläufe und Anschreiben zu erstellen. Vorhandene Dateien kannst du weiterhin bearbeiten und exportieren.",
+    "resend": "E-Mail erneut senden",
+    "confirm": "Ich habe bestätigt"
+  },
+  "stats": {
+    "title": "Übersicht",
+    "cvsCreated": "Erstellte Lebensläufe",
+    "coverLetters": "Anschreiben",
+    "downloads": "Exporte",
+    "thisMonth": "Diesen Monat",
+    "usedThisMonth": "Diesen Monat genutzt"
+  },
+  "quickActions": {
+    "title": "Schnellaktionen",
+    "newCv": "Neuer Lebenslauf",
+    "coverLetter": "Anschreiben",
+    "templates": "Vorlagen",
+    "jobTracker": "Bewerbungs-Tracker",
+    "jobTrackerDescription": "Bewerbungen erfassen, nachdem du dich beworben hast",
+    "careerTools": "Karrieretools",
+    "careerToolsDescription": "Karriereprofil, Entwürfe und Chancen"
+  },
+  "recent": {
+    "title": "Aktuelle Dokumente",
+    "viewAll": "Alle anzeigen",
+    "loadError": "Dokumente konnten nicht geladen werden. Bitte versuche es erneut.",
+    "empty": "Noch keine Dokumente. Erstelle deinen ersten Lebenslauf!",
+    "meta": "{kind, select, cv {Lebenslauf} other {Anschreiben}} · {date}"
+  },
+  "upgrade": {
+    "title": "Auf Pro upgraden",
+    "body": "Schalte {cvs} Lebensläufe, {credits} Engine-Credits und mehr frei",
+    "cta": "Jetzt upgraden — {price}/Monat"
+  }
+}

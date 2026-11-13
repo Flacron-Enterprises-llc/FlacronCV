@@ -4,7 +4,9 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { CV } from '../../types/cv.types';
 import { CoverLetter } from '../../types/cover-letter.types';
-import { formatDate, toDate } from '../../lib/utils';
+import { toDate } from '../../lib/utils';
+import { formatDate, useT } from '../../i18n';
+import { RTL_FLIP } from '../../i18n/native';
 import { colors } from '../../theme/colors';
 import { ErrorState } from '../ui/ErrorState';
 
@@ -26,10 +28,12 @@ export function RecentDocuments({
   isLoading,
   cvsFailed,
   coverLettersFailed,
-  errorMessage = 'Could not load documents. Please try again.',
+  errorMessage,
   onRetry,
 }: RecentDocumentsProps) {
+  const t = useT('dashboard.recent');
   const router = useRouter();
+  const failureMessage = errorMessage ?? t('loadError');
 
   const docs: Document[] = [
     ...cvs.map((cv) => ({ ...cv, docType: 'cv' as const })),
@@ -57,13 +61,13 @@ export function RecentDocuments({
   }
 
   if ((!!cvsFailed && !!coverLettersFailed) || (listsFailed && docs.length === 0)) {
-    return <ErrorState message={errorMessage} onRetry={onRetry} />;
+    return <ErrorState message={failureMessage} onRetry={onRetry} />;
   }
 
   if (docs.length === 0) {
     return (
       <View className="items-center py-8">
-        <Text className="text-stone-400">No documents yet. Create your first CV!</Text>
+        <Text className="text-stone-400">{t('empty')}</Text>
       </View>
     );
   }
@@ -83,7 +87,7 @@ export function RecentDocuments({
           className="bg-white rounded-xl border border-stone-100 p-4 flex-row items-center active:bg-stone-50"
         >
           <View
-            className="w-10 h-10 rounded-xl items-center justify-center mr-3 bg-brand-50"
+            className="w-10 h-10 rounded-xl items-center justify-center me-3 bg-brand-50"
           >
             <Ionicons
               name={doc.docType === 'cv' ? 'document-text' : 'mail'}
@@ -96,13 +100,13 @@ export function RecentDocuments({
               {doc.title}
             </Text>
             <Text className="text-xs text-stone-400 mt-0.5">
-              {doc.docType === 'cv' ? 'CV' : 'Cover Letter'} · {formatDate(doc.updatedAt)}
+              {t('meta', { kind: doc.docType === 'cv' ? 'cv' : 'coverLetter', date: formatDate(toDate(doc.updatedAt)) })}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.stone[300]} />
+          <Ionicons name="chevron-forward" size={16} color={colors.stone[300]} style={RTL_FLIP} />
         </Pressable>
       ))}
-      {listsFailed ? <ErrorState message={errorMessage} onRetry={onRetry} /> : null}
+      {listsFailed ? <ErrorState message={failureMessage} onRetry={onRetry} /> : null}
     </View>
   );
 }

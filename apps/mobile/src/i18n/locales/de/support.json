@@ -1,0 +1,65 @@
+{
+  "title": "Support",
+  "goBack": "Zurück",
+  "status": {
+    "open": "Wartet auf Support-Antwort",
+    "inProgress": "In Bearbeitung",
+    "waitingOnCustomer": "Wartet auf Kundenantwort",
+    "resolved": "Gelöst",
+    "closed": "Geschlossen"
+  },
+  "categories": {
+    "general": "Allgemein",
+    "bug": "Fehler",
+    "featureRequest": "Funktionswunsch",
+    "billing": "Abrechnung",
+    "account": "Konto"
+  },
+  "list": {
+    "replayTour": "App-Tour erneut ansehen",
+    "newTicket": "Neues Ticket",
+    "loadError": "Deine Tickets konnten nicht geladen werden. Bitte versuche es erneut.",
+    "emptyTitle": "Keine Support-Tickets",
+    "emptyDesc": "Brauchst du Hilfe? Erstelle ein Support-Ticket und wir melden uns bei dir.",
+    "emptyAction": "Ticket erstellen"
+  },
+  "form": {
+    "title": "Support-Ticket erstellen",
+    "subject": "Betreff *",
+    "subjectPh": "Beschreibe dein Problem kurz",
+    "description": "Beschreibung *",
+    "descriptionPh": "Bitte beschreibe es so detailliert wie möglich...",
+    "subjectMin": "Der Betreff muss mindestens 5 Zeichen lang sein",
+    "messageMin": "Die Nachricht muss mindestens 20 Zeichen lang sein",
+    "category": "Kategorie",
+    "priority": "Priorität",
+    "categories": {
+      "bug": "Fehlerbericht",
+      "featureRequest": "Funktionswunsch",
+      "billing": "Abrechnung",
+      "account": "Konto",
+      "general": "Allgemein"
+    },
+    "priorities": {
+      "low": "Niedrig",
+      "medium": "Mittel",
+      "high": "Hoch"
+    },
+    "submit": "Ticket einreichen",
+    "createErrorTitle": "Ticket konnte nicht erstellt werden",
+    "createError": "Das Ticket konnte nicht erstellt werden. Bitte versuche es erneut."
+  },
+  "detail": {
+    "loadError": "Dieses Ticket konnte nicht geladen werden. Bitte versuche es erneut.",
+    "sendErrorTitle": "Senden fehlgeschlagen",
+    "sendError": "Senden fehlgeschlagen. Bitte versuche es erneut.",
+    "closeTicket": "Ticket schließen",
+    "closeBody": "Dieses Ticket schließen? Du kannst danach nicht mehr darauf antworten. Erstelle ein neues Ticket, wenn du weitere Hilfe brauchst.",
+    "closed": "Ticket geschlossen",
+    "closeErrorTitle": "Schließen fehlgeschlagen",
+    "closeError": "Ticket konnte nicht geschlossen werden",
+    "closedNotice": "Dieses Ticket ist geschlossen. Erstelle ein neues Ticket, wenn du weitere Hilfe brauchst.",
+    "replyPlaceholder": "Nachricht eingeben...",
+    "sendReply": "Antwort senden"
+  }
+}

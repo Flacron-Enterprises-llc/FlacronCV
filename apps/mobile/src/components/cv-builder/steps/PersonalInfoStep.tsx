@@ -1,17 +1,19 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { ScrollView, Text, View } from 'react-native';
 import { z } from 'zod';
 import { Input } from '../../ui/Input';
 import { useCVStore } from '../../../store/cv-store';
 import { CVPhotoPicker } from '../CVPhotoPicker';
+import { useT } from '../../../i18n';
 
-const schema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().min(1, 'Phone number is required'),
+/** Built per language so validation messages follow the app language. */
+const makeSchema = (t: (key: string) => string) => z.object({
+  firstName: z.string().min(1, t('personal.errors.firstNameRequired')),
+  lastName: z.string().min(1, t('personal.errors.lastNameRequired')),
+  email: z.string().email(t('personal.errors.invalidEmail')),
+  phone: z.string().min(1, t('personal.errors.phoneRequired')),
   headline: z.string().optional(),
   summary: z.string().optional(),
   address: z.string().optional(),
@@ -24,10 +26,12 @@ const schema = z.object({
   github: z.string().optional(),
 });
 
-type FormData = z.infer<typeof schema>;
+type FormData = z.infer<ReturnType<typeof makeSchema>>;
+
+const FORM_FIELDS = Object.keys(makeSchema((key) => key).shape);
 
 function isFormField(key: string): key is keyof FormData {
-  return key in schema.shape;
+  return FORM_FIELDS.includes(key);
 }
 
 interface PersonalInfoStepProps {
@@ -36,6 +40,8 @@ interface PersonalInfoStepProps {
 
 export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
   const { cv, updatePersonalInfo } = useCVStore();
+  const t = useT('cvEditor');
+  const schema = useMemo(() => makeSchema(t), [t]);
 
   const {
     control,
@@ -81,10 +87,8 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
 
   return (
     <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-      <Text className="text-lg font-semibold text-stone-900 mb-1">Personal Information</Text>
-      <Text className="text-stone-500 mb-5 text-sm">
-        Add your basic contact details and professional headline.
-      </Text>
+      <Text className="text-lg font-semibold text-stone-900 mb-1">{t('personal.title')}</Text>
+      <Text className="text-stone-500 mb-5 text-sm">{t('personal.subtitle')}</Text>
 
       <CVPhotoPicker />
 
@@ -95,7 +99,7 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
             name="firstName"
             render={({ field }) => (
               <Input
-                label="First Name *"
+                label={t('personal.firstName')}
                 maxLength={100}
                 placeholder="John"
                 value={field.value}
@@ -111,7 +115,7 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
             name="lastName"
             render={({ field }) => (
               <Input
-                label="Last Name *"
+                label={t('personal.lastName')}
                 maxLength={100}
                 placeholder="Doe"
                 value={field.value}
@@ -128,7 +132,7 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
         name="email"
         render={({ field }) => (
           <Input
-            label="Email Address *"
+            label={t('personal.email')}
             maxLength={320}
             placeholder="john@example.com"
             keyboardType="email-address"
@@ -145,7 +149,7 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
         name="phone"
         render={({ field }) => (
           <Input
-            label="Phone Number *"
+            label={t('personal.phone')}
             maxLength={40}
             placeholder="+1 (555) 000-0000"
             keyboardType="phone-pad"
@@ -161,9 +165,9 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
         name="headline"
         render={({ field }) => (
           <Input
-            label="Professional Headline"
+            label={t('personal.headline')}
             maxLength={200}
-            placeholder="Senior Software Engineer at Google"
+            placeholder={t('personal.headlinePlaceholder')}
             value={field.value}
             onChangeText={field.onChange}
           />
@@ -175,9 +179,9 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
         name="city"
         render={({ field }) => (
           <Input
-            label="City"
+            label={t('personal.city')}
             maxLength={100}
-            placeholder="San Francisco"
+            placeholder={t('personal.cityPlaceholder')}
             value={field.value}
             onChangeText={field.onChange}
           />
@@ -189,8 +193,8 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
         name="country"
         render={({ field }) => (
           <Input
-            label="Country"
-            placeholder="United States"
+            label={t('personal.country')}
+            placeholder={t('personal.countryPlaceholder')}
             maxLength={100}
             value={field.value}
             onChangeText={field.onChange}
@@ -203,8 +207,8 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
         name="address"
         render={({ field }) => (
           <Input
-            label="Street address"
-            placeholder="Street and number"
+            label={t('personal.address')}
+            placeholder={t('personal.addressPlaceholder')}
             autoComplete="street-address"
             maxLength={200}
             value={field.value}
@@ -218,8 +222,8 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
         name="postalCode"
         render={({ field }) => (
           <Input
-            label="Postal code"
-            placeholder="ZIP / postal code"
+            label={t('personal.postalCode')}
+            placeholder={t('personal.postalCodePlaceholder')}
             autoComplete="postal-code"
             autoCapitalize="characters"
             maxLength={20}
@@ -234,7 +238,7 @@ export function PersonalInfoStep({ onValidChange }: PersonalInfoStepProps) {
         name="website"
         render={({ field }) => (
           <Input
-            label="Website"
+            label={t('fields.website')}
             maxLength={500}
             placeholder="https://johndoe.com"
             keyboardType="url"

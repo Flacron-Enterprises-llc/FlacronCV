@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import type { HumanServiceList } from '../../../../../packages/career-api-client/src/types';
 
 /**
@@ -6,13 +7,24 @@ import type { HumanServiceList } from '../../../../../packages/career-api-client
  * 409 not_purchasable), so the app shows no booking, price or purchase action.
  */
 
+/** Copy in `careerModes.services`; the getters read the current language on each use. */
 export const SERVICES_COPY = {
-  title: 'Human review',
-  intro: 'A person would review selected material. This is not AI feedback.',
-  closedLabel: 'BOOKING CLOSED',
-  closedBody: 'Booking stays closed until commercial terms are set. Nothing can be booked or bought yet.',
-  empty: 'No human review services are listed yet.',
-} as const;
+  get title() {
+    return t('careerModes.services.title');
+  },
+  get intro() {
+    return t('careerModes.services.intro');
+  },
+  get closedLabel() {
+    return t('careerModes.services.closedLabel');
+  },
+  get closedBody() {
+    return t('careerModes.services.closedBody');
+  },
+  get empty() {
+    return t('careerModes.services.empty');
+  },
+};
 
 export interface ServiceRow {
   id: string;

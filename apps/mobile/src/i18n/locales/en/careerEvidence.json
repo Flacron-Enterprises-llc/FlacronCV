@@ -1,0 +1,112 @@
+{
+  "title": "Evidence vault",
+  "subtitle": "Proof that backs your career claims",
+  "newSubtitle": "Add proof that backs a career claim",
+  "gate": {
+    "locked": "Career tools are not included in your plan",
+    "off": "The Evidence vault is switched off",
+    "offBody": "Your career profile and drafts are unchanged."
+  },
+  "list": {
+    "add": "Add evidence item",
+    "intro": "Projects, credentials and work samples that back your career claims. Labels show only what has been established: a photo of a certificate is evidence attached, not issuer verified.",
+    "loadError": "Could not load your evidence. Try again.",
+    "emptyTitle": "No evidence items yet",
+    "emptyBody": "Add projects, certifications, or work samples to support your profile facts.",
+    "itemHint": "Opens the item to edit it or manage its file",
+    "privateFile": "Private file",
+    "link": "Link",
+    "shared": "Shared in portfolio",
+    "privateOnly": "Private only"
+  },
+  "types": {
+    "project": "Project",
+    "credential": "Credential",
+    "work_sample": "Work sample",
+    "reference": "Reference",
+    "publication": "Publication"
+  },
+  "labels": {
+    "evidence_attached": "EVIDENCE ATTACHED",
+    "assessment_completed": "ASSESSMENT COMPLETED",
+    "issuer_verified": "ISSUER VERIFIED",
+    "reference_confirmed": "REFERENCE CONFIRMED",
+    "self_reported": "SELF-REPORTED"
+  },
+  "item": {
+    "newTitle": "New evidence item",
+    "fallbackTitle": "Evidence item",
+    "loadError": "Could not load this evidence item.",
+    "checkedBy": "Checked by {name}",
+    "labelsNote": "Labels change only when something is established, never by editing.",
+    "fixedAfterCreation": "(fixed after creation)",
+    "saveItem": "Save item",
+    "saveChanges": "Save changes",
+    "saved": "Saved",
+    "attachAfterSave": "You can attach a photo once the item is saved.",
+    "deleteItem": "Delete item"
+  },
+  "form": {
+    "title": "Title *",
+    "titleA11y": "Title, required",
+    "titlePlaceholder": "e.g. AWS Solutions Architect or Open Source Compiler",
+    "type": "Evidence type",
+    "typeRequired": "Evidence type *",
+    "description": "Description",
+    "descriptionPlaceholder": "Brief summary of the work, credential, or reference",
+    "ownership": "Ownership / personal contribution",
+    "ownershipPlaceholder": "e.g. Sole author, Lead designer, or 30% contributor",
+    "skills": "Linked skills (comma separated)",
+    "skillsPlaceholder": "e.g. TypeScript, PostgreSQL, System Design",
+    "attachmentUrl": "Attachment link",
+    "attachmentName": "Attachment name",
+    "attachmentNamePlaceholder": "credential.pdf",
+    "portfolioShared": "Include in public portfolio"
+  },
+  "validation": {
+    "titleRequired": "Enter a title.",
+    "maxChars": "Use at most {max} characters.",
+    "webLink": "Enter a full web link starting with https://"
+  },
+  "file": {
+    "title": "Private file",
+    "storedFallback": "Stored file",
+    "open": "Open file",
+    "replace": "Replace with photo",
+    "remove": "Remove file",
+    "linkNote": "Opening uses a private link that works for five minutes.",
+    "hint": "Attach a PNG or JPEG photo, such as a certificate scan. Files are private: only you can open them, and storing one does not use a document credit. To attach a PDF or Word file, upload it on the FlacronCV website.",
+    "attach": "Attach a photo"
+  },
+  "alerts": {
+    "notSaved": "Not saved",
+    "changesKept": "Your changes are still here.",
+    "deleteTitle": "Delete this evidence item?",
+    "deleteBody": "It is removed from your vault and from any portfolio page that shows it. A stored file is deleted too.",
+    "notDeleted": "Not deleted",
+    "deleteFailed": "The evidence item was not deleted. Try again.",
+    "saveFirstTitle": "Save first",
+    "saveFirstBody": "Save or undo your changes to this item, then manage its file.",
+    "photosTitle": "Photos unavailable",
+    "photosBody": "Allow photo library access in Settings to attach a photo of your certificate or work.",
+    "notAttached": "File not attached",
+    "openFailedTitle": "Could not open the file",
+    "openFailedBody": "The link could not be opened on this device. Try again.",
+    "removeFileTitle": "Remove this file?",
+    "removeFileBody": "The stored file is deleted. The evidence item stays.",
+    "fileNotRemoved": "File not removed"
+  },
+  "errors": {
+    "tooLarge": "That file is larger than the upload limit (10 MB).",
+    "wrongType": "Choose a PNG or JPEG photo. Upload PDFs and Word files on the FlacronCV website.",
+    "empty": "That file is empty.",
+    "fileType": "Use a PDF, PNG, JPEG, or DOCX file. The file must really be that type.",
+    "storageFull": "Your plan’s storage is full. Remove a file to add another.",
+    "storageUnavailable": "File storage is not available right now. Nothing was charged.",
+    "fileFailed": "The file action did not finish. Try again.",
+    "capacity": "Your career plan has no room for another evidence item.",
+    "switchedOff": "The Evidence vault is switched off right now.",
+    "validation": "Please check the fields for errors.",
+    "saveFailed": "The evidence item was not saved. Try again."
+  }
+}

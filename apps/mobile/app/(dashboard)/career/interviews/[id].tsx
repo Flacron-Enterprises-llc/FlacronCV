@@ -14,15 +14,16 @@ import { useLeaveGuard } from '../../../../src/hooks/useLeaveGuard';
 import {
   ANSWER_MAX,
   CHALLENGE_MAX,
-  NOT_A_SCORE,
   STAGE_LABEL,
   feedbackLines,
   interviewErrorMessage,
   nextQuestion,
+  notAScore,
   pairedAnswers,
   sessionProgress,
 } from '../../../../src/lib/career/interviews';
 import { colors } from '../../../../src/theme/colors';
+import { useT } from '../../../../src/i18n';
 
 type Answer = InterviewSession['answers'][number];
 
@@ -33,6 +34,7 @@ type Answer = InterviewSession['answers'][number];
  * A failed save keeps the typed words in place.
  */
 export default function InterviewSessionScreen() {
+  const t = useT('careerInterviews');
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = useInterview(id);
   const answer = useAnswerInterview(id);
@@ -48,7 +50,7 @@ export default function InterviewSessionScreen() {
   const saveAnswer = () => {
     const typed = draft.trim();
     if (typed.length === 0) {
-      setAnswerError('Type your answer first.');
+      setAnswerError(t('session.typeAnswerFirst'));
       return;
     }
     setAnswerError(null);
@@ -67,9 +69,9 @@ export default function InterviewSessionScreen() {
   const closeChallenge = () => {
     if (challenge.isPending) return;
     if (note.trim().length > 0 && note.trim() !== (challenging?.challenge ?? '')) {
-      Alert.alert('Discard your note?', 'It is not saved yet.', [
-        { text: 'Keep writing', style: 'cancel' },
-        { text: 'Discard', style: 'destructive', onPress: () => setChallenging(null) },
+      Alert.alert(t('session.discardTitle'), t('session.discardBody'), [
+        { text: t('session.keepWriting'), style: 'cancel' },
+        { text: t('session.discard'), style: 'destructive', onPress: () => setChallenging(null) },
       ]);
       return;
     }
@@ -80,7 +82,7 @@ export default function InterviewSessionScreen() {
     if (!challenging) return;
     const typed = note.trim();
     if (typed.length === 0) {
-      setNoteError('Write what you disagree with first.');
+      setNoteError(t('session.writeDisagreeFirst'));
       return;
     }
     setNoteError(null);
@@ -114,26 +116,26 @@ export default function InterviewSessionScreen() {
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
         <View className="flex-row items-center gap-2 mb-2">
           <Pill label={STAGE_LABEL[data.stage].toUpperCase()} tone="brand" />
-          <Text className="text-stone-500 text-xs">{`${progress.answered} of ${progress.total} answered`}</Text>
+          <Text className="text-stone-500 text-xs">{t('status.progress', { answered: progress.answered, total: progress.total })}</Text>
         </View>
         <Text className="text-stone-800 text-sm leading-5">{data.summary}</Text>
-        <Text className="text-stone-500 text-xs mt-1 leading-4">{NOT_A_SCORE}</Text>
+        <Text className="text-stone-500 text-xs mt-1 leading-4">{notAScore()}</Text>
 
         {next ? (
           <View className="bg-white border border-brand-200 rounded-2xl p-4 mt-5">
-            <Text className="text-xs font-semibold text-brand-700 uppercase tracking-wide">{`Question ${progress.answered + 1} of ${progress.total}`}</Text>
+            <Text className="text-xs font-semibold text-brand-700 uppercase tracking-wide">{t('session.questionOf', { number: progress.answered + 1, total: progress.total })}</Text>
             <Text className="text-stone-900 text-base mt-2 leading-6" accessibilityRole="header">
               {next.prompt}
             </Text>
-            <Text className="text-sm font-medium text-stone-700 mt-4 mb-1.5">Your answer</Text>
+            <Text className="text-sm font-medium text-stone-700 mt-4 mb-1.5">{t('session.answerLabel')}</Text>
             <TextInput
               value={draft}
               onChangeText={setDraft}
               multiline
               maxLength={ANSWER_MAX}
               textAlignVertical="top"
-              accessibilityLabel="Your answer"
-              placeholder="Type your answer"
+              accessibilityLabel={t('session.answerLabel')}
+              placeholder={t('session.answerPlaceholder')}
               placeholderTextColor={colors.stone[400]}
               className="bg-white border border-stone-200 rounded-xl px-3 py-2.5 text-base text-stone-900 min-h-[120px]"
             />
@@ -143,21 +145,21 @@ export default function InterviewSessionScreen() {
               </Text>
             ) : null}
             <Button className="mt-3" fullWidth onPress={saveAnswer} loading={answer.isPending}>
-              Save answer
+              {t('session.saveAnswer')}
             </Button>
           </View>
         ) : (
           <View className="bg-success-bg rounded-2xl p-4 mt-5">
-            <Text className="text-success text-sm font-semibold">This session has its ten answers.</Text>
+            <Text className="text-success text-sm font-semibold">{t('session.complete')}</Text>
           </View>
         )}
 
         <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mt-6 mb-2" accessibilityRole="header">
-          Questions
+          {t('session.questions')}
         </Text>
         {pairedAnswers(data).map(({ question, answer: given }) => (
           <View key={question.index} className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
-            <Text className="text-xs text-stone-400">{`Question ${question.index + 1}`}</Text>
+            <Text className="text-xs text-stone-400">{t('session.questionN', { number: question.index + 1 })}</Text>
             <Text className="text-stone-900 font-semibold mt-1 leading-5">{question.prompt}</Text>
             {given ? (
               <>
@@ -171,22 +173,22 @@ export default function InterviewSessionScreen() {
                         color={line.good ? colors.success.DEFAULT : colors.stone[400]}
                         style={{ marginTop: 2 }}
                       />
-                      <Text className="text-stone-600 text-xs ml-1.5 flex-1 leading-5">{`${line.label}: ${line.text}`}</Text>
+                      <Text className="text-stone-600 text-xs ms-1.5 flex-1 leading-5">{`${line.label}: ${line.text}`}</Text>
                     </View>
                   ))}
                 </View>
                 {given.challenge ? (
                   <View className="bg-stone-50 rounded-xl p-3 mt-3">
-                    <Text className="text-xs font-semibold text-stone-500">Your note on this feedback</Text>
+                    <Text className="text-xs font-semibold text-stone-500">{t('session.noteLabel')}</Text>
                     <Text className="text-stone-700 text-sm mt-1 leading-5">{given.challenge}</Text>
                   </View>
                 ) : null}
                 <Button variant="ghost" size="sm" className="mt-2 self-start min-h-[44px]" onPress={() => openChallenge(given)}>
-                  {given.challenge ? 'Edit your note' : 'Challenge this feedback'}
+                  {given.challenge ? t('session.editNote') : t('session.challenge')}
                 </Button>
               </>
             ) : (
-              <Text className="text-stone-400 text-xs mt-2">Not answered yet.</Text>
+              <Text className="text-stone-400 text-xs mt-2">{t('session.notAnswered')}</Text>
             )}
           </View>
         ))}
@@ -196,13 +198,13 @@ export default function InterviewSessionScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title={session.data?.title ?? 'Interview session'} subtitle="Interview practice" />
+      <CareerHeader title={session.data?.title ?? t('session.title')} subtitle={t('session.subtitle')} />
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {content}
       </KeyboardAvoidingView>
-      <Modal visible={challenging !== null} onClose={closeChallenge} title="Challenge this feedback" closeDisabled={challenge.isPending}>
+      <Modal visible={challenging !== null} onClose={closeChallenge} title={t('session.challenge')} closeDisabled={challenge.isPending}>
         <Text className="text-stone-500 text-sm leading-5 mb-3">
-          Say what the feedback missed. Your note is saved with this answer. It does not change the feedback and uses no text interview.
+          {t('session.challengeBody')}
         </Text>
         <TextInput
           value={note}
@@ -210,14 +212,14 @@ export default function InterviewSessionScreen() {
           multiline
           maxLength={CHALLENGE_MAX}
           textAlignVertical="top"
-          accessibilityLabel="Your note on this feedback"
-          placeholder="For example: my answer did cite the project"
+          accessibilityLabel={t('session.noteLabel')}
+          placeholder={t('session.notePlaceholder')}
           placeholderTextColor={colors.stone[400]}
           className="bg-white border border-stone-200 rounded-xl px-3 py-2.5 text-base text-stone-900 min-h-[100px]"
         />
         {noteError ? <Text className="text-warning text-sm mt-2 leading-5">{noteError}</Text> : null}
         <Button className="mt-4" fullWidth onPress={saveChallenge} loading={challenge.isPending}>
-          Save note
+          {t('session.saveNote')}
         </Button>
       </Modal>
     </SafeAreaView>

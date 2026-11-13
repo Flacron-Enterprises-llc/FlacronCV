@@ -1,6 +1,7 @@
 import * as Google from 'expo-auth-session/providers/google';
 import React, { forwardRef, useEffect, useImperativeHandle } from 'react';
 import { Alert, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { useT } from '../../i18n';
 
 interface Props {
   label: string;
@@ -19,6 +20,8 @@ export type GoogleSignInHandle = {
  */
 export const GoogleSignInButton = forwardRef<GoogleSignInHandle, Props>(
   function GoogleSignInButton({ label, onToken, onPressOverride }, ref) {
+    const t = useT('auth');
+    const tc = useT('common');
     const [, response, promptAsync] = Google.useIdTokenAuthRequest({
       androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
       iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
@@ -37,13 +40,15 @@ export const GoogleSignInButton = forwardRef<GoogleSignInHandle, Props>(
           onToken(idToken);
           return;
         }
-        Alert.alert('Google Sign-In failed', 'No sign-in token was returned. Please try again.');
+        Alert.alert(t('google.failedTitle'), t('google.noToken'));
         return;
       }
       if (response.type === 'error') {
-        Alert.alert('Google Sign-In failed', 'Please try again.');
+        Alert.alert(t('google.failedTitle'), tc('pleaseTryAgain'));
       }
       // 'dismiss' / 'cancel' — user backed out; stay silent.
+      // t/tc are deliberately not deps: a language change must not re-show the alert.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [response, onToken]);
 
     return (

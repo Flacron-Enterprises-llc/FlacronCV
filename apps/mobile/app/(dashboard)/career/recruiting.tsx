@@ -12,6 +12,7 @@ import { useLeaveGuard } from '../../../src/hooks/useLeaveGuard';
 import { optInSaveError, RECRUITING_COPY, statusLine } from '../../../src/lib/career/recruiting';
 import { careerErrorMessage } from '../../../src/lib/career-view';
 import { colors } from '../../../src/theme/colors';
+import { useT } from '../../../src/i18n';
 
 /**
  * Recruiting opt-in (website: /career/recruiting): the candidate chooses
@@ -20,6 +21,7 @@ import { colors } from '../../../src/theme/colors';
  * is offered here.
  */
 export default function CareerRecruitingScreen() {
+  const t = useT('careerModes');
   const access = useCareerAccess();
   const current = useRecruitingOptIn();
   const save = useSetRecruitingOptIn();
@@ -44,7 +46,7 @@ export default function CareerRecruitingScreen() {
 
   let content: React.ReactNode;
   if (access.data && !access.data.enabled) {
-    content = <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" />;
+    content = <EmptyState icon="lock-closed-outline" title={t('common.locked')} />;
   } else if (access.isLoading || current.isLoading) {
     content = (
       <View className="p-5">
@@ -52,7 +54,7 @@ export default function CareerRecruitingScreen() {
       </View>
     );
   } else if (access.error) {
-    content = <ErrorState message={careerErrorMessage(access.error, 'This page could not be loaded. Nothing was changed.')} onRetry={() => void access.refetch()} />;
+    content = <ErrorState message={careerErrorMessage(access.error, t('common.loadFailed'))} onRetry={() => void access.refetch()} />;
   } else {
     const readFailed = Boolean(current.error);
     content = (
@@ -72,14 +74,14 @@ export default function CareerRecruitingScreen() {
         ) : null}
         <View className="bg-white rounded-2xl border border-stone-100 p-5">
           <View className="flex-row items-center justify-between">
-            <Text className="font-bold text-stone-900 text-base">Discoverable to employers</Text>
-            {saved !== null ? <Pill label={saved ? 'OPTED IN' : 'NOT OPTED IN'} tone={saved ? 'success' : 'default'} /> : null}
+            <Text className="font-bold text-stone-900 text-base">{t('recruiting.discoverableTitle')}</Text>
+            {saved !== null ? <Pill label={saved ? t('recruiting.optedIn') : t('recruiting.notOptedIn')} tone={saved ? 'success' : 'default'} /> : null}
           </View>
           <Text className="text-stone-500 text-sm mt-1 leading-5">
             {readFailed ? careerErrorMessage(current.error, statusLine(null)) : statusLine(saved)}
           </Text>
           <View className="flex-row items-center justify-between mt-4 min-h-[44px]">
-            <Text className="text-stone-800 text-sm flex-1 mr-3 leading-5">{RECRUITING_COPY.consent}</Text>
+            <Text className="text-stone-800 text-sm flex-1 me-3 leading-5">{RECRUITING_COPY.consent}</Text>
             <Switch
               value={value}
               onValueChange={setChoice}
@@ -94,9 +96,7 @@ export default function CareerRecruitingScreen() {
             </Button>
           </View>
         </View>
-        <Text className="text-stone-400 text-xs mt-4 leading-4">
-          You can change this at any time. Turning it off removes you from employer search.
-        </Text>
+        <Text className="text-stone-400 text-xs mt-4 leading-4">{t('recruiting.footer')}</Text>
       </ScrollView>
     );
   }

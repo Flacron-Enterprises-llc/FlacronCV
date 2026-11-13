@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SubscriptionStatus, UserRole } from '../../types/enums';
 import {
   activeAnnouncement,
-  MAINTENANCE_DEFAULT_MESSAGE,
+  maintenanceDefaultMessage,
   maintenanceMessage,
   parseAppConfig,
   paymentIssueNotice,
@@ -44,7 +44,10 @@ describe('activeAnnouncement', () => {
 
 describe('maintenanceMessage', () => {
   it('blocks users with the operator message or the website fallback', () => {
-    expect(maintenanceMessage(CONFIG, UserRole.USER)).toBe(MAINTENANCE_DEFAULT_MESSAGE);
+    expect(maintenanceMessage(CONFIG, UserRole.USER)).toBe(maintenanceDefaultMessage());
+    expect(maintenanceDefaultMessage()).toBe(
+      "We're carrying out maintenance right now. Please check back shortly.",
+    );
     expect(
       maintenanceMessage(parseAppConfig({ maintenanceMode: { enabled: true, message: 'Back at 5pm' } }), undefined),
     ).toBe('Back at 5pm');

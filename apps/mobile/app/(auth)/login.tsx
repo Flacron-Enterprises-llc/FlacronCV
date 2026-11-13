@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   Alert,
@@ -20,9 +20,10 @@ import { GoogleSignInButton, isGoogleSignInAvailable } from '../../src/component
 import { LegalAcceptanceModal } from '../../src/components/auth/LegalAcceptanceModal';
 import { Button } from '../../src/components/ui/Button';
 import { Input } from '../../src/components/ui/Input';
+import { useT } from '../../src/i18n';
 import {
-  LEGAL_POST_FAILED_MESSAGE,
-  LEGAL_POST_FAILED_TITLE,
+  legalPostFailedMessage,
+  legalPostFailedTitle,
   recordAcceptanceAfterSignup,
 } from '../../src/lib/legal-acceptance';
 import { colors } from '../../src/theme/colors';
@@ -31,14 +32,20 @@ import { useAuthStore } from '../../src/store/auth-store';
 // Required for expo-auth-session redirect to work correctly
 WebBrowser.maybeCompleteAuthSession();
 
-const schema = z.object({
-  email: z.string().email('Please enter a valid email'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
+const makeSchema = (messages: { email: string; password: string }) =>
+  z.object({
+    email: z.string().email(messages.email),
+    password: z.string().min(6, messages.password),
+  });
 
-type FormData = z.infer<typeof schema>;
+type FormData = z.infer<ReturnType<typeof makeSchema>>;
 
 export default function LoginScreen() {
+  const t = useT('auth');
+  const schema = useMemo(
+    () => makeSchema({ email: t('validation.email'), password: t('validation.passwordMin6') }),
+    [t],
+  );
   const { login, loginWithGoogle, logout, isLoading, error, clearError, legalGate, setLegalGate } =
     useAuthStore();
   const [legalOpen, setLegalOpen] = useState(false);
@@ -91,7 +98,7 @@ export default function LoginScreen() {
     try {
       const ok = await recordAcceptanceAfterSignup();
       if (!ok) {
-        Alert.alert(LEGAL_POST_FAILED_TITLE, LEGAL_POST_FAILED_MESSAGE);
+        Alert.alert(legalPostFailedTitle(), legalPostFailedMessage());
         return;
       }
       setLegalGate(false);
@@ -133,8 +140,8 @@ export default function LoginScreen() {
                 style={{ width: 56, height: 56, borderRadius: 14, marginBottom: 16 }}
                 resizeMode="contain"
               />
-              <Text className="text-xl font-bold text-stone-900">Welcome back</Text>
-              <Text className="text-stone-500 mt-1">Sign in to your FlacronCV account</Text>
+              <Text className="text-xl font-bold text-stone-900">{t('login.title')}</Text>
+              <Text className="text-stone-500 mt-1">{t('login.subtitle')}</Text>
             </View>
           </LinearGradient>
 
@@ -153,7 +160,7 @@ export default function LoginScreen() {
                 name="email"
                 render={({ field }) => (
                   <Input
-                    label="Email Address"
+                    label={t('fields.email')}
                     placeholder="you@example.com"
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -170,7 +177,7 @@ export default function LoginScreen() {
                 name="password"
                 render={({ field }) => (
                   <Input
-                    label="Password"
+                    label={t('fields.password')}
                     placeholder="••••••••"
                     isPassword
                     value={field.value}
@@ -181,9 +188,9 @@ export default function LoginScreen() {
               />
 
               <Link href="/(auth)/forgot-password" asChild>
-                <TouchableOpacity className="mb-5">
-                  <Text className="text-brand-600 text-sm font-medium text-right">
-                    Forgot password?
+                <TouchableOpacity className="mb-5 self-end">
+                  <Text className="text-brand-600 text-sm font-medium">
+                    {t('login.forgotPassword')}
                   </Text>
                 </TouchableOpacity>
               </Link>
@@ -195,7 +202,7 @@ export default function LoginScreen() {
                 loading={isLoading}
                 onPress={handleSubmit(onSubmit)}
               >
-                Sign In
+                {t('login.submit')}
               </Button>
 
               {/* Google Sign-In — only rendered when the platform client ID is configured */}
@@ -203,11 +210,11 @@ export default function LoginScreen() {
                 <>
                   <View className="flex-row items-center my-5">
                     <View className="flex-1 h-px bg-stone-200" />
-                    <Text className="mx-3 text-stone-400 text-sm font-medium">or continue with</Text>
+                    <Text className="mx-3 text-stone-400 text-sm font-medium">{t('login.orContinueWith')}</Text>
                     <View className="flex-1 h-px bg-stone-200" />
                   </View>
                   <GoogleSignInButton
-                    label="Continue with Google"
+                    label={t('login.google')}
                     onToken={(token) => void handleGoogleToken(token)}
                   />
                 </>
@@ -216,10 +223,10 @@ export default function LoginScreen() {
 
             {/* Register Link */}
             <View className="flex-row justify-center mt-6 mb-8">
-              <Text className="text-stone-500">Don't have an account? </Text>
+              <Text className="text-stone-500">{`${t('login.noAccount')} `}</Text>
               <Link href="/(auth)/register" asChild>
                 <TouchableOpacity>
-                  <Text className="text-brand-600 font-semibold">Sign up free</Text>
+                  <Text className="text-brand-600 font-semibold">{t('login.signUp')}</Text>
                 </TouchableOpacity>
               </Link>
             </View>

@@ -6,27 +6,45 @@ import type {
   InterviewSession,
   InterviewStage,
 } from '../../../../../packages/career-api-client/src/types';
+import { t } from '../../i18n';
 import { careerErrorMessage } from '../career-view';
 
 /**
  * Pure view logic for text interview practice and STAR stories (tested in
- * interviews.test.ts). Wording follows the website (career.interviews). The
- * career API decides quotas and validation; nothing here grants or charges.
+ * interviews.test.ts). Wording follows the website (career.interviews); the
+ * copy lives in the `careerInterviews` namespace and is read with `t()` in the
+ * current language. The career API decides quotas and validation; nothing
+ * here grants or charges.
  */
 
 export { INTERVIEW_STAGES, MAX_INTERVIEW_QUESTIONS };
 
+/** Stage names in the current language (getters, so they are read at render time). */
 export const STAGE_LABEL: Record<InterviewStage, string> = {
-  recruiter: 'Recruiter',
-  behavioral: 'Behavioral',
-  technical: 'Technical',
-  panel: 'Panel',
-  presentation: 'Presentation',
+  get recruiter() {
+    return t('careerInterviews.stages.recruiter');
+  },
+  get behavioral() {
+    return t('careerInterviews.stages.behavioral');
+  },
+  get technical() {
+    return t('careerInterviews.stages.technical');
+  },
+  get panel() {
+    return t('careerInterviews.stages.panel');
+  },
+  get presentation() {
+    return t('careerInterviews.stages.presentation');
+  },
 };
 
-export const NOT_A_SCORE = 'This is practice. It is not a hiring probability.';
-export const AI_PROVIDER_MISSING =
-  'Needs the AI provider, which is not configured in this environment. Nothing was charged and no text interview was used.';
+/** Evaluated once at import (English); screens call notAScore() for the current language. */
+export const NOT_A_SCORE = t('careerInterviews.notAScore');
+export const AI_PROVIDER_MISSING = t('careerInterviews.aiProviderMissing');
+
+export function notAScore(): string {
+  return t('careerInterviews.notAScore');
+}
 
 export function isStage(value: string): value is InterviewStage {
   return (INTERVIEW_STAGES as readonly string[]).includes(value);
@@ -65,28 +83,34 @@ export function pairedAnswers(session: InterviewSession): Array<{
 export function feedbackLines(feedback: InterviewFeedback): Array<{ label: string; text: string; good: boolean }> {
   return [
     {
-      label: 'Relevance',
+      label: t('careerInterviews.feedback.relevance'),
       text:
         feedback.relevance === 'grounded'
-          ? 'Uses your confirmed fact.'
+          ? t('careerInterviews.feedback.relevanceGrounded')
           : feedback.relevance === 'partial'
-            ? 'Partly uses your confirmed fact.'
-            : 'Does not use the confirmed fact behind this question.',
+            ? t('careerInterviews.feedback.relevancePartial')
+            : t('careerInterviews.feedback.relevanceMissing'),
       good: feedback.relevance === 'grounded',
     },
     {
-      label: 'Structure',
-      text: feedback.structure === 'clear' ? 'Clear structure.' : 'Thin: add the situation, what you did, and the result.',
+      label: t('careerInterviews.feedback.structure'),
+      text:
+        feedback.structure === 'clear'
+          ? t('careerInterviews.feedback.structureClear')
+          : t('careerInterviews.feedback.structureThin'),
       good: feedback.structure === 'clear',
     },
     {
-      label: 'Specificity',
-      text: feedback.specificity === 'specific' ? 'Specific.' : 'General: name a concrete example.',
+      label: t('careerInterviews.feedback.specificity'),
+      text:
+        feedback.specificity === 'specific'
+          ? t('careerInterviews.feedback.specificitySpecific')
+          : t('careerInterviews.feedback.specificityGeneral'),
       good: feedback.specificity === 'specific',
     },
     {
-      label: 'Evidence',
-      text: feedback.evidence === 'cited' ? 'Cites evidence.' : 'No evidence stated.',
+      label: t('careerInterviews.feedback.evidence'),
+      text: feedback.evidence === 'cited' ? t('careerInterviews.feedback.evidenceCited') : t('careerInterviews.feedback.evidenceUnstated'),
       good: feedback.evidence === 'cited',
     },
   ];
@@ -95,11 +119,27 @@ export function feedbackLines(feedback: InterviewFeedback): Array<{ label: strin
 export const STORY_FIELDS = ['situation', 'task', 'action', 'result'] as const;
 export type StoryField = (typeof STORY_FIELDS)[number];
 export type StoryDraft = Record<StoryField, string>;
+/** STAR field names in the current language (getters, read at render time). */
 export const STORY_FIELD_LABEL: Record<StoryField, string> = {
-  situation: 'Situation',
-  task: 'Task',
-  action: 'Action',
-  result: 'Result',
+  get situation() {
+    return t('careerInterviews.story.fields.situation');
+  },
+  get task() {
+    return t('careerInterviews.story.fields.task');
+  },
+  get action() {
+    return t('careerInterviews.story.fields.action');
+  },
+  get result() {
+    return t('careerInterviews.story.fields.result');
+  },
+};
+
+const STORY_REQUIRED: Record<StoryField, () => string> = {
+  situation: () => t('careerInterviews.story.required.situation'),
+  task: () => t('careerInterviews.story.required.task'),
+  action: () => t('careerInterviews.story.required.action'),
+  result: () => t('careerInterviews.story.required.result'),
 };
 export const STORY_MAX = 2000;
 export const ANSWER_MAX = 10_000;
@@ -112,8 +152,8 @@ export function storyFieldErrors(draft: StoryDraft): Partial<Record<StoryField, 
   const errors: Partial<Record<StoryField, string>> = {};
   for (const field of STORY_FIELDS) {
     const text = draft[field].trim();
-    if (text.length === 0) errors[field] = `Add the ${field}.`;
-    else if (text.length > STORY_MAX) errors[field] = `Keep it under ${STORY_MAX} characters.`;
+    if (text.length === 0) errors[field] = STORY_REQUIRED[field]();
+    else if (text.length > STORY_MAX) errors[field] = t('careerInterviews.tooLong', { max: STORY_MAX });
   }
   return errors;
 }
@@ -148,41 +188,41 @@ export function storyErrorField(error: unknown): StoryField | null {
 
 export type InterviewAction = 'load' | 'start' | 'answer' | 'challenge' | 'story';
 
-const FALLBACK: Record<InterviewAction, string> = {
-  load: 'Interview practice could not be loaded. Nothing was changed. Try again.',
-  start: 'This session was not started. Nothing was used. Try again.',
-  answer: 'That answer was not saved. The words you typed are still here. Nothing extra was used.',
-  challenge: 'Your note was not saved. It is still here; try again.',
-  story: 'The story was not saved. Your words are still here; try again.',
+const FALLBACK: Record<InterviewAction, () => string> = {
+  load: () => t('careerInterviews.fallback.load'),
+  start: () => t('careerInterviews.fallback.start'),
+  answer: () => t('careerInterviews.fallback.answer'),
+  challenge: () => t('careerInterviews.fallback.challenge'),
+  story: () => t('careerInterviews.fallback.story'),
 };
 
 /** Message for a refused or failed interview request. Never claims that anything was saved. */
 export function interviewErrorMessage(error: unknown, action: InterviewAction): string {
   if (error instanceof ApiError) {
     const reason = typeof error.body.reason === 'string' ? error.body.reason : null;
-    if (error.code === 'provider_unavailable') return AI_PROVIDER_MISSING;
+    if (error.code === 'provider_unavailable') return t('careerInterviews.aiProviderMissing');
     if (error.code === 'plan_upgrade_required') {
       return action === 'story'
-        ? 'Your career plan does not include this.'
-        : 'Text interview practice is not included in your current plan. You can still save a STAR story from confirmed facts.';
+        ? t('careerInterviews.errors.planStory')
+        : t('careerInterviews.errors.planText');
     }
-    if (error.code === 'quota_exhausted') return 'No text interviews left. This session was not started.';
-    if (error.code === 'idempotency_mismatch') return 'This request changed while it was being retried. Start it again.';
+    if (error.code === 'quota_exhausted') return t('careerInterviews.errors.quota');
+    if (error.code === 'idempotency_mismatch') return t('careerInterviews.errors.idempotency');
     if (error.code === 'validation_error') {
-      if (reason === 'no_confirmed_facts') return 'Confirm at least one fact in your career profile first.';
-      if (reason === 'session_complete') return 'This session has its ten answers.';
-      if (reason === 'number_not_in_facts') return 'That number is not in your confirmed facts.';
-      if (reason === 'too_many') return 'You have the most stories one account can keep.';
-      if (error.body.field === 'factIds') return 'Pick facts that are still confirmed in your profile.';
-      if (error.body.field === 'opportunityId') return 'Pick a saved opportunity.';
-      if (error.body.field === 'answer' || error.body.field === 'note') return 'Type something first (it can be long, but not empty).';
+      if (reason === 'no_confirmed_facts') return t('careerInterviews.errors.noFacts');
+      if (reason === 'session_complete') return t('careerInterviews.errors.sessionComplete');
+      if (reason === 'number_not_in_facts') return t('careerInterviews.errors.numberNotInFacts');
+      if (reason === 'too_many') return t('careerInterviews.errors.tooManyStories');
+      if (error.body.field === 'factIds') return t('careerInterviews.errors.factIds');
+      if (error.body.field === 'opportunityId') return t('careerInterviews.errors.opportunityId');
+      if (error.body.field === 'answer' || error.body.field === 'note') return t('careerInterviews.errors.emptyText');
     }
   }
-  return careerErrorMessage(error, FALLBACK[action]);
+  return careerErrorMessage(error, FALLBACK[action]());
 }
 
 /** The newest session first, with a short status line for the list. */
 export function sessionStatus(session: InterviewSession): string {
   const { answered, total, complete } = sessionProgress(session);
-  return complete ? `Complete · ${total} answers` : `${answered} of ${total} answered`;
+  return complete ? t('careerInterviews.status.complete', { total }) : t('careerInterviews.status.progress', { answered, total });
 }

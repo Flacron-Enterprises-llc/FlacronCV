@@ -4,6 +4,7 @@
  * `components/dashboard/AnnouncementBanner.tsx`, `MaintenanceGate.tsx` and
  * `DunningBanner.tsx`.
  */
+import { t } from '../../i18n';
 import { SubscriptionStatus, UserRole } from '../../types/enums';
 
 export type AnnouncementType = 'info' | 'warning' | 'success' | 'danger';
@@ -57,9 +58,13 @@ export function activeAnnouncement(
   return { message: a.message, type: a.type };
 }
 
-/** Website fallback (`common.maintenance_default`) when the operator leaves the message blank. */
-export const MAINTENANCE_DEFAULT_MESSAGE =
-  "We're carrying out maintenance right now. Please check back shortly.";
+/**
+ * Website fallback (`common.maintenance_default`) when the operator leaves the
+ * message blank, in the current language. Operator-written text is shown as received.
+ */
+export function maintenanceDefaultMessage(): string {
+  return t('notices.maintenance.defaultMessage');
+}
 
 /**
  * Maintenance screen text for this user, or null to let them through. Admins and
@@ -72,7 +77,7 @@ export function maintenanceMessage(
   const m = config?.maintenanceMode;
   if (!m?.enabled) return null;
   if (role === UserRole.ADMIN || role === UserRole.SUPER_ADMIN) return null;
-  return m.message.trim() || MAINTENANCE_DEFAULT_MESSAGE;
+  return m.message.trim() || maintenanceDefaultMessage();
 }
 
 /** shared-types DELINQUENT_STATUSES — the statuses the website's dunning banner shows for. */
@@ -92,14 +97,11 @@ export function paymentIssueNotice(
 ): { title: string; body: string } | null {
   const status = subscription?.status as SubscriptionStatus | undefined;
   if (!status || !DELINQUENT_STATUSES.includes(status)) return null;
-  const where =
+  const body =
     subscription?.provider === 'apple'
-      ? 'in your App Store subscription settings'
+      ? t('notices.paymentIssue.bodyApple')
       : subscription?.provider === 'google'
-        ? 'in your Google Play subscription settings'
-        : 'on the FlacronCV website (Settings → Billing)';
-  return {
-    title: 'Payment issue',
-    body: `Your last payment didn't go through. Update your payment method ${where} to keep your subscription active.`,
-  };
+        ? t('notices.paymentIssue.bodyGoogle')
+        : t('notices.paymentIssue.bodyWeb');
+  return { title: t('notices.paymentIssue.title'), body };
 }

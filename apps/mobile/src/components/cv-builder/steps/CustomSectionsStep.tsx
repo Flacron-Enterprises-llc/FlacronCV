@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { z } from 'zod';
@@ -22,15 +22,17 @@ import {
 import { colors } from '../../../theme/colors';
 import { SectionSwitcher } from '../SectionSwitcher';
 import { SectionTitleModal } from '../SectionTitleModal';
+import { useT } from '../../../i18n';
 
-const schema = z.object({
-  title: z.string().trim().min(1, 'Title is required'),
+/** Built per language so validation messages follow the app language. */
+const makeSchema = (t: (key: string) => string) => z.object({
+  title: z.string().trim().min(1, t('custom.errors.titleRequired')),
   subtitle: z.string().optional(),
   date: z.string().optional(),
   description: z.string().optional(),
 });
 
-type FormData = z.infer<typeof schema>;
+type FormData = z.infer<ReturnType<typeof makeSchema>>;
 
 const EMPTY: FormData = { title: '', subtitle: '', date: '', description: '' };
 
@@ -42,6 +44,9 @@ const EMPTY: FormData = { title: '', subtitle: '', date: '', description: '' };
  */
 export function CustomSectionsStep({ onValidChange }: { onValidChange: (v: boolean) => void }) {
   const { sections, updateSection, addSection } = useCVStore();
+  const t = useT('cvEditor');
+  const tc = useT('common');
+  const schema = useMemo(() => makeSchema(t), [t]);
   const customSections = nonStandardSections(sections);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const section = customSections.find((s) => s.id === selectedId) ?? customSections[0];
@@ -94,10 +99,10 @@ export function CustomSectionsStep({ onValidChange }: { onValidChange: (v: boole
   };
 
   const handleDelete = (itemId: string) => {
-    Alert.alert('Delete Entry', 'Remove this entry?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('custom.deleteTitle'), t('custom.deleteBody'), [
+      { text: tc('cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: tc('delete'),
         style: 'destructive',
         onPress: () => {
           if (section) updateSection(section.id, { items: items.filter((i) => i.id !== itemId) });
@@ -109,17 +114,15 @@ export function CustomSectionsStep({ onValidChange }: { onValidChange: (v: boole
   return (
     <View className="flex-1">
       <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
-        <Text className="text-lg font-semibold text-stone-900 mb-1">Custom Sections</Text>
-        <Text className="text-stone-500 mb-5 text-sm">
-          Add anything else you want on your CV — awards, volunteering, publications, interests.
-        </Text>
+        <Text className="text-lg font-semibold text-stone-900 mb-1">{t('custom.title')}</Text>
+        <Text className="text-stone-500 mb-5 text-sm">{t('custom.subtitle')}</Text>
 
         {customSections.length === 0 ? (
           <View className="items-center py-10">
             <View className="w-16 h-16 rounded-full bg-stone-100 items-center justify-center mb-3">
               <Ionicons name="albums-outline" size={28} color={colors.stone[400]} />
             </View>
-            <Text className="text-stone-500 text-center mb-4">No custom sections yet.</Text>
+            <Text className="text-stone-500 text-center mb-4">{t('custom.empty')}</Text>
           </View>
         ) : (
           <>
@@ -131,25 +134,25 @@ export function CustomSectionsStep({ onValidChange }: { onValidChange: (v: boole
             )}
             {items.length === 0 ? (
               <Text className="text-stone-400 text-center text-sm border border-dashed border-stone-200 rounded-xl py-4 mb-3">
-                No entries yet — add your first one below.
+                {t('custom.noEntries')}
               </Text>
             ) : (
               items.map((item) => (
                 <View key={item.id} className="bg-white border border-stone-100 rounded-xl p-4 mb-3">
                   <View className="flex-row items-start justify-between">
                     <View className="flex-1">
-                      <Text className="font-bold text-stone-900">{customItemTitle(item) || 'Untitled entry'}</Text>
+                      <Text className="font-bold text-stone-900">{customItemTitle(item) || t('custom.untitled')}</Text>
                       {isCustom && item.subtitle ? <Text className="text-stone-500 text-sm">{item.subtitle}</Text> : null}
                       {isCustom && item.date ? <Text className="text-stone-400 text-xs mt-1">{item.date}</Text> : null}
                       {item.description ? (
                         <Text className="text-stone-500 text-xs mt-1" numberOfLines={2}>{item.description}</Text>
                       ) : null}
                     </View>
-                    <View className="flex-row gap-2 ml-2">
-                      <TouchableOpacity onPress={() => openEdit(item)} className="p-1" accessibilityRole="button" accessibilityLabel="Edit entry" hitSlop={12}>
+                    <View className="flex-row gap-2 ms-2">
+                      <TouchableOpacity onPress={() => openEdit(item)} className="p-1" accessibilityRole="button" accessibilityLabel={t('entry.edit')} hitSlop={12}>
                         <Ionicons name="pencil-outline" size={18} color={colors.stone[500]} />
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1" accessibilityRole="button" accessibilityLabel="Delete entry" hitSlop={12}>
+                      <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1" accessibilityRole="button" accessibilityLabel={t('entry.delete')} hitSlop={12}>
                         <Ionicons name="trash-outline" size={18} color={colors.error.DEFAULT} />
                       </TouchableOpacity>
                     </View>
@@ -159,7 +162,7 @@ export function CustomSectionsStep({ onValidChange }: { onValidChange: (v: boole
             )}
             {section && (
               <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color={colors.stone[700]} />} fullWidth>
-                Add item
+                {t('custom.addItem')}
               </Button>
             )}
           </>
@@ -172,16 +175,16 @@ export function CustomSectionsStep({ onValidChange }: { onValidChange: (v: boole
           icon={<Ionicons name="albums-outline" size={18} color={colors.stone[700]} />}
           fullWidth
         >
-          Add Custom Section
+          {t('custom.addSection')}
         </Button>
         <View className="h-8" />
       </ScrollView>
 
       <SectionTitleModal
         visible={naming}
-        heading="New Custom Section"
-        initialTitle="Custom Section"
-        confirmLabel="Add Section"
+        heading={t('custom.newHeading')}
+        initialTitle={sectionTypeLabel(CVSectionType.CUSTOM)}
+        confirmLabel={t('custom.addSectionConfirm')}
         onClose={() => setNaming(false)}
         onSubmit={addCustomSection}
       />
@@ -189,26 +192,26 @@ export function CustomSectionsStep({ onValidChange }: { onValidChange: (v: boole
       <Modal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        title={editingItem ? 'Edit Entry' : 'Add Entry'}
+        title={editingItem ? t('custom.editEntry') : t('custom.addEntry')}
         size="lg"
       >
         <Controller control={control} name="title" render={({ field }) => (
-          <Input label="Title *" value={field.value} onChangeText={field.onChange} error={errors.title?.message} />
+          <Input label={t('custom.titleLabel')} value={field.value} onChangeText={field.onChange} error={errors.title?.message} />
         )} />
         {isCustom && (
           <>
             <Controller control={control} name="subtitle" render={({ field }) => (
-              <Input label="Subtitle" value={field.value} onChangeText={field.onChange} />
+              <Input label={t('custom.subtitleLabel')} value={field.value} onChangeText={field.onChange} />
             )} />
             <Controller control={control} name="date" render={({ field }) => (
-              <Input label="Date" placeholder="2023-01" value={field.value} onChangeText={field.onChange} />
+              <Input label={t('custom.date')} placeholder="2023-01" value={field.value} onChangeText={field.onChange} />
             )} />
           </>
         )}
         <Controller control={control} name="description" render={({ field }) => (
           <Input
-            label="Description"
-            placeholder="Description…"
+            label={t('fields.description')}
+            placeholder={t('custom.descriptionPlaceholder')}
             value={field.value}
             onChangeText={field.onChange}
             multiline
@@ -218,7 +221,7 @@ export function CustomSectionsStep({ onValidChange }: { onValidChange: (v: boole
           />
         )} />
         <Button variant="primary" fullWidth onPress={handleSubmit(onSubmit)}>
-          {editingItem ? 'Update' : 'Add Entry'}
+          {editingItem ? t('entry.update') : t('custom.addEntry')}
         </Button>
       </Modal>
     </View>

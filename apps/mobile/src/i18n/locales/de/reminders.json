@@ -1,0 +1,21 @@
+{
+  "push": {
+    "enableFailedTitle": "Benachrichtigungen konnten nicht aktiviert werden",
+    "expoGoBody": "Push-Benachrichtigungen sind in Expo Go nicht verfügbar. Nutze einen Entwicklungs- oder Store-Build.",
+    "registerFailedBody": "Dieses Gerät konnte nicht für Benachrichtigungen registriert werden. Prüfe deine Verbindung und versuche es erneut.",
+    "promptTitle": "Erinnerung erhalten?",
+    "promptBoth": "Aktiviere Benachrichtigungen, damit wir dich erinnern, wenn dieses Nachfassen oder Vorstellungsgespräch ansteht.",
+    "promptInterview": "Aktiviere Benachrichtigungen, damit wir dich erinnern, wenn dieses Vorstellungsgespräch ansteht.",
+    "promptFollowUp": "Aktiviere Benachrichtigungen, damit wir dich erinnern, wenn dieses Nachfassen ansteht.",
+    "notNow": "Nicht jetzt",
+    "enable": "Aktivieren"
+  },
+  "job": {
+    "channelName": "Erinnerungen",
+    "titleFallback": "Stelle",
+    "followUpToday": "Heute nachfassen",
+    "followUpTodayWith": "Heute bei {company} nachfassen",
+    "interviewToday": "Vorstellungsgespräch heute um {time}",
+    "interviewTodayWith": "Vorstellungsgespräch heute um {time} bei {company}"
+  }
+}

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { t } from '../i18n';
 import { useAuthStore } from '../store/auth-store';
 
 export const REMINDERS_CHANNEL = 'reminders';
@@ -107,17 +108,23 @@ export function interviewTriggerAt(value: unknown, now: Date): Date | null {
   return isPast(trigger, now) ? null : trigger;
 }
 
-function withCompany(base: string, company: string): string {
-  const trimmed = company.trim();
-  return trimmed ? `${base} with ${trimmed}` : base;
-}
-
+/**
+ * Reminder text is translated when the notification is scheduled; one already
+ * scheduled keeps that language until it is rescheduled.
+ */
 export function followUpReminderBody(company: string): string {
-  return withCompany('Follow-up today', company);
+  const trimmed = company.trim();
+  return trimmed
+    ? t('reminders.job.followUpTodayWith', { company: trimmed })
+    : t('reminders.job.followUpToday');
 }
 
 export function interviewReminderBody(company: string, hh: number, mm: number): string {
-  return withCompany(`Interview today at ${pad(hh)}:${pad(mm)}`, company);
+  const time = `${pad(hh)}:${pad(mm)}`;
+  const trimmed = company.trim();
+  return trimmed
+    ? t('reminders.job.interviewTodayWith', { time, company: trimmed })
+    : t('reminders.job.interviewToday', { time });
 }
 
 async function loadMap(): Promise<JobReminderMap> {
@@ -139,7 +146,7 @@ async function saveMap(map: JobReminderMap): Promise<void> {
 export async function ensureRemindersChannel(): Promise<void> {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync(REMINDERS_CHANNEL, {
-    name: 'Reminders',
+    name: t('reminders.job.channelName'),
     importance: Notifications.AndroidImportance.DEFAULT,
   });
 }
@@ -175,7 +182,7 @@ async function scheduleOnce(
   await ensureRemindersChannel();
   return Notifications.scheduleNotificationAsync({
     content: {
-      title: job.position.trim() || 'Job',
+      title: job.position.trim() || t('reminders.job.titleFallback'),
       body,
       data: { jobId: job.id },
     },

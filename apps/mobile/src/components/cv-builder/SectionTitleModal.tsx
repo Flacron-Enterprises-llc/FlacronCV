@@ -3,6 +3,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Modal } from '../ui/Modal';
 import { SECTION_TITLE_MAX, validateSectionTitle } from '../../lib/cv-editor';
+import { useT } from '../../i18n';
 
 interface SectionTitleModalProps {
   visible: boolean;
@@ -22,6 +23,7 @@ export function SectionTitleModal({
   onClose,
   onSubmit,
 }: SectionTitleModalProps) {
+  const t = useT('cvEditor');
   const [value, setValue] = useState(initialTitle);
   const [error, setError] = useState<string | undefined>();
 
@@ -44,10 +46,10 @@ export function SectionTitleModal({
   return (
     <Modal visible={visible} onClose={onClose} title={heading}>
       <Input
-        label="Section title"
+        label={t('sections.titleLabel')}
         value={value}
-        onChangeText={(t) => {
-          setValue(t);
+        onChangeText={(text) => {
+          setValue(text);
           if (error) setError(undefined);
         }}
         maxLength={SECTION_TITLE_MAX}

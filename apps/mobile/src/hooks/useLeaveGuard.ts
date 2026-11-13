@@ -1,6 +1,7 @@
 import { useNavigation } from 'expo-router';
 import { useEffect } from 'react';
 import { Alert } from 'react-native';
+import { useT } from '../i18n';
 
 /**
  * Asks before leaving a career editor with unsaved edits (back gesture,
@@ -11,20 +12,22 @@ import { Alert } from 'react-native';
  */
 export function useLeaveGuard(dirty: boolean): void {
   const navigation = useNavigation();
+  const t = useT('ui');
+  const tc = useT('common');
   useEffect(() => {
     if (!dirty) return undefined;
     const unsubscribe = navigation.addListener('beforeRemove', (event) => {
       event.preventDefault();
       Alert.alert(
-        'Leave without saving?',
-        'Your changes are not saved. They stay on this device until you sign out or close the app.',
+        t('leaveGuard.title'),
+        t('leaveGuard.body'),
         [
-          { text: 'Stay on this page', style: 'cancel' },
-          { text: 'Leave', style: 'destructive', onPress: () => navigation.dispatch(event.data.action) },
+          { text: t('leaveGuard.stay'), style: 'cancel' },
+          { text: tc('unsaved.leave'), style: 'destructive', onPress: () => navigation.dispatch(event.data.action) },
         ],
         { cancelable: true },
       );
     });
     return unsubscribe;
-  }, [navigation, dirty]);
+  }, [navigation, dirty, t, tc]);
 }

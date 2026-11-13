@@ -18,12 +18,14 @@ import { useAuthStore } from '../../../../src/store/auth-store';
 import { canExport } from '../../../../src/lib/entitlements';
 import { exportLimitReachedMessage, upgradeAlertButtons } from '../../../../src/config/paid-upgrades';
 import { colors } from '../../../../src/theme/colors';
+import { t as tNow, useT } from '../../../../src/i18n';
+import { RTL_FLIP } from '../../../../src/i18n/native';
 
 /** E5 — one prompt for in-app back, hardware Back, and Android gesture Back. */
 function confirmUnsavedLeave(onLeave: () => void) {
-  Alert.alert('Unsaved Changes', 'You have unsaved changes. Leave anyway?', [
-    { text: 'Stay', style: 'cancel' },
-    { text: 'Leave', style: 'destructive', onPress: onLeave },
+  Alert.alert(tNow('common.unsaved.title'), tNow('common.unsaved.body'), [
+    { text: tNow('common.unsaved.stay'), style: 'cancel' },
+    { text: tNow('common.unsaved.leave'), style: 'destructive', onPress: onLeave },
   ]);
 }
 
@@ -31,6 +33,8 @@ export default function CVEditorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const navigation = useNavigation();
+  const t = useT('cvEditor');
+  const tc = useT('common');
   const { user } = useAuthStore();
   const { setCV, setSections, cv: storeCV, isDirty, applySavedTitle } = useCVStore();
   const exportCV = useExportCV();
@@ -61,7 +65,7 @@ export default function CVEditorScreen() {
       applySavedTitle(saved?.title ?? check.title);
       setRenameOpen(false);
     } catch (err) {
-      setRenameError(requestFailureMessage(err, 'Could not rename the CV. Please try again.'));
+      setRenameError(requestFailureMessage(err, t('editor.renameFailed')));
     }
   };
 
@@ -98,7 +102,7 @@ export default function CVEditorScreen() {
 
     if (!canExport(user?.subscription, exports)) {
       Alert.alert(
-        'Export Limit Reached',
+        t('editor.exportLimitTitle'),
         exportLimitReachedMessage(),
         upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
       );
@@ -113,7 +117,7 @@ export default function CVEditorScreen() {
   if (loadError) {
     return (
       <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
-        <ErrorState message="Failed to load CV" onRetry={() => router.back()} />
+        <ErrorState message={t('editor.loadError')} onRetry={() => router.back()} />
       </SafeAreaView>
     );
   }
@@ -122,7 +126,7 @@ export default function CVEditorScreen() {
     return (
       <SafeAreaView className="flex-1 bg-white items-center justify-center">
         <ActivityIndicator size="large" color={colors.brand[600]} />
-        <Text className="text-stone-500 mt-3">Loading CV...</Text>
+        <Text className="text-stone-500 mt-3">{t('editor.loading')}</Text>
       </SafeAreaView>
     );
   }
@@ -132,62 +136,62 @@ export default function CVEditorScreen() {
       {/* Top Bar */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-stone-100">
         <TouchableOpacity onPress={() => router.back()} className="flex-row items-center">
-          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={openRename}
           accessibilityRole="button"
-          accessibilityLabel={`CV title: ${storeCV?.title ?? cv?.title ?? ''}. Rename`}
-          accessibilityHint="Opens a field to change the CV title"
+          accessibilityLabel={t('editor.titleA11y', { title: storeCV?.title ?? cv?.title ?? '' })}
+          accessibilityHint={t('editor.titleHint')}
           className="flex-1 px-3 justify-center"
           style={{ minHeight: 44 }}
         >
           <View className="flex-row items-center justify-center">
             <Text className="font-bold text-stone-900 text-center flex-shrink" numberOfLines={1}>
-              {storeCV?.title ?? cv?.title ?? 'Editing CV'}
+              {storeCV?.title ?? cv?.title ?? t('editor.editingFallback')}
             </Text>
-            <Ionicons name="pencil" size={13} color={colors.stone[400]} style={{ marginLeft: 4 }} />
+            <Ionicons name="pencil" size={13} color={colors.stone[400]} style={{ marginStart: 4 }} />
           </View>
           {isDirty && (
-            <Text className="text-xs text-brand-400 text-center">Unsaved changes</Text>
+            <Text className="text-xs text-brand-400 text-center">{t('editor.unsavedChanges')}</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => router.push('./ats-check')}
-          accessibilityLabel="ATS Check"
-          className="mr-1 p-2"
+          accessibilityLabel={t('editor.atsCheck')}
+          className="me-1 p-2"
         >
           <Ionicons name="analytics-outline" size={22} color={colors.stone[700]} />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => router.push('./interview-prep')}
-          accessibilityLabel="Interview Prep"
-          className="mr-1 p-2"
+          accessibilityLabel={t('editor.interviewPrep')}
+          className="me-1 p-2"
         >
           <Ionicons name="chatbubbles-outline" size={22} color={colors.stone[700]} />
         </TouchableOpacity>
         {/* One button for the less frequent tools keeps the title readable on narrow phones. */}
         <TouchableOpacity
           onPress={() =>
-            Alert.alert('More tools', undefined, [
-              { text: 'Design: layout, colours, fonts', onPress: () => router.push('./design') },
-              { text: 'LinkedIn Optimizer', onPress: () => router.push('./linkedin') },
-              { text: 'Cancel', style: 'cancel' },
+            Alert.alert(t('editor.moreTools'), undefined, [
+              { text: t('editor.designTool'), onPress: () => router.push('./design') },
+              { text: t('editor.linkedinTool'), onPress: () => router.push('./linkedin') },
+              { text: tc('cancel'), style: 'cancel' },
             ])
           }
           accessibilityRole="button"
-          accessibilityLabel="More tools: design and LinkedIn Optimizer"
-          className="mr-2 p-2"
+          accessibilityLabel={t('editor.moreToolsA11y')}
+          className="me-2 p-2"
         >
           <Ionicons name="ellipsis-horizontal" size={22} color={colors.stone[700]} />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => Alert.alert('Export', 'Choose format:', [
+          onPress={() => Alert.alert(t('editor.export'), t('editor.chooseFormat'), [
             { text: 'PDF', onPress: () => handleExport('pdf') },
             { text: 'DOCX', onPress: () => handleExport('docx') },
-            { text: 'Cancel', style: 'cancel' },
+            { text: tc('cancel'), style: 'cancel' },
           ])}
           className="flex-row items-center bg-brand-600 px-3 py-2 rounded-xl"
           disabled={exportCV.isPending}
@@ -197,19 +201,19 @@ export default function CVEditorScreen() {
           ) : (
             <>
               <Ionicons name="download-outline" size={16} color={colors.white} />
-              <Text className="text-white font-semibold ml-1 text-sm">Export</Text>
+              <Text className="text-white font-semibold ms-1 text-sm">{t('editor.export')}</Text>
             </>
           )}
         </TouchableOpacity>
       </View>
 
-      <Modal visible={renameOpen} onClose={() => setRenameOpen(false)} title="Rename CV" closeDisabled={updateCV.isPending}>
+      <Modal visible={renameOpen} onClose={() => setRenameOpen(false)} title={t('editor.renameTitle')} closeDisabled={updateCV.isPending}>
         <Input
-          label="CV title"
-          placeholder="e.g. Software Engineer CV 2025"
+          label={t('editor.titleLabel')}
+          placeholder={t('editor.titlePlaceholder')}
           value={renameValue}
-          onChangeText={(t) => {
-            setRenameValue(t);
+          onChangeText={(text) => {
+            setRenameValue(text);
             if (renameError) setRenameError(undefined);
           }}
           maxLength={CV_TITLE_MAX}
@@ -220,7 +224,7 @@ export default function CVEditorScreen() {
           onSubmitEditing={() => void submitRename()}
         />
         <Button variant="primary" fullWidth loading={updateCV.isPending} onPress={() => void submitRename()}>
-          Save
+          {tc('save')}
         </Button>
       </Modal>
 

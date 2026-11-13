@@ -1,0 +1,57 @@
+{
+  "list": {
+    "title": "My CVs",
+    "newCv": "New CV",
+    "createdCount": "{count, plural, one {# CV creation on your plan} other {# CV creations on your plan}}",
+    "noHeadline": "No headline",
+    "updated": "Updated {date}",
+    "meta": "v{version} · {count, plural, one {# downloads} other {# downloads}}",
+    "status": {
+      "draft": "draft",
+      "published": "published"
+    },
+    "emptyTitle": "No CVs yet",
+    "emptyDescription": "Create your first professional CV and land your dream job.",
+    "emptyAction": "Create Your First CV",
+    "loadError": "Failed to load CVs"
+  },
+  "delete": {
+    "title": "Delete CV",
+    "body": "Are you sure you want to delete \"{title}\"? This cannot be undone. Deleting it does not restore a CV creation on your plan.",
+    "done": "Deleted",
+    "doneBody": "\"{title}\" has been deleted.",
+    "failedTitle": "Could not delete",
+    "failed": "Failed to delete CV. Please try again."
+  },
+  "duplicate": {
+    "done": "Duplicated",
+    "doneBody": "\"{title} (Copy)\" has been created.",
+    "failedTitle": "Could not duplicate",
+    "failed": "Failed to duplicate CV. Please try again."
+  },
+  "limitTitle": "CV Limit Reached",
+  "new": {
+    "chooseTitle": "Choose Template",
+    "chooseSubtitle": "Pick a design to get started",
+    "continue": "Continue with this template",
+    "backToTemplates": "Back to Templates",
+    "back": "Go back",
+    "nameTitle": "Name your CV",
+    "nameBody": "Give your CV a descriptive name so it’s easy to find later.",
+    "titleLabel": "CV title",
+    "titlePlaceholder": "e.g. Software Engineer CV 2025",
+    "suggestions": "Suggestions",
+    "suggestion": {
+      "professional": "My Professional CV",
+      "softwareEngineer": "Software Engineer CV",
+      "productManager": "Product Manager CV",
+      "marketing": "Marketing CV",
+      "designer": "Designer CV"
+    },
+    "useSuggestion": "Use title {title}",
+    "create": "Create CV",
+    "createFailedTitle": "Could not create CV",
+    "usageFailed": "Could not load your usage. Please try again.",
+    "createFailed": "Failed to create CV. Please try again."
+  }
+}

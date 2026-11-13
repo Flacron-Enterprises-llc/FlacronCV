@@ -8,7 +8,8 @@ import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { Input } from '../../../../src/components/ui/Input';
 import { useCreateResume } from '../../../../src/hooks/career/documents';
 import { useCareerAccess } from '../../../../src/hooks/useCareer';
-import { createResumeFailure, DEFAULT_RESUME_TITLE, RESUME_TEMPLATE_OPTIONS, resumeTitleError } from '../../../../src/lib/career/documents';
+import { useT } from '../../../../src/i18n';
+import { createResumeFailure, defaultResumeTitle, RESUME_TEMPLATE_OPTIONS, resumeTitleError } from '../../../../src/lib/career/documents';
 
 /**
  * New career CV (website: resume studio "Create resume"). Composed from the
@@ -17,9 +18,11 @@ import { createResumeFailure, DEFAULT_RESUME_TITLE, RESUME_TEMPLATE_OPTIONS, res
  */
 export default function NewCareerResumeScreen() {
   const router = useRouter();
+  const t = useT('careerDocuments');
+  const tk = useT('career');
   const access = useCareerAccess();
   const create = useCreateResume();
-  const [title, setTitle] = useState(DEFAULT_RESUME_TITLE);
+  const [title, setTitle] = useState(defaultResumeTitle);
   const [language, setLanguage] = useState<'en' | 'fr'>('en');
   const [templateId, setTemplateId] = useState('classic');
   const [touched, setTouched] = useState(false);
@@ -37,30 +40,30 @@ export default function NewCareerResumeScreen() {
   if (access.data && !access.data.enabled) {
     return (
       <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-        <CareerHeader title="New career CV" />
-        <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" description="Your FlacronCV CVs and cover letters are in their own tabs." />
+        <CareerHeader title={tk('shared.newCareerCv')} />
+        <EmptyState icon="lock-closed-outline" title={tk('shared.notIncluded')} description={tk('shared.v1InTabs')} />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title="New career CV" subtitle="Built from your career facts. Uses no document credit." />
+      <CareerHeader title={tk('shared.newCareerCv')} subtitle={t('newResume.subtitle')} />
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
           <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
-            <Input label="CV name" value={title} onChangeText={setTitle} onBlur={() => setTouched(true)} maxLength={200} error={titleError ?? undefined} />
-            <Text className="text-sm font-semibold text-stone-700 mt-2 mb-2">Language of the CV</Text>
+            <Input label={t('newResume.cvName')} value={title} onChangeText={setTitle} onBlur={() => setTouched(true)} maxLength={200} error={titleError ?? undefined} />
+            <Text className="text-sm font-semibold text-stone-700 mt-2 mb-2">{t('newResume.language')}</Text>
             <View className="flex-row gap-2" accessibilityRole="radiogroup">
               {(['en', 'fr'] as const).map((value) => (
-                <Choice key={value} label={value === 'en' ? 'English' : 'French'} selected={language === value} onPress={() => setLanguage(value)} />
+                <Choice key={value} label={value === 'en' ? t('newResume.english') : t('newResume.french')} selected={language === value} onPress={() => setLanguage(value)} />
               ))}
             </View>
-            <Text className="text-stone-500 text-xs mt-2 leading-4">Headings and dates in the CV follow this language.</Text>
+            <Text className="text-stone-500 text-xs mt-2 leading-4">{t('newResume.languageNote')}</Text>
           </View>
           <View className="bg-white border border-stone-100 rounded-2xl p-4">
-            <Text className="text-sm font-semibold text-stone-700 mb-1">Layout</Text>
-            <Text className="text-stone-500 text-xs mb-3 leading-4">You can switch layouts later; switching keeps every saved section.</Text>
+            <Text className="text-sm font-semibold text-stone-700 mb-1">{tk('shared.layout')}</Text>
+            <Text className="text-stone-500 text-xs mb-3 leading-4">{t('newResume.layoutNote')}</Text>
             <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup">
               {RESUME_TEMPLATE_OPTIONS.map((option) => (
                 <Choice key={option.id} label={option.name} accent={option.accent} selected={templateId === option.id} onPress={() => setTemplateId(option.id)} />
@@ -73,9 +76,9 @@ export default function NewCareerResumeScreen() {
             </View>
           ) : null}
         </ScrollView>
-        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-stone-100 px-5 py-3">
+        <View className="absolute bottom-0 start-0 end-0 bg-white border-t border-stone-100 px-5 py-3">
           <Button fullWidth onPress={onCreate} loading={create.isPending}>
-            Create CV
+            {t('newResume.create')}
           </Button>
         </View>
       </KeyboardAvoidingView>
@@ -93,7 +96,7 @@ function Choice({ label, selected, accent, onPress }: { label: string; selected:
       className={`min-h-[44px] px-3 rounded-xl border flex-row items-center ${selected ? 'border-brand-500 bg-brand-50' : 'border-stone-200 bg-white'}`}
       activeOpacity={0.8}
     >
-      {accent ? <View style={{ backgroundColor: accent }} className="w-3 h-3 rounded-full mr-2" /> : null}
+      {accent ? <View style={{ backgroundColor: accent }} className="w-3 h-3 rounded-full me-2" /> : null}
       <Text className={`text-sm ${selected ? 'font-semibold text-brand-700' : 'text-stone-700'}`}>{label}</Text>
     </TouchableOpacity>
   );

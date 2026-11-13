@@ -33,7 +33,7 @@ export const Input = forwardRef<TextInput, InputProps>(
             error ? 'border-red-400' : 'border-stone-200',
           ].join(' ')}
         >
-          {leftIcon && <View className="mr-2">{leftIcon}</View>}
+          {leftIcon && <View className="me-2">{leftIcon}</View>}
           <TextInput
             ref={ref}
             {...props}
@@ -45,7 +45,7 @@ export const Input = forwardRef<TextInput, InputProps>(
             placeholderTextColor={colors.stone[400]}
           />
           {isPassword ? (
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="ml-2">
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="ms-2">
               <Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={20}
@@ -53,7 +53,7 @@ export const Input = forwardRef<TextInput, InputProps>(
               />
             </TouchableOpacity>
           ) : rightIcon ? (
-            <View className="ml-2">{rightIcon}</View>
+            <View className="ms-2">{rightIcon}</View>
           ) : null}
         </View>
         {error ? (

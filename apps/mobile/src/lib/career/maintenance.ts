@@ -1,5 +1,6 @@
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type { MaintenanceView } from '../../../../../packages/career-api-client/src/types';
+import { getLocale, hasKey, intlLocale, t } from '../../i18n';
 import { careerErrorMessage } from '../career-view';
 
 /**
@@ -14,10 +15,26 @@ export const MAX_TITLE = 200;
 
 export type TextCheck = { ok: true; value: string } | { ok: false; message: string };
 
+/** Translation key part for each field noun the screen passes as `what`. */
+const TITLE_KIND: Record<string, string> = {
+  achievement: 'achievement',
+  'promotion goal': 'promotionGoal',
+  'credential name': 'credentialName',
+};
+
+function titleMessage(kind: 'empty' | 'tooLong', what: string): string {
+  const field = TITLE_KIND[what];
+  const key = `careerPlans.maintenance.check.${kind}.${field}`;
+  if (field && hasKey(key)) return t(key, { max: MAX_TITLE });
+  return kind === 'empty'
+    ? t('careerPlans.maintenance.check.emptyOther', { what })
+    : t('careerPlans.maintenance.check.tooLongOther', { what, max: MAX_TITLE });
+}
+
 export function checkTitle(raw: string, what: string): TextCheck {
   const value = raw.trim();
-  if (value.length === 0) return { ok: false, message: `Enter a ${what}.` };
-  if (value.length > MAX_TITLE) return { ok: false, message: `Keep the ${what} under ${MAX_TITLE} characters.` };
+  if (value.length === 0) return { ok: false, message: titleMessage('empty', what) };
+  if (value.length > MAX_TITLE) return { ok: false, message: titleMessage('tooLong', what) };
   return { ok: true, value };
 }
 
@@ -27,11 +44,11 @@ export function checkTitle(raw: string, what: string): TextCheck {
  */
 export function checkExpiryDate(raw: string): TextCheck {
   const value = raw.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return { ok: false, message: 'Write the expiry date as YYYY-MM-DD, for example 2027-03-31.' };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return { ok: false, message: t('careerPlans.maintenance.check.dateFormat') };
   const [y, m, d] = value.split('-').map(Number);
   const date = new Date(Date.UTC(y, m - 1, d));
   if (y < 1900 || date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) {
-    return { ok: false, message: 'That date does not exist. Check the month and day.' };
+    return { ok: false, message: t('careerPlans.maintenance.check.dateMissing') };
   }
   return { ok: true, value };
 }
@@ -44,12 +61,12 @@ export function checkCredential(name: string, expiresOn: string): { ok: true; na
   return { ok: true, name: n.value, expiresOn: e.value };
 }
 
-/** "31 March 2027" for a YYYY-MM-DD day, read as a calendar day (no time-zone shift). */
+/** "31 March 2027" (English; other languages use their own format) for a YYYY-MM-DD day, read as a calendar day (no time-zone shift). */
 export function formatExpiry(day: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
   if (!match) return day;
   const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
-  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  return date.toLocaleDateString(getLocale() === 'en' ? 'en-GB' : intlLocale(), { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 }
 
 export function dueCredentials(view: MaintenanceView | undefined): MaintenanceView['credentials'] {
@@ -64,11 +81,11 @@ export function isEmpty(view: MaintenanceView | undefined): boolean {
 export function maintenanceErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.code === 'validation_error') {
-      if (error.body.field === 'expiresOn') return 'Write the expiry date as YYYY-MM-DD. Nothing was saved.';
-      return 'Check the text you entered. Nothing was saved.';
+      if (error.body.field === 'expiresOn') return t('careerPlans.maintenance.errors.dateFormat');
+      return t('careerPlans.maintenance.errors.checkText');
     }
-    if (error.code === 'plan_upgrade_required') return 'This starts on a higher career plan. Nothing was saved.';
-    if (error.code === 'feature_unavailable') return 'Career maintenance is not open yet. Nothing was saved.';
+    if (error.code === 'plan_upgrade_required') return t('careerPlans.maintenance.errors.planUpgrade');
+    if (error.code === 'feature_unavailable') return t('careerPlans.maintenance.errors.featureOff');
   }
-  return careerErrorMessage(error, 'That change was not saved. Please try again.');
+  return careerErrorMessage(error, t('careerPlans.maintenance.errors.saveFailed'));
 }

@@ -1,0 +1,57 @@
+{
+  "dialogLabel": "App-Tour",
+  "progress": "Schritt {current} von {total}",
+  "announce": "App-Tour. {progress}. {title}",
+  "minimizedLabel": "App-Tour, {progress}: {title}",
+  "continue": "Tour fortsetzen",
+  "skip": "Überspringen",
+  "skipTour": "Tour überspringen",
+  "next": "Weiter",
+  "finish": "Fertig",
+  "finishTour": "Tour beenden",
+  "showMeHint": "Öffnet diesen Bereich der App. Die Tour bleibt unten auf dem Bildschirm verfügbar.",
+  "saveError": "Der Fortschritt der Tour konnte nicht gespeichert werden. Du kannst FlacronCV weiter nutzen.",
+  "welcomeTitleNamed": "Willkommen, {name}",
+  "steps": {
+    "welcome": {
+      "show": "Dashboard anzeigen",
+      "title": "Willkommen bei FlacronCV",
+      "body": "Diese kurze Tour zeigt dir, wo du einen Lebenslauf erstellst, ein Anschreiben schreibst und Bewerbungen verfolgst. Du kannst sie jederzeit verlassen."
+    },
+    "usage": {
+      "show": "Dashboard anzeigen",
+      "title": "Dein Plan und deine Nutzung",
+      "body": "Lebensläufe, KI-Credits und Exporte richten sich nach deinem aktuellen Plan. Die Zahlen aktualisieren sich, während du arbeitest. Hier wird keine Zahlung gestartet."
+    },
+    "cvs": {
+      "show": "Meine Lebensläufe anzeigen",
+      "title": "Meine Lebensläufe",
+      "body": "Jeder gespeicherte Lebenslauf steht hier. Tippe auf Neuer Lebenslauf, wenn du bereit bist: Du wählst eine Vorlage und bearbeitest dann deinen eigenen Inhalt. Diese Tour erstellt keinen Lebenslauf für dich."
+    },
+    "coverLetters": {
+      "show": "Anschreiben anzeigen",
+      "title": "Anschreiben",
+      "body": "Schreibe ein Anschreiben für eine Stelle und verbessere einen Entwurf später mit KI, wenn du möchtest. Das Öffnen dieses Tabs verbraucht keine Credits."
+    },
+    "jobs": {
+      "show": "Bewerbungs-Tracker anzeigen",
+      "title": "Bewerbungs-Tracker",
+      "body": "Halte Unternehmen und Phasen in einer Liste fest, von der Merkliste bis zum Angebot. Ein Eintrag entsteht nur, wenn du ihn anlegst. Öffne ihn über das Dashboard."
+    },
+    "templates": {
+      "show": "Vorlagen anzeigen",
+      "title": "Vorlagen",
+      "body": "Hier findest du Layouts für Lebensläufe. Manche Designs gehören zu einem kostenpflichtigen Plan. Diese Tour wählt keines aus."
+    },
+    "career": {
+      "show": "Karrieretools anzeigen",
+      "title": "Karrieretools",
+      "body": "Karrieretools sind ein optionales Add-on, um deinen nächsten Schritt zu planen. Öffne sie über das Dashboard. Diese Tour startet dort nichts."
+    },
+    "settings": {
+      "show": "Einstellungen anzeigen",
+      "title": "Jederzeit wiederholen",
+      "body": "App-Tour wiederholen findest du in den Einstellungen und auf der Support-Seite. Wenn du jetzt fertig bist, startet sie nicht von allein erneut."
+    }
+  }
+}

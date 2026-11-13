@@ -1,0 +1,160 @@
+{
+  "notStated": "Not stated",
+  "sponsorshipYes": "Visa sponsorship stated",
+  "sponsorshipNo": "No visa sponsorship stated",
+  "paste": {
+    "empty": "Paste the text of the job advert first.",
+    "tooLong": "The advert is too long. Keep it under {max} characters.",
+    "badUrl": "The link must start with http:// or https://, or leave it empty."
+  },
+  "trust": {
+    "disclaimer": "These checks show freshness, conflicts, and reports. They do not promise a listing is safe.",
+    "none": "No extra warnings on the saved text. That is not a promise the listing is safe.",
+    "multiple": "Matched across {count} sources. A match is not a safety check.",
+    "candidate": "Source: text you pasted. FlacronCV did not collect this from an employer feed.",
+    "provider": "Source: a job-feed record. The feed is not a safety check.",
+    "title": "Listing checks",
+    "expired": "The saved status says this listing is expired."
+  },
+  "signals": {
+    "verified_employer": "A moderator confirmed this posting. That does not promise the role is open or safe.",
+    "stale_listing": "Last checked more than 30 days ago. The employer site may have changed.",
+    "suspicious_fee": "The text mentions an upfront fee or payment. Check the original listing before you apply.",
+    "conflicting_compensation": "The saved pay range conflicts with itself: the minimum is higher than the maximum.",
+    "duplicate_sources": "This listing was matched across {count} sources.",
+    "user_flagged": "{count} open reports are waiting for review. This is not a confirmed finding.",
+    "suppressed_listing": "Removed from search after review."
+  },
+  "reportStatus": {
+    "pending": "Your report is waiting for review.",
+    "suppress": "A reviewer removed this listing from search.",
+    "verify": "A reviewer confirmed the posting after your report. That is not a safety promise.",
+    "dismiss": "A reviewer looked at your report. The listing stays in search."
+  },
+  "report": {
+    "invalid": "Choose a reason.",
+    "network": "No connection. The report was not saved.",
+    "failed": "The report was not saved.",
+    "update": "Update your report",
+    "open": "Report an issue",
+    "title": "Report this listing",
+    "reason": "Reason",
+    "notes": "Notes, optional",
+    "hint": "One open report per person. Sending again updates that report.",
+    "submit": "Submit report"
+  },
+  "fit": {
+    "blocked": "Blocked",
+    "none": "No overlap with your confirmed facts",
+    "partial": "Partial overlap with your confirmed facts",
+    "strong": "Strong overlap with your confirmed facts"
+  },
+  "notAScore": "This is not an employer score and it is not a hiring probability.",
+  "match": {
+    "reason": "Your confirmed facts include {token}.",
+    "gap": "In the listing, not in your confirmed facts: {token}.",
+    "unconfirmed": "{token} is only on a fact you have not confirmed.",
+    "pay": "Pay was not stated.",
+    "sponsorship": "Sponsorship was not stated.",
+    "location": "Location was not stated.",
+    "overlap": "Wording overlap with your confirmed facts: {value} on a scale from 0 (none) to 1 (same wording).",
+    "compared": "Compared {date}"
+  },
+  "remaining": "{count, plural, one {# resume analysis} other {# resume analyses}} remaining.",
+  "compareErrors": {
+    "quota": "No resume analyses left. The listing is still here.",
+    "notInPlan": "Your career plan does not include resume analyses.",
+    "off": "Resume analysis is switched off.",
+    "provider": "Needs the AI provider, which is not configured in this environment. Nothing was charged.",
+    "notFound": "That CV version or listing no longer exists. No analysis was used.",
+    "network": "No connection. Try again; retrying the same comparison will not charge twice.",
+    "failed": "The comparison was not saved."
+  },
+  "map": {
+    "noTiles": "No map tiles are connected. Locations stay approximate, so the listings are shown as a list.",
+    "errors": {
+      "upgrade": "Map sessions start on a higher plan. Nothing was saved.",
+      "quota": "The map session allowance is used up. The list stays available.",
+      "off": "Map sessions are switched off. Nothing was changed.",
+      "network": "No connection. Try again; retrying the same start will not charge twice.",
+      "failed": "That session was not started. Nothing extra was used."
+    },
+    "notIncluded": "Map sessions are not included in your plan",
+    "stillInJobSearch": "Your saved listings are still in Job search.",
+    "start": "Start 15 minutes",
+    "sessionIs": "This session is {minutes} minutes.",
+    "listingsHeading": "Listings (approximate locations)",
+    "emptyBody": "Paste a job advert in Job search to see it here.",
+    "subtitle": "List view: no map tiles are connected"
+  },
+  "list": {
+    "discardTitle": "Discard this advert?",
+    "discardBody": "The pasted text is not saved yet.",
+    "savedTitle": "Advert saved",
+    "savedBody": "\"{title}\" is saved to your listings. Only you can see it.",
+    "stayHere": "Stay here",
+    "openIt": "Open it",
+    "saveFailed": "The advert was not saved. Your text is still here; try again.",
+    "mapA11y": "Open the map session list",
+    "loadFailed": "Listings could not be loaded. Nothing was changed.",
+    "intro": "Search your listings or paste a job advert. Missing pay and sponsorship stay not stated. A pasted advert is only yours.",
+    "search": "Search",
+    "searchPlaceholder": "Title, employer or keyword",
+    "pasteAdvert": "Paste advert",
+    "clearA11y": "Clear the search for {query}",
+    "resultsFor": "Results for \"{query}\"",
+    "clear": "Clear",
+    "refreshFailed": "The list could not be refreshed.",
+    "noResultsBody": "Try another search, or paste the vacancy.",
+    "emptyTitle": "No saved listings yet",
+    "emptyBody": "Paste a job advert to keep it here and compare it with your career CV.",
+    "expiredA11y": "expired",
+    "pastedByYou": "Pasted by you",
+    "pasteTitle": "Paste a job advert",
+    "pasteBody": "Paste the full advert text. It is saved only to your account. Pay, sponsorship and locations that the text does not state stay not stated.",
+    "advertText": "Advert text",
+    "pastePlaceholder": "Paste the job advert here",
+    "link": "Link to the original, if you have one",
+    "savePasted": "Save pasted advert"
+  },
+  "detail": {
+    "goneTitle": "That listing is not in FlacronCV",
+    "goneBody": "It may have been removed.",
+    "loadFailed": "This listing could not be loaded. Nothing was changed.",
+    "fallbackTitle": "Listing",
+    "linkFailedTitle": "Could not open the link",
+    "linkFailedBody": "No app on this device can open it.",
+    "openOriginalA11y": "Open the original listing in the browser",
+    "original": "Original listing",
+    "staleTitle": "This listing has not been checked recently",
+    "staleBody": "The saved text is still here. Open the original listing to confirm it.",
+    "locations": "Locations",
+    "pay": "Pay",
+    "sponsorship": "Sponsorship",
+    "deadline": "Deadline",
+    "lastChecked": "Last checked {date}"
+  },
+  "compare": {
+    "title": "Compare with my resume",
+    "notInPlan": "Resume analysis is not included in your career plan.",
+    "confirmTitle": "This uses 1 resume analysis",
+    "confirmAgain": "If your facts and the listing have not changed, the saved comparison comes back at no cost. It is not a hiring probability.",
+    "confirmFirst": "This compares the listing with your resume. It is not a hiring probability.",
+    "useOne": "Use 1 analysis",
+    "loadingCvs": "Loading your career CVs…",
+    "cvsFailed": "Your career CVs could not be loaded.",
+    "noResume": "Create a resume first. No analysis was used.",
+    "cvToCompare": "Career CV to compare",
+    "again": "Compare again",
+    "retryA11y": "Try the same comparison again",
+    "retry": "Try again (not charged twice)"
+  },
+  "reasons": {
+    "suspicious_fee": "Asks for a fee",
+    "misleading": "Misleading details",
+    "expired_closed": "Expired or closed",
+    "duplicate": "Duplicate listing",
+    "scam": "Suspicious request",
+    "other": "Something else"
+  }
+}

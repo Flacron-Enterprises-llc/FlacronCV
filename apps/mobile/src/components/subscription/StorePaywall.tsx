@@ -13,6 +13,7 @@ import { PlanCard } from './PlanCard';
 import { allStoreSkus, IAP_ANDROID_PACKAGE, skuForPlan, storeProductIds } from '../../config/iap-products';
 import { verifyMobilePurchase } from '../../hooks/usePayment';
 import { requestFailureMessage } from '../../lib/api-errors';
+import { t, useT } from '../../i18n';
 import { BillingInterval, SubscriptionPlan } from '../../types/enums';
 import { PLAN_CONFIGS } from '../../types/subscription.types';
 
@@ -58,6 +59,7 @@ export async function openStoreSubscriptionManagement(skuAndroid?: string | null
  * file) so Expo Go does not load expo-iap while the flag is off.
  */
 export function StorePaywall({ interval, currentPlan, onEntitlementChanged }: StorePaywallProps) {
+  const tp = useT('subscription.paywall');
   const [busySku, setBusySku] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
   const processed = useRef(new Set<string>());
@@ -80,8 +82,8 @@ export function StorePaywall({ interval, currentPlan, onEntitlementChanged }: St
         if (isPendingPurchase(purchase)) {
           setBusySku(null);
           Alert.alert(
-            'Purchase pending',
-            'This purchase is waiting for payment. You will get access when it completes.',
+            t('subscription.paywall.pendingTitle'),
+            t('subscription.paywall.pendingBody'),
           );
           return;
         }
@@ -94,8 +96,8 @@ export function StorePaywall({ interval, currentPlan, onEntitlementChanged }: St
         } catch (err) {
           if (key) processed.current.delete(key);
           Alert.alert(
-            'Purchase could not be confirmed',
-            requestFailureMessage(err, 'The store charge succeeded but we could not unlock your plan. Try Restore purchases.'),
+            t('subscription.paywall.confirmFailedTitle'),
+            requestFailureMessage(err, t('subscription.paywall.confirmFailedBody')),
           );
         } finally {
           setBusySku(null);
@@ -107,26 +109,26 @@ export function StorePaywall({ interval, currentPlan, onEntitlementChanged }: St
       if (error.code === ErrorCode.UserCancelled) return;
       if (error.code === ErrorCode.Pending || error.code === ErrorCode.DeferredPayment) {
         Alert.alert(
-          'Purchase pending',
-          'This purchase is waiting for payment. You will get access when it completes.',
+          t('subscription.paywall.pendingTitle'),
+          t('subscription.paywall.pendingBody'),
         );
         return;
       }
       if (error.code === ErrorCode.AlreadyOwned) {
         Alert.alert(
-          'Already subscribed',
-          'This Apple or Google account already has this plan. Use Restore purchases to unlock it here.',
+          t('subscription.paywall.alreadyOwnedTitle'),
+          t('subscription.paywall.alreadyOwnedBody'),
         );
         return;
       }
       if (error.code === ErrorCode.ItemUnavailable || error.code === ErrorCode.SkuNotFound) {
         Alert.alert(
-          'Plan not available',
-          'This product is not available in the store for this account or region. Try another plan or Restore purchases.',
+          t('subscription.paywall.unavailableTitle'),
+          t('subscription.paywall.unavailableBody'),
         );
         return;
       }
-      Alert.alert('Purchase failed', error.message || 'The store could not complete this purchase.');
+      Alert.alert(t('subscription.paywall.failedTitle'), error.message || t('subscription.paywall.failedBody'));
     },
   });
 
@@ -144,8 +146,8 @@ export function StorePaywall({ interval, currentPlan, onEntitlementChanged }: St
       const token = androidOfferToken(sub);
       if (!token) {
         Alert.alert(
-          'Plan not available',
-          'Google Play has not returned an offer for this product. Try again later or pick another plan.',
+          t('subscription.paywall.unavailableTitle'),
+          t('subscription.paywall.noOfferBody'),
         );
         return;
       }
@@ -163,8 +165,8 @@ export function StorePaywall({ interval, currentPlan, onEntitlementChanged }: St
       } catch (err) {
         setBusySku(null);
         Alert.alert(
-          'Purchase failed',
-          requestFailureMessage(err, 'The store could not start this purchase.'),
+          t('subscription.paywall.failedTitle'),
+          requestFailureMessage(err, t('subscription.paywall.startFailedBody')),
         );
       }
       return;
@@ -179,8 +181,8 @@ export function StorePaywall({ interval, currentPlan, onEntitlementChanged }: St
     } catch (err) {
       setBusySku(null);
       Alert.alert(
-        'Purchase failed',
-        requestFailureMessage(err, 'The store could not start this purchase.'),
+        t('subscription.paywall.failedTitle'),
+        requestFailureMessage(err, t('subscription.paywall.startFailedBody')),
       );
     }
   };
@@ -194,7 +196,7 @@ export function StorePaywall({ interval, currentPlan, onEntitlementChanged }: St
         (p) => !isPendingPurchase(p),
       );
       if (ready.length === 0) {
-        Alert.alert('No purchases to restore', 'This store account has no active FlacronCV subscription.');
+        Alert.alert(t('subscription.paywall.nothingToRestoreTitle'), t('subscription.paywall.nothingToRestoreBody'));
         return;
       }
       ready.sort((a, b) => b.transactionDate - a.transactionDate);
@@ -210,11 +212,11 @@ export function StorePaywall({ interval, currentPlan, onEntitlementChanged }: St
         }
       }
       onChangedRef.current();
-      Alert.alert('Purchases restored', 'Your plan is now unlocked on this account.');
+      Alert.alert(t('subscription.paywall.restoredTitle'), t('subscription.paywall.restoredBody'));
     } catch (err) {
       Alert.alert(
-        'Restore failed',
-        requestFailureMessage(err, 'Could not restore purchases. Try again.'),
+        t('subscription.paywall.restoreFailedTitle'),
+        requestFailureMessage(err, t('subscription.paywall.restoreFailedBody')),
       );
     } finally {
       setRestoring(false);
@@ -250,14 +252,12 @@ export function StorePaywall({ interval, currentPlan, onEntitlementChanged }: St
         className="mt-1 border border-stone-200 rounded-xl py-3 items-center"
       >
         <Text className="text-stone-700 font-semibold">
-          {restoring ? 'Restoring…' : 'Restore purchases'}
+          {restoring ? tp('restoring') : tp('restore')}
         </Text>
       </TouchableOpacity>
 
       <Text className="text-stone-400 text-xs text-center mt-4 leading-4">
-        Subscriptions are billed by the App Store or Google Play. Restore purchases if you
-        already paid on this store account. You can cancel in your store account, not in
-        this app.
+        {tp('storeNote')}
       </Text>
     </View>
   );

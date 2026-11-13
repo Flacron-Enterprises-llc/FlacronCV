@@ -11,7 +11,9 @@ import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../../src/components/ui/Skeleton';
 import { useCareerFeature, useMapList, useStartMap } from '../../../../src/hooks/career/opportunities';
 import { useCareerAccess } from '../../../../src/hooks/useCareer';
-import { mapErrorMessage, NO_TILES } from '../../../../src/lib/career/opportunities';
+import { useT } from '../../../../src/i18n';
+import { RTL_FLIP } from '../../../../src/i18n/native';
+import { mapErrorMessage, noTiles } from '../../../../src/lib/career/opportunities';
 import { careerErrorMessage } from '../../../../src/lib/career-view';
 import { colors } from '../../../../src/theme/colors';
 
@@ -23,6 +25,8 @@ import { colors } from '../../../../src/theme/colors';
  */
 export default function OpportunityMapScreen() {
   const router = useRouter();
+  const t = useT('careerJobs');
+  const tk = useT('career');
   const access = useCareerAccess();
   const feature = useCareerFeature('mapSessions');
   const list = useMapList();
@@ -47,9 +51,9 @@ export default function OpportunityMapScreen() {
 
   let content: React.ReactNode;
   if (access.data && !access.data.enabled) {
-    content = <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" />;
+    content = <EmptyState icon="lock-closed-outline" title={tk('shared.notIncluded')} />;
   } else if (access.data && !feature.on) {
-    content = <EmptyState icon="lock-closed-outline" title="Map sessions are not included in your plan" description="Your saved listings are still in Job search." />;
+    content = <EmptyState icon="lock-closed-outline" title={t('map.notIncluded')} description={t('map.stillInJobSearch')} />;
   } else if (access.isLoading || list.isLoading) {
     content = (
       <View className="p-5">
@@ -58,7 +62,7 @@ export default function OpportunityMapScreen() {
     );
   } else if (access.error || list.error) {
     content = (
-      <ErrorState message={careerErrorMessage(list.error ?? access.error, 'This page could not be loaded. Nothing was changed.')} onRetry={() => void list.refetch()} />
+      <ErrorState message={careerErrorMessage(list.error ?? access.error, tk('shared.pageNotLoaded'))} onRetry={() => void list.refetch()} />
     );
   } else {
     content = (
@@ -72,15 +76,15 @@ export default function OpportunityMapScreen() {
             <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
               <View className="flex-row items-center">
                 <Ionicons name="map-outline" size={18} color={colors.stone[500]} />
-                <Text className="text-stone-700 text-sm ml-2 flex-1 leading-5">{NO_TILES}</Text>
+                <Text className="text-stone-700 text-sm ms-2 flex-1 leading-5">{noTiles()}</Text>
               </View>
               <View className="mt-4">
                 <Button onPress={onStart} loading={start.isPending}>
-                  Start 15 minutes
+                  {t('map.start')}
                 </Button>
               </View>
               {minutes !== null ? (
-                <Text className="text-success text-sm mt-3" accessibilityLiveRegion="polite">{`This session is ${minutes} minutes.`}</Text>
+                <Text className="text-success text-sm mt-3" accessibilityLiveRegion="polite">{t('map.sessionIs', { minutes })}</Text>
               ) : null}
               {error ? (
                 <Text className="text-red-500 text-sm mt-3" accessibilityRole="alert">
@@ -88,10 +92,10 @@ export default function OpportunityMapScreen() {
                 </Text>
               ) : null}
             </View>
-            <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide">Listings (approximate locations)</Text>
+            <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide">{t('map.listingsHeading')}</Text>
           </View>
         }
-        ListEmptyComponent={<EmptyState icon="briefcase-outline" title="No listings" description="Paste a job advert in Job search to see it here." />}
+        ListEmptyComponent={<EmptyState icon="briefcase-outline" title={tk('shared.noListings')} description={t('map.emptyBody')} />}
         renderItem={({ item }) => (
           <TouchableOpacity
             onPress={() => router.push(`/(dashboard)/career/opportunities/${item.id}` as Href)}
@@ -100,8 +104,8 @@ export default function OpportunityMapScreen() {
             accessibilityLabel={item.title}
           >
             <Ionicons name="location-outline" size={18} color={colors.stone[400]} />
-            <Text className="font-semibold text-stone-900 ml-2 flex-1">{item.title}</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.stone[400]} />
+            <Text className="font-semibold text-stone-900 ms-2 flex-1">{item.title}</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.stone[400]} style={RTL_FLIP} />
           </TouchableOpacity>
         )}
       />
@@ -110,7 +114,7 @@ export default function OpportunityMapScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title="Map session" subtitle="List view: no map tiles are connected" />
+      <CareerHeader title={tk('areas.map.title')} subtitle={t('map.subtitle')} />
       {content}
     </SafeAreaView>
   );

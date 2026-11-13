@@ -1,0 +1,160 @@
+{
+  "notStated": "No indicado",
+  "sponsorshipYes": "Patrocinio de visado indicado",
+  "sponsorshipNo": "Sin patrocinio de visado indicado",
+  "paste": {
+    "empty": "Primero pega el texto del anuncio de empleo.",
+    "tooLong": "El anuncio es demasiado largo. Mantenlo por debajo de {max} caracteres.",
+    "badUrl": "El enlace debe empezar por http:// o https://, o déjalo vacío."
+  },
+  "trust": {
+    "disclaimer": "Estas comprobaciones muestran la actualidad, las contradicciones y las denuncias. No garantizan que una oferta sea segura.",
+    "none": "No hay advertencias adicionales sobre el texto guardado. Eso no garantiza que la oferta sea segura.",
+    "multiple": "Coincide en {count} fuentes. Una coincidencia no es una comprobación de seguridad.",
+    "candidate": "Fuente: texto que pegaste. FlacronCV no lo obtuvo de un feed de empleadores.",
+    "provider": "Fuente: un registro de un feed de empleo. El feed no es una comprobación de seguridad.",
+    "title": "Comprobaciones de la oferta",
+    "expired": "El estado guardado indica que esta oferta ha caducado."
+  },
+  "signals": {
+    "verified_employer": "Un moderador confirmó esta oferta. Eso no garantiza que el puesto esté abierto ni que sea seguro.",
+    "stale_listing": "Comprobada por última vez hace más de 30 días. Es posible que el sitio del empleador haya cambiado.",
+    "suspicious_fee": "El texto menciona un pago o tarifa por adelantado. Revisa la oferta original antes de postularte.",
+    "conflicting_compensation": "La banda salarial guardada se contradice: el mínimo es mayor que el máximo.",
+    "duplicate_sources": "Esta oferta coincide en {count} fuentes.",
+    "user_flagged": "Hay {count} denuncias abiertas pendientes de revisión. No es una conclusión confirmada.",
+    "suppressed_listing": "Retirada de la búsqueda tras la revisión."
+  },
+  "reportStatus": {
+    "pending": "Tu denuncia está pendiente de revisión.",
+    "suppress": "Un revisor retiró esta oferta de la búsqueda.",
+    "verify": "Un revisor confirmó la oferta tras tu denuncia. Eso no es una garantía de seguridad.",
+    "dismiss": "Un revisor examinó tu denuncia. La oferta sigue en la búsqueda."
+  },
+  "report": {
+    "invalid": "Elige un motivo.",
+    "network": "Sin conexión. El informe no se guardó.",
+    "failed": "No se guardó la denuncia.",
+    "update": "Actualizar tu denuncia",
+    "open": "Denunciar un problema",
+    "title": "Denunciar esta oferta",
+    "reason": "Motivo",
+    "notes": "Notas (opcional)",
+    "hint": "Una denuncia abierta por persona. Si vuelves a enviarla, se actualiza esa denuncia.",
+    "submit": "Enviar denuncia"
+  },
+  "fit": {
+    "blocked": "Bloqueada",
+    "none": "Sin coincidencias con tus datos confirmados",
+    "partial": "Coincidencia parcial con tus datos confirmados",
+    "strong": "Gran coincidencia con tus datos confirmados"
+  },
+  "notAScore": "Esto no es una puntuación del empleador ni una probabilidad de contratación.",
+  "match": {
+    "reason": "Tus datos confirmados incluyen {token}.",
+    "gap": "En la oferta, pero no en tus datos confirmados: {token}.",
+    "unconfirmed": "{token} solo aparece en un dato que no has confirmado.",
+    "pay": "No se indicó el salario.",
+    "sponsorship": "No se indicó el patrocinio.",
+    "location": "No se indicó la ubicación.",
+    "overlap": "Coincidencia de redacción con tus datos confirmados: {value} en una escala de 0 (ninguna) a 1 (misma redacción).",
+    "compared": "Comparado el {date}"
+  },
+  "remaining": "{count, plural, one {Queda # análisis de CV} other {Quedan # análisis de CV}}.",
+  "compareErrors": {
+    "quota": "No te quedan análisis de CV. La oferta sigue aquí.",
+    "notInPlan": "Tu plan profesional no incluye análisis de CV.",
+    "off": "El análisis de CV está desactivado.",
+    "provider": "Necesita el proveedor de IA, que no está configurado en este entorno. No se cobró nada.",
+    "notFound": "Esa versión del CV o esa oferta ya no existe. No se usó ningún análisis.",
+    "network": "Sin conexión. Inténtalo de nuevo; repetir la misma comparación no cobra dos veces.",
+    "failed": "No se guardó la comparación."
+  },
+  "map": {
+    "noTiles": "No hay mosaicos de mapa conectados. Las ubicaciones son aproximadas, así que las ofertas se muestran en una lista.",
+    "errors": {
+      "upgrade": "Las sesiones de mapa empiezan en un plan superior. No se guardó nada.",
+      "quota": "Se agotó la asignación de sesiones de mapa. La lista sigue disponible.",
+      "off": "Las sesiones de mapa están desactivadas. No se cambió nada.",
+      "network": "Sin conexión. Inténtalo de nuevo; repetir el mismo inicio no cobra dos veces.",
+      "failed": "Esa sesión no se inició. No se usó nada adicional."
+    },
+    "notIncluded": "Las sesiones de mapa no están incluidas en tu plan",
+    "stillInJobSearch": "Tus ofertas guardadas siguen en Búsqueda de empleo.",
+    "start": "Iniciar 15 minutos",
+    "sessionIs": "Esta sesión dura {minutes} minutos.",
+    "listingsHeading": "Ofertas (ubicaciones aproximadas)",
+    "emptyBody": "Pega un anuncio de empleo en Búsqueda de empleo para verlo aquí.",
+    "subtitle": "Vista de lista: no hay mosaicos de mapa conectados"
+  },
+  "list": {
+    "discardTitle": "¿Descartar este anuncio?",
+    "discardBody": "El texto pegado aún no se ha guardado.",
+    "savedTitle": "Anuncio guardado",
+    "savedBody": "«{title}» se guardó en tus ofertas. Solo tú puedes verlo.",
+    "stayHere": "Quedarme aquí",
+    "openIt": "Abrirlo",
+    "saveFailed": "El anuncio no se guardó. Tu texto sigue aquí; inténtalo de nuevo.",
+    "mapA11y": "Abrir la lista de la sesión de mapa",
+    "loadFailed": "No se pudieron cargar las ofertas. No se cambió nada.",
+    "intro": "Busca en tus ofertas o pega un anuncio de empleo. El salario y el patrocinio que falten quedan como no indicados. Un anuncio pegado es solo tuyo.",
+    "search": "Buscar",
+    "searchPlaceholder": "Puesto, empleador o palabra clave",
+    "pasteAdvert": "Pegar anuncio",
+    "clearA11y": "Borrar la búsqueda de {query}",
+    "resultsFor": "Resultados de «{query}»",
+    "clear": "Borrar",
+    "refreshFailed": "No se pudo actualizar la lista.",
+    "noResultsBody": "Prueba otra búsqueda o pega la vacante.",
+    "emptyTitle": "Aún no hay ofertas guardadas",
+    "emptyBody": "Pega un anuncio de empleo para guardarlo aquí y compararlo con tu CV profesional.",
+    "expiredA11y": "caducada",
+    "pastedByYou": "Pegado por ti",
+    "pasteTitle": "Pega un anuncio de empleo",
+    "pasteBody": "Pega el texto completo del anuncio. Solo se guarda en tu cuenta. El salario, el patrocinio y las ubicaciones que el texto no indique quedan como no indicados.",
+    "advertText": "Texto del anuncio",
+    "pastePlaceholder": "Pega aquí el anuncio de empleo",
+    "link": "Enlace al original, si lo tienes",
+    "savePasted": "Guardar anuncio pegado"
+  },
+  "detail": {
+    "goneTitle": "Esa oferta no está en FlacronCV",
+    "goneBody": "Puede que se haya eliminado.",
+    "loadFailed": "No se pudo cargar esta oferta. No se cambió nada.",
+    "fallbackTitle": "Oferta",
+    "linkFailedTitle": "No se pudo abrir el enlace",
+    "linkFailedBody": "Ninguna app de este dispositivo puede abrirlo.",
+    "openOriginalA11y": "Abrir la oferta original en el navegador",
+    "original": "Oferta original",
+    "staleTitle": "Esta oferta no se ha comprobado recientemente",
+    "staleBody": "El texto guardado sigue aquí. Abre la oferta original para confirmarla.",
+    "locations": "Ubicaciones",
+    "pay": "Salario",
+    "sponsorship": "Patrocinio",
+    "deadline": "Fecha límite",
+    "lastChecked": "Última comprobación: {date}"
+  },
+  "compare": {
+    "title": "Comparar con mi CV",
+    "notInPlan": "El análisis de CV no está incluido en tu plan profesional.",
+    "confirmTitle": "Esto usa 1 análisis de CV",
+    "confirmAgain": "Si tus datos y la oferta no han cambiado, la comparación guardada vuelve sin coste. No es una probabilidad de contratación.",
+    "confirmFirst": "Esto compara la oferta con tu CV. No es una probabilidad de contratación.",
+    "useOne": "Usar 1 análisis",
+    "loadingCvs": "Cargando tus CVs profesionales…",
+    "cvsFailed": "No se pudieron cargar tus CVs profesionales.",
+    "noResume": "Crea primero un CV. No se usó ningún análisis.",
+    "cvToCompare": "CV profesional para comparar",
+    "again": "Comparar de nuevo",
+    "retryA11y": "Intentar de nuevo la misma comparación",
+    "retry": "Reintentar (no se cobra dos veces)"
+  },
+  "reasons": {
+    "suspicious_fee": "Pide un pago",
+    "misleading": "Datos engañosos",
+    "expired_closed": "Caducada o cerrada",
+    "duplicate": "Oferta duplicada",
+    "scam": "Solicitud sospechosa",
+    "other": "Otro motivo"
+  }
+}

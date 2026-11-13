@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Text, View } from 'react-native';
+import { useLocale } from '../../i18n';
 import { useAuthStore } from '../../store/auth-store';
 import { colors } from '../../theme/colors';
 import { paymentIssueNotice } from './app-notices';
@@ -13,6 +14,7 @@ import { paymentIssueNotice } from './app-notices';
  * (the website for web subscriptions, the store for in-app ones).
  */
 export function PaymentIssueNotice({ className = '' }: { className?: string }) {
+  useLocale(); // re-render on a language change (the text is built outside React)
   const subscription = useAuthStore((s) => s.user?.subscription);
   const notice = paymentIssueNotice(subscription);
   if (!notice) return null;
@@ -23,7 +25,7 @@ export function PaymentIssueNotice({ className = '' }: { className?: string }) {
       className={`flex-row items-start rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 ${className}`}
     >
       <Ionicons name="warning-outline" size={20} color={colors.warning.DEFAULT} style={{ marginTop: 1 }} />
-      <View className="flex-1 ml-3">
+      <View className="flex-1 ms-3">
         <Text className="text-sm font-semibold text-amber-800">{notice.title}</Text>
         <Text className="text-sm text-amber-700 mt-0.5">{notice.body}</Text>
       </View>

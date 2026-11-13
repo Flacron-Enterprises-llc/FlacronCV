@@ -1,0 +1,57 @@
+{
+  "list": {
+    "title": "Mis CVs",
+    "newCv": "Nuevo CV",
+    "createdCount": "{count, plural, one {# creación de CV en tu plan} other {# creaciones de CV en tu plan}}",
+    "noHeadline": "Sin titular",
+    "updated": "Actualizado {date}",
+    "meta": "v{version} · {count, plural, one {# descarga} other {# descargas}}",
+    "status": {
+      "draft": "borrador",
+      "published": "publicado"
+    },
+    "emptyTitle": "Aún no tienes CVs",
+    "emptyDescription": "Crea tu primer CV profesional y consigue el trabajo de tus sueños.",
+    "emptyAction": "Crear tu primer CV",
+    "loadError": "No se pudieron cargar los CVs"
+  },
+  "delete": {
+    "title": "Eliminar CV",
+    "body": "¿Seguro que quieres eliminar \"{title}\"? Esta acción no se puede deshacer. Eliminarlo no te devuelve una creación de CV en tu plan.",
+    "done": "Eliminado",
+    "doneBody": "Se eliminó \"{title}\".",
+    "failedTitle": "No se pudo eliminar",
+    "failed": "Error al eliminar el CV. Inténtalo de nuevo."
+  },
+  "duplicate": {
+    "done": "Duplicado",
+    "doneBody": "Se creó \"{title} (Copia)\".",
+    "failedTitle": "No se pudo duplicar",
+    "failed": "Error al duplicar el CV. Inténtalo de nuevo."
+  },
+  "limitTitle": "Límite de CVs alcanzado",
+  "new": {
+    "chooseTitle": "Elegir plantilla",
+    "chooseSubtitle": "Elige un diseño para empezar",
+    "continue": "Continuar con esta plantilla",
+    "backToTemplates": "Volver a plantillas",
+    "back": "Volver",
+    "nameTitle": "Ponle nombre a tu CV",
+    "nameBody": "Dale a tu CV un nombre descriptivo para encontrarlo fácilmente después.",
+    "titleLabel": "Título del CV",
+    "titlePlaceholder": "p. ej. CV Ingeniero de Software 2025",
+    "suggestions": "Sugerencias",
+    "suggestion": {
+      "professional": "Mi CV profesional",
+      "softwareEngineer": "CV de ingeniero de software",
+      "productManager": "CV de gerente de producto",
+      "marketing": "CV de marketing",
+      "designer": "CV de diseñador"
+    },
+    "useSuggestion": "Usar el título {title}",
+    "create": "Crear CV",
+    "createFailedTitle": "No se pudo crear el CV",
+    "usageFailed": "No se pudo cargar tu uso. Inténtalo de nuevo.",
+    "createFailed": "No se pudo crear el CV. Inténtalo de nuevo."
+  }
+}

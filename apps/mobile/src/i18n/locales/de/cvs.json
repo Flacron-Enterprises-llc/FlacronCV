@@ -1,0 +1,57 @@
+{
+  "list": {
+    "title": "Meine Lebensläufe",
+    "newCv": "Neuer Lebenslauf",
+    "createdCount": "{count, plural, one {# Lebenslauf-Erstellung in deinem Tarif} other {# Lebenslauf-Erstellungen in deinem Tarif}}",
+    "noHeadline": "Keine Überschrift",
+    "updated": "Aktualisiert {date}",
+    "meta": "v{version} · {count, plural, one {# Download} other {# Downloads}}",
+    "status": {
+      "draft": "Entwurf",
+      "published": "veröffentlicht"
+    },
+    "emptyTitle": "Noch keine Lebensläufe",
+    "emptyDescription": "Erstelle deinen ersten professionellen Lebenslauf und lande deinen Traumjob.",
+    "emptyAction": "Deinen ersten Lebenslauf erstellen",
+    "loadError": "Lebensläufe konnten nicht geladen werden"
+  },
+  "delete": {
+    "title": "Lebenslauf löschen",
+    "body": "Möchtest du „{title}“ wirklich löschen? Das kann nicht rückgängig gemacht werden. Durch das Löschen erhältst du keine Lebenslauf-Erstellung in deinem Tarif zurück.",
+    "done": "Gelöscht",
+    "doneBody": "„{title}“ wurde gelöscht.",
+    "failedTitle": "Löschen fehlgeschlagen",
+    "failed": "Löschen des Lebenslaufs fehlgeschlagen. Bitte erneut versuchen."
+  },
+  "duplicate": {
+    "done": "Dupliziert",
+    "doneBody": "„{title} (Kopie)“ wurde erstellt.",
+    "failedTitle": "Duplizieren fehlgeschlagen",
+    "failed": "Duplizieren des Lebenslaufs fehlgeschlagen. Bitte erneut versuchen."
+  },
+  "limitTitle": "Lebenslauf-Limit erreicht",
+  "new": {
+    "chooseTitle": "Vorlage wählen",
+    "chooseSubtitle": "Wähle ein Design, um loszulegen",
+    "continue": "Mit dieser Vorlage fortfahren",
+    "backToTemplates": "Zurück zu den Vorlagen",
+    "back": "Zurück",
+    "nameTitle": "Benenne deinen Lebenslauf",
+    "nameBody": "Gib deinem Lebenslauf einen aussagekräftigen Namen, damit du ihn später leicht findest.",
+    "titleLabel": "Lebenslauf-Titel",
+    "titlePlaceholder": "z. B. Lebenslauf Software Engineer 2025",
+    "suggestions": "Vorschläge",
+    "suggestion": {
+      "professional": "Mein professioneller Lebenslauf",
+      "softwareEngineer": "Lebenslauf Softwareentwickler",
+      "productManager": "Lebenslauf Produktmanager",
+      "marketing": "Lebenslauf Marketing",
+      "designer": "Lebenslauf Designer"
+    },
+    "useSuggestion": "Titel {title} verwenden",
+    "create": "Lebenslauf erstellen",
+    "createFailedTitle": "Lebenslauf konnte nicht erstellt werden",
+    "usageFailed": "Deine Nutzung konnte nicht geladen werden. Bitte versuche es erneut.",
+    "createFailed": "Lebenslauf konnte nicht erstellt werden. Bitte versuche es erneut."
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "title": "Soporte",
+  "goBack": "Volver",
+  "status": {
+    "open": "Esperando respuesta de soporte",
+    "inProgress": "En curso",
+    "waitingOnCustomer": "Esperando respuesta del cliente",
+    "resolved": "Resuelto",
+    "closed": "Cerrado"
+  },
+  "categories": {
+    "general": "General",
+    "bug": "Error",
+    "featureRequest": "Sugerencia",
+    "billing": "Facturación",
+    "account": "Cuenta"
+  },
+  "list": {
+    "replayTour": "Repetir el recorrido de la app",
+    "newTicket": "Nuevo ticket",
+    "loadError": "No pudimos cargar tus tickets. Inténtalo de nuevo.",
+    "emptyTitle": "No hay tickets de soporte",
+    "emptyDesc": "¿Necesitas ayuda? Crea un ticket de soporte y te responderemos.",
+    "emptyAction": "Crear ticket"
+  },
+  "form": {
+    "title": "Crear ticket de soporte",
+    "subject": "Asunto *",
+    "subjectPh": "Describe brevemente tu problema",
+    "description": "Descripción *",
+    "descriptionPh": "Danos todos los detalles posibles...",
+    "subjectMin": "El asunto debe tener al menos 5 caracteres",
+    "messageMin": "El mensaje debe tener al menos 20 caracteres",
+    "category": "Categoría",
+    "priority": "Prioridad",
+    "categories": {
+      "bug": "Informe de error",
+      "featureRequest": "Sugerencia",
+      "billing": "Facturación",
+      "account": "Cuenta",
+      "general": "General"
+    },
+    "priorities": {
+      "low": "Baja",
+      "medium": "Media",
+      "high": "Alta"
+    },
+    "submit": "Enviar ticket",
+    "createErrorTitle": "No se pudo crear el ticket",
+    "createError": "No se pudo crear el ticket. Inténtalo de nuevo."
+  },
+  "detail": {
+    "loadError": "No se pudo cargar este ticket. Inténtalo de nuevo.",
+    "sendErrorTitle": "No se pudo enviar",
+    "sendError": "No se pudo enviar. Inténtalo de nuevo.",
+    "closeTicket": "Cerrar ticket",
+    "closeBody": "¿Cerrar este ticket? Ya no podrás responder en él. Crea un nuevo ticket si necesitas más ayuda.",
+    "closed": "Ticket cerrado",
+    "closeErrorTitle": "No se pudo cerrar",
+    "closeError": "No se pudo cerrar el ticket",
+    "closedNotice": "Este ticket está cerrado. Crea un nuevo ticket si necesitas más ayuda.",
+    "replyPlaceholder": "Escribe tu mensaje...",
+    "sendReply": "Enviar respuesta"
+  }
+}

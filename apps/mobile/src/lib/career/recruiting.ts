@@ -1,5 +1,6 @@
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type { RecruitingSearch } from '../../../../../packages/career-api-client/src/types';
+import { t } from '../../i18n';
 import { careerErrorMessage } from '../career-view';
 
 /**
@@ -7,16 +8,32 @@ import { careerErrorMessage } from '../career-view';
  * whether employers may see that they opted in; the email is never shown.
  * Employer checkout is not for sale (commercial terms are not set), so the app
  * offers no purchase, price or checkout of any kind.
+ *
+ * Copy lives in `careerModes.recruiting`; the consent line is the website's
+ * own wording (`career.scope.discoverable`) in every language. The getters
+ * read the current language on each use.
  */
 
 export const RECRUITING_COPY = {
-  title: 'Recruiting opt-in',
-  help: 'Search shows only people who opted in, and it does not show their email.',
-  consent: 'Employers may see that I opted in. My email stays private.',
-  save: 'Save preference',
-  saved: 'Preference saved.',
-  closed: 'Employer access is not for sale. It stays closed until commercial terms are set.',
-} as const;
+  get title() {
+    return t('careerModes.recruiting.title');
+  },
+  get help() {
+    return t('careerModes.recruiting.help');
+  },
+  get consent() {
+    return t('careerModes.recruiting.consent');
+  },
+  get save() {
+    return t('careerModes.recruiting.save');
+  },
+  get saved() {
+    return t('careerModes.recruiting.saved');
+  },
+  get closed() {
+    return t('careerModes.recruiting.closed');
+  },
+};
 
 /**
  * There is no "read my opt-in" endpoint. The opted-in list holds only
@@ -29,11 +46,11 @@ export function isDiscoverable(search: RecruitingSearch | undefined, uid: string
 }
 
 export function statusLine(current: boolean | null): string {
-  if (current === null) return 'Your current choice could not be read. Saving sets it.';
-  return current ? 'You are discoverable: employers may see that you opted in.' : 'You are not discoverable. Employers cannot see you.';
+  if (current === null) return t('careerModes.recruiting.status.unknown');
+  return current ? t('careerModes.recruiting.status.on') : t('careerModes.recruiting.status.off');
 }
 
 export function optInSaveError(error: unknown): string {
   if (error instanceof ApiError && error.code === 'not_purchasable') return RECRUITING_COPY.closed;
-  return careerErrorMessage(error, 'That change was not saved. Try again.');
+  return careerErrorMessage(error, t('careerModes.recruiting.saveFailed'));
 }

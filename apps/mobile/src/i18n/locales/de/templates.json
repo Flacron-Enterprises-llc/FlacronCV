@@ -1,0 +1,45 @@
+{
+  "title": "Vorlagen",
+  "subtitle": "Wähle ein professionelles Design",
+  "filters": {
+    "all": "Alle",
+    "free": "Kostenlos",
+    "pro": "Pro"
+  },
+  "loadError": "Vorlagen konnten nicht geladen werden. Bitte erneut versuchen.",
+  "empty": {
+    "allTitle": "Keine Vorlagen",
+    "freeTitle": "Keine kostenlosen Vorlagen",
+    "proTitle": "Keine Pro-Vorlagen",
+    "allBody": "Derzeit sind keine Vorlagen verfügbar.",
+    "filteredBody": "Probiere einen anderen Filter, um verfügbare Designs zu sehen.",
+    "showAll": "Alle anzeigen"
+  },
+  "tiers": {
+    "free": "Kostenlos",
+    "pro": "Pro",
+    "enterprise": "Enterprise",
+    "careerAccelerator": "Career Accelerator"
+  },
+  "card": {
+    "a11y": "Vorlage {name}",
+    "a11yLocked": "Vorlage {name}, gesperrt",
+    "preview": "Vorschau der Vorlage {name}"
+  },
+  "preview": {
+    "title": "Vorlagenvorschau",
+    "imageA11y": "Vorschau der Vorlage {name} mit Beispieldaten",
+    "unavailable": "Vorschau nicht verfügbar",
+    "lockedUpgrade": "Dies ist eine {tier}-Vorlage. Führe ein Upgrade deines Plans durch, um sie mit deinen eigenen Daten zu verwenden.",
+    "lockedShort": "Dies ist eine {tier}-Vorlage.",
+    "unlocked": "Diese Vorschau verwendet Beispieldaten. Wähle diese Vorlage aus, um deinen eigenen Lebenslauf zu erstellen.",
+    "accentColor": "Akzentfarbe",
+    "layout": "Layout",
+    "readOnly": "Diese Vorschau ist schreibgeschützt. Alle Inhalte sind Beispieldaten.",
+    "upgradeTo": "Upgrade auf {tier}",
+    "select": "Vorlage auswählen",
+    "useFree": "Kostenlos nutzen",
+    "maybeLater": "Vielleicht später",
+    "backToGallery": "Zurück zur Galerie"
+  }
+}

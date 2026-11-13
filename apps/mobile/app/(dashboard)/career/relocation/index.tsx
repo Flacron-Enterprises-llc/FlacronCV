@@ -26,11 +26,12 @@ import {
   locationDeleteError,
   locationLines,
   quotaHint,
-  SPECIALIST_MODE_OPTIONS,
   specialistModeMeta,
+  specialistModeOptions,
   specialistSaveError,
 } from '../../../../src/lib/career/modes';
 import { careerErrorMessage } from '../../../../src/lib/career-view';
+import { useT } from '../../../../src/i18n';
 import { colors } from '../../../../src/theme/colors';
 import type { LocationProfile, SpecialistMode } from '../../../../../../packages/career-api-client/src/types';
 
@@ -44,6 +45,8 @@ type Notice = { tone: 'success' | 'error'; text: string } | null;
  * radius. Specialist mode: the career lens that shapes draft emphasis.
  */
 export default function CareerRelocationScreen() {
+  const t = useT('careerModes');
+  const tc = useT('common');
   const access = useCareerAccess();
   const features = access.data?.features;
   const locationsOn = features?.locationProfiles === true;
@@ -58,7 +61,7 @@ export default function CareerRelocationScreen() {
 
   let content: React.ReactNode;
   if (access.data && !access.data.enabled) {
-    content = <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" />;
+    content = <EmptyState icon="lock-closed-outline" title={t('common.locked')} />;
   } else if (access.isLoading) {
     content = (
       <View className="p-5">
@@ -67,28 +70,28 @@ export default function CareerRelocationScreen() {
       </View>
     );
   } else if (access.error) {
-    content = <ErrorState message={careerErrorMessage(access.error, 'Could not load your career tools.')} onRetry={() => void access.refetch()} />;
+    content = <ErrorState message={careerErrorMessage(access.error, t('relocation.loadFailed'))} onRetry={() => void access.refetch()} />;
   } else if (tab === 'locations') {
     content = locationsOn ? (
       <LocationsTab />
     ) : (
-      <EmptyState icon="lock-closed-outline" title="Location profiles are not included in your plan" />
+      <EmptyState icon="lock-closed-outline" title={t('relocation.locationsLocked')} />
     );
   } else {
     content = specialistOn ? (
       <SpecialistTab onDirtyChange={setSpecialistDirty} />
     ) : (
-      <EmptyState icon="lock-closed-outline" title="Specialist modes are not included in your plan" />
+      <EmptyState icon="lock-closed-outline" title={t('relocation.specialistLocked')} />
     );
   }
 
   const switchTab = (next: Tab) => {
     if (next === tab) return;
     if (tab === 'specialist' && specialistDirty) {
-      Alert.alert('Leave without saving?', 'Your specialist mode changes are not saved.', [
-        { text: 'Stay', style: 'cancel' },
+      Alert.alert(t('relocation.leave.title'), t('relocation.leave.body'), [
+        { text: tc('unsaved.stay'), style: 'cancel' },
         {
-          text: 'Discard',
+          text: t('relocation.leave.discard'),
           style: 'destructive',
           onPress: () => {
             setSpecialistDirty(false);
@@ -103,13 +106,16 @@ export default function CareerRelocationScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title="Relocation & career modes" subtitle="Target locations and the career lens for your drafts" />
+      <CareerHeader title={t('relocation.title')} subtitle={t('relocation.subtitle')} />
       {access.data?.enabled ? (
         <View className="flex-row mx-5 mt-4 bg-stone-100 rounded-xl p-1" accessibilityRole="tablist">
           {(
             [
-              ['locations', locationsOn && locations.data ? `Locations (${used}/${capacity})` : 'Locations'],
-              ['specialist', 'Specialist mode'],
+              [
+                'locations',
+                locationsOn && locations.data ? t('relocation.tabs.locationsCount', { used, capacity }) : t('relocation.tabs.locations'),
+              ],
+              ['specialist', t('relocation.tabs.specialist')],
             ] as const
           ).map(([key, label]) => {
             const selected = tab === key;
@@ -148,6 +154,8 @@ function NoticeBanner({ notice }: { notice: Notice }) {
 }
 
 function LocationsTab() {
+  const t = useT('careerModes');
+  const tc = useT('common');
   const router = useRouter();
   const list = useCareerModeLocations();
   const remove = useDeleteCareerModeLocation();
@@ -162,7 +170,7 @@ function LocationsTab() {
     );
   }
   if (list.error || !list.data) {
-    return <ErrorState message={careerErrorMessage(list.error, 'Could not connect to the career modes service. Please try again.')} onRetry={() => void list.refetch()} />;
+    return <ErrorState message={careerErrorMessage(list.error, t('relocation.serviceUnavailable'))} onRetry={() => void list.refetch()} />;
   }
 
   const { items, capacity, allowedRadiusMiles } = list.data;
@@ -170,15 +178,15 @@ function LocationsTab() {
   const openEditor = (id: string) => router.push(`/(dashboard)/career/relocation/${id}` as Href);
 
   const onDelete = (location: LocationProfile) => {
-    Alert.alert('Delete this location profile?', `${location.place} will no longer be used for matching.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('relocation.deleteConfirm.title'), t('relocation.deleteConfirm.body', { place: location.place }), [
+      { text: tc('cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: tc('delete'),
         style: 'destructive',
         onPress: () => {
           setNotice(null);
           remove.mutate(location.id, {
-            onSuccess: () => setNotice({ tone: 'success', text: 'Location profile removed.' }),
+            onSuccess: () => setNotice({ tone: 'success', text: t('relocation.removed') }),
             onError: (error) => setNotice({ tone: 'error', text: locationDeleteError(error) }),
           });
         },
@@ -198,26 +206,26 @@ function LocationsTab() {
           onPress={() => openEditor('new')}
           disabled={!canAdd}
           icon={<Ionicons name="add" size={18} color={colors.white} />}
-          accessibilityLabel="Add location profile"
+          accessibilityLabel={t('relocation.add')}
         >
-          Add location profile
+          {t('relocation.add')}
         </Button>
       </View>
       {!canAdd ? (
-        <Text className="text-stone-500 text-xs mb-4">All location profiles in your plan are in use. Delete one to add another.</Text>
+        <Text className="text-stone-500 text-xs mb-4">{t('relocation.allInUse')}</Text>
       ) : null}
 
       {items.length === 0 ? (
         <EmptyState
           icon="location-outline"
-          title="No location profiles configured"
-          description="Add your primary location or target relocation cities to power radius-aware opportunity matching."
+          title={t('relocation.empty.title')}
+          description={t('relocation.empty.body')}
         />
       ) : (
         items.map((location) => (
           <View key={location.id} className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
             <View className="flex-row items-start justify-between">
-              <Text className="font-bold text-stone-900 flex-1 mr-2">{location.place}</Text>
+              <Text className="font-bold text-stone-900 flex-1 me-2">{location.place}</Text>
               <Pill label={locationBadge(location)} tone={location.isRelocation ? 'brand' : 'default'} />
             </View>
             <View className="mt-2">
@@ -231,8 +239,8 @@ function LocationsTab() {
               <Text className="text-stone-600 text-xs italic mt-2 bg-stone-50 rounded-lg p-2">“{location.notes}”</Text>
             ) : null}
             <View className="flex-row justify-end gap-2 mt-3 pt-3 border-t border-stone-100">
-              <Button size="sm" variant="outline" className="min-h-[44px]" onPress={() => openEditor(location.id)} accessibilityLabel={`Edit ${location.place}`}>
-                Edit
+              <Button size="sm" variant="outline" className="min-h-[44px]" onPress={() => openEditor(location.id)} accessibilityLabel={t('relocation.editA11y', { place: location.place })}>
+                {t('common.edit')}
               </Button>
               <Button
                 size="sm"
@@ -240,9 +248,9 @@ function LocationsTab() {
                 variant="ghost"
                 onPress={() => onDelete(location)}
                 disabled={remove.isPending}
-                accessibilityLabel={`Delete ${location.place}`}
+                accessibilityLabel={t('relocation.deleteA11y', { place: location.place })}
               >
-                Delete
+                {tc('delete')}
               </Button>
             </View>
           </View>
@@ -253,6 +261,7 @@ function LocationsTab() {
 }
 
 function SpecialistTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }) {
+  const t = useT('careerModes');
   const query = useSpecialistMode();
   const save = useSaveSpecialistMode();
   const [selected, setSelected] = useState<SpecialistMode | null>(null);
@@ -282,18 +291,18 @@ function SpecialistTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => v
     return (
       <EmptyState
         icon="lock-closed-outline"
-        title="Specialist modes are not included in your current plan"
-        description="Specialist career modes adapt drafts for Engineering, Executive Leadership, Design, Research, and Career Pivots."
+        title={t('specialist.upgrade.title')}
+        description={t('specialist.upgrade.body')}
       />
     );
   }
   if (query.error || !query.data) {
-    return <ErrorState message={careerErrorMessage(query.error, 'Could not load your specialist mode.')} onRetry={() => void query.refetch()} />;
+    return <ErrorState message={careerErrorMessage(query.error, t('specialist.loadFailed'))} onRetry={() => void query.refetch()} />;
   }
 
   const onSave = () => {
     if (text.trim().length > GUIDELINES_MAX) {
-      setNotice({ tone: 'error', text: `Keep the custom guidelines under ${GUIDELINES_MAX} characters.` });
+      setNotice({ tone: 'error', text: t('specialist.guidelinesTooLong', { max: GUIDELINES_MAX }) });
       return;
     }
     setNotice(null);
@@ -303,7 +312,7 @@ function SpecialistTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => v
         onSuccess: () => {
           setSelected(null);
           setGuidelines(null);
-          setNotice({ tone: 'success', text: 'Specialist career mode updated.' });
+          setNotice({ tone: 'success', text: t('specialist.saved') });
         },
         onError: (error) => setNotice({ tone: 'error', text: specialistSaveError(error) }),
       },
@@ -314,11 +323,9 @@ function SpecialistTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => v
     <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
         <NoticeBanner notice={notice} />
-        <Text className="text-stone-500 text-sm leading-5 mb-4">
-          Select a career lens to adapt resume emphasis, prompt weighting, and fit analysis to your specific discipline.
-        </Text>
+        <Text className="text-stone-500 text-sm leading-5 mb-4">{t('specialist.intro')}</Text>
         <View accessibilityRole="radiogroup">
-          {SPECIALIST_MODE_OPTIONS.map((option) => {
+          {specialistModeOptions().map((option) => {
             const isSelected = option.id === mode;
             return (
               <TouchableOpacity
@@ -330,7 +337,7 @@ function SpecialistTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => v
                 accessibilityLabel={`${option.name}. ${option.description}`}
               >
                 <View className="flex-row items-center justify-between">
-                  <Text className="font-bold text-stone-900 flex-1 mr-2">{option.name}</Text>
+                  <Text className="font-bold text-stone-900 flex-1 me-2">{option.name}</Text>
                   {isSelected ? (
                     <Ionicons name="checkmark-circle" size={20} color={colors.brand[600]} />
                   ) : (
@@ -340,10 +347,10 @@ function SpecialistTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => v
                 <Text className="text-stone-500 text-xs mt-1 leading-4">{option.description}</Text>
                 {option.id === savedMode ? (
                   <View className="mt-2">
-                    <Pill label="ACTIVE MODE" tone="success" />
+                    <Pill label={t('specialist.activeMode')} tone="success" />
                   </View>
                 ) : null}
-                <Text className="text-stone-400 text-[10px] font-semibold mt-3 tracking-wide">RECOMMENDED FOCUS</Text>
+                <Text className="text-stone-400 text-[10px] font-semibold mt-3 tracking-wide">{t('specialist.recommendedFocus')}</Text>
                 <View className="flex-row flex-wrap gap-1 mt-1">
                   {option.recommendedFocus.map((focus) => (
                     <View key={focus} className="bg-stone-100 rounded px-1.5 py-0.5">
@@ -357,14 +364,14 @@ function SpecialistTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => v
         </View>
 
         <View className="bg-white rounded-2xl border border-stone-100 p-4 mt-1">
-          <Text className="font-bold text-stone-900">Discipline guidelines & custom focus</Text>
+          <Text className="font-bold text-stone-900">{t('specialist.guidelinesTitle')}</Text>
           <Text className="text-stone-500 text-xs mt-1 leading-4">{specialistModeMeta(mode).promptModifier}</Text>
           <View className="mt-3">
             <Input
-              label="Custom guidelines (optional)"
+              label={t('specialist.guidelinesLabel')}
               value={text}
               onChangeText={setGuidelines}
-              placeholder="Add any specific industry context, methodologies, or personal focus areas to guide drafts."
+              placeholder={t('specialist.guidelinesPlaceholder')}
               multiline
               maxLength={GUIDELINES_MAX}
               style={{ minHeight: 90, textAlignVertical: 'top' }}
@@ -372,7 +379,7 @@ function SpecialistTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => v
           </View>
           <View className="mt-3 self-start">
             <Button onPress={onSave} loading={save.isPending} disabled={!dirty || save.isPending}>
-              Save specialist mode
+              {t('specialist.save')}
             </Button>
           </View>
         </View>

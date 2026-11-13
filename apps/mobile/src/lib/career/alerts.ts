@@ -6,35 +6,41 @@ import type {
   AlertSettings,
   SavedSearch,
 } from '../../../../../packages/career-api-client/src/types';
-import { careerErrorMessage, formatDay } from '../career-view';
+import { hasKey, t } from '../../i18n';
+import { careerErrorMessage, formatDay, labelMap } from '../career-view';
 
 /**
  * Pure view logic for the mobile Alerts screen (tested in alerts.test.ts).
- * Copy follows the website's `career.alerts` strings. Delivery by email, push
+ * Copy lives in the `careerAlerts` namespace (the website's `career.alerts` strings). Delivery by email, push
  * or Telegram is not connected in this environment: alerts are listed in the
  * app only, and the copy says so. The server checks every limit; nothing here
  * grants anything.
  */
 
-export const CHANNEL_NOT_CONNECTED = 'Not connected yet: these alerts are shown here in the app only.';
-export const NOT_A_SCORE = 'This is not a hiring probability.';
+export function channelNotConnected(): string {
+  return t('careerAlerts.channelNotConnected');
+}
+
+export function notAScore(): string {
+  return t('careerAlerts.notAScore');
+}
 
 export function reasonText(code: AlertItem['reason']['code']): string {
-  if (code === 'material_update') return 'The listing changed. This update used one alert.';
-  if (code === 'followed_company') return 'This listing is from a company you follow.';
-  return 'This listing matches a saved search.';
+  if (code === 'material_update') return t('careerAlerts.reason.material_update');
+  if (code === 'followed_company') return t('careerAlerts.reason.followed_company');
+  return t('careerAlerts.reason.saved_search');
 }
 
 export function fitText(fit: AlertItem['reason']['fit']): string | null {
   switch (fit) {
     case 'blocked':
-      return 'Blocked';
+      return t('careerAlerts.fit.blocked');
     case 'none':
-      return 'No overlap with your confirmed facts';
+      return t('careerAlerts.fit.none');
     case 'partial':
-      return 'Partial overlap with your confirmed facts';
+      return t('careerAlerts.fit.partial');
     case 'strong':
-      return 'Strong overlap with your confirmed facts';
+      return t('careerAlerts.fit.strong');
     default:
       return null;
   }
@@ -55,26 +61,44 @@ export function alertBalance(list: Pick<AlertList, 'alertItem'>): { remaining: n
   };
 }
 
-export const DIGEST_OPTIONS: { value: AlertSettings['digest']; label: string }[] = [
-  { value: 'weekly', label: 'Weekly email' },
-  { value: 'daily', label: 'Daily email' },
-  { value: 'immediate', label: 'As they are found' },
-];
+const DIGEST_LABEL = labelMap('careerAlerts.digest', ['weekly', 'daily', 'immediate'] as const);
+const SCHEDULE_LABEL = labelMap('careerAlerts.schedule', ['weekly', 'daily', 'every_6_hours', 'hourly'] as const);
 
-export const SCHEDULE_OPTIONS: { value: SavedSearch['schedule']; label: string }[] = [
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'daily', label: 'Daily' },
-  { value: 'every_6_hours', label: 'Every 6 hours' },
-  { value: 'hourly', label: 'Hourly' },
-];
+/** Digest choices; `label` is read in the current language. */
+export const DIGEST_OPTIONS: { value: AlertSettings['digest']; label: string }[] = (['weekly', 'daily', 'immediate'] as const).map((value) => ({
+  value,
+  get label() {
+    return DIGEST_LABEL[value];
+  },
+}));
+
+/** Schedule choices; `label` is read in the current language. */
+export const SCHEDULE_OPTIONS: { value: SavedSearch['schedule']; label: string }[] = (['weekly', 'daily', 'every_6_hours', 'hourly'] as const).map(
+  (value) => ({
+    value,
+    get label() {
+      return SCHEDULE_LABEL[value];
+    },
+  }),
+);
 
 export function scheduleLabel(schedule: SavedSearch['schedule'] | string): string {
   return SCHEDULE_OPTIONS.find((o) => o.value === schedule)?.label ?? schedule;
 }
 
+/** The schedule inside a sentence ("up to daily"). */
+function scheduleInSentence(schedule: string): string {
+  return hasKey(`careerAlerts.scheduleLower.${schedule}`) ? t(`careerAlerts.scheduleLower.${schedule}`) : schedule.toLowerCase();
+}
+
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+/** English value of {@link quietInvalid} (kept for tests and comparisons). */
 export const QUIET_INVALID = 'Quiet hours need a start and an end (HH:MM, UTC), and they cannot be the same time.';
+
+export function quietInvalid(): string {
+  return t('careerAlerts.quietInvalid');
+}
 
 /** Same rule as the server: both empty, or both HH:MM (24h) and different. */
 export function validateQuietHours(
@@ -84,7 +108,7 @@ export function validateQuietHours(
   const start = startText.trim();
   const end = endText.trim();
   if (start.length === 0 && end.length === 0) return { ok: true, start: null, end: null };
-  if (!HHMM.test(start) || !HHMM.test(end) || start === end) return { ok: false, message: QUIET_INVALID };
+  if (!HHMM.test(start) || !HHMM.test(end) || start === end) return { ok: false, message: quietInvalid() };
   return { ok: true, start, end };
 }
 
@@ -136,21 +160,23 @@ export function settingsPatch(draft: SettingsDraft): { ok: true; patch: AlertSet
   };
 }
 
-export const ANY_SEARCH = 'All opportunities';
+export function anySearch(): string {
+  return t('careerAlerts.anySearch');
+}
 
 /** Title and detail line for a saved search. */
 export function searchSummary(search: SavedSearch, locations: AlertLocation[] | undefined): { title: string; detail: string } {
-  const title = search.q?.trim() || search.category?.trim() || ANY_SEARCH;
+  const title = search.q?.trim() || search.category?.trim() || anySearch();
   const parts: string[] = [scheduleLabel(search.schedule)];
   if (search.locationProfileId) {
     const place = locations?.find((l) => l.id === search.locationProfileId);
-    parts.push(place ? locationLabel(place) : 'Saved location');
+    parts.push(place ? locationLabel(place) : t('careerAlerts.savedLocation'));
   }
   return { title, detail: parts.join(' · ') };
 }
 
 export function locationLabel(location: Pick<AlertLocation, 'place' | 'radiusMiles'>): string {
-  return location.radiusMiles > 0 ? `${location.place} · within ${location.radiusMiles} mi` : location.place;
+  return location.radiusMiles > 0 ? t('careerAlerts.locationWithin', { place: location.place, miles: location.radiusMiles }) : location.place;
 }
 
 export const RADIUS_MAX = 10000;
@@ -158,9 +184,9 @@ export const RADIUS_MAX = 10000;
 /** Whole miles, 0–10000 (the API's bounds; the plan limit is checked by the server). */
 export function parseRadius(text: string): { ok: true; miles: number } | { ok: false; message: string } {
   const trimmed = text.trim();
-  if (!/^\d{1,5}$/.test(trimmed)) return { ok: false, message: 'Enter the radius as whole miles, for example 25.' };
+  if (!/^\d{1,5}$/.test(trimmed)) return { ok: false, message: t('careerAlerts.radius.format') };
   const miles = Number(trimmed);
-  if (miles > RADIUS_MAX) return { ok: false, message: `The radius can be at most ${RADIUS_MAX} miles.` };
+  if (miles > RADIUS_MAX) return { ok: false, message: t('careerAlerts.radius.max', { max: RADIUS_MAX }) };
   return { ok: true, miles };
 }
 
@@ -169,7 +195,7 @@ export function parseSourceUrl(text: string): { ok: true; url: string | undefine
   const trimmed = text.trim();
   if (trimmed.length === 0) return { ok: true, url: undefined };
   if (trimmed.length > 2000 || !/^https?:\/\/[^\s/]+\.[^\s]+$/i.test(trimmed)) {
-    return { ok: false, message: 'Enter a full web address starting with https://, or leave it empty.' };
+    return { ok: false, message: t('careerAlerts.sourceUrlInvalid') };
   }
   return { ok: true, url: trimmed };
 }
@@ -184,37 +210,33 @@ export function alertErrorMessage(error: unknown, action: AlertAction): string {
     const limit = error.body?.limit;
     if (error.code === 'plan_upgrade_required') {
       return action === 'settings'
-        ? 'That choice is not on your plan. Your plan includes the weekly email. Nothing was changed.'
-        : 'Your career plan does not include this. Nothing was changed.';
+        ? t('careerAlerts.errors.settingsPlan')
+        : t('careerAlerts.errors.plan');
     }
     if (error.code === 'capacity_exceeded') {
-      if (action === 'search') return 'This plan has no room for another saved search.';
-      if (action === 'location') return 'This plan has no room for another alert location.';
-      if (action === 'company') return 'This plan has no room for another followed company.';
+      if (action === 'search') return t('careerAlerts.errors.capacitySearch');
+      if (action === 'location') return t('careerAlerts.errors.capacityLocation');
+      if (action === 'company') return t('careerAlerts.errors.capacityCompany');
     }
     if (error.code === 'validation_error') {
-      if (field === 'quietHours') return QUIET_INVALID;
+      if (field === 'quietHours') return quietInvalid();
       if (field === 'schedule' && reason === 'above_plan') {
-        return `That schedule is more frequent than your plan allows${typeof limit === 'string' ? ` (up to ${scheduleLabel(limit).toLowerCase()})` : ''}.`;
+        return typeof limit === 'string'
+          ? t('careerAlerts.errors.scheduleAboveLimit', { limit: scheduleInSentence(limit) })
+          : t('careerAlerts.errors.scheduleAbove');
       }
       if (field === 'radiusMiles' && reason === 'above_plan') {
-        return `That radius is larger than your plan allows${typeof limit === 'number' ? ` (up to ${limit} miles)` : ''}.`;
+        return typeof limit === 'number' ? t('careerAlerts.errors.radiusAboveLimit', { limit }) : t('careerAlerts.errors.radiusAbove');
       }
-      if (field === 'radiusMiles') return 'Enter the radius as whole miles, for example 25.';
-      if (field === 'q') return 'Enter what to search for.';
-      if (field === 'place') return 'Enter a place.';
-      if (field === 'name') return 'Enter a company name.';
-      if (field === 'digest') return 'Choose a digest.';
-      return 'Check the details and try again. Nothing was changed.';
+      if (field === 'radiusMiles') return t('careerAlerts.radius.format');
+      if (field === 'q') return t('careerAlerts.errors.q');
+      if (field === 'place') return t('careerAlerts.errors.place');
+      if (field === 'name') return t('careerAlerts.errors.name');
+      if (field === 'digest') return t('careerAlerts.errors.digest');
+      return t('careerAlerts.errors.check');
     }
   }
-  const fallback: Record<AlertAction, string> = {
-    settings: 'Alert settings were not saved. Try again.',
-    search: 'The saved search was not changed. Try again.',
-    location: 'The alert location was not changed. Try again.',
-    company: 'The followed company was not changed. Try again.',
-    load: 'Alerts could not be loaded. Nothing was changed. Try again.',
-  };
+  const fallback: Record<AlertAction, string> = labelMap('careerAlerts.fallback', ['settings', 'search', 'location', 'company', 'load'] as const);
   return careerErrorMessage(error, fallback[action]);
 }
 

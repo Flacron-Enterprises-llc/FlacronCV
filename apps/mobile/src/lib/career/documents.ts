@@ -2,7 +2,8 @@ import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type { DocumentCredit, ResumeVersion, WritingType } from '../../../../../packages/career-api-client/src/types';
 import { COVER_LETTER_TEMPLATES, isCoverLetterTemplateId, type CoverLetterTemplateId } from '../../../../../packages/career-shared/src/writing';
 import { isResumeTemplateId, RESUME_TEMPLATES, type ResumeTemplateId } from '../../../../../packages/career-shared/src/resume';
-import { careerErrorMessage, FACT_TYPE_LABEL } from '../career-view';
+import { t } from '../../i18n';
+import { careerErrorMessage, FACT_TYPE_LABEL, labelMap } from '../career-view';
 
 /**
  * Pure logic for the mobile career drafts (career CVs and letters): template
@@ -11,41 +12,54 @@ import { careerErrorMessage, FACT_TYPE_LABEL } from '../career-view';
  * No React Native or Expo imports, so it runs under vitest.
  */
 
-/** Same names as the website's `career.resume.templates.*`. */
+/** Same names as the website's `career.resume.templates.*` (careerDocuments.templates.resume). */
 export const RESUME_TEMPLATE_NAMES: Record<ResumeTemplateId, string> = {
-  classic: 'Classic',
-  modern: 'Modern',
-  minimal: 'Minimal',
-  compact: 'Compact',
-  academic: 'Academic',
-  professional: 'Professional',
-  creative: 'Creative',
-  executive: 'Executive',
-  'two-column': 'Two-column',
-  bold: 'Bold',
-  sidebar: 'Sidebar',
-  topbar: 'Top bar',
-  'slate-gold': 'Slate',
-  editorial: 'Editorial',
-  structured: 'Structured',
+  get classic() { return t('careerDocuments.templates.resume.classic'); },
+  get modern() { return t('careerDocuments.templates.resume.modern'); },
+  get minimal() { return t('careerDocuments.templates.resume.minimal'); },
+  get compact() { return t('careerDocuments.templates.resume.compact'); },
+  get academic() { return t('careerDocuments.templates.resume.academic'); },
+  get professional() { return t('careerDocuments.templates.resume.professional'); },
+  get creative() { return t('careerDocuments.templates.resume.creative'); },
+  get executive() { return t('careerDocuments.templates.resume.executive'); },
+  get 'two-column'() { return t('careerDocuments.templates.resume.twoColumn'); },
+  get bold() { return t('careerDocuments.templates.resume.bold'); },
+  get sidebar() { return t('careerDocuments.templates.resume.sidebar'); },
+  get topbar() { return t('careerDocuments.templates.resume.topbar'); },
+  get 'slate-gold'() { return t('careerDocuments.templates.resume.slateGold'); },
+  get editorial() { return t('careerDocuments.templates.resume.editorial'); },
+  get structured() { return t('careerDocuments.templates.resume.structured'); },
 };
 
 /** Same names as the website's `career.home.letter_template_*`. */
-export const LETTER_TEMPLATE_NAMES: Record<CoverLetterTemplateId, string> = {
-  classic: 'Classic letter',
-  modern: 'Modern letter',
-  minimalist: 'Minimalist letter',
-  creative: 'Creative letter',
-  corporate: 'Corporate letter',
-  executive: 'Executive letter',
-  editorial: 'Editorial letter',
-  structured: 'Structured letter',
-};
+export const LETTER_TEMPLATE_NAMES: Record<CoverLetterTemplateId, string> = labelMap('careerDocuments.templates.letter', [
+  'classic',
+  'modern',
+  'minimalist',
+  'creative',
+  'corporate',
+  'executive',
+  'editorial',
+  'structured',
+] as const);
 
 export type TemplateOption = { id: string; name: string; accent: string };
 
-export const RESUME_TEMPLATE_OPTIONS: TemplateOption[] = RESUME_TEMPLATES.map((t) => ({ id: t.id, name: RESUME_TEMPLATE_NAMES[t.id], accent: t.accent }));
-export const LETTER_TEMPLATE_OPTIONS: TemplateOption[] = COVER_LETTER_TEMPLATES.map((t) => ({ id: t.id, name: LETTER_TEMPLATE_NAMES[t.id], accent: t.accent }));
+/** Options whose `name` is read in the current language at render time. */
+export const RESUME_TEMPLATE_OPTIONS: TemplateOption[] = RESUME_TEMPLATES.map((tpl) => ({
+  id: tpl.id,
+  get name() {
+    return RESUME_TEMPLATE_NAMES[tpl.id];
+  },
+  accent: tpl.accent,
+}));
+export const LETTER_TEMPLATE_OPTIONS: TemplateOption[] = COVER_LETTER_TEMPLATES.map((tpl) => ({
+  id: tpl.id,
+  get name() {
+    return LETTER_TEMPLATE_NAMES[tpl.id];
+  },
+  accent: tpl.accent,
+}));
 
 export function resumeTemplateName(id: string | null | undefined): string {
   if (!id) return '';
@@ -59,21 +73,25 @@ export function letterTemplateName(id: string | null | undefined): string {
 
 export { isCoverLetterTemplateId, isResumeTemplateId };
 
-export const WRITING_TYPE_OPTIONS: Array<{ id: WritingType; label: string }> = [
-  { id: 'cover_letter', label: 'Cover letter' },
-  { id: 'bio', label: 'Bio' },
-  { id: 'linkedin', label: 'LinkedIn text' },
-  { id: 'outreach', label: 'Outreach draft' },
-];
+const WRITING_TYPE_LABEL = labelMap('careerDocuments.writingTypes', ['cover_letter', 'bio', 'linkedin', 'outreach'] as const);
 
-/** Default title for a new career CV (the website uses "Resume"). */
-export const DEFAULT_RESUME_TITLE = 'Resume';
+export const WRITING_TYPE_OPTIONS: Array<{ id: WritingType; label: string }> = (['cover_letter', 'bio', 'linkedin', 'outreach'] as const).map((id) => ({
+  id,
+  get label() {
+    return WRITING_TYPE_LABEL[id];
+  },
+}));
+
+/** Default title for a new career CV (the website uses "Resume"), in the current language. */
+export function defaultResumeTitle(): string {
+  return t('careerDocuments.defaultTitle');
+}
 
 /** The career API accepts a 1–200 character title. Returns an error message, or null when valid. */
 export function resumeTitleError(title: string): string | null {
   const trimmed = title.trim();
-  if (trimmed.length === 0) return 'Give the CV a name.';
-  if (trimmed.length > 200) return 'Keep the name under 200 characters.';
+  if (trimmed.length === 0) return t('careerDocuments.titleEmpty');
+  if (trimmed.length > 200) return t('careerDocuments.titleTooLong');
   return null;
 }
 
@@ -86,20 +104,20 @@ export function creditsRemaining(credit: DocumentCredit | null | undefined): num
 export function creditLine(credit: DocumentCredit | null | undefined): string | null {
   const count = creditsRemaining(credit);
   if (count === null) return null;
-  return `${count} document ${count === 1 ? 'credit' : 'credits'} remaining.`;
+  return t('careerDocuments.creditLine', { count });
 }
 
 export type ReadabilityIssue = { code: string; section?: string; factId?: string };
 
 /** Same wording as the website's readability check. */
 export function readabilityIssueText(issue: ReadabilityIssue): string {
-  if (issue.code === 'empty') return 'This version has no lines.';
-  if (issue.code === 'unconfirmed_version') return 'This version is not confirmed yet.';
+  if (issue.code === 'empty') return t('careerDocuments.readability.empty');
+  if (issue.code === 'unconfirmed_version') return t('careerDocuments.readability.unconfirmed');
   if (issue.code === 'missing_section') {
-    const section = issue.section ? (FACT_TYPE_LABEL[issue.section] ?? issue.section) : 'A section';
-    return `${section} is missing.`;
+    const section = issue.section ? (FACT_TYPE_LABEL[issue.section] ?? issue.section) : t('careerDocuments.readability.aSection');
+    return t('careerDocuments.readability.missingSection', { section });
   }
-  return 'A line is still marked uncertain.';
+  return t('careerDocuments.readability.uncertainOne');
 }
 
 /** Readability issues, one line each, uncertain lines collapsed into a count. */
@@ -110,8 +128,8 @@ export function readabilityLines(issues: ReadabilityIssue[]): string[] {
     if (issue.code === 'uncertain_line') uncertain += 1;
     else out.push(readabilityIssueText(issue));
   }
-  if (uncertain === 1) out.push('A line is still marked uncertain.');
-  if (uncertain > 1) out.push(`${uncertain} lines are still marked uncertain.`);
+  if (uncertain === 1) out.push(t('careerDocuments.readability.uncertainOne'));
+  if (uncertain > 1) out.push(t('careerDocuments.readability.uncertainMany', { count: uncertain }));
   return out;
 }
 
@@ -187,44 +205,50 @@ export function paidFailure(error: unknown, credit?: DocumentCredit | null): { t
   if (error instanceof ApiError) {
     const reason = typeof error.body.reason === 'string' ? error.body.reason : '';
     if (error.code === 'provider_unavailable') {
-      const charged = error.body.released === true ? 'No document credit was used.' : 'Your current version is unchanged.';
+      const charged = error.body.released === true ? t('careerDocuments.paid.noCreditUsed') : t('careerDocuments.paid.versionUnchanged');
       if (UNUSABLE_REASONS.has(reason))
         return {
-          title: 'The draft was not usable',
-          body: 'The draft described a role, employer or date that is not in your confirmed facts. The credit was returned. Saved documents were not replaced.',
+          title: t('careerDocuments.paid.unusableTitle'),
+          body: t('careerDocuments.paid.unusableBody'),
         };
       if (NOT_CONFIGURED_REASONS.has(reason) || reason === '')
-        return { title: 'Not available yet', body: `Needs the AI provider, which is not configured in this environment. ${charged}` };
-      return { title: 'The new version was not created', body: `The AI provider did not answer. ${charged}` };
+        return { title: t('careerDocuments.paid.notAvailableTitle'), body: [t('careerDocuments.paid.needsProvider'), charged].join(' ') };
+      return { title: t('careerDocuments.paid.failedTitle'), body: [t('careerDocuments.paid.providerNoAnswer'), charged].join(' ') };
     }
     if (error.code === 'validation_error' && ['need_experience_or_education', 'no_facts', 'no_confirmed_facts'].includes(reason))
-      return { title: 'Add facts first', body: 'Add a confirmed job or school on your career profile first. No credit was used.' };
-    if (error.code === 'not_found') return { title: 'Listing not found', body: 'That listing is not in FlacronCV any more. No credit was used.' };
+      return { title: t('careerDocuments.paid.addFactsTitle'), body: t('careerDocuments.paid.addFactsBody') };
+    if (error.code === 'not_found') return { title: t('careerDocuments.paid.listingNotFoundTitle'), body: t('careerDocuments.paid.listingNotFoundBody') };
     if (error.code === 'quota_exhausted') {
       const day = credit?.renewalDate ? credit.renewalDate.slice(0, 10) : null;
-      return { title: 'No document credits left', body: `The current version is still here.${day ? ` Credits renew on ${day}.` : ''}` };
+      return {
+        title: t('careerDocuments.paid.quotaTitle'),
+        body: [t('careerDocuments.paid.stillHere'), day ? t('careerDocuments.paid.renewOn', { date: day }) : ''].filter(Boolean).join(' '),
+      };
     }
     if (error.code === 'capacity_exceeded') {
       const limit = typeof error.body.limit === 'number' ? error.body.limit : null;
-      return { title: 'No room for another version', body: limit !== null ? `This plan has room for ${limit} resume versions.` : 'Your career plan has no room for more.' };
+      return {
+        title: t('careerDocuments.paid.noRoomTitle'),
+        body: limit !== null ? t('careerDocuments.paid.capacity', { limit }) : t('careerDocuments.paid.noRoomMore'),
+      };
     }
   }
-  return { title: 'Not created', body: careerErrorMessage(error, 'Nothing was created and no credit was used. Please try again.') };
+  return { title: t('careerDocuments.paid.notCreatedTitle'), body: careerErrorMessage(error, t('careerDocuments.paid.notCreatedBody')) };
 }
 
 /** Failure copy for creating a CV (free; no credit involved). */
 export function createResumeFailure(error: unknown): string {
   if (error instanceof ApiError && error.code === 'capacity_exceeded') {
     const limit = typeof error.body.limit === 'number' ? error.body.limit : null;
-    return limit !== null ? `This plan has room for ${limit} career CVs.` : 'Your career plan has no room for another CV.';
+    return limit !== null ? t('careerDocuments.create.capacity', { limit }) : t('careerDocuments.create.noRoom');
   }
-  if (error instanceof ApiError && error.code === 'validation_error') return 'Check the name, language and layout, then try again.';
-  return careerErrorMessage(error, 'The CV was not created. Please try again.');
+  if (error instanceof ApiError && error.code === 'validation_error') return t('careerDocuments.create.validation');
+  return careerErrorMessage(error, t('careerDocuments.create.failed'));
 }
 
 /** "Version 3 · 12 Nov 2026 · Editorial · Confirmed" style label. */
 export function versionMeta(version: ResumeVersion): string {
   const day = version.createdAt ? version.createdAt.slice(0, 10) : '';
-  const parts = [day, resumeTemplateName(version.body.templateId), version.body.confirmation === 'confirmed' ? 'Confirmed' : 'Draft'];
+  const parts = [day, resumeTemplateName(version.body.templateId), version.body.confirmation === 'confirmed' ? t('careerDocuments.status.confirmed') : t('careerDocuments.status.draft')];
   return parts.filter(Boolean).join(' · ');
 }

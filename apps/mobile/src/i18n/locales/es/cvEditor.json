@@ -1,0 +1,348 @@
+{
+  "editor": {
+    "renameFailed": "No se pudo cambiar el nombre del CV. Inténtalo de nuevo.",
+    "exportLimitTitle": "Límite de exportaciones alcanzado",
+    "loadError": "No se pudo cargar el CV",
+    "loading": "Cargando CV...",
+    "titleA11y": "Título del CV: {title}. Cambiar nombre",
+    "titleHint": "Abre un campo para cambiar el título del CV",
+    "editingFallback": "Editando CV",
+    "unsavedChanges": "Cambios sin guardar",
+    "atsCheck": "Comprobación ATS",
+    "interviewPrep": "Preparación de entrevista",
+    "moreTools": "Más herramientas",
+    "designTool": "Diseño: estructura, colores, fuentes",
+    "linkedinTool": "Optimizador de LinkedIn",
+    "moreToolsA11y": "Más herramientas: diseño y Optimizador de LinkedIn",
+    "export": "Exportar",
+    "chooseFormat": "Elige el formato:",
+    "renameTitle": "Cambiar nombre del CV",
+    "titleLabel": "Título del CV",
+    "titlePlaceholder": "p. ej. CV Ingeniero de Software 2025"
+  },
+  "wizard": {
+    "steps": {
+      "personal": "Información personal",
+      "experience": "Experiencia",
+      "education": "Formación",
+      "skills": "Habilidades",
+      "summary": "Resumen",
+      "projects": "Proyectos",
+      "certifications": "Certificaciones",
+      "languages": "Idiomas",
+      "references": "Referencias",
+      "custom": "Secciones personalizadas",
+      "arrange": "Organizar secciones"
+    },
+    "saveFailedTitle": "No se pudo guardar",
+    "saveFailed": "No se pudo guardar. Inténtalo de nuevo.",
+    "personalRequired": "Completa los campos obligatorios antes de continuar.",
+    "stepA11y": "Paso {current} de {total}, {label}. Ir a otro paso",
+    "stepOf": "Paso {current} de {total}",
+    "goToStep": "Ir al paso",
+    "finish": "Finalizar",
+    "continue": "Continuar"
+  },
+  "photo": {
+    "upload": "Subir foto",
+    "change": "Cambiar foto",
+    "remove": "Quitar foto",
+    "uploading": "Subiendo…",
+    "hint": "JPG, PNG o WebP · Máx 5 MB · Se usa como avatar de tu CV",
+    "invalid": "Los archivos “.{ext}” no son compatibles. Sube una imagen JPG, PNG o WebP.",
+    "unknownType": "desconocido",
+    "tooLarge": "Ese archivo es demasiado grande ({size} MB). El tamaño máximo es 5 MB.",
+    "uploadFailed": "No se pudo subir la foto. Inténtalo de nuevo.",
+    "unavailable": "La subida de fotos no está disponible ahora. Inicia sesión de nuevo.",
+    "deniedTitle": "Fotos no disponibles",
+    "deniedBody": "Permite el acceso a la fototeca en Ajustes para elegir una foto para tu CV.",
+    "updateFailedTitle": "No se pudo actualizar la foto",
+    "removeBody": "¿Quitar la foto de este CV?"
+  },
+  "sections": {
+    "editA11y": "Editar sección {title}",
+    "hiddenNote": "Esta sección está oculta en tu CV. Vuelve a mostrarla en el paso Organizar secciones.",
+    "titleLabel": "Título de la sección"
+  },
+  "validation": {
+    "titleRequired": "Introduce un título para tu CV.",
+    "titleTooLong": "El título debe tener {max} caracteres o menos.",
+    "sectionTitleRequired": "Introduce un título para la sección.",
+    "sectionTitleTooLong": "El título de la sección debe tener {max} caracteres o menos."
+  },
+  "sectionTypes": {
+    "experience": "Experiencia laboral",
+    "education": "Formación",
+    "skills": "Habilidades",
+    "projects": "Proyectos",
+    "certifications": "Certificaciones",
+    "languages": "Idiomas",
+    "references": "Referencias",
+    "awards": "Premios",
+    "publications": "Publicaciones",
+    "volunteer": "Voluntariado",
+    "custom": "Sección personalizada",
+    "fallback": "Sección"
+  },
+  "entry": {
+    "edit": "Editar entrada",
+    "delete": "Eliminar entrada",
+    "update": "Actualizar",
+    "present": "Actualidad"
+  },
+  "fields": {
+    "startDate": "Fecha de inicio *",
+    "endDate": "Fecha de fin",
+    "description": "Descripción",
+    "company": "Empresa *",
+    "jobTitle": "Puesto *",
+    "proficiency": "Nivel de dominio *",
+    "website": "Sitio web",
+    "websitePlaceholder": "tusitio.com"
+  },
+  "errors": {
+    "startDateRequired": "La fecha de inicio es obligatoria"
+  },
+  "personal": {
+    "title": "Información personal",
+    "subtitle": "Añade tus datos de contacto básicos y tu titular profesional.",
+    "firstName": "Nombre *",
+    "lastName": "Apellidos *",
+    "email": "Correo electrónico *",
+    "phone": "Número de teléfono *",
+    "headline": "Titular profesional",
+    "headlinePlaceholder": "Ingeniero de software sénior en Google",
+    "city": "Ciudad",
+    "cityPlaceholder": "Madrid",
+    "country": "País",
+    "countryPlaceholder": "España",
+    "address": "Dirección",
+    "addressPlaceholder": "Calle y número",
+    "postalCode": "Código postal",
+    "postalCodePlaceholder": "C.P. / código postal",
+    "errors": {
+      "firstNameRequired": "El nombre es obligatorio",
+      "lastNameRequired": "Los apellidos son obligatorios",
+      "invalidEmail": "Correo electrónico no válido",
+      "phoneRequired": "El número de teléfono es obligatorio"
+    }
+  },
+  "summary": {
+    "title": "Resumen profesional",
+    "subtitle": "Escribe un resumen convincente que destaque tu experiencia y tus objetivos profesionales.",
+    "placeholder": "Ingeniero de software orientado a resultados con más de 5 años de experiencia creando aplicaciones web escalables...",
+    "characters": "{count} caracteres",
+    "recommended": "Recomendado: 150-300 caracteres",
+    "generate": "Generar",
+    "generating": "Generando...",
+    "creditsRemaining": "Créditos restantes: {count}",
+    "accountNotLoadedTitle": "Cuenta no cargada",
+    "accountNotLoadedBody": "Tu cuenta aún no se ha cargado. Comprueba tu conexión e inténtalo de nuevo.",
+    "creditsExhaustedTitle": "Créditos agotados",
+    "generateFailedTitle": "No se pudo generar",
+    "generateFailed": "No se pudo generar. Inténtalo de nuevo.",
+    "creditMaybeUsed": "No se pudo generar. Es posible que se haya usado un crédito. Revisa tu saldo e inténtalo de nuevo.",
+    "missing": {
+      "headline": "Añade un titular antes de generar.",
+      "experience": "Añade experiencia antes de generar.",
+      "skills": "Añade habilidades antes de generar.",
+      "headlineExperience": "Añade un titular y experiencia antes de generar.",
+      "headlineSkills": "Añade un titular y habilidades antes de generar.",
+      "experienceSkills": "Añade experiencia y habilidades antes de generar.",
+      "all": "Añade un titular, experiencia y habilidades antes de generar."
+    }
+  },
+  "experience": {
+    "title": "Experiencia laboral",
+    "subtitle": "Añade tu historial laboral, empezando por el puesto más reciente.",
+    "empty": "Aún no has añadido experiencia laboral.",
+    "add": "Añadir experiencia",
+    "edit": "Editar experiencia",
+    "deleteTitle": "Eliminar experiencia",
+    "deleteBody": "¿Seguro que quieres eliminar esta entrada?",
+    "highlightsCount": "{count, plural, one {# logro destacado} other {# logros destacados}}",
+    "jobTitlePlaceholder": "Ingeniero de software sénior",
+    "location": "Ubicación",
+    "locationPlaceholder": "Madrid, España",
+    "startPlaceholder": "ene 2020",
+    "endPlaceholder": "dic 2023",
+    "current": "Trabajo aquí actualmente",
+    "descriptionPlaceholder": "Describe tus responsabilidades y logros...",
+    "highlights": "Logros destacados",
+    "highlightsPlaceholder": "Dirigí un equipo de 5 ingenieros\nReduje el tiempo de carga un 40 %",
+    "highlightsHint": "Uno por línea, hasta {max}.",
+    "errors": {
+      "companyRequired": "El nombre de la empresa es obligatorio",
+      "positionRequired": "El puesto es obligatorio"
+    }
+  },
+  "education": {
+    "title": "Formación",
+    "subtitle": "Añade tu formación académica y tus titulaciones.",
+    "empty": "Aún no has añadido formación.",
+    "add": "Añadir formación",
+    "edit": "Editar formación",
+    "deleteTitle": "Eliminar formación",
+    "deleteBody": "¿Eliminar esta formación?",
+    "degreeIn": "{degree} en {field}",
+    "gpa": "Nota media: {gpa}",
+    "institution": "Institución *",
+    "degree": "Título *",
+    "degreePlaceholder": "Grado en Ciencias",
+    "field": "Campo de estudio *",
+    "fieldPlaceholder": "Informática",
+    "startPlaceholder": "sept 2018",
+    "endPlaceholder": "may 2022",
+    "gpaLabel": "Nota media (opcional)",
+    "errors": {
+      "institutionRequired": "La institución es obligatoria",
+      "degreeRequired": "El título es obligatorio",
+      "fieldRequired": "El campo de estudio es obligatorio"
+    }
+  },
+  "skills": {
+    "title": "Habilidades",
+    "subtitle": "Añade tus habilidades técnicas y personales con su nivel de dominio.",
+    "empty": "Aún no has añadido habilidades.",
+    "add": "Añadir habilidad",
+    "edit": "Editar habilidad",
+    "deleteTitle": "Eliminar habilidad",
+    "deleteBody": "¿Eliminar esta habilidad?",
+    "name": "Nombre de la habilidad *",
+    "category": "Categoría (opcional)",
+    "categoryPlaceholder": "Frontend, Backend, Herramientas...",
+    "levels": {
+      "beginner": "Principiante",
+      "intermediate": "Intermedio",
+      "advanced": "Avanzado",
+      "expert": "Experto"
+    },
+    "errors": {
+      "nameRequired": "El nombre de la habilidad es obligatorio"
+    }
+  },
+  "projects": {
+    "title": "Proyectos",
+    "subtitle": "Muestra tus proyectos destacados y trabajos paralelos.",
+    "empty": "Aún no has añadido proyectos.",
+    "add": "Añadir proyecto",
+    "edit": "Editar proyecto",
+    "deleteTitle": "Eliminar proyecto",
+    "deleteBody": "¿Eliminar este proyecto?",
+    "name": "Nombre del proyecto *",
+    "namePlaceholder": "Mi app increíble",
+    "descriptionPlaceholder": "Una breve descripción de lo que creaste...",
+    "technologies": "Tecnologías (separadas por comas)",
+    "url": "URL del proyecto",
+    "errors": {
+      "nameRequired": "El nombre del proyecto es obligatorio"
+    }
+  },
+  "certifications": {
+    "title": "Certificaciones",
+    "subtitle": "Añade tus certificaciones y licencias profesionales.",
+    "empty": "Aún no has añadido certificaciones.",
+    "add": "Añadir certificación",
+    "edit": "Editar certificación",
+    "deleteTitle": "Eliminar certificación",
+    "deleteBody": "¿Eliminar esta certificación?",
+    "expires": "Caduca: {date}",
+    "name": "Nombre de la certificación *",
+    "issuer": "Entidad emisora *",
+    "issueDate": "Fecha de emisión *",
+    "issuePlaceholder": "ene 2023",
+    "expiry": "Fecha de caducidad",
+    "expiryPlaceholder": "ene 2026",
+    "credentialId": "ID de la credencial",
+    "credentialPlaceholder": "p. ej. AWS-123",
+    "errors": {
+      "nameRequired": "El nombre de la certificación es obligatorio",
+      "issuerRequired": "La entidad emisora es obligatoria",
+      "dateRequired": "La fecha es obligatoria"
+    }
+  },
+  "languages": {
+    "title": "Idiomas",
+    "subtitle": "Indica los idiomas que hablas y tu nivel en cada uno.",
+    "empty": "Aún no has añadido idiomas.",
+    "add": "Añadir idioma",
+    "edit": "Editar idioma",
+    "deleteTitle": "Eliminar idioma",
+    "deleteBody": "¿Eliminar este idioma?",
+    "name": "Idioma *",
+    "namePlaceholder": "Inglés",
+    "levels": {
+      "Native": "Nativo",
+      "Fluent": "Fluido",
+      "Advanced": "Avanzado",
+      "Intermediate": "Intermedio",
+      "Basic": "Básico"
+    },
+    "errors": {
+      "nameRequired": "El nombre del idioma es obligatorio",
+      "proficiencyRequired": "El nivel es obligatorio"
+    }
+  },
+  "references": {
+    "title": "Referencias",
+    "subtitle": "Añade referencias profesionales que puedan avalar tu trabajo.",
+    "empty": "Aún no has añadido referencias.",
+    "add": "Añadir referencia",
+    "edit": "Editar referencia",
+    "deleteTitle": "Eliminar referencia",
+    "deleteBody": "¿Eliminar esta referencia?",
+    "titleAtCompany": "{title} en {company}",
+    "fullName": "Nombre completo *",
+    "jobTitlePlaceholder": "Responsable de ingeniería",
+    "email": "Correo electrónico",
+    "phone": "Teléfono",
+    "relationship": "Relación",
+    "relationshipPlaceholder": "Antiguo responsable",
+    "errors": {
+      "nameRequired": "El nombre es obligatorio",
+      "titleRequired": "El cargo es obligatorio",
+      "companyRequired": "La empresa es obligatoria",
+      "invalidEmail": "Correo no válido"
+    }
+  },
+  "custom": {
+    "title": "Secciones personalizadas",
+    "subtitle": "Añade cualquier otra cosa que quieras en tu CV: premios, voluntariado, publicaciones, intereses.",
+    "empty": "Aún no hay secciones personalizadas.",
+    "noEntries": "Aún no hay entradas — añade la primera abajo.",
+    "untitled": "Entrada sin título",
+    "addItem": "Añadir elemento",
+    "addSection": "Añadir sección personalizada",
+    "newHeading": "Nueva sección personalizada",
+    "addSectionConfirm": "Añadir sección",
+    "addEntry": "Añadir entrada",
+    "editEntry": "Editar entrada",
+    "deleteTitle": "Eliminar entrada",
+    "deleteBody": "¿Eliminar esta entrada?",
+    "titleLabel": "Título *",
+    "subtitleLabel": "Subtítulo",
+    "date": "Fecha",
+    "descriptionPlaceholder": "Descripción…",
+    "errors": {
+      "titleRequired": "El título es obligatorio"
+    }
+  },
+  "arrange": {
+    "title": "Organizar secciones",
+    "subtitle": "Cambia el orden de las secciones de tu CV, renómbralas y elige cuáles mostrar. Las secciones ocultas se conservan, pero no aparecen en tu CV.",
+    "empty": "Aún no hay secciones. Añade una abajo.",
+    "meta": "{type} · {count, plural, one {# elemento} other {# elementos}}",
+    "metaHidden": "{type} · {count, plural, one {# elemento} other {# elementos}} · Oculta",
+    "moveUp": "Subir {title}",
+    "moveDown": "Bajar {title}",
+    "hide": "Ocultar sección {title}",
+    "show": "Mostrar sección {title}",
+    "rename": "Cambiar nombre de la sección {title}",
+    "remove": "Eliminar sección {title}",
+    "addSection": "Añadir sección",
+    "removeTitle": "Eliminar sección",
+    "removeBodyEntries": "¿Eliminar «{title}» y {count, plural, one {su entrada} other {sus # entradas}} de este CV?",
+    "removeBody": "¿Eliminar «{title}» de este CV?",
+    "renameHeading": "Cambiar nombre de la sección"
+  }
+}

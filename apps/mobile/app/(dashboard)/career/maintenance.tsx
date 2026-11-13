@@ -14,6 +14,7 @@ import { useLeaveGuard } from '../../../src/hooks/useLeaveGuard';
 import { checkCredential, checkTitle, dueCredentials, formatExpiry, maintenanceErrorMessage } from '../../../src/lib/career/maintenance';
 import { careerErrorMessage } from '../../../src/lib/career-view';
 import { colors } from '../../../src/theme/colors';
+import { useT } from '../../../src/i18n';
 
 type Section = 'achievement' | 'goal' | 'credential';
 
@@ -24,6 +25,7 @@ type Section = 'achievement' | 'goal' | 'credential';
  * confirmed fact. The API has no edit or delete for these entries.
  */
 export default function CareerMaintenanceScreen() {
+  const t = useT('careerPlans');
   const access = useCareerAccess();
   const view = useMaintenance();
   const actions = useMaintenanceActions();
@@ -87,7 +89,7 @@ export default function CareerMaintenanceScreen() {
 
   let content: React.ReactNode;
   if (access.data && !access.data.enabled) {
-    content = <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" />;
+    content = <EmptyState icon="lock-closed-outline" title={t('lockedTitle')} />;
   } else if (access.isLoading || view.isLoading) {
     content = (
       <View className="p-5">
@@ -96,9 +98,9 @@ export default function CareerMaintenanceScreen() {
       </View>
     );
   } else if (view.error instanceof ApiError && view.error.code === 'feature_unavailable') {
-    content = <EmptyState icon="lock-closed-outline" title="Career maintenance is not open yet" description="Nothing was changed." />;
+    content = <EmptyState icon="lock-closed-outline" title={t('maintenance.notOpen')} description={t('maintenance.nothingChanged')} />;
   } else if (access.error || view.error || !view.data) {
-    content = <ErrorState message={careerErrorMessage(view.error ?? access.error, 'Could not load career maintenance.')} onRetry={() => void view.refetch()} />;
+    content = <ErrorState message={careerErrorMessage(view.error ?? access.error, t('maintenance.loadError'))} onRetry={() => void view.refetch()} />;
   } else {
     const data = view.data;
     const due = dueCredentials(data);
@@ -109,105 +111,105 @@ export default function CareerMaintenanceScreen() {
         refreshControl={<RefreshControl refreshing={view.isRefetching} onRefresh={() => void view.refetch()} tintColor={colors.brand[600]} />}
       >
         <Text className="text-stone-500 text-sm mb-4 leading-5">
-          Keep your career record current between job searches. A promotion goal is not added to your confirmed facts. Entries cannot be edited or removed here yet.
+          {t('maintenance.intro')}
         </Text>
 
         {due.length > 0 ? (
           <View className="bg-warning-bg rounded-2xl p-4 mb-4" accessibilityLiveRegion="polite">
-            <Text className="text-warning font-bold mb-1">Due within 90 days</Text>
+            <Text className="text-warning font-bold mb-1">{t('maintenance.dueTitle')}</Text>
             {due.map((c) => (
               <Text key={c.id} className="text-warning text-sm">{`${c.name} — ${formatExpiry(c.expiresOn)}`}</Text>
             ))}
           </View>
         ) : null}
 
-        <Card title="Achievements">
-          {data.achievements.length === 0 ? <Muted>No achievements logged yet.</Muted> : data.achievements.map((a) => <Row key={a.id} text={a.title} />)}
+        <Card title={t('maintenance.achievements')}>
+          {data.achievements.length === 0 ? <Muted>{t('maintenance.noAchievements')}</Muted> : data.achievements.map((a) => <Row key={a.id} text={a.title} />)}
           <Input
-            label="New achievement"
+            label={t('maintenance.newAchievement')}
             value={achievement}
-            onChangeText={(t) => {
-              setAchievement(t);
+            onChangeText={(text) => {
+              setAchievement(text);
               setErrors((e) => ({ ...e, achievement: undefined }));
             }}
-            placeholder="e.g. Led the Q3 reporting migration"
+            placeholder={t('maintenance.achievementPlaceholder')}
             maxLength={200}
             error={errors.achievement}
             editable={!busy}
           />
           <Button variant="outline" onPress={onAchievement} loading={actions.addAchievement.isPending} disabled={busy || achievement.trim() === ''}>
-            Add achievement
+            {t('maintenance.addAchievement')}
           </Button>
-          {saved === 'achievement' ? <Saved text="Achievement saved." /> : null}
+          {saved === 'achievement' ? <Saved text={t('maintenance.achievementSaved')} /> : null}
         </Card>
 
-        <Card title="Promotion goals">
-          {data.promotionGoals.length === 0 ? <Muted>No promotion goals yet.</Muted> : data.promotionGoals.map((g) => <Row key={g.id} text={g.desiredTitle} />)}
+        <Card title={t('maintenance.goals')}>
+          {data.promotionGoals.length === 0 ? <Muted>{t('maintenance.noGoals')}</Muted> : data.promotionGoals.map((g) => <Row key={g.id} text={g.desiredTitle} />)}
           <Input
-            label="Promotion goal"
+            label={t('maintenance.goal')}
             value={goal}
-            onChangeText={(t) => {
-              setGoal(t);
+            onChangeText={(text) => {
+              setGoal(text);
               setErrors((e) => ({ ...e, goal: undefined }));
             }}
-            placeholder="e.g. Senior Analyst"
+            placeholder={t('maintenance.goalPlaceholder')}
             maxLength={200}
             error={errors.goal}
             editable={!busy}
           />
           <Button variant="outline" onPress={onGoal} loading={actions.addPromotionGoal.isPending} disabled={busy || goal.trim() === ''}>
-            Save goal
+            {t('maintenance.saveGoal')}
           </Button>
-          {saved === 'goal' ? <Saved text="Goal saved. It is not a confirmed fact." /> : null}
+          {saved === 'goal' ? <Saved text={t('maintenance.goalSaved')} /> : null}
         </Card>
 
-        <Card title="Credentials">
+        <Card title={t('maintenance.credentials')}>
           {data.credentials.length === 0 ? (
-            <Muted>No credentials yet.</Muted>
+            <Muted>{t('maintenance.noCredentials')}</Muted>
           ) : (
             data.credentials.map((c) => (
               <View key={c.id} className="flex-row items-center py-2 border-b border-stone-100">
-                <View className="flex-1 mr-2">
+                <View className="flex-1 me-2">
                   <Text className="text-sm text-stone-900 font-medium">{c.name}</Text>
-                  <Text className="text-xs text-stone-500 mt-0.5">{`Expires ${formatExpiry(c.expiresOn)}`}</Text>
+                  <Text className="text-xs text-stone-500 mt-0.5">{t('maintenance.expires', { date: formatExpiry(c.expiresOn) })}</Text>
                 </View>
-                {c.due ? <Pill label="DUE SOON" tone="warning" /> : null}
+                {c.due ? <Pill label={t('maintenance.dueSoon')} tone="warning" /> : null}
               </View>
             ))
           )}
           <View className="h-3" />
           <Input
-            label="Credential"
+            label={t('maintenance.credential')}
             value={credentialName}
-            onChangeText={(t) => {
-              setCredentialName(t);
+            onChangeText={(text) => {
+              setCredentialName(text);
               setErrors((e) => ({ ...e, credential: undefined }));
             }}
-            placeholder="e.g. First aid certificate"
+            placeholder={t('maintenance.credentialPlaceholder')}
             maxLength={200}
             error={errors.credential}
             editable={!busy}
           />
           <Input
-            label="Expires on"
+            label={t('maintenance.expiresOn')}
             value={expiresOn}
-            onChangeText={(t) => {
-              setExpiresOn(t.replace(/[^0-9-]/g, ''));
+            onChangeText={(text) => {
+              setExpiresOn(text.replace(/[^0-9-]/g, ''));
               setErrors((e) => ({ ...e, expiresOn: undefined }));
             }}
-            placeholder="YYYY-MM-DD"
+            placeholder={t('maintenance.datePlaceholder')}
             keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
             autoCapitalize="none"
             autoCorrect={false}
             maxLength={10}
-            hint="For example 2027-03-31."
+            hint={t('maintenance.dateHint')}
             error={errors.expiresOn}
             editable={!busy}
           />
           <Button variant="outline" onPress={onCredential} loading={actions.addCredential.isPending} disabled={busy || credentialName.trim() === '' || expiresOn.trim() === ''}>
-            Save credential
+            {t('maintenance.saveCredential')}
           </Button>
-          {saved === 'credential' ? <Saved text="Credential saved." /> : null}
+          {saved === 'credential' ? <Saved text={t('maintenance.credentialSaved')} /> : null}
         </Card>
       </ScrollView>
     );
@@ -215,7 +217,7 @@ export default function CareerMaintenanceScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title="Career maintenance" />
+      <CareerHeader title={t('maintenance.title')} />
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {content}
       </KeyboardAvoidingView>

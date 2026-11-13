@@ -10,6 +10,7 @@ import {
   type UpdateLocationProfileInput,
   type WorkAuthorization,
 } from '../../../../../packages/career-shared/src/career-modes';
+import { hasKey, t } from '../../i18n';
 import { careerErrorMessage } from '../career-view';
 
 /**
@@ -17,30 +18,32 @@ import { careerErrorMessage } from '../career-view';
  * (website: /career/relocation, RelocationModesScreen). These are career-mode
  * location profiles (`/career-modes/locations`), not alert locations. The
  * career API checks capacity and the plan's radius; nothing here grants it.
+ *
+ * Copy lives in the `careerModes` namespace. Option labels are getters, so
+ * they read the current language each time they are shown.
  */
 
-export const TIMELINE_OPTIONS: { value: TargetTimeline; label: string }[] = [
-  { value: 'immediate', label: 'Immediate (Active Move)' },
-  { value: '1_to_3_months', label: '1 to 3 Months' },
-  { value: '3_to_6_months', label: '3 to 6 Months' },
-  { value: 'exploring', label: 'Exploring Possibilities' },
-  { value: 'not_relocating', label: 'Current Location (Not Relocating)' },
-];
+/** A choice whose label is read in the current language (`careerModes.location.<group>.<value>`). */
+function option<T extends string>(group: 'timeline' | 'workAuth' | 'remote', value: T): { value: T; label: string } {
+  return {
+    value,
+    get label() {
+      return t(`careerModes.location.${group}.${value}`);
+    },
+  };
+}
 
-export const WORK_AUTH_OPTIONS: { value: WorkAuthorization; label: string }[] = [
-  { value: 'citizen', label: 'Citizen' },
-  { value: 'permanent_resident', label: 'Permanent Resident / Green Card' },
-  { value: 'visa_holder', label: 'Current Work Visa' },
-  { value: 'needs_sponsorship', label: 'Requires Visa Sponsorship' },
-  { value: 'authorized', label: 'Authorized to Work' },
-];
+export const TIMELINE_OPTIONS: { value: TargetTimeline; label: string }[] = (
+  ['immediate', '1_to_3_months', '3_to_6_months', 'exploring', 'not_relocating'] as const
+).map((v) => option('timeline', v));
 
-export const REMOTE_OPTIONS: { value: RemoteFlexibility; label: string }[] = [
-  { value: 'hybrid', label: 'Hybrid Preferred' },
-  { value: 'remote_only', label: 'Remote Only' },
-  { value: 'onsite_only', label: 'Onsite Only' },
-  { value: 'any', label: 'Any Arrangement' },
-];
+export const WORK_AUTH_OPTIONS: { value: WorkAuthorization; label: string }[] = (
+  ['citizen', 'permanent_resident', 'visa_holder', 'needs_sponsorship', 'authorized'] as const
+).map((v) => option('workAuth', v));
+
+export const REMOTE_OPTIONS: { value: RemoteFlexibility; label: string }[] = (
+  ['hybrid', 'remote_only', 'onsite_only', 'any'] as const
+).map((v) => option('remote', v));
 
 function labelOf<T extends string>(options: { value: T; label: string }[], value: T): string {
   return options.find((o) => o.value === value)?.label ?? value;
@@ -120,10 +123,12 @@ export function draftsEqual(a: LocationDraft, b: LocationDraft): boolean {
 /** Client-side check before sending; the career API checks again. */
 export function validateLocationDraft(draft: LocationDraft, allowedRadiusMiles: number): string | null {
   const place = draft.place.trim();
-  if (!place) return 'Enter a location.';
-  if (place.length > PLACE_MAX) return `Keep the location under ${PLACE_MAX} characters.`;
-  if (draft.radiusMiles > allowedRadiusMiles) return `Your plan allows a radius of up to ${allowedRadiusMiles} miles.`;
-  if (draft.notes.trim().length > NOTES_MAX) return `Keep the notes under ${NOTES_MAX} characters.`;
+  if (!place) return t('careerModes.location.validation.enterLocation');
+  if (place.length > PLACE_MAX) return t('careerModes.location.validation.placeTooLong', { max: PLACE_MAX });
+  if (draft.radiusMiles > allowedRadiusMiles) {
+    return t('careerModes.location.validation.radiusTooLarge', { radius: allowedRadiusMiles });
+  }
+  if (draft.notes.trim().length > NOTES_MAX) return t('careerModes.location.validation.notesTooLong', { max: NOTES_MAX });
   return null;
 }
 
@@ -155,7 +160,7 @@ export function draftToPatch(draft: LocationDraft, original: LocationDraft): Upd
 }
 
 export function quotaHint(used: number, capacity: number, radius: number): string {
-  return `Using ${used} of ${capacity} location profiles. Plan local search radius: up to ${radius} miles.`;
+  return t('careerModes.location.quotaHint', { used, capacity, radius });
 }
 
 export function canAddLocation(used: number, capacity: number): boolean {
@@ -164,44 +169,72 @@ export function canAddLocation(used: number, capacity: number): boolean {
 
 export function locationLines(location: LocationProfile): string[] {
   return [
-    `Radius: ~${location.radiusMiles} miles`,
-    `Timeline: ${timelineLabel(location.targetTimeline)}`,
-    `Work auth: ${workAuthLabel(location.workAuthorization)}`,
-    `Max commute: ≤ ${location.commuteMinutesMax} min · ${remoteLabel(location.remoteFlexibility)}`,
+    t('careerModes.location.line.radius', { radius: location.radiusMiles }),
+    t('careerModes.location.line.timeline', { value: timelineLabel(location.targetTimeline) }),
+    t('careerModes.location.line.workAuth', { value: workAuthLabel(location.workAuthorization) }),
+    t('careerModes.location.line.commute', {
+      minutes: location.commuteMinutesMax,
+      remote: remoteLabel(location.remoteFlexibility),
+    }),
   ];
 }
 
 export function locationBadge(location: LocationProfile): string {
-  return location.isRelocation ? 'RELOCATION TARGET' : 'CURRENT LOCATION';
+  return location.isRelocation ? t('careerModes.location.badge.relocation') : t('careerModes.location.badge.current');
 }
 
 /** Website wording for a failed location save. */
 export function locationSaveError(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.code === 'capacity_exceeded') {
-      return 'Plan location profile capacity reached. Delete a location profile to add another.';
+      return t('careerModes.location.error.capacity');
     }
     if (error.code === 'validation_error') {
       const field = (error.body as { field?: unknown }).field;
-      if (field === 'radiusMiles') return 'Radius exceeds your plan allowance.';
-      if (field === 'place') return 'Enter a location under 200 characters.';
-      if (field === 'notes') return 'Keep the notes under 2000 characters.';
-      return 'Failed to save location profile. Please check inputs and try again.';
+      if (field === 'radiusMiles') return t('careerModes.location.error.radius');
+      if (field === 'place') return t('careerModes.location.validation.placeInvalid', { max: PLACE_MAX });
+      if (field === 'notes') return t('careerModes.location.validation.notesTooLong', { max: NOTES_MAX });
+      return t('careerModes.location.error.saveFailed');
     }
   }
-  return careerErrorMessage(error, 'Failed to save location profile. Please check inputs and try again.');
+  return careerErrorMessage(error, t('careerModes.location.error.saveFailed'));
 }
 
 export function locationDeleteError(error: unknown): string {
-  return careerErrorMessage(error, 'Failed to delete location profile.');
+  return careerErrorMessage(error, t('careerModes.location.error.deleteFailed'));
 }
 
 export type SpecialistModeOption = SpecialistModeMetadata;
 
+/** The shared (English) metadata, in the shared package's order. Show {@link specialistModeOptions} instead. */
 export const SPECIALIST_MODE_OPTIONS: SpecialistModeOption[] = Object.values(SPECIALIST_MODES);
 
+/**
+ * The metadata in the current language (`careerModes.specialist.modes.<id>`).
+ * A mode added to the shared package without translations keeps its English text.
+ */
+function localizedMode(meta: SpecialistModeMetadata): SpecialistModeOption {
+  const base = `careerModes.specialist.modes.${meta.id}`;
+  if (!hasKey(`${base}.name`)) return meta;
+  return {
+    ...meta,
+    name: t(`${base}.name`),
+    description: t(`${base}.description`),
+    recommendedFocus: meta.recommendedFocus.map((focus, i) => {
+      const key = `${base}.focus${i + 1}`;
+      return hasKey(key) ? t(key) : focus;
+    }),
+    promptModifier: t(`${base}.promptModifier`),
+  };
+}
+
+/** The specialist modes to show, in the current language. */
+export function specialistModeOptions(): SpecialistModeOption[] {
+  return SPECIALIST_MODE_OPTIONS.map(localizedMode);
+}
+
 export function specialistModeMeta(mode: SpecialistMode): SpecialistModeOption {
-  return SPECIALIST_MODES[mode] ?? SPECIALIST_MODES.general;
+  return localizedMode(SPECIALIST_MODES[mode] ?? SPECIALIST_MODES.general);
 }
 
 export function isPlanUpgradeRequired(error: unknown): boolean {
@@ -209,11 +242,11 @@ export function isPlanUpgradeRequired(error: unknown): boolean {
 }
 
 export function specialistSaveError(error: unknown): string {
-  if (isPlanUpgradeRequired(error)) return 'Specialist career modes are not included in your current plan.';
+  if (isPlanUpgradeRequired(error)) return t('careerModes.specialist.upgradeRequired');
   if (error instanceof ApiError && error.code === 'validation_error') {
-    return `Keep the custom guidelines under ${GUIDELINES_MAX} characters.`;
+    return t('careerModes.specialist.guidelinesTooLong', { max: GUIDELINES_MAX });
   }
-  return careerErrorMessage(error, 'Failed to save specialist mode. Please try again.');
+  return careerErrorMessage(error, t('careerModes.specialist.saveFailed'));
 }
 
 /** null for empty guidelines, as the website sends. */

@@ -1,5 +1,6 @@
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type { LearningLoopView } from '../../../../../packages/career-api-client/src/types';
+import { t } from '../../i18n';
 import { careerErrorMessage } from '../career-view';
 
 /**
@@ -10,8 +11,13 @@ import { careerErrorMessage } from '../career-view';
  * the user's own recorded applications, never a hiring probability.
  */
 
-export const LOOP_TITLE = 'Application outcomes';
-export const LOOP_INTRO = 'Observed rates in your recorded applications. Not a hiring probability.';
+export function loopTitle(): string {
+  return t('career.areas.outcomes.title');
+}
+
+export function loopIntro(): string {
+  return t('career.outcomes.intro');
+}
 
 export interface LoopStat {
   key: string;
@@ -33,23 +39,23 @@ export const SMALL_SAMPLE = 10;
 
 export function loopViewModel(report: LearningLoopView): LoopViewModel {
   const stats: LoopStat[] = [
-    { key: 'recorded', label: 'Recorded applications', value: String(report.recordedApplications) },
-    { key: 'interviews', label: 'Interviews', value: String(report.interviews) },
-    { key: 'offers', label: 'Offers', value: String(report.offers) },
-    { key: 'noResponse', label: 'Applied, no response yet', value: String(report.noResponse) },
-    { key: 'unrecorded', label: 'Saved or preparing (not counted)', value: String(report.unrecorded) },
+    { key: 'recorded', label: t('career.outcomes.stats.recorded'), value: String(report.recordedApplications) },
+    { key: 'interviews', label: t('career.outcomes.stats.interviews'), value: String(report.interviews) },
+    { key: 'offers', label: t('career.outcomes.stats.offers'), value: String(report.offers) },
+    { key: 'noResponse', label: t('career.outcomes.stats.noResponse'), value: String(report.noResponse) },
+    { key: 'unrecorded', label: t('career.outcomes.stats.unrecorded'), value: String(report.unrecorded) },
   ];
   if (report.interviewRatePercent !== null) {
-    stats.splice(1, 0, { key: 'rate', label: 'Observed interview rate in this sample', value: `${report.interviewRatePercent}%` });
+    stats.splice(1, 0, { key: 'rate', label: t('career.outcomes.stats.rate'), value: `${report.interviewRatePercent}%` });
   }
   const empty = report.sampleSize === 0;
   let sampleNote: string | null = null;
   if (empty) {
-    sampleNote = 'No applications yet. Counts come from the applications in your Job Tracker.';
+    sampleNote = t('career.outcomes.sample.empty');
   } else if (report.recordedApplications === 0) {
-    sampleNote = 'None of your applications has a recorded outcome yet, so there is no rate to show.';
+    sampleNote = t('career.outcomes.sample.none');
   } else if (report.recordedApplications < SMALL_SAMPLE) {
-    sampleNote = `This is a small sample (${report.recordedApplications} recorded). One more outcome can change the rate a lot.`;
+    sampleNote = t('career.outcomes.sample.small', { count: report.recordedApplications });
   }
   return { statement: report.statement, suggestion: report.suggestion, stats, sampleNote, empty };
 }
@@ -63,5 +69,5 @@ export function loopErrorKind(error: unknown): 'switched-off' | 'not-included' |
 }
 
 export function loopErrorMessage(error: unknown): string {
-  return careerErrorMessage(error, 'This page could not be loaded. Nothing was changed. Try again.');
+  return careerErrorMessage(error, t('career.outcomes.loadFailed'));
 }

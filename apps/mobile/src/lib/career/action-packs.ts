@@ -1,5 +1,6 @@
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type { ActionPack, OpportunityItem } from '../../../../../packages/career-api-client/src/types';
+import { hasKey, t } from '../../i18n';
 import { careerErrorMessage } from '../career-view';
 
 /**
@@ -9,9 +10,14 @@ import { careerErrorMessage } from '../career-view';
  * Credits are career units, never a price.
  */
 
-/** Shown whenever a career call answers `provider_unavailable`. */
+/** Shown whenever a career call answers `provider_unavailable` (the English text; tests compare to it). */
 export const PROVIDER_UNAVAILABLE_MESSAGE =
   'Needs the AI provider, which is not configured in this environment. Nothing was charged.';
+
+/** PROVIDER_UNAVAILABLE_MESSAGE in the current language. */
+export function providerUnavailableMessage(): string {
+  return t('careerPlans.providerUnavailable');
+}
 
 /**
  * One idempotency key per user action. A retry of the SAME action (same
@@ -29,14 +35,6 @@ export function keyForAction(current: KeyedAction | null, signature: string, mak
 
 export type PillTone = 'default' | 'brand' | 'warning' | 'success';
 
-const FIT_LABEL: Record<string, string> = {
-  strong: 'STRONG FIT',
-  partial: 'PARTIAL FIT',
-  possible: 'POSSIBLE FIT',
-  none: 'LOW OVERLAP',
-  blocked: 'BLOCKED',
-};
-
 const FIT_TONE: Record<string, PillTone> = {
   strong: 'success',
   partial: 'brand',
@@ -46,7 +44,8 @@ const FIT_TONE: Record<string, PillTone> = {
 };
 
 export function fitLabel(fit: string): string {
-  return FIT_LABEL[fit] ?? fit.toUpperCase();
+  const key = `careerPlans.actionPack.fit.${fit}`;
+  return hasKey(key) ? t(key) : fit.toUpperCase();
 }
 
 export function fitTone(fit: string): PillTone {
@@ -60,7 +59,7 @@ export function creditsLeft(balance: { includedRemaining: number; packRemaining:
 }
 
 export function organizationName(organization: string | null | undefined): string {
-  return organization && organization.trim().length > 0 ? organization : 'Unstated organization';
+  return organization && organization.trim().length > 0 ? organization : t('careerPlans.actionPack.unstatedOrganization');
 }
 
 export function opportunityLabel(opp: Pick<OpportunityItem, 'title' | 'organization'>): string {
@@ -91,26 +90,26 @@ export function actionPackErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     switch (error.code) {
       case 'plan_upgrade_required':
-        return 'Action packs are not included in your current career plan. No credit was used.';
+        return t('careerPlans.actionPack.errors.planUpgrade');
       case 'quota_exhausted':
-        return 'No action pack credits left. Credits renew on your next billing date.';
+        return t('careerPlans.actionPack.errors.quota');
       case 'feature_unavailable':
-        return 'Action packs are not open yet. No credit was used.';
+        return t('careerPlans.actionPack.errors.featureOff');
       case 'provider_unavailable':
-        return PROVIDER_UNAVAILABLE_MESSAGE;
+        return providerUnavailableMessage();
       case 'validation_error':
         return error.body.reason === 'no_confirmed_facts'
-          ? 'Confirm at least one fact in your career profile first. No credit was used.'
-          : 'Choose a valid opportunity. No credit was used.';
+          ? t('careerPlans.actionPack.errors.noFacts')
+          : t('careerPlans.actionPack.errors.invalidOpportunity');
       case 'not_found':
-        return 'That opportunity is no longer available. No credit was used.';
+        return t('careerPlans.actionPack.errors.notFound');
       default:
         break;
     }
   }
-  return careerErrorMessage(error, 'The action pack was not created. No credit was used.');
+  return careerErrorMessage(error, t('careerPlans.actionPack.errors.createFailed'));
 }
 
 export function checklistErrorMessage(error: unknown): string {
-  return careerErrorMessage(error, 'The checklist item was not updated. Please try again.');
+  return careerErrorMessage(error, t('careerPlans.actionPack.errors.checklistFailed'));
 }

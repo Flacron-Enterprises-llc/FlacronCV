@@ -15,6 +15,7 @@ import {
 } from '../../../lib/cv-editor';
 import { colors } from '../../../theme/colors';
 import { SectionTitleModal } from '../SectionTitleModal';
+import { useT } from '../../../i18n';
 
 interface IconButtonProps {
   icon: React.ComponentProps<typeof Ionicons>['name'];
@@ -52,6 +53,8 @@ export function ArrangeSectionsStep({ onValidChange }: { onValidChange: (v: bool
   const [renaming, setRenaming] = useState<CVSection | null>(null);
   const [picking, setPicking] = useState(false);
   const [namingCustom, setNamingCustom] = useState(false);
+  const t = useT('cvEditor');
+  const tc = useT('common');
 
   const add = (type: CVSectionType, title: string) => {
     addSection(buildNewSection(generateId(), type, title, appendOrder(sections), new Date().toISOString()));
@@ -71,13 +74,13 @@ export function ArrangeSectionsStep({ onValidChange }: { onValidChange: (v: bool
   const confirmRemove = (section: CVSection) => {
     const n = section.items.length;
     Alert.alert(
-      'Remove Section',
+      t('arrange.removeTitle'),
       n > 0
-        ? `Remove “${section.title}” and its ${n} ${n === 1 ? 'entry' : 'entries'} from this CV?`
-        : `Remove “${section.title}” from this CV?`,
+        ? t('arrange.removeBodyEntries', { title: section.title, count: n })
+        : t('arrange.removeBody', { title: section.title }),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', style: 'destructive', onPress: () => removeSection(section.id) },
+        { text: tc('cancel'), style: 'cancel' },
+        { text: tc('remove'), style: 'destructive', onPress: () => removeSection(section.id) },
       ],
     );
   };
@@ -85,15 +88,12 @@ export function ArrangeSectionsStep({ onValidChange }: { onValidChange: (v: bool
   return (
     <View className="flex-1">
       <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
-        <Text className="text-lg font-semibold text-stone-900 mb-1">Arrange Sections</Text>
-        <Text className="text-stone-500 mb-5 text-sm">
-          Change the order of the sections on your CV, rename them, and choose which ones to show.
-          Hidden sections stay saved but are left out of your CV.
-        </Text>
+        <Text className="text-lg font-semibold text-stone-900 mb-1">{t('arrange.title')}</Text>
+        <Text className="text-stone-500 mb-5 text-sm">{t('arrange.subtitle')}</Text>
 
         {sections.length === 0 ? (
           <Text className="text-stone-400 text-center text-sm border border-dashed border-stone-200 rounded-xl py-6 mb-3">
-            No sections yet. Add one below.
+            {t('arrange.empty')}
           </Text>
         ) : (
           sections.map((section, index) => {
@@ -116,8 +116,9 @@ export function ArrangeSectionsStep({ onValidChange }: { onValidChange: (v: bool
                       {section.title}
                     </Text>
                     <Text className="text-xs text-stone-400">
-                      {sectionTypeLabel(section.type)} · {n} {n === 1 ? 'item' : 'items'}
-                      {section.isVisible ? '' : ' · Hidden'}
+                      {section.isVisible
+                        ? t('arrange.meta', { type: sectionTypeLabel(section.type), count: n })
+                        : t('arrange.metaHidden', { type: sectionTypeLabel(section.type), count: n })}
                     </Text>
                   </View>
                 </View>
@@ -125,13 +126,13 @@ export function ArrangeSectionsStep({ onValidChange }: { onValidChange: (v: bool
                   <View className="flex-row gap-2">
                     <IconButton
                       icon="arrow-up"
-                      label={`Move ${section.title} up`}
+                      label={t('arrange.moveUp', { title: section.title })}
                       disabled={index === 0}
                       onPress={() => moveSection(section.id, -1)}
                     />
                     <IconButton
                       icon="arrow-down"
-                      label={`Move ${section.title} down`}
+                      label={t('arrange.moveDown', { title: section.title })}
                       disabled={index === sections.length - 1}
                       onPress={() => moveSection(section.id, 1)}
                     />
@@ -139,18 +140,20 @@ export function ArrangeSectionsStep({ onValidChange }: { onValidChange: (v: bool
                   <View className="flex-row gap-2">
                     <IconButton
                       icon={section.isVisible ? 'eye-outline' : 'eye-off-outline'}
-                      label={section.isVisible ? `Hide section ${section.title}` : `Show section ${section.title}`}
+                      label={section.isVisible
+                        ? t('arrange.hide', { title: section.title })
+                        : t('arrange.show', { title: section.title })}
                       selected={section.isVisible}
                       onPress={() => updateSection(section.id, { isVisible: !section.isVisible })}
                     />
                     <IconButton
                       icon="pencil-outline"
-                      label={`Rename section ${section.title}`}
+                      label={t('arrange.rename', { title: section.title })}
                       onPress={() => setRenaming(section)}
                     />
                     <IconButton
                       icon="trash-outline"
-                      label={`Remove section ${section.title}`}
+                      label={t('arrange.remove', { title: section.title })}
                       color={colors.error.DEFAULT}
                       onPress={() => confirmRemove(section)}
                     />
@@ -167,12 +170,12 @@ export function ArrangeSectionsStep({ onValidChange }: { onValidChange: (v: bool
           icon={<Ionicons name="add" size={18} color={colors.stone[700]} />}
           fullWidth
         >
-          Add Section
+          {t('arrange.addSection')}
         </Button>
         <View className="h-8" />
       </ScrollView>
 
-      <Modal visible={picking} onClose={() => setPicking(false)} title="Add Section">
+      <Modal visible={picking} onClose={() => setPicking(false)} title={t('arrange.addSection')}>
         {ADDABLE_SECTION_TYPES.map(({ type, label }) => (
           <TouchableOpacity
             key={type}
@@ -189,9 +192,9 @@ export function ArrangeSectionsStep({ onValidChange }: { onValidChange: (v: bool
 
       <SectionTitleModal
         visible={renaming !== null}
-        heading="Rename Section"
+        heading={t('arrange.renameHeading')}
         initialTitle={renaming?.title ?? ''}
-        confirmLabel="Save"
+        confirmLabel={tc('save')}
         onClose={() => setRenaming(null)}
         onSubmit={(title) => {
           if (renaming) updateSection(renaming.id, { title });
@@ -201,9 +204,9 @@ export function ArrangeSectionsStep({ onValidChange }: { onValidChange: (v: bool
 
       <SectionTitleModal
         visible={namingCustom}
-        heading="New Custom Section"
-        initialTitle="Custom Section"
-        confirmLabel="Add Section"
+        heading={t('custom.newHeading')}
+        initialTitle={sectionTypeLabel(CVSectionType.CUSTOM)}
+        confirmLabel={t('custom.addSectionConfirm')}
         onClose={() => setNamingCustom(false)}
         onSubmit={(title) => {
           add(CVSectionType.CUSTOM, title);

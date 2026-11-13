@@ -16,6 +16,8 @@ import {
   WHERE_LABEL,
   type CareerArea,
 } from '../../../src/lib/career-view';
+import { useT } from '../../../src/i18n';
+import { RTL_FLIP } from '../../../src/i18n/native';
 import { colors } from '../../../src/theme/colors';
 
 /**
@@ -24,6 +26,8 @@ import { colors } from '../../../src/theme/colors';
  */
 export default function CareerOverviewScreen() {
   const router = useRouter();
+  const t = useT('career');
+  const tc = useT('common');
   const access = useCareerAccess();
   const subscription = useCareerSubscription();
   const usage = useCareerUsage();
@@ -50,21 +54,21 @@ export default function CareerOverviewScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title="Career tools" subtitle="Optional add-on to your FlacronCV plan" />
+      <CareerHeader title={t('overview.title')} subtitle={t('overview.subtitle')} />
       <ScrollView
         contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.brand[600]} />}
       >
         <View className="bg-white rounded-2xl border border-stone-100 p-5" accessible accessibilityLabel={`${copy.title}. ${copy.body}`}>
           <View className="flex-row items-center justify-between">
-            <Text className="text-lg font-black text-stone-900 flex-1 mr-2">{copy.title}</Text>
-            {copy.badge ? <Pill label={copy.badge} tone={copy.badge === 'TEST ENTITLEMENT' ? 'warning' : copy.badge === 'ENDING' ? 'warning' : 'success'} /> : null}
+            <Text className="text-lg font-black text-stone-900 flex-1 me-2">{copy.title}</Text>
+            {copy.badge ? <Pill label={copy.badge} tone={copy.badgeKind === 'test' ? 'warning' : copy.badgeKind === 'ending' ? 'warning' : 'success'} /> : null}
           </View>
           {copy.body ? <Text className="text-stone-600 text-sm mt-2 leading-5">{copy.body}</Text> : null}
           {state.kind === 'offline' || state.kind === 'unavailable' ? (
             <View className="mt-4 self-start">
               <Button variant="outline" size="sm" onPress={refresh}>
-                Try again
+                {tc('retry')}
               </Button>
             </View>
           ) : null}
@@ -72,26 +76,26 @@ export default function CareerOverviewScreen() {
 
         {active ? (
           <View className="bg-white rounded-2xl border border-stone-100 p-5 mt-4">
-            <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide">Career credits</Text>
+            <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide">{t('overview.credits')}</Text>
             {credits ? (
               <>
                 <Text className="text-3xl font-black text-stone-900 mt-2">
                   {credits.remaining}
-                  <Text className="text-base font-semibold text-stone-500">{` of ${credits.granted} document credits left`}</Text>
+                  <Text className="text-base font-semibold text-stone-500">{` ${t('overview.creditsLeft', { granted: credits.granted })}`}</Text>
                 </Text>
-                {credits.packs > 0 ? <Text className="text-stone-500 text-sm mt-1">{`${credits.packs} extra from packs`}</Text> : null}
-                {renewal ? <Text className="text-stone-500 text-sm mt-1">{`Allowance renews on ${renewal}.`}</Text> : null}
+                {credits.packs > 0 ? <Text className="text-stone-500 text-sm mt-1">{t('overview.packs', { count: credits.packs })}</Text> : null}
+                {renewal ? <Text className="text-stone-500 text-sm mt-1">{t('overview.renews', { date: renewal })}</Text> : null}
               </>
             ) : (
-              <Text className="text-stone-500 text-sm mt-2">{usage.isError ? 'Could not load your credits. Pull to refresh.' : 'Loading…'}</Text>
+              <Text className="text-stone-500 text-sm mt-2">{usage.isError ? t('overview.creditsError') : tc('loading')}</Text>
             )}
             <Text className="text-stone-500 text-xs mt-3 leading-4">
-              Career credits are separate from your FlacronCV AI credits and are used only by the career tools. Editing, saving and exporting a draft uses none.
+              {t('overview.creditsNote')}
             </Text>
           </View>
         ) : null}
 
-        <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mt-6 mb-3">What you can do</Text>
+        <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mt-6 mb-3">{t('overview.whatYouCanDo')}</Text>
         {visibleAreas(access.data?.features).map((area) => (
           <AreaRow key={area.key} area={area} enabled={active || area.key === 'tracker'} onOpen={(route) => router.push(route as Href)} />
         ))}
@@ -104,7 +108,7 @@ function AreaRow({ area, enabled, onOpen }: { area: CareerArea; enabled: boolean
   const inApp = area.where === 'app' && area.route;
   const content = (
     <>
-      <View className="flex-1 mr-2">
+      <View className="flex-1 me-2">
         <Text className={`font-bold ${inApp && enabled ? 'text-stone-900' : 'text-stone-700'}`}>{area.title}</Text>
         <Text className="text-stone-500 text-sm mt-0.5 leading-5">{area.body}</Text>
         {area.where !== 'app' ? (
@@ -113,7 +117,7 @@ function AreaRow({ area, enabled, onOpen }: { area: CareerArea; enabled: boolean
           </View>
         ) : null}
       </View>
-      {inApp && enabled ? <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} /> : null}
+      {inApp && enabled ? <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} style={RTL_FLIP} /> : null}
     </>
   );
   if (inApp && enabled) {

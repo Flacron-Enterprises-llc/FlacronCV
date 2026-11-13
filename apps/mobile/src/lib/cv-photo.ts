@@ -11,6 +11,7 @@
  * image re-encoder, so HEIC is refused here (the iOS picker hands back JPEG
  * when editing/quality options are used).
  */
+import { t } from '../i18n';
 
 export const CV_PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 export const CV_PHOTO_URL_MAX = 2048;
@@ -18,7 +19,7 @@ export const CV_PHOTO_URL_MAX = 2048;
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 const ALLOWED_EXT = new Set(['jpg', 'jpeg', 'png', 'webp']);
 
-export const CV_PHOTO_HINT = 'JPG, PNG or WebP · Max 5 MB · Used as your CV avatar';
+/** English copy (tests). Messages shown to the user come from cvEditor.photo.*. */
 export const CV_PHOTO_UPLOAD_FAILED = 'Could not upload the photo. Please try again.';
 export const CV_PHOTO_UNAVAILABLE = 'Photo upload is unavailable right now. Please sign in again.';
 
@@ -113,14 +114,14 @@ export function cvPhotoErrorMessage(err: unknown): string {
   if (err instanceof CvPhotoError) {
     switch (err.code) {
       case 'INVALID_TYPE':
-        return `“.${err.detail || 'unknown'}” files aren’t supported. Please upload a JPG, PNG, or WebP image.`;
+        return t('cvEditor.photo.invalid', { ext: err.detail || t('cvEditor.photo.unknownType') });
       case 'TOO_LARGE':
-        return `That file is too large (${err.detail || '5'} MB). The maximum size is 5 MB.`;
+        return t('cvEditor.photo.tooLarge', { size: err.detail || '5' });
       case 'PHOTO_UNAVAILABLE':
-        return CV_PHOTO_UNAVAILABLE;
+        return t('cvEditor.photo.unavailable');
       default:
-        return CV_PHOTO_UPLOAD_FAILED;
+        return t('cvEditor.photo.uploadFailed');
     }
   }
-  return CV_PHOTO_UPLOAD_FAILED;
+  return t('cvEditor.photo.uploadFailed');
 }

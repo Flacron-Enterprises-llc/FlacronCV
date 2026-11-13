@@ -15,6 +15,8 @@ import {
 import { Modal } from '../ui/Modal';
 import { useCVStore } from '../../store/cv-store';
 import { colors } from '../../theme/colors';
+import { t as tNow, useT } from '../../i18n';
+import { RTL_FLIP } from '../../i18n/native';
 import { PersonalInfoStep } from './steps/PersonalInfoStep';
 import { SummaryStep } from './steps/SummaryStep';
 import { ExperienceStep } from './steps/ExperienceStep';
@@ -28,25 +30,27 @@ import { CustomSectionsStep } from './steps/CustomSectionsStep';
 import { ArrangeSectionsStep } from './steps/ArrangeSectionsStep';
 
 const STEPS = [
-  { id: 'personal', label: 'Personal Info', icon: 'person-outline' },
-  { id: 'experience', label: 'Experience', icon: 'briefcase-outline' },
-  { id: 'education', label: 'Education', icon: 'school-outline' },
-  { id: 'skills', label: 'Skills', icon: 'code-slash-outline' },
-  { id: 'summary', label: 'Summary', icon: 'document-text-outline' },
-  { id: 'projects', label: 'Projects', icon: 'construct-outline' },
-  { id: 'certifications', label: 'Certifications', icon: 'ribbon-outline' },
-  { id: 'languages', label: 'Languages', icon: 'language-outline' },
-  { id: 'references', label: 'References', icon: 'people-outline' },
-  { id: 'custom', label: 'Custom Sections', icon: 'albums-outline' },
-  { id: 'arrange', label: 'Arrange Sections', icon: 'swap-vertical-outline' },
+  { id: 'personal', icon: 'person-outline' },
+  { id: 'experience', icon: 'briefcase-outline' },
+  { id: 'education', icon: 'school-outline' },
+  { id: 'skills', icon: 'code-slash-outline' },
+  { id: 'summary', icon: 'document-text-outline' },
+  { id: 'projects', icon: 'construct-outline' },
+  { id: 'certifications', icon: 'ribbon-outline' },
+  { id: 'languages', icon: 'language-outline' },
+  { id: 'references', icon: 'people-outline' },
+  { id: 'custom', icon: 'albums-outline' },
+  { id: 'arrange', icon: 'swap-vertical-outline' },
 ] as const;
+
+type StepId = (typeof STEPS)[number]['id'];
 
 /** E2 — network (no response) vs rejected request. Do not treat them as one error. */
 function saveFailureMessage(err: unknown): string {
   if (axios.isAxiosError(err) && !err.response) {
-    return 'No connection. Check your network and try again.';
+    return tNow('common.noConnection');
   }
-  return 'Could not save. Please try again.';
+  return tNow('cvEditor.wizard.saveFailed');
 }
 
 interface CVWizardProps {
@@ -60,6 +64,23 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
   const [stepPickerOpen, setStepPickerOpen] = useState(false);
   const queryClient = useQueryClient();
   const isSavingRef = useRef(false);
+  const t = useT('cvEditor');
+  const tc = useT('common');
+
+  const stepLabels: Record<StepId, string> = {
+    personal: t('wizard.steps.personal'),
+    experience: t('wizard.steps.experience'),
+    education: t('wizard.steps.education'),
+    skills: t('wizard.steps.skills'),
+    summary: t('wizard.steps.summary'),
+    projects: t('wizard.steps.projects'),
+    certifications: t('wizard.steps.certifications'),
+    languages: t('wizard.steps.languages'),
+    references: t('wizard.steps.references'),
+    custom: t('wizard.steps.custom'),
+    arrange: t('wizard.steps.arrange'),
+  };
+  const currentLabel = stepLabels[STEPS[currentStep].id];
 
   const handleValidChange = useCallback((isValid: boolean) => {
     setStepValid(isValid);
@@ -111,7 +132,7 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
       // B7 — mid-save keystrokes leave isDirty true. Do not advance/Finish.
       return !useCVStore.getState().isDirty;
     } catch (err) {
-      Alert.alert('Could not save', saveFailureMessage(err));
+      Alert.alert(t('wizard.saveFailedTitle'), saveFailureMessage(err));
       return false;
     } finally {
       setIsSaving(false);
@@ -135,7 +156,7 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
     if (index === currentStep) return;
     // Personal info must be valid before leaving step 1, same as Continue.
     if (currentStep === 0 && !stepValid) {
-      Alert.alert('Personal Info', 'Complete the required fields before moving on.');
+      Alert.alert(stepLabels.personal, t('wizard.personalRequired'));
       return;
     }
     const saved = await saveProgress();
@@ -174,16 +195,16 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
         <TouchableOpacity
           onPress={() => setStepPickerOpen(true)}
           accessibilityRole="button"
-          accessibilityLabel={`Step ${currentStep + 1} of ${STEPS.length}, ${STEPS[currentStep].label}. Go to another step`}
+          accessibilityLabel={t('wizard.stepA11y', { current: currentStep + 1, total: STEPS.length, label: currentLabel })}
           className="flex-row items-center justify-between mb-2"
           style={{ minHeight: 32 }}
         >
           <Text className="text-sm font-semibold text-stone-600">
-            Step {currentStep + 1} of {STEPS.length}
+            {t('wizard.stepOf', { current: currentStep + 1, total: STEPS.length })}
           </Text>
           <View className="flex-row items-center">
-            <Text className="text-sm text-stone-500 mr-1">
-              {STEPS[currentStep].label}
+            <Text className="text-sm text-stone-500 me-1">
+              {currentLabel}
             </Text>
             <Ionicons name="chevron-down" size={14} color={colors.stone[500]} />
           </View>
@@ -222,7 +243,7 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
         {renderStep()}
       </Animated.View>
 
-      <Modal visible={stepPickerOpen} onClose={() => setStepPickerOpen(false)} title="Go to step" size="lg">
+      <Modal visible={stepPickerOpen} onClose={() => setStepPickerOpen(false)} title={t('wizard.goToStep')} size="lg">
         {STEPS.map((step, index) => {
           const active = index === currentStep;
           return (
@@ -238,8 +259,8 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
               style={{ minHeight: 48 }}
             >
               <Ionicons name={step.icon} size={18} color={active ? colors.brand[600] : colors.stone[500]} />
-              <Text className={['ml-3 flex-1', active ? 'text-brand-700 font-semibold' : 'text-stone-700'].join(' ')}>
-                {index + 1}. {step.label}
+              <Text className={['ms-3 flex-1', active ? 'text-brand-700 font-semibold' : 'text-stone-700'].join(' ')}>
+                {index + 1}. {stepLabels[step.id]}
               </Text>
             </TouchableOpacity>
           );
@@ -253,8 +274,8 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
             onPress={handleBack}
             className="flex-row items-center px-5 py-3 rounded-xl border border-stone-200 bg-stone-50"
           >
-            <Ionicons name="chevron-back" size={18} color={colors.stone[700]} />
-            <Text className="text-stone-700 font-semibold ml-1">Back</Text>
+            <Ionicons name="chevron-back" size={18} color={colors.stone[700]} style={RTL_FLIP} />
+            <Text className="text-stone-700 font-semibold ms-1">{tc('back')}</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
@@ -269,13 +290,13 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
             'font-bold text-base',
             currentStep === 0 && !stepValid ? 'text-stone-400' : 'text-white',
           ].join(' ')}>
-            {currentStep === STEPS.length - 1 ? 'Finish' : 'Continue'}
+            {currentStep === STEPS.length - 1 ? t('wizard.finish') : t('wizard.continue')}
           </Text>
           <Ionicons
             name={currentStep === STEPS.length - 1 ? 'checkmark' : 'chevron-forward'}
             size={18}
             color={currentStep === 0 && !stepValid ? colors.stone[400] : colors.white}
-            style={{ marginLeft: 4 }}
+            style={[{ marginStart: 4 }, currentStep === STEPS.length - 1 ? undefined : RTL_FLIP]}
           />
         </TouchableOpacity>
       </View>

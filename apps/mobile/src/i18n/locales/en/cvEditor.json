@@ -1,0 +1,348 @@
+{
+  "editor": {
+    "renameFailed": "Could not rename the CV. Please try again.",
+    "exportLimitTitle": "Export Limit Reached",
+    "loadError": "Failed to load CV",
+    "loading": "Loading CV...",
+    "titleA11y": "CV title: {title}. Rename",
+    "titleHint": "Opens a field to change the CV title",
+    "editingFallback": "Editing CV",
+    "unsavedChanges": "Unsaved changes",
+    "atsCheck": "ATS Check",
+    "interviewPrep": "Interview Prep",
+    "moreTools": "More tools",
+    "designTool": "Design: layout, colours, fonts",
+    "linkedinTool": "LinkedIn Optimizer",
+    "moreToolsA11y": "More tools: design and LinkedIn Optimizer",
+    "export": "Export",
+    "chooseFormat": "Choose format:",
+    "renameTitle": "Rename CV",
+    "titleLabel": "CV title",
+    "titlePlaceholder": "e.g. Software Engineer CV 2025"
+  },
+  "wizard": {
+    "steps": {
+      "personal": "Personal Info",
+      "experience": "Experience",
+      "education": "Education",
+      "skills": "Skills",
+      "summary": "Summary",
+      "projects": "Projects",
+      "certifications": "Certifications",
+      "languages": "Languages",
+      "references": "References",
+      "custom": "Custom Sections",
+      "arrange": "Arrange Sections"
+    },
+    "saveFailedTitle": "Could not save",
+    "saveFailed": "Could not save. Please try again.",
+    "personalRequired": "Complete the required fields before moving on.",
+    "stepA11y": "Step {current} of {total}, {label}. Go to another step",
+    "stepOf": "Step {current} of {total}",
+    "goToStep": "Go to step",
+    "finish": "Finish",
+    "continue": "Continue"
+  },
+  "photo": {
+    "upload": "Upload photo",
+    "change": "Change photo",
+    "remove": "Remove photo",
+    "uploading": "Uploading…",
+    "hint": "JPG, PNG or WebP · Max 5 MB · Used as your CV avatar",
+    "invalid": "“.{ext}” files aren’t supported. Please upload a JPG, PNG, or WebP image.",
+    "unknownType": "unknown",
+    "tooLarge": "That file is too large ({size} MB). The maximum size is 5 MB.",
+    "uploadFailed": "Could not upload the photo. Please try again.",
+    "unavailable": "Photo upload is unavailable right now. Please sign in again.",
+    "deniedTitle": "Photos unavailable",
+    "deniedBody": "Allow photo library access in Settings to choose a CV photo.",
+    "updateFailedTitle": "Could not update photo",
+    "removeBody": "Remove the photo from this CV?"
+  },
+  "sections": {
+    "editA11y": "Edit section {title}",
+    "hiddenNote": "This section is hidden on your CV. Show it again in the Arrange Sections step.",
+    "titleLabel": "Section title"
+  },
+  "validation": {
+    "titleRequired": "Please enter a title for your CV.",
+    "titleTooLong": "Title must be {max} characters or fewer.",
+    "sectionTitleRequired": "Please enter a section title.",
+    "sectionTitleTooLong": "Section title must be {max} characters or fewer."
+  },
+  "sectionTypes": {
+    "experience": "Work Experience",
+    "education": "Education",
+    "skills": "Skills",
+    "projects": "Projects",
+    "certifications": "Certifications",
+    "languages": "Languages",
+    "references": "References",
+    "awards": "Awards",
+    "publications": "Publications",
+    "volunteer": "Volunteer",
+    "custom": "Custom Section",
+    "fallback": "Section"
+  },
+  "entry": {
+    "edit": "Edit entry",
+    "delete": "Delete entry",
+    "update": "Update",
+    "present": "Present"
+  },
+  "fields": {
+    "startDate": "Start Date *",
+    "endDate": "End Date",
+    "description": "Description",
+    "company": "Company *",
+    "jobTitle": "Job Title *",
+    "proficiency": "Proficiency Level *",
+    "website": "Website",
+    "websitePlaceholder": "yoursite.com"
+  },
+  "errors": {
+    "startDateRequired": "Start date is required"
+  },
+  "personal": {
+    "title": "Personal Information",
+    "subtitle": "Add your basic contact details and professional headline.",
+    "firstName": "First Name *",
+    "lastName": "Last Name *",
+    "email": "Email Address *",
+    "phone": "Phone Number *",
+    "headline": "Professional Headline",
+    "headlinePlaceholder": "Senior Software Engineer at Google",
+    "city": "City",
+    "cityPlaceholder": "San Francisco",
+    "country": "Country",
+    "countryPlaceholder": "United States",
+    "address": "Street address",
+    "addressPlaceholder": "Street and number",
+    "postalCode": "Postal code",
+    "postalCodePlaceholder": "ZIP / postal code",
+    "errors": {
+      "firstNameRequired": "First name is required",
+      "lastNameRequired": "Last name is required",
+      "invalidEmail": "Invalid email address",
+      "phoneRequired": "Phone number is required"
+    }
+  },
+  "summary": {
+    "title": "Professional Summary",
+    "subtitle": "Write a compelling summary that highlights your expertise and career goals.",
+    "placeholder": "Results-driven software engineer with 5+ years of experience building scalable web applications...",
+    "characters": "{count} characters",
+    "recommended": "Recommended: 150-300 characters",
+    "generate": "Generate",
+    "generating": "Generating...",
+    "creditsRemaining": "{count} credits remaining",
+    "accountNotLoadedTitle": "Account not loaded",
+    "accountNotLoadedBody": "Your account has not loaded yet. Check your connection and try again.",
+    "creditsExhaustedTitle": "Credits Exhausted",
+    "generateFailedTitle": "Could not generate",
+    "generateFailed": "Could not generate. Please try again.",
+    "creditMaybeUsed": "Could not generate. A credit may have been used. Check your balance and try again.",
+    "missing": {
+      "headline": "Add a headline before generating.",
+      "experience": "Add experience before generating.",
+      "skills": "Add skills before generating.",
+      "headlineExperience": "Add a headline and experience before generating.",
+      "headlineSkills": "Add a headline and skills before generating.",
+      "experienceSkills": "Add experience and skills before generating.",
+      "all": "Add a headline, experience, and skills before generating."
+    }
+  },
+  "experience": {
+    "title": "Work Experience",
+    "subtitle": "Add your work history, starting with the most recent position.",
+    "empty": "No work experience added yet.",
+    "add": "Add Experience",
+    "edit": "Edit Experience",
+    "deleteTitle": "Delete Experience",
+    "deleteBody": "Are you sure you want to remove this entry?",
+    "highlightsCount": "{count, plural, one {# highlight} other {# highlights}}",
+    "jobTitlePlaceholder": "Senior Software Engineer",
+    "location": "Location",
+    "locationPlaceholder": "Mountain View, CA",
+    "startPlaceholder": "Jan 2020",
+    "endPlaceholder": "Dec 2023",
+    "current": "Currently working here",
+    "descriptionPlaceholder": "Describe your responsibilities and achievements...",
+    "highlights": "Key highlights",
+    "highlightsPlaceholder": "Led a team of 5 engineers\nCut page load time by 40%",
+    "highlightsHint": "One per line, up to {max}.",
+    "errors": {
+      "companyRequired": "Company name is required",
+      "positionRequired": "Job title is required"
+    }
+  },
+  "education": {
+    "title": "Education",
+    "subtitle": "Add your academic background and qualifications.",
+    "empty": "No education added yet.",
+    "add": "Add Education",
+    "edit": "Edit Education",
+    "deleteTitle": "Delete Education",
+    "deleteBody": "Remove this education entry?",
+    "degreeIn": "{degree} in {field}",
+    "gpa": "GPA: {gpa}",
+    "institution": "Institution *",
+    "degree": "Degree *",
+    "degreePlaceholder": "Bachelor of Science",
+    "field": "Field of Study *",
+    "fieldPlaceholder": "Computer Science",
+    "startPlaceholder": "Sep 2018",
+    "endPlaceholder": "May 2022",
+    "gpaLabel": "GPA (optional)",
+    "errors": {
+      "institutionRequired": "Institution is required",
+      "degreeRequired": "Degree is required",
+      "fieldRequired": "Field of study is required"
+    }
+  },
+  "skills": {
+    "title": "Skills",
+    "subtitle": "Add your technical and soft skills with proficiency levels.",
+    "empty": "No skills added yet.",
+    "add": "Add Skill",
+    "edit": "Edit Skill",
+    "deleteTitle": "Delete Skill",
+    "deleteBody": "Remove this skill?",
+    "name": "Skill Name *",
+    "category": "Category (optional)",
+    "categoryPlaceholder": "Frontend, Backend, Tools...",
+    "levels": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced",
+      "expert": "Expert"
+    },
+    "errors": {
+      "nameRequired": "Skill name is required"
+    }
+  },
+  "projects": {
+    "title": "Projects",
+    "subtitle": "Showcase your notable projects and side work.",
+    "empty": "No projects added yet.",
+    "add": "Add Project",
+    "edit": "Edit Project",
+    "deleteTitle": "Delete Project",
+    "deleteBody": "Remove this project?",
+    "name": "Project Name *",
+    "namePlaceholder": "My Awesome App",
+    "descriptionPlaceholder": "A brief description of what you built...",
+    "technologies": "Technologies (comma-separated)",
+    "url": "Project URL",
+    "errors": {
+      "nameRequired": "Project name is required"
+    }
+  },
+  "certifications": {
+    "title": "Certifications",
+    "subtitle": "Add your professional certifications and licenses.",
+    "empty": "No certifications added yet.",
+    "add": "Add Certification",
+    "edit": "Edit Certification",
+    "deleteTitle": "Delete Certification",
+    "deleteBody": "Remove this certification?",
+    "expires": "Expires {date}",
+    "name": "Certification Name *",
+    "issuer": "Issuing Organization *",
+    "issueDate": "Issue Date *",
+    "issuePlaceholder": "Jan 2023",
+    "expiry": "Expiry Date",
+    "expiryPlaceholder": "Jan 2026",
+    "credentialId": "Credential ID",
+    "credentialPlaceholder": "e.g. AWS-123",
+    "errors": {
+      "nameRequired": "Certification name is required",
+      "issuerRequired": "Issuer is required",
+      "dateRequired": "Date is required"
+    }
+  },
+  "languages": {
+    "title": "Languages",
+    "subtitle": "List the languages you speak and your proficiency levels.",
+    "empty": "No languages added yet.",
+    "add": "Add Language",
+    "edit": "Edit Language",
+    "deleteTitle": "Delete Language",
+    "deleteBody": "Remove this language?",
+    "name": "Language *",
+    "namePlaceholder": "English",
+    "levels": {
+      "Native": "Native",
+      "Fluent": "Fluent",
+      "Advanced": "Advanced",
+      "Intermediate": "Intermediate",
+      "Basic": "Basic"
+    },
+    "errors": {
+      "nameRequired": "Language name is required",
+      "proficiencyRequired": "Proficiency level is required"
+    }
+  },
+  "references": {
+    "title": "References",
+    "subtitle": "Add professional references who can vouch for your work.",
+    "empty": "No references added yet.",
+    "add": "Add Reference",
+    "edit": "Edit Reference",
+    "deleteTitle": "Delete Reference",
+    "deleteBody": "Remove this reference?",
+    "titleAtCompany": "{title} at {company}",
+    "fullName": "Full Name *",
+    "jobTitlePlaceholder": "Engineering Manager",
+    "email": "Email",
+    "phone": "Phone",
+    "relationship": "Relationship",
+    "relationshipPlaceholder": "Former manager",
+    "errors": {
+      "nameRequired": "Name is required",
+      "titleRequired": "Title is required",
+      "companyRequired": "Company is required",
+      "invalidEmail": "Invalid email"
+    }
+  },
+  "custom": {
+    "title": "Custom Sections",
+    "subtitle": "Add anything else you want on your CV — awards, volunteering, publications, interests.",
+    "empty": "No custom sections yet.",
+    "noEntries": "No entries yet — add your first one below.",
+    "untitled": "Untitled entry",
+    "addItem": "Add item",
+    "addSection": "Add Custom Section",
+    "newHeading": "New Custom Section",
+    "addSectionConfirm": "Add Section",
+    "addEntry": "Add Entry",
+    "editEntry": "Edit Entry",
+    "deleteTitle": "Delete Entry",
+    "deleteBody": "Remove this entry?",
+    "titleLabel": "Title *",
+    "subtitleLabel": "Subtitle",
+    "date": "Date",
+    "descriptionPlaceholder": "Description…",
+    "errors": {
+      "titleRequired": "Title is required"
+    }
+  },
+  "arrange": {
+    "title": "Arrange Sections",
+    "subtitle": "Change the order of the sections on your CV, rename them, and choose which ones to show. Hidden sections stay saved but are left out of your CV.",
+    "empty": "No sections yet. Add one below.",
+    "meta": "{type} · {count, plural, one {# item} other {# items}}",
+    "metaHidden": "{type} · {count, plural, one {# item} other {# items}} · Hidden",
+    "moveUp": "Move {title} up",
+    "moveDown": "Move {title} down",
+    "hide": "Hide section {title}",
+    "show": "Show section {title}",
+    "rename": "Rename section {title}",
+    "remove": "Remove section {title}",
+    "addSection": "Add Section",
+    "removeTitle": "Remove Section",
+    "removeBodyEntries": "Remove “{title}” and its {count, plural, one {# entry} other {# entries}} from this CV?",
+    "removeBody": "Remove “{title}” from this CV?",
+    "renameHeading": "Rename Section"
+  }
+}

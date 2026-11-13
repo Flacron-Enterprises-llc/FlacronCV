@@ -1,0 +1,45 @@
+{
+  "title": "Templates",
+  "subtitle": "Choose a professional design",
+  "filters": {
+    "all": "all",
+    "free": "free",
+    "pro": "pro"
+  },
+  "loadError": "Could not load templates. Please try again.",
+  "empty": {
+    "allTitle": "No templates",
+    "freeTitle": "No free templates",
+    "proTitle": "No pro templates",
+    "allBody": "No templates are available right now.",
+    "filteredBody": "Try another filter to see available designs.",
+    "showAll": "Show all"
+  },
+  "tiers": {
+    "free": "Free",
+    "pro": "Pro",
+    "enterprise": "Enterprise",
+    "careerAccelerator": "Career accelerator"
+  },
+  "card": {
+    "a11y": "{name} template",
+    "a11yLocked": "{name} template, locked",
+    "preview": "Preview {name} template"
+  },
+  "preview": {
+    "title": "Template Preview",
+    "imageA11y": "Preview of the {name} template with sample data",
+    "unavailable": "Preview not available",
+    "lockedUpgrade": "This is a {tier} template. Upgrade your plan to use it with your own data.",
+    "lockedShort": "This is a {tier} template.",
+    "unlocked": "This preview uses sample data. Select this template to start building your own CV.",
+    "accentColor": "Accent color",
+    "layout": "Layout",
+    "readOnly": "This preview is read-only. All content is sample data.",
+    "upgradeTo": "Upgrade to {tier}",
+    "select": "Select Template",
+    "useFree": "Use for Free",
+    "maybeLater": "Maybe Later",
+    "backToGallery": "Back to Gallery"
+  }
+}

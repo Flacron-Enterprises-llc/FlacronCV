@@ -1,4 +1,5 @@
 import { Platform, type AlertButton } from 'react-native';
+import { hasKey, t } from '../i18n';
 import { SubscriptionPlan } from '../types/enums';
 import { PLAN_CONFIGS } from '../types/subscription.types';
 
@@ -35,60 +36,65 @@ export const PAID_UPGRADES_ENABLED: boolean =
 
 export function upgradeAlertButtons(onUpgrade: () => void): AlertButton[] {
   if (!PAID_UPGRADES_ENABLED) {
-    return [{ text: 'OK' }];
+    return [{ text: t('common.ok') }];
   }
   return [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Upgrade', onPress: onUpgrade },
+    { text: t('common.cancel'), style: 'cancel' },
+    { text: t('subscription.limits.upgrade'), onPress: onUpgrade },
   ];
 }
 
 function formatLimit(limit: number | 'unlimited'): string {
-  return limit === 'unlimited' ? 'unlimited' : String(limit);
+  return limit === 'unlimited' ? t('subscription.limits.unlimited') : String(limit);
+}
+
+/** Plan name for copy: the translated name when there is one, else the capitalised id. */
+function planLabel(plan: string): string {
+  const key = `settings.plans.${plan}`;
+  return hasKey(key) ? t(key) : plan.charAt(0).toUpperCase() + plan.slice(1);
 }
 
 export function cvLimitReachedMessage(plan: SubscriptionPlan): string {
-  const fact = `Your ${plan} plan allows up to ${formatLimit(PLAN_CONFIGS[plan].limits.cvs)} CVs.`;
-  return PAID_UPGRADES_ENABLED ? `${fact} Upgrade to create more.` : fact;
+  const fact = t('subscription.limits.cvLimit', {
+    plan,
+    limit: formatLimit(PLAN_CONFIGS[plan].limits.cvs),
+  });
+  return PAID_UPGRADES_ENABLED ? [fact, t('subscription.limits.cvUpgrade')].join(' ') : fact;
 }
 
 export function coverLetterLimitReachedMessage(plan: SubscriptionPlan): string {
   if (PAID_UPGRADES_ENABLED) {
-    return 'Upgrade your plan to create more cover letters.';
+    return t('subscription.limits.coverLetterUpgrade');
   }
-  return `Your ${plan} plan allows up to ${formatLimit(PLAN_CONFIGS[plan].limits.coverLetters)} cover letters.`;
+  return t('subscription.limits.coverLetterLimit', {
+    plan,
+    limit: formatLimit(PLAN_CONFIGS[plan].limits.coverLetters),
+  });
 }
 
 export function exportLimitReachedMessage(): string {
   if (PAID_UPGRADES_ENABLED) {
-    return 'You have reached your monthly export limit. Upgrade to Pro for unlimited exports.';
+    return t('subscription.limits.exportUpgrade');
   }
   const limit = PLAN_CONFIGS[SubscriptionPlan.FREE].limits.exports;
-  return `You have reached your monthly export limit (${formatLimit(limit)}).`;
+  return t('subscription.limits.exportLimit', { limit: formatLimit(limit) });
 }
 
 export function aiCreditsExhaustedMessage(variant: 'summary' | 'coverLetter' | 'summaryHttp'): string {
   if (PAID_UPGRADES_ENABLED) {
-    if (variant === 'coverLetter') return 'Upgrade to get more Engine credits.';
-    if (variant === 'summaryHttp') return 'You are out of Engine credits. Upgrade your plan to get more.';
-    return 'Upgrade your plan to get more Engine credits.';
+    if (variant === 'coverLetter') return t('subscription.limits.creditsUpgradeCoverLetter');
+    if (variant === 'summaryHttp') return t('subscription.limits.creditsUpgradeHttp');
+    return t('subscription.limits.creditsUpgrade');
   }
-  return 'You have used all Engine credits for this month.';
+  return t('subscription.limits.creditsExhausted');
 }
 
 export function lockedTemplateTitle(requiredTier?: string): string {
-  if (PAID_UPGRADES_ENABLED) return 'Upgrade Required';
+  if (PAID_UPGRADES_ENABLED) return t('subscription.upgradeModal.upgradeRequired');
   if (requiredTier) {
-    const label = requiredTier.charAt(0).toUpperCase() + requiredTier.slice(1);
-    return `${label} template`;
+    return t('subscription.limits.templateTitle', { tier: planLabel(requiredTier) });
   }
-  return 'Template unavailable';
-}
-
-function templatesIncludedPhrase(plan: SubscriptionPlan): string {
-  if (plan === SubscriptionPlan.ENTERPRISE) return 'all templates';
-  if (plan === SubscriptionPlan.PRO) return 'Free and Pro templates';
-  return 'Free templates';
+  return t('subscription.limits.templateUnavailable');
 }
 
 export function lockedTemplateMessage(
@@ -97,9 +103,12 @@ export function lockedTemplateMessage(
   currentPlan: SubscriptionPlan = SubscriptionPlan.FREE,
 ): string {
   if (PAID_UPGRADES_ENABLED) {
-    return `The ${templateName} template requires a ${requiredTier} plan.`;
+    return t('subscription.limits.templateRequires', { name: templateName, tier: requiredTier });
   }
-  const tierLabel = requiredTier.charAt(0).toUpperCase() + requiredTier.slice(1);
-  const planLabel = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
-  return `${templateName} is included on ${tierLabel} plans. Your ${planLabel} plan can use ${templatesIncludedPhrase(currentPlan)}.`;
+  return t('subscription.limits.templateIncluded', {
+    name: templateName,
+    tier: planLabel(requiredTier),
+    planLabel: planLabel(currentPlan),
+    plan: currentPlan,
+  });
 }

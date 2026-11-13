@@ -1,0 +1,21 @@
+{
+  "push": {
+    "enableFailedTitle": "Could not enable notifications",
+    "expoGoBody": "Remote notifications are not available in Expo Go. Use a development or store build.",
+    "registerFailedBody": "We could not register this device for notifications. Check your connection and try again.",
+    "promptTitle": "Get a reminder?",
+    "promptBoth": "Turn on notifications so we can remind you when this follow-up or interview is due.",
+    "promptInterview": "Turn on notifications so we can remind you when this interview is due.",
+    "promptFollowUp": "Turn on notifications so we can remind you when this follow-up is due.",
+    "notNow": "Not now",
+    "enable": "Enable"
+  },
+  "job": {
+    "channelName": "Reminders",
+    "titleFallback": "Job",
+    "followUpToday": "Follow-up today",
+    "followUpTodayWith": "Follow-up today with {company}",
+    "interviewToday": "Interview today at {time}",
+    "interviewTodayWith": "Interview today at {time} with {company}"
+  }
+}

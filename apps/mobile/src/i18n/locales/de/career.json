@@ -1,0 +1,242 @@
+{
+  "header": {
+    "goBack": "Zurück"
+  },
+  "addon": {
+    "heading": "Zusatzpaket Karrieretools",
+    "note": "Getrennt von deinem FlacronCV-Tarif oben, den es nie ändert."
+  },
+  "overview": {
+    "title": "Karrieretools",
+    "subtitle": "Optionale Erweiterung deines FlacronCV-Tarifs",
+    "credits": "Karriere-Credits",
+    "creditsLeft": "von {granted} Dokument-Credits übrig",
+    "packs": "{count} zusätzlich aus Paketen",
+    "renews": "Das Kontingent erneuert sich am {date}.",
+    "creditsError": "Deine Credits konnten nicht geladen werden. Zum Aktualisieren nach unten ziehen.",
+    "creditsNote": "Karriere-Credits sind von deinen FlacronCV-KI-Credits getrennt und werden nur von den Karrieretools genutzt. Bearbeiten, Speichern und Exportieren eines Entwurfs verbraucht keine.",
+    "whatYouCanDo": "Was du tun kannst"
+  },
+  "access": {
+    "off": {
+      "title": "Karrieretools sind in dieser App nicht verfügbar",
+      "body": "Dein FlacronCV-Tarif, deine Lebensläufe, Anschreiben und der Bewerbungs-Tracker funktionieren wie gewohnt."
+    },
+    "loading": {
+      "title": "Deine Karrieretools werden geprüft…"
+    },
+    "offline": {
+      "title": "Du bist offline",
+      "body": "Karrieretools brauchen eine Verbindung. Es wurde nichts geändert. Versuche es erneut, wenn du wieder online bist."
+    },
+    "unavailable": {
+      "title": "Karrieretools sind gerade nicht verfügbar",
+      "body": "Der Karrieredienst hat nicht geantwortet. Es wurde nichts geändert. Bitte versuche es später erneut."
+    },
+    "inactive": {
+      "title": "Karrieretools sind für dieses Konto nicht verfügbar",
+      "body": "Dein FlacronCV-Konto ist nicht aktiv."
+    },
+    "notIncluded": {
+      "title": "Karrieretools sind in deinem Tarif nicht enthalten",
+      "body": "Karrieretools sind eine optionale Erweiterung mit eigenen Credits. Dein FlacronCV-Tarif, seine Vorteile und seine KI-Credits bleiben genau so, wie sie sind."
+    },
+    "localFixture": "Lokale Testberechtigung für diese Demo. Es ist kein Kauf und es wurde nichts berechnet.",
+    "purchase": "Eine separate Erweiterung neben deinem FlacronCV-Tarif. Eine Kündigung beendet nur die Karrieretools; dein FlacronCV-Tarif läuft weiter.",
+    "pastDue": "Die letzte Zahlung für die Erweiterung ist fehlgeschlagen. Der Zugang bleibt bis zum Ende des bezahlten Zeitraums bestehen.",
+    "endsOn": "Endet am {date}.",
+    "renewsOn": "Verlängert sich am {date}.",
+    "included": "In deinem FlacronCV-Tarif enthalten.",
+    "activeTitle": "Karriere {plan}",
+    "badge": {
+      "test": "TESTZUGANG",
+      "ending": "ENDET",
+      "active": "AKTIV"
+    }
+  },
+  "areas": {
+    "profile": {
+      "title": "Karriereprofil",
+      "body": "Füge die Fakten, aus denen deine Entwürfe entstehen, hinzu, bearbeite, bestätige oder entferne sie; importiere einen Lebenslauf und lege deine Präferenzen fest."
+    },
+    "documents": {
+      "title": "Karriere-Entwürfe",
+      "body": "Erstelle, generiere, passe an, bearbeite und speichere Karriere-Lebensläufe und -Anschreiben; wechsle Layouts, prüfe die Lesbarkeit, exportiere und teile."
+    },
+    "opportunities": {
+      "title": "Jobsuche",
+      "body": "Durchsuche deine Stellenanzeigen, füge eine Stellenausschreibung ein, prüfe sie und vergleiche sie mit deinem Karriere-Lebenslauf. Es ist kein Live-Stellenfeed verbunden."
+    },
+    "map": {
+      "title": "Kartensitzung",
+      "body": "Stellenanzeigen als Liste mit ungefähren Orten. Es sind keine Kartenkacheln verbunden."
+    },
+    "alerts": {
+      "title": "Benachrichtigungen",
+      "body": "Gespeicherte Suchen, Orte, gefolgte Unternehmen und die Stellenanzeigen, die sie finden."
+    },
+    "tracker": {
+      "title": "Bewerbungs-Tracker",
+      "body": "Deine Bewerbungen bleiben im FlacronCV-Bewerbungs-Tracker."
+    },
+    "outcomes": {
+      "title": "Bewerbungsergebnisse",
+      "body": "Beobachtete Zahlen aus deinem Bewerbungs-Tracker. Keine Einstellungswahrscheinlichkeit."
+    },
+    "evidence": {
+      "title": "Nachweis-Tresor",
+      "body": "Füge Nachweise deiner Arbeit hinzu, bearbeite oder lösche sie; hänge ein Foto eines Zertifikats an."
+    },
+    "portfolios": {
+      "title": "Portfolio-Seiten",
+      "body": "Wähle Arbeiten zum Zeigen aus, veröffentliche sie oder erstelle einen privaten Link, teile ihn und zeige seinen QR-Code."
+    },
+    "interviews": {
+      "title": "Interviewtraining",
+      "body": "Textbasiertes Interviewtraining, deine Sitzungen und STAR-Geschichten."
+    },
+    "voice": {
+      "title": "Sprechtraining",
+      "body": "Übe laut und tippe ein, was du gesagt hast. Die App nimmt kein Audio auf."
+    },
+    "actionPacks": {
+      "title": "Aktionspakete",
+      "body": "Mach aus einer gespeicherten Stelle ein zugeschnittenes Bewerbungspaket mit Checkliste."
+    },
+    "learning": {
+      "title": "Lernpläne",
+      "body": "Kompetenzlücken, Meilensteine und ein Projektbriefing für eine Zielrolle."
+    },
+    "maintenance": {
+      "title": "Karrierepflege",
+      "body": "Erfasse Erfolge und Beförderungsziele; sieh Nachweise, die innerhalb von 90 Tagen fällig sind."
+    },
+    "scenarios": {
+      "title": "Szenarioplaner",
+      "body": "Vergleiche bis zu drei Wege. Fehlendes Gehalt bleibt unbekannt."
+    },
+    "relocation": {
+      "title": "Umzug und Karrieremodi",
+      "body": "Zielorte, Umzugspläne und der Fachfokus für deine Entwürfe."
+    },
+    "recruiting": {
+      "title": "Recruiting-Freigabe",
+      "body": "Wähle, ob Arbeitgeber sehen dürfen, dass du zugestimmt hast. Deine E-Mail bleibt privat."
+    },
+    "services": {
+      "title": "Menschliche Prüfung",
+      "body": "Eine Person prüft ausgewähltes Material. Noch nicht buchbar."
+    },
+    "data": {
+      "title": "Karrieredaten",
+      "body": "Exportiere eine Kopie deiner Karrieredaten."
+    },
+    "forms": {
+      "title": "Ausfüllen von Bewerbungsformularen",
+      "body": "Nutzt die Browsererweiterung am Desktop; auf Smartphones nicht verfügbar."
+    }
+  },
+  "where": {
+    "web": "Auf der Website",
+    "provider": "Noch nicht verfügbar",
+    "desktop": "Nur am Desktop"
+  },
+  "errors": {
+    "network": "Keine Verbindung. Es wurde nichts gespeichert. Prüfe dein Netzwerk und versuche es erneut.",
+    "revisionConflict": "Dieser Entwurf wurde woanders geändert. Lade ihn neu, bevor du erneut speicherst; deine Änderung wurde nicht gespeichert.",
+    "featureUnavailable": "Diese Karrierefunktion ist ausgeschaltet.",
+    "recordDeleted": "Dieser Entwurf wurde woanders gelöscht; deine Änderung wurde nicht gespeichert.",
+    "notInPlan": "Dein Karrieretarif enthält das nicht.",
+    "quotaExhausted": "Deine Karriere-Credits für diesen Zeitraum sind aufgebraucht.",
+    "providerUnavailable": "Dafür wird ein Dienst benötigt, der gerade nicht verfügbar ist. Es wurde nichts berechnet.",
+    "rateLimited": "Zu viele Anfragen. Warte einen Moment und versuche es erneut.",
+    "sessionExpired": "Deine Sitzung ist abgelaufen. Melde dich erneut an.",
+    "forbidden": "Du hast keinen Zugriff darauf.",
+    "notFound": "Dieses Element existiert nicht mehr."
+  },
+  "factTypes": {
+    "contact": "Kontakt",
+    "summary": "Zusammenfassung",
+    "experience": "Berufserfahrung",
+    "education": "Ausbildung",
+    "skill": "Kompetenz",
+    "project": "Projekt",
+    "achievement": "Erfolg",
+    "certification": "Zertifizierung",
+    "language": "Sprache",
+    "reference": "Referenz"
+  },
+  "shared": {
+    "notIncluded": "Karrieretools sind in deinem Tarif nicht enthalten",
+    "v1Unchanged": "Deine FlacronCV-Lebensläufe und -Anschreiben bleiben unverändert.",
+    "v1InTabs": "Deine FlacronCV-Lebensläufe und Anschreiben haben eigene Tabs.",
+    "careerUnchanged": "Dein Karriereprofil und deine Entwürfe bleiben unverändert.",
+    "nothingChanged": "Es wurde nichts geändert.",
+    "nothingChangedNoCredit": "Es wurde nichts geändert und kein Credit verbraucht.",
+    "pageNotLoaded": "Diese Seite konnte nicht geladen werden. Es wurde nichts geändert.",
+    "notOpenYet": "Dieses Tool ist noch nicht verfügbar",
+    "confirmedPill": "BESTÄTIGT",
+    "draftPill": "ENTWURF",
+    "openPill": "OFFEN",
+    "expiredPill": "ABGELAUFEN",
+    "confirm": "Bestätigen",
+    "edit": "Bearbeiten",
+    "change": "Ändern",
+    "discard": "Verwerfen",
+    "discardChanges": "Änderungen verwerfen?",
+    "keepEditing": "Weiter bearbeiten",
+    "unsavedChanges": "Nicht gespeicherte Änderungen",
+    "unsavedRestored": "Deine früheren ungespeicherten Änderungen wurden wiederhergestellt.",
+    "leave": "Verlassen",
+    "notNow": "Nicht jetzt",
+    "saving": "Wird gespeichert…",
+    "saved": "Gespeichert",
+    "saveFirst": "Zuerst speichern",
+    "notSaved": "Nicht gespeichert",
+    "notUpdated": "Nicht aktualisiert",
+    "notDeleted": "Nicht gelöscht",
+    "notRemoved": "Nicht entfernt",
+    "notConfirmed": "Nicht bestätigt",
+    "changesNotSaved": "Deine Änderungen wurden nicht gespeichert. Sie sind noch da; versuche es erneut.",
+    "keepsTextNote": "Bereits erstellte Entwürfe behalten ihren Text. Neue Entwürfe verwenden es nicht mehr.",
+    "usesOneCredit": "Dies verbraucht 1 Dokument-Credit",
+    "separateWithCommas": "Einträge durch Kommas trennen",
+    "searchListings": "Stellenanzeigen durchsuchen",
+    "noListings": "Keine Stellenanzeigen",
+    "layout": "Gestaltung",
+    "layoutNotChanged": "Layout nicht geändert",
+    "careerCv": "Karriere-Lebenslauf",
+    "careerLetter": "Karriere-Anschreiben",
+    "newCareerCv": "Neuer Karriere-Lebenslauf",
+    "writeLetterOrText": "Anschreiben oder Text verfassen",
+    "exportFailed": "Export fehlgeschlagen",
+    "sharingUnavailable": "Teilen nicht verfügbar",
+    "shareSheetUnavailable": "Dieses Gerät kann das Teilen-Menü nicht öffnen.",
+    "fileNotCreated": "Die Datei konnte nicht erstellt werden. Bitte versuche es erneut.",
+    "couldNotOpenFile": "Die Datei konnte nicht geöffnet werden",
+    "exportUsesSaved": "Der Export verwendet die gespeicherte Version. Speichere oder verwirf deine Änderungen und exportiere dann.",
+    "notAHiringProbability": "Dies ist keine Einstellungswahrscheinlichkeit."
+  },
+  "outcomes": {
+    "intro": "Beobachtete Quoten in deinen erfassten Bewerbungen. Keine Einstellungswahrscheinlichkeit.",
+    "stats": {
+      "recorded": "Erfasste Bewerbungen",
+      "rate": "Beobachtete Interviewquote in dieser Stichprobe",
+      "interviews": "Vorstellungsgespräche",
+      "offers": "Angebote",
+      "noResponse": "Beworben, noch keine Antwort",
+      "unrecorded": "Gespeichert oder in Vorbereitung (nicht gezählt)"
+    },
+    "sample": {
+      "empty": "Noch keine Bewerbungen. Die Zahlen stammen aus den Bewerbungen in deinem Bewerbungs-Tracker.",
+      "none": "Keine deiner Bewerbungen hat bisher ein erfasstes Ergebnis, daher gibt es keine Quote.",
+      "small": "Das ist eine kleine Stichprobe ({count} erfasst). Ein weiteres Ergebnis kann die Quote stark ändern."
+    },
+    "loadFailed": "Diese Seite konnte nicht geladen werden. Es wurde nichts geändert. Versuche es erneut.",
+    "offBody": "Es ist in dieser Vorschau deaktiviert. Es wurde nichts geändert und kein Credit verbraucht.",
+    "notIncludedTitle": "Ergebnisanalysen sind in deinem Karrieretarif nicht enthalten",
+    "notIncludedBody": "Deine Bewerbungen im Bewerbungs-Tracker bleiben unverändert.",
+    "countsNote": "Die Zahlen stammen aus deinen Bewerbungen im Bewerbungs-Tracker. Vorstellungsgespräche schließen Angebote ein. Das ist keine Einstellungswahrscheinlichkeit.",
+    "openTracker": "Bewerbungs-Tracker öffnen"
+  }
+}

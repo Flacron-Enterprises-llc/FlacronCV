@@ -1,0 +1,242 @@
+{
+  "header": {
+    "goBack": "Go back"
+  },
+  "addon": {
+    "heading": "Career tools add-on",
+    "note": "Separate from your FlacronCV plan above, which it never changes."
+  },
+  "overview": {
+    "title": "Career tools",
+    "subtitle": "Optional add-on to your FlacronCV plan",
+    "credits": "Career credits",
+    "creditsLeft": "of {granted} document credits left",
+    "packs": "{count} extra from packs",
+    "renews": "Allowance renews on {date}.",
+    "creditsError": "Could not load your credits. Pull to refresh.",
+    "creditsNote": "Career credits are separate from your FlacronCV AI credits and are used only by the career tools. Editing, saving and exporting a draft uses none.",
+    "whatYouCanDo": "What you can do"
+  },
+  "access": {
+    "off": {
+      "title": "Career tools are not available in this app",
+      "body": "Your FlacronCV plan, CVs, cover letters and Job Tracker work as usual."
+    },
+    "loading": {
+      "title": "Checking your career tools…"
+    },
+    "offline": {
+      "title": "You are offline",
+      "body": "Career tools need a connection. Nothing was changed. Try again when you are back online."
+    },
+    "unavailable": {
+      "title": "Career tools are unavailable right now",
+      "body": "The career service did not answer. Nothing was changed. Please try again later."
+    },
+    "inactive": {
+      "title": "Career tools are unavailable for this account",
+      "body": "Your FlacronCV account is not active."
+    },
+    "notIncluded": {
+      "title": "Career tools are not included in your plan",
+      "body": "Career tools are an optional add-on with their own credits. Your FlacronCV plan, its benefits and its AI credits stay exactly as they are."
+    },
+    "localFixture": "Local test entitlement for this demo. It is not a purchase and nothing was charged.",
+    "purchase": "A separate add-on beside your FlacronCV plan. Cancelling it ends only the career tools; your FlacronCV plan continues.",
+    "pastDue": "The last payment for the add-on failed. Access continues until the end of the paid period.",
+    "endsOn": "Ends on {date}.",
+    "renewsOn": "Renews on {date}.",
+    "included": "Included with your FlacronCV plan.",
+    "activeTitle": "Career {plan}",
+    "badge": {
+      "test": "TEST ENTITLEMENT",
+      "ending": "ENDING",
+      "active": "ACTIVE"
+    }
+  },
+  "areas": {
+    "profile": {
+      "title": "Career profile",
+      "body": "Add, edit, confirm or remove the facts your drafts are built from; import a resume and set your preferences."
+    },
+    "documents": {
+      "title": "Career drafts",
+      "body": "Create, generate, tailor, edit and save career CVs and letters; switch layouts, check readability, export and share."
+    },
+    "opportunities": {
+      "title": "Job search",
+      "body": "Search your listings, paste a job advert, check it and compare it with your career CV. No live job feed is connected."
+    },
+    "map": {
+      "title": "Map session",
+      "body": "Listings as a list with approximate locations. No map tiles are connected."
+    },
+    "alerts": {
+      "title": "Alerts",
+      "body": "Saved searches, places, followed companies and the listings they surface."
+    },
+    "tracker": {
+      "title": "Job Tracker",
+      "body": "Your applications stay in the FlacronCV Job Tracker."
+    },
+    "outcomes": {
+      "title": "Application outcomes",
+      "body": "Observed counts from your Job Tracker. Not a hiring probability."
+    },
+    "evidence": {
+      "title": "Evidence vault",
+      "body": "Add, edit and delete proof of your work; attach a photo of a certificate."
+    },
+    "portfolios": {
+      "title": "Portfolio pages",
+      "body": "Choose work to show, publish or make a private link, share it and show its QR code."
+    },
+    "interviews": {
+      "title": "Interview practice",
+      "body": "Text interview practice, your sessions and STAR stories."
+    },
+    "voice": {
+      "title": "Voice practice",
+      "body": "Practice out loud and type what you said. The app does not record audio."
+    },
+    "actionPacks": {
+      "title": "Action packs",
+      "body": "Turn a saved opportunity into a tailored application pack with a checklist."
+    },
+    "learning": {
+      "title": "Learning plans",
+      "body": "Skill gaps, milestones and a project brief for a target role."
+    },
+    "maintenance": {
+      "title": "Career maintenance",
+      "body": "Log achievements and promotion goals; see credentials due within 90 days."
+    },
+    "scenarios": {
+      "title": "Scenario planner",
+      "body": "Compare up to three routes. Missing pay stays unknown."
+    },
+    "relocation": {
+      "title": "Relocation and career modes",
+      "body": "Target locations, relocation plans and the specialist lens for your drafts."
+    },
+    "recruiting": {
+      "title": "Recruiting opt-in",
+      "body": "Choose whether employers may see that you opted in. Your email stays private."
+    },
+    "services": {
+      "title": "Human review",
+      "body": "A person reviews selected material. Not bookable yet."
+    },
+    "data": {
+      "title": "Career data",
+      "body": "Export a copy of your career records."
+    },
+    "forms": {
+      "title": "Application form filling",
+      "body": "Uses the desktop browser extension; not available on phones."
+    }
+  },
+  "where": {
+    "web": "On the website",
+    "provider": "Not available yet",
+    "desktop": "Desktop only"
+  },
+  "errors": {
+    "network": "No connection. Nothing was saved. Check your network and try again.",
+    "revisionConflict": "This draft changed somewhere else. Reload it before saving again; your edit was not saved.",
+    "featureUnavailable": "This career feature is switched off.",
+    "recordDeleted": "This draft was deleted somewhere else; your edit was not saved.",
+    "notInPlan": "Your career plan does not include this.",
+    "quotaExhausted": "Your career credits for this period are used up.",
+    "providerUnavailable": "This needs a service that is not available right now. Nothing was charged.",
+    "rateLimited": "Too many requests. Wait a moment and try again.",
+    "sessionExpired": "Your session expired. Sign in again.",
+    "forbidden": "You do not have access to this.",
+    "notFound": "This item no longer exists."
+  },
+  "factTypes": {
+    "contact": "Contact",
+    "summary": "Summary",
+    "experience": "Experience",
+    "education": "Education",
+    "skill": "Skill",
+    "project": "Project",
+    "achievement": "Achievement",
+    "certification": "Certification",
+    "language": "Language",
+    "reference": "Reference"
+  },
+  "shared": {
+    "notIncluded": "Career tools are not included in your plan",
+    "v1Unchanged": "Your FlacronCV CVs and letters are unchanged.",
+    "v1InTabs": "Your FlacronCV CVs and cover letters are in their own tabs.",
+    "careerUnchanged": "Your career profile and drafts are unchanged.",
+    "nothingChanged": "Nothing was changed.",
+    "nothingChangedNoCredit": "Nothing was changed and no credit was used.",
+    "pageNotLoaded": "This page could not be loaded. Nothing was changed.",
+    "notOpenYet": "This tool is not open yet",
+    "confirmedPill": "CONFIRMED",
+    "draftPill": "DRAFT",
+    "openPill": "OPEN",
+    "expiredPill": "EXPIRED",
+    "confirm": "Confirm",
+    "edit": "Edit",
+    "change": "Change",
+    "discard": "Discard",
+    "discardChanges": "Discard changes?",
+    "keepEditing": "Keep editing",
+    "unsavedChanges": "Unsaved changes",
+    "unsavedRestored": "Your unsaved changes from earlier are restored.",
+    "leave": "Leave",
+    "notNow": "Not now",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "saveFirst": "Save first",
+    "notSaved": "Not saved",
+    "notUpdated": "Not updated",
+    "notDeleted": "Not deleted",
+    "notRemoved": "Not removed",
+    "notConfirmed": "Not confirmed",
+    "changesNotSaved": "Your changes were not saved. They are still here; try again.",
+    "keepsTextNote": "Drafts already made keep their text. New drafts will no longer use it.",
+    "usesOneCredit": "This uses 1 document credit",
+    "separateWithCommas": "Separate items with commas",
+    "searchListings": "Search listings",
+    "noListings": "No listings",
+    "layout": "Layout",
+    "layoutNotChanged": "Layout not changed",
+    "careerCv": "Career CV",
+    "careerLetter": "Career letter",
+    "newCareerCv": "New career CV",
+    "writeLetterOrText": "Write a letter or text",
+    "exportFailed": "Export failed",
+    "sharingUnavailable": "Sharing unavailable",
+    "shareSheetUnavailable": "This device cannot open the share sheet.",
+    "fileNotCreated": "The file could not be created. Please try again.",
+    "couldNotOpenFile": "Could not open the file",
+    "exportUsesSaved": "The export uses the saved version. Save or discard your changes, then export.",
+    "notAHiringProbability": "This is not a hiring probability."
+  },
+  "outcomes": {
+    "intro": "Observed rates in your recorded applications. Not a hiring probability.",
+    "stats": {
+      "recorded": "Recorded applications",
+      "rate": "Observed interview rate in this sample",
+      "interviews": "Interviews",
+      "offers": "Offers",
+      "noResponse": "Applied, no response yet",
+      "unrecorded": "Saved or preparing (not counted)"
+    },
+    "sample": {
+      "empty": "No applications yet. Counts come from the applications in your Job Tracker.",
+      "none": "None of your applications has a recorded outcome yet, so there is no rate to show.",
+      "small": "This is a small sample ({count} recorded). One more outcome can change the rate a lot."
+    },
+    "loadFailed": "This page could not be loaded. Nothing was changed. Try again.",
+    "offBody": "It is switched off in this preview. Nothing was changed and no credit was used.",
+    "notIncludedTitle": "Outcome analytics are not included in your career plan",
+    "notIncludedBody": "Your applications in the Job Tracker are unchanged.",
+    "countsNote": "Counts come from your applications in the Job Tracker. Interviews include offers. This is not a hiring probability.",
+    "openTracker": "Open the Job Tracker"
+  }
+}

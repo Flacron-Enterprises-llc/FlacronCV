@@ -1,0 +1,21 @@
+{
+  "slides": {
+    "build": {
+      "title": "Erstelle einen\nLebenslauf, der überzeugt",
+      "subtitle": "Wähle aus professionell gestalteten Vorlagen. Jede Zeile kannst du selbst bearbeiten."
+    },
+    "engine": {
+      "title": "Inhalte mit der\nFlacron Engine",
+      "subtitle": "Lass die Flacron Engine überzeugende Zusammenfassungen, Stichpunkte und Anschreiben verfassen, zugeschnitten auf deine Stelle.",
+      "badge": "Unterstützt von der Flacron Engine"
+    },
+    "export": {
+      "title": "Exportieren &\nüberallhin mitnehmen",
+      "subtitle": "Lade mit einem Tippen als PDF oder DOCX herunter und teile die Datei von deinem Gerät. Deine Karriere, dein Weg."
+    }
+  },
+  "getStarted": "Jetzt starten — kostenlos",
+  "continue": "Weiter",
+  "haveAccount": "Bereits ein Konto?",
+  "signIn": "Anmelden"
+}

@@ -1,0 +1,12 @@
+{
+  "limitTitle": "Límite de exportaciones alcanzado",
+  "failedTitle": "No se pudo exportar",
+  "failed": "No se pudo exportar. Inténtalo de nuevo.",
+  "docxRequiresPro": "La exportación DOCX requiere un plan Pro o superior.",
+  "docxNotIncluded": "La exportación DOCX no está incluida en tu plan actual.",
+  "downloadFailed": "No se pudo descargar el archivo. Inténtalo de nuevo.",
+  "downloadCompleteTitle": "Descarga completa",
+  "downloadCompleteBody": "Compartir no está disponible en este dispositivo. El archivo se guardó en la caché de la app.",
+  "shareCvTitle": "Guarda o comparte tu CV",
+  "shareCoverLetterTitle": "Guarda o comparte tu carta de presentación"
+}

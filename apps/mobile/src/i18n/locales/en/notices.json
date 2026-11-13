@@ -1,0 +1,15 @@
+{
+  "announcement": {
+    "dismiss": "Dismiss announcement"
+  },
+  "maintenance": {
+    "defaultMessage": "We're carrying out maintenance right now. Please check back shortly.",
+    "checkAgain": "Check again"
+  },
+  "paymentIssue": {
+    "title": "Payment issue",
+    "bodyApple": "Your last payment didn't go through. Update your payment method in your App Store subscription settings to keep your subscription active.",
+    "bodyGoogle": "Your last payment didn't go through. Update your payment method in your Google Play subscription settings to keep your subscription active.",
+    "bodyWeb": "Your last payment didn't go through. Update your payment method on the FlacronCV website (Settings → Billing) to keep your subscription active."
+  }
+}

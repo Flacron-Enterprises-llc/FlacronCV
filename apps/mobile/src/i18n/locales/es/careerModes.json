@@ -1,0 +1,234 @@
+{
+  "common": {
+    "locked": "Las herramientas profesionales no están incluidas en tu plan",
+    "loadFailed": "No se pudo cargar esta página. No se ha modificado nada.",
+    "edit": "Editar"
+  },
+  "relocation": {
+    "title": "Reubicación y modos profesionales",
+    "subtitle": "Ubicaciones objetivo y el enfoque profesional de tus borradores",
+    "loadFailed": "No se pudieron cargar tus herramientas profesionales.",
+    "locationsLocked": "Los perfiles de ubicación no están incluidos en tu plan",
+    "specialistLocked": "Los modos especializados no están incluidos en tu plan",
+    "leave": {
+      "title": "¿Salir sin guardar?",
+      "body": "Los cambios de tu modo especializado no se han guardado.",
+      "discard": "Descartar"
+    },
+    "tabs": {
+      "locations": "Ubicaciones",
+      "locationsCount": "Ubicaciones ({used}/{capacity})",
+      "specialist": "Modo especializado"
+    },
+    "serviceUnavailable": "No se pudo conectar con el servicio de modos profesionales. Inténtalo de nuevo.",
+    "deleteConfirm": {
+      "title": "¿Eliminar este perfil de ubicación?",
+      "body": "{place} dejará de usarse para la búsqueda de coincidencias."
+    },
+    "removed": "Perfil de ubicación eliminado.",
+    "add": "Añadir perfil de ubicación",
+    "allInUse": "Todos los perfiles de ubicación de tu plan están en uso. Elimina uno para añadir otro.",
+    "empty": {
+      "title": "No hay perfiles de ubicación configurados",
+      "body": "Añade tu ubicación principal o las ciudades a las que quieres mudarte para buscar oportunidades según el radio."
+    },
+    "editA11y": "Editar {place}",
+    "deleteA11y": "Eliminar {place}"
+  },
+  "specialist": {
+    "upgrade": {
+      "title": "Los modos especializados no están incluidos en tu plan actual",
+      "body": "Los modos profesionales especializados adaptan los borradores a Ingeniería, Liderazgo ejecutivo, Diseño, Investigación y Cambios de carrera."
+    },
+    "loadFailed": "No se pudo cargar tu modo especializado.",
+    "guidelinesTooLong": "Las pautas personalizadas deben tener menos de {max} caracteres.",
+    "saved": "Modo profesional especializado actualizado.",
+    "intro": "Elige un enfoque profesional para adaptar el énfasis del CV, la ponderación de las instrucciones y el análisis de encaje a tu disciplina.",
+    "activeMode": "MODO ACTIVO",
+    "recommendedFocus": "ENFOQUE RECOMENDADO",
+    "guidelinesTitle": "Pautas de la disciplina y enfoque personalizado",
+    "guidelinesLabel": "Pautas personalizadas (opcional)",
+    "guidelinesPlaceholder": "Añade contexto específico del sector, metodologías o áreas de interés personales para orientar los borradores.",
+    "save": "Guardar modo especializado",
+    "upgradeRequired": "Los modos profesionales especializados no están incluidos en tu plan actual.",
+    "saveFailed": "No se pudo guardar el modo especializado. Inténtalo de nuevo.",
+    "modes": {
+      "general": {
+        "name": "Profesional estándar",
+        "description": "Presentación equilibrada entre habilidades funcionales, trayectoria profesional y resultados prácticos.",
+        "focus1": "Competencias clave",
+        "focus2": "Logros clave",
+        "focus3": "Colaboración en equipo",
+        "promptModifier": "Destaca resultados verificados, un impacto claro y un sólido dominio funcional."
+      },
+      "technical_engineering": {
+        "name": "Técnico e ingeniería",
+        "description": "Prioriza las decisiones de arquitectura, la escala, la profundidad técnica y el rendimiento cuantitativo.",
+        "focus1": "Arquitectura de sistemas",
+        "focus2": "Dominio de lenguajes y frameworks",
+        "focus3": "Métricas de escala y latencia",
+        "focus4": "Código abierto",
+        "promptModifier": "Céntrate en el rigor técnico, la complejidad de los sistemas, las métricas de fiabilidad y las decisiones de ingeniería concretas."
+      },
+      "executive_leadership": {
+        "name": "Dirección y liderazgo",
+        "description": "Destaca la responsabilidad sobre la cuenta de resultados, la transformación organizativa, la relación con el consejo y la visión directiva.",
+        "focus1": "Gestión de la cuenta de resultados",
+        "focus2": "Crecimiento organizativo",
+        "focus3": "Hojas de ruta estratégicas",
+        "focus4": "Alineación de las partes interesadas",
+        "promptModifier": "Presenta la experiencia desde el liderazgo estratégico, el crecimiento de ingresos, el desarrollo del talento y la gobernanza."
+      },
+      "creative_design": {
+        "name": "Creatividad y diseño",
+        "description": "Se centra en la empatía con el producto, los casos prácticos del portafolio, las metodologías de investigación de usuarios y el trabajo de marca.",
+        "focus1": "Sistemas de diseño",
+        "focus2": "Investigación y descubrimiento de usuarios",
+        "focus3": "Casos prácticos",
+        "focus4": "Revisión multifuncional",
+        "promptModifier": "Destaca el proceso de diseño, el planteamiento de los problemas del usuario, el prototipado y el impacto en las métricas de negocio."
+      },
+      "academic_research": {
+        "name": "Académico e investigación",
+        "description": "Destaca las publicaciones revisadas por pares, las becas obtenidas, la docencia y la metodología experimental.",
+        "focus1": "Publicaciones revisadas por pares",
+        "focus2": "Financiación de proyectos",
+        "focus3": "Dirección de laboratorio",
+        "focus4": "Actas de congresos",
+        "promptModifier": "Destaca la metodología de investigación, el impacto de las citas, la gestión de becas y las aportaciones teóricas."
+      },
+      "career_transition": {
+        "name": "Cambio de carrera / inicio",
+        "description": "Traslada las capacidades transferibles de ámbitos anteriores a los sectores objetivo con relatos bien enfocados.",
+        "focus1": "Habilidades transferibles",
+        "focus2": "Pruebas de aprendizaje rápido",
+        "focus3": "Analogías entre sectores",
+        "focus4": "Proyectos propios",
+        "promptModifier": "Traduce la experiencia de ámbitos anteriores al lenguaje del sector objetivo con pruebas claras de un aprendizaje rápido."
+      }
+    }
+  },
+  "location": {
+    "timeline": {
+      "immediate": "Inmediato (mudanza en curso)",
+      "1_to_3_months": "De 1 a 3 meses",
+      "3_to_6_months": "De 3 a 6 meses",
+      "exploring": "Explorando posibilidades",
+      "not_relocating": "Ubicación actual (sin reubicación)"
+    },
+    "workAuth": {
+      "citizen": "Ciudadano/a",
+      "permanent_resident": "Residente permanente / Green Card",
+      "visa_holder": "Visado de trabajo vigente",
+      "needs_sponsorship": "Requiere patrocinio de visado",
+      "authorized": "Autorizado/a para trabajar"
+    },
+    "remote": {
+      "hybrid": "Preferencia por híbrido",
+      "remote_only": "Solo remoto",
+      "onsite_only": "Solo presencial",
+      "any": "Cualquier modalidad"
+    },
+    "validation": {
+      "enterLocation": "Introduce una ubicación.",
+      "placeTooLong": "La ubicación debe tener menos de {max} caracteres.",
+      "radiusTooLarge": "Tu plan permite un radio de hasta {radius} millas.",
+      "notesTooLong": "Las notas deben tener menos de {max} caracteres.",
+      "placeInvalid": "Introduce una ubicación de menos de {max} caracteres."
+    },
+    "quotaHint": "Usando {used} de {capacity} perfiles de ubicación. Radio de búsqueda local del plan: hasta {radius} millas.",
+    "line": {
+      "radius": "Radio: ~{radius} millas",
+      "timeline": "Plazo: {value}",
+      "workAuth": "Autorización de trabajo: {value}",
+      "commute": "Desplazamiento máx.: ≤ {minutes} minutos · {remote}"
+    },
+    "badge": {
+      "relocation": "DESTINO DE REUBICACIÓN",
+      "current": "UBICACIÓN ACTUAL"
+    },
+    "error": {
+      "capacity": "Se ha alcanzado el límite de perfiles de ubicación del plan. Elimina un perfil de ubicación para añadir otro.",
+      "radius": "El radio supera el límite de tu plan.",
+      "saveFailed": "No se pudo guardar el perfil de ubicación. Revisa los datos e inténtalo de nuevo.",
+      "deleteFailed": "No se pudo eliminar el perfil de ubicación."
+    }
+  },
+  "editor": {
+    "titleAdd": "Añadir perfil de ubicación",
+    "titleEdit": "Editar perfil de ubicación",
+    "notFound": "Este perfil de ubicación ya no existe.",
+    "allInUse": {
+      "title": "Todos los perfiles de ubicación están en uso",
+      "body": "Elimina un perfil de ubicación para añadir otro."
+    },
+    "placeLabel": "Ubicación (ciudad, estado / área metropolitana) *",
+    "placePlaceholder": "p. ej., Austin, TX o Seattle, WA",
+    "radiusLabel": "Radio de búsqueda",
+    "radiusValue": "{value} millas",
+    "radiusHint": "Radio máximo del plan: {radius} millas",
+    "commuteLabel": "Desplazamiento diario máximo",
+    "commuteValue": "{value} minutos",
+    "relocationLabel": "Es un destino de reubicación (no mi domicilio actual)",
+    "relocationA11y": "Es un destino de reubicación",
+    "timelineLabel": "Plazo previsto para la mudanza",
+    "workAuthLabel": "Autorización de trabajo en la zona",
+    "remoteLabel": "Flexibilidad de modalidad de trabajo",
+    "notesLabel": "Notas de ubicación / reubicación (opcional)",
+    "notesPlaceholder": "p. ej., Mudanza en el 4.º trimestre; preferencia por los barrios del norte cerca del transporte público.",
+    "save": "Guardar perfil de ubicación",
+    "delete": "Eliminar perfil de ubicación",
+    "decrease": "Reducir {label}",
+    "increase": "Aumentar {label}"
+  },
+  "recruiting": {
+    "title": "Participación en reclutamiento",
+    "help": "La búsqueda solo muestra a las personas que han aceptado participar y no muestra su correo electrónico.",
+    "consent": "Los empleadores pueden ver que acepté participar. Mi correo sigue siendo privado.",
+    "save": "Guardar preferencia",
+    "saved": "Preferencia guardada.",
+    "closed": "El acceso para empleadores no está a la venta. Seguirá cerrado hasta que se definan las condiciones comerciales.",
+    "status": {
+      "unknown": "No se pudo leer tu elección actual. Al guardar, se establecerá.",
+      "on": "Eres visible: los empleadores pueden ver que aceptaste participar.",
+      "off": "No eres visible. Los empleadores no pueden verte."
+    },
+    "saveFailed": "Ese cambio no se guardó. Inténtalo de nuevo.",
+    "discoverableTitle": "Visible para empleadores",
+    "optedIn": "PARTICIPAS",
+    "notOptedIn": "NO PARTICIPAS",
+    "footer": "Puedes cambiarlo en cualquier momento. Si lo desactivas, dejarás de aparecer en las búsquedas de empleadores."
+  },
+  "data": {
+    "title": "Datos profesionales",
+    "intro": "Esta página abarca solo las herramientas profesionales: tu perfil profesional, archivos de evidencias, borradores, sesiones de práctica y otros registros profesionales. Tu cuenta de FlacronCV, tus CV, cartas de presentación, seguimiento de empleos y suscripción se gestionan en Configuración.",
+    "export": {
+      "title": "Exportar datos profesionales",
+      "body": "Una copia de todos los registros y archivos profesionales que tenemos sobre ti, en un archivo JSON. Se comparte desde una copia temporal que se elimina después. Prepararla puede tardar hasta medio minuto.",
+      "button": "Preparar exportación",
+      "a11y": "Preparar la exportación de datos profesionales",
+      "preparing": "Preparando tu exportación…",
+      "shared": "Tu archivo de datos profesionales está listo. Se eliminó la copia temporal de este dispositivo.",
+      "sharingUnavailable": "Este dispositivo no puede abrir el menú para compartir. Abre el enlace de descarga; caduca al poco tiempo.",
+      "downloadFailed": "El archivo está listo, pero no se pudo descargar en la app. Abre el enlace de descarga; caduca al poco tiempo.",
+      "openLink": "Abrir enlace de descarga",
+      "failed": "No se pudo preparar la exportación. Inténtalo de nuevo en unos minutos.",
+      "nothing": "No hay datos profesionales para exportar."
+    },
+    "erase": {
+      "title": "Borrar datos profesionales",
+      "a11y": "Borrar datos profesionales: abre la eliminación de la cuenta en Configuración",
+      "body": "Al eliminar tu cuenta en Configuración › Tus datos también se borran todos los datos profesionales."
+    }
+  },
+  "services": {
+    "title": "Revisión humana",
+    "subtitle": "Aún no se puede reservar",
+    "intro": "Una persona revisaría el material seleccionado. Esto no son comentarios generados por IA.",
+    "closedLabel": "RESERVAS CERRADAS",
+    "closedBody": "Las reservas siguen cerradas hasta que se definan las condiciones comerciales. Todavía no se puede reservar ni comprar nada.",
+    "empty": "Todavía no hay servicios de revisión humana.",
+    "offTitle": "Esta herramienta aún no está disponible",
+    "offBody": "No se ha modificado nada."
+  }
+}

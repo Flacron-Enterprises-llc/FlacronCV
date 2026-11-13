@@ -1,5 +1,6 @@
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type { AccountExport } from '../../../../../packages/career-api-client/src/types';
+import { t } from '../../i18n';
 import { careerErrorMessage } from '../career-view';
 
 /**
@@ -35,12 +36,26 @@ export async function prepareExport(deps: {
   return { kind: 'failed' };
 }
 
-export const EXPORT_FAILED = 'The export could not be prepared. Try again in a few minutes.';
-export const NOTHING_TO_EXPORT = 'There is no career data to export.';
+/** Website wording (`career.data.export_failed`), in the current language. */
+export function exportFailedMessage(): string {
+  return t('careerModes.data.export.failed');
+}
+
+export function nothingToExportMessage(): string {
+  return t('careerModes.data.export.nothing');
+}
+
+/**
+ * The same messages, read once when this module loads (English unless a
+ * language was already chosen). Kept for callers comparing results; screens
+ * use the functions above so the text follows the current language.
+ */
+export const EXPORT_FAILED = exportFailedMessage();
+export const NOTHING_TO_EXPORT = nothingToExportMessage();
 
 export function exportErrorMessage(error: unknown): string {
-  if (error instanceof ApiError && error.code === 'not_found') return NOTHING_TO_EXPORT;
-  return careerErrorMessage(error, EXPORT_FAILED);
+  if (error instanceof ApiError && error.code === 'not_found') return nothingToExportMessage();
+  return careerErrorMessage(error, exportFailedMessage());
 }
 
 export function exportFileName(now: Date): string {

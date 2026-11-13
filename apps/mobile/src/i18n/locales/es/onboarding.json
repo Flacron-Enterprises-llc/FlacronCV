@@ -1,0 +1,21 @@
+{
+  "slides": {
+    "build": {
+      "title": "Crea un CV\nque destaque",
+      "subtitle": "Elige entre plantillas de diseño profesional. Cada línea la editas tú."
+    },
+    "engine": {
+      "title": "Contenido con\nFlacron Engine",
+      "subtitle": "Deja que Flacron Engine escriba resúmenes, viñetas y cartas de presentación convincentes y adaptados a tu puesto.",
+      "badge": "Con la tecnología de Flacron Engine"
+    },
+    "export": {
+      "title": "Exporta y\nllévalo contigo",
+      "subtitle": "Descarga en PDF o DOCX con un toque y comparte el archivo desde tu dispositivo. Tu carrera, a tu manera."
+    }
+  },
+  "getStarted": "Empieza ya: es gratis",
+  "continue": "Continuar",
+  "haveAccount": "¿Ya tienes cuenta?",
+  "signIn": "Inicia sesión"
+}

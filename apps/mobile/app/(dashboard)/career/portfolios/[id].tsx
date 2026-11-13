@@ -36,6 +36,7 @@ import {
 import { careerErrorMessage } from '../../../../src/lib/career-view';
 import { colors } from '../../../../src/theme/colors';
 import type { PortfolioPage } from '../../../../../../packages/career-api-client/src/types';
+import { useT } from '../../../../src/i18n';
 
 /**
  * One portfolio page: create (route id "new"), edit title / headline / display
@@ -48,6 +49,8 @@ export default function PortfolioScreen() {
   const id = typeof rawId === 'string' ? rawId : undefined;
   const isNew = id === 'new';
   const router = useRouter();
+  const t = useT('careerPortfolios');
+  const tc = useT('common');
   const access = useCareerAccess();
   const gate = usePortfolioGate();
   const page = usePortfolio(isNew ? undefined : id);
@@ -92,7 +95,7 @@ export default function PortfolioScreen() {
           setForm(null);
           setCreatedId(created.id);
         },
-        onError: failed('Page not created'),
+        onError: failed(t('editor.notCreated')),
       });
       return;
     }
@@ -102,16 +105,16 @@ export default function PortfolioScreen() {
       {
         onSuccess: () => {
           setForm(null);
-          setNote('Saved.');
+          setNote(t('editor.saved'));
         },
-        onError: (error) => Alert.alert('Not saved', `${portfolioErrorMessage(error)} Your changes are still here.`),
+        onError: (error) => Alert.alert(t('editor.notSaved'), [portfolioErrorMessage(error), t('editor.changesKept')].join(' ')),
       },
     );
   };
 
   const savedFirst = () => {
     if (!dirty) return true;
-    Alert.alert('Save first', 'Publishing uses the saved page. Save or undo your changes first.');
+    Alert.alert(t('editor.saveFirstTitle'), t('editor.saveFirstBody'));
     return false;
   };
 
@@ -120,23 +123,23 @@ export default function PortfolioScreen() {
     actions.publish.mutate(
       { id: target.id, visibility },
       {
-        onSuccess: () => setNote(visibility === 'public' ? 'The page is public.' : 'The private link is ready.'),
-        onError: failed('Not published'),
+        onSuccess: () => setNote(visibility === 'public' ? t('editor.published') : t('editor.privateReady')),
+        onError: failed(t('editor.notPublished')),
       },
     );
   };
 
   const onUnpublish = (target: PortfolioPage) => {
     if (working) return;
-    Alert.alert('Unpublish this page?', 'Public access and any private link stop working. You can publish again later.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('editor.unpublishTitle'), t('editor.unpublishBody'), [
+      { text: tc('cancel'), style: 'cancel' },
       {
-        text: 'Unpublish',
+        text: t('editor.unpublish'),
         style: 'destructive',
         onPress: () =>
           actions.unpublish.mutate(target.id, {
-            onSuccess: () => setNote('Public access is removed.'),
-            onError: failed('Not unpublished'),
+            onSuccess: () => setNote(t('editor.unpublished')),
+            onError: failed(t('editor.notUnpublished')),
           }),
       },
     ]);
@@ -144,15 +147,15 @@ export default function PortfolioScreen() {
 
   const onRevoke = (target: PortfolioPage) => {
     if (working) return;
-    Alert.alert('Replace the private link?', 'Anyone with the current link or QR code loses access. You get a new link to share.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('editor.revokeTitle'), t('editor.revokeBody'), [
+      { text: tc('cancel'), style: 'cancel' },
       {
-        text: 'Replace link',
+        text: t('editor.replaceLink'),
         style: 'destructive',
         onPress: () =>
           actions.revoke.mutate(target.id, {
-            onSuccess: () => setNote('The previous private link no longer works.'),
-            onError: failed('Link not replaced'),
+            onSuccess: () => setNote(t('editor.revoked')),
+            onError: failed(t('editor.notReplaced')),
           }),
       },
     ]);
@@ -162,24 +165,24 @@ export default function PortfolioScreen() {
     try {
       await Share.share(Platform.OS === 'ios' ? { url, message: target.title } : { message: url, title: target.title });
     } catch {
-      Alert.alert('Not shared', 'The share sheet could not open. Copy the link instead.');
+      Alert.alert(t('editor.notShared'), t('editor.shareFailed'));
     }
   };
 
   const onOpen = (url: string) => {
-    void WebBrowser.openBrowserAsync(url).catch(() => Alert.alert('Could not open the page', 'Try again.'));
+    void WebBrowser.openBrowserAsync(url).catch(() => Alert.alert(t('editor.openFailed'), t('editor.tryAgain')));
   };
 
-  const title = isNew ? 'New portfolio page' : (page.data?.title ?? 'Portfolio page');
+  const title = isNew ? t('editor.newTitle') : (page.data?.title ?? t('editor.fallbackTitle'));
   const loadState = page.error ? portfolioLoadState(page.error) : null;
 
   let content: React.ReactNode;
   if (gate === 'locked') {
-    content = <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" />;
+    content = <EmptyState icon="lock-closed-outline" title={t('gate.locked')} />;
   } else if (gate === 'off' || loadState === 'off') {
-    content = <EmptyState icon="lock-closed-outline" title="Portfolio pages are not open yet" description="They are switched off right now. Your evidence and documents are unchanged." />;
+    content = <EmptyState icon="lock-closed-outline" title={t('gate.offTitle')} description={t('gate.offBody')} />;
   } else if (loadState === 'upgrade') {
-    content = <EmptyState icon="lock-closed-outline" title="A public portfolio is not included in your current plan" description="You can keep evidence private in your Evidence vault." />;
+    content = <EmptyState icon="lock-closed-outline" title={t('gate.upgradeTitle')} description={t('gate.upgradeBody')} />;
   } else if (gate === 'loading' || (!isNew && page.isLoading)) {
     content = (
       <View className="p-5">
@@ -190,7 +193,7 @@ export default function PortfolioScreen() {
   } else if (gate === 'error' || (!isNew && (page.error || !page.data))) {
     content = (
       <ErrorState
-        message={careerErrorMessage(page.error ?? access.error, 'The portfolio could not be loaded. Nothing was published.')}
+        message={careerErrorMessage(page.error ?? access.error, t('gate.loadFailed'))}
         onRetry={() => void (page.error ? page.refetch() : access.refetch())}
       />
     );
@@ -209,14 +212,14 @@ export default function PortfolioScreen() {
             <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
               <View className="flex-row items-center justify-between mb-2">
                 <Pill label={pill.label} tone={pill.tone} />
-                <Text className="text-stone-500 text-xs">{visits ?? 'View counts are not on this plan.'}</Text>
+                <Text className="text-stone-500 text-xs">{visits ?? t('editor.visitsHidden')}</Text>
               </View>
 
               {saved.visibility === 'draft' ? (
-                <Text className="text-stone-500 text-sm leading-5">Not published. Publish it, or create a private link only the people you send it to can open.</Text>
+                <Text className="text-stone-500 text-sm leading-5">{t('editor.draftHint')}</Text>
               ) : shareUrl ? (
                 <>
-                  <Text selectable className="text-stone-900 text-sm mb-3" accessibilityLabel={`Page link ${shareUrl}`}>
+                  <Text selectable className="text-stone-900 text-sm mb-3" accessibilityLabel={t('editor.linkA11y', { url: shareUrl })}>
                     {shareUrl}
                   </Text>
                   <View className="flex-row flex-wrap gap-2">
@@ -227,7 +230,7 @@ export default function PortfolioScreen() {
                       onPress={() => void onShare(shareUrl, saved)}
                       icon={<Ionicons name="share-outline" size={16} color={colors.white} />}
                     >
-                      Share link
+                      {t('editor.shareLink')}
                     </Button>
                     <Button
                       variant="outline"
@@ -236,10 +239,10 @@ export default function PortfolioScreen() {
                       onPress={() => onOpen(shareUrl)}
                       icon={<Ionicons name="open-outline" size={16} color={colors.stone[700]} />}
                     >
-                      Open page
+                      {t('editor.openPage')}
                     </Button>
                   </View>
-                  <View className="items-center mt-4" accessible accessibilityRole="image" accessibilityLabel="QR code for the page link">
+                  <View className="items-center mt-4" accessible accessibilityRole="image" accessibilityLabel={t('editor.qrA11y')}>
                     {qr.isLoading ? (
                       <ActivityIndicator color={colors.brand[600]} />
                     ) : qr.data ? (
@@ -248,10 +251,10 @@ export default function PortfolioScreen() {
                       </View>
                     ) : (
                       <Text className="text-stone-500 text-xs text-center">
-                        {qr.error ? careerErrorMessage(qr.error, 'The QR code could not be made. The link still works.') : ''}
+                        {qr.error ? careerErrorMessage(qr.error, t('editor.qrFailed')) : ''}
                       </Text>
                     )}
-                    {qr.data ? <Text className="text-stone-400 text-xs mt-2 text-center">Scan to open the page. Take a screenshot to keep it.</Text> : null}
+                    {qr.data ? <Text className="text-stone-400 text-xs mt-2 text-center">{t('editor.qrHint')}</Text> : null}
                   </View>
                 </>
               ) : (
@@ -262,7 +265,7 @@ export default function PortfolioScreen() {
                     </Text>
                   ) : null}
                   <Text className="text-stone-500 text-xs leading-5">
-                    The website address is not set in this app build, so the full link and QR code cannot be made here. Share the page from the FlacronCV website.
+                    {t('editor.noWebOrigin')}
                   </Text>
                 </>
               )}
@@ -270,22 +273,22 @@ export default function PortfolioScreen() {
               <View className="flex-row flex-wrap gap-2 mt-4">
                 {saved.visibility !== 'public' ? (
                   <Button size="sm" variant="secondary" className="min-h-[44px]" disabled={working} onPress={() => onPublish(saved, 'public')}>
-                    Publish
+                    {t('editor.publish')}
                   </Button>
                 ) : null}
                 {saved.visibility !== 'private' ? (
                   <Button size="sm" variant="outline" className="min-h-[44px]" disabled={working} onPress={() => onPublish(saved, 'private')}>
-                    Create private link
+                    {t('editor.createPrivate')}
                   </Button>
                 ) : null}
                 {saved.visibility === 'private' ? (
                   <Button size="sm" variant="outline" className="min-h-[44px]" disabled={working} onPress={() => onRevoke(saved)}>
-                    Replace private link
+                    {t('editor.replacePrivate')}
                   </Button>
                 ) : null}
                 {saved.visibility !== 'draft' ? (
                   <Button size="sm" variant="ghost" className="min-h-[44px]" disabled={working} onPress={() => onUnpublish(saved)}>
-                    Unpublish
+                    {t('editor.unpublish')}
                   </Button>
                 ) : null}
               </View>
@@ -301,27 +304,27 @@ export default function PortfolioScreen() {
 
           <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
             <Input
-              label="Page title *"
+              label={t('editor.titleLabel')}
               value={current.title}
               onChangeText={(v) => set('title', v)}
               maxLength={PORTFOLIO_LIMITS.title}
               error={errors.title}
-              accessibilityLabel="Page title, required"
+              accessibilityLabel={t('editor.titleA11y')}
             />
-            <Input label="Headline" value={current.headline} onChangeText={(v) => set('headline', v)} maxLength={PORTFOLIO_LIMITS.headline} error={errors.headline} />
+            <Input label={t('editor.headline')} value={current.headline} onChangeText={(v) => set('headline', v)} maxLength={PORTFOLIO_LIMITS.headline} error={errors.headline} />
             <Input
-              label="Display name"
+              label={t('editor.displayName')}
               value={current.displayName}
               onChangeText={(v) => set('displayName', v)}
               maxLength={PORTFOLIO_LIMITS.displayName}
               error={errors.displayName}
-              hint="The link stays the same if you change the display name."
+              hint={t('editor.slugStable')}
             />
 
             {!isNew ? (
               <>
                 <Input
-                  label="Email, optional"
+                  label={t('editor.email')}
                   value={current.contactEmail}
                   onChangeText={(v) => set('contactEmail', v)}
                   maxLength={PORTFOLIO_LIMITS.contactEmail}
@@ -330,30 +333,30 @@ export default function PortfolioScreen() {
                   autoCorrect={false}
                   error={errors.contactEmail}
                 />
-                <ToggleRow label="Show email on the page" value={current.showEmail} onChange={(v) => set('showEmail', v)} />
+                <ToggleRow label={t('editor.showEmail')} value={current.showEmail} onChange={(v) => set('showEmail', v)} />
                 <Input
-                  label="Phone, optional"
+                  label={t('editor.phone')}
                   value={current.contactPhone}
                   onChangeText={(v) => set('contactPhone', v)}
                   maxLength={PORTFOLIO_LIMITS.contactPhone}
                   keyboardType="phone-pad"
                   error={errors.contactPhone}
                 />
-                <ToggleRow label="Show phone on the page" value={current.showPhone} onChange={(v) => set('showPhone', v)} />
+                <ToggleRow label={t('editor.showPhone')} value={current.showPhone} onChange={(v) => set('showPhone', v)} />
               </>
             ) : (
-              <Text className="text-stone-400 text-xs">Choose the work to show and contact options after the page is created.</Text>
+              <Text className="text-stone-400 text-xs">{t('editor.afterCreate')}</Text>
             )}
           </View>
 
           {!isNew ? (
             <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
-              <Text className="font-bold text-stone-900 mb-1">Work to include</Text>
-              <Text className="text-stone-500 text-xs mb-2 leading-5">Only items with “Include in public portfolio” turned on appear on the page.</Text>
+              <Text className="font-bold text-stone-900 mb-1">{t('editor.workTitle')}</Text>
+              <Text className="text-stone-500 text-xs mb-2 leading-5">{t('editor.workHint')}</Text>
               {evidence.isLoading ? <ActivityIndicator color={colors.brand[600]} /> : null}
-              {evidence.error ? <Text className="text-stone-500 text-sm">Your evidence items could not be loaded. The page can still be saved.</Text> : null}
+              {evidence.error ? <Text className="text-stone-500 text-sm">{t('editor.evidenceFailed')}</Text> : null}
               {!evidence.isLoading && !evidence.error && items.length === 0 ? (
-                <Text className="text-stone-500 text-sm">Add evidence first. A page can be saved without it.</Text>
+                <Text className="text-stone-500 text-sm">{t('editor.evidenceEmpty')}</Text>
               ) : null}
               {items.map((item) => {
                 const checked = current.evidenceIds.includes(item.id);
@@ -367,9 +370,9 @@ export default function PortfolioScreen() {
                     accessibilityLabel={item.title}
                   >
                     <Ionicons name={checked ? 'checkbox' : 'square-outline'} size={22} color={checked ? colors.brand[600] : colors.stone[400]} />
-                    <View className="ml-3 flex-1">
+                    <View className="ms-3 flex-1">
                       <Text className="text-stone-900">{item.title}</Text>
-                      {!item.isPortfolioShared ? <Text className="text-stone-400 text-xs">Private only: not shown on the page</Text> : null}
+                      {!item.isPortfolioShared ? <Text className="text-stone-400 text-xs">{t('editor.privateOnly')}</Text> : null}
                     </View>
                   </TouchableOpacity>
                 );
@@ -378,7 +381,7 @@ export default function PortfolioScreen() {
           ) : null}
 
           <Button onPress={onSave} loading={actions.create.isPending || actions.update.isPending} disabled={working || (!isNew && !dirty) || current.title.trim().length === 0} fullWidth>
-            {isNew ? 'Create page' : dirty ? 'Save page' : 'Saved'}
+            {isNew ? t('editor.createPage') : dirty ? t('editor.savePage') : t('editor.savedButton')}
           </Button>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -387,7 +390,7 @@ export default function PortfolioScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title={title} subtitle={isNew ? 'A stable page of chosen work' : undefined} />
+      <CareerHeader title={title} subtitle={isNew ? t('editor.newSubtitle') : undefined} />
       {content}
     </SafeAreaView>
   );
@@ -396,7 +399,7 @@ export default function PortfolioScreen() {
 function ToggleRow({ label, value, onChange }: { label: string; value: boolean; onChange: (value: boolean) => void }) {
   return (
     <View className="flex-row items-center justify-between min-h-[44px] mb-3">
-      <Text className="text-sm font-medium text-stone-700 flex-1 mr-3">{label}</Text>
+      <Text className="text-sm font-medium text-stone-700 flex-1 me-3">{label}</Text>
       <Switch
         value={value}
         onValueChange={onChange}

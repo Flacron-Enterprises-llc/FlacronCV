@@ -1,0 +1,46 @@
+{
+  "header": {
+    "welcomeBack": "Welcome back,",
+    "planBadge": {
+      "free": "Free Plan",
+      "pro": "Pro Plan"
+    }
+  },
+  "loadError": "Could not load. Please try again.",
+  "verifyEmail": {
+    "title": "Verify your email",
+    "body": "Confirm your address to create new CVs and cover letters. Existing files stay editable and exportable.",
+    "resend": "Resend email",
+    "confirm": "I've verified"
+  },
+  "stats": {
+    "title": "Overview",
+    "cvsCreated": "CVs Created",
+    "coverLetters": "Cover Letters",
+    "downloads": "Downloads",
+    "thisMonth": "This month",
+    "usedThisMonth": "Used this month"
+  },
+  "quickActions": {
+    "title": "Quick Actions",
+    "newCv": "New CV",
+    "coverLetter": "Cover Letter",
+    "templates": "Templates",
+    "jobTracker": "Job Tracker",
+    "jobTrackerDescription": "Log applications after you apply",
+    "careerTools": "Career tools",
+    "careerToolsDescription": "Career profile, drafts and opportunities"
+  },
+  "recent": {
+    "title": "Recent Documents",
+    "viewAll": "View all",
+    "loadError": "Could not load documents. Please try again.",
+    "empty": "No documents yet. Create your first CV!",
+    "meta": "{kind, select, cv {CV} other {Cover Letter}} · {date}"
+  },
+  "upgrade": {
+    "title": "Upgrade to Pro",
+    "body": "Unlock {cvs} CVs, {credits} Engine credits & more",
+    "cta": "Upgrade Now — {price}/mo"
+  }
+}

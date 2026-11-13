@@ -1,0 +1,21 @@
+{
+  "slides": {
+    "build": {
+      "title": "Créez un CV\nqui se démarque",
+      "subtitle": "Choisissez parmi des modèles conçus par des professionnels. Chaque ligne reste modifiable."
+    },
+    "engine": {
+      "title": "Contenu\nFlacron Engine",
+      "subtitle": "Laissez Flacron Engine rédiger des résumés, des puces et des lettres de motivation percutants, adaptés à votre poste.",
+      "badge": "Propulsé par Flacron Engine"
+    },
+    "export": {
+      "title": "Exportez et\nemportez-le partout",
+      "subtitle": "Téléchargez en PDF ou DOCX en un geste et partagez le fichier depuis votre appareil. Votre carrière, à votre façon."
+    }
+  },
+  "getStarted": "Commencer — c’est gratuit",
+  "continue": "Continuer",
+  "haveAccount": "Déjà un compte ?",
+  "signIn": "Se connecter"
+}

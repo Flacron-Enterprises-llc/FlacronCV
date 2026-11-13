@@ -1,0 +1,145 @@
+{
+  "channelNotConnected": "Not connected yet: these alerts are shown here in the app only.",
+  "notAScore": "This is not a hiring probability.",
+  "reason": {
+    "saved_search": "This listing matches a saved search.",
+    "followed_company": "This listing is from a company you follow.",
+    "material_update": "The listing changed. This update used one alert."
+  },
+  "fit": {
+    "blocked": "Blocked",
+    "none": "No overlap with your confirmed facts",
+    "partial": "Partial overlap with your confirmed facts",
+    "strong": "Strong overlap with your confirmed facts"
+  },
+  "digest": {
+    "weekly": "Weekly email",
+    "daily": "Daily email",
+    "immediate": "As they are found"
+  },
+  "schedule": {
+    "weekly": "Weekly",
+    "daily": "Daily",
+    "every_6_hours": "Every 6 hours",
+    "hourly": "Hourly"
+  },
+  "scheduleLower": {
+    "weekly": "weekly",
+    "daily": "daily",
+    "every_6_hours": "every 6 hours",
+    "hourly": "hourly"
+  },
+  "quietInvalid": "Quiet hours need a start and an end (HH:MM, UTC), and they cannot be the same time.",
+  "anySearch": "All opportunities",
+  "savedLocation": "Saved location",
+  "locationWithin": "{place} · within {miles} mi",
+  "radius": {
+    "format": "Enter the radius as whole miles, for example 25.",
+    "max": "The radius can be at most {max} miles."
+  },
+  "sourceUrlInvalid": "Enter a full web address starting with https://, or leave it empty.",
+  "errors": {
+    "settingsPlan": "That choice is not on your plan. Your plan includes the weekly email. Nothing was changed.",
+    "plan": "Your career plan does not include this. Nothing was changed.",
+    "capacitySearch": "This plan has no room for another saved search.",
+    "capacityLocation": "This plan has no room for another alert location.",
+    "capacityCompany": "This plan has no room for another followed company.",
+    "scheduleAbove": "That schedule is more frequent than your plan allows.",
+    "scheduleAboveLimit": "That schedule is more frequent than your plan allows (up to {limit}).",
+    "radiusAbove": "That radius is larger than your plan allows.",
+    "radiusAboveLimit": "That radius is larger than your plan allows (up to {limit} miles).",
+    "q": "Enter what to search for.",
+    "place": "Enter a place.",
+    "name": "Enter a company name.",
+    "digest": "Choose a digest.",
+    "check": "Check the details and try again. Nothing was changed."
+  },
+  "fallback": {
+    "settings": "Alert settings were not saved. Try again.",
+    "search": "The saved search was not changed. Try again.",
+    "location": "The alert location was not changed. Try again.",
+    "company": "The followed company was not changed. Try again.",
+    "load": "Alerts could not be loaded. Nothing was changed. Try again."
+  },
+  "screen": {
+    "offTitle": "Alerts are not open yet",
+    "offBody": "They are switched off in this preview. Nothing was changed.",
+    "intro": "Saved searches and followed companies surface new listings here. A new alert uses one alert item; searching does not.",
+    "yourAlerts": "Your alerts",
+    "emptyTitle": "No alerts yet",
+    "emptyBody": "A saved search surfaces a listing later. Searching now does not use an alert.",
+    "openA11y": "{name}. Open listing"
+  },
+  "balance": {
+    "none": "No alert items left. New alerts wait until the balance renews. Search still works.",
+    "noneRenews": "No alert items left. New alerts wait until the balance renews on {date}. Search still works.",
+    "left": "{count, plural, one {# alert item} other {# alert items}} left",
+    "renews": "renews {date}"
+  },
+  "searches": {
+    "title": "Saved searches",
+    "hint": "Checked on a schedule. A listing found later becomes an alert.",
+    "label": "Saved search",
+    "placeholder": "e.g. data analyst",
+    "howOften": "How often to check",
+    "planDefault": "Plan default",
+    "location": "Location",
+    "anywhere": "Anywhere",
+    "save": "Save search",
+    "saved": "Search saved. It does not use an alert.",
+    "loadFailed": "Your saved searches could not be loaded. Nothing was changed.",
+    "empty": "No saved searches yet.",
+    "paused": "PAUSED",
+    "resume": "Resume",
+    "pause": "Pause",
+    "schedule": "Schedule",
+    "deleteA11y": "Delete saved search {query}",
+    "deleteTitle": "Delete saved search?",
+    "deleteBody": "\"{title}\" will stop surfacing new listings. Alerts already shown stay.",
+    "scheduleNote": "Your plan sets how often searches can run. A faster choice than your plan allows is refused."
+  },
+  "locations": {
+    "title": "Alert locations",
+    "hint": "A place and a radius a saved search can be limited to.",
+    "place": "Place",
+    "placePlaceholder": "e.g. Leeds",
+    "radius": "Radius (miles)",
+    "add": "Add location",
+    "saved": "Location saved. Choose it when you save a search.",
+    "loadFailed": "Your alert locations could not be loaded. Nothing was changed.",
+    "empty": "No alert locations yet.",
+    "editA11y": "Edit location {place}",
+    "deleteA11y": "Delete location {place}",
+    "deleteTitle": "Delete alert location?",
+    "deleteBody": "\"{place}\" will be removed. Saved searches that use it will no longer be limited to it.",
+    "editTitle": "Edit alert location",
+    "save": "Save location"
+  },
+  "companies": {
+    "title": "Followed companies",
+    "hint": "New listings from a company you follow become alerts.",
+    "name": "Company name",
+    "url": "Careers page (optional)",
+    "follow": "Follow company",
+    "followed": "Company followed. New listings from it become alerts.",
+    "loadFailed": "Your followed companies could not be loaded. Nothing was changed.",
+    "empty": "You do not follow any companies yet.",
+    "unfollowA11y": "Unfollow {name}",
+    "unfollowTitle": "Unfollow company?",
+    "unfollowBody": "New listings from \"{name}\" will no longer become alerts.",
+    "unfollow": "Unfollow"
+  },
+  "settings": {
+    "title": "How alerts arrive",
+    "email": "Email",
+    "push": "Push",
+    "telegram": "Telegram",
+    "digest": "Digest",
+    "quietStart": "Quiet hours start (UTC)",
+    "quietEnd": "Quiet hours end (UTC)",
+    "quietHint": "24-hour HH:MM. Leave both empty for no quiet hours.",
+    "paused": "Pause new alerts",
+    "save": "Save alert settings",
+    "saved": "Alert settings saved."
+  }
+}

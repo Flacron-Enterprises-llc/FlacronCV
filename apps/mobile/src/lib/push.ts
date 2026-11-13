@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Alert, Platform } from 'react-native';
+import { t } from '../i18n';
 import { useAuthStore } from '../store/auth-store';
 import { api } from './api';
 
@@ -80,10 +81,10 @@ export async function enablePushNotifications(): Promise<EnablePushResult> {
   const registered = await registerExpoPushToken();
   if (!registered) {
     Alert.alert(
-      'Could not enable notifications',
+      t('reminders.push.enableFailedTitle'),
       isExpoGo()
-        ? 'Remote notifications are not available in Expo Go. Use a development or store build.'
-        : 'We could not register this device for notifications. Check your connection and try again.',
+        ? t('reminders.push.expoGoBody')
+        : t('reminders.push.registerFailedBody'),
     );
     return 'token_failed';
   }
@@ -104,15 +105,15 @@ export type ReminderPromptDates = {
   interview: boolean;
 };
 
-/** Hardcoded English — Job Tracker has no t(). */
+/** Reminder prompt body in the current language. */
 export function pushReminderPromptMessage(dates: ReminderPromptDates): string {
   if (dates.followUp && dates.interview) {
-    return 'Turn on notifications so we can remind you when this follow-up or interview is due.';
+    return t('reminders.push.promptBoth');
   }
   if (dates.interview) {
-    return 'Turn on notifications so we can remind you when this interview is due.';
+    return t('reminders.push.promptInterview');
   }
-  return 'Turn on notifications so we can remind you when this follow-up is due.';
+  return t('reminders.push.promptFollowUp');
 }
 
 /**
@@ -131,18 +132,18 @@ export function maybeAskPushAfterFollowUpSave(
         return;
       }
       Alert.alert(
-        'Get a reminder?',
+        t('reminders.push.promptTitle'),
         pushReminderPromptMessage(dates),
         [
           {
-            text: 'Not now',
+            text: t('reminders.push.notNow'),
             style: 'cancel',
             onPress: () => {
               void markPushPrompted().finally(() => onDone('declined'));
             },
           },
           {
-            text: 'Enable',
+            text: t('reminders.push.enable'),
             onPress: () => {
               void enablePushNotifications()
                 .then(async (result) => {

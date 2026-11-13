@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,38 +12,45 @@ import { Input } from '../../../src/components/ui/Input';
 import { useCreateTicket } from '../../../src/hooks/useSupport';
 import { TicketCategory, TicketPriority } from '../../../src/types/enums';
 import { colors } from '../../../src/theme/colors';
+import { t as tNow, useT } from '../../../src/i18n';
+import { RTL_FLIP } from '../../../src/i18n/native';
 
-const schema = z.object({
-  subject: z.string().min(5, 'Subject must be at least 5 characters'),
-  message: z.string().min(20, 'Message must be at least 20 characters'),
-  category: z.nativeEnum(TicketCategory),
-  priority: z.nativeEnum(TicketPriority),
-});
+/** Built per language (zod messages are fixed when the schema is made). */
+function makeSchema(t: (key: string) => string) {
+  return z.object({
+    subject: z.string().min(5, t('form.subjectMin')),
+    message: z.string().min(20, t('form.messageMin')),
+    category: z.nativeEnum(TicketCategory),
+    priority: z.nativeEnum(TicketPriority),
+  });
+}
 
-type FormData = z.infer<typeof schema>;
+type FormData = z.infer<ReturnType<typeof makeSchema>>;
 
 function requestFailureMessage(err: unknown): string {
   if (axios.isAxiosError(err) && !err.response) {
-    return 'No connection. Check your network and try again.';
+    return tNow('common.noConnection');
   }
-  return 'Could not create the ticket. Please try again.';
+  return tNow('support.form.createError');
 }
 
 const CATEGORIES = [
-  { value: TicketCategory.BUG, label: 'Bug Report', icon: 'bug-outline' },
-  { value: TicketCategory.FEATURE_REQUEST, label: 'Feature Request', icon: 'bulb-outline' },
-  { value: TicketCategory.BILLING, label: 'Billing', icon: 'card-outline' },
-  { value: TicketCategory.ACCOUNT, label: 'Account', icon: 'person-outline' },
-  { value: TicketCategory.GENERAL, label: 'General', icon: 'help-circle-outline' },
+  { value: TicketCategory.BUG, label: () => tNow('support.form.categories.bug'), icon: 'bug-outline' },
+  { value: TicketCategory.FEATURE_REQUEST, label: () => tNow('support.form.categories.featureRequest'), icon: 'bulb-outline' },
+  { value: TicketCategory.BILLING, label: () => tNow('support.form.categories.billing'), icon: 'card-outline' },
+  { value: TicketCategory.ACCOUNT, label: () => tNow('support.form.categories.account'), icon: 'person-outline' },
+  { value: TicketCategory.GENERAL, label: () => tNow('support.form.categories.general'), icon: 'help-circle-outline' },
 ];
 
 const PRIORITIES = [
-  { value: TicketPriority.LOW, label: 'Low', color: colors.success.DEFAULT },
-  { value: TicketPriority.MEDIUM, label: 'Medium', color: colors.brand[600] },
-  { value: TicketPriority.HIGH, label: 'High', color: colors.error.DEFAULT },
+  { value: TicketPriority.LOW, label: () => tNow('support.form.priorities.low'), color: colors.success.DEFAULT },
+  { value: TicketPriority.MEDIUM, label: () => tNow('support.form.priorities.medium'), color: colors.brand[600] },
+  { value: TicketPriority.HIGH, label: () => tNow('support.form.priorities.high'), color: colors.error.DEFAULT },
 ];
 
 export default function NewTicketScreen() {
+  const t = useT('support');
+  const schema = useMemo(() => makeSchema(t), [t]);
   const router = useRouter();
   const createTicket = useCreateTicket();
 
@@ -62,7 +69,7 @@ export default function NewTicketScreen() {
       });
       router.replace('/(dashboard)/support');
     } catch (err) {
-      Alert.alert('Could not create ticket', requestFailureMessage(err));
+      Alert.alert(t('form.createErrorTitle'), requestFailureMessage(err));
     }
   };
 
@@ -70,48 +77,48 @@ export default function NewTicketScreen() {
     <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
         <View className="flex-row items-center px-5 pt-4 pb-3 border-b border-stone-100">
-          <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+          <TouchableOpacity onPress={() => router.back()} className="me-3" accessibilityRole="button" accessibilityLabel={t('goBack')}>
+            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
           </TouchableOpacity>
-          <Text className="text-xl font-black text-stone-900">Create Support Ticket</Text>
+          <Text className="text-xl font-black text-stone-900">{t('form.title')}</Text>
         </View>
 
         <ScrollView className="flex-1 px-5 pt-4" keyboardShouldPersistTaps="handled">
           <Controller control={control} name="subject" render={({ field }) => (
-            <Input label="Subject *" placeholder="Describe your issue briefly" value={field.value} onChangeText={field.onChange} error={errors.subject?.message} />
+            <Input label={t('form.subject')} placeholder={t('form.subjectPh')} value={field.value} onChangeText={field.onChange} error={errors.subject?.message} />
           )} />
           <Controller control={control} name="message" render={({ field }) => (
-            <Input label="Description *" placeholder="Please provide as much detail as possible..." value={field.value} onChangeText={field.onChange} multiline numberOfLines={5} className="min-h-28" error={errors.message?.message} />
+            <Input label={t('form.description')} placeholder={t('form.descriptionPh')} value={field.value} onChangeText={field.onChange} multiline numberOfLines={5} className="min-h-28" error={errors.message?.message} />
           )} />
 
-          <Text className="text-sm font-medium text-stone-700 mb-2">Category</Text>
+          <Text className="text-sm font-medium text-stone-700 mb-2">{t('form.category')}</Text>
           <Controller control={control} name="category" render={({ field }) => (
             <View className="flex-row flex-wrap gap-2 mb-4">
               {CATEGORIES.map((cat) => (
                 <TouchableOpacity key={cat.value} onPress={() => field.onChange(cat.value)}
                   className={['flex-row items-center px-3 py-2 rounded-xl border', field.value === cat.value ? 'border-brand-600 bg-brand-50' : 'border-stone-200'].join(' ')}>
                   <Ionicons name={cat.icon as any} size={14} color={field.value === cat.value ? colors.brand[600] : colors.stone[500]} />
-                  <Text className={['text-sm ml-1.5', field.value === cat.value ? 'text-brand-700 font-semibold' : 'text-stone-600'].join(' ')}>{cat.label}</Text>
+                  <Text className={['text-sm ms-1.5', field.value === cat.value ? 'text-brand-700 font-semibold' : 'text-stone-600'].join(' ')}>{cat.label()}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           )} />
 
-          <Text className="text-sm font-medium text-stone-700 mb-2">Priority</Text>
+          <Text className="text-sm font-medium text-stone-700 mb-2">{t('form.priority')}</Text>
           <Controller control={control} name="priority" render={({ field }) => (
             <View className="flex-row gap-2 mb-6">
               {PRIORITIES.map((p) => (
                 <TouchableOpacity key={p.value} onPress={() => field.onChange(p.value)}
                   className={['flex-1 py-2.5 items-center rounded-xl border', field.value === p.value ? 'border-2' : 'border'].join(' ')}
                   style={{ borderColor: field.value === p.value ? p.color : colors.stone[200], backgroundColor: field.value === p.value ? p.color + '15' : 'transparent' }}>
-                  <Text className="font-semibold" style={{ color: field.value === p.value ? p.color : colors.stone[500] }}>{p.label}</Text>
+                  <Text className="font-semibold" style={{ color: field.value === p.value ? p.color : colors.stone[500] }}>{p.label()}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           )} />
 
           <Button variant="primary" fullWidth size="lg" loading={createTicket.isPending} onPress={handleSubmit(onSubmit)}>
-            Submit Ticket
+            {t('form.submit')}
           </Button>
           <View className="h-8" />
         </ScrollView>

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { t } from '../i18n';
 
 /** Nest AllExceptionsFilter body: `{ success, statusCode, message, code? }`. */
 export function nestErrorMessage(err: unknown): string {
@@ -26,7 +27,7 @@ export function isNetworkFailure(err: unknown): boolean {
 /** Prefer server copy (abuse / limit); then network; else fallback. */
 export function requestFailureMessage(err: unknown, fallback: string): string {
   if (isNetworkFailure(err)) {
-    return 'No connection. Check your network and try again.';
+    return t('common.noConnection');
   }
   const message = nestErrorMessage(err);
   if (message) return message;

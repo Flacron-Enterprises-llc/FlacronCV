@@ -1,0 +1,12 @@
+{
+  "limitTitle": "Limite d'exports atteinte",
+  "failedTitle": "Impossible d'exporter",
+  "failed": "Impossible d'exporter. Veuillez réessayer.",
+  "docxRequiresPro": "L'export DOCX nécessite un plan Pro ou supérieur.",
+  "docxNotIncluded": "L'export DOCX n'est pas inclus dans votre plan actuel.",
+  "downloadFailed": "Le fichier n'a pas pu être téléchargé. Veuillez réessayer.",
+  "downloadCompleteTitle": "Téléchargement terminé",
+  "downloadCompleteBody": "Le partage n'est pas disponible sur cet appareil. Le fichier est enregistré dans le cache de l'application.",
+  "shareCvTitle": "Enregistrer ou partager votre CV",
+  "shareCoverLetterTitle": "Enregistrer ou partager votre lettre de motivation"
+}

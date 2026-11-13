@@ -1,0 +1,348 @@
+{
+  "editor": {
+    "renameFailed": "CV کا نام تبدیل نہیں ہو سکا۔ براہ کرم دوبارہ کوشش کریں۔",
+    "exportLimitTitle": "ایکسپورٹ کی حد پوری ہو گئی",
+    "loadError": "CV لوڈ نہیں ہو سکا",
+    "loading": "CV لوڈ ہو رہا ہے...",
+    "titleA11y": "CV کا عنوان: {title}۔ نام تبدیل کریں",
+    "titleHint": "CV کا عنوان بدلنے کے لیے ایک خانہ کھولتا ہے",
+    "editingFallback": "CV میں ترمیم",
+    "unsavedChanges": "غیر محفوظ تبدیلیاں",
+    "atsCheck": "ATS چیک",
+    "interviewPrep": "انٹرویو کی تیاری",
+    "moreTools": "مزید ٹولز",
+    "designTool": "ڈیزائن: لے آؤٹ، رنگ، فونٹس",
+    "linkedinTool": "LinkedIn آپٹیمائزر",
+    "moreToolsA11y": "مزید ٹولز: ڈیزائن اور LinkedIn آپٹیمائزر",
+    "export": "ایکسپورٹ",
+    "chooseFormat": "فارمیٹ منتخب کریں:",
+    "renameTitle": "CV کا نام تبدیل کریں",
+    "titleLabel": "CV کا عنوان",
+    "titlePlaceholder": "مثلاً سافٹ ویئر انجینئر CV 2025"
+  },
+  "wizard": {
+    "steps": {
+      "personal": "ذاتی معلومات",
+      "experience": "تجربہ",
+      "education": "تعلیم",
+      "skills": "مہارتیں",
+      "summary": "خلاصہ",
+      "projects": "پروجیکٹس",
+      "certifications": "سرٹیفیکیشنز",
+      "languages": "زبانیں",
+      "references": "حوالہ جات",
+      "custom": "کسٹم سیکشنز",
+      "arrange": "سیکشنز ترتیب دیں"
+    },
+    "saveFailedTitle": "محفوظ نہیں ہو سکا",
+    "saveFailed": "محفوظ نہیں ہو سکا۔ براہ کرم دوبارہ کوشش کریں۔",
+    "personalRequired": "آگے بڑھنے سے پہلے لازمی خانے مکمل کریں۔",
+    "stepA11y": "مرحلہ {current} از {total}، {label}۔ کسی اور مرحلے پر جائیں",
+    "stepOf": "مرحلہ {current} از {total}",
+    "goToStep": "مرحلے پر جائیں",
+    "finish": "مکمل کریں",
+    "continue": "جاری رکھیں"
+  },
+  "photo": {
+    "upload": "تصویر اپ لوڈ کریں",
+    "change": "تصویر تبدیل کریں",
+    "remove": "تصویر ہٹائیں",
+    "uploading": "اپ لوڈ ہو رہی ہے…",
+    "hint": "JPG، PNG یا WebP · زیادہ سے زیادہ 5 MB · آپ کے CV اوتار کے طور پر استعمال ہوتی ہے",
+    "invalid": "«.{ext}» فائلیں معاون نہیں ہیں۔ براہ کرم JPG، PNG یا WebP تصویر اپ لوڈ کریں۔",
+    "unknownType": "نامعلوم",
+    "tooLarge": "یہ فائل بہت بڑی ہے ({size} MB)۔ زیادہ سے زیادہ سائز 5 MB ہے۔",
+    "uploadFailed": "تصویر اپ لوڈ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
+    "unavailable": "تصویر اپ لوڈ اس وقت دستیاب نہیں۔ براہ کرم دوبارہ سائن ان کریں۔",
+    "deniedTitle": "تصاویر دستیاب نہیں",
+    "deniedBody": "CV کی تصویر منتخب کرنے کے لیے سیٹنگز میں فوٹو لائبریری تک رسائی کی اجازت دیں۔",
+    "updateFailedTitle": "تصویر اپ ڈیٹ نہیں ہو سکی",
+    "removeBody": "کیا اس CV سے تصویر ہٹانی ہے؟"
+  },
+  "sections": {
+    "editA11y": "سیکشن {title} میں ترمیم کریں",
+    "hiddenNote": "یہ سیکشن آپ کے CV میں چھپا ہوا ہے۔ اسے \"سیکشنز ترتیب دیں\" مرحلے میں دوبارہ دکھائیں۔",
+    "titleLabel": "سیکشن کا عنوان"
+  },
+  "validation": {
+    "titleRequired": "براہ کرم اپنے CV کا عنوان درج کریں۔",
+    "titleTooLong": "عنوان زیادہ سے زیادہ {max} حروف کا ہو سکتا ہے۔",
+    "sectionTitleRequired": "براہ کرم سیکشن کا عنوان درج کریں۔",
+    "sectionTitleTooLong": "سیکشن کا عنوان زیادہ سے زیادہ {max} حروف کا ہو سکتا ہے۔"
+  },
+  "sectionTypes": {
+    "experience": "کام کا تجربہ",
+    "education": "تعلیم",
+    "skills": "مہارتیں",
+    "projects": "پروجیکٹس",
+    "certifications": "سرٹیفیکیشنز",
+    "languages": "زبانیں",
+    "references": "حوالہ جات",
+    "awards": "اعزازات",
+    "publications": "اشاعتیں",
+    "volunteer": "رضاکارانہ کام",
+    "custom": "کسٹم سیکشن",
+    "fallback": "سیکشن"
+  },
+  "entry": {
+    "edit": "اندراج میں ترمیم کریں",
+    "delete": "اندراج حذف کریں",
+    "update": "اپ ڈیٹ کریں",
+    "present": "تاحال"
+  },
+  "fields": {
+    "startDate": "آغاز کی تاریخ *",
+    "endDate": "اختتام کی تاریخ",
+    "description": "تفصیل",
+    "company": "کمپنی *",
+    "jobTitle": "ملازمت کا عنوان *",
+    "proficiency": "مہارت کی سطح *",
+    "website": "ویب سائٹ",
+    "websitePlaceholder": "آپکیسائٹ.com"
+  },
+  "errors": {
+    "startDateRequired": "آغاز کی تاریخ لازمی ہے"
+  },
+  "personal": {
+    "title": "ذاتی معلومات",
+    "subtitle": "اپنی بنیادی رابطہ معلومات اور پیشہ ورانہ عنوان شامل کریں۔",
+    "firstName": "پہلا نام *",
+    "lastName": "آخری نام *",
+    "email": "ای میل ایڈریس *",
+    "phone": "فون نمبر *",
+    "headline": "پیشہ ورانہ عنوان",
+    "headlinePlaceholder": "Google میں سینئر سافٹ ویئر انجینئر",
+    "city": "شہر",
+    "cityPlaceholder": "لاہور",
+    "country": "ملک",
+    "countryPlaceholder": "پاکستان",
+    "address": "پتہ",
+    "addressPlaceholder": "گلی اور نمبر",
+    "postalCode": "ڈاک رمز",
+    "postalCodePlaceholder": "ZIP / ڈاک رمز",
+    "errors": {
+      "firstNameRequired": "پہلا نام لازمی ہے",
+      "lastNameRequired": "آخری نام لازمی ہے",
+      "invalidEmail": "غلط ای میل ایڈریس",
+      "phoneRequired": "فون نمبر لازمی ہے"
+    }
+  },
+  "summary": {
+    "title": "پیشہ ورانہ خلاصہ",
+    "subtitle": "ایک مؤثر خلاصہ لکھیں جو آپ کی مہارت اور کیریئر کے اہداف کو نمایاں کرے۔",
+    "placeholder": "نتائج پر مرکوز سافٹ ویئر انجینئر جسے قابلِ توسیع ویب ایپلیکیشنز بنانے کا 5 سال سے زیادہ تجربہ ہے...",
+    "characters": "{count} حروف",
+    "recommended": "تجویز کردہ: 150-300 حروف",
+    "generate": "بنائیں",
+    "generating": "بن رہا ہے...",
+    "creditsRemaining": "باقی کریڈٹس: {count}",
+    "accountNotLoadedTitle": "اکاؤنٹ لوڈ نہیں ہوا",
+    "accountNotLoadedBody": "آپ کا اکاؤنٹ ابھی لوڈ نہیں ہوا۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔",
+    "creditsExhaustedTitle": "کریڈٹس ختم ہو گئے",
+    "generateFailedTitle": "نہیں بن سکا",
+    "generateFailed": "نہیں بن سکا۔ براہ کرم دوبارہ کوشش کریں۔",
+    "creditMaybeUsed": "نہیں بن سکا۔ ممکن ہے ایک کریڈٹ استعمال ہو گیا ہو۔ اپنا بیلنس چیک کریں اور دوبارہ کوشش کریں۔",
+    "missing": {
+      "headline": "بنانے سے پہلے پیشہ ورانہ عنوان شامل کریں۔",
+      "experience": "بنانے سے پہلے تجربہ شامل کریں۔",
+      "skills": "بنانے سے پہلے مہارتیں شامل کریں۔",
+      "headlineExperience": "بنانے سے پہلے پیشہ ورانہ عنوان اور تجربہ شامل کریں۔",
+      "headlineSkills": "بنانے سے پہلے پیشہ ورانہ عنوان اور مہارتیں شامل کریں۔",
+      "experienceSkills": "بنانے سے پہلے تجربہ اور مہارتیں شامل کریں۔",
+      "all": "بنانے سے پہلے پیشہ ورانہ عنوان، تجربہ اور مہارتیں شامل کریں۔"
+    }
+  },
+  "experience": {
+    "title": "کام کا تجربہ",
+    "subtitle": "اپنی ملازمت کی تاریخ شامل کریں، تازہ ترین عہدے سے شروع کرتے ہوئے۔",
+    "empty": "ابھی تک کوئی کام کا تجربہ شامل نہیں کیا گیا۔",
+    "add": "تجربہ شامل کریں",
+    "edit": "تجربے میں ترمیم کریں",
+    "deleteTitle": "تجربہ حذف کریں",
+    "deleteBody": "کیا آپ واقعی یہ اندراج ہٹانا چاہتے ہیں؟",
+    "highlightsCount": "{count, plural, one {# نمایاں کامیابی} other {# نمایاں کامیابیاں}}",
+    "jobTitlePlaceholder": "سینئر سافٹ ویئر انجینئر",
+    "location": "مقام",
+    "locationPlaceholder": "کراچی، پاکستان",
+    "startPlaceholder": "جنوری 2020",
+    "endPlaceholder": "دسمبر 2023",
+    "current": "فی الحال یہاں کام کر رہا ہوں",
+    "descriptionPlaceholder": "اپنی ذمہ داریوں اور کامیابیوں کو بیان کریں...",
+    "highlights": "نمایاں کامیابیاں",
+    "highlightsPlaceholder": "5 انجینئرز کی ٹیم کی قیادت کی\nصفحہ لوڈ ہونے کا وقت 40% کم کیا",
+    "highlightsHint": "ہر سطر میں ایک، زیادہ سے زیادہ {max}۔",
+    "errors": {
+      "companyRequired": "کمپنی کا نام لازمی ہے",
+      "positionRequired": "ملازمت کا عنوان لازمی ہے"
+    }
+  },
+  "education": {
+    "title": "تعلیم",
+    "subtitle": "اپنا تعلیمی پس منظر اور قابلیتیں شامل کریں۔",
+    "empty": "ابھی تک کوئی تعلیم شامل نہیں کی گئی۔",
+    "add": "تعلیم شامل کریں",
+    "edit": "تعلیم میں ترمیم کریں",
+    "deleteTitle": "تعلیم حذف کریں",
+    "deleteBody": "کیا یہ تعلیمی اندراج ہٹانا ہے؟",
+    "degreeIn": "{field} میں {degree}",
+    "gpa": "GPA (اوسط): {gpa}",
+    "institution": "ادارہ *",
+    "degree": "ڈگری *",
+    "degreePlaceholder": "بیچلر آف سائنس",
+    "field": "شعبۂ مطالعہ *",
+    "fieldPlaceholder": "کمپیوٹر سائنس",
+    "startPlaceholder": "ستمبر 2018",
+    "endPlaceholder": "مئی 2022",
+    "gpaLabel": "GPA / اوسط (اختیاری)",
+    "errors": {
+      "institutionRequired": "ادارہ لازمی ہے",
+      "degreeRequired": "ڈگری لازمی ہے",
+      "fieldRequired": "شعبۂ مطالعہ لازمی ہے"
+    }
+  },
+  "skills": {
+    "title": "مہارتیں",
+    "subtitle": "اپنی تکنیکی اور سماجی مہارتیں مہارت کی سطح کے ساتھ شامل کریں۔",
+    "empty": "ابھی تک کوئی مہارت شامل نہیں کی گئی۔",
+    "add": "مہارت شامل کریں",
+    "edit": "مہارت میں ترمیم کریں",
+    "deleteTitle": "مہارت حذف کریں",
+    "deleteBody": "کیا یہ مہارت ہٹانی ہے؟",
+    "name": "مہارت کا نام *",
+    "category": "زمرہ (اختیاری)",
+    "categoryPlaceholder": "فرنٹ اینڈ، بیک اینڈ، ٹولز...",
+    "levels": {
+      "beginner": "ابتدائی",
+      "intermediate": "درمیانہ",
+      "advanced": "اعلیٰ",
+      "expert": "ماہر"
+    },
+    "errors": {
+      "nameRequired": "مہارت کا نام لازمی ہے"
+    }
+  },
+  "projects": {
+    "title": "پروجیکٹس",
+    "subtitle": "اپنے نمایاں پروجیکٹس اور ضمنی کام پیش کریں۔",
+    "empty": "ابھی تک کوئی پروجیکٹ شامل نہیں کیا گیا۔",
+    "add": "پروجیکٹ شامل کریں",
+    "edit": "پروجیکٹ میں ترمیم کریں",
+    "deleteTitle": "پروجیکٹ حذف کریں",
+    "deleteBody": "کیا یہ پروجیکٹ ہٹانا ہے؟",
+    "name": "پروجیکٹ کا نام *",
+    "namePlaceholder": "میری زبردست ایپ",
+    "descriptionPlaceholder": "آپ نے جو بنایا اس کی مختصر تفصیل...",
+    "technologies": "ٹیکنالوجیز (کوما سے الگ)",
+    "url": "پروجیکٹ کا URL",
+    "errors": {
+      "nameRequired": "پروجیکٹ کا نام لازمی ہے"
+    }
+  },
+  "certifications": {
+    "title": "سرٹیفیکیشنز",
+    "subtitle": "اپنے پیشہ ورانہ سرٹیفیکیشنز اور لائسنس شامل کریں۔",
+    "empty": "ابھی تک کوئی سرٹیفیکیشن شامل نہیں کی گئی۔",
+    "add": "سرٹیفیکیشن شامل کریں",
+    "edit": "سرٹیفیکیشن میں ترمیم کریں",
+    "deleteTitle": "سرٹیفیکیشن حذف کریں",
+    "deleteBody": "کیا یہ سرٹیفیکیشن ہٹانی ہے؟",
+    "expires": "میعاد ختم: {date}",
+    "name": "سرٹیفیکیشن کا نام *",
+    "issuer": "جاری کرنے والا ادارہ *",
+    "issueDate": "اجراء کی تاریخ *",
+    "issuePlaceholder": "جنوری 2023",
+    "expiry": "خاتمے کی تاریخ",
+    "expiryPlaceholder": "جنوری 2026",
+    "credentialId": "سرٹیفکیٹ آئی ڈی",
+    "credentialPlaceholder": "مثلاً AWS-123",
+    "errors": {
+      "nameRequired": "سرٹیفیکیشن کا نام لازمی ہے",
+      "issuerRequired": "جاری کنندہ لازمی ہے",
+      "dateRequired": "تاریخ لازمی ہے"
+    }
+  },
+  "languages": {
+    "title": "زبانیں",
+    "subtitle": "وہ زبانیں درج کریں جو آپ بولتے ہیں اور ان میں اپنی مہارت کی سطح۔",
+    "empty": "ابھی تک کوئی زبان شامل نہیں کی گئی۔",
+    "add": "زبان شامل کریں",
+    "edit": "زبان میں ترمیم کریں",
+    "deleteTitle": "زبان حذف کریں",
+    "deleteBody": "کیا یہ زبان ہٹانی ہے؟",
+    "name": "زبان *",
+    "namePlaceholder": "انگریزی",
+    "levels": {
+      "Native": "مادری زبان",
+      "Fluent": "روانی سے",
+      "Advanced": "اعلیٰ",
+      "Intermediate": "درمیانہ",
+      "Basic": "بنیادی"
+    },
+    "errors": {
+      "nameRequired": "زبان کا نام لازمی ہے",
+      "proficiencyRequired": "مہارت کی سطح لازمی ہے"
+    }
+  },
+  "references": {
+    "title": "حوالہ جات",
+    "subtitle": "پیشہ ورانہ حوالے شامل کریں جو آپ کے کام کی تصدیق کر سکیں۔",
+    "empty": "ابھی تک کوئی حوالہ شامل نہیں کیا گیا۔",
+    "add": "حوالہ شامل کریں",
+    "edit": "حوالے میں ترمیم کریں",
+    "deleteTitle": "حوالہ حذف کریں",
+    "deleteBody": "کیا یہ حوالہ ہٹانا ہے؟",
+    "titleAtCompany": "{company} میں {title}",
+    "fullName": "پورا نام *",
+    "jobTitlePlaceholder": "انجینئرنگ مینیجر",
+    "email": "ای میل",
+    "phone": "فون",
+    "relationship": "تعلق",
+    "relationshipPlaceholder": "سابق مینیجر",
+    "errors": {
+      "nameRequired": "نام لازمی ہے",
+      "titleRequired": "عنوان لازمی ہے",
+      "companyRequired": "کمپنی لازمی ہے",
+      "invalidEmail": "غلط ای میل"
+    }
+  },
+  "custom": {
+    "title": "کسٹم سیکشنز",
+    "subtitle": "اپنے CV میں جو کچھ اور چاہیں شامل کریں — اعزازات، رضاکارانہ کام، اشاعتیں، دلچسپیاں۔",
+    "empty": "ابھی کوئی کسٹم سیکشن نہیں۔",
+    "noEntries": "ابھی کوئی اندراج نہیں — نیچے پہلا شامل کریں۔",
+    "untitled": "بلا عنوان اندراج",
+    "addItem": "آئٹم شامل کریں",
+    "addSection": "کسٹم سیکشن شامل کریں",
+    "newHeading": "نیا کسٹم سیکشن",
+    "addSectionConfirm": "سیکشن شامل کریں",
+    "addEntry": "اندراج شامل کریں",
+    "editEntry": "اندراج میں ترمیم کریں",
+    "deleteTitle": "اندراج حذف کریں",
+    "deleteBody": "کیا یہ اندراج ہٹانا ہے؟",
+    "titleLabel": "عنوان *",
+    "subtitleLabel": "ذیلی عنوان",
+    "date": "تاریخ",
+    "descriptionPlaceholder": "تفصیل…",
+    "errors": {
+      "titleRequired": "عنوان لازمی ہے"
+    }
+  },
+  "arrange": {
+    "title": "سیکشنز ترتیب دیں",
+    "subtitle": "اپنے CV کے سیکشنز کی ترتیب بدلیں، ان کے نام تبدیل کریں اور منتخب کریں کہ کون سے دکھانے ہیں۔ چھپے ہوئے سیکشنز محفوظ رہتے ہیں لیکن آپ کے CV میں شامل نہیں ہوتے۔",
+    "empty": "ابھی کوئی سیکشن نہیں۔ نیچے ایک شامل کریں۔",
+    "meta": "{type} · {count, plural, one {# آئٹم} other {# آئٹمز}}",
+    "metaHidden": "{type} · {count, plural, one {# آئٹم} other {# آئٹمز}} · چھپا ہوا",
+    "moveUp": "{title} کو اوپر لے جائیں",
+    "moveDown": "{title} کو نیچے لے جائیں",
+    "hide": "سیکشن {title} چھپائیں",
+    "show": "سیکشن {title} دکھائیں",
+    "rename": "سیکشن {title} کا نام تبدیل کریں",
+    "remove": "سیکشن {title} ہٹائیں",
+    "addSection": "سیکشن شامل کریں",
+    "removeTitle": "سیکشن ہٹائیں",
+    "removeBodyEntries": "کیا اس CV سے «{title}» اور اس {count, plural, one {کا # اندراج} other {کے # اندراجات}} ہٹانے ہیں؟",
+    "removeBody": "کیا اس CV سے «{title}» ہٹانا ہے؟",
+    "renameHeading": "سیکشن کا نام تبدیل کریں"
+  }
+}

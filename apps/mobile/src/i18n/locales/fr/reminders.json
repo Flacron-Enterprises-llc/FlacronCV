@@ -1,0 +1,21 @@
+{
+  "push": {
+    "enableFailedTitle": "Impossible d'activer les notifications",
+    "expoGoBody": "Les notifications à distance ne sont pas disponibles dans Expo Go. Utilisez une version de développement ou de la boutique.",
+    "registerFailedBody": "Nous n'avons pas pu enregistrer cet appareil pour les notifications. Vérifiez votre connexion et réessayez.",
+    "promptTitle": "Recevoir un rappel ?",
+    "promptBoth": "Activez les notifications pour que nous vous rappelions cette relance ou cet entretien le moment venu.",
+    "promptInterview": "Activez les notifications pour que nous vous rappelions cet entretien le moment venu.",
+    "promptFollowUp": "Activez les notifications pour que nous vous rappelions cette relance le moment venu.",
+    "notNow": "Pas maintenant",
+    "enable": "Activer"
+  },
+  "job": {
+    "channelName": "Rappels",
+    "titleFallback": "Candidature",
+    "followUpToday": "Relance aujourd'hui",
+    "followUpTodayWith": "Relance aujourd'hui avec {company}",
+    "interviewToday": "Entretien aujourd'hui à {time}",
+    "interviewTodayWith": "Entretien aujourd'hui à {time} avec {company}"
+  }
+}

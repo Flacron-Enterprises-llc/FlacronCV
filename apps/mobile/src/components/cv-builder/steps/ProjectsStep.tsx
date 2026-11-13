@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { z } from 'zod';
@@ -11,12 +11,15 @@ import { useCVStore } from '../../../store/cv-store';
 import { CVSectionType } from '../../../types/enums';
 import { ProjectItem } from '../../../types/cv.types';
 import { generateId } from '../../../lib/utils';
+import { sectionTypeLabel } from '../../../lib/cv-editor';
 import { colors } from '../../../theme/colors';
 import { useStepSection } from '../useStepSection';
 import { SectionSwitcher } from '../SectionSwitcher';
+import { useT } from '../../../i18n';
 
-const schema = z.object({
-  name: z.string().min(1, 'Project name is required'),
+/** Built per language so validation messages follow the app language. */
+const makeSchema = (t: (key: string) => string) => z.object({
+  name: z.string().min(1, t('projects.errors.nameRequired')),
   description: z.string().optional(),
   // Soft like Personal Info website — API stores a string, not a strict URL.
   url: z.string().optional().or(z.literal('')),
@@ -25,7 +28,7 @@ const schema = z.object({
   endDate: z.string().optional(),
 });
 
-type FormData = z.infer<typeof schema>;
+type FormData = z.infer<ReturnType<typeof makeSchema>>;
 
 interface ProjectsStepProps {
   onValidChange: (isValid: boolean) => void;
@@ -33,6 +36,9 @@ interface ProjectsStepProps {
 
 export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
   const { sections, updateSection, addSection } = useCVStore();
+  const t = useT('cvEditor');
+  const tc = useT('common');
+  const schema = useMemo(() => makeSchema(t), [t]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<ProjectItem | null>(null);
 
@@ -85,7 +91,7 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
       name: data.name,
       description: data.description,
       url: data.url || undefined,
-      technologies: data.technologies?.split(',').map((t) => t.trim()).filter(Boolean),
+      technologies: data.technologies?.split(',').map((tech) => tech.trim()).filter(Boolean),
       startDate: data.startDate,
       endDate: data.endDate,
     };
@@ -99,7 +105,7 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
       addSection({
         id: generateId(),
         type: CVSectionType.PROJECTS,
-        title: 'Projects',
+        title: sectionTypeLabel(CVSectionType.PROJECTS),
         isVisible: true,
         order: sections.length,
         items: [newItem],
@@ -111,10 +117,10 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
   };
 
   const handleDelete = (itemId: string) => {
-    Alert.alert('Delete Project', 'Remove this project?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('projects.deleteTitle'), t('projects.deleteBody'), [
+      { text: tc('cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: tc('delete'),
         style: 'destructive',
         onPress: () => {
           if (projectsSection) {
@@ -128,10 +134,8 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
   return (
     <View className="flex-1">
       <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <Text className="text-lg font-semibold text-stone-900 mb-1">Projects</Text>
-        <Text className="text-stone-500 mb-5 text-sm">
-          Showcase your notable projects and side work.
-        </Text>
+        <Text className="text-lg font-semibold text-stone-900 mb-1">{t('projects.title')}</Text>
+        <Text className="text-stone-500 mb-5 text-sm">{t('projects.subtitle')}</Text>
         <SectionSwitcher sections={sectionsForType} selected={projectsSection} onSelect={selectSection} />
 
         {items.length === 0 ? (
@@ -139,7 +143,7 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
             <View className="w-16 h-16 rounded-full bg-stone-100 items-center justify-center mb-3">
               <Ionicons name="construct-outline" size={28} color={colors.stone[400]} />
             </View>
-            <Text className="text-stone-500 text-center mb-4">No projects added yet.</Text>
+            <Text className="text-stone-500 text-center mb-4">{t('projects.empty')}</Text>
           </View>
         ) : (
           items.map((item) => (
@@ -160,11 +164,11 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
                     </View>
                   )}
                 </View>
-                <View className="flex-row gap-2 ml-2">
-                  <TouchableOpacity onPress={() => openEdit(item)} className="p-1" accessibilityRole="button" accessibilityLabel="Edit entry" hitSlop={12}>
+                <View className="flex-row gap-2 ms-2">
+                  <TouchableOpacity onPress={() => openEdit(item)} className="p-1" accessibilityRole="button" accessibilityLabel={t('entry.edit')} hitSlop={12}>
                     <Ionicons name="pencil-outline" size={18} color={colors.stone[500]} />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1" accessibilityRole="button" accessibilityLabel="Delete entry" hitSlop={12}>
+                  <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-1" accessibilityRole="button" accessibilityLabel={t('entry.delete')} hitSlop={12}>
                     <Ionicons name="trash-outline" size={18} color={colors.error.DEFAULT} />
                   </TouchableOpacity>
                 </View>
@@ -174,26 +178,26 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
         )}
 
         <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color={colors.stone[700]} />} fullWidth>
-          Add Project
+          {t('projects.add')}
         </Button>
         <View className="h-8" />
       </ScrollView>
 
-      <Modal visible={modalVisible} onClose={() => setModalVisible(false)} title={editingItem ? 'Edit Project' : 'Add Project'} size="lg">
+      <Modal visible={modalVisible} onClose={() => setModalVisible(false)} title={editingItem ? t('projects.edit') : t('projects.add')} size="lg">
         <Controller control={control} name="name" render={({ field }) => (
-          <Input label="Project Name *" placeholder="My Awesome App" value={field.value} onChangeText={field.onChange} error={errors.name?.message} />
+          <Input label={t('projects.name')} placeholder={t('projects.namePlaceholder')} value={field.value} onChangeText={field.onChange} error={errors.name?.message} />
         )} />
         <Controller control={control} name="description" render={({ field }) => (
-          <Input label="Description" placeholder="A brief description of what you built..." value={field.value} onChangeText={field.onChange} multiline numberOfLines={3} />
+          <Input label={t('fields.description')} placeholder={t('projects.descriptionPlaceholder')} value={field.value} onChangeText={field.onChange} multiline numberOfLines={3} />
         )} />
         <Controller control={control} name="technologies" render={({ field }) => (
-          <Input label="Technologies (comma-separated)" placeholder="React Native, TypeScript, Firebase" value={field.value} onChangeText={field.onChange} />
+          <Input label={t('projects.technologies')} placeholder="React Native, TypeScript, Firebase" value={field.value} onChangeText={field.onChange} />
         )} />
         <Controller control={control} name="url" render={({ field }) => (
-          <Input label="Project URL" placeholder="https://github.com/..." keyboardType="url" autoCapitalize="none" value={field.value} onChangeText={field.onChange} error={errors.url?.message} />
+          <Input label={t('projects.url')} placeholder="https://github.com/..." keyboardType="url" autoCapitalize="none" value={field.value} onChangeText={field.onChange} error={errors.url?.message} />
         )} />
         <Button variant="primary" fullWidth onPress={handleSubmit(onSubmit)}>
-          {editingItem ? 'Update' : 'Add Project'}
+          {editingItem ? t('entry.update') : t('projects.add')}
         </Button>
       </Modal>
     </View>

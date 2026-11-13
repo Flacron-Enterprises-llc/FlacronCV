@@ -1,0 +1,57 @@
+{
+  "dialogLabel": "Visite guidée",
+  "progress": "Étape {current} sur {total}",
+  "announce": "Visite guidée. {progress}. {title}",
+  "minimizedLabel": "Visite guidée, {progress} : {title}",
+  "continue": "Reprendre la visite",
+  "skip": "Ignorer",
+  "skipTour": "Ignorer la visite",
+  "next": "Suivant",
+  "finish": "Terminer",
+  "finishTour": "Terminer la visite",
+  "showMeHint": "Ouvre cette partie de l'application. La visite reste accessible en bas de l'écran.",
+  "saveError": "Nous n'avons pas pu enregistrer la progression de la visite. Vous pouvez continuer à utiliser FlacronCV.",
+  "welcomeTitleNamed": "Bienvenue, {name}",
+  "steps": {
+    "welcome": {
+      "show": "Voir le tableau de bord",
+      "title": "Bienvenue sur FlacronCV",
+      "body": "Cette courte visite montre où créer un CV, rédiger une lettre de motivation et suivre vos candidatures. Vous pouvez la quitter à tout moment."
+    },
+    "usage": {
+      "show": "Voir le tableau de bord",
+      "title": "Votre forfait et votre usage",
+      "body": "Les CV, les crédits d'IA et les exportations suivent votre forfait actuel. Ces compteurs se mettent à jour quand vous travaillez. Rien ici ne lance un paiement."
+    },
+    "cvs": {
+      "show": "Voir Mes CV",
+      "title": "Mes CV",
+      "body": "Chaque CV enregistré apparaît ici. Touchez Nouveau CV quand vous êtes prêt : vous choisissez un modèle, puis vous modifiez votre propre contenu. Cette visite ne crée pas de CV à votre place."
+    },
+    "coverLetters": {
+      "show": "Voir Lettres",
+      "title": "Lettres de motivation",
+      "body": "Rédigez une lettre pour un poste et, si vous le souhaitez, améliorez un brouillon avec l'IA plus tard. Ouvrir cet onglet ne dépense aucun crédit."
+    },
+    "jobs": {
+      "show": "Voir le suivi des candidatures",
+      "title": "Suivi des candidatures",
+      "body": "Gardez les entreprises et les étapes dans une seule liste, de la liste d'envies à l'offre. Une candidature n'est ajoutée que si vous le décidez. Ouvrez-le depuis le tableau de bord."
+    },
+    "templates": {
+      "show": "Voir Modèles",
+      "title": "Modèles",
+      "body": "Parcourez ici les mises en page de CV. Certains designs font partie d'un forfait payant. Cette visite n'en sélectionne aucun."
+    },
+    "career": {
+      "show": "Voir les outils de carrière",
+      "title": "Outils de carrière",
+      "body": "Les outils de carrière sont un module optionnel pour préparer votre prochaine étape. Ouvrez-les depuis le tableau de bord. Cette visite n'y lance rien."
+    },
+    "settings": {
+      "show": "Voir Paramètres",
+      "title": "Revoir à tout moment",
+      "body": "Revoir la visite se trouve dans Paramètres et sur la page Assistance. Terminez maintenant et elle ne redémarrera pas toute seule."
+    }
+  }
+}

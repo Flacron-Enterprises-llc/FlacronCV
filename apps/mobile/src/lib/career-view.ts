@@ -2,6 +2,20 @@ import { includedUnits, type PlanId } from '../../../../packages/career-shared/s
 import { FACT_FIELDS } from '../../../../packages/career-shared/src/facts';
 import { ApiError } from '../../../../packages/career-api-client/src/client';
 import type { CareerAccessView, UsageSummary } from '../../../../packages/career-api-client/src/types';
+import { formatDate, t } from '../i18n';
+
+/**
+ * A label map whose values are read from the translation files at access time
+ * (`labelMap('career.factTypes', ['contact', …]).contact` → current language).
+ * Every key must exist in the en file under `prefix`.
+ */
+export function labelMap<K extends string>(prefix: string, keys: readonly K[]): Record<K, string> {
+  const out = {} as Record<K, string>;
+  for (const key of keys) {
+    Object.defineProperty(out, key, { enumerable: true, get: () => t(`${prefix}.${key}`) });
+  }
+  return out;
+}
 
 /**
  * Pure view logic for the mobile career screens (tested in career-view.test.ts).
@@ -91,44 +105,49 @@ export function formatDay(iso: string | null): string | null {
   if (!iso) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+  return formatDate(date, { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
 }
 
 /** Headline + explanation for the entitlement card. */
-export function describeAccess(state: CareerAccessState): { title: string; body: string; badge?: string } {
+export function describeAccess(state: CareerAccessState): {
+  title: string;
+  body: string;
+  badge?: string;
+  badgeKind?: 'test' | 'ending' | 'active';
+} {
   switch (state.kind) {
     case 'off':
-      return { title: 'Career tools are not available in this app', body: 'Your FlacronCV plan, CVs, cover letters and Job Tracker work as usual.' };
+      return { title: t('career.access.off.title'), body: t('career.access.off.body') };
     case 'loading':
-      return { title: 'Checking your career tools…', body: '' };
+      return { title: t('career.access.loading.title'), body: '' };
     case 'offline':
-      return { title: 'You are offline', body: 'Career tools need a connection. Nothing was changed. Try again when you are back online.' };
+      return { title: t('career.access.offline.title'), body: t('career.access.offline.body') };
     case 'unavailable':
-      return { title: 'Career tools are unavailable right now', body: 'The career service did not answer. Nothing was changed. Please try again later.' };
+      return { title: t('career.access.unavailable.title'), body: t('career.access.unavailable.body') };
     case 'v1_inactive':
-      return { title: 'Career tools are unavailable for this account', body: 'Your FlacronCV account is not active.' };
+      return { title: t('career.access.inactive.title'), body: t('career.access.inactive.body') };
     case 'not_included':
-      return {
-        title: 'Career tools are not included in your plan',
-        body: 'Career tools are an optional add-on with their own credits. Your FlacronCV plan, its benefits and its AI credits stay exactly as they are.',
-      };
+      return { title: t('career.access.notIncluded.title'), body: t('career.access.notIncluded.body') };
     case 'active': {
       const day = formatDay(state.endsOrRenews);
       const lines: string[] = [];
       if (state.origin === 'local_fixture') {
-        lines.push('Local test entitlement for this demo. It is not a purchase and nothing was charged.');
+        lines.push(t('career.access.localFixture'));
       } else if (state.origin === 'purchase') {
-        lines.push('A separate add-on beside your FlacronCV plan. Cancelling it ends only the career tools; your FlacronCV plan continues.');
-        if (state.pastDue) lines.push('The last payment for the add-on failed. Access continues until the end of the paid period.');
-        if (day) lines.push(state.cancelAtPeriodEnd ? `Ends on ${day}.` : `Renews on ${day}.`);
+        lines.push(t('career.access.purchase'));
+        if (state.pastDue) lines.push(t('career.access.pastDue'));
+        if (day) lines.push(state.cancelAtPeriodEnd ? t('career.access.endsOn', { date: day }) : t('career.access.renewsOn', { date: day }));
       } else {
-        lines.push('Included with your FlacronCV plan.');
+        lines.push(t('career.access.included'));
       }
-      return {
-        title: `Career ${state.planName}`,
-        body: lines.join(' '),
-        badge: state.origin === 'local_fixture' ? 'TEST ENTITLEMENT' : state.cancelAtPeriodEnd ? 'ENDING' : 'ACTIVE',
-      };
+      const badgeKind = state.origin === 'local_fixture' ? 'test' : state.cancelAtPeriodEnd ? 'ending' : 'active';
+      const badge =
+        badgeKind === 'test'
+          ? t('career.access.badge.test')
+          : badgeKind === 'ending'
+            ? t('career.access.badge.ending')
+            : t('career.access.badge.active');
+      return { title: t('career.access.activeTitle', { plan: state.planName }), body: lines.join(' '), badge, badgeKind };
     }
   }
 }
@@ -154,26 +173,26 @@ export type CareerArea = {
 };
 
 export const CAREER_AREAS: CareerArea[] = [
-  { key: 'profile', title: 'Career profile', body: 'Add, edit, confirm or remove the facts your drafts are built from; import a resume and set your preferences.', where: 'app', route: '/(dashboard)/career/profile' },
-  { key: 'documents', title: 'Career drafts', body: 'Create, generate, tailor, edit and save career CVs and letters; switch layouts, check readability, export and share.', where: 'app', route: '/(dashboard)/career/documents' },
-  { key: 'opportunities', title: 'Job search', body: 'Search your listings, paste a job advert, check it and compare it with your career CV. No live job feed is connected.', where: 'app', route: '/(dashboard)/career/opportunities' },
-  { key: 'map', title: 'Map session', body: 'Listings as a list with approximate locations. No map tiles are connected.', where: 'app', route: '/(dashboard)/career/opportunities/map', feature: 'mapSessions' },
-  { key: 'alerts', title: 'Alerts', body: 'Saved searches, places, followed companies and the listings they surface.', where: 'app', route: '/(dashboard)/career/alerts', feature: 'alertItems' },
-  { key: 'tracker', title: 'Job Tracker', body: 'Your applications stay in the FlacronCV Job Tracker.', where: 'app', route: '/(dashboard)/jobs' },
-  { key: 'outcomes', title: 'Application outcomes', body: 'Observed counts from your Job Tracker. Not a hiring probability.', where: 'app', route: '/(dashboard)/career/learning-loop', feature: 'applicationAnalytics' },
-  { key: 'evidence', title: 'Evidence vault', body: 'Add, edit and delete proof of your work; attach a photo of a certificate.', where: 'app', route: '/(dashboard)/career/evidence', feature: 'evidenceItems' },
-  { key: 'portfolios', title: 'Portfolio pages', body: 'Choose work to show, publish or make a private link, share it and show its QR code.', where: 'app', route: '/(dashboard)/career/portfolios', feature: 'portfolioPages' },
-  { key: 'interviews', title: 'Interview practice', body: 'Text interview practice, your sessions and STAR stories.', where: 'app', route: '/(dashboard)/career/interviews', feature: 'textInterviewSessions' },
-  { key: 'voice', title: 'Voice practice', body: 'Practice out loud and type what you said. The app does not record audio.', where: 'app', route: '/(dashboard)/career/interviews/voice', feature: 'voiceMinutes' },
-  { key: 'action-packs', title: 'Action packs', body: 'Turn a saved opportunity into a tailored application pack with a checklist.', where: 'app', route: '/(dashboard)/career/action-pack', feature: 'actionPacks' },
-  { key: 'learning', title: 'Learning plans', body: 'Skill gaps, milestones and a project brief for a target role.', where: 'app', route: '/(dashboard)/career/learning', feature: 'skillReports' },
-  { key: 'maintenance', title: 'Career maintenance', body: 'Log achievements and promotion goals; see credentials due within 90 days.', where: 'app', route: '/(dashboard)/career/maintenance' },
-  { key: 'scenarios', title: 'Scenario planner', body: 'Compare up to three routes. Missing pay stays unknown.', where: 'app', route: '/(dashboard)/career/scenarios', feature: 'scenarioReports' },
-  { key: 'relocation', title: 'Relocation and career modes', body: 'Target locations, relocation plans and the specialist lens for your drafts.', where: 'app', route: '/(dashboard)/career/relocation', feature: 'locationProfiles' },
-  { key: 'recruiting', title: 'Recruiting opt-in', body: 'Choose whether employers may see that you opted in. Your email stays private.', where: 'app', route: '/(dashboard)/career/recruiting' },
-  { key: 'services', title: 'Human review', body: 'A person reviews selected material. Not bookable yet.', where: 'app', route: '/(dashboard)/career/services' },
-  { key: 'data', title: 'Career data', body: 'Export a copy of your career records.', where: 'app', route: '/(dashboard)/career/data' },
-  { key: 'forms', title: 'Application form filling', body: 'Uses the desktop browser extension; not available on phones.', where: 'desktop' },
+  { key: 'profile', get title() { return t('career.areas.profile.title'); }, get body() { return t('career.areas.profile.body'); }, where: 'app', route: '/(dashboard)/career/profile' },
+  { key: 'documents', get title() { return t('career.areas.documents.title'); }, get body() { return t('career.areas.documents.body'); }, where: 'app', route: '/(dashboard)/career/documents' },
+  { key: 'opportunities', get title() { return t('career.areas.opportunities.title'); }, get body() { return t('career.areas.opportunities.body'); }, where: 'app', route: '/(dashboard)/career/opportunities' },
+  { key: 'map', get title() { return t('career.areas.map.title'); }, get body() { return t('career.areas.map.body'); }, where: 'app', route: '/(dashboard)/career/opportunities/map', feature: 'mapSessions' },
+  { key: 'alerts', get title() { return t('career.areas.alerts.title'); }, get body() { return t('career.areas.alerts.body'); }, where: 'app', route: '/(dashboard)/career/alerts', feature: 'alertItems' },
+  { key: 'tracker', get title() { return t('career.areas.tracker.title'); }, get body() { return t('career.areas.tracker.body'); }, where: 'app', route: '/(dashboard)/jobs' },
+  { key: 'outcomes', get title() { return t('career.areas.outcomes.title'); }, get body() { return t('career.areas.outcomes.body'); }, where: 'app', route: '/(dashboard)/career/learning-loop', feature: 'applicationAnalytics' },
+  { key: 'evidence', get title() { return t('career.areas.evidence.title'); }, get body() { return t('career.areas.evidence.body'); }, where: 'app', route: '/(dashboard)/career/evidence', feature: 'evidenceItems' },
+  { key: 'portfolios', get title() { return t('career.areas.portfolios.title'); }, get body() { return t('career.areas.portfolios.body'); }, where: 'app', route: '/(dashboard)/career/portfolios', feature: 'portfolioPages' },
+  { key: 'interviews', get title() { return t('career.areas.interviews.title'); }, get body() { return t('career.areas.interviews.body'); }, where: 'app', route: '/(dashboard)/career/interviews', feature: 'textInterviewSessions' },
+  { key: 'voice', get title() { return t('career.areas.voice.title'); }, get body() { return t('career.areas.voice.body'); }, where: 'app', route: '/(dashboard)/career/interviews/voice', feature: 'voiceMinutes' },
+  { key: 'action-packs', get title() { return t('career.areas.actionPacks.title'); }, get body() { return t('career.areas.actionPacks.body'); }, where: 'app', route: '/(dashboard)/career/action-pack', feature: 'actionPacks' },
+  { key: 'learning', get title() { return t('career.areas.learning.title'); }, get body() { return t('career.areas.learning.body'); }, where: 'app', route: '/(dashboard)/career/learning', feature: 'skillReports' },
+  { key: 'maintenance', get title() { return t('career.areas.maintenance.title'); }, get body() { return t('career.areas.maintenance.body'); }, where: 'app', route: '/(dashboard)/career/maintenance' },
+  { key: 'scenarios', get title() { return t('career.areas.scenarios.title'); }, get body() { return t('career.areas.scenarios.body'); }, where: 'app', route: '/(dashboard)/career/scenarios', feature: 'scenarioReports' },
+  { key: 'relocation', get title() { return t('career.areas.relocation.title'); }, get body() { return t('career.areas.relocation.body'); }, where: 'app', route: '/(dashboard)/career/relocation', feature: 'locationProfiles' },
+  { key: 'recruiting', get title() { return t('career.areas.recruiting.title'); }, get body() { return t('career.areas.recruiting.body'); }, where: 'app', route: '/(dashboard)/career/recruiting' },
+  { key: 'services', get title() { return t('career.areas.services.title'); }, get body() { return t('career.areas.services.body'); }, where: 'app', route: '/(dashboard)/career/services' },
+  { key: 'data', get title() { return t('career.areas.data.title'); }, get body() { return t('career.areas.data.body'); }, where: 'app', route: '/(dashboard)/career/data' },
+  { key: 'forms', get title() { return t('career.areas.forms.title'); }, get body() { return t('career.areas.forms.body'); }, where: 'desktop' },
 ];
 
 export function visibleAreas(features: Record<string, boolean> | undefined): CareerArea[] {
@@ -182,43 +201,49 @@ export function visibleAreas(features: Record<string, boolean> | undefined): Car
 
 export const WHERE_LABEL: Record<CareerArea['where'], string> = {
   app: '',
-  web: 'On the website',
-  provider: 'Not available yet',
-  desktop: 'Desktop only',
+  get web() {
+    return t('career.where.web');
+  },
+  get provider() {
+    return t('career.where.provider');
+  },
+  get desktop() {
+    return t('career.where.desktop');
+  },
 };
 
 /** Messages for career API failures. Never claims a write succeeded. */
 export function careerErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError) {
-    if (error.code === 'network_error') return 'No connection. Nothing was saved. Check your network and try again.';
+    if (error.code === 'network_error') return t('career.errors.network');
     if (error.code === 'revision_conflict')
-      return 'This draft changed somewhere else. Reload it before saving again; your edit was not saved.';
-    if (error.code === 'feature_unavailable') return 'This career feature is switched off.';
-    if (error.code === 'record_deleted') return 'This draft was deleted somewhere else; your edit was not saved.';
-    if (error.code === 'plan_upgrade_required' || error.code === 'capacity_exceeded') return 'Your career plan does not include this.';
-    if (error.code === 'quota_exhausted') return 'Your career credits for this period are used up.';
-    if (error.code === 'provider_unavailable') return 'This needs a service that is not available right now. Nothing was charged.';
-    if (error.code === 'rate_limited') return 'Too many requests. Wait a moment and try again.';
-    if (error.status === 401) return 'Your session expired. Sign in again.';
-    if (error.status === 403) return 'You do not have access to this.';
-    if (error.status === 404) return 'This item no longer exists.';
+      return t('career.errors.revisionConflict');
+    if (error.code === 'feature_unavailable') return t('career.errors.featureUnavailable');
+    if (error.code === 'record_deleted') return t('career.errors.recordDeleted');
+    if (error.code === 'plan_upgrade_required' || error.code === 'capacity_exceeded') return t('career.errors.notInPlan');
+    if (error.code === 'quota_exhausted') return t('career.errors.quotaExhausted');
+    if (error.code === 'provider_unavailable') return t('career.errors.providerUnavailable');
+    if (error.code === 'rate_limited') return t('career.errors.rateLimited');
+    if (error.status === 401) return t('career.errors.sessionExpired');
+    if (error.status === 403) return t('career.errors.forbidden');
+    if (error.status === 404) return t('career.errors.notFound');
   }
-  if (isNetworkFailure(error)) return 'No connection. Nothing was saved. Check your network and try again.';
+  if (isNetworkFailure(error)) return t('career.errors.network');
   return fallback;
 }
 
-export const FACT_TYPE_LABEL: Record<string, string> = {
-  contact: 'Contact',
-  summary: 'Summary',
-  experience: 'Experience',
-  education: 'Education',
-  skill: 'Skill',
-  project: 'Project',
-  achievement: 'Achievement',
-  certification: 'Certification',
-  language: 'Language',
-  reference: 'Reference',
-};
+export const FACT_TYPE_LABEL: Record<string, string> = labelMap('career.factTypes', [
+  'contact',
+  'summary',
+  'experience',
+  'education',
+  'skill',
+  'project',
+  'achievement',
+  'certification',
+  'language',
+  'reference',
+] as const);
 
 /** Title and one detail line for a fact, in the field order the career catalog defines. */
 export function factSummary(type: string, value: Record<string, unknown>): { title: string; detail: string } {

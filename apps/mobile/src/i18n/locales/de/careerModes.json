@@ -1,0 +1,234 @@
+{
+  "common": {
+    "locked": "Die Karrieretools sind in deinem Tarif nicht enthalten",
+    "loadFailed": "Diese Seite konnte nicht geladen werden. Es wurde nichts geändert.",
+    "edit": "Bearbeiten"
+  },
+  "relocation": {
+    "title": "Umzug & Karrieremodi",
+    "subtitle": "Zielstandorte und die Karriereperspektive für deine Entwürfe",
+    "loadFailed": "Deine Karrieretools konnten nicht geladen werden.",
+    "locationsLocked": "Standortprofile sind in deinem Tarif nicht enthalten",
+    "specialistLocked": "Spezialisierte Modi sind in deinem Tarif nicht enthalten",
+    "leave": {
+      "title": "Ohne Speichern verlassen?",
+      "body": "Die Änderungen an deinem spezialisierten Modus sind nicht gespeichert.",
+      "discard": "Verwerfen"
+    },
+    "tabs": {
+      "locations": "Standorte",
+      "locationsCount": "Standorte ({used}/{capacity})",
+      "specialist": "Spezialisierter Modus"
+    },
+    "serviceUnavailable": "Keine Verbindung zum Dienst für Karrieremodi. Bitte versuche es erneut.",
+    "deleteConfirm": {
+      "title": "Dieses Standortprofil löschen?",
+      "body": "{place} wird nicht mehr für den Abgleich verwendet."
+    },
+    "removed": "Standortprofil entfernt.",
+    "add": "Standortprofil hinzufügen",
+    "allInUse": "Alle Standortprofile deines Tarifs sind belegt. Lösche eines, um ein weiteres hinzuzufügen.",
+    "empty": {
+      "title": "Keine Standortprofile eingerichtet",
+      "body": "Füge deinen Hauptstandort oder Ziel-Städte für einen Umzug hinzu, um Stellenangebote im passenden Umkreis zu finden."
+    },
+    "editA11y": "{place} bearbeiten",
+    "deleteA11y": "{place} löschen"
+  },
+  "specialist": {
+    "upgrade": {
+      "title": "Spezialisierte Modi sind in deinem aktuellen Tarif nicht enthalten",
+      "body": "Spezialisierte Karrieremodi passen Entwürfe für Engineering, Führungspositionen, Design, Forschung und berufliche Neuorientierung an."
+    },
+    "loadFailed": "Dein spezialisierter Modus konnte nicht geladen werden.",
+    "guidelinesTooLong": "Die eigenen Richtlinien dürfen höchstens {max} Zeichen lang sein.",
+    "saved": "Spezialisierter Karrieremodus aktualisiert.",
+    "intro": "Wähle eine Karriereperspektive, um Schwerpunkte im Lebenslauf, die Gewichtung der Prompts und die Passungsanalyse an dein Fachgebiet anzupassen.",
+    "activeMode": "AKTIVER MODUS",
+    "recommendedFocus": "EMPFOHLENER SCHWERPUNKT",
+    "guidelinesTitle": "Fachliche Richtlinien & eigener Schwerpunkt",
+    "guidelinesLabel": "Eigene Richtlinien (optional)",
+    "guidelinesPlaceholder": "Füge Branchenkontext, Methoden oder persönliche Schwerpunkte hinzu, um die Entwürfe zu steuern.",
+    "save": "Spezialisierten Modus speichern",
+    "upgradeRequired": "Spezialisierte Karrieremodi sind in deinem aktuellen Tarif nicht enthalten.",
+    "saveFailed": "Spezialisierter Modus konnte nicht gespeichert werden. Bitte versuche es erneut.",
+    "modes": {
+      "general": {
+        "name": "Standard-Profil",
+        "description": "Ausgewogene Darstellung von Fachkompetenzen, Karriereverlauf und praktischen Ergebnissen.",
+        "focus1": "Kernkompetenzen",
+        "focus2": "Wichtigste Erfolge",
+        "focus3": "Teamarbeit",
+        "promptModifier": "Betont belegte Ergebnisse, klare Wirkung und fundierte Fachkompetenz."
+      },
+      "technical_engineering": {
+        "name": "Technik & Engineering",
+        "description": "Priorisiert Architekturentscheidungen, Skalierung, technische Tiefe und messbare Leistung.",
+        "focus1": "Systemarchitektur",
+        "focus2": "Tiefe in Sprachen & Frameworks",
+        "focus3": "Skalierungs- & Latenzmetriken",
+        "focus4": "Quelloffene Software",
+        "promptModifier": "Fokus auf technische Sorgfalt, Systemkomplexität, Zuverlässigkeitsmetriken und konkrete Engineering-Entscheidungen."
+      },
+      "executive_leadership": {
+        "name": "Führung & Management",
+        "description": "Hebt GuV-Verantwortung, organisatorischen Wandel, Zusammenarbeit mit dem Vorstand und strategische Vision hervor.",
+        "focus1": "GuV-Verantwortung",
+        "focus2": "Organisationswachstum",
+        "focus3": "Strategische Roadmaps",
+        "focus4": "Abstimmung mit Stakeholdern",
+        "promptModifier": "Stellt Erfahrungen über strategische Führung, Umsatzwachstum, Talententwicklung und Governance dar."
+      },
+      "creative_design": {
+        "name": "Kreativ & Design",
+        "description": "Stellt Produktempathie, Portfolio-Fallstudien, Methoden der Nutzerforschung und Markenhandwerk in den Mittelpunkt.",
+        "focus1": "Designsysteme",
+        "focus2": "Nutzerforschung & Discovery",
+        "focus3": "Fallstudien",
+        "focus4": "Bereichsübergreifende Kritik",
+        "promptModifier": "Hebt Designprozess, Formulierung von Nutzerproblemen, Prototyping und Wirkung auf Geschäftskennzahlen hervor."
+      },
+      "academic_research": {
+        "name": "Wissenschaft & Forschung",
+        "description": "Betont begutachtete Publikationen, eingeworbene Fördermittel, Lehre und experimentelle Methodik.",
+        "focus1": "Begutachtete Publikationen",
+        "focus2": "Fördermittel",
+        "focus3": "Laborleitung",
+        "focus4": "Tagungsbeiträge",
+        "promptModifier": "Hebt Forschungsmethodik, Zitationswirkung, Fördermittelmanagement und theoretische Beiträge hervor."
+      },
+      "career_transition": {
+        "name": "Neuorientierung / Einstieg",
+        "description": "Überträgt übertragbare Fähigkeiten aus früheren Bereichen mit gezielten Darstellungen in die Zielbranchen.",
+        "focus1": "Übertragbare Fähigkeiten",
+        "focus2": "Belege für schnelles Weiterlernen",
+        "focus3": "Analogien zwischen Fachgebieten",
+        "focus4": "Eigeninitiierte Projekte",
+        "promptModifier": "Überträgt bisherige Fachkenntnisse in die Sprache der Zielbranche, mit klaren Belegen für schnelles Lernen."
+      }
+    }
+  },
+  "location": {
+    "timeline": {
+      "immediate": "Sofort (Umzug läuft)",
+      "1_to_3_months": "1 bis 3 Monate",
+      "3_to_6_months": "3 bis 6 Monate",
+      "exploring": "Möglichkeiten ausloten",
+      "not_relocating": "Aktueller Standort (kein Umzug)"
+    },
+    "workAuth": {
+      "citizen": "Staatsbürger",
+      "permanent_resident": "Daueraufenthalt / Green Card",
+      "visa_holder": "Aktuelles Arbeitsvisum",
+      "needs_sponsorship": "Visa-Sponsoring erforderlich",
+      "authorized": "Arbeitsberechtigt"
+    },
+    "remote": {
+      "hybrid": "Hybrid bevorzugt",
+      "remote_only": "Nur remote",
+      "onsite_only": "Nur vor Ort",
+      "any": "Beliebiges Modell"
+    },
+    "validation": {
+      "enterLocation": "Gib einen Standort ein.",
+      "placeTooLong": "Der Standort darf höchstens {max} Zeichen lang sein.",
+      "radiusTooLarge": "Dein Tarif erlaubt einen Radius von bis zu {radius} Meilen.",
+      "notesTooLong": "Die Notizen dürfen höchstens {max} Zeichen lang sein.",
+      "placeInvalid": "Gib einen Standort mit höchstens {max} Zeichen ein."
+    },
+    "quotaHint": "{used} von {capacity} Standortprofilen belegt. Lokaler Suchradius laut Tarif: bis zu {radius} Meilen.",
+    "line": {
+      "radius": "Radius: ~{radius} Meilen",
+      "timeline": "Zeitraum: {value}",
+      "workAuth": "Arbeitserlaubnis: {value}",
+      "commute": "Max. Arbeitsweg: ≤ {minutes} Min. · {remote}"
+    },
+    "badge": {
+      "relocation": "UMZUGSZIEL",
+      "current": "AKTUELLER STANDORT"
+    },
+    "error": {
+      "capacity": "Maximale Anzahl an Standortprofilen laut Tarif erreicht. Lösche ein Standortprofil, um ein weiteres hinzuzufügen.",
+      "radius": "Der Radius überschreitet das Limit deines Tarifs.",
+      "saveFailed": "Standortprofil konnte nicht gespeichert werden. Bitte prüfe deine Eingaben und versuche es erneut.",
+      "deleteFailed": "Standortprofil konnte nicht gelöscht werden."
+    }
+  },
+  "editor": {
+    "titleAdd": "Standortprofil hinzufügen",
+    "titleEdit": "Standortprofil bearbeiten",
+    "notFound": "Dieses Standortprofil existiert nicht mehr.",
+    "allInUse": {
+      "title": "Alle Standortprofile sind belegt",
+      "body": "Lösche ein Standortprofil, um ein weiteres hinzuzufügen."
+    },
+    "placeLabel": "Standort (Stadt, Bundesland / Ballungsraum) *",
+    "placePlaceholder": "z. B. Austin, TX oder Seattle, WA",
+    "radiusLabel": "Suchradius",
+    "radiusValue": "{value} Meilen",
+    "radiusHint": "Maximaler Radius laut Tarif: {radius} Meilen",
+    "commuteLabel": "Maximaler täglicher Arbeitsweg",
+    "commuteValue": "{value} Min.",
+    "relocationLabel": "Dies ist ein Umzugsziel (nicht mein aktueller Wohnort)",
+    "relocationA11y": "Dies ist ein Umzugsziel",
+    "timelineLabel": "Geplanter Umzugszeitraum",
+    "workAuthLabel": "Arbeitserlaubnis in der Region",
+    "remoteLabel": "Flexibilität beim Arbeitsmodell",
+    "notesLabel": "Notizen zu Umzug / Standort (optional)",
+    "notesPlaceholder": "z. B. Umzug im 4. Quartal; bevorzugt nördliche Vororte mit ÖPNV-Anbindung.",
+    "save": "Standortprofil speichern",
+    "delete": "Standortprofil löschen",
+    "decrease": "{label} verringern",
+    "increase": "{label} erhöhen"
+  },
+  "recruiting": {
+    "title": "Recruiting-Freigabe",
+    "help": "Die Suche zeigt nur Personen, die zugestimmt haben, und zeigt ihre E-Mail-Adresse nicht an.",
+    "consent": "Arbeitgeber dürfen sehen, dass ich zugestimmt habe. Meine E-Mail-Adresse bleibt privat.",
+    "save": "Präferenz speichern",
+    "saved": "Präferenz gespeichert.",
+    "closed": "Der Arbeitgeberzugang ist nicht käuflich. Er bleibt geschlossen, bis die kommerziellen Bedingungen feststehen.",
+    "status": {
+      "unknown": "Deine aktuelle Auswahl konnte nicht gelesen werden. Beim Speichern wird sie festgelegt.",
+      "on": "Du bist auffindbar: Arbeitgeber dürfen sehen, dass du zugestimmt hast.",
+      "off": "Du bist nicht auffindbar. Arbeitgeber können dich nicht sehen."
+    },
+    "saveFailed": "Diese Änderung wurde nicht gespeichert. Versuche es erneut.",
+    "discoverableTitle": "Für Arbeitgeber auffindbar",
+    "optedIn": "ZUGESTIMMT",
+    "notOptedIn": "NICHT ZUGESTIMMT",
+    "footer": "Du kannst das jederzeit ändern. Wenn du es ausschaltest, wirst du aus der Arbeitgebersuche entfernt."
+  },
+  "data": {
+    "title": "Karrieredaten",
+    "intro": "Diese Seite betrifft nur die Karrieretools: dein Karriereprofil, Nachweisdateien, Entwürfe, Trainingssitzungen und andere Karrieredatensätze. Dein FlacronCV-Konto, deine Lebensläufe, Anschreiben, der Bewerbungs-Tracker und dein Abonnement werden in den Einstellungen verwaltet.",
+    "export": {
+      "title": "Karrieredaten exportieren",
+      "body": "Eine Kopie aller Karrieredatensätze und Dateien, die wir über dich speichern, als JSON-Datei. Sie wird aus einer temporären Kopie geteilt, die danach gelöscht wird. Die Vorbereitung kann bis zu einer halben Minute dauern.",
+      "button": "Export vorbereiten",
+      "a11y": "Export der Karrieredaten vorbereiten",
+      "preparing": "Dein Export wird vorbereitet…",
+      "shared": "Deine Karrieredaten-Datei ist bereit. Die temporäre Kopie auf diesem Gerät wurde entfernt.",
+      "sharingUnavailable": "Dieses Gerät kann das Teilen-Menü nicht öffnen. Öffne stattdessen den Download-Link; er läuft nach kurzer Zeit ab.",
+      "downloadFailed": "Die Datei ist bereit, konnte aber nicht in der App heruntergeladen werden. Öffne stattdessen den Download-Link; er läuft nach kurzer Zeit ab.",
+      "openLink": "Download-Link öffnen",
+      "failed": "Der Export konnte nicht vorbereitet werden. Versuche es in ein paar Minuten erneut.",
+      "nothing": "Es gibt keine Karrieredaten zum Exportieren."
+    },
+    "erase": {
+      "title": "Karrieredaten löschen",
+      "a11y": "Karrieredaten löschen: Kontolöschung in den Einstellungen öffnen",
+      "body": "Wenn du dein Konto unter Einstellungen › Deine Daten löschst, werden auch alle Karrieredaten gelöscht."
+    }
+  },
+  "services": {
+    "title": "Prüfung durch eine Person",
+    "subtitle": "Noch nicht buchbar",
+    "intro": "Eine Person würde ausgewähltes Material prüfen. Dies ist kein KI-Feedback.",
+    "closedLabel": "BUCHUNG GESCHLOSSEN",
+    "closedBody": "Buchungen bleiben geschlossen, bis die kommerziellen Bedingungen feststehen. Noch kann nichts gebucht oder gekauft werden.",
+    "empty": "Es sind noch keine Prüfdienste durch eine Person aufgeführt.",
+    "offTitle": "Dieses Tool ist noch nicht verfügbar",
+    "offBody": "Es wurde nichts geändert."
+  }
+}

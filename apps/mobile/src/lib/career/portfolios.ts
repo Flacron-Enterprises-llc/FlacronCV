@@ -7,6 +7,7 @@ import type {
 } from '../../../../../packages/career-api-client/src/types';
 import { portfolioPath } from '../../../../../packages/career-shared/src/portfolio';
 import { careerErrorMessage } from '../career-view';
+import { t } from '../../i18n';
 
 /**
  * Pure view logic for the mobile Portfolio pages (tested in portfolios.test.ts).
@@ -23,22 +24,23 @@ export const PORTFOLIO_LIMITS = {
   contactPhone: 40,
 } as const;
 
-export const VISIBILITY_TEXT: Record<PortfolioVisibility, string> = {
-  draft: 'Draft',
-  private: 'Private link',
-  public: 'Public',
-};
+/** Visibility name in the current language (careerPortfolios.visibility.*). */
+export function visibilityText(visibility: PortfolioVisibility): string {
+  if (visibility === 'public') return t('careerPortfolios.visibility.public');
+  if (visibility === 'private') return t('careerPortfolios.visibility.private');
+  return t('careerPortfolios.visibility.draft');
+}
 
 export function visibilityPill(visibility: PortfolioVisibility): { label: string; tone: 'default' | 'brand' | 'success' } {
-  if (visibility === 'public') return { label: 'PUBLIC', tone: 'success' };
-  if (visibility === 'private') return { label: 'PRIVATE LINK', tone: 'brand' };
-  return { label: 'DRAFT', tone: 'default' };
+  if (visibility === 'public') return { label: t('careerPortfolios.pill.public'), tone: 'success' };
+  if (visibility === 'private') return { label: t('careerPortfolios.pill.private'), tone: 'brand' };
+  return { label: t('careerPortfolios.pill.draft'), tone: 'default' };
 }
 
 /** Null when visit counts are not on the plan (the API sends null). */
 export function visitsText(count: number | null): string | null {
   if (count === null) return null;
-  return count === 1 ? '1 view' : `${count} views`;
+  return t('careerPortfolios.visits', { count });
 }
 
 export interface PortfolioForm {
@@ -93,14 +95,16 @@ export type PortfolioFormErrors = Partial<Record<'title' | 'headline' | 'display
 
 export function validatePortfolioForm(form: PortfolioForm): PortfolioFormErrors {
   const errors: PortfolioFormErrors = {};
-  if (!form.title.trim()) errors.title = 'Enter a page title.';
+  if (!form.title.trim()) errors.title = t('careerPortfolios.errors.titleRequired');
   for (const key of ['title', 'headline', 'displayName', 'contactEmail', 'contactPhone'] as const) {
-    if (!errors[key] && form[key].trim().length > PORTFOLIO_LIMITS[key]) errors[key] = `Use at most ${PORTFOLIO_LIMITS[key]} characters.`;
+    if (!errors[key] && form[key].trim().length > PORTFOLIO_LIMITS[key]) {
+      errors[key] = t('careerPortfolios.errors.tooLong', { max: PORTFOLIO_LIMITS[key] });
+    }
   }
   return errors;
 }
 
-/** Same body the website sends on create (the app is English only). */
+/** Same body the website sends on create (pages are created with the 'en' locale). */
 export function toCreatePortfolioInput(form: PortfolioForm): CreatePortfolioInput {
   return { title: form.title.trim(), headline: form.headline, displayName: form.displayName, locale: 'en' };
 }
@@ -151,12 +155,12 @@ export function portfolioShareUrl(
 
 export function portfolioErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.code === 'plan_upgrade_required') return 'A shareable page is not included in your current career plan.';
-    if (error.code === 'capacity_exceeded') return 'This plan has no room for another page.';
-    if (error.code === 'feature_unavailable') return 'Portfolio pages are switched off right now.';
-    if (error.code === 'validation_error') return 'Please check the fields for errors.';
+    if (error.code === 'plan_upgrade_required') return t('careerPortfolios.errors.planUpgrade');
+    if (error.code === 'capacity_exceeded') return t('careerPortfolios.errors.capacity');
+    if (error.code === 'feature_unavailable') return t('careerPortfolios.errors.off');
+    if (error.code === 'validation_error') return t('careerPortfolios.errors.validation');
   }
-  return careerErrorMessage(error, 'That change was not saved.');
+  return careerErrorMessage(error, t('careerPortfolios.errors.failed'));
 }
 
 /** How a failed list load should be shown: locked by plan, switched off, or a retryable error. */

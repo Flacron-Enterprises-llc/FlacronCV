@@ -17,6 +17,8 @@ import { alertIfUnverifiedEmail } from '../../../../src/lib/email-verification';
 import { engineFailureMessage } from '../../../../src/lib/engine-errors';
 import { canUseAI } from '../../../../src/lib/entitlements';
 import { serializeCVToText } from '../../../../src/lib/serialize-cv';
+import { useT } from '../../../../src/i18n';
+import { RTL_FLIP } from '../../../../src/i18n/native';
 import { useAuthStore } from '../../../../src/store/auth-store';
 import { useCVStore } from '../../../../src/store/cv-store';
 import { colors } from '../../../../src/theme/colors';
@@ -75,6 +77,7 @@ function QuestionSection({
 export default function InterviewPrepScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const t = useT('aiTools');
   const queryClient = useQueryClient();
   const { user, syncUser } = useAuthStore();
   const storeCv = useCVStore((s) => s.cv);
@@ -100,19 +103,16 @@ export default function InterviewPrepScreen() {
   const runPrep = async () => {
     const jd = jobDescription.trim();
     if (!jd) {
-      setJdError('Paste a job description first.');
+      setJdError(t('shared.jdRequired'));
       return;
     }
     setJdError(undefined);
     if (emptyCv) {
-      Alert.alert('Empty CV', 'Add content to this CV before preparing questions.');
+      Alert.alert(t('shared.emptyCvTitle'), t('interview.emptyCvBody'));
       return;
     }
     if (!user) {
-      Alert.alert(
-        'Account not loaded',
-        'Your account has not loaded yet. Check your connection and try again.',
-      );
+      Alert.alert(t('shared.accountNotLoadedTitle'), t('shared.accountNotLoadedBody'));
       return;
     }
     if (
@@ -123,7 +123,7 @@ export default function InterviewPrepScreen() {
       )
     ) {
       Alert.alert(
-        'Credits Exhausted',
+        t('shared.creditsExhaustedTitle'),
         aiCreditsExhaustedMessage('summary'),
         upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
       );
@@ -139,19 +139,13 @@ export default function InterviewPrepScreen() {
       await syncUser();
       await queryClient.invalidateQueries({ queryKey: ['user'] });
       if (!parsed) {
-        Alert.alert(
-          'Could not read the result',
-          'Preparation finished but the response could not be read. A credit may have been used. Check your balance and try again.',
-        );
+        Alert.alert(t('shared.readErrorTitle'), t('interview.readErrorBody'));
         return;
       }
       setResult(parsed);
     } catch (err: unknown) {
       if (alertIfUnverifiedEmail(err)) return;
-      Alert.alert(
-        'Could not prepare questions',
-        engineFailureMessage(err, 'Could not prepare questions. Please try again.'),
-      );
+      Alert.alert(t('interview.errorTitle'), engineFailureMessage(err, t('interview.error')));
     }
   };
 
@@ -159,7 +153,7 @@ export default function InterviewPrepScreen() {
     return (
       <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
         <ErrorState
-          message={requestFailureMessage(loadError, 'Could not load this CV. Please try again.')}
+          message={requestFailureMessage(loadError, t('shared.loadCvError'))}
           onRetry={() => {
             void cvQuery.refetch();
             void sectionsQuery.refetch();
@@ -185,11 +179,11 @@ export default function InterviewPrepScreen() {
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
-        <TouchableOpacity onPress={() => router.back()} className="mr-3" accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+        <TouchableOpacity onPress={() => router.back()} className="me-3" accessibilityLabel={t('shared.goBack')}>
+          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
         </TouchableOpacity>
         <Text className="text-xl font-black text-stone-900 flex-1" numberOfLines={1}>
-          Interview Prep
+          {t('interview.title')}
         </Text>
       </View>
 
@@ -200,12 +194,10 @@ export default function InterviewPrepScreen() {
       >
         {!result ? (
           <>
-            <Text className="text-stone-500 text-sm mb-4">
-              Paste the job description. Flacron Engine prepares questions from this CV and the role. Uses 1 credit.
-            </Text>
+            <Text className="text-stone-500 text-sm mb-4">{t('interview.intro')}</Text>
             <Input
-              label="Job description"
-              placeholder="Paste the job posting here"
+              label={t('shared.jdLabel')}
+              placeholder={t('shared.jdPlaceholder')}
               multiline
               numberOfLines={10}
               textAlignVertical="top"
@@ -216,7 +208,7 @@ export default function InterviewPrepScreen() {
                 if (jdError) setJdError(undefined);
               }}
               error={jdError}
-              hint={emptyCv ? 'Add content to this CV first.' : undefined}
+              hint={emptyCv ? t('shared.addContentFirst') : undefined}
             />
             <Button
               variant="primary"
@@ -225,22 +217,22 @@ export default function InterviewPrepScreen() {
               disabled={interviewPrep.isPending || emptyCv}
               onPress={() => void runPrep()}
             >
-              Prepare questions
+              {t('interview.prepare')}
             </Button>
             {user ? (
               <Text className="text-xs text-stone-400 text-center mt-3">
-                {creditsLeft} Flacron Engine credits remaining
+                {t('shared.engineCreditsRemaining', { count: creditsLeft })}
               </Text>
             ) : null}
           </>
         ) : (
           <>
-            <QuestionSection title="Behavioral" items={result.behavioral} ordered />
-            <QuestionSection title="Technical" items={result.technical} ordered />
-            <QuestionSection title="Questions to ask" items={result.questionsToAsk} />
-            <QuestionSection title="Tips" items={result.tips} />
+            <QuestionSection title={t('interview.behavioral')} items={result.behavioral} ordered />
+            <QuestionSection title={t('interview.technical')} items={result.technical} ordered />
+            <QuestionSection title={t('interview.questionsToAsk')} items={result.questionsToAsk} />
+            <QuestionSection title={t('interview.tips')} items={result.tips} />
             <Button variant="outline" fullWidth onPress={() => setResult(null)}>
-              Prepare again
+              {t('interview.prepareAgain')}
             </Button>
           </>
         )}

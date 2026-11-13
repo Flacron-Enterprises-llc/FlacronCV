@@ -1,7 +1,8 @@
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type { SkillGapReport } from '../../../../../packages/career-api-client/src/types';
+import { formatNumber, hasKey, t } from '../../i18n';
 import { careerErrorMessage } from '../career-view';
-import { PROVIDER_UNAVAILABLE_MESSAGE, type PillTone } from './action-packs';
+import { providerUnavailableMessage, type PillTone } from './action-packs';
 
 /**
  * Pure view logic for the mobile skill-report / learning-plan screens
@@ -49,11 +50,11 @@ export function buildSkillReportInput(
   form: SkillReportForm,
 ): { ok: true; input: SkillReportInput } | { ok: false; field: 'targetRole' | 'financialBudget'; message: string } {
   const targetRole = form.targetRole.trim();
-  if (targetRole.length === 0) return { ok: false, field: 'targetRole', message: 'Enter the role you are aiming for.' };
-  if (targetRole.length > 200) return { ok: false, field: 'targetRole', message: 'Keep the role under 200 characters.' };
+  if (targetRole.length === 0) return { ok: false, field: 'targetRole', message: t('careerPlans.learning.validation.roleRequired') };
+  if (targetRole.length > 200) return { ok: false, field: 'targetRole', message: t('careerPlans.learning.validation.roleTooLong') };
   const budgetText = form.financialBudget.trim() === '' ? '0' : form.financialBudget.trim();
   if (!/^\d{1,7}$/.test(budgetText)) {
-    return { ok: false, field: 'financialBudget', message: 'Enter a whole number of dollars (0 or more).' };
+    return { ok: false, field: 'financialBudget', message: t('careerPlans.learning.validation.budgetInvalid') };
   }
   return {
     ok: true,
@@ -79,15 +80,15 @@ export function skillReportSignature(input: SkillReportInput): string {
 }
 
 export function wholeDollars(cents: number): string {
-  return `$${Math.round(cents / 100).toLocaleString('en-US')}`;
+  return `$${formatNumber(Math.round(cents / 100))}`;
 }
 
 /** "Data Science · 5 hours/week · $0 budget" (same pieces as the website's report header). */
 export function reportMeta(report: Pick<SkillGapReport, 'targetIndustry' | 'timeBudgetHoursPerWeek' | 'financialBudgetCents'>): string {
   const parts: string[] = [];
   if (report.targetIndustry) parts.push(report.targetIndustry);
-  parts.push(`${report.timeBudgetHoursPerWeek} hours/week`);
-  parts.push(`${wholeDollars(report.financialBudgetCents)} budget`);
+  parts.push(t('careerPlans.learning.hoursPerWeek', { hours: report.timeBudgetHoursPerWeek }));
+  parts.push(t('careerPlans.learning.metaBudget', { amount: wholeDollars(report.financialBudgetCents) }));
   return parts.join(' · ');
 }
 
@@ -97,7 +98,9 @@ export function milestoneDone(report: Pick<SkillGapReport, 'progress'>, mileston
 
 /** "~6h · Free" or "~6h · about $40". */
 export function milestoneEffort(m: { estimatedHours: number; estimatedCostCents: number }): string {
-  return `~${m.estimatedHours}h · ${m.estimatedCostCents > 0 ? `about ${wholeDollars(m.estimatedCostCents)}` : 'Free'}`;
+  const hours = t('careerPlans.learning.effortHours', { hours: m.estimatedHours });
+  const cost = m.estimatedCostCents > 0 ? t('careerPlans.learning.costAbout', { amount: wholeDollars(m.estimatedCostCents) }) : t('careerPlans.learning.free');
+  return `${hours} · ${cost}`;
 }
 
 /**
@@ -114,11 +117,11 @@ export function withMilestone(report: SkillGapReport, milestoneId: string, compl
   return { ...report, progress: { completedMilestoneIds: kept, percent } };
 }
 
-export const IMPORTANCE_LABEL: Record<string, string> = {
-  critical: 'CRITICAL GAP',
-  preferred: 'PREFERRED',
-  optional: 'NICE TO HAVE',
-};
+/** "CRITICAL GAP" etc. in the current language; an unknown importance is shown upper-cased. */
+export function importanceLabel(importance: string): string {
+  const key = `careerPlans.learning.importance.${importance}`;
+  return hasKey(key) ? t(key) : importance.toUpperCase();
+}
 
 export const IMPORTANCE_TONE: Record<string, PillTone> = {
   critical: 'warning',
@@ -126,16 +129,9 @@ export const IMPORTANCE_TONE: Record<string, PillTone> = {
   optional: 'default',
 };
 
-const LEVEL_LABEL: Record<string, string> = {
-  none: 'None',
-  beginner: 'Beginner',
-  intermediate: 'Intermediate',
-  advanced: 'Advanced',
-  expert: 'Expert',
-};
-
 export function levelLabel(level: string): string {
-  return LEVEL_LABEL[level] ?? level;
+  const key = `careerPlans.learning.level.${level}`;
+  return hasKey(key) ? t(key) : level;
 }
 
 /** Only web links are opened from a learning resource. */
@@ -147,26 +143,26 @@ export function skillReportErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     switch (error.code) {
       case 'plan_upgrade_required':
-        return 'Skill reports are not included in your current career plan. No credit was used.';
+        return t('careerPlans.learning.errors.planUpgrade');
       case 'quota_exhausted':
-        return 'No skill report credits left. Credits renew on your next billing date.';
+        return t('careerPlans.learning.errors.quota');
       case 'feature_unavailable':
-        return 'Learning plans are not open yet. No credit was used.';
+        return t('careerPlans.learning.errors.featureOff');
       case 'provider_unavailable':
-        return PROVIDER_UNAVAILABLE_MESSAGE;
+        return providerUnavailableMessage();
       case 'validation_error':
-        return 'Enter a valid target role. No credit was used.';
+        return t('careerPlans.learning.errors.invalid');
       default:
         break;
     }
   }
-  return careerErrorMessage(error, 'The learning plan was not created. No credit was used.');
+  return careerErrorMessage(error, t('careerPlans.learning.errors.createFailed'));
 }
 
 export function progressErrorMessage(error: unknown): string {
-  return careerErrorMessage(error, 'The milestone was not updated. Please try again.');
+  return careerErrorMessage(error, t('careerPlans.learning.errors.progressFailed'));
 }
 
 export function evidenceErrorMessage(error: unknown): string {
-  return careerErrorMessage(error, 'The milestone was not added to your evidence. Please try again.');
+  return careerErrorMessage(error, t('careerPlans.learning.errors.evidenceFailed'));
 }

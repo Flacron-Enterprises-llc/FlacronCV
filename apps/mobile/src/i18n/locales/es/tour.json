@@ -1,0 +1,57 @@
+{
+  "dialogLabel": "Visita guiada",
+  "progress": "Paso {current} de {total}",
+  "announce": "Visita guiada. {progress}. {title}",
+  "minimizedLabel": "Visita guiada, {progress}: {title}",
+  "continue": "Continuar la visita",
+  "skip": "Omitir",
+  "skipTour": "Omitir la visita",
+  "next": "Siguiente",
+  "finish": "Finalizar",
+  "finishTour": "Finalizar la visita",
+  "showMeHint": "Abre esta parte de la app. La visita sigue disponible en la parte inferior de la pantalla.",
+  "saveError": "No pudimos guardar el progreso de la visita. Puedes seguir usando FlacronCV.",
+  "welcomeTitleNamed": "Bienvenido, {name}",
+  "steps": {
+    "welcome": {
+      "show": "Ver el panel",
+      "title": "Bienvenido a FlacronCV",
+      "body": "Esta visita breve muestra dónde crear un CV, escribir una carta y seguir tus postulaciones. Puedes salir cuando quieras."
+    },
+    "usage": {
+      "show": "Ver el panel",
+      "title": "Tu plan y tu uso",
+      "body": "Los CV, los créditos de IA y las exportaciones siguen tu plan actual. Estas cifras se actualizan al trabajar. Aquí no se inicia ningún pago."
+    },
+    "cvs": {
+      "show": "Ver Mis CVs",
+      "title": "Mis CV",
+      "body": "Aquí aparecen todos los CV que guardes. Toca Nuevo CV cuando quieras: eliges una plantilla y luego editas tu propio contenido. Esta visita no crea un CV por ti."
+    },
+    "coverLetters": {
+      "show": "Ver Cartas",
+      "title": "Cartas de presentación",
+      "body": "Escribe una carta para un puesto y, si quieres, mejora un borrador con IA más tarde. Abrir esta pestaña no gasta créditos."
+    },
+    "jobs": {
+      "show": "Ver Seguimiento de empleos",
+      "title": "Seguimiento de empleos",
+      "body": "Reúne empresas y etapas en una lista, de la lista de deseos a la oferta. Un empleo se añade solo cuando tú lo decides. Ábrelo desde el panel."
+    },
+    "templates": {
+      "show": "Ver Plantillas",
+      "title": "Plantillas",
+      "body": "Aquí puedes ver los diseños de CV. Algunos forman parte de un plan de pago. Esta visita no elige ninguno."
+    },
+    "career": {
+      "show": "Ver Herramientas profesionales",
+      "title": "Herramientas profesionales",
+      "body": "Herramientas profesionales es un complemento opcional para planificar tu próximo paso. Ábrelo desde el panel. Esta visita no inicia nada allí."
+    },
+    "settings": {
+      "show": "Ver Configuración",
+      "title": "Repítela cuando quieras",
+      "body": "Repetir la visita está en Configuración y en la página de Soporte. Si terminas ahora, no volverá a empezar sola."
+    }
+  }
+}

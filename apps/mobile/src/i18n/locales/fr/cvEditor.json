@@ -1,0 +1,348 @@
+{
+  "editor": {
+    "renameFailed": "Impossible de renommer le CV. Veuillez réessayer.",
+    "exportLimitTitle": "Limite d’exportations atteinte",
+    "loadError": "Impossible de charger le CV",
+    "loading": "Chargement du CV...",
+    "titleA11y": "Titre du CV : {title}. Renommer",
+    "titleHint": "Ouvre un champ pour modifier le titre du CV",
+    "editingFallback": "Modification du CV",
+    "unsavedChanges": "Modifications non enregistrées",
+    "atsCheck": "Vérification ATS",
+    "interviewPrep": "Préparation à l’entretien",
+    "moreTools": "Plus d’outils",
+    "designTool": "Design : mise en page, couleurs, polices",
+    "linkedinTool": "Optimiseur LinkedIn",
+    "moreToolsA11y": "Plus d’outils : design et Optimiseur LinkedIn",
+    "export": "Exporter",
+    "chooseFormat": "Choisissez le format :",
+    "renameTitle": "Renommer le CV",
+    "titleLabel": "Titre du CV",
+    "titlePlaceholder": "ex. CV Ingénieur logiciel 2025"
+  },
+  "wizard": {
+    "steps": {
+      "personal": "Informations personnelles",
+      "experience": "Expérience",
+      "education": "Formation",
+      "skills": "Compétences",
+      "summary": "Résumé",
+      "projects": "Projets",
+      "certifications": "Certifications",
+      "languages": "Langues",
+      "references": "Références",
+      "custom": "Sections personnalisées",
+      "arrange": "Organiser les sections"
+    },
+    "saveFailedTitle": "Enregistrement impossible",
+    "saveFailed": "Impossible d’enregistrer. Veuillez réessayer.",
+    "personalRequired": "Remplissez les champs obligatoires avant de continuer.",
+    "stepA11y": "Étape {current} sur {total}, {label}. Aller à une autre étape",
+    "stepOf": "Étape {current} sur {total}",
+    "goToStep": "Aller à l’étape",
+    "finish": "Terminer",
+    "continue": "Continuer"
+  },
+  "photo": {
+    "upload": "Ajouter une photo",
+    "change": "Changer la photo",
+    "remove": "Supprimer la photo",
+    "uploading": "Téléversement…",
+    "hint": "JPG, PNG ou WebP · Max 5 Mo · Utilisée comme avatar de votre CV",
+    "invalid": "Les fichiers « .{ext} » ne sont pas pris en charge. Importez une image JPG, PNG ou WebP.",
+    "unknownType": "inconnu",
+    "tooLarge": "Ce fichier est trop volumineux ({size} Mo). La taille maximale est de 5 Mo.",
+    "uploadFailed": "Impossible de téléverser la photo. Veuillez réessayer.",
+    "unavailable": "Le téléversement de photo est indisponible pour le moment. Veuillez vous reconnecter.",
+    "deniedTitle": "Photos indisponibles",
+    "deniedBody": "Autorisez l’accès à la photothèque dans les Réglages pour choisir une photo de CV.",
+    "updateFailedTitle": "Impossible de mettre à jour la photo",
+    "removeBody": "Supprimer la photo de ce CV ?"
+  },
+  "sections": {
+    "editA11y": "Modifier la section {title}",
+    "hiddenNote": "Cette section est masquée sur votre CV. Réaffichez-la à l’étape Organiser les sections.",
+    "titleLabel": "Titre de la section"
+  },
+  "validation": {
+    "titleRequired": "Veuillez saisir un titre pour votre CV.",
+    "titleTooLong": "Le titre doit comporter au maximum {max} caractères.",
+    "sectionTitleRequired": "Veuillez saisir un titre de section.",
+    "sectionTitleTooLong": "Le titre de la section doit comporter au maximum {max} caractères."
+  },
+  "sectionTypes": {
+    "experience": "Expérience professionnelle",
+    "education": "Formation",
+    "skills": "Compétences",
+    "projects": "Projets",
+    "certifications": "Certifications",
+    "languages": "Langues",
+    "references": "Références",
+    "awards": "Distinctions",
+    "publications": "Publications",
+    "volunteer": "Bénévolat",
+    "custom": "Section personnalisée",
+    "fallback": "Rubrique"
+  },
+  "entry": {
+    "edit": "Modifier l’entrée",
+    "delete": "Supprimer l’entrée",
+    "update": "Mettre à jour",
+    "present": "Présent"
+  },
+  "fields": {
+    "startDate": "Date de début *",
+    "endDate": "Date de fin",
+    "description": "Description",
+    "company": "Entreprise *",
+    "jobTitle": "Intitulé du poste *",
+    "proficiency": "Niveau de maîtrise *",
+    "website": "Site web",
+    "websitePlaceholder": "votresite.com"
+  },
+  "errors": {
+    "startDateRequired": "La date de début est obligatoire"
+  },
+  "personal": {
+    "title": "Informations personnelles",
+    "subtitle": "Ajoutez vos coordonnées de base et votre titre professionnel.",
+    "firstName": "Prénom *",
+    "lastName": "Nom *",
+    "email": "Adresse e-mail *",
+    "phone": "Numéro de téléphone *",
+    "headline": "Titre professionnel",
+    "headlinePlaceholder": "Ingénieur logiciel senior chez Google",
+    "city": "Ville",
+    "cityPlaceholder": "Paris",
+    "country": "Pays",
+    "countryPlaceholder": "France",
+    "address": "Adresse",
+    "addressPlaceholder": "Rue et numéro",
+    "postalCode": "Code postal",
+    "postalCodePlaceholder": "Code postal / ZIP",
+    "errors": {
+      "firstNameRequired": "Le prénom est obligatoire",
+      "lastNameRequired": "Le nom est obligatoire",
+      "invalidEmail": "Adresse e-mail invalide",
+      "phoneRequired": "Le numéro de téléphone est obligatoire"
+    }
+  },
+  "summary": {
+    "title": "Résumé professionnel",
+    "subtitle": "Rédigez un résumé percutant qui met en valeur votre expertise et vos objectifs de carrière.",
+    "placeholder": "Ingénieur logiciel axé sur les résultats, avec plus de 5 ans d’expérience dans la création d’applications web évolutives...",
+    "characters": "{count} caractères",
+    "recommended": "Recommandé : 150 à 300 caractères",
+    "generate": "Générer",
+    "generating": "Génération...",
+    "creditsRemaining": "Crédits restants : {count}",
+    "accountNotLoadedTitle": "Compte non chargé",
+    "accountNotLoadedBody": "Votre compte n’est pas encore chargé. Vérifiez votre connexion et réessayez.",
+    "creditsExhaustedTitle": "Crédits épuisés",
+    "generateFailedTitle": "Génération impossible",
+    "generateFailed": "Impossible de générer. Veuillez réessayer.",
+    "creditMaybeUsed": "Impossible de générer. Un crédit a peut-être été utilisé. Vérifiez votre solde et réessayez.",
+    "missing": {
+      "headline": "Ajoutez un titre professionnel avant de générer.",
+      "experience": "Ajoutez une expérience avant de générer.",
+      "skills": "Ajoutez des compétences avant de générer.",
+      "headlineExperience": "Ajoutez un titre professionnel et une expérience avant de générer.",
+      "headlineSkills": "Ajoutez un titre professionnel et des compétences avant de générer.",
+      "experienceSkills": "Ajoutez une expérience et des compétences avant de générer.",
+      "all": "Ajoutez un titre professionnel, une expérience et des compétences avant de générer."
+    }
+  },
+  "experience": {
+    "title": "Expérience professionnelle",
+    "subtitle": "Ajoutez votre parcours professionnel, en commençant par le poste le plus récent.",
+    "empty": "Aucune expérience professionnelle ajoutée pour le moment.",
+    "add": "Ajouter une expérience",
+    "edit": "Modifier l’expérience",
+    "deleteTitle": "Supprimer l’expérience",
+    "deleteBody": "Voulez-vous vraiment supprimer cette entrée ?",
+    "highlightsCount": "{count, plural, one {# point fort} other {# points forts}}",
+    "jobTitlePlaceholder": "Ingénieur logiciel senior",
+    "location": "Lieu",
+    "locationPlaceholder": "Paris, France",
+    "startPlaceholder": "janv. 2020",
+    "endPlaceholder": "déc. 2023",
+    "current": "J’occupe actuellement ce poste",
+    "descriptionPlaceholder": "Décrivez vos responsabilités et réalisations...",
+    "highlights": "Points forts",
+    "highlightsPlaceholder": "Encadrement d’une équipe de 5 ingénieurs\nTemps de chargement réduit de 40 %",
+    "highlightsHint": "Un par ligne, jusqu’à {max}.",
+    "errors": {
+      "companyRequired": "Le nom de l’entreprise est obligatoire",
+      "positionRequired": "L’intitulé du poste est obligatoire"
+    }
+  },
+  "education": {
+    "title": "Formation",
+    "subtitle": "Ajoutez votre parcours académique et vos diplômes.",
+    "empty": "Aucune formation ajoutée pour le moment.",
+    "add": "Ajouter une formation",
+    "edit": "Modifier la formation",
+    "deleteTitle": "Supprimer la formation",
+    "deleteBody": "Supprimer cette formation ?",
+    "degreeIn": "{degree} en {field}",
+    "gpa": "Moyenne : {gpa}",
+    "institution": "Établissement *",
+    "degree": "Diplôme *",
+    "degreePlaceholder": "Licence en sciences",
+    "field": "Domaine d’études *",
+    "fieldPlaceholder": "Informatique",
+    "startPlaceholder": "sept. 2018",
+    "endPlaceholder": "mai 2022",
+    "gpaLabel": "Moyenne (facultatif)",
+    "errors": {
+      "institutionRequired": "L’établissement est obligatoire",
+      "degreeRequired": "Le diplôme est obligatoire",
+      "fieldRequired": "Le domaine d’études est obligatoire"
+    }
+  },
+  "skills": {
+    "title": "Compétences",
+    "subtitle": "Ajoutez vos compétences techniques et relationnelles avec leur niveau de maîtrise.",
+    "empty": "Aucune compétence ajoutée pour le moment.",
+    "add": "Ajouter une compétence",
+    "edit": "Modifier la compétence",
+    "deleteTitle": "Supprimer la compétence",
+    "deleteBody": "Supprimer cette compétence ?",
+    "name": "Nom de la compétence *",
+    "category": "Catégorie (facultatif)",
+    "categoryPlaceholder": "Frontend, Backend, Outils...",
+    "levels": {
+      "beginner": "Débutant",
+      "intermediate": "Intermédiaire",
+      "advanced": "Avancé",
+      "expert": "Expert"
+    },
+    "errors": {
+      "nameRequired": "Le nom de la compétence est obligatoire"
+    }
+  },
+  "projects": {
+    "title": "Projets",
+    "subtitle": "Présentez vos projets marquants et vos réalisations personnelles.",
+    "empty": "Aucun projet ajouté pour le moment.",
+    "add": "Ajouter un projet",
+    "edit": "Modifier le projet",
+    "deleteTitle": "Supprimer le projet",
+    "deleteBody": "Supprimer ce projet ?",
+    "name": "Nom du projet *",
+    "namePlaceholder": "Mon application géniale",
+    "descriptionPlaceholder": "Une brève description de ce que vous avez réalisé...",
+    "technologies": "Technologies (séparées par des virgules)",
+    "url": "URL du projet",
+    "errors": {
+      "nameRequired": "Le nom du projet est obligatoire"
+    }
+  },
+  "certifications": {
+    "title": "Certifications",
+    "subtitle": "Ajoutez vos certifications et licences professionnelles.",
+    "empty": "Aucune certification ajoutée pour le moment.",
+    "add": "Ajouter une certification",
+    "edit": "Modifier la certification",
+    "deleteTitle": "Supprimer la certification",
+    "deleteBody": "Supprimer cette certification ?",
+    "expires": "Expire le {date}",
+    "name": "Nom de la certification *",
+    "issuer": "Organisme émetteur *",
+    "issueDate": "Date d’émission *",
+    "issuePlaceholder": "janv. 2023",
+    "expiry": "Date d’expiration",
+    "expiryPlaceholder": "janv. 2026",
+    "credentialId": "Identifiant de la certification",
+    "credentialPlaceholder": "ex. AWS-123",
+    "errors": {
+      "nameRequired": "Le nom de la certification est obligatoire",
+      "issuerRequired": "L’organisme émetteur est obligatoire",
+      "dateRequired": "La date est obligatoire"
+    }
+  },
+  "languages": {
+    "title": "Langues",
+    "subtitle": "Indiquez les langues que vous parlez et votre niveau.",
+    "empty": "Aucune langue ajoutée pour le moment.",
+    "add": "Ajouter une langue",
+    "edit": "Modifier la langue",
+    "deleteTitle": "Supprimer la langue",
+    "deleteBody": "Supprimer cette langue ?",
+    "name": "Langue *",
+    "namePlaceholder": "Anglais",
+    "levels": {
+      "Native": "Langue maternelle",
+      "Fluent": "Courant",
+      "Advanced": "Avancé",
+      "Intermediate": "Intermédiaire",
+      "Basic": "Notions"
+    },
+    "errors": {
+      "nameRequired": "Le nom de la langue est obligatoire",
+      "proficiencyRequired": "Le niveau est obligatoire"
+    }
+  },
+  "references": {
+    "title": "Références",
+    "subtitle": "Ajoutez des références professionnelles qui peuvent témoigner de votre travail.",
+    "empty": "Aucune référence ajoutée pour le moment.",
+    "add": "Ajouter une référence",
+    "edit": "Modifier la référence",
+    "deleteTitle": "Supprimer la référence",
+    "deleteBody": "Supprimer cette référence ?",
+    "titleAtCompany": "{title} chez {company}",
+    "fullName": "Nom complet *",
+    "jobTitlePlaceholder": "Responsable de l’ingénierie",
+    "email": "E-mail",
+    "phone": "Téléphone",
+    "relationship": "Lien",
+    "relationshipPlaceholder": "Ancien responsable",
+    "errors": {
+      "nameRequired": "Le nom est obligatoire",
+      "titleRequired": "Le poste est obligatoire",
+      "companyRequired": "L’entreprise est obligatoire",
+      "invalidEmail": "E-mail invalide"
+    }
+  },
+  "custom": {
+    "title": "Sections personnalisées",
+    "subtitle": "Ajoutez tout ce que vous souhaitez d’autre sur votre CV : distinctions, bénévolat, publications, centres d’intérêt.",
+    "empty": "Aucune section personnalisée pour le moment.",
+    "noEntries": "Aucune entrée pour le moment — ajoutez la première ci-dessous.",
+    "untitled": "Entrée sans titre",
+    "addItem": "Ajouter un élément",
+    "addSection": "Ajouter une section personnalisée",
+    "newHeading": "Nouvelle section personnalisée",
+    "addSectionConfirm": "Ajouter une section",
+    "addEntry": "Ajouter une entrée",
+    "editEntry": "Modifier l’entrée",
+    "deleteTitle": "Supprimer l’entrée",
+    "deleteBody": "Supprimer cette entrée ?",
+    "titleLabel": "Titre *",
+    "subtitleLabel": "Sous-titre",
+    "date": "Date",
+    "descriptionPlaceholder": "Description…",
+    "errors": {
+      "titleRequired": "Le titre est obligatoire"
+    }
+  },
+  "arrange": {
+    "title": "Organiser les sections",
+    "subtitle": "Modifiez l’ordre des sections de votre CV, renommez-les et choisissez celles à afficher. Les sections masquées restent enregistrées mais n’apparaissent pas sur votre CV.",
+    "empty": "Aucune section pour le moment. Ajoutez-en une ci-dessous.",
+    "meta": "{type} · {count, plural, one {# élément} other {# éléments}}",
+    "metaHidden": "{type} · {count, plural, one {# élément} other {# éléments}} · Masquée",
+    "moveUp": "Monter {title}",
+    "moveDown": "Descendre {title}",
+    "hide": "Masquer la section {title}",
+    "show": "Afficher la section {title}",
+    "rename": "Renommer la section {title}",
+    "remove": "Supprimer la section {title}",
+    "addSection": "Ajouter une section",
+    "removeTitle": "Supprimer la section",
+    "removeBodyEntries": "Supprimer « {title} » et {count, plural, one {son entrée} other {ses # entrées}} de ce CV ?",
+    "removeBody": "Supprimer « {title} » de ce CV ?",
+    "renameHeading": "Renommer la section"
+  }
+}

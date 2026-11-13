@@ -8,7 +8,8 @@ import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../src/components/ui/Skeleton';
 import { useAppTourReplay } from '../../../src/hooks/useAppTour';
 import { useSupportTickets } from '../../../src/hooks/useSupport';
-import { SupportTicket, TICKET_STATUS_LABEL } from '../../../src/types/support.types';
+import { SupportTicket, ticketCategoryLabel, ticketStatusLabel } from '../../../src/types/support.types';
+import { useT } from '../../../src/i18n';
 import { formatDate } from '../../../src/lib/utils';
 import { requestFailureMessage } from '../../../src/lib/api-errors';
 import { TicketStatus } from '../../../src/types/enums';
@@ -23,6 +24,7 @@ const STATUS_COLORS: Record<TicketStatus, { bg: string; text: string }> = {
 };
 
 export default function SupportScreen() {
+  const t = useT('support');
   const router = useRouter();
   const replayTour = useAppTourReplay();
   const { data, isLoading, error, refetch, isRefetching } = useSupportTickets();
@@ -40,11 +42,11 @@ export default function SupportScreen() {
         <View className="flex-row items-start justify-between">
           <View className="flex-1">
             <Text className="font-bold text-stone-900" numberOfLines={1}>{item.subject}</Text>
-            <Text className="text-stone-500 text-sm mt-0.5 capitalize">{item.category.replace('_', ' ')}</Text>
+            <Text className="text-stone-500 text-sm mt-0.5">{ticketCategoryLabel(item.category)}</Text>
           </View>
-          <View className="px-2 py-0.5 rounded-full ml-2" style={{ backgroundColor: statusColor.bg }}>
+          <View className="px-2 py-0.5 rounded-full ms-2" style={{ backgroundColor: statusColor.bg }}>
             <Text className="text-xs font-medium" style={{ color: statusColor.text }}>
-              {TICKET_STATUS_LABEL[item.status] ?? item.status.replace(/_/g, ' ')}
+              {ticketStatusLabel(item.status)}
             </Text>
           </View>
         </View>
@@ -58,21 +60,21 @@ export default function SupportScreen() {
       <View className="px-5 pt-4 pb-4 bg-white border-b border-stone-100">
         <View className="flex-row items-center justify-between">
           <View>
-            <Text className="text-xl font-black text-stone-900">Support</Text>
+            <Text className="text-xl font-black text-stone-900">{t('title')}</Text>
             <TouchableOpacity onPress={replayTour} accessibilityRole="button" className="min-h-[44px] justify-center">
-              <Text className="text-brand-700 text-sm font-semibold">Replay App Tour</Text>
+              <Text className="text-brand-700 text-sm font-semibold">{t('list.replayTour')}</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity onPress={() => router.push('/(dashboard)/support/new')} className="flex-row items-center bg-brand-600 px-4 py-2 rounded-xl">
             <Ionicons name="add" size={18} color={colors.white} />
-            <Text className="text-white font-bold ml-1">New Ticket</Text>
+            <Text className="text-white font-bold ms-1">{t('list.newTicket')}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {error ? (
         <ErrorState
-          message={requestFailureMessage(error, 'Could not load tickets. Please try again.')}
+          message={requestFailureMessage(error, t('list.loadError'))}
           onRetry={() => void refetch()}
         />
       ) : isLoading ? (
@@ -86,9 +88,9 @@ export default function SupportScreen() {
         >
           <EmptyState
             icon="help-circle-outline"
-            title="No support tickets"
-            description="Need help? Create a support ticket and we'll get back to you."
-            actionLabel="Create Ticket"
+            title={t('list.emptyTitle')}
+            description={t('list.emptyDesc')}
+            actionLabel={t('list.emptyAction')}
             onAction={() => router.push('/(dashboard)/support/new')}
           />
         </ScrollView>

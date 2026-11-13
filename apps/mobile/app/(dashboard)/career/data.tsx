@@ -6,8 +6,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CareerHeader } from '../../../src/components/career/CareerHeader';
 import { Button } from '../../../src/components/ui/Button';
 import { useCareerExport } from '../../../src/hooks/career/data';
-import { EXPORT_FAILED, exportErrorMessage } from '../../../src/lib/career/data';
+import { exportErrorMessage, exportFailedMessage } from '../../../src/lib/career/data';
 import { colors } from '../../../src/theme/colors';
+import { useT } from '../../../src/i18n';
+import { RTL_FLIP } from '../../../src/i18n/native';
 
 /**
  * Career data (website: /career/data). Export prepares a JSON file of every
@@ -16,6 +18,7 @@ import { colors } from '../../../src/theme/colors';
  * deletion in Settings › Your data, so it is linked rather than repeated here.
  */
 export default function CareerDataScreen() {
+  const t = useT('careerModes.data');
   const router = useRouter();
   const exporter = useCareerExport();
   const [note, setNote] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
@@ -28,17 +31,17 @@ export default function CareerDataScreen() {
     exporter.mutate(undefined, {
       onSuccess: (result) => {
         if (result.kind === 'shared') {
-          setNote({ tone: 'success', text: 'Your career data file is ready. The temporary copy on this device was removed.' });
+          setNote({ tone: 'success', text: t('export.shared') });
         } else if (result.kind === 'failed') {
-          setNote({ tone: 'error', text: EXPORT_FAILED });
+          setNote({ tone: 'error', text: exportFailedMessage() });
         } else {
           setLink(result.url);
           setNote({
             tone: 'error',
             text:
               result.reason === 'sharing_unavailable'
-                ? 'This device cannot open the share sheet. Open the download link instead; it expires after a short time.'
-                : 'The file is ready but could not be downloaded in the app. Open the download link instead; it expires after a short time.',
+                ? t('export.sharingUnavailable')
+                : t('export.downloadFailed'),
           });
         }
       },
@@ -48,23 +51,19 @@ export default function CareerDataScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title="Career data" />
+      <CareerHeader title={t('title')} />
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
-        <Text className="text-stone-500 text-sm leading-5 mb-4">
-          This page covers only the career tools: your career profile, evidence files, drafts, practice sessions and other career records. Your FlacronCV account, CVs, cover letters, job tracker and subscription are managed in Settings.
-        </Text>
+        <Text className="text-stone-500 text-sm leading-5 mb-4">{t('intro')}</Text>
 
         <View className="bg-white rounded-2xl border border-stone-100 p-5">
-          <Text className="font-bold text-stone-900 text-base">Export career data</Text>
-          <Text className="text-stone-500 text-sm mt-1 leading-5">
-            A copy of every career record and file we hold for you, as a JSON file. It is shared from a temporary copy that is removed afterwards. Preparing it can take up to half a minute.
-          </Text>
+          <Text className="font-bold text-stone-900 text-base">{t('export.title')}</Text>
+          <Text className="text-stone-500 text-sm mt-1 leading-5">{t('export.body')}</Text>
           <View className="mt-4 self-start">
-            <Button variant="outline" onPress={onExport} loading={exporter.isPending} accessibilityLabel="Prepare career data export">
-              Prepare export
+            <Button variant="outline" onPress={onExport} loading={exporter.isPending} accessibilityLabel={t('export.a11y')}>
+              {t('export.button')}
             </Button>
           </View>
-          {exporter.isPending ? <Text className="text-stone-400 text-xs mt-2">Preparing your export…</Text> : null}
+          {exporter.isPending ? <Text className="text-stone-400 text-xs mt-2">{t('export.preparing')}</Text> : null}
           {note ? (
             <View
               className={`rounded-xl border p-3 mt-4 ${note.tone === 'success' ? 'bg-success-bg border-green-200' : 'bg-red-50 border-red-200'}`}
@@ -76,8 +75,8 @@ export default function CareerDataScreen() {
           ) : null}
           {link ? (
             <View className="mt-3 self-start">
-              <Button variant="ghost" onPress={() => void Linking.openURL(link)} accessibilityLabel="Open download link">
-                Open download link
+              <Button variant="ghost" onPress={() => void Linking.openURL(link)} accessibilityLabel={t('export.openLink')}>
+                {t('export.openLink')}
               </Button>
             </View>
           ) : null}
@@ -87,15 +86,13 @@ export default function CareerDataScreen() {
           onPress={() => router.push('/(dashboard)/settings/data' as Href)}
           className="bg-white rounded-2xl border border-stone-100 p-5 mt-4 flex-row items-center"
           accessibilityRole="link"
-          accessibilityLabel="Erase career data: open account deletion in Settings"
+          accessibilityLabel={t('erase.a11y')}
         >
-          <View className="flex-1 mr-3">
-            <Text className="font-bold text-stone-900 text-base">Erase career data</Text>
-            <Text className="text-stone-500 text-sm mt-1 leading-5">
-              Deleting your account in Settings › Your data also erases all career data.
-            </Text>
+          <View className="flex-1 me-3">
+            <Text className="font-bold text-stone-900 text-base">{t('erase.title')}</Text>
+            <Text className="text-stone-500 text-sm mt-1 leading-5">{t('erase.body')}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.stone[400]} />
+          <Ionicons name="chevron-forward" size={20} color={colors.stone[400]} style={RTL_FLIP} />
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

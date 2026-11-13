@@ -1,0 +1,6 @@
+{
+  "engine": {
+    "generic": "Generieren fehlgeschlagen. Bitte versuche es erneut.",
+    "creditNotRefunded": "Generieren fehlgeschlagen. Möglicherweise wurde ein Credit verbraucht. Prüfe dein Guthaben und versuche es erneut."
+  }
+}

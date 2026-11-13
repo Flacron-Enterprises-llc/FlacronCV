@@ -1,3 +1,4 @@
+import { hasKey, t } from '../i18n';
 import type { AppTourPreference, AppTourStatus } from '../types/user.types';
 
 /**
@@ -43,65 +44,54 @@ export interface MobileTourStep {
   requiresCareer?: boolean;
 }
 
-/** Copy follows the website tour (`tour.*` in apps/web/public/locales/en/common.json), adapted to tabs. */
+/** Segment under `tour.steps.*` (src/i18n/locales/<locale>/tour.json) for each step. */
+const STEP_COPY_KEY: Record<MobileTourStepId, string> = {
+  welcome: 'welcome',
+  usage: 'usage',
+  cvs: 'cvs',
+  'cover-letters': 'coverLetters',
+  jobs: 'jobs',
+  templates: 'templates',
+  career: 'career',
+  settings: 'settings',
+};
+
+function stepCopy(id: MobileTourStepId, field: 'show' | 'title' | 'body'): string {
+  const key = `tour.steps.${STEP_COPY_KEY[id]}.${field}`;
+  return hasKey(key) ? t(key) : '';
+}
+
+/**
+ * Copy follows the website tour (`tour.*` in apps/web/public/locales/en/common.json),
+ * adapted to tabs. `showLabel` / `title` / `body` are getters, so they read the
+ * current language every time they are rendered.
+ */
+function tourStep(id: MobileTourStepId, route: string, requiresCareer?: true): MobileTourStep {
+  return {
+    id,
+    route,
+    ...(requiresCareer ? { requiresCareer } : {}),
+    get showLabel() {
+      return stepCopy(id, 'show');
+    },
+    get title() {
+      return stepCopy(id, 'title');
+    },
+    get body() {
+      return stepCopy(id, 'body');
+    },
+  };
+}
+
 export const MOBILE_TOUR_STEPS: readonly MobileTourStep[] = [
-  {
-    id: 'welcome',
-    route: '/(dashboard)',
-    showLabel: 'Show dashboard',
-    title: 'Welcome to FlacronCV',
-    body: 'This short tour shows where to build a CV, write a cover letter, and track jobs. You can leave at any time.',
-  },
-  {
-    id: 'usage',
-    route: '/(dashboard)',
-    showLabel: 'Show dashboard',
-    title: 'Your plan and usage',
-    body: 'CVs, AI credits, and exports follow your current plan. These counts update as you work. Nothing here starts a payment.',
-  },
-  {
-    id: 'cvs',
-    route: '/(dashboard)/cvs',
-    showLabel: 'Show My CVs',
-    title: 'My CVs',
-    body: 'Every CV you save is listed here. Tap New CV when you are ready: you pick a template, then edit your own content. This tour does not create a CV for you.',
-  },
-  {
-    id: 'cover-letters',
-    route: '/(dashboard)/cover-letters',
-    showLabel: 'Show Cover Letters',
-    title: 'Cover letters',
-    body: 'Write a letter for a role and, if you want, improve a draft with AI later. Opening this tab does not spend credits.',
-  },
-  {
-    id: 'jobs',
-    route: '/(dashboard)/jobs',
-    showLabel: 'Show Job Tracker',
-    title: 'Job tracker',
-    body: 'Keep companies and stages in one list, from wishlist to offer. A job is added only when you choose to. Open it from the dashboard.',
-  },
-  {
-    id: 'templates',
-    route: '/(dashboard)/templates',
-    showLabel: 'Show Templates',
-    title: 'Templates',
-    body: 'Browse CV layouts here. Some designs are part of a paid plan. This tour does not select one.',
-  },
-  {
-    id: 'career',
-    route: '/(dashboard)/career',
-    showLabel: 'Show Career tools',
-    title: 'Career tools',
-    body: 'Career tools is an optional add-on for planning your next move. Open it from the dashboard. This tour does not start anything there.',
-    requiresCareer: true,
-  },
-  {
-    id: 'settings',
-    route: '/(dashboard)/settings',
-    showLabel: 'Show Settings',
-    title: 'Replay anytime',
-    body: 'Replay App Tour is in Settings and on the Support page. Finish now and it will not start by itself again.',
-  },
+  tourStep('welcome', '/(dashboard)'),
+  tourStep('usage', '/(dashboard)'),
+  tourStep('cvs', '/(dashboard)/cvs'),
+  tourStep('cover-letters', '/(dashboard)/cover-letters'),
+  tourStep('jobs', '/(dashboard)/jobs'),
+  tourStep('templates', '/(dashboard)/templates'),
+  tourStep('career', '/(dashboard)/career', true),
+  tourStep('settings', '/(dashboard)/settings'),
 ];
 
 export function selectMobileTourSteps(input: { careerEnabled: boolean }): MobileTourStep[] {
@@ -113,11 +103,11 @@ export function stepTitle(step: MobileTourStep, firstName: string | null | undef
   if (step.id !== 'welcome') return step.title;
   const name = firstName?.trim() ?? '';
   if (!name || name.includes('@')) return step.title;
-  return `Welcome, ${name}`;
+  return t('tour.welcomeTitleNamed', { name });
 }
 
 export function progressLabel(index: number, total: number): string {
-  return `Step ${index + 1} of ${total}`;
+  return t('tour.progress', { current: index + 1, total });
 }
 
 export interface MobileTourEligibilityInput {

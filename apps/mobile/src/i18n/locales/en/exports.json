@@ -1,0 +1,12 @@
+{
+  "limitTitle": "Export Limit Reached",
+  "failedTitle": "Could not export",
+  "failed": "Could not export. Please try again.",
+  "docxRequiresPro": "DOCX export requires a Pro plan or higher.",
+  "docxNotIncluded": "DOCX export is not included in your current plan.",
+  "downloadFailed": "The file could not be downloaded. Please try again.",
+  "downloadCompleteTitle": "Download complete",
+  "downloadCompleteBody": "Sharing is not available on this device. The file is saved in the app cache.",
+  "shareCvTitle": "Save or Share your CV",
+  "shareCoverLetterTitle": "Save or Share your Cover Letter"
+}

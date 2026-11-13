@@ -1,23 +1,28 @@
 import { MAX_VOICE_RECORD_SECONDS, VOICE_CONSENT_VERSION } from '../../../../../packages/career-shared/src/voice';
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type { VoiceList, VoiceSession } from '../../../../../packages/career-api-client/src/types';
+import { t } from '../../i18n';
 import { careerErrorMessage } from '../career-view';
 
 /**
  * Pure view logic for voice practice (tested in voice.test.ts). Same typed
  * path as the website: the app records no audio and sends nothing to a
  * transcription service; the user types what they said. Wording follows the
- * website (career.voice).
+ * website (career.voice); the copy lives in `careerInterviews.voice` and is
+ * read with `t()` in the current language.
  */
 
 export { MAX_VOICE_RECORD_SECONDS, VOICE_CONSENT_VERSION };
 
-/** The website's consent wording (career.voice.consent / consent_help). */
-export const VOICE_CONSENT_TEXT = 'I agree to record this practice on my account.';
-export const VOICE_CONSENT_HELP = 'Recording waits for this agreement.';
-export const VOICE_NOT_A_SCORE = 'Feedback covers the words only. It does not judge emotion, honesty, or personality.';
-export const NO_MICROPHONE =
-  'This app does not record audio and no speech service is connected. Start the timer, practice out loud, then type the words you said. Nothing is sent to a transcription service.';
+/**
+ * The website's consent wording (career.voice.consent / consent_help), copied
+ * per language into careerInterviews.voice. The constants are evaluated once at
+ * import (English); screens use the keys so the current language applies.
+ */
+export const VOICE_CONSENT_TEXT = t('careerInterviews.voice.consent');
+export const VOICE_CONSENT_HELP = t('careerInterviews.voice.consentHelp');
+export const VOICE_NOT_A_SCORE = t('careerInterviews.voice.notAScore');
+export const NO_MICROPHONE = t('careerInterviews.voice.noMicrophone');
 
 /** m:ss for a number of seconds (never negative). */
 export function clock(total: number): string {
@@ -29,7 +34,7 @@ export function clock(total: number): string {
 
 export function remainingLine(seconds: number): string {
   const safe = Math.max(0, Math.floor(seconds));
-  return `Voice time left: ${clock(safe)} (${safe} seconds).`;
+  return t('careerInterviews.voice.remaining', { time: clock(safe), seconds: safe });
 }
 
 /** Whole seconds between start and stop: at least 1, at most the server's limit for one take. */
@@ -44,7 +49,15 @@ export function savedSummary(session: VoiceSession | null): string | null {
   return session.summary && session.summary !== 'No recording yet.' ? session.summary : null;
 }
 
-export const KIND_LABEL: Record<VoiceSession['kind'], string> = { practice: 'Practice', negotiation: 'Negotiation' };
+/** Session kinds in the current language (getters, read at render time). */
+export const KIND_LABEL: Record<VoiceSession['kind'], string> = {
+  get practice() {
+    return t('careerInterviews.voice.kind.practice');
+  },
+  get negotiation() {
+    return t('careerInterviews.voice.kind.negotiation');
+  },
+};
 
 export type VoiceGate = 'ready' | 'needs_consent' | 'no_plan' | 'no_time';
 
@@ -62,21 +75,21 @@ export const OFFER_MAX = 500;
 export function negotiationErrors(offer: string, salarySource: string): { offer?: string; salarySource?: string } {
   const errors: { offer?: string; salarySource?: string } = {};
   const o = offer.trim();
-  if (o.length === 0) errors.offer = 'Enter the offer you received.';
-  else if (o.length > OFFER_MAX) errors.offer = `Keep it under ${OFFER_MAX} characters.`;
-  if (salarySource.trim().length > OFFER_MAX) errors.salarySource = `Keep it under ${OFFER_MAX} characters.`;
+  if (o.length === 0) errors.offer = t('careerInterviews.voice.offerRequired');
+  else if (o.length > OFFER_MAX) errors.offer = t('careerInterviews.tooLong', { max: OFFER_MAX });
+  if (salarySource.trim().length > OFFER_MAX) errors.salarySource = t('careerInterviews.tooLong', { max: OFFER_MAX });
   return errors;
 }
 
 export type VoiceAction = 'load' | 'consent' | 'start' | 'record' | 'correct' | 'delete';
 
-const FALLBACK: Record<VoiceAction, string> = {
-  load: 'Voice practice could not be loaded. Nothing was changed. Try again.',
-  consent: 'Your agreement was not saved. Try again.',
-  start: 'The session was not started. Try again.',
-  record: 'That take was not saved. The words you typed are still here.',
-  correct: 'The correction was not saved. Your words are still here.',
-  delete: 'The recording was not removed. Try again.',
+const FALLBACK: Record<VoiceAction, () => string> = {
+  load: () => t('careerInterviews.voice.fallback.load'),
+  consent: () => t('careerInterviews.voice.fallback.consent'),
+  start: () => t('careerInterviews.voice.fallback.start'),
+  record: () => t('careerInterviews.voice.fallback.record'),
+  correct: () => t('careerInterviews.voice.fallback.correct'),
+  delete: () => t('careerInterviews.voice.fallback.delete'),
 };
 
 /** Message for a refused or failed voice request. Never claims that anything was saved. */
@@ -85,21 +98,21 @@ export function voiceErrorMessage(error: unknown, action: VoiceAction): string {
     const field = error.body.field;
     const reason = typeof error.body.reason === 'string' ? error.body.reason : null;
     if (error.code === 'feature_unavailable') {
-      return 'Voice practice is not open yet. It is switched off in this preview. Text practice stays available, and no credit was used.';
+      return t('careerInterviews.voice.errors.featureUnavailable');
     }
-    if (error.code === 'plan_upgrade_required') return 'Voice practice is not included in your current plan.';
-    if (error.code === 'quota_exhausted') return 'No voice time left. This take was not saved.';
-    if (error.code === 'provider_unavailable') return 'This needs a speech service, which is not configured. Nothing was charged.';
-    if (error.code === 'idempotency_mismatch') return 'This take changed while it was being retried. Stop and save it again.';
+    if (error.code === 'plan_upgrade_required') return t('careerInterviews.voice.errors.plan');
+    if (error.code === 'quota_exhausted') return t('careerInterviews.voice.errors.quota');
+    if (error.code === 'provider_unavailable') return t('careerInterviews.voice.errors.provider');
+    if (error.code === 'idempotency_mismatch') return t('careerInterviews.voice.errors.idempotency');
     if (error.code === 'validation_error') {
-      if (field === 'consent') return 'Agree to record this practice first.';
-      if (reason === 'no_confirmed_facts') return 'Confirm at least one fact in your career profile first.';
-      if (reason === 'already_recorded') return 'This session already has its take. Start a new session to practice again.';
-      if (field === 'offer') return 'Enter the offer you received (up to 500 characters).';
-      if (field === 'salarySource') return 'Keep the salary source under 500 characters.';
-      if (field === 'transcript') return 'Type the words you said first (up to 10,000 characters).';
-      if (field === 'opportunityId') return 'Pick a saved opportunity.';
+      if (field === 'consent') return t('careerInterviews.voice.errors.consent');
+      if (reason === 'no_confirmed_facts') return t('careerInterviews.errors.noFacts');
+      if (reason === 'already_recorded') return t('careerInterviews.voice.errors.alreadyRecorded');
+      if (field === 'offer') return t('careerInterviews.voice.errors.offer');
+      if (field === 'salarySource') return t('careerInterviews.voice.errors.salarySource');
+      if (field === 'transcript') return t('careerInterviews.voice.errors.transcript');
+      if (field === 'opportunityId') return t('careerInterviews.errors.opportunityId');
     }
   }
-  return careerErrorMessage(error, FALLBACK[action]);
+  return careerErrorMessage(error, FALLBACK[action]());
 }

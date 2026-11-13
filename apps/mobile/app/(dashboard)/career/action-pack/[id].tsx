@@ -12,6 +12,7 @@ import { useCareerAccess } from '../../../../src/hooks/useCareer';
 import { checklistErrorMessage, checklistProgress, fitLabel, fitTone, organizationName } from '../../../../src/lib/career/action-packs';
 import { careerErrorMessage, FACT_TYPE_LABEL, formatDay } from '../../../../src/lib/career-view';
 import { colors } from '../../../../src/theme/colors';
+import { useT } from '../../../../src/i18n';
 
 /**
  * One action pack, as the website's detail column shows it: vacancy, fit
@@ -19,6 +20,7 @@ import { colors } from '../../../../src/theme/colors';
  * cover letter, the tailored CV lines and the next steps.
  */
 export default function ActionPackScreen() {
+  const t = useT('careerPlans');
   const { id } = useLocalSearchParams<{ id: string }>();
   const access = useCareerAccess();
   const pack = useActionPack(id);
@@ -27,13 +29,13 @@ export default function ActionPackScreen() {
   const onToggle = (checklistId: string, done: boolean) => {
     toggle.mutate(
       { checklistId, done },
-      { onError: (error) => Alert.alert('Not updated', checklistErrorMessage(error)) },
+      { onError: (error) => Alert.alert(t('notUpdated'), checklistErrorMessage(error)) },
     );
   };
 
   let content: React.ReactNode;
   if (access.data && !access.data.enabled) {
-    content = <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" />;
+    content = <EmptyState icon="lock-closed-outline" title={t('lockedTitle')} />;
   } else if (pack.isLoading) {
     content = (
       <View className="p-5">
@@ -42,7 +44,7 @@ export default function ActionPackScreen() {
       </View>
     );
   } else if (pack.error || !pack.data) {
-    content = <ErrorState message={careerErrorMessage(pack.error, 'Could not open this action pack.')} onRetry={() => void pack.refetch()} />;
+    content = <ErrorState message={careerErrorMessage(pack.error, t('actionPack.openError'))} onRetry={() => void pack.refetch()} />;
   } else {
     const p = pack.data;
     const progress = checklistProgress(p);
@@ -53,30 +55,35 @@ export default function ActionPackScreen() {
       >
         <Card>
           <View className="flex-row items-start justify-between">
-            <View className="flex-1 mr-2">
+            <View className="flex-1 me-2">
               <Text className="text-lg font-bold text-stone-900">{p.vacancySnapshot.title}</Text>
               <Text className="text-brand-700 text-sm font-medium mt-0.5">{organizationName(p.vacancySnapshot.organization)}</Text>
             </View>
             <Pill label={fitLabel(p.fit.fit)} tone={fitTone(p.fit.fit)} />
           </View>
           <Text className="text-stone-400 text-xs mt-2">
-            {`Created ${formatDay(p.createdAt) ?? ''}${p.vacancySnapshot.deadline ? ` · Deadline ${formatDay(p.vacancySnapshot.deadline) ?? ''}` : ''}`}
+            {[
+              t('actionPack.created', { date: formatDay(p.createdAt) ?? '' }),
+              p.vacancySnapshot.deadline ? t('actionPack.deadline', { date: formatDay(p.vacancySnapshot.deadline) ?? '' }) : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </Text>
           {p.vacancySnapshot.description ? (
             <>
-              <SectionLabel>Vacancy overview</SectionLabel>
+              <SectionLabel>{t('actionPack.vacancyOverview')}</SectionLabel>
               <Text className="text-stone-700 text-sm leading-5" numberOfLines={6}>
                 {p.vacancySnapshot.description}
               </Text>
             </>
           ) : null}
-          <SectionLabel>Why you qualify</SectionLabel>
-          {p.fit.reasons.length > 0 ? p.fit.reasons.map((r, i) => <Bullet key={i} icon="checkmark-circle-outline" color={colors.success.DEFAULT} text={r} />) : <Text className="text-stone-500 text-sm">No matching facts were found.</Text>}
-          <SectionLabel>Skill and evidence gaps</SectionLabel>
-          {p.fit.gaps.length > 0 ? p.fit.gaps.map((g, i) => <Bullet key={i} icon="alert-circle-outline" color={colors.warning.DEFAULT} text={g} />) : <Text className="text-stone-500 text-sm">No critical skill gaps detected.</Text>}
+          <SectionLabel>{t('actionPack.whyQualify')}</SectionLabel>
+          {p.fit.reasons.length > 0 ? p.fit.reasons.map((r, i) => <Bullet key={i} icon="checkmark-circle-outline" color={colors.success.DEFAULT} text={r} />) : <Text className="text-stone-500 text-sm">{t('actionPack.noReasons')}</Text>}
+          <SectionLabel>{t('actionPack.gaps')}</SectionLabel>
+          {p.fit.gaps.length > 0 ? p.fit.gaps.map((g, i) => <Bullet key={i} icon="alert-circle-outline" color={colors.warning.DEFAULT} text={g} />) : <Text className="text-stone-500 text-sm">{t('actionPack.noGaps')}</Text>}
           {p.fit.unknowns.length > 0 ? (
             <>
-              <SectionLabel>Not stated in the advert</SectionLabel>
+              <SectionLabel>{t('actionPack.unknowns')}</SectionLabel>
               {p.fit.unknowns.map((u, i) => (
                 <Bullet key={i} icon="help-circle-outline" color={colors.stone[400]} text={u} />
               ))}
@@ -85,8 +92,8 @@ export default function ActionPackScreen() {
         </Card>
 
         <Card>
-          <Text className="text-base font-bold text-stone-900">Preparation checklist</Text>
-          <Text className="text-stone-500 text-xs mt-0.5 mb-3">{`${progress.done} of ${progress.total} done. Ticking items is free.`}</Text>
+          <Text className="text-base font-bold text-stone-900">{t('actionPack.checklist')}</Text>
+          <Text className="text-stone-500 text-xs mt-0.5 mb-3">{t('actionPack.checklistProgress', { done: progress.done, total: progress.total })}</Text>
           {p.checklist.map((item) => (
             <TouchableOpacity
               key={item.id}
@@ -98,21 +105,21 @@ export default function ActionPackScreen() {
               activeOpacity={0.7}
             >
               <Ionicons name={item.done ? 'checkbox' : 'square-outline'} size={22} color={item.done ? colors.brand[600] : colors.stone[400]} />
-              <Text className={`flex-1 ml-3 text-sm leading-5 ${item.done ? 'text-stone-400 line-through' : 'text-stone-800'}`}>{item.label}</Text>
+              <Text className={`flex-1 ms-3 text-sm leading-5 ${item.done ? 'text-stone-400 line-through' : 'text-stone-800'}`}>{item.label}</Text>
             </TouchableOpacity>
           ))}
         </Card>
 
         <Card>
-          <Text className="text-base font-bold text-stone-900 mb-2">Tailored cover letter</Text>
+          <Text className="text-base font-bold text-stone-900 mb-2">{t('actionPack.coverLetter')}</Text>
           <Text selectable className="text-stone-800 text-sm leading-6">
             {p.coverLetter.body}
           </Text>
         </Card>
 
         <Card>
-          <Text className="text-base font-bold text-stone-900">Tailored CV content</Text>
-          <Text className="text-stone-500 text-xs mt-0.5 mb-2">{`Confirmed facts included: ${p.tailoredResume.factIds.length}`}</Text>
+          <Text className="text-base font-bold text-stone-900">{t('actionPack.cvContent')}</Text>
+          <Text className="text-stone-500 text-xs mt-0.5 mb-2">{t('actionPack.factsIncluded', { count: p.tailoredResume.factIds.length })}</Text>
           {p.tailoredResume.lines.map((line, idx) => (
             <View key={`${line.factId}-${idx}`} className="py-2 border-t border-stone-100">
               <Text className="text-[10px] font-bold text-stone-400 uppercase tracking-wide">{FACT_TYPE_LABEL[line.factType] ?? line.factType}</Text>
@@ -124,7 +131,7 @@ export default function ActionPackScreen() {
         </Card>
 
         <Card>
-          <Text className="text-base font-bold text-stone-900 mb-2">Recommended next steps</Text>
+          <Text className="text-base font-bold text-stone-900 mb-2">{t('actionPack.nextSteps')}</Text>
           {p.nextSteps.map((step, idx) => (
             <View key={idx} className="flex-row mb-2">
               <Text className="text-stone-500 text-sm w-6">{`${idx + 1}.`}</Text>
@@ -132,14 +139,14 @@ export default function ActionPackScreen() {
             </View>
           ))}
         </Card>
-        <Text className="text-stone-400 text-xs leading-4">Edit the full CV and letter in Career drafts on the website. Nothing here is sent anywhere.</Text>
+        <Text className="text-stone-400 text-xs leading-4">{t('actionPack.footer')}</Text>
       </ScrollView>
     );
   }
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title={pack.data?.vacancySnapshot.title ?? 'Action pack'} subtitle="Action pack" />
+      <CareerHeader title={pack.data?.vacancySnapshot.title ?? t('actionPack.detailSubtitle')} subtitle={t('actionPack.detailSubtitle')} />
       {content}
     </SafeAreaView>
   );
@@ -157,7 +164,7 @@ function Bullet({ icon, color, text }: { icon: React.ComponentProps<typeof Ionic
   return (
     <View className="flex-row items-start mb-1.5">
       <Ionicons name={icon} size={16} color={color} style={{ marginTop: 2 }} />
-      <Text className="flex-1 ml-2 text-stone-700 text-sm leading-5">{text}</Text>
+      <Text className="flex-1 ms-2 text-stone-700 text-sm leading-5">{text}</Text>
     </View>
   );
 }

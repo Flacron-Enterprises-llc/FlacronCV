@@ -1,0 +1,46 @@
+{
+  "header": {
+    "welcomeBack": "Bon retour,",
+    "planBadge": {
+      "free": "Forfait Gratuit",
+      "pro": "Forfait Pro"
+    }
+  },
+  "loadError": "Chargement impossible. Veuillez réessayer.",
+  "verifyEmail": {
+    "title": "Vérifiez votre e-mail",
+    "body": "Confirmez votre adresse pour créer de nouveaux CV et lettres de motivation. Vos fichiers existants restent modifiables et exportables.",
+    "resend": "Renvoyer l'e-mail",
+    "confirm": "J'ai vérifié"
+  },
+  "stats": {
+    "title": "Aperçu",
+    "cvsCreated": "CV créés",
+    "coverLetters": "Lettres de motivation",
+    "downloads": "Téléchargements",
+    "thisMonth": "Ce mois-ci",
+    "usedThisMonth": "Utilisés ce mois-ci"
+  },
+  "quickActions": {
+    "title": "Actions rapides",
+    "newCv": "Nouveau CV",
+    "coverLetter": "Lettre de motivation",
+    "templates": "Modèles",
+    "jobTracker": "Suivi des candidatures",
+    "jobTrackerDescription": "Notez vos candidatures une fois envoyées",
+    "careerTools": "Outils de carrière",
+    "careerToolsDescription": "Profil de carrière, brouillons et opportunités"
+  },
+  "recent": {
+    "title": "Documents récents",
+    "viewAll": "Tout voir",
+    "loadError": "Impossible de charger les documents. Veuillez réessayer.",
+    "empty": "Aucun document pour l'instant. Créez votre premier CV !",
+    "meta": "{kind, select, cv {CV} other {Lettre de motivation}} · {date}"
+  },
+  "upgrade": {
+    "title": "Passer à Pro",
+    "body": "Débloquez {cvs} CV, {credits} crédits Engine et plus encore",
+    "cta": "Passer à Pro — {price}/mois"
+  }
+}

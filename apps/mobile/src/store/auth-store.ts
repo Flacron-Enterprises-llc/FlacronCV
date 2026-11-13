@@ -18,6 +18,7 @@ import {
 } from '../lib/legal-acceptance';
 import { secureStore } from '../lib/secure-store';
 import { requestFailureMessage } from '../lib/api-errors';
+import { t } from '../i18n';
 import { User } from '../types/user.types';
 
 interface AuthState {
@@ -193,7 +194,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } catch (verifyErr: unknown) {
         const message = requestFailureMessage(
           verifyErr,
-          'Could not load your account. Please try again.',
+          t('auth.store.loadAccountFailed'),
         );
         set({ error: message, userSyncError: message });
       }
@@ -253,7 +254,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await api.post('/auth/reset-password', { email });
     } catch (err: unknown) {
       // API route — Nest message / network, not Firebase Auth codes.
-      const message = requestFailureMessage(err, 'Could not send reset email. Please try again.');
+      const message = requestFailureMessage(err, t('auth.store.resetEmailFailed'));
       set({ error: message });
       throw new Error(message);
     } finally {
@@ -268,7 +269,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (err: unknown) {
       // API route — Nest message / network, not Firebase Auth codes.
       // Rethrow the original error so callers can branch on HTTP status (e.g. 429).
-      const message = requestFailureMessage(err, 'Could not send verification email. Please try again.');
+      const message = requestFailureMessage(err, t('auth.store.verificationEmailFailed'));
       set({ error: message });
       throw err;
     } finally {
@@ -312,8 +313,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // to login. Do not touch legalGate. Keep any previously synced user.
       const userSyncError =
         axios.isAxiosError(err) && !err.response
-          ? 'No connection. Check your network and try again.'
-          : 'Could not load your account. Please try again.';
+          ? t('auth.store.noConnection')
+          : t('auth.store.loadAccountFailed');
       set({ userSyncError });
     }
   },
@@ -329,19 +330,19 @@ function getFirebaseErrorMessage(err: unknown): string {
     case 'auth/user-not-found':
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
-      return 'Invalid email or password.';
+      return t('auth.store.invalidCredentials');
     case 'auth/email-already-in-use':
-      return 'An account with this email already exists.';
+      return t('auth.store.emailInUse');
     case 'auth/weak-password':
-      return 'Password must be at least 6 characters.';
+      return t('auth.store.weakPassword');
     case 'auth/invalid-email':
-      return 'Invalid email address.';
+      return t('auth.store.invalidEmail');
     case 'auth/too-many-requests':
-      return 'Too many attempts. Please try again later.';
+      return t('auth.store.tooManyAttempts');
     case 'auth/network-request-failed':
-      return 'Network error. Please check your connection.';
+      return t('auth.store.networkError');
     case 'auth/account-exists-with-different-credential':
-      return 'An account already exists with a different sign-in method.';
+      return t('auth.store.differentSignInMethod');
     default:
       return error.message ?? 'An unexpected error occurred.';
   }

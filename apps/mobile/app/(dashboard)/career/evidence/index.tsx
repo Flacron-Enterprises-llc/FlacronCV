@@ -12,6 +12,7 @@ import { useCareerAccess } from '../../../../src/hooks/useCareer';
 import { evidenceLabelView, evidenceTypeLabel, formatBytes } from '../../../../src/lib/career/evidence';
 import { careerErrorMessage } from '../../../../src/lib/career-view';
 import { colors } from '../../../../src/theme/colors';
+import { useT } from '../../../../src/i18n';
 
 /**
  * Evidence vault: projects, credentials, work samples, references and
@@ -22,6 +23,7 @@ export default function EvidenceListScreen() {
   const access = useCareerAccess();
   const gate = useEvidenceGate();
   const list = useEvidenceList();
+  const t = useT('careerEvidence');
 
   const addButton =
     gate === 'open' ? (
@@ -29,7 +31,7 @@ export default function EvidenceListScreen() {
         onPress={() => router.push('/(dashboard)/career/evidence/new' as Href)}
         className="h-11 w-11 items-center justify-center rounded-full bg-brand-600"
         accessibilityRole="button"
-        accessibilityLabel="Add evidence item"
+        accessibilityLabel={t('list.add')}
       >
         <Ionicons name="add" size={24} color={colors.white} />
       </TouchableOpacity>
@@ -37,9 +39,9 @@ export default function EvidenceListScreen() {
 
   let content: React.ReactNode;
   if (gate === 'locked') {
-    content = <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" />;
+    content = <EmptyState icon="lock-closed-outline" title={t('gate.locked')} />;
   } else if (gate === 'off') {
-    content = <EmptyState icon="lock-closed-outline" title="The Evidence vault is switched off" description="Your career profile and drafts are unchanged." />;
+    content = <EmptyState icon="lock-closed-outline" title={t('gate.off')} description={t('gate.offBody')} />;
   } else if (gate === 'loading' || list.isLoading) {
     content = (
       <View className="p-5">
@@ -50,7 +52,7 @@ export default function EvidenceListScreen() {
   } else if (gate === 'error' || list.error) {
     content = (
       <ErrorState
-        message={careerErrorMessage(list.error ?? access.error, 'Could not load your evidence. Try again.')}
+        message={careerErrorMessage(list.error ?? access.error, t('list.loadError'))}
         onRetry={() => void (list.error ? list.refetch() : access.refetch())}
       />
     );
@@ -63,15 +65,15 @@ export default function EvidenceListScreen() {
         refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} tintColor={colors.brand[600]} />}
         ListHeaderComponent={
           <Text className="text-stone-500 text-sm mb-4 leading-5">
-            Projects, credentials and work samples that back your career claims. Labels show only what has been established: a photo of a certificate is evidence attached, not issuer verified.
+            {t('list.intro')}
           </Text>
         }
         ListEmptyComponent={
           <EmptyState
             icon="ribbon-outline"
-            title="No evidence items yet"
-            description="Add projects, certifications, or work samples to support your profile facts."
-            actionLabel="Add evidence item"
+            title={t('list.emptyTitle')}
+            description={t('list.emptyBody')}
+            actionLabel={t('list.add')}
             onAction={() => router.push('/(dashboard)/career/evidence/new' as Href)}
           />
         }
@@ -83,7 +85,7 @@ export default function EvidenceListScreen() {
               className="bg-white border border-stone-100 rounded-2xl p-4 mb-3"
               accessibilityRole="button"
               accessibilityLabel={`${item.title}, ${evidenceTypeLabel(item.evidenceType)}, ${label.text.toLowerCase()}`}
-              accessibilityHint="Opens the item to edit it or manage its file"
+              accessibilityHint={t('list.itemHint')}
             >
               <View className="flex-row items-center justify-between mb-1">
                 <Text className="text-xs font-semibold text-stone-500 uppercase tracking-wide">{evidenceTypeLabel(item.evidenceType)}</Text>
@@ -101,19 +103,19 @@ export default function EvidenceListScreen() {
                 </Text>
               ) : null}
               <View className="flex-row items-center justify-between mt-3">
-                <View className="flex-row items-center flex-1 mr-2">
+                <View className="flex-row items-center flex-1 me-2">
                   {item.attachmentStored || item.attachmentUrl ? (
                     <>
                       <Ionicons name={item.attachmentStored ? 'document-attach-outline' : 'link-outline'} size={14} color={colors.stone[500]} />
-                      <Text className="text-stone-500 text-xs ml-1" numberOfLines={1}>
+                      <Text className="text-stone-500 text-xs ms-1" numberOfLines={1}>
                         {item.attachmentStored
-                          ? `${item.attachmentName ?? 'Private file'} ${formatBytes(item.attachmentSizeBytes)}`.trim()
-                          : (item.attachmentName ?? 'Link')}
+                          ? `${item.attachmentName ?? t('list.privateFile')} ${formatBytes(item.attachmentSizeBytes)}`.trim()
+                          : (item.attachmentName ?? t('list.link'))}
                       </Text>
                     </>
                   ) : null}
                 </View>
-                <Text className="text-stone-400 text-xs">{item.isPortfolioShared ? 'Shared in portfolio' : 'Private only'}</Text>
+                <Text className="text-stone-400 text-xs">{item.isPortfolioShared ? t('list.shared') : t('list.privateOnly')}</Text>
               </View>
             </TouchableOpacity>
           );
@@ -124,7 +126,7 @@ export default function EvidenceListScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title="Evidence vault" subtitle="Proof that backs your career claims" right={addButton} />
+      <CareerHeader title={t('title')} subtitle={t('subtitle')} right={addButton} />
       {content}
     </SafeAreaView>
   );

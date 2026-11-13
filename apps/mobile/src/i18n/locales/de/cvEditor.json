@@ -1,0 +1,348 @@
+{
+  "editor": {
+    "renameFailed": "Der Lebenslauf konnte nicht umbenannt werden. Bitte versuche es erneut.",
+    "exportLimitTitle": "Exportlimit erreicht",
+    "loadError": "Lebenslauf konnte nicht geladen werden",
+    "loading": "Lebenslauf wird geladen...",
+    "titleA11y": "Lebenslauf-Titel: {title}. Umbenennen",
+    "titleHint": "Öffnet ein Feld zum Ändern des Lebenslauf-Titels",
+    "editingFallback": "Lebenslauf bearbeiten",
+    "unsavedChanges": "Ungespeicherte Änderungen",
+    "atsCheck": "ATS-Prüfung",
+    "interviewPrep": "Interview-Vorbereitung",
+    "moreTools": "Weitere Tools",
+    "designTool": "Design: Layout, Farben, Schriften",
+    "linkedinTool": "LinkedIn-Optimierer",
+    "moreToolsA11y": "Weitere Tools: Design und LinkedIn-Optimierer",
+    "export": "Exportieren",
+    "chooseFormat": "Format wählen:",
+    "renameTitle": "Lebenslauf umbenennen",
+    "titleLabel": "Lebenslauf-Titel",
+    "titlePlaceholder": "z. B. Lebenslauf Software Engineer 2025"
+  },
+  "wizard": {
+    "steps": {
+      "personal": "Persönliche Daten",
+      "experience": "Berufserfahrung",
+      "education": "Ausbildung",
+      "skills": "Fähigkeiten",
+      "summary": "Zusammenfassung",
+      "projects": "Projekte",
+      "certifications": "Zertifizierungen",
+      "languages": "Sprachen",
+      "references": "Referenzen",
+      "custom": "Benutzerdefinierte Abschnitte",
+      "arrange": "Abschnitte anordnen"
+    },
+    "saveFailedTitle": "Speichern fehlgeschlagen",
+    "saveFailed": "Speichern nicht möglich. Bitte versuche es erneut.",
+    "personalRequired": "Fülle die Pflichtfelder aus, bevor du weitermachst.",
+    "stepA11y": "Schritt {current} von {total}, {label}. Zu einem anderen Schritt wechseln",
+    "stepOf": "Schritt {current} von {total}",
+    "goToStep": "Zu Schritt wechseln",
+    "finish": "Fertig",
+    "continue": "Weiter"
+  },
+  "photo": {
+    "upload": "Foto hochladen",
+    "change": "Foto ändern",
+    "remove": "Foto entfernen",
+    "uploading": "Wird hochgeladen…",
+    "hint": "JPG, PNG oder WebP · Max. 5 MB · Wird als Lebenslauf-Avatar verwendet",
+    "invalid": "„.{ext}“-Dateien werden nicht unterstützt. Bitte lade ein JPG-, PNG- oder WebP-Bild hoch.",
+    "unknownType": "unbekannt",
+    "tooLarge": "Diese Datei ist zu groß ({size} MB). Die maximale Größe beträgt 5 MB.",
+    "uploadFailed": "Das Foto konnte nicht hochgeladen werden. Bitte erneut versuchen.",
+    "unavailable": "Foto-Upload ist gerade nicht verfügbar. Bitte erneut anmelden.",
+    "deniedTitle": "Fotos nicht verfügbar",
+    "deniedBody": "Erlaube in den Einstellungen den Zugriff auf die Fotomediathek, um ein Lebenslauf-Foto auszuwählen.",
+    "updateFailedTitle": "Foto konnte nicht aktualisiert werden",
+    "removeBody": "Foto aus diesem Lebenslauf entfernen?"
+  },
+  "sections": {
+    "editA11y": "Abschnitt {title} bearbeiten",
+    "hiddenNote": "Dieser Abschnitt ist in deinem Lebenslauf ausgeblendet. Blende ihn im Schritt „Abschnitte anordnen“ wieder ein.",
+    "titleLabel": "Abschnittstitel"
+  },
+  "validation": {
+    "titleRequired": "Bitte gib einen Titel für deinen Lebenslauf ein.",
+    "titleTooLong": "Der Titel darf höchstens {max} Zeichen lang sein.",
+    "sectionTitleRequired": "Bitte gib einen Abschnittstitel ein.",
+    "sectionTitleTooLong": "Der Abschnittstitel darf höchstens {max} Zeichen lang sein."
+  },
+  "sectionTypes": {
+    "experience": "Berufserfahrung",
+    "education": "Ausbildung",
+    "skills": "Fähigkeiten",
+    "projects": "Projekte",
+    "certifications": "Zertifizierungen",
+    "languages": "Sprachen",
+    "references": "Referenzen",
+    "awards": "Auszeichnungen",
+    "publications": "Veröffentlichungen",
+    "volunteer": "Ehrenamt",
+    "custom": "Benutzerdefinierter Abschnitt",
+    "fallback": "Abschnitt"
+  },
+  "entry": {
+    "edit": "Eintrag bearbeiten",
+    "delete": "Eintrag löschen",
+    "update": "Aktualisieren",
+    "present": "Heute"
+  },
+  "fields": {
+    "startDate": "Startdatum *",
+    "endDate": "Enddatum",
+    "description": "Beschreibung",
+    "company": "Unternehmen *",
+    "jobTitle": "Jobtitel *",
+    "proficiency": "Kenntnisstand *",
+    "website": "Website",
+    "websitePlaceholder": "deineseite.com"
+  },
+  "errors": {
+    "startDateRequired": "Startdatum ist erforderlich"
+  },
+  "personal": {
+    "title": "Persönliche Informationen",
+    "subtitle": "Füge deine wichtigsten Kontaktdaten und deine berufliche Überschrift hinzu.",
+    "firstName": "Vorname *",
+    "lastName": "Nachname *",
+    "email": "E-Mail-Adresse *",
+    "phone": "Telefonnummer *",
+    "headline": "Berufliche Überschrift",
+    "headlinePlaceholder": "Senior Software Engineer bei Google",
+    "city": "Stadt",
+    "cityPlaceholder": "Berlin",
+    "country": "Land",
+    "countryPlaceholder": "Deutschland",
+    "address": "Adresse",
+    "addressPlaceholder": "Straße und Hausnummer",
+    "postalCode": "Postleitzahl",
+    "postalCodePlaceholder": "PLZ / Postleitzahl",
+    "errors": {
+      "firstNameRequired": "Vorname ist erforderlich",
+      "lastNameRequired": "Nachname ist erforderlich",
+      "invalidEmail": "Ungültige E-Mail-Adresse",
+      "phoneRequired": "Telefonnummer ist erforderlich"
+    }
+  },
+  "summary": {
+    "title": "Berufliches Profil",
+    "subtitle": "Schreibe eine überzeugende Zusammenfassung, die deine Expertise und Karriereziele hervorhebt.",
+    "placeholder": "Ergebnisorientierter Softwareentwickler mit über 5 Jahren Erfahrung in der Entwicklung skalierbarer Webanwendungen...",
+    "characters": "{count} Zeichen",
+    "recommended": "Empfohlen: 150–300 Zeichen",
+    "generate": "Generieren",
+    "generating": "Generieren...",
+    "creditsRemaining": "Verbleibende Credits: {count}",
+    "accountNotLoadedTitle": "Konto nicht geladen",
+    "accountNotLoadedBody": "Dein Konto wurde noch nicht geladen. Prüfe deine Verbindung und versuche es erneut.",
+    "creditsExhaustedTitle": "Credits aufgebraucht",
+    "generateFailedTitle": "Generieren fehlgeschlagen",
+    "generateFailed": "Generieren nicht möglich. Bitte versuche es erneut.",
+    "creditMaybeUsed": "Generieren nicht möglich. Möglicherweise wurde ein Credit verbraucht. Prüfe dein Guthaben und versuche es erneut.",
+    "missing": {
+      "headline": "Füge vor dem Generieren eine Überschrift hinzu.",
+      "experience": "Füge vor dem Generieren Berufserfahrung hinzu.",
+      "skills": "Füge vor dem Generieren Fähigkeiten hinzu.",
+      "headlineExperience": "Füge vor dem Generieren eine Überschrift und Berufserfahrung hinzu.",
+      "headlineSkills": "Füge vor dem Generieren eine Überschrift und Fähigkeiten hinzu.",
+      "experienceSkills": "Füge vor dem Generieren Berufserfahrung und Fähigkeiten hinzu.",
+      "all": "Füge vor dem Generieren eine Überschrift, Berufserfahrung und Fähigkeiten hinzu."
+    }
+  },
+  "experience": {
+    "title": "Berufserfahrung",
+    "subtitle": "Füge deinen beruflichen Werdegang hinzu, beginnend mit der aktuellsten Position.",
+    "empty": "Noch keine Berufserfahrung hinzugefügt.",
+    "add": "Erfahrung hinzufügen",
+    "edit": "Erfahrung bearbeiten",
+    "deleteTitle": "Erfahrung löschen",
+    "deleteBody": "Möchtest du diesen Eintrag wirklich entfernen?",
+    "highlightsCount": "{count, plural, one {# Highlight} other {# Highlights}}",
+    "jobTitlePlaceholder": "Senior-Softwareentwickler",
+    "location": "Ort",
+    "locationPlaceholder": "München, Deutschland",
+    "startPlaceholder": "Jan. 2020",
+    "endPlaceholder": "Dez. 2023",
+    "current": "Ich arbeite derzeit hier",
+    "descriptionPlaceholder": "Beschreibe deine Aufgaben und Erfolge...",
+    "highlights": "Wichtigste Erfolge",
+    "highlightsPlaceholder": "Team aus 5 Entwicklern geleitet\nLadezeit um 40 % verkürzt",
+    "highlightsHint": "Einer pro Zeile, bis zu {max}.",
+    "errors": {
+      "companyRequired": "Unternehmensname ist erforderlich",
+      "positionRequired": "Jobtitel ist erforderlich"
+    }
+  },
+  "education": {
+    "title": "Ausbildung",
+    "subtitle": "Füge deinen akademischen Werdegang und deine Qualifikationen hinzu.",
+    "empty": "Noch keine Ausbildung hinzugefügt.",
+    "add": "Ausbildung hinzufügen",
+    "edit": "Ausbildung bearbeiten",
+    "deleteTitle": "Ausbildung löschen",
+    "deleteBody": "Diesen Ausbildungseintrag entfernen?",
+    "degreeIn": "{degree}, {field}",
+    "gpa": "Notendurchschnitt: {gpa}",
+    "institution": "Einrichtung *",
+    "degree": "Abschluss *",
+    "degreePlaceholder": "Bachelor of Science (B.Sc.)",
+    "field": "Fachrichtung *",
+    "fieldPlaceholder": "Informatik",
+    "startPlaceholder": "Sept. 2018",
+    "endPlaceholder": "Mai 2022",
+    "gpaLabel": "Notendurchschnitt (optional)",
+    "errors": {
+      "institutionRequired": "Einrichtung ist erforderlich",
+      "degreeRequired": "Abschluss ist erforderlich",
+      "fieldRequired": "Fachrichtung ist erforderlich"
+    }
+  },
+  "skills": {
+    "title": "Fähigkeiten",
+    "subtitle": "Füge deine fachlichen und sozialen Fähigkeiten mit Kenntnisstand hinzu.",
+    "empty": "Noch keine Fähigkeiten hinzugefügt.",
+    "add": "Fähigkeit hinzufügen",
+    "edit": "Fähigkeit bearbeiten",
+    "deleteTitle": "Fähigkeit löschen",
+    "deleteBody": "Diese Fähigkeit entfernen?",
+    "name": "Name der Fähigkeit *",
+    "category": "Kategorie (optional)",
+    "categoryPlaceholder": "Frontend, Backend, Tools …",
+    "levels": {
+      "beginner": "Anfänger",
+      "intermediate": "Mittel",
+      "advanced": "Fortgeschritten",
+      "expert": "Experte"
+    },
+    "errors": {
+      "nameRequired": "Name der Fähigkeit ist erforderlich"
+    }
+  },
+  "projects": {
+    "title": "Projekte",
+    "subtitle": "Präsentiere deine wichtigsten Projekte und Nebenprojekte.",
+    "empty": "Noch keine Projekte hinzugefügt.",
+    "add": "Projekt hinzufügen",
+    "edit": "Projekt bearbeiten",
+    "deleteTitle": "Projekt löschen",
+    "deleteBody": "Dieses Projekt entfernen?",
+    "name": "Projektname *",
+    "namePlaceholder": "Meine tolle App",
+    "descriptionPlaceholder": "Eine kurze Beschreibung dessen, was du gebaut hast...",
+    "technologies": "Technologien (durch Kommas getrennt)",
+    "url": "Projekt-URL",
+    "errors": {
+      "nameRequired": "Projektname ist erforderlich"
+    }
+  },
+  "certifications": {
+    "title": "Zertifizierungen",
+    "subtitle": "Füge deine beruflichen Zertifizierungen und Lizenzen hinzu.",
+    "empty": "Noch keine Zertifizierungen hinzugefügt.",
+    "add": "Zertifizierung hinzufügen",
+    "edit": "Zertifizierung bearbeiten",
+    "deleteTitle": "Zertifizierung löschen",
+    "deleteBody": "Diese Zertifizierung entfernen?",
+    "expires": "Läuft ab: {date}",
+    "name": "Name der Zertifizierung *",
+    "issuer": "Ausstellende Organisation *",
+    "issueDate": "Ausstellungsdatum *",
+    "issuePlaceholder": "Jan. 2023",
+    "expiry": "Ablaufdatum",
+    "expiryPlaceholder": "Jan. 2026",
+    "credentialId": "Zertifikats-ID",
+    "credentialPlaceholder": "z. B. AWS-123",
+    "errors": {
+      "nameRequired": "Name der Zertifizierung ist erforderlich",
+      "issuerRequired": "Aussteller ist erforderlich",
+      "dateRequired": "Datum ist erforderlich"
+    }
+  },
+  "languages": {
+    "title": "Sprachen",
+    "subtitle": "Liste die Sprachen auf, die du sprichst, und dein Niveau.",
+    "empty": "Noch keine Sprachen hinzugefügt.",
+    "add": "Sprache hinzufügen",
+    "edit": "Sprache bearbeiten",
+    "deleteTitle": "Sprache löschen",
+    "deleteBody": "Diese Sprache entfernen?",
+    "name": "Sprache *",
+    "namePlaceholder": "Englisch",
+    "levels": {
+      "Native": "Muttersprache",
+      "Fluent": "Fließend",
+      "Advanced": "Fortgeschritten",
+      "Intermediate": "Mittel",
+      "Basic": "Grundkenntnisse"
+    },
+    "errors": {
+      "nameRequired": "Name der Sprache ist erforderlich",
+      "proficiencyRequired": "Kenntnisstand ist erforderlich"
+    }
+  },
+  "references": {
+    "title": "Referenzen",
+    "subtitle": "Füge berufliche Referenzen hinzu, die deine Arbeit bestätigen können.",
+    "empty": "Noch keine Referenzen hinzugefügt.",
+    "add": "Referenz hinzufügen",
+    "edit": "Referenz bearbeiten",
+    "deleteTitle": "Referenz löschen",
+    "deleteBody": "Diese Referenz entfernen?",
+    "titleAtCompany": "{title} bei {company}",
+    "fullName": "Vollständiger Name *",
+    "jobTitlePlaceholder": "Engineering-Manager",
+    "email": "E-Mail",
+    "phone": "Telefon",
+    "relationship": "Beziehung",
+    "relationshipPlaceholder": "Ehemalige Vorgesetzte",
+    "errors": {
+      "nameRequired": "Name ist erforderlich",
+      "titleRequired": "Titel ist erforderlich",
+      "companyRequired": "Unternehmen ist erforderlich",
+      "invalidEmail": "Ungültige E-Mail"
+    }
+  },
+  "custom": {
+    "title": "Benutzerdefinierte Abschnitte",
+    "subtitle": "Füge alles hinzu, was du sonst noch im Lebenslauf haben möchtest – Auszeichnungen, Ehrenamt, Veröffentlichungen, Interessen.",
+    "empty": "Noch keine benutzerdefinierten Abschnitte.",
+    "noEntries": "Noch keine Einträge — füge unten den ersten hinzu.",
+    "untitled": "Eintrag ohne Titel",
+    "addItem": "Element hinzufügen",
+    "addSection": "Benutzerdefinierten Abschnitt hinzufügen",
+    "newHeading": "Neuer benutzerdefinierter Abschnitt",
+    "addSectionConfirm": "Abschnitt hinzufügen",
+    "addEntry": "Eintrag hinzufügen",
+    "editEntry": "Eintrag bearbeiten",
+    "deleteTitle": "Eintrag löschen",
+    "deleteBody": "Diesen Eintrag entfernen?",
+    "titleLabel": "Titel *",
+    "subtitleLabel": "Untertitel",
+    "date": "Datum",
+    "descriptionPlaceholder": "Beschreibung…",
+    "errors": {
+      "titleRequired": "Titel ist erforderlich"
+    }
+  },
+  "arrange": {
+    "title": "Abschnitte anordnen",
+    "subtitle": "Ändere die Reihenfolge der Abschnitte in deinem Lebenslauf, benenne sie um und wähle aus, welche angezeigt werden. Ausgeblendete Abschnitte bleiben gespeichert, erscheinen aber nicht im Lebenslauf.",
+    "empty": "Noch keine Abschnitte. Füge unten einen hinzu.",
+    "meta": "{type} · {count, plural, one {# Element} other {# Elemente}}",
+    "metaHidden": "{type} · {count, plural, one {# Element} other {# Elemente}} · Ausgeblendet",
+    "moveUp": "{title} nach oben verschieben",
+    "moveDown": "{title} nach unten verschieben",
+    "hide": "Abschnitt {title} ausblenden",
+    "show": "Abschnitt {title} einblenden",
+    "rename": "Abschnitt {title} umbenennen",
+    "remove": "Abschnitt {title} entfernen",
+    "addSection": "Abschnitt hinzufügen",
+    "removeTitle": "Abschnitt entfernen",
+    "removeBodyEntries": "„{title}“ und {count, plural, one {den Eintrag} other {die # Einträge}} aus diesem Lebenslauf entfernen?",
+    "removeBody": "„{title}“ aus diesem Lebenslauf entfernen?",
+    "renameHeading": "Abschnitt umbenennen"
+  }
+}

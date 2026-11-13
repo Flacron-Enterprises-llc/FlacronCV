@@ -20,12 +20,15 @@ import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { Modal } from '../../../src/components/ui/Modal';
 import { SkeletonCard } from '../../../src/components/ui/Skeleton';
 import { useArchiveJob, useJobList } from '../../../src/hooks/useJobs';
+import { useT } from '../../../src/i18n';
+import { RTL_FLIP } from '../../../src/i18n/native';
 import { requestFailureMessage } from '../../../src/lib/api-errors';
 import {
   filterAndSortJobs,
+  jobSortLabel,
   type JobSortKey,
-  SORT_OPTIONS,
-  STATUS_LABEL,
+  jobStatusLabel,
+  SORT_KEYS,
   STATUS_ORDER,
   statusCounts,
   visibleJobs,
@@ -54,10 +57,10 @@ function MetaLine({
   accent?: boolean;
 }) {
   return (
-    <View className="flex-row items-center mr-3 mt-1">
+    <View className="flex-row items-center me-3 mt-1">
       <Ionicons name={icon} size={13} color={accent ? colors.brand[600] : colors.stone[400]} />
       <Text
-        className={accent ? 'text-brand-600 text-xs font-medium ml-1' : 'text-stone-500 text-xs ml-1'}
+        className={accent ? 'text-brand-600 text-xs font-medium ms-1' : 'text-stone-500 text-xs ms-1'}
         numberOfLines={1}
       >
         {text}
@@ -67,6 +70,7 @@ function MetaLine({
 }
 
 export default function JobsScreen() {
+  const t = useT('jobs');
   const router = useRouter();
   const { data, isLoading, error, refetch, isRefetching } = useJobList();
   const archiveJob = useArchiveJob();
@@ -84,23 +88,24 @@ export default function JobsScreen() {
     () => filterAndSortJobs(visible, { status: filter, search, sort }),
     [visible, filter, search, sort],
   );
-  const sortLabel = SORT_OPTIONS.find((o) => o.value === sort)?.label ?? '';
+  const sortLabel = jobSortLabel(sort);
 
   const toggleArchive = (job: JobApplication) => {
     const archived = !job.archived;
     archiveJob.mutate(
       { job, archived },
       {
-        onSuccess: () => Alert.alert(archived ? 'Application archived' : 'Application restored'),
+        onSuccess: () => Alert.alert(archived ? t('archive.archived') : t('archive.restored')),
         onError: (err) =>
-          Alert.alert('Could not save', requestFailureMessage(err, "Couldn't save. Please try again.")),
+          Alert.alert(t('form.saveErrorTitle'), requestFailureMessage(err, t('form.archiveError'))),
       },
     );
   };
 
   const renderJob = ({ item }: { item: JobApplication }) => {
     const archivePending = archiveJob.isPending && archiveJob.variables?.job.id === item.id;
-    const statusLabel = STATUS_LABEL[item.status] ?? item.status;
+    const statusLabel = jobStatusLabel(item.status);
+    const names = { position: item.position, company: item.company };
     return (
       <View className="bg-white border border-stone-100 rounded-2xl mb-3 overflow-hidden">
         <TouchableOpacity
@@ -108,11 +113,11 @@ export default function JobsScreen() {
           className="p-4 pb-1"
           activeOpacity={0.8}
           accessibilityRole="button"
-          accessibilityLabel={`${item.position} at ${item.company}, ${statusLabel}`}
-          accessibilityHint="Opens the application to edit it"
+          accessibilityLabel={t('card.a11yLabel', { ...names, status: statusLabel })}
+          accessibilityHint={t('card.a11yHint')}
         >
           <View className="flex-row items-start justify-between">
-            <View className="flex-1 mr-2">
+            <View className="flex-1 me-2">
               <Text className="font-bold text-stone-900" numberOfLines={1}>
                 {item.position}
               </Text>
@@ -128,17 +133,17 @@ export default function JobsScreen() {
               icon="time-outline"
               text={
                 item.appliedDate
-                  ? `Applied ${formatDate(item.appliedDate)}`
-                  : `Updated ${formatDate(item.updatedAt)}`
+                  ? t('card.applied', { date: formatDate(item.appliedDate) })
+                  : t('card.updated', { date: formatDate(item.updatedAt) })
               }
             />
             {item.salaryRange ? <MetaLine icon="cash-outline" text={item.salaryRange} /> : null}
             {item.contactName ? <MetaLine icon="person-outline" text={item.contactName} /> : null}
             {item.interviewDate ? (
-              <MetaLine icon="calendar-outline" text={`Interview ${formatDate(item.interviewDate)}`} accent />
+              <MetaLine icon="calendar-outline" text={t('card.interview', { date: formatDate(item.interviewDate) })} accent />
             ) : null}
             {item.followUpDate ? (
-              <MetaLine icon="notifications-outline" text={`Follow up ${formatDate(item.followUpDate)}`} />
+              <MetaLine icon="notifications-outline" text={t('card.followUp', { date: formatDate(item.followUpDate) })} />
             ) : null}
           </View>
         </TouchableOpacity>
@@ -148,7 +153,7 @@ export default function JobsScreen() {
               onPress={() => void shareInterviewIcs(item)}
               className="w-11 h-11 items-center justify-center"
               accessibilityRole="button"
-              accessibilityLabel={`Add interview for ${item.position} at ${item.company} to calendar`}
+              accessibilityLabel={t('card.addToCalendar', names)}
             >
               <Ionicons name="calendar-outline" size={20} color={colors.stone[500]} />
             </TouchableOpacity>
@@ -160,8 +165,8 @@ export default function JobsScreen() {
             accessibilityRole="button"
             accessibilityLabel={
               item.archived
-                ? `Restore ${item.position} at ${item.company}`
-                : `Archive ${item.position} at ${item.company}`
+                ? t('card.restore', names)
+                : t('card.archive', names)
             }
             accessibilityState={{ disabled: archivePending, busy: archivePending }}
           >
@@ -188,16 +193,16 @@ export default function JobsScreen() {
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
       <View className="px-5 pt-4 pb-3 bg-white border-b border-stone-100">
         <View className="flex-row items-center justify-between mb-3">
-          <View className="flex-row items-center flex-1 mr-3">
+          <View className="flex-row items-center flex-1 me-3">
             <TouchableOpacity
               onPress={() => router.back()}
-              className="mr-3"
+              className="me-3"
               accessibilityRole="button"
-              accessibilityLabel="Go back"
+              accessibilityLabel={t('goBack')}
             >
-              <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+              <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
             </TouchableOpacity>
-            <Text className="text-xl font-black text-stone-900">Job Tracker</Text>
+            <Text className="text-xl font-black text-stone-900">{t('list.title')}</Text>
           </View>
           <TouchableOpacity
             onPress={() => router.push('./new')}
@@ -205,15 +210,15 @@ export default function JobsScreen() {
             accessibilityRole="button"
           >
             <Ionicons name="add" size={18} color={colors.white} />
-            <Text className="text-white font-bold ml-1">Log job</Text>
+            <Text className="text-white font-bold ms-1">{t('list.logJob')}</Text>
           </TouchableOpacity>
         </View>
         <TextInput
           value={search}
           onChangeText={setSearch}
-          placeholder="Search company, role, location or notes…"
+          placeholder={t('list.searchPlaceholder')}
           placeholderTextColor={colors.stone[400]}
-          accessibilityLabel="Search applications"
+          accessibilityLabel={t('list.searchLabel')}
           className="bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-base text-stone-900"
         />
         <View className="flex-row mt-3 gap-2">
@@ -221,11 +226,11 @@ export default function JobsScreen() {
             onPress={() => setSortOpen(true)}
             className="flex-1 flex-row items-center justify-between bg-white border border-stone-200 rounded-xl px-3 min-h-[44px]"
             accessibilityRole="button"
-            accessibilityLabel={`Sort by: ${sortLabel}`}
+            accessibilityLabel={t('list.sortByLabel', { label: sortLabel })}
           >
             <View className="flex-row items-center flex-1">
               <Ionicons name="swap-vertical" size={16} color={colors.stone[500]} />
-              <Text className="text-stone-700 text-sm ml-1.5" numberOfLines={1}>
+              <Text className="text-stone-700 text-sm ms-1.5" numberOfLines={1}>
                 {sortLabel}
               </Text>
             </View>
@@ -241,7 +246,7 @@ export default function JobsScreen() {
               showArchived ? 'bg-brand-600' : 'bg-stone-100',
             ].join(' ')}
             accessibilityRole="switch"
-            accessibilityLabel="Show archived applications"
+            accessibilityLabel={t('list.showArchived')}
             accessibilityState={{ checked: showArchived }}
           >
             <Ionicons
@@ -251,10 +256,10 @@ export default function JobsScreen() {
             />
             <Text
               className={
-                showArchived ? 'text-white text-sm font-semibold ml-1.5' : 'text-stone-700 text-sm ml-1.5'
+                showArchived ? 'text-white text-sm font-semibold ms-1.5' : 'text-stone-700 text-sm ms-1.5'
               }
             >
-              Archived
+              {t('list.archived')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -267,7 +272,7 @@ export default function JobsScreen() {
           {(['all', ...STATUS_ORDER] as const).map((value) => {
             const selected = filter === value;
             const count = value === 'all' ? visible.length : (counts[value] ?? 0);
-            const label = value === 'all' ? 'All' : STATUS_LABEL[value];
+            const label = value === 'all' ? t('list.all') : jobStatusLabel(value);
             return (
               <TouchableOpacity
                 key={value}
@@ -286,8 +291,8 @@ export default function JobsScreen() {
                 <Text
                   className={
                     selected
-                      ? 'text-white text-xs font-semibold ml-1.5'
-                      : 'text-stone-400 text-xs font-semibold ml-1.5'
+                      ? 'text-white text-xs font-semibold ms-1.5'
+                      : 'text-stone-400 text-xs font-semibold ms-1.5'
                   }
                 >
                   {count}
@@ -300,7 +305,7 @@ export default function JobsScreen() {
 
       {error ? (
         <ErrorState
-          message={requestFailureMessage(error, "Couldn't load your applications. Please try again.")}
+          message={requestFailureMessage(error, t('list.loadError'))}
           onRetry={() => void refetch()}
         />
       ) : isLoading ? (
@@ -310,22 +315,22 @@ export default function JobsScreen() {
           {showArchived ? (
             <EmptyState
               icon="archive-outline"
-              title="No archived applications"
-              description="Archive a finished application to keep it out of your active list."
+              title={t('list.emptyArchivedTitle')}
+              description={t('list.emptyArchivedDesc')}
             />
           ) : (
             <EmptyState
               icon="briefcase-outline"
-              title="No applications yet"
-              description="Log a job after you apply — title, company, and status is enough."
-              actionLabel="Log a job"
+              title={t('list.emptyTitle')}
+              description={t('list.emptyDesc')}
+              actionLabel={t('list.emptyAction')}
               onAction={() => router.push('./new')}
             />
           )}
         </ScrollView>
       ) : jobs.length === 0 ? (
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} refreshControl={refresh}>
-          <EmptyState icon="search-outline" title="No matches" description="Try a different status or search." />
+          <EmptyState icon="search-outline" title={t('list.noMatchesTitle')} description={t('list.noMatchesDesc')} />
         </ScrollView>
       ) : (
         <FlatList
@@ -337,14 +342,14 @@ export default function JobsScreen() {
         />
       )}
 
-      <Modal visible={sortOpen} onClose={() => setSortOpen(false)} title="Sort by" size="md">
-        {SORT_OPTIONS.map((opt) => {
-          const selected = opt.value === sort;
+      <Modal visible={sortOpen} onClose={() => setSortOpen(false)} title={t('list.sortTitle')} size="md">
+        {SORT_KEYS.map((key) => {
+          const selected = key === sort;
           return (
             <TouchableOpacity
-              key={opt.value}
+              key={key}
               onPress={() => {
-                setSort(opt.value);
+                setSort(key);
                 setSortOpen(false);
               }}
               className="flex-row items-center justify-between py-3 border-b border-stone-100 min-h-[44px]"
@@ -352,7 +357,7 @@ export default function JobsScreen() {
               accessibilityState={{ checked: selected }}
             >
               <Text className={selected ? 'text-brand-600 font-semibold' : 'text-stone-900'}>
-                {opt.label}
+                {jobSortLabel(key)}
               </Text>
               {selected ? <Ionicons name="checkmark" size={18} color={colors.brand[600]} /> : null}
             </TouchableOpacity>

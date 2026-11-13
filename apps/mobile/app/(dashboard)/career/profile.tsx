@@ -39,6 +39,8 @@ import {
   type PreferencesDraft,
 } from '../../../src/lib/career/profile';
 import { careerErrorMessage, FACT_TYPE_LABEL, factSummary } from '../../../src/lib/career-view';
+import { formatNumber, useT } from '../../../src/i18n';
+import { RTL_FLIP } from '../../../src/i18n/native';
 import { colors } from '../../../src/theme/colors';
 import { fieldErrors } from '../../../../../packages/career-api-client/src/client';
 import type { Fact, ImportAllowance } from '../../../../../packages/career-api-client/src/types';
@@ -51,6 +53,9 @@ import type { Fact, ImportAllowance } from '../../../../../packages/career-api-c
  */
 export default function CareerProfileScreen() {
   const router = useRouter();
+  const t = useT('careerProfile');
+  const tk = useT('career');
+  const tc = useT('common');
   const access = useCareerAccess();
   const facts = useCareerFacts();
   const profile = useCareerProfile();
@@ -68,19 +73,19 @@ export default function CareerProfileScreen() {
 
   const onConfirm = (fact: Fact) => {
     confirm.mutate(fact.id, {
-      onError: (error) => Alert.alert('Not confirmed', careerErrorMessage(error, 'Could not confirm this fact. Nothing was changed.')),
+      onError: (error) => Alert.alert(tk('shared.notConfirmed'), careerErrorMessage(error, t('screen.confirmFailed'))),
     });
   };
 
   const onRemove = (fact: Fact) => {
-    Alert.alert('Remove this fact?', 'Drafts already made keep their text. New drafts will no longer use it.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('screen.removeTitle'), tk('shared.keepsTextNote'), [
+      { text: tc('cancel'), style: 'cancel' },
       {
-        text: 'Remove',
+        text: tc('remove'),
         style: 'destructive',
         onPress: () =>
           remove.mutate(fact.id, {
-            onError: (error) => Alert.alert('Not removed', careerErrorMessage(error, 'Could not remove this fact. Nothing was changed.')),
+            onError: (error) => Alert.alert(tk('shared.notRemoved'), careerErrorMessage(error, t('screen.removeFailed'))),
           }),
       },
     ]);
@@ -94,7 +99,7 @@ export default function CareerProfileScreen() {
 
   const body = () => {
     if (access.data && !access.data.enabled) {
-      return <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" description="Your FlacronCV CVs and letters are unchanged." />;
+      return <EmptyState icon="lock-closed-outline" title={tk('shared.notIncluded')} description={tk('shared.v1Unchanged')} />;
     }
     if (facts.isLoading || access.isLoading) {
       return (
@@ -105,7 +110,7 @@ export default function CareerProfileScreen() {
       );
     }
     if (facts.error || access.error) {
-      return <ErrorState message={careerErrorMessage(facts.error ?? access.error, 'Could not load your career profile.')} onRetry={() => void facts.refetch()} />;
+      return <ErrorState message={careerErrorMessage(facts.error ?? access.error, t('screen.loadFailed'))} onRetry={() => void facts.refetch()} />;
     }
     const items = facts.data?.items ?? [];
     const prefs = preferencesSummary(profile.data?.preferences);
@@ -128,50 +133,50 @@ export default function CareerProfileScreen() {
         ListHeaderComponent={
           <View>
             <Text className="text-stone-500 text-sm mb-1 leading-5">
-              Drafts use only confirmed facts. Confirming a fact means you agree it is accurate and may be used in your career drafts.
+              {t('screen.intro')}
             </Text>
             {items.length > 0 ? <Text className="text-stone-700 text-sm font-semibold mb-4 leading-5">{countsLine(items)}</Text> : <View className="mb-4" />}
 
             <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
               <View className="flex-row items-center mb-1">
                 <Ionicons name="document-text-outline" size={18} color={colors.stone[500]} />
-                <Text className="font-bold text-stone-900 ml-2">Import a resume</Text>
+                <Text className="font-bold text-stone-900 ms-2">{t('import.title')}</Text>
               </View>
               <Text className="text-stone-500 text-sm leading-5">
-                Paste your resume text; the facts it finds arrive as drafts for you to review. This does not use a document credit.
+                {t('import.cardBody')}
               </Text>
               <Text className="text-stone-700 text-sm mt-2">
                 {allowance.data
                   ? allowanceLine(allowance.data)
                   : allowance.isLoading
-                    ? 'Checking today’s imports…'
-                    : careerErrorMessage(allowance.error, 'Could not check today’s imports.')}
+                    ? t('import.checking')
+                    : careerErrorMessage(allowance.error, t('import.checkFailed'))}
               </Text>
               <View className="mt-3 self-start">
                 <Button variant="outline" size="sm" onPress={() => setImportOpen(true)} disabled={!allowance.data || allowance.data.remaining <= 0}>
-                  Paste resume text
+                  {t('import.paste')}
                 </Button>
               </View>
             </View>
 
             <Button fullWidth onPress={() => setChooserOpen(true)} icon={<Ionicons name="add" size={18} color={colors.white} />}>
-              Add a fact
+              {t('screen.addFact')}
             </Button>
             <View className="h-4" />
             {items.length === 0 ? (
-              <EmptyState icon="person-outline" title="No career facts yet" description="Add a fact yourself, or import a resume. An import does not use a document credit." />
+              <EmptyState icon="person-outline" title={t('screen.emptyTitle')} description={t('screen.emptyBody')} />
             ) : null}
           </View>
         }
         ListFooterComponent={
           <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-2">
-            <Text className="font-bold text-stone-900 mb-1">Preferences</Text>
+            <Text className="font-bold text-stone-900 mb-1">{t('screen.prefsTitle')}</Text>
             {profile.isLoading ? (
-              <Text className="text-stone-500 text-sm">Loading…</Text>
+              <Text className="text-stone-500 text-sm">{tc('loading')}</Text>
             ) : profile.error ? (
-              <Text className="text-stone-500 text-sm">{careerErrorMessage(profile.error, 'Could not load your preferences.')}</Text>
+              <Text className="text-stone-500 text-sm">{careerErrorMessage(profile.error, t('screen.prefsLoadFailed'))}</Text>
             ) : prefs.length === 0 ? (
-              <Text className="text-stone-500 text-sm leading-5">No preferences yet. Matching uses your target roles, locations and how you want to work.</Text>
+              <Text className="text-stone-500 text-sm leading-5">{t('screen.prefsEmpty')}</Text>
             ) : (
               prefs.map((line) => (
                 <Text key={line} className="text-stone-700 text-sm leading-5">
@@ -189,7 +194,7 @@ export default function CareerProfileScreen() {
                   setPrefsOpen(true);
                 }}
               >
-                Edit preferences
+                {t('screen.editPrefs')}
               </Button>
             </View>
           </View>
@@ -200,15 +205,15 @@ export default function CareerProfileScreen() {
           const uncertain = Object.keys(item.uncertain ?? {}).length > 0;
           return (
             <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
-              <TouchableOpacity onPress={() => openFact(item.id)} accessibilityRole="button" accessibilityLabel={`Edit ${title}`} accessibilityHint="Opens the fact to edit it">
+              <TouchableOpacity onPress={() => openFact(item.id)} accessibilityRole="button" accessibilityLabel={t('screen.editA11y', { title })} accessibilityHint={t('screen.editHint')}>
                 <View className="flex-row items-center justify-between mb-1">
                   <Text className="text-xs font-semibold text-stone-500 uppercase tracking-wide">{FACT_TYPE_LABEL[item.factType] ?? item.factType}</Text>
-                  <Pill label={confirmed ? 'CONFIRMED' : 'DRAFT'} tone={confirmed ? 'success' : 'warning'} />
+                  <Pill label={confirmed ? tk('shared.confirmedPill') : tk('shared.draftPill')} tone={confirmed ? 'success' : 'warning'} />
                 </View>
                 <Text className="font-bold text-stone-900">{title}</Text>
                 {detail ? <Text className="text-stone-500 text-sm mt-0.5">{detail}</Text> : null}
-                {item.missingFields.length > 0 ? <Text className="text-warning text-xs mt-2">{`Missing: ${item.missingFields.join(', ')}`}</Text> : null}
-                {uncertain ? <Text className="text-warning text-xs mt-1">Some fields need checking.</Text> : null}
+                {item.missingFields.length > 0 ? <Text className="text-warning text-xs mt-2">{t('screen.missing', { fields: item.missingFields.join(', ') })}</Text> : null}
+                {uncertain ? <Text className="text-warning text-xs mt-1">{t('screen.uncertain')}</Text> : null}
               </TouchableOpacity>
               <View className="flex-row mt-3 gap-2">
                 {!confirmed ? (
@@ -217,28 +222,28 @@ export default function CareerProfileScreen() {
                     onPress={() => onConfirm(item)}
                     className={`px-4 min-h-[44px] justify-center rounded-xl ${item.missingFields.length > 0 ? 'bg-stone-100' : 'bg-brand-600'}`}
                     accessibilityRole="button"
-                    accessibilityLabel={`Confirm ${title}`}
+                    accessibilityLabel={t('screen.confirmA11y', { title })}
                     accessibilityState={{ disabled: busy || item.missingFields.length > 0 }}
                   >
-                    <Text className={item.missingFields.length > 0 ? 'text-stone-400 font-semibold' : 'text-white font-semibold'}>Confirm</Text>
+                    <Text className={item.missingFields.length > 0 ? 'text-stone-400 font-semibold' : 'text-white font-semibold'}>{tk('shared.confirm')}</Text>
                   </TouchableOpacity>
                 ) : null}
                 <TouchableOpacity
                   onPress={() => openFact(item.id)}
                   className="px-4 min-h-[44px] justify-center rounded-xl border border-stone-200"
                   accessibilityRole="button"
-                  accessibilityLabel={`Edit ${title}`}
+                  accessibilityLabel={t('screen.editA11y', { title })}
                 >
-                  <Text className="text-stone-700 font-semibold">Edit</Text>
+                  <Text className="text-stone-700 font-semibold">{tk('shared.edit')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   disabled={busy}
                   onPress={() => onRemove(item)}
                   className="px-4 min-h-[44px] justify-center rounded-xl border border-stone-200"
                   accessibilityRole="button"
-                  accessibilityLabel={`Remove ${title}`}
+                  accessibilityLabel={t('screen.removeA11y', { title })}
                 >
-                  <Text className="text-stone-700 font-semibold">Remove</Text>
+                  <Text className="text-stone-700 font-semibold">{tc('remove')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -250,21 +255,21 @@ export default function CareerProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title="Career profile" subtitle="The facts your career drafts are built from" />
+      <CareerHeader title={t('screen.title')} subtitle={t('screen.subtitle')} />
       {body()}
 
-      <Modal visible={chooserOpen} onClose={() => setChooserOpen(false)} title="Add a fact" size="lg">
-        <Text className="text-stone-500 text-sm mb-3">Choose the fact type.</Text>
+      <Modal visible={chooserOpen} onClose={() => setChooserOpen(false)} title={t('screen.addFact')} size="lg">
+        <Text className="text-stone-500 text-sm mb-3">{t('chooser.body')}</Text>
         {FACT_TYPES.map((type) => (
           <TouchableOpacity
             key={type}
             onPress={() => addFact(type)}
             className="flex-row items-center justify-between min-h-[48px] px-4 mb-2 rounded-xl border border-stone-200 bg-white"
             accessibilityRole="button"
-            accessibilityLabel={`Add ${typeLabel(type)}`}
+            accessibilityLabel={t('chooser.addA11y', { type: typeLabel(type) })}
           >
             <Text className="text-stone-800 font-semibold">{typeLabel(type)}</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.stone[400]} />
+            <Ionicons name="chevron-forward" size={18} color={colors.stone[400]} style={RTL_FLIP} />
           </TouchableOpacity>
         ))}
         <View className="h-6" />
@@ -302,6 +307,7 @@ function ImportSheet({
   allowance: ImportAllowance | undefined;
 }) {
   const run = useImportResume();
+  const t = useT('careerProfile');
   const [problem, setProblem] = useState<ImportOutcome | null>(null);
   const [inputError, setInputError] = useState<string | null>(null);
 
@@ -327,14 +333,14 @@ function ImportSheet({
         onClose();
         const missing = missingSectionsLine(result.missing);
         Alert.alert(
-          result.facts.length === 1 ? '1 fact imported' : `${result.facts.length} facts imported`,
-          ['They are drafts: review and confirm each one before your drafts use it.', missing].filter(Boolean).join('\n\n'),
+          t('import.imported', { count: result.facts.length }),
+          [t('import.importedBody'), missing].filter(Boolean).join('\n\n'),
         );
       },
       onError: (error) => {
         const fields = fieldErrors(error);
         if (fields.some((f) => f.field === 'text')) {
-          setInputError(fields[0]?.reason === 'too_long' ? 'That text is too long. Paste at most 100,000 characters.' : 'Paste the text of your resume first.');
+          setInputError(fields[0]?.reason === 'too_long' ? t('import.tooLong') : t('import.empty'));
           return;
         }
         setProblem(importFailure(error, allowance));
@@ -345,8 +351,8 @@ function ImportSheet({
   const shown = allowance && problem?.kind === 'limit' ? { ...allowance, limit: problem.limit, remaining: 0, resetsAt: problem.resetsAt || allowance.resetsAt } : allowance;
   const limited = shown !== undefined && shown.remaining <= 0;
   return (
-    <Modal visible={visible} onClose={close} title="Import a resume" size="full" closeDisabled={run.isPending}>
-      <Text className="text-stone-500 text-sm leading-5 mb-2">This does not use a document credit. Nothing is added until the import finishes.</Text>
+    <Modal visible={visible} onClose={close} title={t('import.title')} size="full" closeDisabled={run.isPending}>
+      <Text className="text-stone-500 text-sm leading-5 mb-2">{t('import.sheetBody')}</Text>
       {shown ? <Text className="text-stone-700 text-sm mb-3">{allowanceLine(shown)}</Text> : null}
       {problem && problem.kind !== 'limit' ? (
         <View className={`${problem.kind === 'unavailable' ? 'bg-warning-bg' : 'bg-error-bg'} rounded-xl p-3 mb-3`} accessibilityRole="alert">
@@ -362,20 +368,20 @@ function ImportSheet({
         }}
         multiline
         textAlignVertical="top"
-        placeholder="Paste the text of your resume here"
+        placeholder={t('import.placeholder')}
         placeholderTextColor={colors.stone[400]}
-        accessibilityLabel="Resume text"
+        accessibilityLabel={t('import.textA11y')}
         editable={!run.isPending}
         className={`bg-white border ${inputError ? 'border-red-400' : 'border-stone-200'} rounded-xl px-3 py-3 text-base text-stone-900 min-h-[220px]`}
       />
       {inputError ? (
         <Text className="mt-1 text-xs text-red-500">{inputError}</Text>
       ) : (
-        <Text className="mt-1 text-xs text-stone-400">{`${text.length.toLocaleString('en-US')} characters`}</Text>
+        <Text className="mt-1 text-xs text-stone-400">{t('import.characters', { count: formatNumber(text.length) })}</Text>
       )}
       <View className="mt-4 mb-8">
         <Button fullWidth onPress={submit} loading={run.isPending} disabled={limited || text.trim().length === 0}>
-          Import
+          {t('import.submit')}
         </Button>
       </View>
     </Modal>
@@ -409,6 +415,8 @@ function PreferencesSheet({
   onClose: () => void;
 }) {
   const save = useSetPreferences();
+  const t = useT('careerProfile');
+  const tk = useT('career');
   const [error, setError] = useState<string | null>(null);
   const set = (patch: Partial<PreferencesDraft>) => {
     onChange({ ...draft, ...patch });
@@ -421,9 +429,9 @@ function PreferencesSheet({
       onClose();
       return;
     }
-    Alert.alert('Discard changes?', 'Your preference changes are not saved.', [
-      { text: 'Keep editing', style: 'cancel' },
-      { text: 'Discard', style: 'destructive', onPress: onClose },
+    Alert.alert(tk('shared.discardChanges'), t('prefs.discardBody'), [
+      { text: tk('shared.keepEditing'), style: 'cancel' },
+      { text: tk('shared.discard'), style: 'destructive', onPress: onClose },
     ]);
   };
 
@@ -438,33 +446,33 @@ function PreferencesSheet({
       onSuccess: () => onClose(),
       onError: (failure) => {
         const fields = fieldErrors(failure);
-        setError(fields.length > 0 ? preferenceErrorMessage(fields[0].field) : careerErrorMessage(failure, 'Your preferences were not saved. Try again.'));
+        setError(fields.length > 0 ? preferenceErrorMessage(fields[0].field) : careerErrorMessage(failure, t('prefs.saveFailed')));
       },
     });
   };
 
   return (
-    <Modal visible={visible} onClose={close} title="Preferences" size="full" closeDisabled={save.isPending}>
-      <Input label="Target roles" hint="Separate items with commas" value={draft.targetRoles} onChangeText={(v) => set({ targetRoles: v })} />
-      <Input label="Locations" hint="Separate items with commas" value={draft.locations} onChangeText={(v) => set({ locations: v })} />
+    <Modal visible={visible} onClose={close} title={t('screen.prefsTitle')} size="full" closeDisabled={save.isPending}>
+      <Input label={t('prefFields.targetRoles')} hint={t('hints.list')} value={draft.targetRoles} onChangeText={(v) => set({ targetRoles: v })} />
+      <Input label={t('prefFields.locations')} hint={t('hints.list')} value={draft.locations} onChangeText={(v) => set({ locations: v })} />
 
-      <Text className="text-sm font-medium text-stone-700 mb-1.5">Work arrangement</Text>
+      <Text className="text-sm font-medium text-stone-700 mb-1.5">{t('prefFields.arrangements')}</Text>
       <View className="flex-row flex-wrap gap-2 mb-4">
         {WORK_ARRANGEMENTS.map((item) => (
           <Chip key={item} label={ARRANGEMENT_LABEL[item]} selected={draft.arrangements.includes(item)} onPress={() => set({ arrangements: toggle(draft.arrangements, item) })} />
         ))}
       </View>
 
-      <Text className="text-sm font-medium text-stone-700 mb-1.5">Schedule</Text>
+      <Text className="text-sm font-medium text-stone-700 mb-1.5">{t('prefFields.schedules')}</Text>
       <View className="flex-row flex-wrap gap-2 mb-4">
         {SCHEDULES.map((item) => (
           <Chip key={item} label={SCHEDULE_LABEL[item]} selected={draft.schedules.includes(item)} onPress={() => set({ schedules: toggle(draft.schedules, item) })} />
         ))}
       </View>
 
-      <Text className="text-sm font-medium text-stone-700 mb-1.5">Seniority</Text>
+      <Text className="text-sm font-medium text-stone-700 mb-1.5">{t('prefFields.seniority')}</Text>
       <View className="flex-row flex-wrap gap-2 mb-4" accessibilityRole="radiogroup">
-        <Chip radio label="No preference" selected={draft.seniority === null} onPress={() => set({ seniority: null })} />
+        <Chip radio label={t('prefs.noPreference')} selected={draft.seniority === null} onPress={() => set({ seniority: null })} />
         {SENIORITIES.map((item) => (
           <Chip radio key={item} label={SENIORITY_LABEL[item]} selected={draft.seniority === item} onPress={() => set({ seniority: item })} />
         ))}
@@ -472,21 +480,21 @@ function PreferencesSheet({
 
       <View className="flex-row gap-3">
         <View className="flex-1">
-          <Input label="Minimum pay" keyboardType="number-pad" value={draft.amount} onChangeText={(v) => set({ amount: v })} />
+          <Input label={t('prefFields.minimumPay')} keyboardType="number-pad" value={draft.amount} onChangeText={(v) => set({ amount: v })} />
         </View>
         <View className="w-28">
-          <Input label="Currency" autoCapitalize="characters" maxLength={3} placeholder="USD" value={draft.currency} onChangeText={(v) => set({ currency: v })} />
+          <Input label={t('prefs.currency')} autoCapitalize="characters" maxLength={3} placeholder="USD" value={draft.currency} onChangeText={(v) => set({ currency: v })} />
         </View>
       </View>
-      <Text className="text-sm font-medium text-stone-700 mb-1.5">Pay period</Text>
+      <Text className="text-sm font-medium text-stone-700 mb-1.5">{t('prefs.period')}</Text>
       <View className="flex-row flex-wrap gap-2 mb-4" accessibilityRole="radiogroup">
         {PAY_PERIODS.map((item) => (
           <Chip radio key={item} label={PERIOD_LABEL[item]} selected={draft.period === item} onPress={() => set({ period: item })} />
         ))}
       </View>
 
-      <Input label="Learning hours a week" keyboardType="number-pad" value={draft.hours} onChangeText={(v) => set({ hours: v })} />
-      <Input label="Career goals" multiline textAlignVertical="top" className="min-h-[90px]" value={draft.goals} onChangeText={(v) => set({ goals: v })} />
+      <Input label={t('prefFields.learningHoursPerWeek')} keyboardType="number-pad" value={draft.hours} onChangeText={(v) => set({ hours: v })} />
+      <Input label={t('prefFields.careerGoals')} multiline textAlignVertical="top" className="min-h-[90px]" value={draft.goals} onChangeText={(v) => set({ goals: v })} />
 
       {error ? (
         <Text className="text-sm text-red-500 mb-3" accessibilityRole="alert">
@@ -495,7 +503,7 @@ function PreferencesSheet({
       ) : null}
       <View className="mb-10">
         <Button fullWidth onPress={submit} loading={save.isPending} disabled={!dirty}>
-          Save preferences
+          {t('prefs.save')}
         </Button>
       </View>
     </Modal>

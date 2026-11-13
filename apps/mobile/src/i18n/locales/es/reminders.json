@@ -1,0 +1,21 @@
+{
+  "push": {
+    "enableFailedTitle": "No se pudieron activar las notificaciones",
+    "expoGoBody": "Las notificaciones remotas no están disponibles en Expo Go. Usa una compilación de desarrollo o de la tienda.",
+    "registerFailedBody": "No pudimos registrar este dispositivo para recibir notificaciones. Revisa tu conexión e inténtalo de nuevo.",
+    "promptTitle": "¿Quieres un recordatorio?",
+    "promptBoth": "Activa las notificaciones para que te recordemos cuando toque este seguimiento o esta entrevista.",
+    "promptInterview": "Activa las notificaciones para que te recordemos cuando toque esta entrevista.",
+    "promptFollowUp": "Activa las notificaciones para que te recordemos cuando toque este seguimiento.",
+    "notNow": "Ahora no",
+    "enable": "Activar"
+  },
+  "job": {
+    "channelName": "Recordatorios",
+    "titleFallback": "Empleo",
+    "followUpToday": "Seguimiento hoy",
+    "followUpTodayWith": "Seguimiento hoy con {company}",
+    "interviewToday": "Entrevista hoy a las {time}",
+    "interviewTodayWith": "Entrevista hoy a las {time} con {company}"
+  }
+}

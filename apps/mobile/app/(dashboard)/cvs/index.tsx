@@ -17,7 +17,8 @@ import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { useCVList, useDeleteCV, useDuplicateCV } from '../../../src/hooks/useCVs';
 import { useCurrentUser } from '../../../src/hooks/useUser';
 import { CV } from '../../../src/types/cv.types';
-import { formatDate } from '../../../src/lib/utils';
+import { toDate } from '../../../src/lib/utils';
+import { formatDate, hasKey, useT } from '../../../src/i18n';
 import { canCreateCV, effectivePlanForCopy } from '../../../src/lib/entitlements';
 import { isLimitRejection, requestFailureMessage } from '../../../src/lib/api-errors';
 import { alertIfUnverifiedEmail } from '../../../src/lib/email-verification';
@@ -34,26 +35,28 @@ export default function CVsScreen() {
   const { data: user } = useCurrentUser();
   const deleteCV = useDeleteCV();
   const duplicateCV = useDuplicateCV();
+  const t = useT('cvs');
+  const tc = useT('common');
 
   const cvs = data?.items ?? [];
   const cvsCreated = user?.usage?.cvsCreated;
 
   const handleDelete = (cv: CV) => {
     Alert.alert(
-      'Delete CV',
-      `Are you sure you want to delete "${cv.title}"? This cannot be undone. Deleting it does not restore a CV creation on your plan.`,
+      t('delete.title'),
+      t('delete.body', { title: cv.title }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: tc('cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: tc('delete'),
           style: 'destructive',
           onPress: () =>
             deleteCV.mutate(cv.id, {
-              onSuccess: () => Alert.alert('Deleted', `"${cv.title}" has been deleted.`),
+              onSuccess: () => Alert.alert(t('delete.done'), t('delete.doneBody', { title: cv.title })),
               onError: (err) =>
                 Alert.alert(
-                  'Could not delete',
-                  requestFailureMessage(err, 'Failed to delete CV. Please try again.'),
+                  t('delete.failedTitle'),
+                  requestFailureMessage(err, t('delete.failed')),
                 ),
             }),
         },
@@ -65,7 +68,7 @@ export default function CVsScreen() {
     const created = user?.usage?.cvsCreated;
     if (typeof created === 'number' && !canCreateCV(user?.subscription, created)) {
       Alert.alert(
-        'CV Limit Reached',
+        t('limitTitle'),
         cvLimitReachedMessage(effectivePlanForCopy(user?.subscription)),
         upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
       );
@@ -73,20 +76,20 @@ export default function CVsScreen() {
     }
 
     duplicateCV.mutate(cv.id, {
-      onSuccess: () => Alert.alert('Duplicated', `"${cv.title} (Copy)" has been created.`),
+      onSuccess: () => Alert.alert(t('duplicate.done'), t('duplicate.doneBody', { title: cv.title })),
       onError: (err) => {
         if (alertIfUnverifiedEmail(err)) return;
         if (isLimitRejection(err)) {
           Alert.alert(
-            'CV Limit Reached',
+            t('limitTitle'),
             cvLimitReachedMessage(effectivePlanForCopy(user?.subscription)),
             upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
           );
           return;
         }
         Alert.alert(
-          'Could not duplicate',
-          requestFailureMessage(err, 'Failed to duplicate CV. Please try again.'),
+          t('duplicate.failedTitle'),
+          requestFailureMessage(err, t('duplicate.failed')),
         );
       },
     });
@@ -100,7 +103,7 @@ export default function CVsScreen() {
     >
       <View className="flex-row items-start justify-between">
         <View className="flex-row items-center flex-1">
-          <View className="w-12 h-12 rounded-xl bg-brand-50 items-center justify-center mr-3">
+          <View className="w-12 h-12 rounded-xl bg-brand-50 items-center justify-center me-3">
             <Ionicons name="document-text" size={22} color={colors.brand[600]} />
           </View>
           <View className="flex-1">
@@ -108,22 +111,22 @@ export default function CVsScreen() {
               {item.title}
             </Text>
             <Text className="text-stone-500 text-xs mt-0.5">
-              {item.personalInfo?.headline ?? 'No headline'}
+              {item.personalInfo?.headline ?? t('list.noHeadline')}
             </Text>
             <View className="flex-row items-center mt-1.5 gap-2">
               <View className={['px-2 py-0.5 rounded-full', item.status === CVStatus.PUBLISHED ? 'bg-success-bg' : 'bg-stone-100'].join(' ')}>
                 <Text className={['text-xs font-medium', item.status === CVStatus.PUBLISHED ? 'text-success' : 'text-stone-500'].join(' ')}>
-                  {item.status}
+                  {hasKey(`cvs.list.status.${item.status}`) ? t(`list.status.${item.status}`) : item.status}
                 </Text>
               </View>
               <Text className="text-xs text-stone-400">
-                Updated {formatDate(item.updatedAt)}
+                {t('list.updated', { date: formatDate(toDate(item.updatedAt)) })}
               </Text>
             </View>
           </View>
         </View>
 
-        <View className="flex-row gap-1 ml-2">
+        <View className="flex-row gap-1 ms-2">
           <TouchableOpacity
             onPress={() => handleDuplicate(item)}
             disabled={duplicateCV.isPending}
@@ -150,7 +153,7 @@ export default function CVsScreen() {
       </View>
 
       <Text className="text-xs text-stone-400 mt-3">
-        v{item.version} · {item.downloadCount} downloads
+        {t('list.meta', { version: item.version, count: item.downloadCount })}
       </Text>
     </TouchableOpacity>
   );
@@ -158,7 +161,7 @@ export default function CVsScreen() {
   if (error) {
     return (
       <ErrorState
-        message={requestFailureMessage(error, 'Failed to load CVs')}
+        message={requestFailureMessage(error, t('list.loadError'))}
         onRetry={refetch}
       />
     );
@@ -169,18 +172,18 @@ export default function CVsScreen() {
       {/* Header */}
       <View className="px-5 pt-4 pb-4 bg-white border-b border-stone-100">
         <View className="flex-row items-center justify-between">
-          <Text className="text-xl font-black text-stone-900">My CVs</Text>
+          <Text className="text-xl font-black text-stone-900">{t('list.title')}</Text>
           <TouchableOpacity
             onPress={() => router.push('/(dashboard)/cvs/new')}
             className="flex-row items-center bg-brand-600 px-4 py-2 rounded-xl"
           >
             <Ionicons name="add" size={18} color={colors.white} />
-            <Text className="text-white font-bold ml-1">New CV</Text>
+            <Text className="text-white font-bold ms-1">{t('list.newCv')}</Text>
           </TouchableOpacity>
         </View>
         {typeof cvsCreated === 'number' && (
           <Text className="text-stone-400 text-sm mt-1">
-            {cvsCreated} CV {cvsCreated === 1 ? 'creation' : 'creations'} on your plan
+            {t('list.createdCount', { count: cvsCreated })}
           </Text>
         )}
       </View>
@@ -198,9 +201,9 @@ export default function CVsScreen() {
         >
           <EmptyState
             icon="document-text-outline"
-            title="No CVs yet"
-            description="Create your first professional CV and land your dream job."
-            actionLabel="Create Your First CV"
+            title={t('list.emptyTitle')}
+            description={t('list.emptyDescription')}
+            actionLabel={t('list.emptyAction')}
             onAction={() => router.push('/(dashboard)/cvs/new')}
           />
         </ScrollView>

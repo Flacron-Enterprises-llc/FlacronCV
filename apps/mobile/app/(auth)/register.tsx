@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   Alert,
@@ -27,9 +27,10 @@ import {
 } from '../../src/components/auth/LegalAcceptanceModal';
 import { Button } from '../../src/components/ui/Button';
 import { Input } from '../../src/components/ui/Input';
+import { useT, type TFunction } from '../../src/i18n';
 import {
-  LEGAL_POST_FAILED_MESSAGE,
-  LEGAL_POST_FAILED_TITLE,
+  legalPostFailedMessage,
+  legalPostFailedTitle,
   recordAcceptanceAfterSignup,
 } from '../../src/lib/legal-acceptance';
 import { getFirebaseAuth } from '../../src/lib/firebase';
@@ -38,21 +39,25 @@ import { colors } from '../../src/theme/colors';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const schema = z
-  .object({
-    displayName: z.string().min(2, 'Name must be at least 2 characters'),
-    email: z.string().email('Please enter a valid email'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
-    confirmPassword: z.string(),
-  })
-  .refine((d) => d.password === d.confirmPassword, {
-    message: "Passwords don't match",
-    path: ['confirmPassword'],
-  });
+/** `t` is the `auth` namespace translator. */
+const makeSchema = (t: TFunction) =>
+  z
+    .object({
+      displayName: z.string().min(2, t('validation.nameMin')),
+      email: z.string().email(t('validation.email')),
+      password: z.string().min(8, t('validation.passwordMin8')),
+      confirmPassword: z.string(),
+    })
+    .refine((d) => d.password === d.confirmPassword, {
+      message: t('validation.passwordsMismatch'),
+      path: ['confirmPassword'],
+    });
 
-type FormData = z.infer<typeof schema>;
+type FormData = z.infer<ReturnType<typeof makeSchema>>;
 
 export default function RegisterScreen() {
+  const t = useT('auth');
+  const schema = useMemo(() => makeSchema(t), [t]);
   const { register, loginWithGoogle, isLoading, error, clearError, setLegalGate } = useAuthStore();
   const googleRef = useRef<GoogleSignInHandle>(null);
   const pendingSignup = useRef<'password' | 'google' | null>(null);
@@ -84,7 +89,7 @@ export default function RegisterScreen() {
       closeLegal();
       return true;
     }
-    Alert.alert(LEGAL_POST_FAILED_TITLE, LEGAL_POST_FAILED_MESSAGE);
+    Alert.alert(legalPostFailedTitle(), legalPostFailedMessage());
     setLegalOpen(true);
     return false;
   };
@@ -102,7 +107,7 @@ export default function RegisterScreen() {
         pendingSignup.current = null;
         pendingForm.current = null;
       } else {
-        Alert.alert(LEGAL_POST_FAILED_TITLE, LEGAL_POST_FAILED_MESSAGE);
+        Alert.alert(legalPostFailedTitle(), legalPostFailedMessage());
         setLegalOpen(true);
       }
     } catch {
@@ -117,7 +122,7 @@ export default function RegisterScreen() {
           pendingSignup.current = null;
           pendingForm.current = null;
         } else {
-          Alert.alert(LEGAL_POST_FAILED_TITLE, LEGAL_POST_FAILED_MESSAGE);
+          Alert.alert(legalPostFailedTitle(), legalPostFailedMessage());
           setLegalOpen(true);
         }
       } else {
@@ -201,8 +206,8 @@ export default function RegisterScreen() {
                 style={{ width: 56, height: 56, borderRadius: 14, marginBottom: 16 }}
                 resizeMode="contain"
               />
-              <Text className="text-xl font-bold text-stone-900">Create account</Text>
-              <Text className="text-stone-500 mt-1">Start building your dream CV today</Text>
+              <Text className="text-xl font-bold text-stone-900">{t('register.title')}</Text>
+              <Text className="text-stone-500 mt-1">{t('register.subtitle')}</Text>
             </View>
           </LinearGradient>
 
@@ -215,7 +220,7 @@ export default function RegisterScreen() {
                   <View style={{ marginBottom: 16 }}>
                     <GoogleSignInButton
                       ref={googleRef}
-                      label="Sign up with Google"
+                      label={t('register.google')}
                       onPressOverride={() => {
                         clearError();
                         pendingSignup.current = 'google';
@@ -227,7 +232,7 @@ export default function RegisterScreen() {
                   </View>
                   <View className="flex-row items-center mb-5">
                     <View className="flex-1 h-px bg-stone-200" />
-                    <Text className="mx-3 text-stone-400 text-sm font-medium">or with email</Text>
+                    <Text className="mx-3 text-stone-400 text-sm font-medium">{t('register.orWithEmail')}</Text>
                     <View className="flex-1 h-px bg-stone-200" />
                   </View>
                 </>
@@ -245,8 +250,8 @@ export default function RegisterScreen() {
                 name="displayName"
                 render={({ field }) => (
                   <Input
-                    label="Full Name"
-                    placeholder="John Doe"
+                    label={t('fields.fullName')}
+                    placeholder={t('fields.fullNamePlaceholder')}
                     autoCapitalize="words"
                     value={field.value}
                     onChangeText={field.onChange}
@@ -260,7 +265,7 @@ export default function RegisterScreen() {
                 name="email"
                 render={({ field }) => (
                   <Input
-                    label="Email Address"
+                    label={t('fields.email')}
                     placeholder="you@example.com"
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -276,8 +281,8 @@ export default function RegisterScreen() {
                 name="password"
                 render={({ field }) => (
                   <Input
-                    label="Password"
-                    placeholder="Min. 8 characters"
+                    label={t('fields.password')}
+                    placeholder={t('fields.passwordPlaceholder')}
                     isPassword
                     value={field.value}
                     onChangeText={field.onChange}
@@ -291,8 +296,8 @@ export default function RegisterScreen() {
                 name="confirmPassword"
                 render={({ field }) => (
                   <Input
-                    label="Confirm Password"
-                    placeholder="Repeat password"
+                    label={t('fields.confirmPassword')}
+                    placeholder={t('fields.confirmPasswordPlaceholder')}
                     isPassword
                     value={field.value}
                     onChangeText={field.onChange}
@@ -310,16 +315,16 @@ export default function RegisterScreen() {
                 loading={isLoading}
                 onPress={handleSubmit(onSubmit)}
               >
-                Create Account
+                {t('register.submit')}
               </Button>
             </View>
 
             {/* Login Link */}
             <View className="flex-row justify-center mt-6 mb-8">
-              <Text className="text-stone-500">Already have an account? </Text>
+              <Text className="text-stone-500">{`${t('register.haveAccount')} `}</Text>
               <Link href="/(auth)/login" asChild>
                 <TouchableOpacity>
-                  <Text className="text-brand-600 font-semibold">Sign in</Text>
+                  <Text className="text-brand-600 font-semibold">{t('register.signIn')}</Text>
                 </TouchableOpacity>
               </Link>
             </View>

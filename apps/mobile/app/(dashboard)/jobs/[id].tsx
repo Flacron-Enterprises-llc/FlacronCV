@@ -6,9 +6,11 @@ import { JobForm } from '../../../src/components/jobs/JobForm';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../src/components/ui/Skeleton';
 import { useJob } from '../../../src/hooks/useJobs';
+import { useT } from '../../../src/i18n';
 import { requestFailureMessage } from '../../../src/lib/api-errors';
 
 export default function EditJobScreen() {
+  const t = useT('jobs');
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: job, isLoading, error, refetch } = useJob(id ?? null);
 
@@ -16,7 +18,7 @@ export default function EditJobScreen() {
     return (
       <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
         <ErrorState
-          message={requestFailureMessage(error, 'Could not load this application. Please try again.')}
+          message={requestFailureMessage(error, t('form.loadError'))}
           onRetry={() => void refetch()}
         />
       </SafeAreaView>

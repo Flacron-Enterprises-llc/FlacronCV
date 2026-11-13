@@ -1,0 +1,112 @@
+{
+  "title": "Archivo de evidencias",
+  "subtitle": "Pruebas que respaldan tus logros profesionales",
+  "newSubtitle": "Añade una prueba que respalde un logro profesional",
+  "gate": {
+    "locked": "Las herramientas de carrera no están incluidas en tu plan",
+    "off": "El archivo de evidencias está desactivado",
+    "offBody": "Tu perfil profesional y tus borradores no han cambiado."
+  },
+  "list": {
+    "add": "Añadir evidencia",
+    "intro": "Proyectos, credenciales y muestras de trabajo que respaldan tus logros profesionales. Las etiquetas solo muestran lo que se ha establecido: una foto de un certificado es una evidencia adjunta, no una verificación del emisor.",
+    "loadError": "No se pudieron cargar tus evidencias. Inténtalo de nuevo.",
+    "emptyTitle": "Aún no hay evidencias",
+    "emptyBody": "Añade proyectos, certificaciones o muestras de trabajo para respaldar los datos de tu perfil.",
+    "itemHint": "Abre el elemento para editarlo o gestionar su archivo",
+    "privateFile": "Archivo privado",
+    "link": "Enlace",
+    "shared": "Compartido en el portafolio",
+    "privateOnly": "Solo privado"
+  },
+  "types": {
+    "project": "Proyecto",
+    "credential": "Credencial",
+    "work_sample": "Muestra de trabajo",
+    "reference": "Referencia",
+    "publication": "Publicación"
+  },
+  "labels": {
+    "evidence_attached": "EVIDENCIA ADJUNTA",
+    "assessment_completed": "EVALUACIÓN COMPLETADA",
+    "issuer_verified": "VERIFICADO POR EL EMISOR",
+    "reference_confirmed": "REFERENCIA CONFIRMADA",
+    "self_reported": "DECLARADO POR TI"
+  },
+  "item": {
+    "newTitle": "Nueva evidencia",
+    "fallbackTitle": "Evidencia",
+    "loadError": "No se pudo cargar esta evidencia.",
+    "checkedBy": "Comprobado por {name}",
+    "labelsNote": "Las etiquetas solo cambian cuando algo se establece, nunca al editar.",
+    "fixedAfterCreation": "(no se puede cambiar tras crearla)",
+    "saveItem": "Guardar elemento",
+    "saveChanges": "Guardar cambios",
+    "saved": "Guardado",
+    "attachAfterSave": "Podrás adjuntar una foto cuando el elemento esté guardado.",
+    "deleteItem": "Eliminar elemento"
+  },
+  "form": {
+    "title": "Título *",
+    "titleA11y": "Título, obligatorio",
+    "titlePlaceholder": "p. ej., AWS Solutions Architect o compilador de código abierto",
+    "type": "Tipo de evidencia",
+    "typeRequired": "Tipo de evidencia *",
+    "description": "Descripción",
+    "descriptionPlaceholder": "Breve resumen del trabajo, la credencial o la referencia",
+    "ownership": "Autoría / contribución personal",
+    "ownershipPlaceholder": "p. ej., Autor único, diseñador principal o contribución del 30 %",
+    "skills": "Habilidades vinculadas (separadas por comas)",
+    "skillsPlaceholder": "p. ej., TypeScript, PostgreSQL, diseño de sistemas",
+    "attachmentUrl": "Enlace del adjunto",
+    "attachmentName": "Nombre del adjunto",
+    "attachmentNamePlaceholder": "credencial.pdf",
+    "portfolioShared": "Incluir en el portafolio público"
+  },
+  "validation": {
+    "titleRequired": "Introduce un título.",
+    "maxChars": "Usa como máximo {max} caracteres.",
+    "webLink": "Introduce un enlace web completo que empiece por https://"
+  },
+  "file": {
+    "title": "Archivo privado",
+    "storedFallback": "Archivo guardado",
+    "open": "Abrir archivo",
+    "replace": "Reemplazar con foto",
+    "remove": "Quitar archivo",
+    "linkNote": "Se abre con un enlace privado que funciona durante cinco minutos.",
+    "hint": "Adjunta una foto PNG o JPEG, como el escaneo de un certificado. Los archivos son privados: solo tú puedes abrirlos, y guardar uno no usa créditos de documentos. Para adjuntar un PDF o un archivo de Word, súbelo en el sitio web de FlacronCV.",
+    "attach": "Adjuntar una foto"
+  },
+  "alerts": {
+    "notSaved": "No guardado",
+    "changesKept": "Tus cambios siguen aquí.",
+    "deleteTitle": "¿Eliminar esta evidencia?",
+    "deleteBody": "Se quita de tu archivo y de cualquier página de portafolio que la muestre. El archivo guardado también se elimina.",
+    "notDeleted": "No eliminado",
+    "deleteFailed": "No se eliminó la evidencia. Inténtalo de nuevo.",
+    "saveFirstTitle": "Guarda primero",
+    "saveFirstBody": "Guarda o deshaz los cambios de este elemento y luego gestiona su archivo.",
+    "photosTitle": "Fotos no disponibles",
+    "photosBody": "Permite el acceso a la fototeca en Ajustes para adjuntar una foto de tu certificado o trabajo.",
+    "notAttached": "Archivo no adjuntado",
+    "openFailedTitle": "No se pudo abrir el archivo",
+    "openFailedBody": "No se pudo abrir el enlace en este dispositivo. Inténtalo de nuevo.",
+    "removeFileTitle": "¿Quitar este archivo?",
+    "removeFileBody": "Se elimina el archivo guardado. La evidencia se mantiene.",
+    "fileNotRemoved": "Archivo no quitado"
+  },
+  "errors": {
+    "tooLarge": "Ese archivo supera el límite de subida (10 MB).",
+    "wrongType": "Elige una foto PNG o JPEG. Sube los PDF y archivos de Word en el sitio web de FlacronCV.",
+    "empty": "Ese archivo está vacío.",
+    "fileType": "Usa un archivo PDF, PNG, JPEG o DOCX. El archivo debe ser realmente de ese tipo.",
+    "storageFull": "El almacenamiento de tu plan está lleno. Quita un archivo para añadir otro.",
+    "storageUnavailable": "El almacenamiento de archivos no está disponible en este momento. No se ha cobrado nada.",
+    "fileFailed": "La acción sobre el archivo no se completó. Inténtalo de nuevo.",
+    "capacity": "Tu plan de carrera no tiene espacio para otra evidencia.",
+    "switchedOff": "El archivo de evidencias está desactivado en este momento.",
+    "validation": "Revisa los campos para corregir errores.",
+    "saveFailed": "No se guardó la evidencia. Inténtalo de nuevo."
+  }
+}

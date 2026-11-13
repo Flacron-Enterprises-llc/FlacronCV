@@ -1,0 +1,145 @@
+{
+  "channelNotConnected": "Noch nicht verbunden: Diese Benachrichtigungen erscheinen nur hier in der App.",
+  "notAScore": "Dies ist keine Einstellungswahrscheinlichkeit.",
+  "reason": {
+    "saved_search": "Diese Anzeige passt zu einer gespeicherten Suche.",
+    "followed_company": "Diese Anzeige stammt von einem Unternehmen, dem du folgst.",
+    "material_update": "Die Anzeige hat sich geändert. Diese Aktualisierung hat eine Benachrichtigung verbraucht."
+  },
+  "fit": {
+    "blocked": "Blockiert",
+    "none": "Keine Überschneidung mit deinen bestätigten Fakten",
+    "partial": "Teilweise Überschneidung mit deinen bestätigten Fakten",
+    "strong": "Starke Überschneidung mit deinen bestätigten Fakten"
+  },
+  "digest": {
+    "weekly": "Wöchentliche E-Mail",
+    "daily": "Tägliche E-Mail",
+    "immediate": "Sobald sie gefunden werden"
+  },
+  "schedule": {
+    "weekly": "Wöchentlich",
+    "daily": "Täglich",
+    "every_6_hours": "Alle 6 Stunden",
+    "hourly": "Stündlich"
+  },
+  "scheduleLower": {
+    "weekly": "wöchentlich",
+    "daily": "täglich",
+    "every_6_hours": "alle 6 Stunden",
+    "hourly": "stündlich"
+  },
+  "quietInvalid": "Ruhezeiten brauchen einen Beginn und ein Ende (HH:MM, UTC), die nicht gleich sein dürfen.",
+  "anySearch": "Alle Stellenangebote",
+  "savedLocation": "Gespeicherter Ort",
+  "locationWithin": "{place} · im Umkreis von {miles} mi",
+  "radius": {
+    "format": "Gib den Radius in ganzen Meilen ein, zum Beispiel 25.",
+    "max": "Der Radius darf höchstens {max} Meilen betragen."
+  },
+  "sourceUrlInvalid": "Gib eine vollständige Webadresse ein, die mit https:// beginnt, oder lass das Feld leer.",
+  "errors": {
+    "settingsPlan": "Diese Auswahl ist nicht in deinem Tarif. Dein Tarif enthält die wöchentliche E-Mail. Es wurde nichts geändert.",
+    "plan": "Dein Karrieretarif enthält das nicht. Es wurde nichts geändert.",
+    "capacitySearch": "Dieser Tarif bietet keinen Platz für eine weitere gespeicherte Suche.",
+    "capacityLocation": "Dieser Tarif hat keinen Platz für einen weiteren Alarmort.",
+    "capacityCompany": "Dieser Tarif hat keinen Platz für ein weiteres gefolgtes Unternehmen.",
+    "scheduleAbove": "Dieser Zeitplan ist häufiger, als dein Tarif erlaubt.",
+    "scheduleAboveLimit": "Dieser Zeitplan ist häufiger, als dein Tarif erlaubt (bis {limit}).",
+    "radiusAbove": "Dieser Radius ist größer, als dein Tarif erlaubt.",
+    "radiusAboveLimit": "Dieser Radius ist größer, als dein Tarif erlaubt (bis {limit} Meilen).",
+    "q": "Gib ein, wonach gesucht werden soll.",
+    "place": "Gib einen Ort ein.",
+    "name": "Gib einen Firmennamen ein.",
+    "digest": "Wähle eine Zusammenfassung.",
+    "check": "Prüfe die Angaben und versuche es erneut. Es wurde nichts geändert."
+  },
+  "fallback": {
+    "settings": "Die Alarmeinstellungen wurden nicht gespeichert. Versuche es erneut.",
+    "search": "Die gespeicherte Suche wurde nicht geändert. Versuche es erneut.",
+    "location": "Der Alarmort wurde nicht geändert. Versuche es erneut.",
+    "company": "Das gefolgte Unternehmen wurde nicht geändert. Versuche es erneut.",
+    "load": "Die Alarme konnten nicht geladen werden. Es wurde nichts geändert. Versuche es erneut."
+  },
+  "screen": {
+    "offTitle": "Alarme sind noch nicht verfügbar",
+    "offBody": "Sie sind in dieser Vorschau ausgeschaltet. Es wurde nichts geändert.",
+    "intro": "Gespeicherte Suchen und gefolgte Unternehmen zeigen hier neue Stellenanzeigen. Ein neuer Alarm verbraucht ein Alarmelement; Suchen nicht.",
+    "yourAlerts": "Deine Alarme",
+    "emptyTitle": "Noch keine Benachrichtigungen",
+    "emptyBody": "Eine gespeicherte Suche zeigt später passende Anzeigen an. Eine Suche jetzt verbraucht keine Benachrichtigung.",
+    "openA11y": "{name}. Stellenanzeige öffnen"
+  },
+  "balance": {
+    "none": "Keine Alarmelemente mehr übrig. Neue Alarme warten, bis sich das Guthaben erneuert. Die Suche funktioniert weiterhin.",
+    "noneRenews": "Keine Alarmelemente mehr übrig. Neue Alarme warten, bis sich das Guthaben am {date} erneuert. Die Suche funktioniert weiterhin.",
+    "left": "{count, plural, one {# Alarmelement} other {# Alarmelemente}} übrig",
+    "renews": "erneuert sich am {date}"
+  },
+  "searches": {
+    "title": "Gespeicherte Suchen",
+    "hint": "Werden nach Zeitplan geprüft. Eine später gefundene Stellenanzeige wird zum Alarm.",
+    "label": "Gespeicherte Suche",
+    "placeholder": "z. B. Datenanalyst",
+    "howOften": "Wie oft prüfen",
+    "planDefault": "Tarif-Standard",
+    "location": "Ort",
+    "anywhere": "Überall",
+    "save": "Suche speichern",
+    "saved": "Suche gespeichert. Sie verbraucht keine Benachrichtigung.",
+    "loadFailed": "Deine gespeicherten Suchen konnten nicht geladen werden. Es wurde nichts geändert.",
+    "empty": "Noch keine gespeicherten Suchen.",
+    "paused": "PAUSIERT",
+    "resume": "Fortsetzen",
+    "pause": "Pausieren",
+    "schedule": "Zeitplan",
+    "deleteA11y": "Gespeicherte Suche {query} löschen",
+    "deleteTitle": "Gespeicherte Suche löschen?",
+    "deleteBody": "„{title}“ zeigt keine neuen Stellenanzeigen mehr. Bereits angezeigte Alarme bleiben.",
+    "scheduleNote": "Dein Tarif legt fest, wie oft Suchen laufen können. Eine schnellere Auswahl, als dein Tarif erlaubt, wird abgelehnt."
+  },
+  "locations": {
+    "title": "Alarmorte",
+    "hint": "Ein Ort und ein Radius, auf die eine gespeicherte Suche beschränkt werden kann.",
+    "place": "Ort",
+    "placePlaceholder": "z. B. Leeds",
+    "radius": "Radius (Meilen)",
+    "add": "Ort hinzufügen",
+    "saved": "Ort gespeichert. Wähle ihn, wenn du eine Suche speicherst.",
+    "loadFailed": "Deine Alarmorte konnten nicht geladen werden. Es wurde nichts geändert.",
+    "empty": "Noch keine Alarmorte.",
+    "editA11y": "Ort {place} bearbeiten",
+    "deleteA11y": "Ort {place} löschen",
+    "deleteTitle": "Alarmort löschen?",
+    "deleteBody": "„{place}“ wird entfernt. Gespeicherte Suchen, die ihn nutzen, sind nicht mehr darauf beschränkt.",
+    "editTitle": "Alarmort bearbeiten",
+    "save": "Ort speichern"
+  },
+  "companies": {
+    "title": "Gefolgte Unternehmen",
+    "hint": "Neue Stellenanzeigen eines Unternehmens, dem du folgst, werden zu Alarmen.",
+    "name": "Name des Unternehmens",
+    "url": "Karriereseite (optional)",
+    "follow": "Unternehmen folgen",
+    "followed": "Unternehmen gefolgt. Neue Stellenanzeigen davon werden zu Alarmen.",
+    "loadFailed": "Deine gefolgten Unternehmen konnten nicht geladen werden. Es wurde nichts geändert.",
+    "empty": "Du folgst noch keinen Unternehmen.",
+    "unfollowA11y": "{name} nicht mehr folgen",
+    "unfollowTitle": "Unternehmen nicht mehr folgen?",
+    "unfollowBody": "Neue Stellenanzeigen von „{name}“ werden nicht mehr zu Alarmen.",
+    "unfollow": "Nicht mehr folgen"
+  },
+  "settings": {
+    "title": "Wie Benachrichtigungen ankommen",
+    "email": "E-Mail",
+    "push": "Push",
+    "telegram": "Telegram",
+    "digest": "Zusammenfassung",
+    "quietStart": "Beginn der Ruhezeit (UTC)",
+    "quietEnd": "Ende der Ruhezeit (UTC)",
+    "quietHint": "24-Stunden-Format HH:MM. Lass beide leer für keine Ruhezeiten.",
+    "paused": "Neue Benachrichtigungen pausieren",
+    "save": "Benachrichtigungseinstellungen speichern",
+    "saved": "Alarmeinstellungen gespeichert."
+  }
+}

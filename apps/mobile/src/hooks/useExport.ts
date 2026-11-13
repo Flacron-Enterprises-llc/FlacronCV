@@ -11,6 +11,7 @@ import { router } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import axios from 'axios';
 import { Alert } from 'react-native';
+import { t } from '../i18n';
 import { api } from '../lib/api';
 import { ExportResponse } from '../types/api.types';
 import { useAuthStore } from '../store/auth-store';
@@ -68,23 +69,23 @@ function isDocxRejection(err: unknown): boolean {
 
 function exportRequestFailureMessage(err: unknown): string {
   if (axios.isAxiosError(err) && !err.response) {
-    return 'No connection. Check your network and try again.';
+    return t('common.noConnection');
   }
   if (isLimitRejection(err)) {
     return exportLimitReachedMessage();
   }
   if (isDocxRejection(err)) {
     return PAID_UPGRADES_ENABLED
-      ? 'DOCX export requires a Pro plan or higher.'
-      : 'DOCX export is not included in your current plan.';
+      ? t('exports.docxRequiresPro')
+      : t('exports.docxNotIncluded');
   }
-  return 'Could not export. Please try again.';
+  return t('exports.failed');
 }
 
 function alertExportRequestError(err: unknown): void {
   if (isLimitRejection(err)) {
     Alert.alert(
-      'Export Limit Reached',
+      t('exports.limitTitle'),
       exportRequestFailureMessage(err),
       upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
     );
@@ -92,13 +93,13 @@ function alertExportRequestError(err: unknown): void {
   }
   if (isDocxRejection(err)) {
     Alert.alert(
-      'Could not export',
+      t('exports.failedTitle'),
       exportRequestFailureMessage(err),
       upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
     );
     return;
   }
-  Alert.alert('Could not export', exportRequestFailureMessage(err));
+  Alert.alert(t('exports.failedTitle'), exportRequestFailureMessage(err));
 }
 
 function normalizeExportPayload(
@@ -147,10 +148,7 @@ async function downloadAndShare(
   const downloadResult = await FileSystem.downloadAsync(url, localUri);
 
   if (downloadResult.status !== 200) {
-    Alert.alert(
-      'Could not export',
-      'The file could not be downloaded. Please try again.',
-    );
+    Alert.alert(t('exports.failedTitle'), t('exports.downloadFailed'));
     return;
   }
 
@@ -160,17 +158,11 @@ async function downloadAndShare(
     return;
   }
 
-  Alert.alert(
-    'Download complete',
-    'Sharing is not available on this device. The file is saved in the app cache.',
-  );
+  Alert.alert(t('exports.downloadCompleteTitle'), t('exports.downloadCompleteBody'));
 }
 
 function alertDownloadError(): void {
-  Alert.alert(
-    'Could not export',
-    'No connection. Check your network and try again.',
-  );
+  Alert.alert(t('exports.failedTitle'), t('common.noConnection'));
 }
 
 export function useExportCV() {
@@ -195,7 +187,7 @@ export function useExportCV() {
         await downloadAndShare(
           data.url,
           data.filename,
-          'Save or Share your CV',
+          t('exports.shareCvTitle'),
           data.filename.endsWith('.pdf')
             ? 'application/pdf'
             : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -237,7 +229,7 @@ export function useExportCoverLetter() {
         await downloadAndShare(
           data.url,
           data.filename,
-          'Save or Share your Cover Letter',
+          t('exports.shareCoverLetterTitle'),
           data.filename.endsWith('.docx')
             ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             : 'application/pdf',

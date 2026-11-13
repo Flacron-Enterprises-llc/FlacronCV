@@ -9,7 +9,9 @@ import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../src/components/ui/Skeleton';
 import { Button } from '../../../src/components/ui/Button';
 import { Input } from '../../../src/components/ui/Input';
-import { CV_TITLE_MAX, CV_TITLE_SUGGESTIONS, validateCvTitle } from '../../../src/lib/cv-editor';
+import { CV_TITLE_MAX, validateCvTitle } from '../../../src/lib/cv-editor';
+import { t as tNow, useT } from '../../../src/i18n';
+import { RTL_FLIP } from '../../../src/i18n/native';
 import { useTemplates } from '../../../src/hooks/useTemplates';
 import { useCreateCV } from '../../../src/hooks/useCVs';
 import { useAuthStore } from '../../../src/store/auth-store';
@@ -30,13 +32,21 @@ import { colors } from '../../../src/theme/colors';
 
 function loadFailureMessage(err: unknown): string {
   if (axios.isAxiosError(err) && !err.response) {
-    return 'No connection. Check your network and try again.';
+    return tNow('common.noConnection');
   }
-  return 'Could not load templates. Please try again.';
+  return tNow('templates.loadError');
 }
 
 export default function NewCVScreen() {
   const router = useRouter();
+  const t = useT('cvs');
+  const titleSuggestions = [
+    t('new.suggestion.professional'),
+    t('new.suggestion.softwareEngineer'),
+    t('new.suggestion.productManager'),
+    t('new.suggestion.marketing'),
+    t('new.suggestion.designer'),
+  ];
   const { template: queryTemplate } = useLocalSearchParams<{ template?: string }>();
   const { user } = useAuthStore();
   const { setCV, setSections } = useCVStore();
@@ -87,15 +97,15 @@ export default function NewCVScreen() {
 
     if (!user?.usage) {
       Alert.alert(
-        'Could not create CV',
-        'Could not load your usage. Please try again.',
+        t('new.createFailedTitle'),
+        t('new.usageFailed'),
       );
       return;
     }
 
     if (!canCreateCV(subscription, user.usage.cvsCreated)) {
       Alert.alert(
-        'CV Limit Reached',
+        t('limitTitle'),
         cvLimitReachedMessage(effectivePlanForCopy(subscription)),
         upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
       );
@@ -147,15 +157,15 @@ export default function NewCVScreen() {
       if (alertIfUnverifiedEmail(err)) return;
       if (isLimitRejection(err)) {
         Alert.alert(
-          'CV Limit Reached',
+          t('limitTitle'),
           cvLimitReachedMessage(effectivePlanForCopy(subscription)),
           upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
         );
         return;
       }
       Alert.alert(
-        'Could not create CV',
-        requestFailureMessage(err, 'Failed to create CV. Please try again.'),
+        t('new.createFailedTitle'),
+        requestFailureMessage(err, t('new.createFailed')),
       );
     }
   };
@@ -165,12 +175,12 @@ export default function NewCVScreen() {
       <SafeAreaView className="flex-1 bg-stone-50">
         <View className="px-5 pt-4 pb-4 bg-white border-b border-stone-100">
           <View className="flex-row items-center">
-            <TouchableOpacity onPress={() => router.back()} className="mr-3">
-              <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+            <TouchableOpacity onPress={() => router.back()} className="me-3" accessibilityRole="button" accessibilityLabel={t('new.back')}>
+              <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
             </TouchableOpacity>
             <View>
-              <Text className="text-xl font-black text-stone-900">Choose Template</Text>
-              <Text className="text-stone-400 text-sm">Pick a design to get started</Text>
+              <Text className="text-xl font-black text-stone-900">{t('new.chooseTitle')}</Text>
+              <Text className="text-stone-400 text-sm">{t('new.chooseSubtitle')}</Text>
             </View>
           </View>
         </View>
@@ -205,7 +215,7 @@ export default function NewCVScreen() {
         {selectedTemplateId && (
           <View className="px-5 py-4 bg-white border-t border-stone-100">
             <Button variant="primary" fullWidth size="lg" onPress={() => setStep('title')}>
-              Continue with this template
+              {t('new.continue')}
             </Button>
           </View>
         )}
@@ -226,16 +236,16 @@ export default function NewCVScreen() {
             className="flex-row items-center mb-6"
             style={{ minHeight: 44 }}
           >
-            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
-            <Text className="text-stone-700 ml-2 font-medium">Back to Templates</Text>
+            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
+            <Text className="text-stone-700 ms-2 font-medium">{t('new.backToTemplates')}</Text>
           </TouchableOpacity>
 
-          <Text className="text-2xl font-black text-stone-900 mb-2">Name your CV</Text>
-          <Text className="text-stone-500 mb-6">Give your CV a descriptive name so it’s easy to find later.</Text>
+          <Text className="text-2xl font-black text-stone-900 mb-2">{t('new.nameTitle')}</Text>
+          <Text className="text-stone-500 mb-6">{t('new.nameBody')}</Text>
 
           <Input
-            label="CV title"
-            placeholder="e.g. Software Engineer CV 2025"
+            label={t('new.titleLabel')}
+            placeholder={t('new.titlePlaceholder')}
             value={cvTitle}
             onChangeText={(text) => {
               setCvTitle(text);
@@ -247,12 +257,12 @@ export default function NewCVScreen() {
             autoFocus
             returnKeyType="done"
             onSubmitEditing={() => void handleCreate()}
-            accessibilityLabel="CV title"
+            accessibilityLabel={t('new.titleLabel')}
           />
 
-          <Text className="text-sm font-medium text-stone-500 mb-2">Suggestions</Text>
+          <Text className="text-sm font-medium text-stone-500 mb-2">{t('new.suggestions')}</Text>
           <View className="flex-row flex-wrap gap-2 mb-2">
-            {CV_TITLE_SUGGESTIONS.map((suggestion) => {
+            {titleSuggestions.map((suggestion) => {
               const active = cvTitle === suggestion;
               return (
                 <TouchableOpacity
@@ -263,7 +273,7 @@ export default function NewCVScreen() {
                   }}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
-                  accessibilityLabel={`Use title ${suggestion}`}
+                  accessibilityLabel={t('new.useSuggestion', { title: suggestion })}
                   className={['px-4 rounded-full border justify-center', active ? 'border-brand-500 bg-brand-50' : 'border-stone-200'].join(' ')}
                   style={{ minHeight: 44 }}
                 >
@@ -283,7 +293,7 @@ export default function NewCVScreen() {
             className="mt-6"
             onPress={handleCreate}
           >
-            Create CV
+            {t('new.create')}
           </Button>
           <View className="h-8" />
         </ScrollView>

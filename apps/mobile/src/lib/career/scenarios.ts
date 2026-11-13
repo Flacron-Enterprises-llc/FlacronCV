@@ -1,7 +1,8 @@
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type { ScenarioOptionView } from '../../../../../packages/career-api-client/src/types';
+import { formatNumber, t } from '../../i18n';
 import { careerErrorMessage } from '../career-view';
-import { PROVIDER_UNAVAILABLE_MESSAGE } from './action-packs';
+import { providerUnavailableMessage } from './action-packs';
 
 /**
  * Pure logic for the mobile scenario planner (tested in scenarios.test.ts).
@@ -61,15 +62,15 @@ export function buildScenarioOptions(
     const destination = route.destination.trim();
     if (name.length === 0 || destination.length === 0) continue;
     if (name.length > 120 || destination.length > 120) {
-      return { ok: false, index, message: `Route ${index + 1}: keep the name and destination under 120 characters.` };
+      return { ok: false, index, message: t('careerPlans.scenarios.validation.tooLong', { number: index + 1 }) };
     }
     const wage = route.wage.trim();
     if (wage !== '' && !/^\d{1,12}$/.test(wage)) {
-      return { ok: false, index, message: `Route ${index + 1}: pay must be a whole number of cents, or blank when unknown.` };
+      return { ok: false, index, message: t('careerPlans.scenarios.validation.payInvalid', { number: index + 1 }) };
     }
     options.push({ name, destination, costCents: 0, months: 12, wageCents: wage === '' ? null : Number(wage), source: 'user' });
   }
-  if (options.length === 0) return { ok: false, index: null, message: 'Give at least one route a name and a destination.' };
+  if (options.length === 0) return { ok: false, index: null, message: t('careerPlans.scenarios.validation.noRoutes') };
   return { ok: true, options: options.slice(0, MAX_ROUTES) };
 }
 
@@ -79,28 +80,28 @@ export function scenarioSignature(options: ScenarioOptionInput[]): string {
 
 /** "Pay unknown" or the amount the user entered, shown in currency units (no currency is assumed). */
 export function payLabel(option: Pick<ScenarioOptionView, 'wageCents'>): string {
-  if (option.wageCents === null) return 'Pay unknown';
+  if (option.wageCents === null) return t('careerPlans.scenarios.payUnknown');
   const units = option.wageCents / 100;
-  return `Pay you entered: ${units.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return t('careerPlans.scenarios.payEntered', { amount: formatNumber(units, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) });
 }
 
 export function scenarioErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     switch (error.code) {
       case 'plan_upgrade_required':
-        return 'Scenario reports start on a higher career plan. Nothing was saved.';
+        return t('careerPlans.scenarios.errors.planUpgrade');
       case 'quota_exhausted':
       case 'capacity_exceeded':
-        return 'Your scenario report allowance is used up. Nothing extra was saved.';
+        return t('careerPlans.scenarios.errors.quota');
       case 'feature_unavailable':
-        return 'The scenario planner is not open yet. No credit was used.';
+        return t('careerPlans.scenarios.errors.featureOff');
       case 'provider_unavailable':
-        return PROVIDER_UNAVAILABLE_MESSAGE;
+        return providerUnavailableMessage();
       case 'validation_error':
-        return 'Each route needs a name and a destination. No credit was used.';
+        return t('careerPlans.scenarios.errors.invalid');
       default:
         break;
     }
   }
-  return careerErrorMessage(error, 'The comparison was not created. No credit was used.');
+  return careerErrorMessage(error, t('careerPlans.scenarios.errors.createFailed'));
 }

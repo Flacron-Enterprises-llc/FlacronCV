@@ -26,6 +26,7 @@ import {
 import { colors } from '../../../theme/colors';
 import { CV, CVSection, CVSectionItem, ExperienceItem, SkillItem } from '../../../types/cv.types';
 import { CVSectionType } from '../../../types/enums';
+import { t as tNow, useT } from '../../../i18n';
 
 interface SummaryStepProps {
   onValidChange: (isValid: boolean) => void;
@@ -103,21 +104,22 @@ function emptyGenerateReason(
   skills: string,
   targetRole: string,
 ): string | null {
-  const missing: string[] = [];
-  if (!targetRole) missing.push('a headline');
-  if (!experience) missing.push('experience');
-  if (!skills) missing.push('skills');
-  if (missing.length === 0) return null;
-  if (missing.length === 1) return `Add ${missing[0]} before generating.`;
-  if (missing.length === 2) {
-    return `Add ${missing[0]} and ${missing[1]} before generating.`;
-  }
-  return 'Add a headline, experience, and skills before generating.';
+  const h = !targetRole;
+  const e = !experience;
+  const s = !skills;
+  if (h && e && s) return tNow('cvEditor.summary.missing.all');
+  if (h && e) return tNow('cvEditor.summary.missing.headlineExperience');
+  if (h && s) return tNow('cvEditor.summary.missing.headlineSkills');
+  if (e && s) return tNow('cvEditor.summary.missing.experienceSkills');
+  if (h) return tNow('cvEditor.summary.missing.headline');
+  if (e) return tNow('cvEditor.summary.missing.experience');
+  if (s) return tNow('cvEditor.summary.missing.skills');
+  return null;
 }
 
 function generateFailureMessage(err: unknown): string {
   if (axios.isAxiosError(err) && !err.response) {
-    return 'No connection. Check your network and try again.';
+    return tNow('common.noConnection');
   }
   const data = axios.isAxiosError(err) ? err.response?.data : undefined;
   const rec = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
@@ -125,12 +127,12 @@ function generateFailureMessage(err: unknown): string {
   const code = typeof rec.code === 'string' ? rec.code : '';
 
   if (code === 'AI_CREDIT_NOT_REFUNDED') {
-    return 'Could not generate. A credit may have been used. Check your balance and try again.';
+    return tNow('cvEditor.summary.creditMaybeUsed');
   }
   if (/credit/i.test(message)) {
     return aiCreditsExhaustedMessage('summaryHttp');
   }
-  return 'Could not generate. Please try again.';
+  return tNow('cvEditor.summary.generateFailed');
 }
 
 export function SummaryStep({ onValidChange }: SummaryStepProps) {
@@ -140,6 +142,7 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
   const queryClient = useQueryClient();
   const [summary, setSummary] = useState(cv?.personalInfo.summary ?? '');
   const generateSummary = useGenerateSummary();
+  const t = useT('cvEditor');
 
   const experience = experienceFromStore(sections);
   const skills = skillsFromStore(sections);
@@ -155,10 +158,7 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
 
   const handleGenerate = async () => {
     if (!user) {
-      Alert.alert(
-        'Account not loaded',
-        'Your account has not loaded yet. Check your connection and try again.',
-      );
+      Alert.alert(t('summary.accountNotLoadedTitle'), t('summary.accountNotLoadedBody'));
       return;
     }
     if (!canUseAI(
@@ -167,7 +167,7 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
       user.usage?.aiCreditsLimit,
     )) {
       Alert.alert(
-        'Credits Exhausted',
+        t('summary.creditsExhaustedTitle'),
         aiCreditsExhaustedMessage('summary'),
         upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
       );
@@ -189,7 +189,7 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
       await queryClient.invalidateQueries({ queryKey: ['user'] });
     } catch (err: unknown) {
       if (alertIfUnverifiedEmail(err)) return;
-      Alert.alert('Could not generate', generateFailureMessage(err));
+      Alert.alert(t('summary.generateFailedTitle'), generateFailureMessage(err));
     }
   };
 
@@ -201,10 +201,8 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
       className="flex-1"
     >
       <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
-        <Text className="text-lg font-semibold text-stone-900 mb-1">Professional Summary</Text>
-        <Text className="text-stone-500 mb-5 text-sm">
-          Write a compelling summary that highlights your expertise and career goals.
-        </Text>
+        <Text className="text-lg font-semibold text-stone-900 mb-1">{t('summary.title')}</Text>
+        <Text className="text-stone-500 mb-5 text-sm">{t('summary.subtitle')}</Text>
 
         <View className="border border-stone-200 rounded-xl overflow-hidden mb-3">
           <TextInput
@@ -212,16 +210,14 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
             onChangeText={handleChange}
             multiline
             numberOfLines={8}
-            placeholder="Results-driven software engineer with 5+ years of experience building scalable web applications..."
+            placeholder={t('summary.placeholder')}
             placeholderTextColor={colors.stone[400]}
             className="p-4 text-base text-stone-900 min-h-48"
             textAlignVertical="top"
           />
           <View className="border-t border-stone-100 px-4 py-2 flex-row justify-between items-center bg-stone-50">
-            <Text className="text-xs text-stone-400">{summary.length} characters</Text>
-            <Text className="text-xs text-stone-400">
-              Recommended: 150-300 characters
-            </Text>
+            <Text className="text-xs text-stone-400">{t('summary.characters', { count: summary.length })}</Text>
+            <Text className="text-xs text-stone-400">{t('summary.recommended')}</Text>
           </View>
         </View>
 
@@ -238,8 +234,8 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
           ) : (
             <Ionicons name="sparkles" size={18} color={colors.brand[600]} />
           )}
-          <Text className="text-brand-600 font-semibold ml-2">
-            {generateSummary.isPending ? 'Generating...' : 'Generate'}
+          <Text className="text-brand-600 font-semibold ms-2">
+            {generateSummary.isPending ? t('summary.generating') : t('summary.generate')}
           </Text>
         </TouchableOpacity>
 
@@ -247,7 +243,9 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
           <Text className="text-xs text-stone-400 text-center mt-2">{emptyReason}</Text>
         ) : user ? (
           <Text className="text-xs text-stone-400 text-center mt-2">
-            {(user.usage?.aiCreditsLimit ?? 0) - (user.usage?.aiCreditsUsed ?? 0)} credits remaining
+            {t('summary.creditsRemaining', {
+              count: (user.usage?.aiCreditsLimit ?? 0) - (user.usage?.aiCreditsUsed ?? 0),
+            })}
           </Text>
         ) : null}
 

@@ -1,0 +1,21 @@
+{
+  "push": {
+    "enableFailedTitle": "تعذّر تفعيل الإشعارات",
+    "expoGoBody": "الإشعارات عن بُعد غير متاحة في Expo Go. استخدم نسخة تطوير أو نسخة المتجر.",
+    "registerFailedBody": "تعذّر تسجيل هذا الجهاز لتلقي الإشعارات. تحقّق من اتصالك وحاول مرة أخرى.",
+    "promptTitle": "هل تريد تذكيرًا؟",
+    "promptBoth": "فعّل الإشعارات لنذكّرك عندما يحين موعد هذه المتابعة أو المقابلة.",
+    "promptInterview": "فعّل الإشعارات لنذكّرك عندما يحين موعد هذه المقابلة.",
+    "promptFollowUp": "فعّل الإشعارات لنذكّرك عندما يحين موعد هذه المتابعة.",
+    "notNow": "ليس الآن",
+    "enable": "تفعيل"
+  },
+  "job": {
+    "channelName": "التذكيرات",
+    "titleFallback": "وظيفة",
+    "followUpToday": "متابعة اليوم",
+    "followUpTodayWith": "متابعة اليوم مع {company}",
+    "interviewToday": "مقابلة اليوم الساعة {time}",
+    "interviewTodayWith": "مقابلة اليوم الساعة {time} مع {company}"
+  }
+}

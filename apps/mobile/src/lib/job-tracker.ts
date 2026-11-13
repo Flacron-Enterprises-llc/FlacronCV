@@ -5,6 +5,7 @@
  *
  * No React Native / Expo imports (unit-tested under node).
  */
+import { t } from '../i18n';
 import { JobStatus } from '../types/enums';
 import type { JobApplication } from '../types/job.types';
 import { buildIcsEvent, icsToDate, safeIcsFilename } from './ics';
@@ -19,25 +20,39 @@ export const STATUS_ORDER: JobStatus[] = [
   JobStatus.ACCEPTED,
 ];
 
-export const STATUS_LABEL: Record<JobStatus, string> = {
-  [JobStatus.WISHLIST]: 'Wishlist',
-  [JobStatus.APPLIED]: 'Applied',
-  [JobStatus.INTERVIEWING]: 'Interviewing',
-  [JobStatus.OFFER]: 'Offer',
-  [JobStatus.REJECTED]: 'Rejected',
-  [JobStatus.ACCEPTED]: 'Accepted',
+/** Website `jobs.status.*` wording, read in the current language at call time. */
+const STATUS_LABEL: Record<JobStatus, () => string> = {
+  [JobStatus.WISHLIST]: () => t('jobs.status.wishlist'),
+  [JobStatus.APPLIED]: () => t('jobs.status.applied'),
+  [JobStatus.INTERVIEWING]: () => t('jobs.status.interviewing'),
+  [JobStatus.OFFER]: () => t('jobs.status.offer'),
+  [JobStatus.REJECTED]: () => t('jobs.status.rejected'),
+  [JobStatus.ACCEPTED]: () => t('jobs.status.accepted'),
 };
+
+/** Status label in the current language; an unknown status is shown as sent. */
+export function jobStatusLabel(status: string): string {
+  const label = STATUS_LABEL[status as JobStatus];
+  return label ? label() : status;
+}
 
 export type JobSortKey = 'updated' | 'applied' | 'company' | 'position' | 'status';
 
-/** Website `jobs.sort.*` wording. */
-export const SORT_OPTIONS: { value: JobSortKey; label: string }[] = [
-  { value: 'updated', label: 'Recently updated' },
-  { value: 'applied', label: 'Date applied' },
-  { value: 'company', label: 'Company (A–Z)' },
-  { value: 'position', label: 'Position (A–Z)' },
-  { value: 'status', label: 'Status' },
-];
+/** Sort menu order. */
+export const SORT_KEYS: JobSortKey[] = ['updated', 'applied', 'company', 'position', 'status'];
+
+/** Website `jobs.sort.*` wording, read in the current language at call time. */
+const SORT_LABEL: Record<JobSortKey, () => string> = {
+  updated: () => t('jobs.sort.updated'),
+  applied: () => t('jobs.sort.applied'),
+  company: () => t('jobs.sort.company'),
+  position: () => t('jobs.sort.position'),
+  status: () => t('jobs.sort.status'),
+};
+
+export function jobSortLabel(key: JobSortKey): string {
+  return SORT_LABEL[key]();
+}
 
 /** Epoch millis for any date-ish value; 0 when absent so it sorts last. */
 function time(value: unknown): number {
@@ -134,7 +149,7 @@ export function duplicateCheckParams(company: string, position: string): { compa
 
 /** Website `duplicate_confirm` wording. */
 export function duplicateConfirmMessage(dup: Pick<JobApplication, 'company' | 'position'>): string {
-  return `You already track an application for ${dup.position} at ${dup.company}. Add another one anyway?`;
+  return t('jobs.form.duplicateBody', { position: dup.position, company: dup.company });
 }
 
 /** Filename-safe fragment of a company or position name. */
@@ -152,8 +167,10 @@ export function interviewCalendarFile(
   now?: Date,
 ): { filename: string; content: string } | null {
   const content = buildIcsEvent({
-    title: `Interview: ${job.position} at ${job.company}`,
-    description: [`Interview for ${job.position} at ${job.company}.`, job.jobUrl].filter(Boolean).join('\n'),
+    title: t('jobs.calendar.summary', { position: job.position, company: job.company }),
+    description: [t('jobs.calendar.description', { position: job.position, company: job.company }), job.jobUrl]
+      .filter(Boolean)
+      .join('\n'),
     location: job.location,
     start: job.interviewDate,
     url: job.jobUrl,

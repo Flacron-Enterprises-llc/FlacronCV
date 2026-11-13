@@ -8,6 +8,7 @@ import { Button } from '../../../../src/components/ui/Button';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { useCreateWriting } from '../../../../src/hooks/career/documents';
 import { useCareerAccess, useCareerOpportunities, useCareerWritingList } from '../../../../src/hooks/useCareer';
+import { useT } from '../../../../src/i18n';
 import { creditLine, LETTER_TEMPLATE_OPTIONS, paidFailure, WRITING_TYPE_OPTIONS } from '../../../../src/lib/career/documents';
 
 /**
@@ -19,6 +20,8 @@ import { creditLine, LETTER_TEMPLATE_OPTIONS, paidFailure, WRITING_TYPE_OPTIONS 
  */
 export default function NewCareerWritingScreen() {
   const router = useRouter();
+  const t = useT('careerDocuments');
+  const tk = useT('career');
   const access = useCareerAccess();
   const opportunities = useCareerOpportunities();
   const writing = useCareerWritingList();
@@ -38,11 +41,11 @@ export default function NewCareerWritingScreen() {
   const onWrite = () => {
     if (create.isPending) return;
     Alert.alert(
-      'This uses 1 document credit',
-      `${credits ? `${credits} ` : ''}The draft uses your confirmed facts only. It does not add employers, dates or numbers.`,
+      tk('shared.usesOneCredit'),
+      [credits, t('newWriting.confirmBody')].filter(Boolean).join(' '),
       [
-        { text: 'Leave', style: 'cancel' },
-        { text: 'Write with 1 credit', onPress: run },
+        { text: tk('shared.leave'), style: 'cancel' },
+        { text: t('newWriting.writeWithCredit'), onPress: run },
       ],
     );
   };
@@ -50,8 +53,8 @@ export default function NewCareerWritingScreen() {
   if (access.data && !access.data.enabled) {
     return (
       <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-        <CareerHeader title="Write a letter or text" />
-        <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" description="Your FlacronCV CVs and cover letters are in their own tabs." />
+        <CareerHeader title={tk('shared.writeLetterOrText')} />
+        <EmptyState icon="lock-closed-outline" title={tk('shared.notIncluded')} description={tk('shared.v1InTabs')} />
       </SafeAreaView>
     );
   }
@@ -61,10 +64,10 @@ export default function NewCareerWritingScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title="Write a letter or text" subtitle="From your confirmed facts. This stays a draft; FlacronCV does not send it." />
+      <CareerHeader title={tk('shared.writeLetterOrText')} subtitle={t('newWriting.subtitle')} />
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
         <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
-          <Text className="text-sm font-semibold text-stone-700 mb-2">What to write</Text>
+          <Text className="text-sm font-semibold text-stone-700 mb-2">{t('newWriting.whatToWrite')}</Text>
           <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup">
             {WRITING_TYPE_OPTIONS.map((option) => (
               <Choice key={option.id} label={option.label} selected={type === option.id} onPress={() => setType(option.id)} />
@@ -73,8 +76,8 @@ export default function NewCareerWritingScreen() {
         </View>
         {type === 'cover_letter' ? (
           <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
-            <Text className="text-sm font-semibold text-stone-700 mb-1">Cover-letter layout</Text>
-            <Text className="text-stone-500 text-xs mb-3 leading-4">The layout is saved with the draft. Changing it later keeps the text.</Text>
+            <Text className="text-sm font-semibold text-stone-700 mb-1">{t('newWriting.letterLayout')}</Text>
+            <Text className="text-stone-500 text-xs mb-3 leading-4">{t('newWriting.letterLayoutNote')}</Text>
             <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup">
               {LETTER_TEMPLATE_OPTIONS.map((option) => (
                 <Choice key={option.id} label={option.name} accent={option.accent} selected={templateId === option.id} onPress={() => setTemplateId(option.id)} />
@@ -83,10 +86,10 @@ export default function NewCareerWritingScreen() {
           </View>
         ) : null}
         <View className="bg-white border border-stone-100 rounded-2xl p-4">
-          <Text className="text-sm font-semibold text-stone-700 mb-1">For a saved opportunity (optional)</Text>
-          <Text className="text-stone-500 text-xs mb-3 leading-4">Pick one of your saved opportunities, or none for a general draft.</Text>
+          <Text className="text-sm font-semibold text-stone-700 mb-1">{t('newWriting.forOpportunity')}</Text>
+          <Text className="text-stone-500 text-xs mb-3 leading-4">{t('newWriting.pickOpportunity')}</Text>
           <View className="gap-2" accessibilityRole="radiogroup">
-            <Choice label="None (general draft)" selected={opportunityId === null} onPress={() => setOpportunityId(null)} />
+            <Choice label={t('newWriting.none')} selected={opportunityId === null} onPress={() => setOpportunityId(null)} />
             {listings.map((item) => (
               <Choice
                 key={item.id}
@@ -96,8 +99,8 @@ export default function NewCareerWritingScreen() {
               />
             ))}
           </View>
-          {opportunities.isLoading ? <Text className="text-stone-500 text-xs mt-2">Loading your opportunities…</Text> : null}
-          {opportunities.error ? <Text className="text-stone-500 text-xs mt-2">Your opportunities could not be loaded; you can still write a general draft.</Text> : null}
+          {opportunities.isLoading ? <Text className="text-stone-500 text-xs mt-2">{t('newWriting.loadingOpps')}</Text> : null}
+          {opportunities.error ? <Text className="text-stone-500 text-xs mt-2">{t('newWriting.oppsFailed')}</Text> : null}
         </View>
         {credits ? <Text className="text-stone-500 text-xs mt-4 leading-4">{credits}</Text> : null}
         {failure ? (
@@ -107,9 +110,9 @@ export default function NewCareerWritingScreen() {
           </View>
         ) : null}
       </ScrollView>
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-stone-100 px-5 py-3">
+      <View className="absolute bottom-0 start-0 end-0 bg-white border-t border-stone-100 px-5 py-3">
         <Button fullWidth onPress={onWrite} loading={create.isPending}>
-          Write from confirmed facts
+          {t('newWriting.writeFromFacts')}
         </Button>
       </View>
     </SafeAreaView>
@@ -126,7 +129,7 @@ function Choice({ label, selected, accent, onPress }: { label: string; selected:
       className={`min-h-[44px] px-3 py-2 rounded-xl border flex-row items-center ${selected ? 'border-brand-500 bg-brand-50' : 'border-stone-200 bg-white'}`}
       activeOpacity={0.8}
     >
-      {accent ? <View style={{ backgroundColor: accent }} className="w-3 h-3 rounded-full mr-2" /> : null}
+      {accent ? <View style={{ backgroundColor: accent }} className="w-3 h-3 rounded-full me-2" /> : null}
       <Text className={`text-sm flex-shrink ${selected ? 'font-semibold text-brand-700' : 'text-stone-700'}`}>{label}</Text>
     </TouchableOpacity>
   );

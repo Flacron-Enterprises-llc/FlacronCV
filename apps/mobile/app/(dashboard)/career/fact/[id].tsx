@@ -31,6 +31,7 @@ import {
   type FactType,
 } from '../../../../src/lib/career/profile';
 import { careerErrorMessage, formatDay } from '../../../../src/lib/career-view';
+import { hasKey, useT } from '../../../../src/i18n';
 import { colors } from '../../../../src/theme/colors';
 import { fieldErrors } from '../../../../../../packages/career-api-client/src/client';
 import type { Fact } from '../../../../../../packages/career-api-client/src/types';
@@ -45,6 +46,9 @@ const EMPTY: Record<string, never> = {};
 export default function CareerFactScreen() {
   const params = useLocalSearchParams<{ id: string; type?: string }>();
   const router = useRouter();
+  const t = useT('careerProfile');
+  const tk = useT('career');
+  const tc = useT('common');
   const isNew = params.id === 'new';
   const access = useCareerAccess();
   const facts = useCareerFacts();
@@ -90,14 +94,14 @@ export default function CareerFactScreen() {
       setErrors(fieldErrorMap(fields));
       return;
     }
-    Alert.alert('Not saved', careerErrorMessage(error, fallback));
+    Alert.alert(tk('shared.notSaved'), careerErrorMessage(error, fallback));
   };
 
   const submitNew = (confirm: boolean) => {
     if (!type) return;
     const result = newFactValue(type, current, confirm ? 'confirmed' : 'draft');
     if (!result.ok) {
-      if ('empty' in result) Alert.alert('Nothing to save', 'Fill in at least one field first.');
+      if ('empty' in result) Alert.alert(t('fact.nothingToSave'), t('fact.fillOne'));
       else setErrors(fieldErrorMap(result.errors));
       return;
     }
@@ -109,7 +113,7 @@ export default function CareerFactScreen() {
           setDraft(null);
           setLeave(true);
         },
-        onError: (error) => showServerError(error, 'The fact was not added. Your entries are still here; try again.'),
+        onError: (error) => showServerError(error, t('fact.addFailed')),
       },
     );
   };
@@ -130,16 +134,16 @@ export default function CareerFactScreen() {
       {
         onSuccess: () => setDraft(null),
         onError: (error) =>
-          showServerError(error, confirm ? 'Could not confirm this fact. Your entries are still here.' : 'Your changes were not saved. They are still here; try again.'),
+          showServerError(error, confirm ? t('fact.confirmFailed') : tk('shared.changesNotSaved')),
       },
     );
   };
 
   const onDelete = (target: Fact) => {
-    Alert.alert('Delete this fact?', 'Drafts already made keep their text. New drafts will no longer use it.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('fact.deleteTitle'), tk('shared.keepsTextNote'), [
+      { text: tc('cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: tc('delete'),
         style: 'destructive',
         onPress: () =>
           remove.mutate(target.id, {
@@ -147,7 +151,7 @@ export default function CareerFactScreen() {
               setDraft(null);
               setLeave(true);
             },
-            onError: (error) => Alert.alert('Not deleted', careerErrorMessage(error, 'Could not delete this fact. Nothing was changed.')),
+            onError: (error) => Alert.alert(tk('shared.notDeleted'), careerErrorMessage(error, t('fact.deleteFailed'))),
           }),
       },
     ]);
@@ -157,7 +161,7 @@ export default function CareerFactScreen() {
 
   let content: React.ReactNode;
   if (access.data && !access.data.enabled) {
-    content = <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" description="Your FlacronCV CVs and letters are unchanged." />;
+    content = <EmptyState icon="lock-closed-outline" title={tk('shared.notIncluded')} description={tk('shared.v1Unchanged')} />;
   } else if (leave) {
     content = (
       <View className="p-5">
@@ -172,9 +176,9 @@ export default function CareerFactScreen() {
       </View>
     );
   } else if (access.error || facts.error) {
-    content = <ErrorState message={careerErrorMessage(facts.error ?? access.error, 'Could not load your career profile.')} onRetry={() => void facts.refetch()} />;
+    content = <ErrorState message={careerErrorMessage(facts.error ?? access.error, t('screen.loadFailed'))} onRetry={() => void facts.refetch()} />;
   } else if (!type || (!isNew && !fact)) {
-    content = <ErrorState message="This fact no longer exists." onRetry={() => void facts.refetch()} />;
+    content = <ErrorState message={t('fact.gone')} onRetry={() => void facts.refetch()} />;
   } else {
     const extra = unplacedErrors(type, errors);
     const missing = fact ? missingFieldsLine(fact.missingFields) : null;
@@ -182,12 +186,12 @@ export default function CareerFactScreen() {
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 140 }} keyboardShouldPersistTaps="handled">
         {fact ? (
           <View className="flex-row flex-wrap items-center gap-2 mb-3">
-            <Pill label={fact.confirmation === 'confirmed' ? 'CONFIRMED' : 'DRAFT'} tone={fact.confirmation === 'confirmed' ? 'success' : 'warning'} />
+            <Pill label={fact.confirmation === 'confirmed' ? tk('shared.confirmedPill') : tk('shared.draftPill')} tone={fact.confirmation === 'confirmed' ? 'success' : 'warning'} />
             <Text className="text-xs font-semibold text-stone-500">{SOURCE_LABEL[fact.source] ?? fact.source}</Text>
           </View>
         ) : (
           <Text className="text-stone-500 text-sm mb-4 leading-5">
-            Save keeps this as a draft. Save and confirm also confirms it: you agree it is accurate and may be used in your career drafts.
+            {t('fact.newIntro')}
           </Text>
         )}
         {missing ? <Text className="text-warning text-sm mb-3">{missing}</Text> : null}
@@ -200,7 +204,7 @@ export default function CareerFactScreen() {
             if (spec.kind === 'boolean') {
               control = (
                 <View className="flex-row items-center justify-between min-h-[44px] mb-4">
-                  <Text className="text-sm font-medium text-stone-700 flex-1 mr-3">{label}</Text>
+                  <Text className="text-sm font-medium text-stone-700 flex-1 me-3">{label}</Text>
                   <Switch
                     value={value === 'true'}
                     onValueChange={(on) => setField(field, on ? 'true' : '')}
@@ -211,7 +215,7 @@ export default function CareerFactScreen() {
               );
             } else if (spec.kind === 'ref') {
               const options: Array<{ id: string; title: string }> = [
-                { id: '', title: 'No linked role' },
+                { id: '', title: t('fact.noLinkedRole') },
                 ...experiences.map((role) => ({ id: role.id, title: factTitle('experience', role.value) })),
               ];
               control = (
@@ -227,7 +231,7 @@ export default function CareerFactScreen() {
                         accessibilityRole="radio"
                         accessibilityState={{ selected, checked: selected }}
                       >
-                        <View className={`w-4 h-4 rounded-full border mr-3 ${selected ? 'border-brand-600 bg-brand-600' : 'border-stone-300'}`} />
+                        <View className={`w-4 h-4 rounded-full border me-3 ${selected ? 'border-brand-600 bg-brand-600' : 'border-stone-300'}`} />
                         <Text className="text-stone-800 flex-1" numberOfLines={2}>
                           {option.title}
                         </Text>
@@ -271,12 +275,12 @@ export default function CareerFactScreen() {
             <View className="flex-row gap-3">
               <View className="flex-1">
                 <Button variant="outline" fullWidth onPress={() => setShowHistory((open) => !open)} accessibilityState={{ expanded: showHistory }}>
-                  {showHistory ? 'Hide history' : 'History'}
+                  {showHistory ? t('fact.hideHistory') : t('fact.history')}
                 </Button>
               </View>
               <View className="flex-1">
                 <Button variant="outline" fullWidth onPress={() => onDelete(fact)} disabled={pending} loading={remove.isPending}>
-                  Delete
+                  {tc('delete')}
                 </Button>
               </View>
             </View>
@@ -285,9 +289,9 @@ export default function CareerFactScreen() {
                 {revisions.isLoading ? (
                   <ActivityIndicator color={colors.brand[600]} />
                 ) : revisions.error ? (
-                  <Text className="text-stone-500 text-sm">{careerErrorMessage(revisions.error, 'Could not load the history.')}</Text>
+                  <Text className="text-stone-500 text-sm">{careerErrorMessage(revisions.error, t('fact.historyFailed'))}</Text>
                 ) : (revisions.data ?? []).length === 0 ? (
-                  <Text className="text-stone-500 text-sm">No earlier versions.</Text>
+                  <Text className="text-stone-500 text-sm">{t('fact.noEarlier')}</Text>
                 ) : (
                   (revisions.data ?? []).map((revision) => (
                     <View key={revision.revision} className="py-2 border-b border-stone-100">
@@ -306,15 +310,22 @@ export default function CareerFactScreen() {
 
   const ready = Boolean(type) && (isNew || Boolean(fact)) && !leave && access.data?.enabled === true;
   const canConfirm = isNew || fact?.confirmation === 'draft';
-  const title = isNew ? `New ${typeLabel(type ?? 'experience').toLowerCase()}` : fact ? factTitle(fact.factType, fact.value) : 'Career fact';
+  const newKey = `careerProfile.fact.newTitle.${type ?? 'experience'}`;
+  const title = isNew
+    ? hasKey(newKey)
+      ? t(`fact.newTitle.${type ?? 'experience'}`)
+      : typeLabel(type ?? 'experience')
+    : fact
+      ? factTitle(fact.factType, fact.value)
+      : t('fact.fallbackTitle');
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title={title} subtitle={dirty ? 'Unsaved changes' : fact ? typeLabel(fact.factType) : undefined} />
+      <CareerHeader title={title} subtitle={dirty ? tk('shared.unsavedChanges') : fact ? typeLabel(fact.factType) : undefined} />
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {content}
         {ready ? (
-          <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-stone-100 px-5 py-3 flex-row gap-3">
+          <View className="absolute bottom-0 start-0 end-0 bg-white border-t border-stone-100 px-5 py-3 flex-row gap-3">
             <View className="flex-1">
               <Button
                 variant="outline"
@@ -323,13 +334,13 @@ export default function CareerFactScreen() {
                 loading={(create.isPending || save.isPending) && !canConfirm}
                 onPress={() => (fact ? submitExisting(fact, false) : submitNew(false))}
               >
-                Save
+                {tc('save')}
               </Button>
             </View>
             {canConfirm ? (
               <View className="flex-1">
                 <Button fullWidth disabled={pending} loading={create.isPending || save.isPending} onPress={() => (fact ? submitExisting(fact, true) : submitNew(true))}>
-                  {dirty || isNew ? 'Save and confirm' : 'Confirm'}
+                  {dirty || isNew ? t('fact.saveAndConfirm') : tk('shared.confirm')}
                 </Button>
               </View>
             ) : null}

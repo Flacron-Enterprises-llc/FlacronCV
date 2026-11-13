@@ -1,0 +1,242 @@
+{
+  "header": {
+    "goBack": "Revenir en arrière"
+  },
+  "addon": {
+    "heading": "Module complémentaire Outils de carrière",
+    "note": "Indépendant de votre forfait FlacronCV ci-dessus, qu’il ne modifie jamais."
+  },
+  "overview": {
+    "title": "Outils de carrière",
+    "subtitle": "Module facultatif de votre forfait FlacronCV",
+    "credits": "Crédits carrière",
+    "creditsLeft": "sur {granted} crédits de document restants",
+    "packs": "{count} en plus grâce aux packs",
+    "renews": "L’allocation se renouvelle le {date}.",
+    "creditsError": "Impossible de charger vos crédits. Tirez pour actualiser.",
+    "creditsNote": "Les crédits carrière sont distincts de vos crédits IA FlacronCV et ne servent qu’aux outils de carrière. Modifier, enregistrer et exporter un brouillon n’en utilise aucun.",
+    "whatYouCanDo": "Ce que vous pouvez faire"
+  },
+  "access": {
+    "off": {
+      "title": "Les outils de carrière ne sont pas disponibles dans cette application",
+      "body": "Votre forfait FlacronCV, vos CV, lettres de motivation et le suivi des candidatures fonctionnent comme d’habitude."
+    },
+    "loading": {
+      "title": "Vérification de vos outils de carrière…"
+    },
+    "offline": {
+      "title": "Vous êtes hors ligne",
+      "body": "Les outils de carrière nécessitent une connexion. Rien n’a été modifié. Réessayez une fois de nouveau en ligne."
+    },
+    "unavailable": {
+      "title": "Les outils de carrière sont indisponibles pour le moment",
+      "body": "Le service carrière n’a pas répondu. Rien n’a été modifié. Veuillez réessayer plus tard."
+    },
+    "inactive": {
+      "title": "Les outils de carrière sont indisponibles pour ce compte",
+      "body": "Votre compte FlacronCV n’est pas actif."
+    },
+    "notIncluded": {
+      "title": "Les outils de carrière ne sont pas inclus dans votre forfait",
+      "body": "Les outils de carrière sont un module facultatif avec leurs propres crédits. Votre forfait FlacronCV, ses avantages et ses crédits IA restent exactement tels quels."
+    },
+    "localFixture": "Droit d’accès de test local pour cette démo. Ce n’est pas un achat et rien n’a été facturé.",
+    "purchase": "Un module distinct à côté de votre forfait FlacronCV. L’annuler ne met fin qu’aux outils de carrière ; votre forfait FlacronCV continue.",
+    "pastDue": "Le dernier paiement du module a échoué. L’accès continue jusqu’à la fin de la période payée.",
+    "endsOn": "Prend fin le {date}.",
+    "renewsOn": "Se renouvelle le {date}.",
+    "included": "Inclus dans votre forfait FlacronCV.",
+    "activeTitle": "Carrière {plan}",
+    "badge": {
+      "test": "ACCÈS DE TEST",
+      "ending": "SE TERMINE",
+      "active": "ACTIF"
+    }
+  },
+  "areas": {
+    "profile": {
+      "title": "Profil de carrière",
+      "body": "Ajoutez, modifiez, confirmez ou supprimez les informations à partir desquelles vos brouillons sont créés ; importez un CV et définissez vos préférences."
+    },
+    "documents": {
+      "title": "Brouillons carrière",
+      "body": "Créez, générez, adaptez, modifiez et enregistrez des CV et lettres carrière ; changez de mise en page, vérifiez la lisibilité, exportez et partagez."
+    },
+    "opportunities": {
+      "title": "Recherche d'offres",
+      "body": "Cherchez dans vos annonces, collez une offre d’emploi, vérifiez-la et comparez-la à votre CV carrière. Aucun flux d’offres en direct n’est connecté."
+    },
+    "map": {
+      "title": "Session carte",
+      "body": "Les annonces sous forme de liste avec des emplacements approximatifs. Aucun fond de carte n’est connecté."
+    },
+    "alerts": {
+      "title": "Alertes",
+      "body": "Recherches enregistrées, lieux, entreprises suivies et les annonces qu’elles font remonter."
+    },
+    "tracker": {
+      "title": "Suivi des candidatures",
+      "body": "Vos candidatures restent dans le suivi des candidatures FlacronCV."
+    },
+    "outcomes": {
+      "title": "Résultats des candidatures",
+      "body": "Chiffres observés dans votre suivi des candidatures. Ce n’est pas une probabilité d’embauche."
+    },
+    "evidence": {
+      "title": "Coffre de preuves",
+      "body": "Ajoutez, modifiez et supprimez des preuves de votre travail ; joignez la photo d’un certificat."
+    },
+    "portfolios": {
+      "title": "Pages de portfolio",
+      "body": "Choisissez les travaux à montrer, publiez ou créez un lien privé, partagez-le et affichez son code QR."
+    },
+    "interviews": {
+      "title": "Entraînement à l'entretien",
+      "body": "Entraînement à l’entretien par écrit, vos sessions et vos récits STAR."
+    },
+    "voice": {
+      "title": "Entraînement vocal",
+      "body": "Entraînez-vous à voix haute et tapez ce que vous avez dit. L’application n’enregistre pas d’audio."
+    },
+    "actionPacks": {
+      "title": "Packs d’action",
+      "body": "Transformez une opportunité enregistrée en un dossier de candidature sur mesure avec une liste de contrôle."
+    },
+    "learning": {
+      "title": "Plans d’apprentissage",
+      "body": "Lacunes de compétences, étapes et un brief de projet pour un poste cible."
+    },
+    "maintenance": {
+      "title": "Suivi de carrière",
+      "body": "Notez vos réussites et objectifs de promotion ; voyez les certifications qui expirent dans les 90 jours."
+    },
+    "scenarios": {
+      "title": "Planificateur de scénarios",
+      "body": "Comparez jusqu'à trois parcours. Un salaire manquant reste inconnu."
+    },
+    "relocation": {
+      "title": "Mobilité et modes de carrière",
+      "body": "Lieux cibles, projets de mobilité et l’angle spécialisé de vos brouillons."
+    },
+    "recruiting": {
+      "title": "Visibilité recruteurs",
+      "body": "Choisissez si les employeurs peuvent voir que vous avez accepté. Votre e-mail reste privé."
+    },
+    "services": {
+      "title": "Relecture humaine",
+      "body": "Une personne relit les documents choisis. Pas encore réservable."
+    },
+    "data": {
+      "title": "Données carrière",
+      "body": "Exportez une copie de vos données de carrière."
+    },
+    "forms": {
+      "title": "Remplissage des formulaires de candidature",
+      "body": "Utilise l’extension du navigateur sur ordinateur ; non disponible sur téléphone."
+    }
+  },
+  "where": {
+    "web": "Sur le site web",
+    "provider": "Pas encore disponible",
+    "desktop": "Ordinateur uniquement"
+  },
+  "errors": {
+    "network": "Pas de connexion. Rien n’a été enregistré. Vérifiez votre réseau et réessayez.",
+    "revisionConflict": "Ce brouillon a été modifié ailleurs. Rechargez-le avant d’enregistrer à nouveau ; votre modification n’a pas été enregistrée.",
+    "featureUnavailable": "Cette fonctionnalité carrière est désactivée.",
+    "recordDeleted": "Ce brouillon a été supprimé ailleurs ; votre modification n’a pas été enregistrée.",
+    "notInPlan": "Votre forfait carrière n’inclut pas cela.",
+    "quotaExhausted": "Vos crédits carrière pour cette période sont épuisés.",
+    "providerUnavailable": "Cela nécessite un service indisponible pour le moment. Rien n’a été facturé.",
+    "rateLimited": "Trop de requêtes. Patientez un instant et réessayez.",
+    "sessionExpired": "Votre session a expiré. Reconnectez-vous.",
+    "forbidden": "Vous n’avez pas accès à cet élément.",
+    "notFound": "Cet élément n’existe plus."
+  },
+  "factTypes": {
+    "contact": "Coordonnées",
+    "summary": "Résumé",
+    "experience": "Expérience",
+    "education": "Formation",
+    "skill": "Compétence",
+    "project": "Projet",
+    "achievement": "Résultat",
+    "certification": "Certificat",
+    "language": "Langue",
+    "reference": "Référence"
+  },
+  "shared": {
+    "notIncluded": "Les outils de carrière ne sont pas inclus dans votre forfait",
+    "v1Unchanged": "Vos CV et lettres FlacronCV sont inchangés.",
+    "v1InTabs": "Vos CV et lettres de motivation FlacronCV sont dans leurs propres onglets.",
+    "careerUnchanged": "Votre profil carrière et vos brouillons sont inchangés.",
+    "nothingChanged": "Rien n'a été modifié.",
+    "nothingChangedNoCredit": "Rien n’a été modifié et aucun crédit n’a été utilisé.",
+    "pageNotLoaded": "Cette page n’a pas pu être chargée. Rien n’a été modifié.",
+    "notOpenYet": "Cet outil n'est pas encore ouvert",
+    "confirmedPill": "CONFIRMÉ",
+    "draftPill": "BROUILLON",
+    "openPill": "OUVERTE",
+    "expiredPill": "EXPIRÉE",
+    "confirm": "Confirmer",
+    "edit": "Modifier",
+    "change": "Modifier",
+    "discard": "Ignorer",
+    "discardChanges": "Ignorer les modifications ?",
+    "keepEditing": "Continuer à modifier",
+    "unsavedChanges": "Modifications non enregistrées",
+    "unsavedRestored": "Vos modifications non enregistrées précédentes ont été restaurées.",
+    "leave": "Quitter",
+    "notNow": "Pas maintenant",
+    "saving": "Enregistrement…",
+    "saved": "Enregistré",
+    "saveFirst": "Enregistrez d’abord",
+    "notSaved": "Non enregistré",
+    "notUpdated": "Non mis à jour",
+    "notDeleted": "Non supprimé",
+    "notRemoved": "Non retiré",
+    "notConfirmed": "Non confirmé",
+    "changesNotSaved": "Vos modifications n’ont pas été enregistrées. Elles sont toujours là ; réessayez.",
+    "keepsTextNote": "Les brouillons déjà créés gardent leur texte. Les nouveaux brouillons ne l’utiliseront plus.",
+    "usesOneCredit": "Cela utilise 1 crédit de document",
+    "separateWithCommas": "Séparez les éléments par des virgules",
+    "searchListings": "Chercher des annonces",
+    "noListings": "Aucune annonce",
+    "layout": "Mise en page",
+    "layoutNotChanged": "Mise en page non modifiée",
+    "careerCv": "CV carrière",
+    "careerLetter": "Lettre carrière",
+    "newCareerCv": "Nouveau CV carrière",
+    "writeLetterOrText": "Rédiger une lettre ou un texte",
+    "exportFailed": "Échec de l’export",
+    "sharingUnavailable": "Partage indisponible",
+    "shareSheetUnavailable": "Cet appareil ne peut pas ouvrir le menu de partage.",
+    "fileNotCreated": "Le fichier n’a pas pu être créé. Veuillez réessayer.",
+    "couldNotOpenFile": "Impossible d’ouvrir le fichier",
+    "exportUsesSaved": "L’export utilise la version enregistrée. Enregistrez ou ignorez vos modifications, puis exportez.",
+    "notAHiringProbability": "Ce n'est pas une probabilité d'embauche."
+  },
+  "outcomes": {
+    "intro": "Taux observés dans vos candidatures enregistrées. Ce n’est pas une probabilité d’embauche.",
+    "stats": {
+      "recorded": "Candidatures enregistrées",
+      "rate": "Taux d’entretiens observé dans cet échantillon",
+      "interviews": "Entretiens",
+      "offers": "Offres reçues",
+      "noResponse": "Envoyée, pas encore de réponse",
+      "unrecorded": "Enregistrée ou en préparation (non comptée)"
+    },
+    "sample": {
+      "empty": "Aucune candidature pour l’instant. Les chiffres viennent des candidatures de votre suivi des candidatures.",
+      "none": "Aucune de vos candidatures n’a encore de résultat enregistré, il n’y a donc pas de taux à afficher.",
+      "small": "C’est un petit échantillon ({count} enregistrées). Un résultat de plus peut beaucoup changer le taux."
+    },
+    "loadFailed": "Cette page n’a pas pu être chargée. Rien n’a été modifié. Réessayez.",
+    "offBody": "Il est désactivé dans cet aperçu. Rien n'a été modifié et aucun crédit n'a été utilisé.",
+    "notIncludedTitle": "L’analyse des résultats n’est pas incluse dans votre forfait carrière",
+    "notIncludedBody": "Vos candidatures dans le suivi des candidatures sont inchangées.",
+    "countsNote": "Les chiffres viennent de vos candidatures dans le suivi des candidatures. Les entretiens incluent les offres. Ce n’est pas une probabilité d’embauche.",
+    "openTracker": "Ouvrir le suivi des candidatures"
+  }
+}

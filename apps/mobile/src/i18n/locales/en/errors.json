@@ -1,0 +1,6 @@
+{
+  "engine": {
+    "generic": "Could not generate. Please try again.",
+    "creditNotRefunded": "Could not generate. A credit may have been used. Check your balance and try again."
+  }
+}

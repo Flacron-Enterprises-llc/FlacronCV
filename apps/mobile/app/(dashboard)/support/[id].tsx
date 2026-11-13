@@ -5,7 +5,9 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSupportTicket, useAddTicketMessage, useCloseTicket } from '../../../src/hooks/useSupport';
-import { TICKET_STATUS_LABEL, TicketMessage } from '../../../src/types/support.types';
+import { ticketCategoryLabel, ticketStatusLabel, TicketMessage } from '../../../src/types/support.types';
+import { t as tNow, useT } from '../../../src/i18n';
+import { RTL_FLIP } from '../../../src/i18n/native';
 import { TicketStatus } from '../../../src/types/enums';
 import { requestFailureMessage as apiFailureMessage } from '../../../src/lib/api-errors';
 import { useAuthStore } from '../../../src/store/auth-store';
@@ -15,19 +17,21 @@ import { colors } from '../../../src/theme/colors';
 
 function requestFailureMessage(err: unknown): string {
   if (axios.isAxiosError(err) && !err.response) {
-    return 'No connection. Check your network and try again.';
+    return tNow('common.noConnection');
   }
-  return 'Could not send. Please try again.';
+  return tNow('support.detail.sendError');
 }
 
 function loadFailureMessage(err: unknown): string {
   if (axios.isAxiosError(err) && !err.response) {
-    return 'No connection. Check your network and try again.';
+    return tNow('common.noConnection');
   }
-  return 'Could not load this ticket. Please try again.';
+  return tNow('support.detail.loadError');
 }
 
 export default function TicketDetailScreen() {
+  const t = useT('support');
+  const tc = useT('common');
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { firebaseUser } = useAuthStore();
@@ -45,24 +49,24 @@ export default function TicketDetailScreen() {
       await addMessage.mutateAsync(text);
       setMessageText('');
     } catch (err) {
-      Alert.alert('Could not send', requestFailureMessage(err));
+      Alert.alert(t('detail.sendErrorTitle'), requestFailureMessage(err));
     }
   };
 
   const handleClose = () => {
     Alert.alert(
-      'Close ticket',
-      'Close this ticket? You will not be able to reply to it. Create a new ticket if you need further help.',
+      t('detail.closeTicket'),
+      t('detail.closeBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: tc('cancel'), style: 'cancel' },
         {
-          text: 'Close ticket',
+          text: t('detail.closeTicket'),
           style: 'destructive',
           onPress: () =>
             closeTicket.mutate(undefined, {
-              onSuccess: () => Alert.alert('Ticket closed'),
+              onSuccess: () => Alert.alert(t('detail.closed')),
               onError: (err) =>
-                Alert.alert('Could not close', apiFailureMessage(err, 'Failed to close ticket')),
+                Alert.alert(t('detail.closeErrorTitle'), apiFailureMessage(err, t('detail.closeError'))),
             }),
         },
       ],
@@ -101,13 +105,13 @@ export default function TicketDetailScreen() {
         <View className="flex-row items-center px-4 py-3 border-b border-stone-100">
           <TouchableOpacity
             onPress={() => router.back()}
-            className="mr-3"
+            className="me-3"
             accessibilityRole="button"
-            accessibilityLabel="Go back"
+            accessibilityLabel={t('goBack')}
           >
-            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+            <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
           </TouchableOpacity>
-          <Text className="font-bold text-stone-900">Support</Text>
+          <Text className="font-bold text-stone-900">{t('title')}</Text>
         </View>
         <ErrorState
           message={loadFailureMessage(error)}
@@ -124,25 +128,25 @@ export default function TicketDetailScreen() {
       <View className="flex-row items-center px-4 py-3 border-b border-stone-100">
         <TouchableOpacity
           onPress={() => router.back()}
-          className="mr-3"
+          className="me-3"
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('goBack')}
         >
-          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
         </TouchableOpacity>
         <View className="flex-1">
           <Text className="font-bold text-stone-900" numberOfLines={1}>{ticket.subject}</Text>
           <Text className="text-stone-400 text-xs">
-            {TICKET_STATUS_LABEL[ticket.status] ?? ticket.status?.replace(/_/g, ' ')}
+            {ticketStatusLabel(ticket.status)}
           </Text>
         </View>
         {!isClosed ? (
           <TouchableOpacity
             onPress={handleClose}
             disabled={closeTicket.isPending}
-            className="ml-2 flex-row items-center px-3 min-h-[44px] rounded-xl"
+            className="ms-2 flex-row items-center px-3 min-h-[44px] rounded-xl"
             accessibilityRole="button"
-            accessibilityLabel="Close ticket"
+            accessibilityLabel={t('detail.closeTicket')}
             accessibilityState={{ disabled: closeTicket.isPending, busy: closeTicket.isPending }}
           >
             {closeTicket.isPending ? (
@@ -150,7 +154,7 @@ export default function TicketDetailScreen() {
             ) : (
               <Ionicons name="close-circle-outline" size={18} color={colors.error.DEFAULT} />
             )}
-            <Text className="text-red-600 font-semibold text-sm ml-1">Close</Text>
+            <Text className="text-red-600 font-semibold text-sm ms-1">{tc('close')}</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -165,8 +169,8 @@ export default function TicketDetailScreen() {
           inverted={false}
           ListHeaderComponent={
             <View className="bg-stone-50 rounded-xl p-3 mb-4">
-              <Text className="text-sm text-stone-600 capitalize">
-                {ticket.category.replace('_', ' ')}
+              <Text className="text-sm text-stone-600">
+                {ticketCategoryLabel(ticket.category)}
               </Text>
               <Text className="text-xs text-stone-400 mt-2">{formatDate(ticket.createdAt)}</Text>
             </View>
@@ -176,7 +180,7 @@ export default function TicketDetailScreen() {
         {isClosed ? (
           <View className="px-4 py-4 border-t border-stone-100 bg-stone-50">
             <Text className="text-sm font-medium text-stone-500 text-center">
-              This ticket is closed. Create a new ticket if you need further help.
+              {t('detail.closedNotice')}
             </Text>
           </View>
         ) : (
@@ -185,7 +189,7 @@ export default function TicketDetailScreen() {
               <TextInput
                 value={messageText}
                 onChangeText={setMessageText}
-                placeholder="Type your message..."
+                placeholder={t('detail.replyPlaceholder')}
                 placeholderTextColor={colors.stone[400]}
                 multiline
                 className="text-stone-900 text-base"
@@ -195,14 +199,14 @@ export default function TicketDetailScreen() {
               onPress={() => void handleSend()}
               disabled={!messageText.trim() || addMessage.isPending}
               accessibilityRole="button"
-              accessibilityLabel="Send reply"
+              accessibilityLabel={t('detail.sendReply')}
               accessibilityState={{ disabled: !messageText.trim() || addMessage.isPending }}
               className={['w-11 h-11 rounded-full items-center justify-center', messageText.trim() ? 'bg-brand-600' : 'bg-stone-200'].join(' ')}
             >
               {addMessage.isPending ? (
                 <ActivityIndicator size="small" color={colors.white} />
               ) : (
-                <Ionicons name="send" size={18} color={messageText.trim() ? colors.white : colors.stone[400]} />
+                <Ionicons name="send" size={18} color={messageText.trim() ? colors.white : colors.stone[400]} style={RTL_FLIP} />
               )}
             </TouchableOpacity>
           </View>

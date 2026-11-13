@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { z } from 'zod';
@@ -11,24 +11,20 @@ import { useCVStore } from '../../../store/cv-store';
 import { CVSectionType, SkillLevel } from '../../../types/enums';
 import { SkillItem } from '../../../types/cv.types';
 import { generateId } from '../../../lib/utils';
+import { sectionTypeLabel } from '../../../lib/cv-editor';
 import { colors } from '../../../theme/colors';
 import { useStepSection } from '../useStepSection';
 import { SectionSwitcher } from '../SectionSwitcher';
+import { useT } from '../../../i18n';
 
-const schema = z.object({
-  name: z.string().min(1, 'Skill name is required'),
+/** Built per language so validation messages follow the app language. */
+const makeSchema = (t: (key: string) => string) => z.object({
+  name: z.string().min(1, t('skills.errors.nameRequired')),
   level: z.nativeEnum(SkillLevel),
   category: z.string().optional(),
 });
 
-type FormData = z.infer<typeof schema>;
-
-const SKILL_LEVELS = [
-  { value: SkillLevel.BEGINNER, label: 'Beginner' },
-  { value: SkillLevel.INTERMEDIATE, label: 'Intermediate' },
-  { value: SkillLevel.ADVANCED, label: 'Advanced' },
-  { value: SkillLevel.EXPERT, label: 'Expert' },
-];
+type FormData = z.infer<ReturnType<typeof makeSchema>>;
 
 interface SkillsStepProps {
   onValidChange: (isValid: boolean) => void;
@@ -36,6 +32,15 @@ interface SkillsStepProps {
 
 export function SkillsStep({ onValidChange }: SkillsStepProps) {
   const { sections, updateSection, addSection } = useCVStore();
+  const t = useT('cvEditor');
+  const tc = useT('common');
+  const schema = useMemo(() => makeSchema(t), [t]);
+  const SKILL_LEVELS = [
+    { value: SkillLevel.BEGINNER, label: t('skills.levels.beginner') },
+    { value: SkillLevel.INTERMEDIATE, label: t('skills.levels.intermediate') },
+    { value: SkillLevel.ADVANCED, label: t('skills.levels.advanced') },
+    { value: SkillLevel.EXPERT, label: t('skills.levels.expert') },
+  ];
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<SkillItem | null>(null);
 
@@ -83,7 +88,7 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
       addSection({
         id: generateId(),
         type: CVSectionType.SKILLS,
-        title: 'Skills',
+        title: sectionTypeLabel(CVSectionType.SKILLS),
         isVisible: true,
         order: sections.length,
         items: [newItem],
@@ -95,10 +100,10 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
   };
 
   const handleDelete = (itemId: string) => {
-    Alert.alert('Delete Skill', 'Remove this skill?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('skills.deleteTitle'), t('skills.deleteBody'), [
+      { text: tc('cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: tc('delete'),
         style: 'destructive',
         onPress: () => {
           if (skillsSection) {
@@ -112,10 +117,8 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
   return (
     <View className="flex-1">
       <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-        <Text className="text-lg font-semibold text-stone-900 mb-1">Skills</Text>
-        <Text className="text-stone-500 mb-5 text-sm">
-          Add your technical and soft skills with proficiency levels.
-        </Text>
+        <Text className="text-lg font-semibold text-stone-900 mb-1">{t('skills.title')}</Text>
+        <Text className="text-stone-500 mb-5 text-sm">{t('skills.subtitle')}</Text>
         <SectionSwitcher sections={sectionsForType} selected={skillsSection} onSelect={selectSection} />
 
         {items.length > 0 && (
@@ -128,10 +131,10 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
                 <Text className="text-sm font-medium text-brand-700">
                   {item.name}
                 </Text>
-                <TouchableOpacity onPress={() => openEdit(item)} className="ml-1.5 p-0.5" accessibilityRole="button" accessibilityLabel="Edit entry" hitSlop={12}>
+                <TouchableOpacity onPress={() => openEdit(item)} className="ms-1.5 p-0.5" accessibilityRole="button" accessibilityLabel={t('entry.edit')} hitSlop={12}>
                   <Ionicons name="pencil-outline" size={14} color={colors.stone[500]} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDelete(item.id)} className="ml-0.5" accessibilityRole="button" accessibilityLabel="Delete entry" hitSlop={12}>
+                <TouchableOpacity onPress={() => handleDelete(item.id)} className="ms-0.5" accessibilityRole="button" accessibilityLabel={t('entry.delete')} hitSlop={12}>
                   <Ionicons name="close-circle" size={14} color={colors.error.DEFAULT} />
                 </TouchableOpacity>
               </View>
@@ -142,27 +145,27 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
         {items.length === 0 && (
           <View className="items-center py-8">
             <Ionicons name="code-slash-outline" size={36} color={colors.stone[400]} />
-            <Text className="text-stone-500 text-center mt-2 mb-4">No skills added yet.</Text>
+            <Text className="text-stone-500 text-center mt-2 mb-4">{t('skills.empty')}</Text>
           </View>
         )}
 
         <Button variant="outline" onPress={openAdd} icon={<Ionicons name="add" size={18} color={colors.stone[700]} />} fullWidth>
-          Add Skill
+          {t('skills.add')}
         </Button>
 
         <View className="h-8" />
       </ScrollView>
 
-      <Modal visible={modalVisible} onClose={() => setModalVisible(false)} title={editingItem ? 'Edit Skill' : 'Add Skill'}>
+      <Modal visible={modalVisible} onClose={() => setModalVisible(false)} title={editingItem ? t('skills.edit') : t('skills.add')}>
         <Controller
           control={control}
           name="name"
           render={({ field }) => (
-            <Input label="Skill Name *" placeholder="React Native" value={field.value} onChangeText={field.onChange} error={errors.name?.message} />
+            <Input label={t('skills.name')} placeholder="React Native" value={field.value} onChangeText={field.onChange} error={errors.name?.message} />
           )}
         />
 
-        <Text className="text-sm font-medium text-stone-700 mb-2">Proficiency Level *</Text>
+        <Text className="text-sm font-medium text-stone-700 mb-2">{t('fields.proficiency')}</Text>
         <Controller
           control={control}
           name="level"
@@ -197,12 +200,12 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
           control={control}
           name="category"
           render={({ field }) => (
-            <Input label="Category (optional)" placeholder="Frontend, Backend, Tools..." value={field.value} onChangeText={field.onChange} />
+            <Input label={t('skills.category')} placeholder={t('skills.categoryPlaceholder')} value={field.value} onChangeText={field.onChange} />
           )}
         />
 
         <Button variant="primary" fullWidth onPress={handleSubmit(onSubmit)}>
-          {editingItem ? 'Update' : 'Add Skill'}
+          {editingItem ? t('entry.update') : t('skills.add')}
         </Button>
       </Modal>
     </View>

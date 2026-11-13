@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { extractJsonObject } from './ai-json';
 
 /** `LinkedinOptimizeDto`: cvContent required (max 50000), targetRole optional (max 200). */
@@ -57,9 +58,9 @@ export function skillsCopyText(result: LinkedInResult): string {
 /** Whole result as one shareable text, for "Share all". */
 export function linkedInShareText(result: LinkedInResult): string {
   const parts: string[] = [];
-  if (result.headline) parts.push(`Headline\n${result.headline}`);
-  if (result.about) parts.push(`About section\n${result.about}`);
-  if (result.skills.length) parts.push(`Skills & keywords\n${skillsCopyText(result)}`);
-  if (result.tips.length) parts.push(`Tips\n${result.tips.map((t) => `- ${t}`).join('\n')}`);
+  if (result.headline) parts.push(`${t('aiTools.linkedin.headline')}\n${result.headline}`);
+  if (result.about) parts.push(`${t('aiTools.linkedin.about')}\n${result.about}`);
+  if (result.skills.length) parts.push(`${t('aiTools.linkedin.skills')}\n${skillsCopyText(result)}`);
+  if (result.tips.length) parts.push(`${t('aiTools.linkedin.tips')}\n${result.tips.map((tip) => `- ${tip}`).join('\n')}`);
   return parts.join('\n\n');
 }

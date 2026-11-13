@@ -5,6 +5,8 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { CAREER_ENABLED } from '../../config/career';
 import { useCareerAccess, useCareerSubscription } from '../../hooks/useCareer';
 import { careerAccessState, describeAccess } from '../../lib/career-view';
+import { useT } from '../../i18n';
+import { RTL_FLIP } from '../../i18n/native';
 import { colors } from '../../theme/colors';
 import { Pill } from './CareerHeader';
 
@@ -15,6 +17,7 @@ import { Pill } from './CareerHeader';
  */
 export function CareerAddonCard() {
   const router = useRouter();
+  const t = useT('career');
   const access = useCareerAccess();
   const subscription = useCareerSubscription();
   if (!CAREER_ENABLED) return null;
@@ -28,22 +31,22 @@ export function CareerAddonCard() {
   const copy = describeAccess(state);
   return (
     <View className="mx-5 mb-6">
-      <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">Career tools add-on</Text>
+      <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">{t('addon.heading')}</Text>
       <TouchableOpacity
         onPress={() => router.push('/(dashboard)/career')}
         className="bg-white rounded-2xl border border-stone-100 p-4 flex-row items-center"
         accessibilityRole="button"
         activeOpacity={0.8}
       >
-        <View className="flex-1 mr-2">
+        <View className="flex-1 me-2">
           <View className="flex-row items-center justify-between">
-            <Text className="font-bold text-stone-900 flex-1 mr-2">{copy.title}</Text>
-            {copy.badge ? <Pill label={copy.badge} tone={copy.badge === 'ACTIVE' ? 'success' : 'warning'} /> : null}
+            <Text className="font-bold text-stone-900 flex-1 me-2">{copy.title}</Text>
+            {copy.badge ? <Pill label={copy.badge} tone={copy.badgeKind === 'active' ? 'success' : 'warning'} /> : null}
           </View>
           {copy.body ? <Text className="text-stone-500 text-sm mt-1 leading-5">{copy.body}</Text> : null}
-          <Text className="text-stone-400 text-xs mt-2">Separate from your FlacronCV plan above, which it never changes.</Text>
+          <Text className="text-stone-400 text-xs mt-2">{t('addon.note')}</Text>
         </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} />
+        <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} style={RTL_FLIP} />
       </TouchableOpacity>
     </View>
   );

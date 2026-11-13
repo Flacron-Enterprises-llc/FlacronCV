@@ -87,7 +87,7 @@ export function Button({
         />
       ) : (
         <>
-          {icon && iconPosition === 'left' && <View className="mr-2">{icon}</View>}
+          {icon && iconPosition === 'left' && <View className="me-2">{icon}</View>}
           <Text
             className={[
               'font-semibold',
@@ -97,7 +97,7 @@ export function Button({
           >
             {children}
           </Text>
-          {icon && iconPosition === 'right' && <View className="ml-2">{icon}</View>}
+          {icon && iconPosition === 'right' && <View className="ms-2">{icon}</View>}
         </>
       )}
     </Pressable>

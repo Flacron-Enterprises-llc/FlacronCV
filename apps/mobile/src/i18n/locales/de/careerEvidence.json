@@ -1,0 +1,112 @@
+{
+  "title": "Nachweisarchiv",
+  "subtitle": "Belege für deine beruflichen Angaben",
+  "newSubtitle": "Füge einen Beleg für eine berufliche Angabe hinzu",
+  "gate": {
+    "locked": "Karriere-Tools sind in deinem Tarif nicht enthalten",
+    "off": "Das Nachweisarchiv ist deaktiviert",
+    "offBody": "Dein Karriereprofil und deine Entwürfe bleiben unverändert."
+  },
+  "list": {
+    "add": "Nachweis hinzufügen",
+    "intro": "Projekte, Qualifikationsnachweise und Arbeitsproben, die deine beruflichen Angaben belegen. Labels zeigen nur, was feststeht: Ein Foto eines Zertifikats ist ein angehängter Nachweis, keine Bestätigung durch den Aussteller.",
+    "loadError": "Deine Nachweise konnten nicht geladen werden. Versuche es erneut.",
+    "emptyTitle": "Noch keine Nachweise",
+    "emptyBody": "Füge Projekte, Zertifizierungen oder Arbeitsproben hinzu, um deine Profilangaben zu belegen.",
+    "itemHint": "Öffnet den Eintrag zum Bearbeiten oder zum Verwalten seiner Datei",
+    "privateFile": "Private Datei",
+    "link": "Verknüpfung",
+    "shared": "Im Portfolio geteilt",
+    "privateOnly": "Nur privat"
+  },
+  "types": {
+    "project": "Projekt",
+    "credential": "Qualifikationsnachweis",
+    "work_sample": "Arbeitsprobe",
+    "reference": "Referenz",
+    "publication": "Veröffentlichung"
+  },
+  "labels": {
+    "evidence_attached": "NACHWEIS ANGEHÄNGT",
+    "assessment_completed": "PRÜFUNG ABGESCHLOSSEN",
+    "issuer_verified": "VOM AUSSTELLER BESTÄTIGT",
+    "reference_confirmed": "REFERENZ BESTÄTIGT",
+    "self_reported": "SELBST ANGEGEBEN"
+  },
+  "item": {
+    "newTitle": "Neuer Nachweis",
+    "fallbackTitle": "Nachweis",
+    "loadError": "Dieser Nachweis konnte nicht geladen werden.",
+    "checkedBy": "Geprüft von {name}",
+    "labelsNote": "Labels ändern sich nur, wenn etwas feststeht – nie durch Bearbeiten.",
+    "fixedAfterCreation": "(nach dem Erstellen nicht änderbar)",
+    "saveItem": "Eintrag speichern",
+    "saveChanges": "Änderungen speichern",
+    "saved": "Gespeichert",
+    "attachAfterSave": "Du kannst ein Foto anhängen, sobald der Eintrag gespeichert ist.",
+    "deleteItem": "Eintrag löschen"
+  },
+  "form": {
+    "title": "Titel *",
+    "titleA11y": "Titel, erforderlich",
+    "titlePlaceholder": "z. B. AWS Solutions Architect oder Open-Source-Compiler",
+    "type": "Art des Nachweises",
+    "typeRequired": "Art des Nachweises *",
+    "description": "Beschreibung",
+    "descriptionPlaceholder": "Kurze Zusammenfassung der Arbeit, des Nachweises oder der Referenz",
+    "ownership": "Urheberschaft / persönlicher Beitrag",
+    "ownershipPlaceholder": "z. B. Alleinautor, leitender Designer oder 30 % Beitrag",
+    "skills": "Verknüpfte Kompetenzen (durch Kommas getrennt)",
+    "skillsPlaceholder": "z. B. TypeScript, PostgreSQL, Systemdesign",
+    "attachmentUrl": "Link zum Anhang",
+    "attachmentName": "Name des Anhangs",
+    "attachmentNamePlaceholder": "nachweis.pdf",
+    "portfolioShared": "Im öffentlichen Portfolio anzeigen"
+  },
+  "validation": {
+    "titleRequired": "Gib einen Titel ein.",
+    "maxChars": "Verwende höchstens {max} Zeichen.",
+    "webLink": "Gib einen vollständigen Weblink ein, der mit https:// beginnt"
+  },
+  "file": {
+    "title": "Private Datei",
+    "storedFallback": "Gespeicherte Datei",
+    "open": "Datei öffnen",
+    "replace": "Durch Foto ersetzen",
+    "remove": "Datei entfernen",
+    "linkNote": "Zum Öffnen wird ein privater Link verwendet, der fünf Minuten gültig ist.",
+    "hint": "Hänge ein PNG- oder JPEG-Foto an, z. B. den Scan eines Zertifikats. Dateien sind privat: Nur du kannst sie öffnen, und das Speichern verbraucht keinen Dokument-Credit. Um eine PDF- oder Word-Datei anzuhängen, lade sie auf der FlacronCV-Website hoch.",
+    "attach": "Foto anhängen"
+  },
+  "alerts": {
+    "notSaved": "Nicht gespeichert",
+    "changesKept": "Deine Änderungen sind noch da.",
+    "deleteTitle": "Diesen Nachweis löschen?",
+    "deleteBody": "Er wird aus deinem Archiv und von jeder Portfolio-Seite entfernt, die ihn zeigt. Eine gespeicherte Datei wird ebenfalls gelöscht.",
+    "notDeleted": "Nicht gelöscht",
+    "deleteFailed": "Der Nachweis wurde nicht gelöscht. Versuche es erneut.",
+    "saveFirstTitle": "Zuerst speichern",
+    "saveFirstBody": "Speichere deine Änderungen an diesem Eintrag oder mache sie rückgängig und verwalte dann seine Datei.",
+    "photosTitle": "Fotos nicht verfügbar",
+    "photosBody": "Erlaube in den Einstellungen den Zugriff auf die Fotomediathek, um ein Foto deines Zertifikats oder deiner Arbeit anzuhängen.",
+    "notAttached": "Datei nicht angehängt",
+    "openFailedTitle": "Datei konnte nicht geöffnet werden",
+    "openFailedBody": "Der Link konnte auf diesem Gerät nicht geöffnet werden. Versuche es erneut.",
+    "removeFileTitle": "Diese Datei entfernen?",
+    "removeFileBody": "Die gespeicherte Datei wird gelöscht. Der Nachweis bleibt erhalten.",
+    "fileNotRemoved": "Datei nicht entfernt"
+  },
+  "errors": {
+    "tooLarge": "Diese Datei überschreitet das Upload-Limit (10 MB).",
+    "wrongType": "Wähle ein PNG- oder JPEG-Foto. Lade PDF- und Word-Dateien auf der FlacronCV-Website hoch.",
+    "empty": "Diese Datei ist leer.",
+    "fileType": "Verwende eine PDF-, PNG-, JPEG- oder DOCX-Datei. Die Datei muss tatsächlich diesen Typ haben.",
+    "storageFull": "Der Speicher deines Tarifs ist voll. Entferne eine Datei, um eine weitere hinzuzufügen.",
+    "storageUnavailable": "Der Dateispeicher ist gerade nicht verfügbar. Es wurde nichts berechnet.",
+    "fileFailed": "Die Dateiaktion wurde nicht abgeschlossen. Versuche es erneut.",
+    "capacity": "Dein Karriere-Tarif hat keinen Platz für einen weiteren Nachweis.",
+    "switchedOff": "Das Nachweisarchiv ist gerade deaktiviert.",
+    "validation": "Bitte prüfe die Felder auf Fehler.",
+    "saveFailed": "Der Nachweis wurde nicht gespeichert. Versuche es erneut."
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "title": "Support",
+  "goBack": "Retour",
+  "status": {
+    "open": "En attente du support",
+    "inProgress": "En cours",
+    "waitingOnCustomer": "En attente du client",
+    "resolved": "Résolu",
+    "closed": "Fermé"
+  },
+  "categories": {
+    "general": "Général",
+    "bug": "Bogue",
+    "featureRequest": "Suggestion",
+    "billing": "Facturation",
+    "account": "Compte"
+  },
+  "list": {
+    "replayTour": "Revoir la visite de l’app",
+    "newTicket": "Nouveau ticket",
+    "loadError": "Impossible de charger vos tickets. Veuillez réessayer.",
+    "emptyTitle": "Aucun ticket de support",
+    "emptyDesc": "Besoin d’aide ? Créez un ticket de support et nous vous répondrons.",
+    "emptyAction": "Créer un ticket"
+  },
+  "form": {
+    "title": "Créer un ticket de support",
+    "subject": "Sujet *",
+    "subjectPh": "Décrivez brièvement votre problème",
+    "description": "Description *",
+    "descriptionPh": "Veuillez donner le plus de détails possible...",
+    "subjectMin": "Le sujet doit comporter au moins 5 caractères",
+    "messageMin": "Le message doit comporter au moins 20 caractères",
+    "category": "Catégorie",
+    "priority": "Priorité",
+    "categories": {
+      "bug": "Signaler un bogue",
+      "featureRequest": "Suggestion",
+      "billing": "Facturation",
+      "account": "Compte",
+      "general": "Général"
+    },
+    "priorities": {
+      "low": "Basse",
+      "medium": "Moyenne",
+      "high": "Haute"
+    },
+    "submit": "Soumettre le ticket",
+    "createErrorTitle": "Impossible de créer le ticket",
+    "createError": "Impossible de créer le ticket. Veuillez réessayer."
+  },
+  "detail": {
+    "loadError": "Impossible de charger ce ticket. Veuillez réessayer.",
+    "sendErrorTitle": "Impossible d’envoyer",
+    "sendError": "Impossible d’envoyer. Veuillez réessayer.",
+    "closeTicket": "Fermer le ticket",
+    "closeBody": "Fermer ce ticket ? Vous ne pourrez plus y répondre. Créez un nouveau ticket si vous avez besoin d’aide supplémentaire.",
+    "closed": "Ticket fermé",
+    "closeErrorTitle": "Impossible de fermer",
+    "closeError": "Échec de la fermeture du ticket",
+    "closedNotice": "Ce ticket est fermé. Créez un nouveau ticket si vous avez besoin d’aide supplémentaire.",
+    "replyPlaceholder": "Saisissez votre message...",
+    "sendReply": "Envoyer la réponse"
+  }
+}

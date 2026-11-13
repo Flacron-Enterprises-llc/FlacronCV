@@ -2,9 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Text, TouchableOpacity, View } from 'react-native';
 import { useCVPhoto } from '../../hooks/useCVPhoto';
-import { CV_PHOTO_HINT } from '../../lib/cv-photo';
 import { useCVStore } from '../../store/cv-store';
 import { colors } from '../../theme/colors';
+import { useT } from '../../i18n';
 
 /**
  * CV photo — same behaviour as the web editor: upload sets
@@ -17,6 +17,8 @@ export function CVPhotoPicker() {
   const updatePersonalInfo = useCVStore((s) => s.updatePersonalInfo);
   const updateStyling = useCVStore((s) => s.updateStyling);
   const { pickAndUpload, isUploading } = useCVPhoto();
+  const t = useT('cvEditor');
+  const tc = useT('common');
   const [error, setError] = useState<string | null>(null);
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -33,14 +35,11 @@ export function CVPhotoPicker() {
         updateStyling('showPhoto', true);
         return;
       case 'permission-denied':
-        Alert.alert(
-          'Photos unavailable',
-          'Allow photo library access in Settings to choose a CV photo.',
-        );
+        Alert.alert(t('photo.deniedTitle'), t('photo.deniedBody'));
         return;
       case 'error':
         setError(result.message);
-        Alert.alert('Could not update photo', result.message);
+        Alert.alert(t('photo.updateFailedTitle'), result.message);
         return;
       default:
         return;
@@ -48,10 +47,10 @@ export function CVPhotoPicker() {
   };
 
   const onRemove = () => {
-    Alert.alert('Remove photo', 'Remove the photo from this CV?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('photo.remove'), t('photo.removeBody'), [
+      { text: tc('cancel'), style: 'cancel' },
       {
-        text: 'Remove',
+        text: tc('remove'),
         style: 'destructive',
         onPress: () => {
           setError(null);
@@ -68,7 +67,7 @@ export function CVPhotoPicker() {
         onPress={() => void onPick()}
         disabled={isUploading}
         accessibilityRole="button"
-        accessibilityLabel={hasPhoto ? 'Change photo' : 'Upload photo'}
+        accessibilityLabel={hasPhoto ? t('photo.change') : t('photo.upload')}
         accessibilityState={{ disabled: isUploading, busy: isUploading }}
         className="w-20 h-20 rounded-full overflow-hidden bg-stone-100 border-2 border-dashed border-stone-300 items-center justify-center"
       >
@@ -90,17 +89,17 @@ export function CVPhotoPicker() {
         )}
       </TouchableOpacity>
 
-      <View className="flex-1 ml-4">
+      <View className="flex-1 ms-4">
         <View className="flex-row flex-wrap items-center">
           <TouchableOpacity
             onPress={() => void onPick()}
             disabled={isUploading}
             accessibilityRole="button"
-            className="justify-center mr-4"
+            className="justify-center me-4"
             style={{ minHeight: 44 }}
           >
             <Text className="text-brand-600 font-semibold">
-              {isUploading ? 'Uploading…' : hasPhoto ? 'Change photo' : 'Upload photo'}
+              {isUploading ? t('photo.uploading') : hasPhoto ? t('photo.change') : t('photo.upload')}
             </Text>
           </TouchableOpacity>
           {hasPhoto && !isUploading && (
@@ -110,11 +109,11 @@ export function CVPhotoPicker() {
               className="justify-center"
               style={{ minHeight: 44 }}
             >
-              <Text className="text-red-500 font-semibold">Remove photo</Text>
+              <Text className="text-red-500 font-semibold">{t('photo.remove')}</Text>
             </TouchableOpacity>
           )}
         </View>
-        <Text className="text-xs text-stone-500">{CV_PHOTO_HINT}</Text>
+        <Text className="text-xs text-stone-500">{t('photo.hint')}</Text>
         {error && (
           <Text className="text-xs text-red-500 mt-1" accessibilityRole="alert">
             {error}

@@ -1,0 +1,57 @@
+{
+  "list": {
+    "title": "Mes CV",
+    "newCv": "Nouveau CV",
+    "createdCount": "{count, plural, one {# création de CV sur votre forfait} other {# créations de CV sur votre forfait}}",
+    "noHeadline": "Pas de titre",
+    "updated": "Mis à jour {date}",
+    "meta": "v{version} · {count, plural, one {# téléchargement} other {# téléchargements}}",
+    "status": {
+      "draft": "brouillon",
+      "published": "publié"
+    },
+    "emptyTitle": "Aucun CV pour le moment",
+    "emptyDescription": "Créez votre premier CV professionnel et décrochez le poste de vos rêves.",
+    "emptyAction": "Créez votre premier CV",
+    "loadError": "Impossible de charger les CV"
+  },
+  "delete": {
+    "title": "Supprimer le CV",
+    "body": "Voulez-vous vraiment supprimer « {title} » ? Cette action est irréversible. La suppression ne rétablit pas de création de CV sur votre forfait.",
+    "done": "Supprimé",
+    "doneBody": "« {title} » a été supprimé.",
+    "failedTitle": "Suppression impossible",
+    "failed": "Échec de la suppression du CV. Veuillez réessayer."
+  },
+  "duplicate": {
+    "done": "Dupliqué",
+    "doneBody": "« {title} (Copie) » a été créé.",
+    "failedTitle": "Duplication impossible",
+    "failed": "Échec de la duplication du CV. Veuillez réessayer."
+  },
+  "limitTitle": "Limite de CV atteinte",
+  "new": {
+    "chooseTitle": "Choisir un modèle",
+    "chooseSubtitle": "Choisissez un design pour commencer",
+    "continue": "Continuer avec ce modèle",
+    "backToTemplates": "Retour aux modèles",
+    "back": "Retour",
+    "nameTitle": "Nommez votre CV",
+    "nameBody": "Donnez à votre CV un nom descriptif pour le retrouver facilement.",
+    "titleLabel": "Titre du CV",
+    "titlePlaceholder": "ex. CV Ingénieur logiciel 2025",
+    "suggestions": "Suggestions de titre",
+    "suggestion": {
+      "professional": "Mon CV professionnel",
+      "softwareEngineer": "CV Ingénieur logiciel",
+      "productManager": "CV Chef de produit",
+      "marketing": "CV Marketing",
+      "designer": "CV Designer"
+    },
+    "useSuggestion": "Utiliser le titre {title}",
+    "create": "Créer le CV",
+    "createFailedTitle": "Impossible de créer le CV",
+    "usageFailed": "Impossible de charger votre utilisation. Veuillez réessayer.",
+    "createFailed": "Échec de la création du CV. Veuillez réessayer."
+  }
+}

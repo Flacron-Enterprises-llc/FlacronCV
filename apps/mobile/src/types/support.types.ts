@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { TicketCategory, TicketPriority, TicketStatus } from './enums';
 
 export interface TicketAttachment {
@@ -46,11 +47,31 @@ export interface CreateTicketData {
   priority?: TicketPriority;
 }
 
-/** Website `support.statusLabels` wording. */
-export const TICKET_STATUS_LABEL: Record<TicketStatus, string> = {
-  [TicketStatus.OPEN]: 'Awaiting support reply',
-  [TicketStatus.IN_PROGRESS]: 'In progress',
-  [TicketStatus.WAITING_ON_CUSTOMER]: 'Awaiting customer reply',
-  [TicketStatus.RESOLVED]: 'Resolved',
-  [TicketStatus.CLOSED]: 'Closed',
+/** Website `support.statusLabels` wording, read in the current language at call time. */
+const TICKET_STATUS_LABEL: Record<TicketStatus, () => string> = {
+  [TicketStatus.OPEN]: () => t('support.status.open'),
+  [TicketStatus.IN_PROGRESS]: () => t('support.status.inProgress'),
+  [TicketStatus.WAITING_ON_CUSTOMER]: () => t('support.status.waitingOnCustomer'),
+  [TicketStatus.RESOLVED]: () => t('support.status.resolved'),
+  [TicketStatus.CLOSED]: () => t('support.status.closed'),
 };
+
+/** Ticket status label; an unknown status is shown as sent (underscores → spaces). */
+export function ticketStatusLabel(status: string): string {
+  const label = TICKET_STATUS_LABEL[status as TicketStatus];
+  return label ? label() : (status ?? '').replace(/_/g, ' ');
+}
+
+const TICKET_CATEGORY_LABEL: Record<TicketCategory, () => string> = {
+  [TicketCategory.GENERAL]: () => t('support.categories.general'),
+  [TicketCategory.BUG]: () => t('support.categories.bug'),
+  [TicketCategory.FEATURE_REQUEST]: () => t('support.categories.featureRequest'),
+  [TicketCategory.BILLING]: () => t('support.categories.billing'),
+  [TicketCategory.ACCOUNT]: () => t('support.categories.account'),
+};
+
+/** Ticket category label; an unknown category is shown as sent (underscores → spaces). */
+export function ticketCategoryLabel(category: string): string {
+  const label = TICKET_CATEGORY_LABEL[category as TicketCategory];
+  return label ? label() : (category ?? '').replace(/_/g, ' ');
+}

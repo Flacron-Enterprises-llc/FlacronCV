@@ -12,6 +12,7 @@ import React, {
 } from 'react';
 import { Alert } from 'react-native';
 import { CAREER_ENABLED } from '../config/career';
+import { t } from '../i18n';
 import { api } from '../lib/api';
 import {
   isAutoStartEligible,
@@ -44,7 +45,6 @@ import type { AppTourPreference, User } from '../types/user.types';
  */
 const sessionTour = new Map<string, AppTourPreference>();
 
-const SAVE_ERROR = 'We could not save your tour progress. You can keep using FlacronCV.';
 /** Lets the dashboard finish its first paint before the sheet slides up. */
 const AUTO_START_DELAY_MS = 800;
 
@@ -146,7 +146,7 @@ export function AppTourProvider({ children }: { children: ReactNode }) {
         } catch {
           if (errorShown.current) return;
           errorShown.current = true;
-          Alert.alert('App tour', SAVE_ERROR);
+          Alert.alert(t('tour.dialogLabel'), t('tour.saveError'));
         }
       });
     },

@@ -28,6 +28,8 @@ import {
 } from '../../../../src/lib/career/learning';
 import { careerErrorMessage, formatDay } from '../../../../src/lib/career-view';
 import { colors } from '../../../../src/theme/colors';
+import { useT } from '../../../../src/i18n';
+import { RTL_FLIP } from '../../../../src/i18n/native';
 
 /**
  * Skill gaps and learning plans, as on the website (career/learning): set a
@@ -36,6 +38,8 @@ import { colors } from '../../../../src/theme/colors';
  * skill-report credit per plan; ticking milestones is free.
  */
 export default function LearningScreen() {
+  const t = useT('careerPlans');
+  const tc = useT('common');
   const router = useRouter();
   const access = useCareerAccess();
   const list = useSkillReports();
@@ -81,9 +85,9 @@ export default function LearningScreen() {
 
   let content: React.ReactNode;
   if (access.data && !access.data.enabled) {
-    content = <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" />;
+    content = <EmptyState icon="lock-closed-outline" title={t('lockedTitle')} />;
   } else if (featureOff) {
-    content = <EmptyState icon="lock-closed-outline" title="Learning plans are not open yet" description="Nothing was changed and no credit was used." />;
+    content = <EmptyState icon="lock-closed-outline" title={t('learning.notOpen')} description={t('nothingChangedNoCredit')} />;
   } else if (access.isLoading || list.isLoading) {
     content = (
       <View className="p-5">
@@ -92,7 +96,7 @@ export default function LearningScreen() {
       </View>
     );
   } else if (access.error || list.error || !list.data) {
-    content = <ErrorState message={careerErrorMessage(list.error ?? access.error, 'Could not load your learning plans.')} onRetry={() => void list.refetch()} />;
+    content = <ErrorState message={careerErrorMessage(list.error ?? access.error, t('learning.loadError'))} onRetry={() => void list.refetch()} />;
   } else {
     const reports = list.data.items;
     const credits = creditsLeft(list.data.skillReport);
@@ -102,11 +106,11 @@ export default function LearningScreen() {
         refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} tintColor={colors.brand[600]} />}
       >
         <Text className="text-stone-500 text-sm mb-4 leading-5">
-          Bridge the gap to a target role with milestones, curated resources and an optional practical project. Built from your confirmed facts.
+          {t('learning.intro')}
         </Text>
         <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4 flex-row items-center">
-          <View className="flex-1 mr-3">
-            <Text className="text-stone-500 text-xs font-semibold uppercase tracking-wide">Skill report credits</Text>
+          <View className="flex-1 me-3">
+            <Text className="text-stone-500 text-xs font-semibold uppercase tracking-wide">{t('learning.credits')}</Text>
             <Text className="text-2xl font-black text-stone-900 mt-0.5">{credits ?? '—'}</Text>
           </View>
           <Button
@@ -116,26 +120,26 @@ export default function LearningScreen() {
             }}
             icon={<Ionicons name="add" size={18} color={colors.white} />}
           >
-            New plan
+            {t('learning.newPlan')}
           </Button>
         </View>
         {reports.length === 0 ? (
-          <EmptyState icon="school-outline" title="No learning plans yet" description="Set a target role to see your skill gaps and a milestone plan." />
+          <EmptyState icon="school-outline" title={t('learning.emptyTitle')} description={t('learning.emptyBody')} />
         ) : (
           <>
-            <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">Your learning plans</Text>
+            <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">{t('learning.yourPlans')}</Text>
             {reports.map((report) => (
               <TouchableOpacity
                 key={report.id}
                 onPress={() => router.push(`/(dashboard)/career/learning/${report.id}` as Href)}
                 className="bg-white border border-stone-100 rounded-2xl p-4 mb-3 flex-row items-center min-h-[56px]"
                 accessibilityRole="button"
-                accessibilityLabel={`${report.targetRole}, ${report.progress.percent} percent complete`}
+                accessibilityLabel={t('learning.itemA11y', { role: report.targetRole, percent: report.progress.percent })}
                 activeOpacity={0.8}
               >
-                <View className="flex-1 mr-2">
+                <View className="flex-1 me-2">
                   <View className="flex-row items-center justify-between">
-                    <Text className="font-bold text-stone-900 flex-1 mr-2" numberOfLines={1}>
+                    <Text className="font-bold text-stone-900 flex-1 me-2" numberOfLines={1}>
                       {report.targetRole}
                     </Text>
                     <Pill label={`${report.progress.percent}%`} tone={report.progress.percent === 100 ? 'success' : 'brand'} />
@@ -148,7 +152,7 @@ export default function LearningScreen() {
                   </View>
                   <Text className="text-stone-400 text-xs mt-1.5">{formatDay(report.createdAt) ?? ''}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} />
+                <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} style={RTL_FLIP} />
               </TouchableOpacity>
             ))}
           </>
@@ -159,65 +163,65 @@ export default function LearningScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title="Learning plans" subtitle="Skill gaps and milestones" />
+      <CareerHeader title={t('learning.title')} subtitle={t('learning.subtitle')} />
       {content}
-      <Modal visible={open} onClose={() => setOpen(false)} title="Target a new role" size="full" closeDisabled={create.isPending}>
+      <Modal visible={open} onClose={() => setOpen(false)} title={t('learning.createTitle')} size="full" closeDisabled={create.isPending}>
         <Text className="text-stone-500 text-sm leading-5 mb-4">
-          Uses 1 skill report credit. Includes the gap matrix, milestones and, if you choose, a practical project brief with rubrics at no extra charge.
+          {t('learning.createCost')}
         </Text>
         <Input
-          label="Target role *"
+          label={t('learning.targetRole')}
           value={form.targetRole}
           onChangeText={(targetRole) => set({ targetRole })}
-          placeholder="e.g. Senior Data Analyst"
+          placeholder={t('learning.targetRolePlaceholder')}
           maxLength={200}
           error={fieldError?.field === 'targetRole' ? fieldError.message : undefined}
           editable={!create.isPending}
         />
         <Input
-          label="Target industry (optional)"
+          label={t('learning.targetIndustry')}
           value={form.targetIndustry}
           onChangeText={(targetIndustry) => set({ targetIndustry })}
-          placeholder="e.g. Healthcare"
+          placeholder={t('learning.targetIndustryPlaceholder')}
           maxLength={200}
           editable={!create.isPending}
         />
-        <Text className="text-sm font-medium text-stone-700 mb-1.5">Weekly time</Text>
+        <Text className="text-sm font-medium text-stone-700 mb-1.5">{t('learning.weeklyTime')}</Text>
         <View className="flex-row items-center mb-4">
           <StepButton
             icon="remove"
-            label="Fewer hours per week"
+            label={t('learning.fewerHours')}
             disabled={create.isPending || form.timeBudgetHoursPerWeek <= TIME_BUDGET_MIN}
             onPress={() => set({ timeBudgetHoursPerWeek: clampTimeBudget(form.timeBudgetHoursPerWeek - 1) })}
           />
           <Text className="flex-1 text-center text-base font-semibold text-stone-900" accessibilityLiveRegion="polite">
-            {`${form.timeBudgetHoursPerWeek} hours/week`}
+            {t('learning.hoursPerWeek', { hours: form.timeBudgetHoursPerWeek })}
           </Text>
           <StepButton
             icon="add"
-            label="More hours per week"
+            label={t('learning.moreHours')}
             disabled={create.isPending || form.timeBudgetHoursPerWeek >= TIME_BUDGET_MAX}
             onPress={() => set({ timeBudgetHoursPerWeek: clampTimeBudget(form.timeBudgetHoursPerWeek + 1) })}
           />
         </View>
         <Input
-          label="Learning budget in dollars"
+          label={t('learning.budget')}
           value={form.financialBudget}
           onChangeText={(financialBudget) => set({ financialBudget: financialBudget.replace(/[^0-9]/g, '') })}
           keyboardType="number-pad"
           maxLength={7}
-          hint="Your own budget for courses. 0 means free resources only."
+          hint={t('learning.budgetHint')}
           error={fieldError?.field === 'financialBudget' ? fieldError.message : undefined}
           editable={!create.isPending}
         />
         <View className="flex-row items-center justify-between mb-4 min-h-[44px]">
-          <Text className="flex-1 text-sm text-stone-700 mr-3">Include a practical project brief with evaluation rubrics</Text>
+          <Text className="flex-1 text-sm text-stone-700 me-3">{t('learning.includeBrief')}</Text>
           <Switch
             value={form.includeProjectBrief}
             onValueChange={(includeProjectBrief) => set({ includeProjectBrief })}
             disabled={create.isPending}
             trackColor={{ true: colors.brand[500], false: colors.stone[300] }}
-            accessibilityLabel="Include a practical project brief"
+            accessibilityLabel={t('learning.includeBriefA11y')}
           />
         </View>
         {createError ? (
@@ -228,12 +232,12 @@ export default function LearningScreen() {
         <View className="flex-row gap-3 mb-8">
           <View className="flex-1">
             <Button variant="outline" fullWidth onPress={() => setOpen(false)} disabled={create.isPending}>
-              Cancel
+              {tc('cancel')}
             </Button>
           </View>
           <View className="flex-1">
             <Button fullWidth onPress={onCreate} loading={create.isPending} disabled={form.targetRole.trim() === ''}>
-              Create plan
+              {t('learning.create')}
             </Button>
           </View>
         </View>

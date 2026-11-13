@@ -1,0 +1,12 @@
+{
+  "errorState": {
+    "title": "Oups !",
+    "message": "Une erreur s’est produite",
+    "retry": "Réessayer"
+  },
+  "leaveGuard": {
+    "title": "Quitter sans enregistrer ?",
+    "body": "Vos modifications ne sont pas enregistrées. Elles restent sur cet appareil jusqu’à ce que vous vous déconnectiez ou fermiez l’app.",
+    "stay": "Rester sur cette page"
+  }
+}

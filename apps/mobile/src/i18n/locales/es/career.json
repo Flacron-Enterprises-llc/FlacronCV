@@ -1,0 +1,242 @@
+{
+  "header": {
+    "goBack": "Volver"
+  },
+  "addon": {
+    "heading": "Complemento de herramientas profesionales",
+    "note": "Es independiente de tu plan de FlacronCV de arriba, que nunca cambia."
+  },
+  "overview": {
+    "title": "Herramientas profesionales",
+    "subtitle": "Complemento opcional de tu plan de FlacronCV",
+    "credits": "Créditos profesionales",
+    "creditsLeft": "de {granted} créditos de documento restantes",
+    "packs": "{count} extra de paquetes",
+    "renews": "La asignación se renueva el {date}.",
+    "creditsError": "No se pudieron cargar tus créditos. Desliza hacia abajo para actualizar.",
+    "creditsNote": "Los créditos profesionales son independientes de tus créditos de IA de FlacronCV y solo los usan las herramientas profesionales. Editar, guardar y exportar un borrador no usa ninguno.",
+    "whatYouCanDo": "Lo que puedes hacer"
+  },
+  "access": {
+    "off": {
+      "title": "Las herramientas profesionales no están disponibles en esta app",
+      "body": "Tu plan de FlacronCV, tus CVs, cartas de presentación y el seguimiento de empleos funcionan como siempre."
+    },
+    "loading": {
+      "title": "Comprobando tus herramientas profesionales…"
+    },
+    "offline": {
+      "title": "No tienes conexión",
+      "body": "Las herramientas profesionales necesitan conexión. No se cambió nada. Inténtalo de nuevo cuando vuelvas a estar en línea."
+    },
+    "unavailable": {
+      "title": "Las herramientas profesionales no están disponibles en este momento",
+      "body": "El servicio profesional no respondió. No se cambió nada. Inténtalo de nuevo más tarde."
+    },
+    "inactive": {
+      "title": "Las herramientas profesionales no están disponibles para esta cuenta",
+      "body": "Tu cuenta de FlacronCV no está activa."
+    },
+    "notIncluded": {
+      "title": "Las herramientas profesionales no están incluidas en tu plan",
+      "body": "Las herramientas profesionales son un complemento opcional con sus propios créditos. Tu plan de FlacronCV, sus ventajas y sus créditos de IA se quedan exactamente como están."
+    },
+    "localFixture": "Acceso de prueba local para esta demostración. No es una compra y no se cobró nada.",
+    "purchase": "Un complemento independiente junto a tu plan de FlacronCV. Cancelarlo solo termina las herramientas profesionales; tu plan de FlacronCV continúa.",
+    "pastDue": "El último pago del complemento falló. El acceso continúa hasta el final del periodo pagado.",
+    "endsOn": "Termina el {date}.",
+    "renewsOn": "Se renueva el {date}.",
+    "included": "Incluido en tu plan de FlacronCV.",
+    "activeTitle": "Carrera {plan}",
+    "badge": {
+      "test": "ACCESO DE PRUEBA",
+      "ending": "POR TERMINAR",
+      "active": "ACTIVO"
+    }
+  },
+  "areas": {
+    "profile": {
+      "title": "Perfil profesional",
+      "body": "Añade, edita, confirma o elimina los datos con los que se crean tus borradores; importa un CV y define tus preferencias."
+    },
+    "documents": {
+      "title": "Borradores profesionales",
+      "body": "Crea, genera, adapta, edita y guarda CVs y cartas profesionales; cambia el diseño, revisa la legibilidad, exporta y comparte."
+    },
+    "opportunities": {
+      "title": "Búsqueda de empleo",
+      "body": "Busca en tus ofertas, pega un anuncio de empleo, revísalo y compáralo con tu CV profesional. No hay ninguna fuente de empleos en vivo conectada."
+    },
+    "map": {
+      "title": "Sesión de mapa",
+      "body": "Ofertas en forma de lista con ubicaciones aproximadas. No hay mosaicos de mapa conectados."
+    },
+    "alerts": {
+      "title": "Alertas",
+      "body": "Búsquedas guardadas, lugares, empresas que sigues y las ofertas que muestran."
+    },
+    "tracker": {
+      "title": "Seguimiento de empleos",
+      "body": "Tus candidaturas siguen en el seguimiento de empleos de FlacronCV."
+    },
+    "outcomes": {
+      "title": "Resultados de candidaturas",
+      "body": "Recuentos observados de tu seguimiento de empleos. No es una probabilidad de contratación."
+    },
+    "evidence": {
+      "title": "Archivo de evidencias",
+      "body": "Añade, edita y elimina pruebas de tu trabajo; adjunta una foto de un certificado."
+    },
+    "portfolios": {
+      "title": "Páginas de portafolio",
+      "body": "Elige qué trabajos mostrar, publica o crea un enlace privado, compártelo y muestra su código QR."
+    },
+    "interviews": {
+      "title": "Práctica de entrevistas",
+      "body": "Práctica de entrevistas por texto, tus sesiones y tus historias STAR."
+    },
+    "voice": {
+      "title": "Práctica de voz",
+      "body": "Practica en voz alta y escribe lo que dijiste. La app no graba audio."
+    },
+    "actionPacks": {
+      "title": "Paquetes de acción",
+      "body": "Convierte una oportunidad guardada en un paquete de candidatura adaptado con una lista de comprobación."
+    },
+    "learning": {
+      "title": "Planes de aprendizaje",
+      "body": "Carencias de habilidades, hitos y un resumen de proyecto para un puesto objetivo."
+    },
+    "maintenance": {
+      "title": "Mantenimiento profesional",
+      "body": "Registra logros y objetivos de ascenso; consulta las credenciales que vencen en 90 días."
+    },
+    "scenarios": {
+      "title": "Planificador de escenarios",
+      "body": "Compara hasta tres rutas. El salario que falte se muestra como desconocido."
+    },
+    "relocation": {
+      "title": "Reubicación y modos profesionales",
+      "body": "Ubicaciones objetivo, planes de reubicación y el enfoque especializado para tus borradores."
+    },
+    "recruiting": {
+      "title": "Participación en reclutamiento",
+      "body": "Elige si los empleadores pueden ver que te has apuntado. Tu correo sigue siendo privado."
+    },
+    "services": {
+      "title": "Revisión humana",
+      "body": "Una persona revisa el material seleccionado. Todavía no se puede reservar."
+    },
+    "data": {
+      "title": "Datos profesionales",
+      "body": "Exporta una copia de tus registros profesionales."
+    },
+    "forms": {
+      "title": "Rellenado de formularios de solicitud",
+      "body": "Usa la extensión del navegador de escritorio; no está disponible en teléfonos."
+    }
+  },
+  "where": {
+    "web": "En el sitio web",
+    "provider": "Aún no disponible",
+    "desktop": "Solo en escritorio"
+  },
+  "errors": {
+    "network": "Sin conexión. No se guardó nada. Revisa tu red e inténtalo de nuevo.",
+    "revisionConflict": "Este borrador cambió en otro lugar. Vuelve a cargarlo antes de guardar de nuevo; tu edición no se guardó.",
+    "featureUnavailable": "Esta función profesional está desactivada.",
+    "recordDeleted": "Este borrador se eliminó en otro lugar; tu edición no se guardó.",
+    "notInPlan": "Tu plan profesional no incluye esto.",
+    "quotaExhausted": "Ya usaste tus créditos profesionales de este periodo.",
+    "providerUnavailable": "Esto necesita un servicio que no está disponible en este momento. No se cobró nada.",
+    "rateLimited": "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo.",
+    "sessionExpired": "Tu sesión caducó. Inicia sesión de nuevo.",
+    "forbidden": "No tienes acceso a esto.",
+    "notFound": "Este elemento ya no existe."
+  },
+  "factTypes": {
+    "contact": "Contacto",
+    "summary": "Resumen",
+    "experience": "Experiencia",
+    "education": "Formación",
+    "skill": "Habilidad",
+    "project": "Proyecto",
+    "achievement": "Logro",
+    "certification": "Certificación",
+    "language": "Idioma",
+    "reference": "Referencia"
+  },
+  "shared": {
+    "notIncluded": "Las herramientas profesionales no están incluidas en tu plan",
+    "v1Unchanged": "Tus CVs y cartas de FlacronCV no han cambiado.",
+    "v1InTabs": "Tus CVs y cartas de presentación de FlacronCV están en sus propias pestañas.",
+    "careerUnchanged": "Tu perfil profesional y tus borradores no han cambiado.",
+    "nothingChanged": "No se ha modificado nada.",
+    "nothingChangedNoCredit": "No se cambió nada y no se usó ningún crédito.",
+    "pageNotLoaded": "No se pudo cargar esta página. No se cambió nada.",
+    "notOpenYet": "Esta herramienta aún no está disponible",
+    "confirmedPill": "CONFIRMADO",
+    "draftPill": "BORRADOR",
+    "openPill": "ABIERTA",
+    "expiredPill": "CADUCADA",
+    "confirm": "Confirmar",
+    "edit": "Editar",
+    "change": "Cambiar",
+    "discard": "Descartar",
+    "discardChanges": "¿Descartar los cambios?",
+    "keepEditing": "Seguir editando",
+    "unsavedChanges": "Cambios no guardados",
+    "unsavedRestored": "Se restauraron tus cambios sin guardar de antes.",
+    "leave": "Salir",
+    "notNow": "Ahora no",
+    "saving": "Guardando…",
+    "saved": "Guardado",
+    "saveFirst": "Guarda primero",
+    "notSaved": "No guardado",
+    "notUpdated": "No actualizado",
+    "notDeleted": "No eliminado",
+    "notRemoved": "No quitado",
+    "notConfirmed": "No confirmado",
+    "changesNotSaved": "Tus cambios no se guardaron. Siguen aquí; inténtalo de nuevo.",
+    "keepsTextNote": "Los borradores ya creados conservan su texto. Los nuevos borradores ya no lo usarán.",
+    "usesOneCredit": "Esto usa 1 crédito de documento",
+    "separateWithCommas": "Separa los elementos con comas",
+    "searchListings": "Buscar ofertas",
+    "noListings": "No hay ofertas",
+    "layout": "Diseño",
+    "layoutNotChanged": "Diseño sin cambiar",
+    "careerCv": "CV profesional",
+    "careerLetter": "Carta profesional",
+    "newCareerCv": "Nuevo CV profesional",
+    "writeLetterOrText": "Escribe una carta o un texto",
+    "exportFailed": "Error al exportar",
+    "sharingUnavailable": "No se puede compartir",
+    "shareSheetUnavailable": "Este dispositivo no puede abrir el menú para compartir.",
+    "fileNotCreated": "No se pudo crear el archivo. Inténtalo de nuevo.",
+    "couldNotOpenFile": "No se pudo abrir el archivo",
+    "exportUsesSaved": "La exportación usa la versión guardada. Guarda o descarta tus cambios y luego exporta.",
+    "notAHiringProbability": "Esto no es una probabilidad de contratación."
+  },
+  "outcomes": {
+    "intro": "Tasas observadas en tus candidaturas registradas. No es una probabilidad de contratación.",
+    "stats": {
+      "recorded": "Candidaturas registradas",
+      "rate": "Tasa de entrevistas observada en esta muestra",
+      "interviews": "Entrevistas",
+      "offers": "Ofertas recibidas",
+      "noResponse": "Enviada, sin respuesta aún",
+      "unrecorded": "Guardada o en preparación (no cuenta)"
+    },
+    "sample": {
+      "empty": "Aún no hay candidaturas. Los recuentos salen de las candidaturas de tu seguimiento de empleos.",
+      "none": "Ninguna de tus candidaturas tiene aún un resultado registrado, así que no hay tasa que mostrar.",
+      "small": "Es una muestra pequeña ({count} registradas). Un resultado más puede cambiar mucho la tasa."
+    },
+    "loadFailed": "No se pudo cargar esta página. No se cambió nada. Inténtalo de nuevo.",
+    "offBody": "Está desactivada en esta versión preliminar. No se ha modificado nada ni se ha usado ningún crédito.",
+    "notIncludedTitle": "El análisis de resultados no está incluido en tu plan profesional",
+    "notIncludedBody": "Tus candidaturas del seguimiento de empleos no han cambiado.",
+    "countsNote": "Los recuentos salen de tus candidaturas en el seguimiento de empleos. Las entrevistas incluyen las ofertas. No es una probabilidad de contratación.",
+    "openTracker": "Abrir el seguimiento de empleos"
+  }
+}

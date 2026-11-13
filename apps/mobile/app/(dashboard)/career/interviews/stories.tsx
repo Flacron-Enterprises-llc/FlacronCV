@@ -25,6 +25,7 @@ import {
 } from '../../../../src/lib/career/interviews';
 import { FACT_TYPE_LABEL, factSummary, formatDay } from '../../../../src/lib/career-view';
 import { colors } from '../../../../src/theme/colors';
+import { useT } from '../../../../src/i18n';
 
 /**
  * STAR stories (situation, task, action, result), as on the website. A story
@@ -33,6 +34,7 @@ import { colors } from '../../../../src/theme/colors';
  * all confirmed facts. Saving a story uses no text interview.
  */
 export default function StarStoriesScreen() {
+  const t = useT('careerInterviews');
   const access = useCareerAccess();
   const stories = useStarStories();
   const facts = useCareerFacts();
@@ -64,7 +66,7 @@ export default function StarStoriesScreen() {
       onSuccess: () => {
         setDraft(EMPTY_STORY);
         setFactIds([]);
-        Alert.alert('Story saved.', 'It is on your account with your other STAR stories.');
+        Alert.alert(t('stories.savedTitle'), t('stories.savedBody'));
       },
       onError: (error) => {
         const message = interviewErrorMessage(error, 'story');
@@ -77,7 +79,7 @@ export default function StarStoriesScreen() {
 
   let content: React.ReactNode;
   if (access.data && (!access.data.enabled || access.data.features?.textInterviewSessions === false)) {
-    content = <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" />;
+    content = <EmptyState icon="lock-closed-outline" title={t('list.locked')} />;
   } else if (access.isLoading || stories.isLoading) {
     content = (
       <View className="p-5">
@@ -96,10 +98,10 @@ export default function StarStoriesScreen() {
       >
         <View className="bg-white border border-stone-100 rounded-2xl p-4">
           <Text className="font-bold text-stone-900 text-base" accessibilityRole="header">
-            New STAR story
+            {t('stories.newTitle')}
           </Text>
           <Text className="text-stone-500 text-sm mt-1 mb-4 leading-5">
-            Situation, task, action, and result. A number that is not in your confirmed facts is refused. Saving a story does not use a text interview.
+            {t('stories.body')}
           </Text>
           {STORY_FIELDS.map((field) => (
             <View key={field} className="mb-4">
@@ -118,12 +120,12 @@ export default function StarStoriesScreen() {
             </View>
           ))}
 
-          <Text className="text-sm font-medium text-stone-700 mb-1">Facts this story uses (optional)</Text>
-          <Text className="text-stone-500 text-xs mb-2 leading-4">Only confirmed facts. With none picked, the story is linked to all of them.</Text>
+          <Text className="text-sm font-medium text-stone-700 mb-1">{t('stories.factsLabel')}</Text>
+          <Text className="text-stone-500 text-xs mb-2 leading-4">{t('stories.factsHelp')}</Text>
           {facts.isLoading ? (
             <SkeletonCard />
           ) : confirmed.length === 0 ? (
-            <Text className="text-stone-500 text-sm mb-2">No confirmed facts yet. Confirm facts in your career profile first.</Text>
+            <Text className="text-stone-500 text-sm mb-2">{t('stories.noFacts')}</Text>
           ) : (
             confirmed.map((fact) => {
               const on = factIds.includes(fact.id);
@@ -138,7 +140,7 @@ export default function StarStoriesScreen() {
                   className={`min-h-[44px] flex-row items-center rounded-xl border px-3 py-2 mb-2 ${on ? 'border-brand-400 bg-brand-50' : 'border-stone-200 bg-white'}`}
                 >
                   <Ionicons name={on ? 'checkbox' : 'square-outline'} size={20} color={on ? colors.brand[600] : colors.stone[400]} />
-                  <View className="flex-1 ml-2">
+                  <View className="flex-1 ms-2">
                     <Text className="text-stone-900 text-sm">{summary.title}</Text>
                     <Text className="text-stone-400 text-xs">{FACT_TYPE_LABEL[fact.factType] ?? fact.factType}</Text>
                   </View>
@@ -153,17 +155,17 @@ export default function StarStoriesScreen() {
             </View>
           ) : null}
           <Button className="mt-3" fullWidth onPress={save} loading={create.isPending}>
-            Save story
+            {t('stories.save')}
           </Button>
         </View>
 
         <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mt-6 mb-2" accessibilityRole="header">
-          Your stories
+          {t('stories.yourStories')}
         </Text>
         {stories.data.items.length === 0 ? (
           <View className="bg-white border border-stone-100 rounded-2xl p-4">
-            <Text className="font-semibold text-stone-800">No stories yet</Text>
-            <Text className="text-stone-500 text-sm mt-1">Write one above from your confirmed facts.</Text>
+            <Text className="font-semibold text-stone-800">{t('stories.emptyTitle')}</Text>
+            <Text className="text-stone-500 text-sm mt-1">{t('stories.emptyBody')}</Text>
           </View>
         ) : (
           stories.data.items.map((story) => (
@@ -174,7 +176,7 @@ export default function StarStoriesScreen() {
                   <Text className="text-stone-800 text-sm leading-5">{story[field]}</Text>
                 </View>
               ))}
-              <Text className="text-stone-400 text-xs">{`Saved ${formatDay(story.createdAt) ?? ''} · ${story.factIds.length} ${story.factIds.length === 1 ? 'fact' : 'facts'}`}</Text>
+              <Text className="text-stone-400 text-xs">{t('stories.savedLine', { date: formatDay(story.createdAt) ?? '', count: story.factIds.length })}</Text>
             </View>
           ))
         )}
@@ -184,7 +186,7 @@ export default function StarStoriesScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title="STAR stories" subtitle={dirty ? 'Unsaved story' : 'Interview practice'} />
+      <CareerHeader title={t('stories.title')} subtitle={dirty ? t('stories.unsaved') : t('stories.subtitle')} />
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {content}
       </KeyboardAvoidingView>

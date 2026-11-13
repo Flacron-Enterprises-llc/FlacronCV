@@ -18,6 +18,8 @@ import { engineFailureMessage } from '../../../../src/lib/engine-errors';
 import { canUseAI } from '../../../../src/lib/entitlements';
 import { requestFailureMessage } from '../../../../src/lib/api-errors';
 import { serializeCVToText } from '../../../../src/lib/serialize-cv';
+import { useT } from '../../../../src/i18n';
+import { RTL_FLIP } from '../../../../src/i18n/native';
 import { useAuthStore } from '../../../../src/store/auth-store';
 import { useCVStore } from '../../../../src/store/cv-store';
 import { colors } from '../../../../src/theme/colors';
@@ -54,6 +56,7 @@ function scoreTint(score: number): string {
 export default function ATSCheckScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const t = useT('aiTools');
   const queryClient = useQueryClient();
   const { user, syncUser } = useAuthStore();
   const storeCv = useCVStore((s) => s.cv);
@@ -79,19 +82,16 @@ export default function ATSCheckScreen() {
   const runCheck = async () => {
     const jd = jobDescription.trim();
     if (!jd) {
-      setJdError('Paste a job description first.');
+      setJdError(t('shared.jdRequired'));
       return;
     }
     setJdError(undefined);
     if (emptyCv) {
-      Alert.alert('Empty CV', 'Add content to this CV before running a check.');
+      Alert.alert(t('shared.emptyCvTitle'), t('ats.emptyCvBody'));
       return;
     }
     if (!user) {
-      Alert.alert(
-        'Account not loaded',
-        'Your account has not loaded yet. Check your connection and try again.',
-      );
+      Alert.alert(t('shared.accountNotLoadedTitle'), t('shared.accountNotLoadedBody'));
       return;
     }
     if (
@@ -102,7 +102,7 @@ export default function ATSCheckScreen() {
       )
     ) {
       Alert.alert(
-        'Credits Exhausted',
+        t('shared.creditsExhaustedTitle'),
         aiCreditsExhaustedMessage('summary'),
         upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
       );
@@ -118,16 +118,13 @@ export default function ATSCheckScreen() {
       await syncUser();
       await queryClient.invalidateQueries({ queryKey: ['user'] });
       if (!parsed) {
-        Alert.alert(
-          'Could not read the result',
-          'The check finished but the response could not be read. A credit may have been used. Check your balance and try again.',
-        );
+        Alert.alert(t('shared.readErrorTitle'), t('ats.readErrorBody'));
         return;
       }
       setResult(parsed);
     } catch (err: unknown) {
       if (alertIfUnverifiedEmail(err)) return;
-      Alert.alert('Could not run the check', engineFailureMessage(err, 'Could not run the check. Please try again.'));
+      Alert.alert(t('ats.errorTitle'), engineFailureMessage(err, t('ats.error')));
     }
   };
 
@@ -135,7 +132,7 @@ export default function ATSCheckScreen() {
     return (
       <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
         <ErrorState
-          message={requestFailureMessage(loadError, 'Could not load this CV. Please try again.')}
+          message={requestFailureMessage(loadError, t('shared.loadCvError'))}
           onRetry={() => {
             void cvQuery.refetch();
             void sectionsQuery.refetch();
@@ -161,11 +158,11 @@ export default function ATSCheckScreen() {
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
-        <TouchableOpacity onPress={() => router.back()} className="mr-3" accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+        <TouchableOpacity onPress={() => router.back()} className="me-3" accessibilityLabel={t('shared.goBack')}>
+          <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
         </TouchableOpacity>
         <Text className="text-xl font-black text-stone-900 flex-1" numberOfLines={1}>
-          ATS Check
+          {t('ats.title')}
         </Text>
       </View>
 
@@ -176,12 +173,10 @@ export default function ATSCheckScreen() {
       >
         {!result ? (
           <>
-            <Text className="text-stone-500 text-sm mb-4">
-              Paste the job description. Flacron Engine scores this CV against it and lists keyword gaps. Uses 1 credit.
-            </Text>
+            <Text className="text-stone-500 text-sm mb-4">{t('ats.intro')}</Text>
             <Input
-              label="Job description"
-              placeholder="Paste the job posting here"
+              label={t('shared.jdLabel')}
+              placeholder={t('shared.jdPlaceholder')}
               multiline
               numberOfLines={10}
               textAlignVertical="top"
@@ -192,7 +187,7 @@ export default function ATSCheckScreen() {
                 if (jdError) setJdError(undefined);
               }}
               error={jdError}
-              hint={emptyCv ? 'Add content to this CV first.' : undefined}
+              hint={emptyCv ? t('shared.addContentFirst') : undefined}
             />
             <Button
               variant="primary"
@@ -201,11 +196,11 @@ export default function ATSCheckScreen() {
               disabled={atsCheck.isPending || emptyCv}
               onPress={() => void runCheck()}
             >
-              Run check
+              {t('ats.run')}
             </Button>
             {user ? (
               <Text className="text-xs text-stone-400 text-center mt-3">
-                {creditsLeft} Flacron Engine credits remaining
+                {t('shared.engineCreditsRemaining', { count: creditsLeft })}
               </Text>
             ) : null}
           </>
@@ -217,7 +212,7 @@ export default function ATSCheckScreen() {
                 <Text className="text-xl font-bold text-stone-400">/100</Text>
               </Text>
               <Text className="text-xs font-semibold uppercase tracking-wider text-stone-500 mt-1">
-                Match score
+                {t('ats.matchScore')}
               </Text>
             </View>
 
@@ -227,7 +222,7 @@ export default function ATSCheckScreen() {
               </Text>
             ) : null}
 
-            <Text className="text-sm font-semibold text-stone-800 mb-2">Keyword gaps</Text>
+            <Text className="text-sm font-semibold text-stone-800 mb-2">{t('ats.keywordGaps')}</Text>
             {result.missingKeywords.length ? (
               <View className="flex-row flex-wrap gap-1.5 mb-5">
                 {result.missingKeywords.map((k) => (
@@ -237,10 +232,10 @@ export default function ATSCheckScreen() {
                 ))}
               </View>
             ) : (
-              <Text className="text-sm text-stone-500 mb-5">No missing keywords.</Text>
+              <Text className="text-sm text-stone-500 mb-5">{t('ats.noMissing')}</Text>
             )}
 
-            <Text className="text-sm font-semibold text-stone-800 mb-2">Matched keywords</Text>
+            <Text className="text-sm font-semibold text-stone-800 mb-2">{t('ats.matched')}</Text>
             {result.matchedKeywords.length ? (
               <View className="flex-row flex-wrap gap-1.5 mb-5">
                 {result.matchedKeywords.map((k) => (
@@ -250,12 +245,12 @@ export default function ATSCheckScreen() {
                 ))}
               </View>
             ) : (
-              <Text className="text-sm text-stone-400 mb-5">None matched.</Text>
+              <Text className="text-sm text-stone-400 mb-5">{t('ats.noneMatched')}</Text>
             )}
 
             {result.suggestions.length > 0 ? (
               <View className="mb-5">
-                <Text className="text-sm font-semibold text-stone-800 mb-2">Suggestions</Text>
+                <Text className="text-sm font-semibold text-stone-800 mb-2">{t('ats.suggestions')}</Text>
                 {result.suggestions.map((s) => (
                   <Text key={s} className="text-sm text-stone-600 mb-1.5">
                     • {s}
@@ -265,7 +260,7 @@ export default function ATSCheckScreen() {
             ) : null}
 
             <Button variant="outline" fullWidth onPress={() => setResult(null)}>
-              Check again
+              {t('ats.checkAgain')}
             </Button>
           </>
         )}

@@ -40,7 +40,10 @@ import {
   normalizeHex,
   SECTION_STYLE_OPTIONS,
   templateTier,
+  tierLabel,
 } from '../../../../src/lib/cv-design';
+import { useT } from '../../../../src/i18n';
+import { RTL_FLIP } from '../../../../src/i18n/native';
 import { effectivePlanForCopy, resolveEffectivePlan } from '../../../../src/lib/entitlements';
 import { useAuthStore } from '../../../../src/store/auth-store';
 import { colors } from '../../../../src/theme/colors';
@@ -67,12 +70,13 @@ interface ChipProps {
 }
 
 function Chip({ label, selected, onPress, locked, hint, accessibilityLabel }: ChipProps) {
+  const t = useT('cvDesign');
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityState={{ selected, checked: selected }}
-      accessibilityLabel={accessibilityLabel ?? (locked ? `${label}, locked` : label)}
+      accessibilityLabel={accessibilityLabel ?? (locked ? t('lockedA11y', { label }) : label)}
       accessibilityHint={hint}
       className={[
         'min-h-[44px] px-3 py-2 rounded-xl flex-row items-center justify-center',
@@ -85,7 +89,7 @@ function Chip({ label, selected, onPress, locked, hint, accessibilityLabel }: Ch
           name="lock-closed"
           size={12}
           color={selected ? colors.white : colors.stone[500]}
-          style={{ marginRight: 4 }}
+          style={{ marginEnd: 4 }}
         />
       ) : null}
       <Text className={['text-sm font-semibold', selected ? 'text-white' : 'text-stone-600'].join(' ')}>
@@ -102,6 +106,9 @@ function Card({ children }: { children: React.ReactNode }) {
 export default function CVDesignScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const t = useT('cvDesign');
+  const tc = useT('common');
+  const tt = useT('templates');
   const { user } = useAuthStore();
   const cvQuery = useCV(id ?? null);
   const templatesQuery = useTemplates(TemplateCategory.CV);
@@ -162,11 +169,11 @@ export default function CVDesignScreen() {
       return;
     }
     Alert.alert(
-      `Switch to ${template.name}?`,
-      'This applies the template’s layout, colour and fonts to your CV. Your content stays the same. Nothing is saved until you tap Save.',
+      t('switchTitle', { name: template.name }),
+      t('switchBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Switch', onPress: apply },
+        { text: tc('cancel'), style: 'cancel' },
+        { text: t('switch'), onPress: apply },
       ],
     );
   };
@@ -174,13 +181,13 @@ export default function CVDesignScreen() {
   const pickLayout = (layout: CVLayout) => {
     if (!draft || !original) return;
     if (!canSelectLayout(layout, plan, original.layout)) {
-      const tier = capitalize(layoutTier(layout));
+      const tier = tierLabel(layoutTier(layout));
       const label = layoutLabel(layout);
       showUpgrade(
         lockedTemplateTitle(layoutTier(layout)),
         PAID_UPGRADES_ENABLED
-          ? `The ${label} layout requires a ${tier} plan.`
-          : `The ${label} layout is included on ${tier} plans. Your ${capitalize(planForCopy)} plan can use the other layouts.`,
+          ? t('layoutRequires', { layout: label, tier })
+          : t('layoutIncluded', { layout: label, tier, plan: tierLabel(planForCopy) }),
       );
       return;
     }
@@ -190,7 +197,7 @@ export default function CVDesignScreen() {
   const applyCustomHex = () => {
     const hex = normalizeHex(customHex);
     if (!hex) {
-      setHexError('Enter a hex colour like #1e3a5f.');
+      setHexError(t('hexError'));
       return;
     }
     setHexError(undefined);
@@ -205,10 +212,10 @@ export default function CVDesignScreen() {
       const next = saved ? designDraftFromCV(saved) : draft;
       setOriginal(next);
       setDraft(next);
-      Alert.alert('Design saved', 'Your CV design has been updated.');
+      Alert.alert(t('savedTitle'), t('savedBody'));
     } catch (err: unknown) {
       // Server copy first (e.g. a plan-gated layout/template 403), then network, then generic.
-      Alert.alert('Could not save', requestFailureMessage(err, 'Could not save the design. Please try again.'));
+      Alert.alert(t('saveFailedTitle'), requestFailureMessage(err, t('saveFailed')));
     }
   };
 
@@ -216,14 +223,14 @@ export default function CVDesignScreen() {
     <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
       <TouchableOpacity
         onPress={() => router.back()}
-        className="mr-3 w-11 h-11 items-center justify-center -ml-3"
+        className="me-3 w-11 h-11 items-center justify-center -ms-3"
         accessibilityRole="button"
-        accessibilityLabel="Go back"
+        accessibilityLabel={t('back')}
       >
-        <Ionicons name="arrow-back" size={22} color={colors.stone[700]} />
+        <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
       </TouchableOpacity>
       <Text className="text-xl font-black text-stone-900 flex-1" numberOfLines={1}>
-        CV design
+        {t('title')}
       </Text>
       {draft ? (
         <Button
@@ -232,9 +239,9 @@ export default function CVDesignScreen() {
           loading={saveDesign.isPending}
           disabled={!dirty || saveDesign.isPending}
           onPress={() => void handleSave()}
-          accessibilityLabel="Save design"
+          accessibilityLabel={t('saveA11y')}
         >
-          Save
+          {tc('save')}
         </Button>
       ) : null}
     </View>
@@ -245,7 +252,7 @@ export default function CVDesignScreen() {
       <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
         {header}
         <ErrorState
-          message={requestFailureMessage(cvQuery.error, 'Could not load this CV. Please try again.')}
+          message={requestFailureMessage(cvQuery.error, t('loadFailed'))}
           onRetry={() => void cvQuery.refetch()}
         />
       </SafeAreaView>
@@ -279,9 +286,9 @@ export default function CVDesignScreen() {
         <Card>
           <View className="flex-row items-center">
             <View
-              className="w-12 h-12 rounded-xl border border-stone-200 mr-3"
+              className="w-12 h-12 rounded-xl border border-stone-200 me-3"
               style={{ backgroundColor: draft.primaryColor }}
-              accessibilityLabel={`Accent colour ${accentLabel(draft.primaryColor)} ${draft.primaryColor}`}
+              accessibilityLabel={t('accentA11y', { name: accentLabel(draft.primaryColor), hex: draft.primaryColor })}
             />
             <View className="flex-1">
               <Text className="font-bold text-stone-900" numberOfLines={1}>
@@ -289,29 +296,29 @@ export default function CVDesignScreen() {
               </Text>
               <Text className="text-xs text-stone-500 mt-0.5" numberOfLines={2}>
                 {accentLabel(draft.primaryColor)} {draft.primaryColor.toUpperCase()} · {draft.fontFamily} /{' '}
-                {headingFont} · {capitalize(draft.fontSize)}
+                {headingFont} · {FONT_SIZE_OPTIONS.find((s) => s.key === draft.fontSize)?.label ?? capitalize(draft.fontSize)}
               </Text>
             </View>
           </View>
           {dirty ? (
-            <Text className="text-xs text-amber-700 mt-3">Unsaved changes. Tap Save to apply them to your CV.</Text>
+            <Text className="text-xs text-amber-700 mt-3">{t('unsaved')}</Text>
           ) : null}
         </Card>
 
         {/* Template */}
         <Card>
-          <SectionHeading>Template</SectionHeading>
+          <SectionHeading>{t('sections.template')}</SectionHeading>
           {templatesQuery.error ? (
             <View className="flex-row items-center justify-between">
-              <Text className="text-sm text-stone-500 flex-1">Could not load templates.</Text>
+              <Text className="text-sm text-stone-500 flex-1">{t('templatesLoadError')}</Text>
               <Button size="sm" variant="outline" onPress={() => void templatesQuery.refetch()}>
-                Retry
+                {t('retry')}
               </Button>
             </View>
           ) : templatesQuery.isLoading ? (
-            <Text className="text-sm text-stone-400">Loading templates…</Text>
+            <Text className="text-sm text-stone-400">{t('loadingTemplates')}</Text>
           ) : templates.length === 0 ? (
-            <Text className="text-sm text-stone-400">No templates are available right now.</Text>
+            <Text className="text-sm text-stone-400">{tt('empty.allBody')}</Text>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
               {templates.map((t) => (
@@ -331,7 +338,7 @@ export default function CVDesignScreen() {
 
         {/* Layout */}
         <Card>
-          <SectionHeading>Layout</SectionHeading>
+          <SectionHeading>{t('sections.layout')}</SectionHeading>
           <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup">
             {LAYOUT_OPTIONS.map((opt) => (
               <Chip
@@ -349,7 +356,7 @@ export default function CVDesignScreen() {
 
         {/* Accent colour */}
         <Card>
-          <SectionHeading>Accent colour</SectionHeading>
+          <SectionHeading>{t('sections.accent')}</SectionHeading>
           <View className="flex-row flex-wrap gap-1" accessibilityRole="radiogroup">
             {ACCENT_COLORS.map((c) => {
               const selected = draft.primaryColor.toLowerCase() === c.value;
@@ -378,7 +385,7 @@ export default function CVDesignScreen() {
           <View className="flex-row items-start gap-2 mt-3">
             <View className="flex-1">
               <Input
-                label="Custom colour"
+                label={t('customColour')}
                 placeholder="#1e3a5f"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -393,8 +400,8 @@ export default function CVDesignScreen() {
               />
             </View>
             <View style={{ marginTop: 26 }}>
-              <Button variant="outline" onPress={applyCustomHex} accessibilityLabel="Apply custom colour">
-                Apply
+              <Button variant="outline" onPress={applyCustomHex} accessibilityLabel={t('applyA11y')}>
+                {t('apply')}
               </Button>
             </View>
           </View>
@@ -402,7 +409,7 @@ export default function CVDesignScreen() {
 
         {/* Section headings */}
         <Card>
-          <SectionHeading>Section headings</SectionHeading>
+          <SectionHeading>{t('sections.sectionHeadings')}</SectionHeading>
           <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup">
             {SECTION_STYLE_OPTIONS.map((s) => (
               <Chip
@@ -417,7 +424,7 @@ export default function CVDesignScreen() {
 
         {/* Corner style */}
         <Card>
-          <SectionHeading>Corner style</SectionHeading>
+          <SectionHeading>{t('sections.cornerStyle')}</SectionHeading>
           <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup">
             {BORDER_RADIUS_OPTIONS.map((r) => (
               <Chip
@@ -432,45 +439,45 @@ export default function CVDesignScreen() {
 
         {/* Fonts */}
         <Card>
-          <SectionHeading>Body font</SectionHeading>
+          <SectionHeading>{t('sections.bodyFont')}</SectionHeading>
           <View className="flex-row flex-wrap gap-2 mb-4" accessibilityRole="radiogroup">
             {FONT_OPTIONS.map((f) => (
               <Chip
                 key={f}
                 label={f}
                 selected={draft.fontFamily === f}
-                accessibilityLabel={`Body font ${f}`}
+                accessibilityLabel={t('bodyFontA11y', { font: f })}
                 onPress={() => update({ fontFamily: f })}
               />
             ))}
           </View>
-          <SectionHeading>Heading font</SectionHeading>
+          <SectionHeading>{t('sections.headingFont')}</SectionHeading>
           <View className="flex-row flex-wrap gap-2 mb-4" accessibilityRole="radiogroup">
             {FONT_OPTIONS.map((f) => (
               <Chip
                 key={f}
                 label={f}
                 selected={headingFont === f}
-                accessibilityLabel={`Heading font ${f}`}
+                accessibilityLabel={t('headingFontA11y', { font: f })}
                 onPress={() => update({ headingFontFamily: f })}
               />
             ))}
           </View>
-          <SectionHeading>Font size</SectionHeading>
+          <SectionHeading>{t('sections.fontSize')}</SectionHeading>
           <View className="flex-row gap-2" accessibilityRole="radiogroup">
             {FONT_SIZE_OPTIONS.map((s) => (
               <View key={s.key} className="flex-1">
                 <Chip
                   label={s.label}
                   selected={draft.fontSize === s.key}
-                  accessibilityLabel={`Font size ${s.label}`}
+                  accessibilityLabel={t('fontSizeA11y', { size: s.label })}
                   onPress={() => update({ fontSize: s.key })}
                 />
               </View>
             ))}
           </View>
           <Text className="text-xs text-stone-400 mt-3">
-            Fonts show in your exported and web CV. The app lists them by name.
+            {t('fontsNote')}
           </Text>
         </Card>
 
@@ -484,7 +491,7 @@ export default function CVDesignScreen() {
               setHexError(undefined);
             }}
           >
-            Discard changes
+            {t('discard')}
           </Button>
         ) : null}
       </ScrollView>
@@ -498,8 +505,8 @@ export default function CVDesignScreen() {
             ? lockedTemplateMessage(previewing.name, templateTier(previewing.id, previewing.tier), planForCopy)
             : undefined
         }
-        selectLabel={previewing?.id === draft.templateId ? 'Current template' : 'Use this template'}
-        closeLabel="Close"
+        selectLabel={previewing?.id === draft.templateId ? t('currentTemplate') : t('useTemplate')}
+        closeLabel={tc('close')}
         onSelect={() => {
           const chosen = previewing;
           setPreviewing(null);

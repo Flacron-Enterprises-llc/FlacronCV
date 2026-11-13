@@ -24,6 +24,8 @@ import {
 } from '../../../../src/lib/career/action-packs';
 import { careerErrorMessage, formatDay } from '../../../../src/lib/career-view';
 import { colors } from '../../../../src/theme/colors';
+import { useT } from '../../../../src/i18n';
+import { RTL_FLIP } from '../../../../src/i18n/native';
 
 /**
  * Action packs, as on the website (career/action-pack): pick a saved
@@ -32,6 +34,8 @@ import { colors } from '../../../../src/theme/colors';
  * One action-pack credit per pack; reading and ticking the checklist are free.
  */
 export default function ActionPacksScreen() {
+  const t = useT('careerPlans');
+  const tc = useT('common');
   const router = useRouter();
   const access = useCareerAccess();
   const list = useActionPacks();
@@ -70,9 +74,9 @@ export default function ActionPacksScreen() {
 
   let content: React.ReactNode;
   if (access.data && !access.data.enabled) {
-    content = <EmptyState icon="lock-closed-outline" title="Career tools are not included in your plan" />;
+    content = <EmptyState icon="lock-closed-outline" title={t('lockedTitle')} />;
   } else if (featureOff) {
-    content = <EmptyState icon="lock-closed-outline" title="Action packs are not open yet" description="Nothing was changed and no credit was used." />;
+    content = <EmptyState icon="lock-closed-outline" title={t('actionPack.notOpen')} description={t('nothingChangedNoCredit')} />;
   } else if (access.isLoading || list.isLoading) {
     content = (
       <View className="p-5">
@@ -81,7 +85,7 @@ export default function ActionPacksScreen() {
       </View>
     );
   } else if (access.error || list.error || !list.data) {
-    content = <ErrorState message={careerErrorMessage(list.error ?? access.error, 'Could not load your action packs.')} onRetry={() => void list.refetch()} />;
+    content = <ErrorState message={careerErrorMessage(list.error ?? access.error, t('actionPack.loadError'))} onRetry={() => void list.refetch()} />;
   } else {
     const packs = list.data.items;
     const credits = creditsLeft(list.data.actionPack);
@@ -91,22 +95,22 @@ export default function ActionPacksScreen() {
         refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} tintColor={colors.brand[600]} />}
       >
         <Text className="text-stone-500 text-sm mb-4 leading-5">
-          Turn a saved opportunity into an application pack: fit explanation, tailored CV lines, cover letter, checklist and next steps, built from your confirmed facts.
+          {t('actionPack.intro')}
         </Text>
         <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4 flex-row items-center">
-          <View className="flex-1 mr-3">
-            <Text className="text-stone-500 text-xs font-semibold uppercase tracking-wide">Action pack credits</Text>
+          <View className="flex-1 me-3">
+            <Text className="text-stone-500 text-xs font-semibold uppercase tracking-wide">{t('actionPack.credits')}</Text>
             <Text className="text-2xl font-black text-stone-900 mt-0.5">{credits ?? '—'}</Text>
           </View>
           <Button onPress={openPicker} icon={<Ionicons name="add" size={18} color={colors.white} />}>
-            New pack
+            {t('actionPack.newPack')}
           </Button>
         </View>
         {packs.length === 0 ? (
-          <EmptyState icon="rocket-outline" title="No action packs yet" description="Pick a saved opportunity to build a tailored application pack." />
+          <EmptyState icon="rocket-outline" title={t('actionPack.emptyTitle')} description={t('actionPack.emptyBody')} />
         ) : (
           <>
-            <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">Your action packs</Text>
+            <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">{t('actionPack.yourPacks')}</Text>
             {packs.map((pack) => {
               const progress = checklistProgress(pack);
               return (
@@ -115,10 +119,16 @@ export default function ActionPacksScreen() {
                   onPress={() => router.push(`/(dashboard)/career/action-pack/${pack.id}` as Href)}
                   className="bg-white border border-stone-100 rounded-2xl p-4 mb-3 flex-row items-center min-h-[56px]"
                   accessibilityRole="button"
-                  accessibilityLabel={`${pack.vacancySnapshot.title}, ${organizationName(pack.vacancySnapshot.organization)}, ${fitLabel(pack.fit.fit).toLowerCase()}, checklist ${progress.done} of ${progress.total}`}
+                  accessibilityLabel={t('actionPack.itemA11y', {
+                    title: pack.vacancySnapshot.title,
+                    organization: organizationName(pack.vacancySnapshot.organization),
+                    fit: fitLabel(pack.fit.fit).toLowerCase(),
+                    done: progress.done,
+                    total: progress.total,
+                  })}
                   activeOpacity={0.8}
                 >
-                  <View className="flex-1 mr-2">
+                  <View className="flex-1 me-2">
                     <Text className="font-bold text-stone-900" numberOfLines={1}>
                       {pack.vacancySnapshot.title}
                     </Text>
@@ -127,10 +137,10 @@ export default function ActionPacksScreen() {
                     </Text>
                     <View className="flex-row items-center mt-2 gap-2">
                       <Pill label={fitLabel(pack.fit.fit)} tone={fitTone(pack.fit.fit)} />
-                      <Text className="text-stone-400 text-xs">{`Checklist ${progress.done}/${progress.total} · ${formatDay(pack.createdAt) ?? ''}`}</Text>
+                      <Text className="text-stone-400 text-xs">{`${t('actionPack.itemChecklist', { done: progress.done, total: progress.total })} · ${formatDay(pack.createdAt) ?? ''}`}</Text>
                     </View>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} />
+                  <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} style={RTL_FLIP} />
                 </TouchableOpacity>
               );
             })}
@@ -143,18 +153,18 @@ export default function ActionPacksScreen() {
   const opps = opportunities.data?.items ?? [];
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title="Action packs" />
+      <CareerHeader title={t('actionPack.title')} />
       {content}
-      <Modal visible={picking} onClose={() => setPicking(false)} title="Target an opportunity" size="lg" closeDisabled={create.isPending}>
+      <Modal visible={picking} onClose={() => setPicking(false)} title={t('actionPack.pickTitle')} size="lg" closeDisabled={create.isPending}>
         <Text className="text-stone-500 text-sm leading-5 mb-4">
-          Uses 1 action pack credit. The pack includes the tailored CV lines, cover letter, fit explanation, checklist and next steps; there is no separate charge for them.
+          {t('actionPack.pickCost')}
         </Text>
         {opportunities.isLoading ? (
           <SkeletonCard />
         ) : opportunities.error ? (
-          <Text className="text-red-600 text-sm mb-4">{careerErrorMessage(opportunities.error, 'Could not load your saved opportunities.')}</Text>
+          <Text className="text-red-600 text-sm mb-4">{careerErrorMessage(opportunities.error, t('actionPack.oppsLoadError'))}</Text>
         ) : opps.length === 0 ? (
-          <Text className="text-stone-500 text-sm mb-4">No saved opportunities yet. Save or paste a job advert on the FlacronCV website first.</Text>
+          <Text className="text-stone-500 text-sm mb-4">{t('actionPack.noOpps')}</Text>
         ) : (
           <View accessibilityRole="radiogroup" className="mb-2">
             {opps.map((opp) => {
@@ -171,13 +181,13 @@ export default function ActionPacksScreen() {
                   activeOpacity={0.8}
                 >
                   <Ionicons name={isSelected ? 'radio-button-on' : 'radio-button-off'} size={20} color={isSelected ? colors.brand[600] : colors.stone[400]} />
-                  <View className="flex-1 ml-3">
+                  <View className="flex-1 ms-3">
                     <Text className="font-semibold text-stone-900" numberOfLines={2}>
                       {opp.title}
                     </Text>
                     <Text className="text-stone-500 text-xs mt-0.5" numberOfLines={1}>
                       {organizationName(opp.organization)}
-                      {opp.label === 'expired' ? ' · Expired' : ''}
+                      {opp.label === 'expired' ? ` · ${t('actionPack.expired')}` : ''}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -193,12 +203,12 @@ export default function ActionPacksScreen() {
         <View className="flex-row gap-3 mb-8">
           <View className="flex-1">
             <Button variant="outline" fullWidth onPress={() => setPicking(false)} disabled={create.isPending}>
-              Cancel
+              {tc('cancel')}
             </Button>
           </View>
           <View className="flex-1">
             <Button fullWidth onPress={onCreate} loading={create.isPending} disabled={!selected}>
-              Create pack
+              {t('actionPack.create')}
             </Button>
           </View>
         </View>

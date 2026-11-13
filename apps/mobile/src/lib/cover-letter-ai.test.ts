@@ -1,7 +1,9 @@
 import { AxiosError, AxiosHeaders } from 'axios';
 import { describe, expect, it } from 'vitest';
+import { setLocale } from '../i18n';
 import {
   AI_LANGUAGE,
+  aiLanguage,
   aiChargeNote,
   buildDraftRequest,
   buildJobDescriptionRequest,
@@ -85,5 +87,17 @@ describe('AI responses', () => {
     expect(aiChargeNote(refunded)).toMatch(/No Engine credit was used/);
     expect(draftChargeNote(unconfirmed)).toMatch(/No draft was saved, but/);
     expect(draftChargeNote(refunded)).toMatch(/no draft was saved/);
+  });
+});
+
+describe('aiLanguage', () => {
+  it('asks for the app language by its English name, like the website', () => {
+    expect(aiLanguage()).toBe(AI_LANGUAGE);
+    setLocale('fr');
+    expect(aiLanguage()).toBe('French');
+    expect(buildJobDescriptionRequest('Engineer', '').language).toBe('French');
+    setLocale('ur');
+    expect(aiLanguage()).toBe('Urdu');
+    setLocale('en');
   });
 });

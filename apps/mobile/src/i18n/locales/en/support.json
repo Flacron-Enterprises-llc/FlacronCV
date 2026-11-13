@@ -1,0 +1,65 @@
+{
+  "title": "Support",
+  "goBack": "Go back",
+  "status": {
+    "open": "Awaiting support reply",
+    "inProgress": "In progress",
+    "waitingOnCustomer": "Awaiting customer reply",
+    "resolved": "Resolved",
+    "closed": "Closed"
+  },
+  "categories": {
+    "general": "General",
+    "bug": "Bug",
+    "featureRequest": "Feature Request",
+    "billing": "Billing",
+    "account": "Account"
+  },
+  "list": {
+    "replayTour": "Replay App Tour",
+    "newTicket": "New Ticket",
+    "loadError": "Could not load tickets. Please try again.",
+    "emptyTitle": "No support tickets",
+    "emptyDesc": "Need help? Create a support ticket and we'll get back to you.",
+    "emptyAction": "Create Ticket"
+  },
+  "form": {
+    "title": "Create Support Ticket",
+    "subject": "Subject *",
+    "subjectPh": "Describe your issue briefly",
+    "description": "Description *",
+    "descriptionPh": "Please provide as much detail as possible...",
+    "subjectMin": "Subject must be at least 5 characters",
+    "messageMin": "Message must be at least 20 characters",
+    "category": "Category",
+    "priority": "Priority",
+    "categories": {
+      "bug": "Bug Report",
+      "featureRequest": "Feature Request",
+      "billing": "Billing",
+      "account": "Account",
+      "general": "General"
+    },
+    "priorities": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "submit": "Submit Ticket",
+    "createErrorTitle": "Could not create ticket",
+    "createError": "Could not create the ticket. Please try again."
+  },
+  "detail": {
+    "loadError": "Could not load this ticket. Please try again.",
+    "sendErrorTitle": "Could not send",
+    "sendError": "Could not send. Please try again.",
+    "closeTicket": "Close ticket",
+    "closeBody": "Close this ticket? You will not be able to reply to it. Create a new ticket if you need further help.",
+    "closed": "Ticket closed",
+    "closeErrorTitle": "Could not close",
+    "closeError": "Failed to close ticket",
+    "closedNotice": "This ticket is closed. Create a new ticket if you need further help.",
+    "replyPlaceholder": "Type your message...",
+    "sendReply": "Send reply"
+  }
+}
