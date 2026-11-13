@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import en from '../../../public/locales/en/common.json';
 import { CareerPlansScreen } from './CareerPlansScreen';
 
@@ -10,6 +11,13 @@ const post = vi.fn();
 vi.mock('@/lib/api', () => ({ api: { get: (...args: unknown[]) => get(...args), post: (...args: unknown[]) => post(...args) } }));
 vi.mock('@/providers/AuthProvider', () => ({
   useAuth: () => ({ user: { uid: 'u1', subscription: { plan: 'pro', status: 'active', currentPeriodEnd: new Date(Date.now() + 86400e3) } } }),
+}));
+vi.mock('@/i18n/routing', () => ({
+  Link: ({ href, children, ...rest }: { href: string; children: ReactNode }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
 }));
 vi.mock('./CareerServices', () => ({ useCareerAccess: () => ({ data: { enabled: false, v1Plan: 'pro', reason: 'plan_not_mapped', features: {} } }) }));
 
@@ -78,4 +86,27 @@ describe('CareerPlansScreen (add-on)', () => {
     renderScreen();
     expect(await screen.findByText(/Checkout for career plans is not set up in this environment yet/)).toBeTruthy();
   });
+  it('shows when a Stripe career add-on renews or ends, and where to manage it', async () => {
+    get.mockResolvedValue(
+      status({ careerSubscription: { plan: 'professional', status: 'active', currentPeriodEnd: '2026-12-13T12:00:00.000Z', cancelAtPeriodEnd: false, source: 'stripe' } }),
+    );
+    const { unmount } = renderScreen();
+    expect(await screen.findByText('Renews on December 13, 2026.')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Manage in Billing' }).getAttribute('href')).toBe('/settings/billing');
+    unmount();
+    get.mockResolvedValue(
+      status({ careerSubscription: { plan: 'professional', status: 'active', currentPeriodEnd: '2026-12-13T12:00:00.000Z', cancelAtPeriodEnd: true, source: 'stripe' } }),
+    );
+    renderScreen();
+    expect(await screen.findByText('Ends on December 13, 2026. It will not renew.')).toBeTruthy();
+  });
+
+  it('shows no billing date or manage link for a local test entitlement', async () => {
+    get.mockResolvedValue(status({ careerSubscription: { plan: 'professional', status: 'active', currentPeriodEnd: null, cancelAtPeriodEnd: false, source: 'local_fixture' } }));
+    renderScreen();
+    await screen.findByText(/billed in addition/);
+    expect(screen.queryByRole('link', { name: 'Manage in Billing' })).toBeNull();
+    expect(screen.queryByText(/Renews on/)).toBeNull();
+  });
 });
+

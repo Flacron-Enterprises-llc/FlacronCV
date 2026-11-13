@@ -42,6 +42,7 @@ import { shouldClaimCheckoutSuccess } from '@/lib/checkout-verify';
 import { localizedPlanFeatures } from '@/lib/plan-features';
 import { legalDocLinks } from '@/components/auth/LegalAcceptanceModal';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
+import { CareerAddonBillingCard } from '@/components/career/CareerAddonBillingCard';
 
 export default function BillingPage(): React.JSX.Element | null {
   const t = useTranslations('billing');
@@ -452,6 +453,10 @@ export default function BillingPage(): React.JSX.Element | null {
           )}
         </div>
       </Card>
+
+      {/* Optional career tools add-on (career build switch only). Its own Stripe
+          subscription on the same customer, so the same portal manages it. */}
+      <CareerAddonBillingCard onManage={() => portalMutation.mutate()} managing={portalMutation.isPending} />
 
       {/* Upgrade Options - Only for free plan */}
       {isFreePlan && (

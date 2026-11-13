@@ -13,7 +13,15 @@ import { cn } from '@/lib/utils';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { useAuth } from '@/providers/AuthProvider';
 import { PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
+import { Link } from '@/i18n/routing';
 import { useCareerAccess } from './CareerServices';
+import {
+  careerBillingStatusKey,
+  careerRenewal,
+  formatCareerDate,
+  hasStripeCareerSubscription,
+  type CareerBillingStatusView,
+} from './career-subscription';
 
 /** Individual career plans offered here. Business (seats, candidates) is a team product and is not sold in this flow. */
 const OFFERED: readonly PlanId[] = ['starter', 'professional', 'career_pro'];
@@ -36,14 +44,7 @@ const BENEFITS = [
 type Benefit = (typeof BENEFITS)[number];
 type Interval = 'month' | 'year';
 
-interface CareerBillingStatus {
-  mode: 'disabled' | 'addon_fixture';
-  purchasable: boolean;
-  blockedReason: 'disabled' | 'stripe_not_configured' | 'prices_not_configured' | null;
-  configuredPrices: string[];
-  stripeTestMode: boolean;
-  careerSubscription: { plan: string | null; status: string | null; currentPeriodEnd: string | null; cancelAtPeriodEnd: boolean; source: string | null } | null;
-}
+type CareerBillingStatus = CareerBillingStatusView;
 
 function money(cents: number, locale: string): string {
   return new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(cents / 100);
@@ -69,7 +70,7 @@ export function CareerPlansScreen() {
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(false);
   const status = useQuery<CareerBillingStatus>({
-    queryKey: ['career-billing-status', user?.uid ?? 'anon'],
+    queryKey: careerBillingStatusKey(user?.uid),
     queryFn: () => api.get<CareerBillingStatus>('/career-billing/status'),
     enabled: Boolean(user),
     retry: false,
@@ -85,6 +86,7 @@ export function CareerPlansScreen() {
     return t(`benefit.${benefit}`, { count: value });
   };
   const current = status.data?.careerSubscription;
+  const renewal = careerRenewal(current);
   const currentLabel = useMemo(() => {
     if (!access.data?.enabled) return t('current_none');
     // A locally seeded entitlement must never read as a purchase.
@@ -123,6 +125,17 @@ export function CareerPlansScreen() {
           <li>{t('optional_note')}</li>
         </ul>
         <p className="mt-2 text-sm font-medium text-stone-800 dark:text-stone-100">{currentLabel}</p>
+        {renewal ? (
+          <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">{t(renewal.key, { date: formatCareerDate(renewal.date, locale) })}</p>
+        ) : null}
+        {hasStripeCareerSubscription(current) ? (
+          <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
+            {t('manage_note')}{' '}
+            <Link className="font-semibold text-brand-700 underline-offset-2 hover:underline dark:text-brand-400" href="/settings/billing">
+              {t('manage_link')}
+            </Link>
+          </p>
+        ) : null}
         {current?.source === 'local_fixture' ? (
           <p className="mt-1 inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
             {t('fixture_badge')}

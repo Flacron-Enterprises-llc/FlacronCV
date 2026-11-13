@@ -1,6 +1,7 @@
 import createNextIntlPlugin from 'next-intl/plugin';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { legacyRedirects } from './legacy-redirects.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
@@ -25,6 +26,10 @@ const nextConfig = {
   transpilePackages: ['jspdf', 'html2canvas', 'docx', 'file-saver', '@flacroncv/career-api-client', '@flacroncv/career-shared'],
   images: {
     domains: ['firebasestorage.googleapis.com', 'lh3.googleusercontent.com'],
+  },
+  // Old V2 portfolio links (`/p/:slug`) → `/:locale/portfolio/:slug`, keeping `?token=`.
+  async redirects() {
+    return legacyRedirects;
   },
   async headers() {
     return [
