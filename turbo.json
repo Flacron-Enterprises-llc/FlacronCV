@@ -52,6 +52,9 @@
     "test": {
       // Same reason: jest/vitest load the package's compiled entrypoint.
       "dependsOn": ["^build"],
+      // The career packages' tests need the CI Postgres service's URL; strict
+      // env mode would otherwise hide it from them.
+      "passThroughEnv": ["DATABASE_URL"],
       "cache": false
     },
 

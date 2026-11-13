@@ -6,8 +6,7 @@ import { ExportService } from './export.service';
 import { InMemoryFirestore } from '../firebase/in-memory-firestore';
 import { SubscriptionPlan, SubscriptionStatus } from '@flacroncv/shared-types';
 // docx's own zip dependency, used here to read word/document.xml.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const JSZip = require('jszip');
+import JSZip from 'jszip';
 
 const PNG_1X1 = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
@@ -88,7 +87,9 @@ function richSections() {
 
 async function readDocx(buffer: Buffer): Promise<{ xml: string; files: string[] }> {
   const zip = await JSZip.loadAsync(buffer);
-  const xml: string = await zip.file('word/document.xml').async('string');
+  const part = zip.file('word/document.xml');
+  if (!part) throw new Error('word/document.xml missing from the DOCX');
+  const xml: string = await part.async('string');
   return { xml, files: Object.keys(zip.files) };
 }
 

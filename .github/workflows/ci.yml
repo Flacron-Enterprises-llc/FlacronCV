@@ -43,6 +43,24 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint-and-typecheck
 
+    # The career packages' tests (packages/career-server, apps/career-worker)
+    # migrate a throwaway schema per test file in a local Postgres. This
+    # container exists only for the job; the credentials are not secrets.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: career_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d career_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
     steps:
       - uses: actions/checkout@v4
 
@@ -63,12 +81,13 @@ jobs:
       - name: Build shared-types
         run: pnpm --filter @flacroncv/shared-types build
 
-      # Runs both suites: apps/api (jest) and apps/web (vitest). The web suite
-      # includes the three i18n gates — locale parity, no hardcoded English, and
-      # every t() key resolving — which are the only checks that catch an
-      # untranslated string before a user sees it.
+      # Runs every suite: apps/api (jest), apps/web and apps/mobile (vitest,
+      # incl. the i18n gates — locale parity, no hardcoded English, every t() key
+      # resolving), and the career packages (against the Postgres service).
       - name: Test
         run: pnpm test
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/career_test
 
   build:
     name: Build

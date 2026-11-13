@@ -13,8 +13,7 @@
 import { ExportService } from './export.service';
 import { InMemoryFirestore } from '../firebase/in-memory-firestore';
 // docx's own zip dependency, used here to read word/document.xml.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const JSZip = require('jszip');
+import JSZip from 'jszip';
 
 type Internals = {
   renderCVHTML: (cv: unknown, sections: unknown[], photo?: unknown) => string;
@@ -56,7 +55,9 @@ function refs(...items: unknown[]) {
 
 async function docxXml(internals: Internals, sections: unknown[]): Promise<string> {
   const zip = await JSZip.loadAsync(await internals.buildCVDocx(CV, sections));
-  return zip.file('word/document.xml').async('string');
+  const part = zip.file('word/document.xml');
+  if (!part) throw new Error('word/document.xml missing from the DOCX');
+  return part.async('string');
 }
 
 /** Paragraph texts (all <w:t> runs of a <w:p> joined), in order. */
