@@ -160,6 +160,17 @@ export class PortfolioService {
     return this.get(owner, current.id);
   }
 
+  /**
+   * Deletes a page and its evidence links and visit counts (cascade). The
+   * slug stops resolving at once. Not behind the feature switch: a person
+   * can always remove a page they published.
+   */
+  async remove(owner: Principal, portfolioId: string): Promise<{ ok: true }> {
+    const current = await this.owned(owner, portfolioId);
+    await this.pool.query(`DELETE FROM portfolios WHERE id = $1`, [current.id]);
+    return { ok: true };
+  }
+
   async revoke(owner: Principal, portfolioId: string): Promise<PortfolioPage> {
     const current = await this.owned(owner, portfolioId);
     await this.requirePortfolioFeature(owner);

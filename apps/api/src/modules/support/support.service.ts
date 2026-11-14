@@ -22,15 +22,38 @@ export class SupportService {
 
   constructor(private firebaseAdmin: FirebaseAdminService) {}
 
+  /**
+   * The name to show for a customer on tickets and in the message thread.
+   *
+   * Staff (and the customer reading their own thread) should see a name, not a
+   * raw email. The caller passes the sign-in token's name when it has one;
+   * otherwise use the profile's displayName, and only then fall back to the
+   * email. Never throws — a failed profile read just means the email is shown.
+   */
+  async resolveCustomerName(userId: string, userEmail: string, tokenName?: unknown): Promise<string> {
+    let displayName = typeof tokenName === 'string' ? tokenName.trim() : '';
+    if (!displayName) {
+      try {
+        const profile = await this.firebaseAdmin.firestore.collection('users').doc(userId).get();
+        const stored = profile.exists ? profile.data()?.displayName : '';
+        displayName = typeof stored === 'string' ? stored.trim() : '';
+      } catch {
+        displayName = '';
+      }
+    }
+    return displayName || userEmail;
+  }
+
   async createTicket(userId: string, userEmail: string, userName: string, data: CreateTicketData): Promise<SupportTicket> {
     const id = uuidv4();
     const now = new Date();
+    const displayName = await this.resolveCustomerName(userId, userEmail, userName);
 
     const ticket: SupportTicket = {
       id,
       userId,
       userEmail,
-      userDisplayName: userName,
+      userDisplayName: displayName,
       subject: data.subject,
       category: data.category,
       priority: data.priority || TicketPriority.MEDIUM,
@@ -45,8 +68,9 @@ export class SupportService {
 
     await this.firebaseAdmin.firestore.collection(this.collection).doc(id).set(ticket);
 
-    // Add first message
-    await this.addMessage(id, userId, userName, 'user', data.message);
+    // Add first message — under the same resolved name as the ticket, so the
+    // opening message is not labelled with a blank or raw-email author.
+    await this.addMessage(id, userId, displayName, 'user', data.message);
 
     return ticket;
   }
@@ -226,6 +250,9 @@ export class SupportService {
         (sanitized as Record<string, unknown>)[key] = data[key];
       }
     }
+    // Firestore's update() on a missing document throws a raw NOT_FOUND, which
+    // surfaced as a 500; check first so a bad id is a 404.
+    await this.getTicket(id);
     await this.firebaseAdmin.firestore.collection(this.collection).doc(id).update({
       ...sanitized,
       updatedAt: new Date(),

@@ -20,6 +20,39 @@ import {
 import { cn } from '@/lib/utils';
 import { TOUR_TARGETS } from '@/lib/app-tour';
 import { isCareerEnabled, useCareerAccess } from '@/components/career/CareerServices';
+import { CV_NEW_DRAFT_KEY } from '@/app/[locale]/(dashboard)/cv/new/constants';
+
+/**
+ * In-app template gallery. "Templates" used to point at the public /templates
+ * marketing page, which renders outside the dashboard layout — the sidebar
+ * vanished and the user was dropped out of the app. The CV template picker is
+ * the in-app gallery (with plan locks and "use this template").
+ */
+export const TEMPLATE_GALLERY_HREF = '/cv/new/pick-template';
+
+/**
+ * The picker is step 2 of "new CV" and reads the CV title from step 1's
+ * session draft, bouncing to /cv/new without one. Coming from the sidebar
+ * there is no step 1, so seed the same default title /cv/new's "start from a
+ * template" mode uses — unless a draft with a real title is already in
+ * progress, which is kept.
+ */
+export function seedTemplateGalleryDraft(defaultTitle: string) {
+  try {
+    const raw = sessionStorage.getItem(CV_NEW_DRAFT_KEY);
+    const existing = raw ? (JSON.parse(raw) as { title?: unknown }) : null;
+    if (typeof existing?.title === 'string' && existing.title.trim()) return;
+    sessionStorage.setItem(CV_NEW_DRAFT_KEY, JSON.stringify({ title: defaultTitle }));
+  } catch {
+    // Storage unavailable or a corrupt draft: overwrite best-effort; at worst
+    // the picker sends the user to /cv/new, which still works.
+    try {
+      sessionStorage.setItem(CV_NEW_DRAFT_KEY, JSON.stringify({ title: defaultTitle }));
+    } catch {
+      /* ignore */
+    }
+  }
+}
 
 interface SidebarProps {
   /** Mobile drawer open state (below `lg`). */
@@ -34,6 +67,7 @@ interface SidebarProps {
 export default function Sidebar({ open, onClose, collapsed = false, onToggleCollapse }: SidebarProps) {
   const t = useTranslations('dashboard');
   const tCommon = useTranslations('common');
+  const tCv = useTranslations('cv_builder');
   const pathname = usePathname();
   // Career tools appear only when the person's V1 plan includes them (decided by
   // the career service). Unmapped plans, and an unreachable service, see V1 as before.
@@ -50,7 +84,13 @@ export default function Sidebar({ open, onClose, collapsed = false, onToggleColl
     { href: '/jobs', icon: Briefcase, label: t('job_tracker') },
     ...(careerAccess.data?.enabled ? [{ href: '/career', icon: Compass, label: t('career_tools') }] : []),
     ...(offerCareerAddon ? [{ href: '/career/plans', icon: PlusCircle, label: t('add_career_tools') }] : []),
-    { href: '/templates', icon: Palette, label: t('templates'), tour: TOUR_TARGETS.templates },
+    {
+      href: TEMPLATE_GALLERY_HREF,
+      icon: Palette,
+      label: t('templates'),
+      tour: TOUR_TARGETS.templates,
+      onNavigate: () => seedTemplateGalleryDraft(tCv('untitled_cv')),
+    },
   ];
 
   const bottomItems = [
@@ -70,15 +110,25 @@ export default function Sidebar({ open, onClose, collapsed = false, onToggleColl
   }, [open, onClose]);
 
   // Only the most specific matching item is active, so /settings/billing
-  // highlights Billing without also highlighting Settings.
+  // highlights Billing without also highlighting Settings — and the template
+  // gallery (/cv/new/pick-template) highlights Templates, not My CVs.
   const activeHref = [...navItems, ...bottomItems]
     .filter(({ href }) => pathname === href || pathname.startsWith(href + '/'))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
-  const NavLink = ({ href, icon: Icon, label, tour }: { href: string; icon: any; label: string; tour?: string }) => (
+  const NavLink = ({ href, icon: Icon, label, tour, onNavigate }: {
+    href: string;
+    icon: any;
+    label: string;
+    tour?: string;
+    onNavigate?: () => void;
+  }) => (
     <Link
       href={href}
-      onClick={onClose}
+      onClick={() => {
+        onNavigate?.();
+        onClose();
+      }}
       data-tour={tour}
       aria-current={href === activeHref ? 'page' : undefined}
       // Native tooltip is the affordance that replaces the hidden label on the rail.

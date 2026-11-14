@@ -10,20 +10,19 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { Plus, FileText, Trash2, Copy, Pencil, Sparkles, AlertTriangle } from 'lucide-react';
 import Skeleton from '@/components/ui/Skeleton';
-import { CV, PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
+import { CV } from '@flacroncv/shared-types';
 import CVThumbnail from '@/components/cv-builder/CVThumbnail';
 import { useFormatDate } from '@/lib/use-format-date';
 import { toast } from 'sonner';
 import { useId, useState } from 'react';
 import { useRouter } from '@/i18n/routing';
-import { useAuth } from '@/providers/AuthProvider';
+import { useCvAllowance, isCvLimitError } from '@/components/cv-builder/cv-allowance';
 import UpgradeModal from '@/components/shared/UpgradeModal';
 import { TOUR_TARGETS } from '@/lib/app-tour';
 
 export default function CVListPage(): React.JSX.Element | null {
   const t = useTranslations();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
@@ -33,10 +32,7 @@ export default function CVListPage(): React.JSX.Element | null {
     setConfirmDeleteId(null),
   );
 
-  const planLimits = PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)].limits;
-  const cvLimit = planLimits.cvs;
-  const cvsCreated = user?.usage?.cvsCreated ?? 0;
-  const atLimit = cvLimit !== 'unlimited' && cvsCreated >= cvLimit;
+  const { limit: cvLimit, used: cvsCreated, limited, atLimit, refreshUser } = useCvAllowance();
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['cvs'],
@@ -62,10 +58,19 @@ export default function CVListPage(): React.JSX.Element | null {
       queryClient.invalidateQueries({ queryKey: ['cvs'] });
       toast.success(t('cv.duplicated'));
       setDuplicatingId(null);
+      // A duplicate uses a CV creation: refresh usage so the counter and the
+      // at-limit state are right without a reload.
+      void refreshUser();
     },
-    onError: () => {
-      toast.error(t('cv.duplicate_failed'));
+    onError: (error) => {
       setDuplicatingId(null);
+      if (isCvLimitError(error)) {
+        // Usage was stale (e.g. a CV made in another tab): explain, don't just fail.
+        void refreshUser();
+        setShowUpgrade(true);
+        return;
+      }
+      toast.error(t('cv.duplicate_failed'));
     },
   });
 
@@ -79,7 +84,17 @@ export default function CVListPage(): React.JSX.Element | null {
         className="flex items-center justify-between"
         data-tour={listReady && !highlightEmpty ? TOUR_TARGETS.myCvs : undefined}
       >
-        <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{t('dashboard.my_cvs')}</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{t('dashboard.my_cvs')}</h1>
+          {limited && typeof cvLimit === 'number' && (
+            <p
+              className={`mt-1 text-sm ${atLimit ? 'font-medium text-amber-700 dark:text-amber-400' : 'text-stone-500 dark:text-stone-400'}`}
+              data-testid="cv-allowance"
+            >
+              {t('cv.allowance_used', { used: Math.min(cvsCreated, cvLimit), limit: cvLimit })}
+            </p>
+          )}
+        </div>
         {atLimit ? (
           <Button icon={<Plus className="h-4 w-4" />} onClick={() => setShowUpgrade(true)}>
             {t('dashboard.create_cv')}
@@ -125,11 +140,19 @@ export default function CVListPage(): React.JSX.Element | null {
             {t('common.create_your_first_cv')}
           </h3>
           <p className="mx-auto mt-2 max-w-sm text-sm text-stone-500">{t('dashboard.start_creating')}</p>
-          <Link href="/cv/new">
-            <Button variant="gradient" className="mt-6" size="lg" icon={<Sparkles className="h-5 w-5" />}>
+          {/* Deleting CVs does not restore creations, so an empty list can
+              still be at the limit. */}
+          {atLimit ? (
+            <Button variant="gradient" className="mt-6" size="lg" icon={<Sparkles className="h-5 w-5" />} onClick={() => setShowUpgrade(true)}>
               {t('common.get_started')}
             </Button>
-          </Link>
+          ) : (
+            <Link href="/cv/new">
+              <Button variant="gradient" className="mt-6" size="lg" icon={<Sparkles className="h-5 w-5" />}>
+                {t('common.get_started')}
+              </Button>
+            </Link>
+          )}
         </Card>
         </div>
       ) : (

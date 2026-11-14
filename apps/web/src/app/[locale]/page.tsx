@@ -29,8 +29,10 @@ export async function generateMetadata({
   const twitterDescription = t('home_twitter_description');
   const ogAlt = t('home_og_alt');
   return {
-    // Bare title — the root layout template appends " | FlacronCV".
-    title,
+    // Absolute, with the brand: a title.template only applies to segments
+    // BELOW the layout that defines it, and this page shares the [locale]
+    // segment with that layout, so the template never reached the home page.
+    title: { absolute: `${title} | FlacronCV` },
     description,
     keywords: [
       'CV builder',

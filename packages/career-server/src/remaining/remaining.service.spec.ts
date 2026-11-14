@@ -174,6 +174,15 @@ describe('RemainingService', () => {
     expect(isBillingError(unassigned, 'permission_denied')).toBe(true);
     await remaining.assignCounselor(accessOwner, staff.id, candidate.id);
     expect((await remaining.getCandidate(counselor, candidate.id)).email).toBe('person@example.test');
+
+    // A malformed id is simply not found, never a database error.
+    const malformed = await remaining.getCandidate(accessOwner, 'not-a-uuid').catch((error: unknown) => error);
+    expect(isBillingError(malformed, 'not_found')).toBe(true);
+    const badAssign = await remaining.assignCounselor(accessOwner, 'x', candidate.id).catch((error: unknown) => error);
+    expect(isBillingError(badAssign, 'not_found')).toBe(true);
+    const overview = await remaining.businessOverview(accessOwner);
+    expect(overview.staff).toEqual([{ id: staff.id, authUserId: counselor.authUserId, role: 'counselor' }]);
+    expect(overview.candidates).toEqual([{ id: candidate.id, email: 'person@example.test' }]);
   });
 
   it('does not sell human review or employer checkout', async () => {
@@ -193,7 +202,9 @@ describe('RemainingService', () => {
     const quiet = await person('quiet');
     const visible = await person('visible');
     expect((await remaining.recruitingSearch()).items).toEqual([]);
+    expect(await remaining.getOptIn(visible)).toEqual({ discoverable: false });
     await remaining.setOptIn(visible, true);
+    expect(await remaining.getOptIn(visible)).toEqual({ discoverable: true });
     expect((await remaining.recruitingSearch()).items).toEqual([{ candidateAuthUserId: visible.authUserId, label: 'Opted-in candidate' }]);
     await remaining.setOptIn(quiet, false);
     await remaining.setOptIn(visible, false);
@@ -212,6 +223,7 @@ describe('RemainingService', () => {
   it('refuses an API key until the package exists, then blocks another workspace', async () => {
     const owner = await person('api-biz', 'business');
     const other = await person('api-other', 'business');
+    expect(await remaining.developerStatus(owner)).toEqual({ apiPackage: false, whiteLabel: false, brand: null });
     const blocked = await remaining.createApiKey(owner).catch((error: unknown) => error);
     expect(isBillingError(blocked, 'not_purchasable')).toBe(true);
     await db.pool.query(
@@ -238,6 +250,11 @@ describe('RemainingService', () => {
     const stripped = await remaining.setWhiteLabel(owner, 'North', 'North only').catch((error: unknown) => error);
     expect(isBillingError(stripped, 'validation_error')).toBe(true);
     expect((await remaining.setWhiteLabel(owner, 'North', 'Source: FlacronCV')).attribution).toContain('FlacronCV');
+    expect(await remaining.developerStatus(owner)).toEqual({
+      apiPackage: true,
+      whiteLabel: true,
+      brand: { brandName: 'North', attribution: 'Source: FlacronCV' },
+    });
   });
 
   it('stores a sales inquiry without claiming email delivery', async () => {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, Query, Provider } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, Provider } from '@nestjs/common';
 import { IsArray, IsBoolean, IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { PortfolioService, type Principal } from '@flacroncv/career-server';
 import type { CreatePortfolioInput, PublishPortfolioInput, UpdatePortfolioInput } from '@flacroncv/career-shared';
@@ -134,6 +134,11 @@ export class PortfoliosController {
   @Post('portfolios/:portfolioId/unpublish')
   unpublish(@CurrentPrincipal() principal: Principal, @Param('portfolioId') portfolioId: string) {
     return this.portfolios.unpublish(principal, portfolioId);
+  }
+
+  @Delete('portfolios/:portfolioId')
+  remove(@CurrentPrincipal() principal: Principal, @Param('portfolioId') portfolioId: string) {
+    return this.portfolios.remove(principal, portfolioId);
   }
 
   @Post('portfolios/:portfolioId/revoke')

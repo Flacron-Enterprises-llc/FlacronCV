@@ -4,10 +4,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { isApiError, newIdempotencyKey, type ApiClient, type MatchResult, type OpportunityDetail } from '@flacroncv/career-api-client';
 import { isStaleListing } from '@flacroncv/career-shared';
-import { Button, Card, EmptyState, LoadingState, PermissionDeniedState, ProviderUnavailableState, StaleSourceState } from '@/components/career/ui';
+import { Button, Card, EmptyState, LoadingState, PageHeader, PermissionDeniedState, ProviderUnavailableState, ScreenStack, StaleSourceState } from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { profileLoadFailure } from '@/lib/career/profile-load';
 import { ListingTrustPanel } from './ListingTrustPanel';
+import { ListingFacts } from './ListingFacts';
 
 export function OpportunityDetailScreen({
   api,
@@ -103,7 +104,7 @@ export function OpportunityDetailScreen({
         title={t('signed_out_title')}
         body={t('signed_out_body')}
         action={
-          <a className="inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white" href={signInHref}>
+          <a className="inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white dark:text-stone-950" href={signInHref}>
             {t('go_sign_in')}
           </a>
         }
@@ -113,11 +114,11 @@ export function OpportunityDetailScreen({
   if (load === 'missing' || !item) return <EmptyState title={t('missing_title')} body={t('missing_body')} />;
 
   const stale = isStaleListing(item.checkedAt, nowMs);
-  const pay = item.compensation.minimum === null && item.compensation.maximum === null;
+  const checked = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(item.checkedAt));
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold text-career-ink">{item.title}</h1>
+    <ScreenStack>
+      <PageHeader title={<span dir="auto">{item.title}</span>} />
       {stale ? (
         <StaleSourceState
           title={t('stale_title')}
@@ -132,13 +133,10 @@ export function OpportunityDetailScreen({
         />
       ) : null}
       <Card>
-        <p className="text-sm text-career-muted">{item.organization ?? t('not_stated')}</p>
-        <p className="mt-2 text-sm text-career-ink">{item.locations.length > 0 ? item.locations.join(', ') : t('not_stated')}</p>
-        <p className="mt-2 text-sm text-career-ink">{pay ? t('not_stated') : `${item.compensation.minimum ?? ''} ${item.compensation.maximum ?? ''}`.trim()}</p>
-        <p className="mt-2 text-sm text-career-ink">{item.sponsorship === 'unknown' ? t('not_stated') : item.sponsorship}</p>
+        <ListingFacts item={item} />
         {item.label === 'expired' ? <p className="mt-2 text-sm text-career-orange-text">{t('expired')}</p> : null}
-        <p className="mt-2 text-sm text-career-muted">{t('checked', { date: item.checkedAt.slice(0, 10) })}</p>
-        <p className="mt-4 whitespace-pre-wrap text-sm text-career-ink">{item.description}</p>
+        <p className="mt-2 text-sm text-career-muted">{t('checked', { date: checked })}</p>
+        <p className="mt-4 whitespace-pre-wrap text-sm text-career-ink" dir="auto">{item.description}</p>
         {item.sourceUrl && !stale ? (
           <a className="mt-4 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text" href={item.sourceUrl} rel="noreferrer">
             {t('source')}
@@ -185,6 +183,6 @@ export function OpportunityDetailScreen({
           </ul>
         </div>
       ) : null}
-    </div>
+    </ScreenStack>
   );
 }

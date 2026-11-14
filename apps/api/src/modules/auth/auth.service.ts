@@ -230,7 +230,22 @@ export class AuthService {
     });
   }
 
-  async sendPasswordReset(email: string): Promise<void> {
+  /**
+   * Sends a password-reset email.
+   *
+   * `surfaceDeliveryFailure` is false for the anonymous "forgot password" form:
+   * there a mail-delivery failure must look exactly like success, because
+   * unknown addresses already get the success response and an error only for
+   * real accounts would reveal which addresses are registered during an email
+   * outage. The failure is still logged at error level so ops sees it. A
+   * signed-in user resetting their own password (settings) gets `true` — their
+   * account's existence is no secret to them, and they deserve to know the
+   * email did not go out.
+   */
+  async sendPasswordReset(
+    email: string,
+    options: { surfaceDeliveryFailure?: boolean } = {},
+  ): Promise<void> {
     let link: string;
     try {
       link = await this.firebaseAdmin.auth.generatePasswordResetLink(email);
@@ -257,7 +272,16 @@ export class AuthService {
       .limit(1)
       .get();
     const displayName: string = snapshot.empty ? '' : ((snapshot.docs[0].data().displayName as string) || '');
-    await this.mailService.sendPasswordResetEmail(email, displayName, link);
+    try {
+      await this.mailService.sendPasswordResetEmail(email, displayName, link);
+    } catch (error) {
+      if (options.surfaceDeliveryFailure) throw error;
+      // The address is deliberately not logged (it is in the audit row above).
+      this.logger.error(
+        'Password reset email could not be delivered; caller was told it was sent so account existence is not disclosed',
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 
   async sendEmailVerification(uid: string): Promise<void> {

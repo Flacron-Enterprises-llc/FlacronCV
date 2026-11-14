@@ -29,6 +29,10 @@ const CATEGORY_VALUES: TicketCategory[] = [
   TicketCategory.ACCOUNT,
 ];
 
+/** Must match CreateTicketDto's @MaxLength limits on the API. */
+const SUBJECT_MAX = 200;
+const MESSAGE_MAX = 5000;
+
 const PRIORITY_VALUES: TicketPriority[] = [
   TicketPriority.LOW,
   TicketPriority.MEDIUM,
@@ -62,13 +66,24 @@ export default function NewSupportTicketPage(): React.JSX.Element | null {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validated here, in the user's language, against the same limits as the
+    // API. Previously an over-long subject reached the server and came back as
+    // its raw English validation message.
     if (!subject.trim()) {
       toast.error(t('subjectRequired'));
+      return;
+    }
+    if (subject.trim().length > SUBJECT_MAX) {
+      toast.error(t('subjectTooLong', { max: SUBJECT_MAX }));
       return;
     }
 
     if (!message.trim()) {
       toast.error(t('messageRequired'));
+      return;
+    }
+    if (message.trim().length > MESSAGE_MAX) {
+      toast.error(t('messageTooLong', { max: MESSAGE_MAX }));
       return;
     }
 
@@ -106,6 +121,8 @@ export default function NewSupportTicketPage(): React.JSX.Element | null {
             placeholder={t('subjectPlaceholder')}
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
+            maxLength={SUBJECT_MAX}
+            hint={t('charCount', { count: subject.length, max: SUBJECT_MAX })}
             required
           />
 
@@ -166,9 +183,14 @@ export default function NewSupportTicketPage(): React.JSX.Element | null {
               onChange={(e) => setMessage(e.target.value)}
               placeholder={t('messagePlaceholder')}
               rows={8}
+              maxLength={MESSAGE_MAX}
+              aria-describedby="message-count"
               className="input-field w-full resize-y"
               required
             />
+            <p id="message-count" className="text-end text-xs text-stone-500 dark:text-stone-400">
+              {t('charCount', { count: message.length, max: MESSAGE_MAX })}
+            </p>
           </div>
 
           <div className="flex justify-end">

@@ -1,6 +1,8 @@
 import request from 'supertest';
 import { randomUUID } from 'crypto';
-import { bearer } from '@flacroncv/career-server/src/testing';
+import { bearer, FakeTextModel } from '@flacroncv/career-server/src/testing';
+import { COVER_LETTER_TEMPLATE } from '@flacroncv/career-server/src/writing/writing-compose';
+import { TEXT_MODEL } from '../src/ai/ai.providers';
 import { createTestApp, TestApp } from './support';
 import { openBalances, readAccount } from '@flacroncv/career-server/src/billing/accounts';
 import { CatalogStore } from '@flacroncv/career-server/src/billing/catalog';
@@ -8,9 +10,22 @@ import { CatalogStore } from '@flacroncv/career-server/src/billing/catalog';
 describe('action engine over HTTP (CV12)', () => {
   let t: TestApp;
   const http = () => request(t.app.getHttpServer());
+  // The pack's letter comes from the text model; this reply names only the
+  // confirmed employer and the listing's organization.
+  const model = new FakeTextModel().always(COVER_LETTER_TEMPLATE, (req) => {
+    const prompt = JSON.parse(req.prompt) as { requiredFactIds: string[] };
+    return JSON.stringify({
+      opening: 'I am writing to apply to CloudScale and to share the work I did at Harbour Data.',
+      body: 'At Harbour Data I worked as a platform engineer and used PostgreSQL every week to keep streaming pipelines reliable for the team. That confirmed experience is the evidence I can offer.',
+      closing: 'Thank you for your time and consideration.',
+      factIds: prompt.requiredFactIds,
+    });
+  });
 
   beforeAll(async () => {
-    t = await createTestApp('api_action_engine');
+    t = await createTestApp('api_action_engine', {
+      customize: (builder) => builder.overrideProvider(TEXT_MODEL).useValue(model),
+    });
     // Ensure the Phase 2 actionPacks flag is enabled
     await t.db.pool.query(
       `INSERT INTO feature_flags (feature, enabled) VALUES ('actionPacks', true)
@@ -47,6 +62,13 @@ describe('action engine over HTTP (CV12)', () => {
       .post(`/api/career/v1/facts/${factRes.body.id}/confirm`)
       .set('Authorization', auth);
     expect(confirmRes.status).toBe(200);
+    // A cover letter needs a confirmed job or school.
+    const roleRes = await http()
+      .post('/api/career/v1/facts')
+      .set('Authorization', auth)
+      .send({ factType: 'experience', value: { position: 'Platform Engineer', company: 'Harbour Data', startDate: '2020-01', endDate: '2024-06' } });
+    expect(roleRes.status).toBe(201);
+    expect((await http().post(`/api/career/v1/facts/${roleRes.body.id}/confirm`).set('Authorization', auth)).status).toBe(200);
 
     // 3. Seed an opportunity in the test db
     const oppId = randomUUID();

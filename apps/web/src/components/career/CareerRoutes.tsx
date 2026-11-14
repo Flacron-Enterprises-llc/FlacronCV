@@ -24,7 +24,7 @@ import { DocumentsScreen } from './documents/DocumentsScreen';
 import { ScopeScreen, type ScopeMode } from './scope/ScopeScreen';
 import { VoiceScreen } from './voice/VoiceScreen';
 import { CareerGate } from './CareerGate';
-import { useCareerApi, useCareerUser } from './CareerServices';
+import { useCareerAccess, useCareerApi, useCareerUser } from './CareerServices';
 
 /** Props every career screen takes, from V1's session. */
 function useScreenProps() {
@@ -178,10 +178,11 @@ export function CareerRelocationRoute() {
 
 /** Scenarios, outcomes, forms, maintenance, map, business, recruiting, developer, services. */
 export function CareerScopeRoute({ mode }: { mode: ScopeMode }) {
-  const { uiLocale: _ui, ...props } = useScreenProps();
+  const { uiLocale, ...props } = useScreenProps();
+  const access = useCareerAccess();
   return (
     <CareerGate>
-      <ScopeScreen {...props} mode={mode} />
+      <ScopeScreen {...props} mode={mode} careerPlan={access.data?.careerPlan} plansHref={`/${uiLocale}/career/plans`} />
     </CareerGate>
   );
 }

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { asDate } from './crm-analytics.service';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import {
   PlatformAnalyticsOverview,
@@ -25,18 +26,19 @@ export class CRMPlatformService {
     ]);
 
     const users: User[] = usersSnap.docs.map((d: any) => d.data() as User);
-    const cvs: any[] = cvsSnap.docs.map((d: any) => d.data());
-    const coverLetters: any[] = coverLettersSnap.docs.map((d: any) => d.data());
+    // Soft-deleted documents keep their row (deletedAt set); they are not content any more.
+    const cvs: any[] = cvsSnap.docs.map((d: any) => d.data()).filter((cv: any) => !cv.deletedAt);
+    const coverLetters: any[] = coverLettersSnap.docs.map((d: any) => d.data()).filter((cl: any) => !cl.deletedAt);
 
     const totalUsers = users.length;
     const activeUsers = users.filter((u) => u.isActive !== false).length;
 
     const newUsersThisMonth = users.filter(
-      (u) => new Date(u.createdAt) >= startOfMonth,
+      (u) => asDate(u.createdAt) >= startOfMonth,
     ).length;
 
     const newUsersLastMonth = users.filter((u) => {
-      const d = new Date(u.createdAt);
+      const d = asDate(u.createdAt);
       return d >= startOfLastMonth && d <= endOfLastMonth;
     }).length;
 
@@ -51,22 +53,22 @@ export class CRMPlatformService {
     const totalCoverLetters = coverLetters.length;
 
     const cvsThisMonth = cvs.filter(
-      (cv) => cv.createdAt && new Date(cv.createdAt) >= startOfMonth,
+      (cv) => cv.createdAt && asDate(cv.createdAt) >= startOfMonth,
     ).length;
 
     const coverLettersThisMonth = coverLetters.filter(
-      (cl) => cl.createdAt && new Date(cl.createdAt) >= startOfMonth,
+      (cl) => cl.createdAt && asDate(cl.createdAt) >= startOfMonth,
     ).length;
 
     const cvsLastMonth = cvs.filter((cv) => {
       if (!cv.createdAt) return false;
-      const d = new Date(cv.createdAt);
+      const d = asDate(cv.createdAt);
       return d >= startOfLastMonth && d <= endOfLastMonth;
     }).length;
 
     const coverLettersLastMonth = coverLetters.filter((cl) => {
       if (!cl.createdAt) return false;
-      const d = new Date(cl.createdAt);
+      const d = asDate(cl.createdAt);
       return d >= startOfLastMonth && d <= endOfLastMonth;
     }).length;
 
@@ -109,7 +111,7 @@ export class CRMPlatformService {
     }
 
     for (const u of users) {
-      const d = new Date(u.createdAt);
+      const d = asDate(u.createdAt);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       if (byMonth.has(key)) {
         byMonth.get(key)!.users += 1;
@@ -128,8 +130,9 @@ export class CRMPlatformService {
       this.firebase.firestore.collection('cover_letters').get(),
     ]);
 
-    const cvs: any[] = cvsSnap.docs.map((d: any) => d.data());
-    const coverLetters: any[] = coverLettersSnap.docs.map((d: any) => d.data());
+    // Soft-deleted documents keep their row (deletedAt set); they are not content any more.
+    const cvs: any[] = cvsSnap.docs.map((d: any) => d.data()).filter((cv: any) => !cv.deletedAt);
+    const coverLetters: any[] = coverLettersSnap.docs.map((d: any) => d.data()).filter((cl: any) => !cl.deletedAt);
 
     const now = new Date();
     const byMonth = new Map<string, { cvs: number; coverLetters: number; label: string }>();
@@ -143,14 +146,14 @@ export class CRMPlatformService {
 
     for (const cv of cvs) {
       if (!cv.createdAt) continue;
-      const d = new Date(cv.createdAt);
+      const d = asDate(cv.createdAt);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       if (byMonth.has(key)) byMonth.get(key)!.cvs += 1;
     }
 
     for (const cl of coverLetters) {
       if (!cl.createdAt) continue;
-      const d = new Date(cl.createdAt);
+      const d = asDate(cl.createdAt);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       if (byMonth.has(key)) byMonth.get(key)!.coverLetters += 1;
     }
@@ -162,7 +165,8 @@ export class CRMPlatformService {
 
   async getTopTemplates(): Promise<PlatformTopTemplate[]> {
     const cvsSnap = await this.firebase.firestore.collection('cvs').get();
-    const cvs: any[] = cvsSnap.docs.map((d: any) => d.data());
+    // Soft-deleted documents keep their row (deletedAt set); they are not content any more.
+    const cvs: any[] = cvsSnap.docs.map((d: any) => d.data()).filter((cv: any) => !cv.deletedAt);
 
     const counts = new Map<string, number>();
     for (const cv of cvs) {

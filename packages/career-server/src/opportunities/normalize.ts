@@ -17,6 +17,8 @@ export interface NormalizedListing {
   compensation: ListingCompensation;
   category: 'job';
   status: 'open' | 'closed';
+  /** Only a paste states this today; feeds leave it out and it stays unknown. */
+  sponsorship?: 'unknown' | 'stated_yes' | 'stated_no';
 }
 
 const EMPTY_PAY: ListingCompensation = { minimum: null, maximum: null, currency: null, period: null };

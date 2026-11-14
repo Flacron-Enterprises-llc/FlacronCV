@@ -4,7 +4,6 @@ import React from 'react';
 import { useState, useEffect, useId } from 'react';
 import { useRouter } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
-import { useAuth } from '@/providers/AuthProvider';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -14,6 +13,8 @@ import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
 import { CV_NEW_DRAFT_KEY as DRAFT_KEY } from './constants';
 import ImportResumeModal from '@/components/cv-builder/ImportResumeModal';
+import UpgradeModal from '@/components/shared/UpgradeModal';
+import { useCvAllowance } from '@/components/cv-builder/cv-allowance';
 
 /** How the user wants to begin. Drives the CTA and the supporting copy below. */
 type StartMode = 'scratch' | 'import' | 'template';
@@ -25,7 +26,13 @@ export default function NewCVPage(): React.JSX.Element | null {
   const tImport = useTranslations('resume_import');
   const tTpl = useTranslations('template_picker');
   const router = useRouter();
-  const { user } = useAuth();
+  // At the CV limit the wizard is blocked up front: letting someone name the
+  // CV and pick a template only to refuse on the last click wasted their time.
+  const { atLimit } = useCvAllowance();
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  useEffect(() => {
+    if (atLimit) setShowUpgrade(true);
+  }, [atLimit]);
   const [title, setTitle] = useState('');
   const [mode, setMode] = useState<StartMode>('scratch');
   const [showImport, setShowImport] = useState(false);
@@ -69,6 +76,11 @@ export default function NewCVPage(): React.JSX.Element | null {
 
   const handleContinue = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (atLimit) {
+      setShowUpgrade(true);
+      return;
+    }
 
     if (mode === 'import') {
       track('cv_creation_started', { source: 'import' });
@@ -158,6 +170,19 @@ export default function NewCVPage(): React.JSX.Element | null {
       <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
         {t('dashboard.create_cv')}
       </h1>
+
+      {atLimit && (
+        <div
+          role="status"
+          data-testid="cv-limit-notice"
+          className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between dark:border-amber-800/60 dark:bg-amber-900/20 dark:text-amber-200"
+        >
+          <span>{tCv('new_limit_reached')}</span>
+          <Button size="sm" variant="outline" className="shrink-0" onClick={() => setShowUpgrade(true)}>
+            {tCommon('upgrade')}
+          </Button>
+        </div>
+      )}
 
       <form onSubmit={handleContinue} className="space-y-6">
         {/* Three starting points. Native radios keep arrow-key navigation,
@@ -282,6 +307,7 @@ export default function NewCVPage(): React.JSX.Element | null {
       </form>
 
       <ImportResumeModal open={showImport} onClose={() => setShowImport(false)} title={title} />
+      <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} reason="cvs" />
     </div>
   );
 }

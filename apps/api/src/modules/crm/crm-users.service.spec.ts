@@ -258,10 +258,28 @@ describe('CRMUsersService', () => {
     });
 
     it('allows a super_admin to suspend a super_admin', async () => {
+      // The acting super_admin is itself an active super_admin, so one remains.
+      await seedUser(firestore, makeUser('sa-actor', { role: UserRole.SUPER_ADMIN }));
       await seedUser(firestore, makeUser('sa-2', { role: UserRole.SUPER_ADMIN }));
       await service.suspendUser('sa-2', 'sa-actor', 'sa@example.com', UserRole.SUPER_ADMIN);
       expect((await service.getUserById('sa-2')).isActive).toBe(false);
       expect(firebase.auth.revokeRefreshTokens).toHaveBeenCalledWith('sa-2');
+    });
+
+    it('refuses to let an operator suspend their own account', async () => {
+      await seedUser(firestore, makeUser('self-admin', { role: UserRole.ADMIN }));
+      await expect(
+        service.suspendUser('self-admin', 'self-admin', 'me@example.com', UserRole.ADMIN),
+      ).rejects.toThrow(BadRequestException);
+      expect((await service.getUserById('self-admin')).isActive).toBe(true);
+    });
+
+    it('refuses to suspend the last active super_admin', async () => {
+      await seedUser(firestore, makeUser('only-sa', { role: UserRole.SUPER_ADMIN }));
+      await expect(
+        service.suspendUser('only-sa', 'other-actor', 'x@example.com', UserRole.SUPER_ADMIN),
+      ).rejects.toThrow(BadRequestException);
+      expect((await service.getUserById('only-sa')).isActive).toBe(true);
     });
 
     it('still lets a plain admin suspend a regular user', async () => {

@@ -7,7 +7,44 @@ import type { VerifiedIdentity } from '../identity/id-token';
 import { IdentityService, type Principal } from '../identity/identity.service';
 import { MeteringService } from '../metering/metering.service';
 import { createTestDatabase, TestClock, TestDatabase } from '../testing';
+import { UnconfiguredTextModel } from '../ai/text-model';
+import { FakeTextModel } from '../testing/fake-ai';
+import { LEARNING_PLAN_TEMPLATE } from './learning-plan-compose';
 import { SkillsLearningService } from './skills-learning.service';
+
+/** A plan for the role named in the prompt, as a model would reply. */
+function planReply(request: { prompt: string }): string {
+  const prompt = JSON.parse(request.prompt) as { targetRole: string };
+  return JSON.stringify({
+    requirements: [
+      { skill: 'System Design', importance: 'critical', requiredLevel: 'advanced' },
+      { skill: 'Kubernetes', importance: 'preferred', requiredLevel: 'intermediate' },
+      { skill: 'Incident Response', importance: 'optional', requiredLevel: 'intermediate' },
+    ],
+    milestones: [
+      {
+        title: 'Container orchestration',
+        description: `Run a small service on Kubernetes as a ${prompt.targetRole} would.`,
+        targetSkill: 'Kubernetes',
+        estimatedHours: 12,
+        estimatedCostCents: 0,
+        resources: [{ title: 'Kubernetes Basics', provider: 'kubernetes.io', type: 'documentation', isFree: true, url: 'https://invented.example' }],
+      },
+    ],
+    projectBrief: {
+      title: 'Resilient service',
+      summary: 'Deploy and observe a service.',
+      requirements: ['Deploy with health checks'],
+      deliverables: ['Repository with a README'],
+      rubrics: [
+        { name: 'Deployment', description: 'Deploys cleanly.', weight: 2, evidenceType: 'project' },
+        { name: 'Recovery', description: 'Recovers from a killed pod.', weight: 1, evidenceType: 'project' },
+        { name: 'Write-up', description: 'Explains the choices.', weight: 1, evidenceType: 'work_sample' },
+      ],
+      estimatedHours: 20,
+    },
+  });
+}
 
 function identity(uid: string): VerifiedIdentity {
   const at = new Date('2026-10-17T10:00:00Z');
@@ -27,6 +64,7 @@ describe('CV13: SkillsLearningService', () => {
   let identities: IdentityService;
   let metering: MeteringService;
   let service: SkillsLearningService;
+  let model: FakeTextModel;
   let ada: Principal;
   let other: Principal;
 
@@ -39,7 +77,8 @@ describe('CV13: SkillsLearningService', () => {
     other = await identities.principal(identity('other-learning'));
 
     metering = new MeteringService(db.pool, clock);
-    service = new SkillsLearningService(db.pool, metering);
+    model = new FakeTextModel().always(LEARNING_PLAN_TEMPLATE, planReply);
+    service = new SkillsLearningService(db.pool, metering, model);
 
     // Set ada to Starter plan (1 skill report / mo included)
     await setPlan(ada, 'starter');
@@ -83,6 +122,23 @@ describe('CV13: SkillsLearningService', () => {
     if (isBillingError(err)) expect(err.details).toMatchObject({ field: 'targetRole' });
   });
 
+  it('releases the credit and saves nothing when no model is available', async () => {
+    const offline = new SkillsLearningService(db.pool, metering, new UnconfiguredTextModel());
+    const err = await offline.create(ada, { targetRole: 'Nurse' }, 'idem-offline').catch((e) => e);
+    expect(isBillingError(err, 'provider_unavailable')).toBe(true);
+    if (isBillingError(err)) expect(err.details).toMatchObject({ released: true });
+    const list = await service.list(ada);
+    expect(list.items).toEqual([]);
+    expect(list.skillReport.includedRemaining).toBe(1);
+  });
+
+  it('releases the credit when the reply is not a usable plan', async () => {
+    model.once(LEARNING_PLAN_TEMPLATE, JSON.stringify({ requirements: [{ skill: 'Typing' }], milestones: [] }));
+    const err = await service.create(ada, { targetRole: 'Nurse' }, 'idem-unusable').catch((e) => e);
+    expect(isBillingError(err, 'provider_unavailable')).toBe(true);
+    expect((await service.list(ada)).skillReport.includedRemaining).toBe(1);
+  });
+
   it('generates a skill gap report, debits exactly 1 skill_report unit, and includes project brief without extra debit', async () => {
     const res = await service.create(
       ada,
@@ -107,9 +163,15 @@ describe('CV13: SkillsLearningService', () => {
     expect(report.projectBrief?.rubrics.length).toBe(3);
     expect(report.progress.percent).toBe(0);
 
-    // Verify System Design is marked intermediate because of confirmed career fact
+    // The current level comes from the confirmed fact, not from the model.
     const sysDesign = report.skillGaps.find((g) => g.skill === 'System Design');
     expect(sysDesign?.currentLevel).toBe('intermediate');
+    expect(report.skillGaps.find((g) => g.skill === 'Kubernetes')?.currentLevel).toBe('none');
+    // The plan is for the requested role, and model links are not kept.
+    expect(report.learningPlan[0].description).toContain('Staff Distributed Systems Engineer');
+    expect(report.learningPlan[0].resources[0].url).toBe('');
+    expect(report.projectBrief?.rubrics.reduce((sum, r) => sum + r.weight, 0)).toBe(100);
+    expect(model.callsFor(LEARNING_PLAN_TEMPLATE).at(-1)?.prompt).toContain('System Design');
   });
 
   it('replaying the same idempotency key returns the cached report without re-debiting', async () => {
@@ -181,7 +243,7 @@ describe('CV13: SkillsLearningService', () => {
       [ev.evidenceId],
     );
     expect(row.rows[0].evidence_type).toBe('project');
-    expect(row.rows[0].linked_skills).toContain('System Design');
+    expect(row.rows[0].linked_skills).toContain('Kubernetes');
   });
 
   it('enforces tenant and candidate isolation on get and update', async () => {

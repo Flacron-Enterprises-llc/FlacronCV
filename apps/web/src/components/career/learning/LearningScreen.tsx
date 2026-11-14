@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   isApiError,
   newIdempotencyKey,
@@ -14,9 +14,12 @@ import {
   Button,
   Card,
   EmptyState,
+  InlineNote,
   LoadingState,
+  PageHeader,
   PermissionDeniedState,
   ProviderUnavailableState,
+  ScreenStack,
 } from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { profileLoadFailure } from '@/lib/career/profile-load';
@@ -39,6 +42,7 @@ export function LearningScreen({
   signInHref: string;
 }) {
   const t = useTranslations('career.learning');
+  const locale = useLocale();
   const [load, setLoad] = useState<'loading' | 'permission' | 'unavailable' | 'signed-out' | 'ready'>('loading');
   const [reports, setReports] = useState<SkillGapReport[]>([]);
   const [balance, setBalance] = useState<SkillReportBalanceView | null>(null);
@@ -116,6 +120,9 @@ export function LearningScreen({
         setErrorMessage(t('feature_unavailable'));
       } else if (isApiError(error, 'validation_error')) {
         setErrorMessage(t('validation_error'));
+      } else if (isApiError(error, 'provider_unavailable')) {
+        // A plan is written for the role by the model; without it nothing is charged.
+        setErrorMessage(t('provider_unavailable'));
       } else {
         setErrorMessage(t('generate_failed'));
       }
@@ -178,40 +185,32 @@ export function LearningScreen({
   const selectedReport = reports.find((r) => r.id === selectedReportId) || reports[0] || null;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 px-4 py-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-career-navy dark:text-white sm:text-3xl">{t('title')}</h1>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{t('subtitle')}</p>
-        </div>
-        <div className="flex items-center gap-4">
-          {balance && (
-            <div className="text-right text-xs">
-              <span className="font-semibold text-career-ink">{t('remaining_credits')}:</span>{' '}
-              <span className="font-bold text-career-navy dark:text-career-orange">
-                {balance.includedRemaining + balance.packRemaining}
+    <ScreenStack>
+      <PageHeader
+        title={t('title')}
+        description={t('subtitle')}
+        actions={
+          <>
+            {balance ? (
+              <span className="text-xs text-career-muted">
+                {t('remaining_credits')}: <span className="font-bold text-career-ink">{balance.includedRemaining + balance.packRemaining}</span>
               </span>
-            </div>
-          )}
-          {!isGenerating && (
-            <Button type="button" onClick={() => setIsGenerating(true)}>
-              {t('generate_new')}
-            </Button>
-          )}
-        </div>
-      </div>
+            ) : null}
+            {!isGenerating ? (
+              <Button type="button" onClick={() => setIsGenerating(true)}>
+                {t('generate_new')}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
-      {errorMessage && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
-          {errorMessage}
-        </div>
-      )}
+      {errorMessage ? <InlineNote tone="error">{errorMessage}</InlineNote> : null}
 
       {evidenceSuccessId && (
         <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-900/50 dark:bg-green-950/30 dark:text-green-300 flex items-center justify-between">
           <span>{t('evidence_created_success')}</span>
-          <a href="/career/evidence" className="underline font-semibold text-xs ml-2">
+          <a href={`/${locale}/career/evidence`} className="underline font-semibold text-xs ml-2">
             {t('view_in_vault')}
           </a>
         </div>
@@ -368,7 +367,7 @@ export function LearningScreen({
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-career-line pb-4">
                   <div>
                     <h2 className="text-xl font-bold text-career-ink">{selectedReport.targetRole}</h2>
-                    <p className="text-sm font-medium text-career-navy dark:text-career-orange">
+                    <p className="text-sm font-medium text-career-navy">
                       {selectedReport.targetIndustry ? `${selectedReport.targetIndustry} • ` : ''}
                       {selectedReport.timeBudgetHoursPerWeek} {t('hours_per_week')}
                       {selectedReport.financialBudgetCents > 0
@@ -378,7 +377,7 @@ export function LearningScreen({
                   </div>
                   <div className="text-right">
                     <span className="text-xs text-career-muted font-semibold">{t('plan_progress')}</span>
-                    <div className="text-lg font-bold text-career-navy dark:text-career-orange">
+                    <div className="text-lg font-bold text-career-navy">
                       {selectedReport.progress.percent}%
                     </div>
                   </div>
@@ -482,15 +481,22 @@ export function LearningScreen({
                             </p>
                             <div className="space-y-1">
                               {milestone.resources.map((res) => (
-                                <div key={res.url} className="text-xs flex items-center justify-between">
-                                  <a
-                                    href={res.url}
-                                    target="_blank"
-                                    rel="noreferrer noopener"
-                                    className="font-medium text-career-navy hover:underline dark:text-career-orange"
-                                  >
-                                    {res.title} <span className="text-career-muted">({res.provider})</span> ↗
-                                  </a>
+                                <div key={`${res.title}-${res.provider}`} className="text-xs flex items-center justify-between gap-2">
+                                  {/* New plans carry no links (a model could invent one); older plans keep theirs. */}
+                                  {res.url ? (
+                                    <a
+                                      href={res.url}
+                                      target="_blank"
+                                      rel="noreferrer noopener"
+                                      className="font-medium text-career-navy hover:underline"
+                                    >
+                                      {res.title} <span className="text-career-muted">({res.provider})</span> ↗
+                                    </a>
+                                  ) : (
+                                    <span className="font-medium text-career-ink" dir="auto">
+                                      {res.title} <span className="text-career-muted">({res.provider})</span>
+                                    </span>
+                                  )}
                                   <span className="text-career-muted">{res.isFree ? t('free') : t('paid')}</span>
                                 </div>
                               ))}
@@ -558,7 +564,7 @@ export function LearningScreen({
                             <tr key={rubric.id}>
                               <td className="px-3 py-2 font-medium text-career-ink">{rubric.name}</td>
                               <td className="px-3 py-2 text-career-muted">{rubric.description}</td>
-                              <td className="px-3 py-2 text-right font-semibold text-career-navy dark:text-career-orange">
+                              <td className="px-3 py-2 text-right font-semibold text-career-navy">
                                 {rubric.weight}%
                               </td>
                             </tr>
@@ -573,6 +579,6 @@ export function LearningScreen({
           )}
         </div>
       )}
-    </div>
+    </ScreenStack>
   );
 }

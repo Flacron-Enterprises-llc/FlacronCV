@@ -15,6 +15,7 @@ import {
   PlanUpgradeState,
   ProviderUnavailableState,
   QuotaExhaustedState,
+  PageHeader,
 } from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { profileLoadFailure } from '@/lib/career/profile-load';
@@ -45,7 +46,7 @@ export function InterviewsScreen({
   const [task, setTask] = useState('');
   const [action, setAction] = useState('');
   const [result, setResult] = useState('');
-  const [note, setNote] = useState<'upgrade' | 'quota' | 'failed' | 'story' | 'saved' | null>(null);
+  const [note, setNote] = useState<'upgrade' | 'quota' | 'failed' | 'start_failed' | 'provider' | 'story' | 'saved' | null>(null);
 
   const loadList = useCallback(async () => {
     setLoad('loading');
@@ -90,7 +91,10 @@ export function InterviewsScreen({
     } catch (error) {
       if (isApiError(error, 'plan_upgrade_required')) setNote('upgrade');
       else if (isApiError(error, 'quota_exhausted')) setNote('quota');
-      else setNote('failed');
+      // No AI provider: nothing was typed or charged, so say that, not "your answer was not saved".
+      else if (isApiError(error, 'provider_unavailable')) setNote('provider');
+      else setNote('start_failed');
+      setConfirming(false);
     }
   }
 
@@ -103,7 +107,7 @@ export function InterviewsScreen({
       setAnswer('');
     } catch (error) {
       setAnswer(typed);
-      setNote('failed');
+      setNote(isApiError(error, 'provider_unavailable') ? 'provider' : 'failed');
     }
   }
 
@@ -135,7 +139,7 @@ export function InterviewsScreen({
         title={t('signed_out_title')}
         body={t('signed_out_body')}
         action={
-          <a className="inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white" href={signInHref}>
+          <a className="inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white dark:text-stone-950" href={signInHref}>
             {t('go_sign_in')}
           </a>
         }
@@ -147,18 +151,19 @@ export function InterviewsScreen({
   const next = session && session.answers.length < session.questions.length ? session.questions[session.answers.length] : null;
 
   return (
-    <div data-testid="interview-layout" className="grid grid-cols-1 gap-6">
+    <div data-testid="interview-layout" className="flex min-w-0 flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold text-career-ink">{t('title')}</h1>
+        <PageHeader title={t('title')} description={t('not_a_score')} />
         <p className="mt-2 text-sm text-career-muted">{t('allowance', { count: remaining })}</p>
-        <p className="mt-1 text-sm text-career-muted">{t('not_a_score')}</p>
-        <a className="mt-2 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text" href={opportunityId ? `/interviews/voice?opportunityId=${encodeURIComponent(opportunityId)}` : '/interviews/voice'}>
+        <a className="mt-2 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text" href={`/${locale}/career/interviews/voice${opportunityId ? `?opportunityId=${encodeURIComponent(opportunityId)}` : ''}`}>
           {t('voice_link')}
         </a>
       </div>
       {note === 'upgrade' ? <PlanUpgradeState title={t('upgrade_title')} body={t('upgrade_body')} /> : null}
       {note === 'quota' ? <QuotaExhaustedState title={t('quota_title')} body={t('quota_body')} /> : null}
       {note === 'failed' ? <FailedJobState title={t('failed_title')} body={t('failed_body')} /> : null}
+      {note === 'start_failed' ? <FailedJobState title={t('start_failed_title')} body={t('start_failed_body')} /> : null}
+      {note === 'provider' ? <ProviderUnavailableState title={t('provider_title')} body={t('provider_body')} /> : null}
       {session ? (
         <Card>
           <p className="text-sm text-career-muted">{session.title}</p>
@@ -199,7 +204,7 @@ export function InterviewsScreen({
           <label className="mt-3 block text-sm font-semibold text-career-ink" htmlFor="interview-stage">{t('stage')}</label>
           <select
             id="interview-stage"
-            className="mt-1 min-h-career-touch w-full rounded-md border border-career-line bg-white px-3 text-sm text-career-ink"
+            className="mt-1 min-h-career-touch w-full rounded-md border border-career-line bg-career-surface px-3 text-sm text-career-ink"
             value={stage}
             onChange={(event) => {
               const value = event.target.value;

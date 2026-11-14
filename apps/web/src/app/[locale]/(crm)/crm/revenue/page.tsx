@@ -1,5 +1,6 @@
 'use client';
-import React from 'react';
+
+import { transactionStatusLabel } from '@/lib/crm-labels';import React from 'react';
 
 import { useState, useId } from 'react';
 import { useTranslations } from 'next-intl';
@@ -200,7 +201,7 @@ export default function CRMRevenuePage(): React.JSX.Element | null {
           >
             <option value="">{t('all_statuses')}</option>
             {Object.values(CRMTransactionStatus).map((v) => (
-              <option key={v} value={v} className="capitalize">{v}</option>
+              <option key={v} value={v}>{transactionStatusLabel(t, v)}</option>
             ))}
           </select>
 
@@ -386,7 +387,7 @@ export default function CRMRevenuePage(): React.JSX.Element | null {
                       className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-white"
                     >
                       {Object.values(CRMTransactionStatus).map((v) => (
-                        <option key={v} value={v}>{v}</option>
+                        <option key={v} value={v}>{transactionStatusLabel(t, v)}</option>
                       ))}
                     </select>
                   </div>

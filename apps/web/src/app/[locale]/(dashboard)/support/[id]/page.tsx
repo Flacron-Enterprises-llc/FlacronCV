@@ -12,6 +12,7 @@ import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
+import Modal from '@/components/ui/Modal';
 import {
   ArrowLeft,
   Send,
@@ -58,6 +59,9 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
   const queryClient = useQueryClient();
 
   const [replyContent, setReplyContent] = useState('');
+  // Closing cannot be undone by the customer (the reply form goes away), so it
+  // is confirmed first instead of happening on a single click.
+  const [confirmClose, setConfirmClose] = useState(false);
 
   // GET /support/tickets/:id returns the ticket AND its messages in one payload;
   // there is no separate /messages GET route. Consume the combined shape.
@@ -91,6 +95,7 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
     mutationFn: () =>
       api.patch<SupportTicket>(`/support/tickets/${params.id}/close`),
     onSuccess: () => {
+      setConfirmClose(false);
       toast.success(t('ticketClosed'));
       queryClient.invalidateQueries({
         queryKey: ['support-ticket', params.id],
@@ -219,8 +224,7 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
               variant="danger"
               size="sm"
               icon={<XCircle className="h-4 w-4" />}
-              onClick={() => closeMutation.mutate()}
-              loading={closeMutation.isPending}
+              onClick={() => setConfirmClose(true)}
             >
               {t('closeTicket')}
             </Button>
@@ -313,6 +317,7 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
                 onChange={(e) => setReplyContent(e.target.value)}
                 placeholder={t('replyPlaceholder')}
                 rows={4}
+                maxLength={5000}
                 className="input-field w-full resize-y"
                 required
               />
@@ -330,6 +335,32 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
           </form>
         </Card>
       )}
+
+      <Modal
+        isOpen={confirmClose}
+        onClose={() => !closeMutation.isPending && setConfirmClose(false)}
+        title={t('closeConfirmTitle')}
+        size="sm"
+      >
+        <p className="text-sm text-stone-600 dark:text-stone-400">{t('closeConfirmBody')}</p>
+        <div className="mt-6 flex justify-end gap-3">
+          <Button
+            variant="secondary"
+            onClick={() => setConfirmClose(false)}
+            disabled={closeMutation.isPending}
+          >
+            {t('closeConfirmCancel')}
+          </Button>
+          <Button
+            variant="danger"
+            icon={<XCircle className="h-4 w-4" />}
+            loading={closeMutation.isPending}
+            onClick={() => closeMutation.mutate()}
+          >
+            {t('closeTicket')}
+          </Button>
+        </div>
+      </Modal>
 
       {isClosed && (
         <Card className="py-6 text-center">

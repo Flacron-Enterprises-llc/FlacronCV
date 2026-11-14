@@ -1,7 +1,10 @@
 /**
- * Flacron Growth Engine (client). Loads only when all three public env vars
- * are set AND the visitor has accepted analytics cookies. Missing config,
- * a declined or unanswered banner, and the server are no-ops. Never throws.
+ * Flacron Growth Engine (client). Loads only when it is configured (the
+ * NEXT_PUBLIC_FCGE_* env vars, or the production fallback below) AND the
+ * visitor has accepted analytics cookies AND the page is not /admin or /crm.
+ * Missing config, a declined or unanswered banner, staff pages and the server
+ * are no-ops. Never throws. `loadFcge()` is the only way the SDK or the chat
+ * widget reaches the page.
  *
  * There is no marketing-cookie category. Analytics is the gate.
  * marketingConsent on identify is the account's marketing-email opt-in, and
@@ -51,25 +54,61 @@ const LOCALES = ['en', 'es', 'fr', 'de', 'ar', 'ur'];
 const LIMIT_MARK = 'fcge_usage_90';
 const PRICING_MARK = 'fcge_pricing_visited';
 
-const DEFAULT_APP_ID = 'cmujjip0p0163jy1j3qxh7bt7';
-const DEFAULT_KEY = 'pk_live_f68b3b4b2ef9cd1ce3258a4efe9ace85ed12d13b8e7e89ee';
-const DEFAULT_ENDPOINT = 'https://dleleyb9ufrgz.cloudfront.net';
+/**
+ * Production build-time fallback. These values used to live in hard-coded
+ * <script> tags in the root layout, which loaded the SDK before (and
+ * regardless of) consent. The tags are gone; the values stay here ONLY so a
+ * production build that never set the NEXT_PUBLIC_FCGE_* variables keeps
+ * working as before — now behind the consent gate. Development and test builds
+ * never fall back: no env, no tracker. The key is a publishable (pk_) key that
+ * is meant to ship in the browser bundle. Setting a variable to the empty
+ * string disables FCGE in any environment.
+ */
+const PRODUCTION_FALLBACK = {
+  appId: 'cmujjip0p0163jy1j3qxh7bt7',
+  key: 'pk_live_f68b3b4b2ef9cd1ce3258a4efe9ace85ed12d13b8e7e89ee',
+  endpoint: 'https://dleleyb9ufrgz.cloudfront.net',
+  chatWidgetId: 'wid_bOgLvgKF5D8g',
+} as const;
 
-function readConfig(): { appId: string; key: string; endpoint: string } | null {
-  const envAppId = process.env.NEXT_PUBLIC_FCGE_APP_ID;
-  const envKey = process.env.NEXT_PUBLIC_FCGE_KEY;
-  const envEndpoint = process.env.NEXT_PUBLIC_FCGE_ENDPOINT;
+interface FcgeConfig {
+  appId: string;
+  key: string;
+  endpoint: string;
+  /** Support-chat widget id; null when the chat is not configured. */
+  chatWidgetId: string | null;
+}
 
-  if (envAppId === '' || envKey === '' || envEndpoint === '') {
-    return null;
-  }
+function pick(value: string | undefined, fallback: string, useFallback: boolean): string | null {
+  if (value === '') return null; // explicit opt-out
+  const trimmed = value?.trim();
+  if (trimmed) return trimmed;
+  return useFallback ? fallback : null;
+}
 
-  const appId = (envAppId?.trim()) || DEFAULT_APP_ID;
-  const key = (envKey?.trim()) || DEFAULT_KEY;
-  const endpoint = (envEndpoint?.trim()) || DEFAULT_ENDPOINT;
+/** The deployed site: flacroncv.com and its subdomains (www.). */
+export function isLiveHost(hostname?: string): boolean {
+  const host = hostname ?? (typeof window === 'undefined' ? '' : window.location.hostname);
+  return /(^|\.)flacroncv\.com$/i.test(host);
+}
 
+function readConfig(): FcgeConfig | null {
+  // Literal process.env.X reads: Next only inlines NEXT_PUBLIC_* values into
+  // the client bundle when the property access is written out in full.
+  // The production fallback is tied to the live site's own hostname, not just
+  // to NODE_ENV: a production build run anywhere else (`next start` on a
+  // laptop, a preview host) must never send events to the live project.
+  const useFallback = process.env.NODE_ENV === 'production' && isLiveHost();
+  const appId = pick(process.env.NEXT_PUBLIC_FCGE_APP_ID, PRODUCTION_FALLBACK.appId, useFallback);
+  const key = pick(process.env.NEXT_PUBLIC_FCGE_KEY, PRODUCTION_FALLBACK.key, useFallback);
+  const endpoint = pick(process.env.NEXT_PUBLIC_FCGE_ENDPOINT, PRODUCTION_FALLBACK.endpoint, useFallback);
   if (!appId || !key || !endpoint) return null;
-  return { appId, key, endpoint };
+  const chatWidgetId = pick(
+    process.env.NEXT_PUBLIC_FCGE_CHAT_WIDGET_ID,
+    PRODUCTION_FALLBACK.chatWidgetId,
+    useFallback,
+  );
+  return { appId, key, endpoint: endpoint.replace(/\/$/, ''), chatWidgetId };
 }
 
 export function fcgeConfigured(): boolean {
@@ -82,10 +121,17 @@ export function isStaffPath(pathname: string): boolean {
   return stripped === '/admin' || stripped.startsWith('/admin/') || stripped === '/crm' || stripped.startsWith('/crm/');
 }
 
-function canSend(): boolean {
+/** Whether the visitor and the current page permit FCGE at all. */
+function mayRun(): boolean {
   return typeof window !== 'undefined'
     && !isStaffPath(window.location.pathname)
-    && !!window.FCGE;
+    && isAllowed('analytics');
+}
+
+function canSend(): boolean {
+  // Consent is re-checked on every call: a visitor who withdraws it mid-session
+  // must stop being tracked even though the SDK is already on the page.
+  return mayRun() && !!window.FCGE;
 }
 
 function call(method: FcgeMethod, args: unknown[]): void {
@@ -99,9 +145,12 @@ function call(method: FcgeMethod, args: unknown[]): void {
   }
 }
 
-/** Install the queueing stub. Does nothing without config, consent, or a browser. */
+/**
+ * Install the queueing stub. Does nothing without config, analytics consent,
+ * a browser, or on a staff (admin/CRM) path.
+ */
 export function installFcgeStub(): void {
-  if (typeof window === 'undefined') return;
+  if (!mayRun()) return;
   if (window.FCGE) return;
   const config = readConfig();
   if (!config) return;
@@ -124,7 +173,87 @@ export function installFcgeStub(): void {
 export function fcgeScriptSrc(): string | null {
   const config = readConfig();
   if (!config || typeof window === 'undefined') return null;
-  return `${config.endpoint.replace(/\/$/, '')}/sdk/fcge.min.js`;
+  return `${config.endpoint}/sdk/fcge.min.js`;
+}
+
+const SDK_SCRIPT_ID = 'fcge-sdk';
+const CHAT_SCRIPT_ID = 'fcge-chat';
+
+function appendScript(id: string, src: string, attrs: Record<string, string> = {}): void {
+  if (document.getElementById(id)) return;
+  const script = document.createElement('script');
+  script.id = id;
+  script.async = true;
+  script.src = src;
+  for (const [name, value] of Object.entries(attrs)) script.setAttribute(name, value);
+  document.body.appendChild(script);
+}
+
+/** Whether the SDK script has been injected into this document. */
+export function fcgeLoaded(): boolean {
+  return typeof document !== 'undefined' && !!document.getElementById(SDK_SCRIPT_ID);
+}
+
+/**
+ * Install the stub, then inject the SDK and (when configured) the support-chat
+ * widget. This is the only way either script reaches the page.
+ *
+ * The chat is gated by ANALYTICS consent too, not treated as strictly
+ * necessary: it is third-party code from the tracker's host, it runs on every
+ * page whether or not the visitor wants support, and it shares the SDK's
+ * anonymous visitor id. Visitors who reject still have the contact form.
+ * Idempotent; returns whether FCGE is (now) loaded.
+ */
+export function loadFcge(): boolean {
+  if (!mayRun()) return false;
+  const config = readConfig();
+  if (!config) return false;
+  try {
+    installFcgeStub();
+    appendScript(SDK_SCRIPT_ID, `${config.endpoint}/sdk/fcge.min.js`);
+    if (config.chatWidgetId) {
+      appendScript(CHAT_SCRIPT_ID, `${config.endpoint}/sdk/fcge-chat.min.js`, {
+        'data-widget': config.chatWidgetId,
+      });
+    }
+    guardStaffNavigation();
+    return true;
+  } catch {
+    return false; // growth tracking must never break a page
+  }
+}
+
+let staffGuardInstalled = false;
+
+/**
+ * Client-side navigation into /admin or /crm becomes a full page load while the
+ * SDK is on the page. The SDK tracks history changes itself, so by the time
+ * React re-renders (and FcgeLoader reloads the document without it) a pageview
+ * for the staff page has already been sent. Wrapping pushState/replaceState and
+ * leaving through location.assign means the SDK never sees the staff URL.
+ */
+function guardStaffNavigation(): void {
+  if (staffGuardInstalled || typeof window === 'undefined') return;
+  staffGuardInstalled = true;
+  const wrap = (method: 'pushState' | 'replaceState') => {
+    const original = window.history[method];
+    window.history[method] = function guarded(this: History, data: unknown, unused: string, url?: string | URL | null) {
+      if (url != null && fcgeLoaded()) {
+        try {
+          const target = new URL(String(url), window.location.href);
+          if (target.origin === window.location.origin && isStaffPath(target.pathname)) {
+            window.location.assign(target.href);
+            return;
+          }
+        } catch {
+          /* fall through to the normal navigation */
+        }
+      }
+      return original.call(this, data, unused, url);
+    } as History[typeof method];
+  };
+  wrap('pushState');
+  wrap('replaceState');
 }
 
 export function fcgeIdentify(traits: FcgeIdentify): void {

@@ -87,14 +87,6 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `window.FCGE={appId:"cmujjip0p0163jy1j3qxh7bt7",key:"pk_live_f68b3b4b2ef9cd1ce3258a4efe9ace85ed12d13b8e7e89ee",endpoint:"https://dleleyb9ufrgz.cloudfront.net",q:[]};["identify","track","registerWebinar","page","showForm","reset"].forEach(function(m){window.FCGE[m]=function(){window.FCGE.q.push([m,arguments])}});`,
-          }}
-        />
-        <script src="https://dleleyb9ufrgz.cloudfront.net/sdk/fcge.min.js" async />
-      </head>
       <body suppressHydrationWarning className={`${inter.variable} ${merriweather.variable} ${playfair.variable} ${roboto.variable} ${lora.variable} ${openSans.variable} ${montserrat.variable} font-sans antialiased`}>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <a
@@ -112,17 +104,15 @@ export default async function LocaleLayout({
                   {children}
                   <Toaster position="bottom-right" richColors />
                   <CookieConsent />
+                  {/* The only loader for the Growth Engine SDK and chat: it waits
+                      for analytics consent and skips /admin and /crm. Never add
+                      FCGE <script> tags to this layout. */}
                   <FcgeLoader />
                 </AnalyticsProvider>
               </AuthProvider>
             </ThemeProvider>
           </QueryProvider>
         </NextIntlClientProvider>
-        <script
-          src="https://dleleyb9ufrgz.cloudfront.net/sdk/fcge-chat.min.js"
-          data-widget="wid_bOgLvgKF5D8g"
-          async
-        />
       </body>
     </html>
   );

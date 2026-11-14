@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { isApiError, newIdempotencyKey, type ApiClient, type InterviewStage, type VoiceSession } from '@flacroncv/career-api-client';
 import { Button, Card, EmptyState, FailedJobState, Input, LoadingState, PermissionDeniedState, PlanUpgradeState, QuotaExhaustedState } from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
@@ -28,6 +28,7 @@ export function VoiceScreen({
   opportunityId: string | null;
 }) {
   const t = useTranslations('career.voice');
+  const locale = useLocale();
   const [load, setLoad] = useState<'loading' | 'permission' | 'unavailable' | 'switched-off' | 'signed-out' | 'ready'>('loading');
   const [remaining, setRemaining] = useState(0);
   const [planIncludesVoice, setPlanIncludesVoice] = useState(false);
@@ -38,7 +39,7 @@ export function VoiceScreen({
   const [correction, setCorrection] = useState('');
   const [offer, setOffer] = useState('');
   const [salarySource, setSalarySource] = useState('');
-  const [note, setNote] = useState<'upgrade' | 'quota' | 'failed' | 'truncated' | 'deleted' | 'corrected' | null>(null);
+  const [note, setNote] = useState<'upgrade' | 'quota' | 'failed' | 'truncated' | 'deleted' | 'corrected' | 'withdrawn' | null>(null);
   const startedAt = useRef<number | null>(null);
   const busy = useRef(false);
 
@@ -73,13 +74,20 @@ export function VoiceScreen({
     void loadList();
   }, [ready, user, loadList]);
 
+  /** Ticking gives consent; unticking withdraws it (a privacy right), but never mid-recording. */
   async function agree(checked: boolean) {
-    if (!checked || consented || busy.current) return;
+    if (checked === consented || busy.current || running) return;
     busy.current = true;
     setNote(null);
     try {
-      await api.consentVoice();
-      setConsented(true);
+      if (checked) {
+        await api.consentVoice();
+        setConsented(true);
+      } else {
+        await api.withdrawVoiceConsent();
+        setConsented(false);
+        setNote('withdrawn');
+      }
     } catch {
       setNote('failed');
     } finally {
@@ -184,7 +192,7 @@ export function VoiceScreen({
         title={t('signed_out_title')}
         body={t('signed_out_body')}
         action={
-          <a className="inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white" href={signInHref}>
+          <a className="inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white dark:text-stone-950" href={signInHref}>
             {t('go_sign_in')}
           </a>
         }
@@ -195,12 +203,12 @@ export function VoiceScreen({
   const savedSummary = session && session.summary !== 'No recording yet.' ? session.summary : null;
 
   return (
-    <div data-testid="voice-layout" className="grid grid-cols-1 gap-6">
+    <div data-testid="voice-layout" className="flex min-w-0 flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold text-career-ink">{t('title')}</h1>
+        <h1 className="text-balance text-2xl font-bold text-stone-900 dark:text-white">{t('title')}</h1>
         <p className="mt-2 text-sm text-career-muted">{t('remaining', { time: clock(remaining), seconds: remaining })}</p>
         <p className="mt-1 text-sm text-career-muted">{t('not_a_score')}</p>
-        <a className="mt-2 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text" href="/career/interviews">
+        <a className="mt-2 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text" href={`/${locale}/career/interviews`}>
           {t('text_link')}
         </a>
       </div>
@@ -210,17 +218,20 @@ export function VoiceScreen({
       {note === 'truncated' ? <p className="text-sm text-career-warning">{t('truncated')}</p> : null}
       {note === 'deleted' ? <p className="text-sm text-career-ink">{t('audio_deleted')}</p> : null}
       {note === 'corrected' ? <p className="text-sm text-career-ink">{t('corrected')}</p> : null}
+      {note === 'withdrawn' ? <p role="status" className="text-sm text-career-ink">{t('consent_withdrawn')}</p> : null}
       <Card>
         <label className="flex min-h-career-touch items-center gap-3 text-sm text-career-ink">
           <input
             type="checkbox"
             className="h-4 w-4"
             checked={consented}
+            disabled={running}
             onChange={(event) => void agree(event.target.checked)}
           />
           {t('consent')}
         </label>
         <p className="mt-2 text-sm text-career-muted">{t('consent_help')}</p>
+        <p className="mt-1 text-sm text-career-muted">{t('consent_withdraw_help')}</p>
         {opportunityId ? (
           <Button className="mt-4" disabled={!consented || running || remaining < 1} onClick={() => void begin('practice')}>
             {t('start')}

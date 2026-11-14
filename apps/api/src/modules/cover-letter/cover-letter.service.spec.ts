@@ -275,3 +275,38 @@ describe('CoverLetterService delete does not restore a creation', () => {
     ).rejects.toThrow(ForbiddenException);
   });
 });
+
+/**
+ * The letter's own language is stored separately from the UI language so an
+ * English letter viewed in /ar keeps English labels, date and direction.
+ */
+describe('CoverLetterService letterLocale', () => {
+  it('stores the letter language sent on create', async () => {
+    const { service, firestore } = makeService(SubscriptionPlan.FREE);
+    const cl = await service.create('u1', { title: 'X', letterLocale: 'fr' });
+    const stored = (await firestore.collection('cover_letters').doc(cl.id).get()).data();
+    expect(stored?.letterLocale).toBe('fr');
+  });
+
+  it('omits the field (rather than writing undefined) when the client did not send it', async () => {
+    const { service, firestore } = makeService(SubscriptionPlan.FREE);
+    const cl = await service.create('u1', { title: 'X' });
+    const stored = (await firestore.collection('cover_letters').doc(cl.id).get()).data();
+    expect(stored && 'letterLocale' in stored).toBe(false);
+  });
+
+  it('lets the editor change the letter language', async () => {
+    const { service, firestore } = makeService(SubscriptionPlan.FREE);
+    await seedCL(firestore);
+    const updated = await service.update('cl1', 'u1', { letterLocale: 'ar' });
+    expect((updated as { letterLocale?: string }).letterLocale).toBe('ar');
+  });
+
+  it('keeps the letter language on duplicate', async () => {
+    const { service, firestore } = makeService(SubscriptionPlan.FREE);
+    await seedCL(firestore);
+    await service.update('cl1', 'u1', { letterLocale: 'de' });
+    const copy = await service.duplicate('cl1', 'u1');
+    expect((copy as { letterLocale?: string }).letterLocale).toBe('de');
+  });
+});

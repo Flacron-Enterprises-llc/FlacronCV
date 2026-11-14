@@ -252,6 +252,25 @@ describe('AuthService', () => {
 
       await expect(service.sendPasswordReset('reset@example.com')).rejects.toThrow('boom');
     });
+
+    it('reports success on a mail-delivery failure (anonymous form) so an outage cannot reveal which accounts exist', async () => {
+      mockFirebaseAdmin.auth.generatePasswordResetLink.mockResolvedValue('https://reset.link');
+      mockMailService.sendPasswordResetEmail.mockRejectedValue(new Error('smtp down'));
+      const logged = jest.spyOn((service as unknown as { logger: { error: () => void } }).logger, 'error');
+
+      await expect(service.sendPasswordReset('reset@example.com')).resolves.toBeUndefined();
+      // Ops must still see it, at error level.
+      expect(logged).toHaveBeenCalled();
+    });
+
+    it('surfaces a mail-delivery failure for a signed-in user resetting their own password', async () => {
+      mockFirebaseAdmin.auth.generatePasswordResetLink.mockResolvedValue('https://reset.link');
+      mockMailService.sendPasswordResetEmail.mockRejectedValue(new Error('smtp down'));
+
+      await expect(
+        service.sendPasswordReset('reset@example.com', { surfaceDeliveryFailure: true }),
+      ).rejects.toThrow('smtp down');
+    });
   });
 
   describe('sendEmailVerification', () => {

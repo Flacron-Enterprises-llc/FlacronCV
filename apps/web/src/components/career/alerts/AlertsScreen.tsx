@@ -6,6 +6,7 @@ import { isApiError, type AlertItem, type AlertList, type AlertLocation, type Ap
 import {
   Button,
   Card,
+  ConfirmDialog,
   EmptyState,
   Input,
   LoadingState,
@@ -42,6 +43,8 @@ export function AlertsScreen({
   const [searchBusy, setSearchBusy] = useState<string | null>(null);
   const [locations, setLocations] = useState<AlertLocation[]>([]);
   const [searchLocation, setSearchLocation] = useState('');
+  // A deleted saved search stops its alerts and cannot be restored, so it asks first.
+  const [confirmSearch, setConfirmSearch] = useState<SavedSearch | null>(null);
 
   const loadSearches = useCallback(async () => {
     try {
@@ -93,7 +96,7 @@ export function AlertsScreen({
         title={t('signed_out_title')}
         body={t('signed_out_body')}
         action={
-          <a className="inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white" href={signInHref}>
+          <a className="inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white dark:text-stone-950" href={signInHref}>
             {t('go_sign_in')}
           </a>
         }
@@ -135,6 +138,7 @@ export function AlertsScreen({
     }
   }
 
+
   async function removeSearch(search: SavedSearch) {
     setSearchBusy(search.id);
     try {
@@ -144,6 +148,7 @@ export function AlertsScreen({
       setSearches('error');
     } finally {
       setSearchBusy(null);
+      setConfirmSearch(null);
     }
   }
 
@@ -178,8 +183,19 @@ export function AlertsScreen({
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-testid="alerts-layout">
+      <ConfirmDialog
+        open={confirmSearch !== null}
+        title={t('searches_confirm_title')}
+        body={confirmSearch ? t('searches_confirm_body', { query: confirmSearch.q || t('searches_any') }) : undefined}
+        confirmLabel={t('searches_delete')}
+        cancelLabel={t('cancel')}
+        danger
+        busy={confirmSearch !== null && searchBusy === confirmSearch.id}
+        onConfirm={() => confirmSearch && void removeSearch(confirmSearch)}
+        onCancel={() => setConfirmSearch(null)}
+      />
       <section className="space-y-4">
-        <h1 className="text-2xl font-semibold text-career-navy dark:text-white">{t('title')}</h1>
+        <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{t('title')}</h1>
         {balance === 0 ? <QuotaExhaustedState title={t('quota_title')} body={t('quota_body')} /> : null}
         {note === 'upgrade' ? <PlanUpgradeState title={t('upgrade_title')} body={t('upgrade_body')} /> : null}
         {list.items.length === 0 ? (
@@ -253,7 +269,7 @@ export function AlertsScreen({
                   <Button type="button" disabled={searchBusy === search.id} onClick={() => void togglePaused(search)}>
                     {search.paused ? t('searches_resume') : t('searches_pause')}
                   </Button>
-                  <Button type="button" disabled={searchBusy === search.id} onClick={() => void removeSearch(search)} aria-label={t('searches_delete_label', { query: search.q || t('searches_any') })}>
+                  <Button type="button" disabled={searchBusy === search.id} onClick={() => setConfirmSearch(search)} aria-label={t('searches_delete_label', { query: search.q || t('searches_any') })}>
                     {t('searches_delete')}
                   </Button>
                 </li>

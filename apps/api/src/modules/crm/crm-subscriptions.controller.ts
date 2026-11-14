@@ -7,6 +7,7 @@ import {
   UseGuards,
   Res,
 } from '@nestjs/common';
+import { positiveInt } from './paging';
 import { Response } from 'express';
 import { csvCell } from '../../common/utils/csv';
 import { toIsoString } from '../../common/utils/date';
@@ -36,8 +37,8 @@ export class CRMSubscriptionsController {
     @Query('endDate') endDate?: string,
   ) {
     return this.service.listSubscriptions({
-      page: page ? parseInt(page, 10) : 1,
-      limit: limit ? parseInt(limit, 10) : 25,
+      page: positiveInt(page, 1),
+      limit: positiveInt(limit, 25),
       plan,
       status,
       userId,

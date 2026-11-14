@@ -52,7 +52,7 @@ export const REFUND: LegalDocument = {
       ),
     ]),
     section('4', '4. Canceling Your Subscription', [
-      p('Users should be able to cancel through:'),
+      p('You can cancel through:'),
       p('Settings → Billing → Manage Subscription'),
       p('or through the applicable payment-provider portal.'),
       p('Cancel before your next renewal date if you do not want another subscription charge.'),
@@ -143,7 +143,7 @@ export const REFUND: LegalDocument = {
     section('14', '14. Pricing Changes', [
       p('Subscription prices may change in the future.'),
       p(
-        'Where required, appropriate notice should be provided before a pricing change affects an existing renewal.',
+        'Where required, we will provide appropriate notice before a pricing change affects an existing renewal.',
       ),
     ]),
     section('15', '15. Billing Contact', [
@@ -155,7 +155,7 @@ export const REFUND: LegalDocument = {
       p('410 E 95th St'),
       p('Brooklyn, NY 11212'),
       p('United States'),
-      p('Parent Company Email: Contact@flacronenterprises.com'),
+      p('Parent Company Email: contact@flacronenterprises.com'),
       p('Powered by Flacron Engine'),
     ]),
   ],

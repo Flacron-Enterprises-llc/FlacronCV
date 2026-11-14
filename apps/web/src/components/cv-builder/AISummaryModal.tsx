@@ -6,7 +6,7 @@ import { useCVStore } from '@/store/cv-store';
 import { useAuth } from '@/providers/AuthProvider';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { cn } from '@/lib/utils';
-import { api, isAiCreditUnconfirmed } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { track } from '@/lib/analytics';
 import Button from '@/components/ui/Button';
 import UpgradeModal from '@/components/shared/UpgradeModal';
@@ -14,7 +14,7 @@ import InAppWarning from '@/components/shared/InAppWarning';
 import { X, Sparkles, RefreshCw, PlusCircle, Replace } from 'lucide-react';
 import { toast } from 'sonner';
 import { PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
-import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
+import { useAiFailureToast } from './useAiFailureToast';
 
 interface AISummaryModalProps {
   cvId: string;
@@ -31,7 +31,7 @@ const LOCALE_LANGUAGE_NAMES: Record<string, string> = {
 export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalProps) {
   const t = useTranslations('cv_builder');
   const tCommon = useTranslations('common');
-  const formatApiError = useApiErrorMessage();
+  const showAiFailure = useAiFailureToast();
   const tw = useTranslations('in_app_warnings');
   const locale = useLocale();
   const { cv, updatePersonalInfo } = useCVStore();
@@ -101,16 +101,16 @@ export default function AISummaryModal({ cvId, open, onClose }: AISummaryModalPr
       // An out-of-credits 503 (stale-state race — the client thought credits
       // remained) must surface the upgrade prompt, not a fabricated summary.
       // Match the API body's English `message`, not the localized toast copy.
-      if (/credit/i.test(raw)) {
+      // A failed generation (code AI_CREDIT_REFUNDED / _NOT_REFUNDED) is not
+      // an out-of-credits case.
+      const generationFailed = error instanceof ApiError && /^AI_CREDIT_/.test(error.code ?? '');
+      if (!generationFailed && /credit/i.test(raw)) {
         setShowUpgrade(true);
       } else {
         // Do not write a local English paragraph. Empty skills 400'd the API
-        // and that filler was labelled as if the Engine produced it.
-        toast.error(formatApiError(error, tCommon(
-          isAiCreditUnconfirmed(error)
-            ? 'generate_failed_charge_unconfirmed'
-            : 'generate_failed_no_charge',
-        )));
+        // and that filler was labelled as if the Engine produced it. Same
+        // translated title + credit line as the other four AI features.
+        showAiFailure(error, t('ai_summary_error'));
       }
     } finally {
       setIsGenerating(false);

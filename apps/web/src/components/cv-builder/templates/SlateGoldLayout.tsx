@@ -12,12 +12,14 @@
  */
 
 import React from 'react';
-import { useTranslations } from 'next-intl';
 import type { LayoutProps } from './shared';
 import {
   getTokens, hexToRgba, readableOn, INK,
-  splitSections, formatCVDate, formatDegree, SkillList, SkillLines,
-  contactSidebarLines, referenceLines,
+  splitSections, formatDegree, SkillList, SkillLines,
+  sidebarContactParts, referenceLines,
+  useCVDocument, useDocument, CVDocumentProvider,
+  genericItemParts, ItemLineView, formatDocDateRange,
+  type ItemLine,
 } from './shared';
 
 /* ─── Palette ────────────────────────────────────────────────────────────────── */
@@ -37,7 +39,7 @@ interface MainHeadingProps {
 
 function MainHeading({ title, gold, headingFont, fs }: MainHeadingProps) {
   return (
-    <div style={{ marginBottom: '10px' }}>
+    <div data-pdf-keep-next="" style={{ marginBottom: '10px' }}>
       {/* Thick gold bar above the text */}
       <div style={{ width: '28px', height: '3px', background: gold, borderRadius: '2px', marginBottom: '6px' }} />
       <h2 style={{
@@ -69,7 +71,7 @@ interface SideHeadingProps {
 
 function SideHeading({ title, gold, headingFont, fs }: SideHeadingProps) {
   return (
-    <div style={{ marginBottom: '8px' }}>
+    <div data-pdf-keep-next="" style={{ marginBottom: '8px' }}>
       <h3 style={{
         fontFamily: headingFont,
         fontSize: `${fs.sectionTitle - 1}px`,
@@ -103,15 +105,17 @@ interface TimelineItemProps {
 }
 
 function TimelineItem({ item, gold, bodyFont, headingFont, fs, sp, isLast }: TimelineItemProps) {
+  const { lang, labels } = useDocument();
   const isExperience = !!(item.position || item.company);
   const isEducation  = !!item.institution;
 
   const title    = isExperience ? item.position : isEducation ? formatDegree(item) : (item.name || item.title || '');
-  const subtitle = isExperience ? `${item.company || ''}${item.location ? ` · ${item.location}` : ''}` : isEducation ? item.institution : (item.issuer || item.proficiency || '');
-  const start    = formatCVDate(item.startDate);
-  const end      = isExperience ? (item.isCurrent ? 'Present' : formatCVDate(item.endDate) || 'Present')
-                                : formatCVDate(item.endDate);
-  const dateStr  = start ? `${start}${end ? ` – ${end}` : ''}` : (end || formatCVDate(item.date) || '');
+  const subtitle = isExperience || isEducation
+    ? `${(isExperience ? item.company : item.institution) || ''}${item.location ? ` · ${item.location}` : ''}`
+    : (item.issuer || item.proficiency || '');
+  const dateStr  = isExperience
+    ? formatDocDateRange(item.startDate, item.endDate, lang, { current: !!item.isCurrent, openEndedIsPresent: true })
+    : formatDocDateRange(item.startDate, item.endDate, lang) || formatDocDateRange(item.date, null, lang);
 
   return (
     <div style={{ display: 'flex', gap: '12px', marginBottom: isLast ? 0 : `${sp.item + 4}px` }}>
@@ -130,7 +134,7 @@ function TimelineItem({ item, gold, bodyFont, headingFont, fs, sp, isLast }: Tim
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
         {/* Title row */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
+        <div data-pdf-keep-next="" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{
             fontFamily: headingFont,
             fontSize: `${fs.headline}px`,
@@ -155,7 +159,7 @@ function TimelineItem({ item, gold, bodyFont, headingFont, fs, sp, isLast }: Tim
 
         {/* Subtitle */}
         {subtitle && (
-          <p style={{
+          <p data-pdf-keep-next="" style={{
             fontFamily: bodyFont,
             fontSize: `${fs.name}px`,
             fontWeight: 500,
@@ -167,9 +171,15 @@ function TimelineItem({ item, gold, bodyFont, headingFont, fs, sp, isLast }: Tim
           </p>
         )}
 
+        {isEducation && item.gpa && (
+          <p style={{ fontFamily: bodyFont, fontSize: `${fs.meta}px`, color: INK.meta, margin: '0 0 4px' }}>
+            {labels.gpa}: <bdi>{item.gpa}</bdi>
+          </p>
+        )}
+
         {/* Description */}
         {item.description && (
-          <p style={{
+          <p dir="auto" style={{
             fontFamily: bodyFont,
             fontSize: `${fs.body}px`,
             color: INK.body,
@@ -189,39 +199,43 @@ function TimelineItem({ item, gold, bodyFont, headingFont, fs, sp, isLast }: Tim
 
 /* ─── Generic sidebar item ───────────────────────────────────────────────────── */
 
-function SideItem({ item, gold, bodyFont, fs, sp }: {
-  item: any; gold: string; bodyFont: string;
+function SideItem({ item, sectionType, gold, bodyFont, fs, sp }: {
+  item: any; sectionType: string; gold: string; bodyFont: string;
   fs: ReturnType<typeof getTokens>['fs'];
   sp: ReturnType<typeof getTokens>['sp'];
 }) {
-  const label  = item.name || item.title || item.degree || item.issuer || '';
-  const detail = item.description || item.proficiency || item.field || '';
-  const date   = formatCVDate(item.date || item.startDate);
+  const { lang } = useDocument();
+  const parts = genericItemParts(item, sectionType, lang);
+  // Older content may carry the label in degree/issuer only.
+  const label = parts.label || item.degree || item.issuer || '';
+  const base: React.CSSProperties = { fontFamily: bodyFont, fontSize: `${fs.body}px`, color: 'rgba(255,255,255,0.60)', margin: '2px 0 0', lineHeight: 1.5, whiteSpace: 'pre-line', overflowWrap: 'break-word' };
+  const lineStyle: Record<ItemLine['kind'], React.CSSProperties> = {
+    subtitle: { ...base, color: 'rgba(255,255,255,0.74)' },
+    detail: base,
+    meta: { ...base, fontSize: `${fs.meta}px` },
+    link: { ...base, fontSize: `${fs.meta}px`, color: 'rgba(255,255,255,0.80)', wordBreak: 'break-all' },
+  };
   return (
     <div style={{ marginBottom: `${sp.item}px` }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <span style={{ fontFamily: bodyFont, fontSize: `${fs.name}px`, fontWeight: 600, color: 'rgba(255,255,255,0.90)' }}>
-          {label}
+      {/* Title, then the date on its own line: in a 30% column a date beside
+          the title was pushed past the edge and clipped. */}
+      <span dir="auto" style={{ display: 'block', fontFamily: bodyFont, fontSize: `${fs.name}px`, fontWeight: 600, color: 'rgba(255,255,255,0.90)', overflowWrap: 'break-word' }}>
+        {label}
+      </span>
+      {parts.date && (
+        <span style={{ display: 'block', fontSize: `${fs.meta}px`, color: gold, marginTop: '1px' }}>
+          {parts.date}
         </span>
-        {date && (
-          <span style={{ fontSize: `${fs.meta}px`, color: gold }}>
-            {date}
-          </span>
-        )}
-      </div>
-      {detail && (
-        <p style={{ fontFamily: bodyFont, fontSize: `${fs.body}px`, color: 'rgba(255,255,255,0.60)', margin: '2px 0 0', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
-          {detail}
-        </p>
       )}
+      {parts.lines.map((line, i) => <ItemLineView key={i} line={line} style={lineStyle[line.kind]} />)}
     </div>
   );
 }
 
 /* ─── Main layout ────────────────────────────────────────────────────────────── */
 
-export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
-  const t = useTranslations('cv_builder');
+export default function SlateGoldLayout({ cv, sections, nameAs: NameTag = 'div' }: LayoutProps) {
+  const doc = useCVDocument(cv, sections);
   const { primary, bodyFont, headingFont, fs, sp } = getTokens(cv);
 
   // This layout paints the accent onto two fixed, opposite backgrounds: the
@@ -242,7 +256,8 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
     ((cv.personalInfo.firstName?.[0] || '') + (cv.personalInfo.lastName?.[0] || '')).toUpperCase();
 
   return (
-    <div style={{
+    <CVDocumentProvider doc={doc}>
+    <div dir={doc.dir} lang={doc.lang} style={{
       fontFamily: bodyFont,
       display: 'flex',
       minHeight: '1122px',
@@ -295,7 +310,7 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
           )}
 
           {/* Name */}
-          <h1 style={{
+          <NameTag style={{
             fontFamily: headingFont,
             fontSize: `${fs.nameTop}px`,
             fontWeight: 900,
@@ -313,7 +328,7 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
                 </span>
               </>
             )}
-          </h1>
+          </NameTag>
 
           {/* Headline — the job title, which is the second thing anyone reads.
               It used to be painted in the accent at 80% opacity, so on a dark
@@ -335,8 +350,8 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
 
         {/* ── Contact ── */}
         <div style={{ padding: `${sp.section * 0.7}px ${sp.pad * 0.55}px` }}>
-          <SideHeading title={t('template_contact')} gold={goldSide} headingFont={headingFont} fs={fs} />
-          {contactSidebarLines(cv).map((line, i) => (
+          <SideHeading title={doc.labels.contact} gold={goldSide} headingFont={headingFont} fs={fs} />
+          {sidebarContactParts(cv).map((part, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginBottom: '5px' }}>
               {/* Gold bullet */}
               <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: goldSide, marginTop: '5px', flexShrink: 0 }} />
@@ -349,7 +364,7 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
                 wordBreak: 'break-word',
                 overflowWrap: 'break-word',
               }}>
-                {line}
+                <bdi data-pdf-link={part.href}>{part.text}</bdi>
               </p>
             </div>
           ))}
@@ -364,7 +379,7 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
               <SkillLines items={section.items.map((i: any) => i.name)} primary={goldSide} fs={fs} tone="dark" />
             ) : (
               section.items.map((item: any, i: number) => (
-                <SideItem key={i} item={item} gold={goldSide} bodyFont={bodyFont} fs={fs} sp={sp} />
+                <SideItem key={i} item={item} sectionType={section.type} gold={goldSide} bodyFont={bodyFont} fs={fs} sp={sp} />
               ))
             )}
           </div>
@@ -383,7 +398,7 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
         {/* ── Summary ── */}
         {cv.personalInfo.summary && (
           <div style={{ marginBottom: `${sp.section}px` }}>
-            <MainHeading title={t('template_profile')} gold={gold} headingFont={headingFont} fs={fs} />
+            <MainHeading title={doc.labels.profile} gold={gold} headingFont={headingFont} fs={fs} />
             <p style={{
               fontFamily: bodyFont,
               fontSize: `${fs.name}px`,
@@ -393,7 +408,7 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
               overflowWrap: 'break-word',
               whiteSpace: 'pre-line',
               fontStyle: 'italic',
-            }}>
+            }} dir="auto">
               {cv.personalInfo.summary}
             </p>
           </div>
@@ -450,26 +465,26 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
                     );
                   }
 
-                  const label  = item.name || item.title || '';
-                  const detail = item.description || item.issuer || item.proficiency || '';
-                  const date   = formatCVDate(item.date || item.startDate);
+                  const parts = genericItemParts(item, section.type, doc.lang);
+                  const lineStyle: Record<ItemLine['kind'], React.CSSProperties> = {
+                    subtitle: { ...detailStyle, fontSize: `${fs.name}px`, fontWeight: 500, color: INK.subtle },
+                    detail: detailStyle,
+                    meta: { ...detailStyle, fontSize: `${fs.meta}px`, color: INK.meta },
+                    link: { ...detailStyle, fontSize: `${fs.meta}px`, color: gold, wordBreak: 'break-all' },
+                  };
                   return (
                     <div key={i} style={{ marginBottom: `${sp.item}px` }}>
                       <div style={rowStyle}>
-                        <span style={labelStyle}>
-                          {label}
+                        <span dir="auto" style={labelStyle}>
+                          {parts.label}
                         </span>
-                        {date && (
+                        {parts.date && (
                           <span style={{ fontSize: `${fs.meta}px`, fontWeight: 600, color: gold, flexShrink: 0 }}>
-                            {date}
+                            {parts.date}
                           </span>
                         )}
                       </div>
-                      {detail && (
-                        <p style={detailStyle}>
-                          {detail}
-                        </p>
-                      )}
+                      {parts.lines.map((line, j) => <ItemLineView key={j} line={line} style={lineStyle[line.kind]} />)}
                     </div>
                   );
                 })
@@ -479,5 +494,6 @@ export default function SlateGoldLayout({ cv, sections }: LayoutProps) {
         })}
       </div>
     </div>
+    </CVDocumentProvider>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultActionPackChecklist, defaultActionPackNextSteps } from './action-pack';
+import { actionPackNextStepCodes, defaultActionPackChecklist, defaultActionPackNextSteps } from './action-pack';
 
 describe('action-pack', () => {
   it('generates customized checklist items for vacancy', () => {
@@ -21,5 +21,18 @@ describe('action-pack', () => {
     const partialSteps = defaultActionPackNextSteps('partial', 3);
     expect(partialSteps.some((s) => s.includes('highlighted skill gaps'))).toBe(true);
     expect(partialSteps.some((s) => s.includes('3 identified skill gaps'))).toBe(true);
+  });
+
+  it('leaves an unstated employer out of the checklist instead of writing a placeholder', () => {
+    const checklist = defaultActionPackChecklist('Analyst', null);
+    expect(checklist[0].label).toBe('Review the tailored resume for Analyst');
+    expect(checklist[1].label).toBe('Review the cover letter');
+    expect(JSON.stringify(checklist)).not.toMatch(/unstated|the employer/i);
+  });
+
+  it('derives next-step codes that match the English steps one to one', () => {
+    expect(actionPackNextStepCodes('partial', 1)).toEqual(['address_gaps', 'highlight_transferable', 'add_gap_evidence', 'track_application']);
+    expect(defaultActionPackNextSteps('partial', 1)).toHaveLength(4);
+    expect(defaultActionPackNextSteps('partial', 1)[2]).toContain('1 identified skill gap.');
   });
 });

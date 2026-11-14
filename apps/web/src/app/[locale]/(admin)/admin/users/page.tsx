@@ -13,6 +13,7 @@ import Badge from '@/components/ui/Badge';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { useFormatDate } from '@/lib/use-format-date';
+import { useAuth } from '@/providers/AuthProvider';
 import { toast } from 'sonner';
 import {
   Search,
@@ -55,6 +56,14 @@ interface UsersResponse {
 export default function AdminUsersPage(): React.JSX.Element | null {
   const formatDate = useFormatDate();
   const t = useTranslations('admin');
+  // Plan and role labels are shared with the CRM (crm.plan_*, crm.role_*).
+  const tc = useTranslations('crm');
+  const { user: me } = useAuth();
+  const planLabel = (plan?: string) => {
+    const known = ['free', 'pro', 'career_accelerator', 'enterprise'];
+    const p = plan || 'free';
+    return known.includes(p) ? tc(`plan_${p}`) : p;
+  };
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -143,12 +152,16 @@ export default function AdminUsersPage(): React.JSX.Element | null {
     }
   };
 
-  const handleRoleChange = (userId: string, newRole: string) => {
-    updateRoleMutation.mutate({ userId, role: newRole });
+  const handleRoleChange = (user: UserData, newRole: string) => {
+    // Granting staff access is consequential; confirm it like a suspension.
+    if (!confirm(t('confirm_role_change', { name: user.displayName || user.email, role: tc(`role_${newRole}`) }))) return;
+    updateRoleMutation.mutate({ userId: user.id, role: newRole });
   };
 
   const handleToggleBan = (user: UserData) => {
     const action = user.status === 'banned' ? 'unban' : 'ban';
+    // Suspension signs the person out and blocks sign-in, so it needs a confirm.
+    if (action === 'ban' && !confirm(t('confirm_ban', { name: user.displayName || user.email }))) return;
     toggleBanMutation.mutate({ userId: user.id, action });
   };
 
@@ -249,7 +262,7 @@ export default function AdminUsersPage(): React.JSX.Element | null {
                     {/* Columns hidden at this width, kept legible here. */}
                     <p className="text-xs font-normal text-stone-500 md:hidden">{user.email}</p>
                     <p className="text-xs font-normal text-stone-500 sm:hidden">
-                      {user.subscription?.plan?.toUpperCase() || 'FREE'} ·{' '}
+                      {planLabel(user.subscription?.plan)} ·{' '}
                       {user.status === 'banned' ? t('banned') : t('active')}
                     </p>
                   </td>
@@ -264,22 +277,29 @@ export default function AdminUsersPage(): React.JSX.Element | null {
                     <select
                       aria-label={t('change_role_for', { name: user.displayName || user.email })}
                       value={user.role}
-                      disabled={updateRoleMutation.isPending && updateRoleMutation.variables?.userId === user.id}
+                      // Your own role is not editable here (and a super admin's role can
+                      // only be changed by another super admin, server-side).
+                      disabled={
+                        user.id === me?.uid ||
+                        (updateRoleMutation.isPending && updateRoleMutation.variables?.userId === user.id)
+                      }
+                      title={user.id === me?.uid ? t('own_account_locked') : undefined}
                       onChange={(e) => {
                         e.stopPropagation();
-                        handleRoleChange(user.id, e.target.value);
+                        handleRoleChange(user, e.target.value);
                       }}
                       onClick={(e) => e.stopPropagation()}
                       className="rounded-md border border-stone-300 bg-white px-2 py-1 text-xs text-stone-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-300"
                     >
                       <option value="user">{t('role_user')}</option>
                       <option value="admin">{t('role_admin')}</option>
+                      {/* Without this option a super_admin rendered as "User", and any
+                          change on that row silently demoted them. */}
+                      <option value="super_admin">{tc('role_super_admin')}</option>
                     </select>
                   </td>
                   <td className="hidden whitespace-nowrap px-4 py-4 lg:table-cell sm:px-6">
-                    <Badge variant="brand">
-                      {user.subscription?.plan?.toUpperCase() || 'FREE'}
-                    </Badge>
+                    <Badge variant="brand">{planLabel(user.subscription?.plan)}</Badge>
                   </td>
                   <td className="hidden whitespace-nowrap px-4 py-4 sm:table-cell sm:px-6">
                     <Badge variant={user.status === 'banned' ? 'danger' : 'success'}>
@@ -294,7 +314,9 @@ export default function AdminUsersPage(): React.JSX.Element | null {
                         e.stopPropagation();
                         handleToggleBan(user);
                       }}
-                      loading={toggleBanMutation.isPending}
+                      loading={toggleBanMutation.isPending && toggleBanMutation.variables?.userId === user.id}
+                      disabled={user.id === me?.uid}
+                      title={user.id === me?.uid ? t('own_account_locked') : undefined}
                       icon={
                         user.status === 'banned' ? (
                           <CheckCircle className="h-3.5 w-3.5" />
@@ -392,7 +414,7 @@ export default function AdminUsersPage(): React.JSX.Element | null {
                   {t('plan')}
                 </p>
                 <p className="mt-1 text-sm font-medium text-stone-900 dark:text-white">
-                  {selectedUser.subscription?.plan?.toUpperCase() || 'FREE'}
+                  {planLabel(selectedUser.subscription?.plan)}
                 </p>
               </div>
               <div className="rounded-lg bg-stone-50 p-3 dark:bg-stone-700/50">

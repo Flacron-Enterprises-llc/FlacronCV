@@ -188,6 +188,24 @@ export class CRMUsersService {
   async suspendUser(uid: string, actorId: string, actorEmail: string, actorRole: string): Promise<User> {
     const user = await this.getUserById(uid);
     this.assertCanManageTarget(actorRole, user.role);
+    // Suspension disables sign-in, so these two would lock the platform's own
+    // operators out: an admin banning themself, or the last active super admin.
+    if (uid === actorId) {
+      throw new BadRequestException('You cannot suspend your own account.');
+    }
+    if (user.role === UserRole.SUPER_ADMIN) {
+      const superAdmins = await this.firebase.firestore
+        .collection(this.col)
+        .where('role', '==', UserRole.SUPER_ADMIN)
+        .get();
+      const hasOtherActive = superAdmins.docs.some((d: any) => {
+        const other = d.data() as { uid?: string; isActive?: boolean };
+        return other.uid !== uid && other.isActive !== false;
+      });
+      if (!hasOtherActive) {
+        throw new BadRequestException('Cannot suspend the last active super admin.');
+      }
+    }
     await this.firebase.firestore.collection(this.col).doc(uid).update({
       isActive: false,
       // NOT deletedAt — suspension is a moderation state, not a deletion, and

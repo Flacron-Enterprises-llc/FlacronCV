@@ -15,6 +15,17 @@ export const STALE_LISTING_DAYS = 14;
 /** Stored when a paste has no employer. The API returns null and the screen says it was not stated. */
 export const UNSTATED_ORGANIZATION = 'unstated';
 
+/**
+ * The employer name to show or write, or null when the listing did not state
+ * one. Every place that builds text from a listing goes through this, so the
+ * storage marker never reaches a letter, a checklist or a screen.
+ */
+export function statedOrganization(value: string | null | undefined): string | null {
+  const name = value?.trim() ?? '';
+  if (name.length < 2 || name.toLowerCase() === UNSTATED_ORGANIZATION) return null;
+  return name;
+}
+
 export interface ListingCompensation {
   minimum: number | null;
   maximum: number | null;

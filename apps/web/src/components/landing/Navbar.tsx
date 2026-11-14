@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Link, usePathname, useRouter } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -47,23 +47,35 @@ export default function Navbar({ logoVariant = 'on-dark' }: NavbarProps) {
 
   const isCurrentPage = (href: string) => pathname === href;
 
+  const locale = useLocale();
+
   /**
-   * When already on `/`, smooth-scroll to the section.
-   * When on any other page, navigate to `/#hash` so the browser
-   * lands on the homepage and jumps to the section automatically.
+   * Home-page section links ("Features", "Pricing").
+   *
+   * They are plain <a href="/{locale}#id"> elements, not next-intl <Link>s.
+   * From another page a client-side navigation to "/#id" sometimes did
+   * nothing at all: the RSC request for the home page was aborted (the click
+   * also closes the mobile menu and re-renders the bar) and the router never
+   * reached the page or the hash. A document navigation cannot be dropped
+   * that way, and the browser itself jumps to the fragment once the
+   * server-rendered home page loads. The href carries the locale, so it never
+   * bounces through the locale redirect.
+   *
+   * On the home page itself the click is intercepted and the section is
+   * scrolled into view without a reload.
    */
+  const sectionHref = (sectionId: string) => `/${locale}#${sectionId}`;
   const handleSectionLink = (
     e: React.MouseEvent<HTMLAnchorElement>,
     sectionId: string,
   ) => {
     setMobileOpen(false);
-    if (pathname === '/') {
-      e.preventDefault();
-      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
-    }
-    // else: next-intl Link follows href="/#sectionId" with the locale prefix
-    // (`/es#features`). A raw `/#features` dropped the locale and 302'd via the apex.
+    const target = pathname === '/' ? document.getElementById(sectionId) : null;
+    if (!target) return; // let the browser follow the href
+    e.preventDefault();
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+    window.history.replaceState(window.history.state, '', `#${sectionId}`);
   };
 
   const navLinkClass = (href?: string) =>
@@ -91,20 +103,20 @@ export default function Navbar({ logoVariant = 'on-dark' }: NavbarProps) {
 
         {/* Desktop nav */}
         <div className="hidden items-center gap-5 xl:flex 2xl:gap-8">
-          <Link
-            href="/#features"
+          <a
+            href={sectionHref('features')}
             onClick={(e) => handleSectionLink(e, 'features')}
             className={navLinkClass()}
           >
             {t('nav.features')}
-          </Link>
-          <Link
-            href="/#pricing"
+          </a>
+          <a
+            href={sectionHref('pricing')}
             onClick={(e) => handleSectionLink(e, 'pricing')}
             className={navLinkClass()}
           >
             {t('nav.pricing')}
-          </Link>
+          </a>
           <Link href="/templates" aria-current={isCurrentPage('/templates') ? 'page' : undefined} className={navLinkClass('/templates')}>
             {t('nav.templates')}
           </Link>
@@ -166,20 +178,20 @@ export default function Navbar({ logoVariant = 'on-dark' }: NavbarProps) {
       {mobileOpen && (
         <div className="border-t border-white/10 bg-chrome px-4 py-4 xl:hidden dark:border-white/10 dark:bg-chrome">
           <div className="flex flex-col gap-1">
-            <Link
-              href="/#features"
+            <a
+              href={sectionHref('features')}
               onClick={(e) => handleSectionLink(e, 'features')}
               className={mobileNavLinkClass()}
             >
               {t('nav.features')}
-            </Link>
-            <Link
-              href="/#pricing"
+            </a>
+            <a
+              href={sectionHref('pricing')}
               onClick={(e) => handleSectionLink(e, 'pricing')}
               className={mobileNavLinkClass()}
             >
               {t('nav.pricing')}
-            </Link>
+            </a>
             <Link
               href="/templates"
               aria-current={isCurrentPage('/templates') ? 'page' : undefined}

@@ -24,7 +24,12 @@ export class SupportController {
   @Post('tickets')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async create(@CurrentUser() user: FirebaseUser, @Body() data: CreateTicketDto) {
-    const ticket = await this.supportService.createTicket(user.uid, user.email, user.email, data);
+    const ticket = await this.supportService.createTicket(
+      user.uid,
+      user.email,
+      typeof user.name === 'string' ? user.name : '',
+      data,
+    );
     await this.audit.logUserAction(
       AuditAction.TICKET_CREATED,
       { uid: user.uid, email: user.email },
@@ -58,7 +63,10 @@ export class SupportController {
   ) {
     const ticket = await this.supportService.getTicket(id);
     if (ticket.userId !== user.uid) throw new ForbiddenException('Access denied');
-    return this.supportService.addMessage(id, user.uid, user.email, 'user', body.content);
+    // Same name resolution as ticket creation, so replies are labelled with the
+    // customer's display name rather than their raw email.
+    const authorName = await this.supportService.resolveCustomerName(user.uid, user.email, user.name);
+    return this.supportService.addMessage(id, user.uid, authorName, 'user', body.content);
   }
 
   @Patch('tickets/:id/close')

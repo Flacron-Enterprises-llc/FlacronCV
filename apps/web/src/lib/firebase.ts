@@ -10,7 +10,7 @@ import {
   Auth,
 } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator, Firestore } from 'firebase/firestore';
-import { getStorage, FirebaseStorage } from 'firebase/storage';
+import { getStorage, connectStorageEmulator, FirebaseStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -110,9 +110,22 @@ if (isConfigured) {
     const [fsHost, fsPort] = (
       process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST || '127.0.0.1:8080'
     ).split(':');
+    // Storage has no default: the local emulator suite may not run it. Without
+    // a Storage emulator the client would upload to the LIVE bucket with an
+    // emulator-issued token, which the real service never accepts (the avatar
+    // spinner used to hang). So, in emulator mode, Storage is either the
+    // emulator or switched off — callers already treat `storage === null` as
+    // "upload unavailable".
+    const storageEmulator = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_HOST;
     try {
       if (auth) connectAuthEmulator(auth, authUrl, { disableWarnings: true });
       if (db) connectFirestoreEmulator(db, fsHost, Number(fsPort) || 8080);
+      if (storage && storageEmulator) {
+        const [stHost, stPort] = storageEmulator.split(':');
+        connectStorageEmulator(storage, stHost, Number(stPort) || 9199);
+      } else {
+        storage = null;
+      }
       // eslint-disable-next-line no-console
       console.info('[firebase] Using LOCAL emulators — production data is not touched.');
     } catch (err) {

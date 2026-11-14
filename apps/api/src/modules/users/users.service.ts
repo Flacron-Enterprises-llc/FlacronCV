@@ -20,7 +20,9 @@ import {
   resolveEffectivePlan,
   ProfileLinkField,
   isProfileLinkField,
-  validateProfileLink,
+  checkProfileLink,
+  profileLinkErrorCode,
+  profileLinkIssueMessage,
   LEGAL_ACCEPTANCES_COLLECTION,
 } from '@flacroncv/shared-types';
 import { EXPO_PUSH_TOKEN_PATTERN } from './dto/push-token.dto';
@@ -223,8 +225,15 @@ export class UsersService {
    * the CV renderer and the public profile page both assume that.
    */
   private assertProfileLink(field: ProfileLinkField, value: string, maxLen: number): string {
-    const result = validateProfileLink(field, value, maxLen);
-    if (result.error) throw new BadRequestException(result.error);
+    const result = checkProfileLink(field, value, maxLen);
+    if (result.issue) {
+      // `code` names the field and reason so the web form can show a
+      // translated message under the right input instead of an English toast.
+      throw new BadRequestException({
+        message: profileLinkIssueMessage(field, result.issue),
+        code: profileLinkErrorCode(field, result.issue),
+      });
+    }
     return result.value;
   }
 

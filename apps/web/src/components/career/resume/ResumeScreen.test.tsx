@@ -152,7 +152,8 @@ describe('ResumeScreen', () => {
     fireEvent.change(field, { target: { value: 'SQL, reviewed' } });
     fireEvent.click(screen.getByRole('button', { name: 'Generate a new version' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Use 1 credit' }));
-    expect(await screen.findByText('No document credit was used.')).toBeTruthy();
+    // The AI service is unavailable and the server released the credit: say exactly that.
+    expect((await screen.findAllByText(/not available right now. Nothing was generated and no credit was used/)).length).toBeGreaterThan(0);
     expect(screen.getByLabelText('Skill')).toHaveProperty('value', 'SQL, reviewed');
   });
 

@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { ACTION_PACK_CHECKLIST_IDS, actionPackNextStepCodes, statedOrganization } from '@flacroncv/career-shared';
 import {
   isApiError,
   newIdempotencyKey,
@@ -15,9 +16,12 @@ import {
   Button,
   Card,
   EmptyState,
+  InlineNote,
   LoadingState,
+  PageHeader,
   PermissionDeniedState,
   ProviderUnavailableState,
+  ScreenStack,
 } from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { profileLoadFailure } from '@/lib/career/profile-load';
@@ -29,6 +33,22 @@ const FIT_TONES: Record<string, 'neutral' | 'recommended' | 'later' | 'draft' | 
   none: 'neutral',
   blocked: 'draft',
 };
+
+const CHECKLIST_IDS: readonly string[] = ACTION_PACK_CHECKLIST_IDS;
+
+/** Packs saved before the server fix can hold the "unstated" storage marker; it is never shown. */
+function normalizePack(pack: ActionPack): ActionPack {
+  return { ...pack, vacancySnapshot: { ...pack.vacancySnapshot, organization: statedOrganization(pack.vacancySnapshot.organization) } };
+}
+
+/**
+ * Words behind "why you qualify" and the gaps. Packs saved before the tokens
+ * existed hold English sentences only; those are shown as they are.
+ */
+function tokensOf(pack: ActionPack, key: 'reasonTokens' | 'gapTokens', legacy: string[]): { tokens: string[]; legacy: string[] } {
+  const tokens = pack.fit[key];
+  return Array.isArray(tokens) ? { tokens, legacy: [] } : { tokens: [], legacy };
+}
 
 export function ActionPackScreen({
   api,
@@ -42,6 +62,8 @@ export function ActionPackScreen({
   signInHref: string;
 }) {
   const t = useTranslations('career.actionPack');
+  const locale = useLocale();
+  const dateFormat = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
   const [load, setLoad] = useState<'loading' | 'permission' | 'unavailable' | 'signed-out' | 'ready'>('loading');
   const [packs, setPacks] = useState<ActionPack[]>([]);
   const [balance, setBalance] = useState<ActionPackBalanceView | null>(null);
@@ -60,7 +82,7 @@ export function ActionPackScreen({
         api.actionPacks(),
         api.opportunities({ q: '' }),
       ]);
-      setPacks(packRes.items);
+      setPacks(packRes.items.map(normalizePack));
       setBalance(packRes.actionPack);
       setOpportunities(oppRes.items);
       setSelectedPackId((curr) => curr || (packRes.items.length > 0 ? packRes.items[0].id : null));
@@ -88,7 +110,7 @@ export function ActionPackScreen({
     try {
       const key = newIdempotencyKey();
       const res = await api.createActionPack({ opportunityId: selectedOppId }, key);
-      setPacks((prev) => [res.actionPack, ...prev]);
+      setPacks((prev) => [normalizePack(res.actionPack), ...prev]);
       setSelectedPackId(res.actionPack.id);
       setIsGenerating(false);
       setSelectedOppId('');
@@ -107,7 +129,18 @@ export function ActionPackScreen({
       } else if (isApiError(error, 'feature_unavailable')) {
         setErrorMessage(t('feature_unavailable'));
       } else if (isApiError(error, 'validation_error')) {
-        setErrorMessage(t('validation_error'));
+        const reason = error.body.reason;
+        setErrorMessage(
+          reason === 'listing_too_short'
+            ? t('listing_too_short')
+            : reason === 'need_experience_or_education'
+              ? t('need_role')
+              : t('validation_error'),
+        );
+      } else if (isApiError(error, 'provider_unavailable')) {
+        // The letter needs the writing model; nothing was saved and no credit was used.
+        setErrorMessage(t('provider_unavailable'));
+        setIsGenerating(false);
       } else {
         setErrorMessage(t('generate_failed'));
       }
@@ -119,7 +152,7 @@ export function ActionPackScreen({
   const handleChecklistToggle = async (packId: string, checklistId: string, currentDone: boolean) => {
     try {
       const updated = await api.updateActionPackChecklist(packId, checklistId, !currentDone);
-      setPacks((prev) => prev.map((p) => (p.id === packId ? updated : p)));
+      setPacks((prev) => prev.map((p) => (p.id === packId ? normalizePack(updated) : p)));
     } catch {
       setErrorMessage(t('checklist_update_failed'));
     }
@@ -155,44 +188,38 @@ export function ActionPackScreen({
   }
 
   const selectedPack = packs.find((p) => p.id === selectedPackId) || packs[0] || null;
+  const reasons = selectedPack ? tokensOf(selectedPack, 'reasonTokens', selectedPack.fit.reasons) : { tokens: [], legacy: [] };
+  const gaps = selectedPack ? tokensOf(selectedPack, 'gapTokens', selectedPack.fit.gaps) : { tokens: [], legacy: [] };
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 px-4 py-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-career-navy dark:text-white sm:text-3xl">{t('title')}</h1>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{t('subtitle')}</p>
-        </div>
-        <div className="flex items-center gap-4">
-          {balance && (
-            <div className="text-right text-xs">
-              <span className="font-semibold text-career-ink">{t('remaining_credits')}:</span>{' '}
-              <span className="font-bold text-career-navy dark:text-career-orange">
-                {balance.includedRemaining + balance.packRemaining}
+    <ScreenStack>
+      <PageHeader
+        title={t('title')}
+        description={t('subtitle')}
+        actions={
+          <>
+            {balance ? (
+              <span className="text-xs text-career-muted">
+                {t('remaining_credits')}: <span className="font-bold text-career-ink">{balance.includedRemaining + balance.packRemaining}</span>
               </span>
-            </div>
-          )}
-          {!isGenerating && (
-            <Button type="button" onClick={() => setIsGenerating(true)}>
-              {t('generate_new')}
-            </Button>
-          )}
-        </div>
-      </div>
+            ) : null}
+            {!isGenerating ? (
+              <Button type="button" onClick={() => setIsGenerating(true)}>
+                {t('generate_new')}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
-      {errorMessage && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
-          {errorMessage}
-        </div>
-      )}
+      {errorMessage ? <InlineNote tone="error">{errorMessage}</InlineNote> : null}
 
       {/* Generation Form */}
       {isGenerating && (
         <Card className="p-6">
           <form onSubmit={handleGenerate} className="space-y-4">
-            <h2 className="text-lg font-semibold text-career-navy dark:text-white">{t('generate_heading')}</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-300">{t('generate_cost_notice')}</p>
+            <h2 className="text-lg font-semibold text-career-ink">{t('generate_heading')}</h2>
+            <p className="text-sm text-career-muted">{t('generate_cost_notice')}</p>
 
             <div>
               <label htmlFor="opp-select" className="block text-sm font-semibold text-career-ink">
@@ -208,7 +235,7 @@ export function ActionPackScreen({
                 <option value="">{t('choose_placeholder')}</option>
                 {opportunities.map((opp) => (
                   <option key={opp.id} value={opp.id}>
-                    {opp.title} — {opp.organization || t('unstated_org')}
+                    {opp.organization ? `${opp.title} · ${opp.organization}` : opp.title}
                   </option>
                 ))}
               </select>
@@ -259,11 +286,11 @@ export function ActionPackScreen({
                       {t(`fit_${pack.fit.fit}`)}
                     </Badge>
                   </div>
-                  <p className="mt-1 text-xs text-career-muted line-clamp-1">
-                    {pack.vacancySnapshot.organization || t('unstated_org')}
-                  </p>
+                  {pack.vacancySnapshot.organization ? (
+                    <p className="mt-1 text-xs text-career-muted line-clamp-1">{pack.vacancySnapshot.organization}</p>
+                  ) : null}
                   <p className="mt-2 text-xs text-career-muted">
-                    {new Date(pack.createdAt).toLocaleDateString()}
+                    {dateFormat.format(new Date(pack.createdAt))}
                   </p>
                 </button>
               ))}
@@ -278,9 +305,9 @@ export function ActionPackScreen({
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-career-line pb-4">
                   <div>
                     <h2 className="text-xl font-bold text-career-ink">{selectedPack.vacancySnapshot.title}</h2>
-                    <p className="text-sm font-medium text-career-navy dark:text-career-orange">
-                      {selectedPack.vacancySnapshot.organization || t('unstated_org')}
-                    </p>
+                    {selectedPack.vacancySnapshot.organization ? (
+                      <p className="text-sm font-medium text-career-navy">{selectedPack.vacancySnapshot.organization}</p>
+                    ) : null}
                   </div>
                   <Badge tone={FIT_TONES[selectedPack.fit.fit] || 'neutral'}>
                     {t(`fit_${selectedPack.fit.fit}`)}
@@ -300,9 +327,13 @@ export function ActionPackScreen({
                         ✓ {t('fit_reasons')}
                       </h4>
                       <ul className="mt-1 list-disc pl-4 text-xs text-career-ink/80 space-y-1">
-                        {selectedPack.fit.reasons.map((r, i) => (
-                          <li key={i}>{r}</li>
+                        {reasons.tokens.map((token) => (
+                          <li key={token}>{t('reason_token', { token })}</li>
                         ))}
+                        {reasons.legacy.map((r, i) => (
+                          <li key={i} dir="auto">{r}</li>
+                        ))}
+                        {reasons.tokens.length + reasons.legacy.length === 0 ? <li className="list-none">{t('no_reasons')}</li> : null}
                       </ul>
                     </div>
                     <div className="rounded-md border border-career-line bg-career-surface/50 p-3">
@@ -310,10 +341,15 @@ export function ActionPackScreen({
                         ⚠ {t('skill_gaps')}
                       </h4>
                       <ul className="mt-1 list-disc pl-4 text-xs text-career-ink/80 space-y-1">
-                        {selectedPack.fit.gaps.length > 0 ? (
-                          selectedPack.fit.gaps.map((g, i) => (
-                            <li key={i}>{g}</li>
-                          ))
+                        {gaps.tokens.length + gaps.legacy.length > 0 ? (
+                          <>
+                            {gaps.tokens.map((token) => (
+                              <li key={token}>{t('gap_token', { token })}</li>
+                            ))}
+                            {gaps.legacy.map((g, i) => (
+                              <li key={i} dir="auto">{g}</li>
+                            ))}
+                          </>
                         ) : (
                           <li>{t('no_major_gaps')}</li>
                         )}
@@ -341,7 +377,11 @@ export function ActionPackScreen({
                         className="mt-0.5 h-4 w-4 rounded border-career-line text-career-navy focus:ring-career-navy"
                       />
                       <span className={`text-sm ${item.done ? 'line-through text-career-muted' : 'text-career-ink'}`}>
-                        {item.label}
+                        {CHECKLIST_IDS.includes(item.id)
+                          ? selectedPack.vacancySnapshot.organization
+                            ? t(`checklist_${item.id}_at`, { title: selectedPack.vacancySnapshot.title, organization: selectedPack.vacancySnapshot.organization })
+                            : t(`checklist_${item.id}`, { title: selectedPack.vacancySnapshot.title })
+                          : item.label}
                       </span>
                     </label>
                   ))}
@@ -351,7 +391,7 @@ export function ActionPackScreen({
               {/* Tailored Cover Letter Card */}
               <Card className="p-6">
                 <h3 className="text-lg font-semibold text-career-ink">{t('tailored_letter')}</h3>
-                <div className="mt-3 rounded-md border border-career-line bg-career-wash/30 p-4 font-sans text-sm text-career-ink whitespace-pre-wrap leading-relaxed">
+                <div dir="auto" className="mt-3 rounded-md border border-career-line bg-career-wash/30 p-4 font-sans text-sm text-career-ink whitespace-pre-wrap leading-relaxed">
                   {selectedPack.coverLetter.body}
                 </div>
               </Card>
@@ -377,8 +417,9 @@ export function ActionPackScreen({
               <Card className="p-6">
                 <h3 className="text-lg font-semibold text-career-ink">{t('next_steps')}</h3>
                 <ul className="mt-3 list-decimal pl-5 text-sm text-career-ink/90 space-y-2">
-                  {selectedPack.nextSteps.map((step, idx) => (
-                    <li key={idx}>{step}</li>
+                  {/* Codes are derived from the fit, so older packs translate too. */}
+                  {actionPackNextStepCodes(selectedPack.fit.fit, gaps.tokens.length || selectedPack.fit.gaps.length).map((code) => (
+                    <li key={code}>{t(`next_${code}`, { count: gaps.tokens.length || selectedPack.fit.gaps.length })}</li>
                   ))}
                 </ul>
               </Card>
@@ -386,6 +427,6 @@ export function ActionPackScreen({
           )}
         </div>
       )}
-    </div>
+    </ScreenStack>
   );
 }

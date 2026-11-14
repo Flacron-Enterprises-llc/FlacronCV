@@ -42,17 +42,36 @@ function renderSearch(api = testApi()) {
 }
 
 describe('OpportunityScreen', () => {
-  it('does not search until asked, then shows missing pay as not stated', async () => {
-    const opportunities = vi.fn(async () => ({ items: [listing] }));
+  it('lists saved listings on open, labels stated fields and says once what was not stated', async () => {
+    const opportunities = vi.fn(async ({ q }: { q?: string }) => ({ items: q ? [listing] : [] }));
     renderSearch(testApi({ opportunities }));
     expect(await screen.findByText('Search or paste a listing')).toBeTruthy();
-    expect(opportunities).not.toHaveBeenCalled();
+    expect(opportunities).toHaveBeenCalledWith({ q: '' });
     fireEvent.change(screen.getByLabelText('Search'), { target: { value: 'ledger' } });
     fireEvent.click(screen.getByRole('button', { name: 'Search listings' }));
     expect(await screen.findByText('Ledger analyst')).toBeTruthy();
-    expect(screen.getAllByText('Not stated').length).toBeGreaterThan(0);
+    expect(screen.getByText('Employer')).toBeTruthy();
+    expect(screen.getByText('Babbage Works')).toBeTruthy();
+    expect(screen.getByText('Not stated in the listing: Pay')).toBeTruthy();
+    expect(screen.queryByText('Not stated')).toBeNull();
     expect(opportunities).toHaveBeenCalledWith({ q: 'ledger' });
     expect(screen.queryByText(/score|hiring/i)).toBeNull();
+  });
+
+  it('refuses a paste too short to be a listing and clears both fields after saving', async () => {
+    const pasteOpportunity = vi.fn(async () => ({ ...listing, title: 'Records analyst' }));
+    renderSearch(testApi({ opportunities: async () => ({ items: [] }), pasteOpportunity }));
+    const text = await screen.findByLabelText('Paste a vacancy');
+    fireEvent.change(text, { target: { value: 'abc' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save pasted vacancy' }));
+    expect(await screen.findByText(/at least 40 characters/)).toBeTruthy();
+    expect(pasteOpportunity).not.toHaveBeenCalled();
+    fireEvent.change(text, { target: { value: 'Records analyst\nKeep the records accurate and up to date every week.' } });
+    fireEvent.change(screen.getByLabelText('Link to the original, if you have one'), { target: { value: 'https://example.test/job' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save pasted vacancy' }));
+    expect(await screen.findByText('Records analyst')).toBeTruthy();
+    expect((screen.getByLabelText('Link to the original, if you have one') as HTMLInputElement).value).toBe('');
+    expect((text as HTMLTextAreaElement).value).toBe('');
   });
 });
 
@@ -72,7 +91,7 @@ describe('OpportunityDetailScreen', () => {
     );
     expect(await screen.findByText('This listing has not been checked recently')).toBeTruthy();
     expect(screen.getByText('Keep the ledger.')).toBeTruthy();
-    expect(screen.getAllByText('Not stated').length).toBeGreaterThan(0);
+    expect(screen.getByText('Not stated in the listing: Pay')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Original listing' }).getAttribute('href')).toBe(listing.sourceUrl);
   });
 

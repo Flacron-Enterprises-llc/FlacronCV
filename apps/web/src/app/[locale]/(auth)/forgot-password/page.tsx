@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import { authErrorKey } from '@/lib/auth-errors';
+import { useHydrated } from '@/hooks/useHydrated';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { toast } from 'sonner';
@@ -17,6 +18,8 @@ export default function ForgotPasswordPage(): React.JSX.Element | null {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  // No native GET submit (address in the URL) before React attaches the handler.
+  const hydrated = useHydrated();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,8 +62,8 @@ export default function ForgotPasswordPage(): React.JSX.Element | null {
       <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">{t('forgot_subtitle')}</p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-        <Input id="email" type="email" autoComplete="email" label={t('email')} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required />
-        <Button type="submit" loading={loading} className="w-full" size="lg">
+        <Input id="email" type="email" autoComplete="email" label={t('email')} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" dir="ltr" required />
+        <Button type="submit" loading={loading} disabled={!hydrated} className="w-full" size="lg">
           {t('reset_btn')}
         </Button>
       </form>

@@ -15,11 +15,15 @@ import {
   Badge,
   Button,
   Card,
+  ConfirmDialog,
   EmptyState,
+  FilePicker,
   Input,
   LoadingState,
+  PageHeader,
   PermissionDeniedState,
   ProviderUnavailableState,
+  ScreenStack,
 } from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { profileLoadFailure } from '@/lib/career/profile-load';
@@ -192,11 +196,33 @@ export function EvidenceScreen({
   };
 
   const handleDelete = async (id: string) => {
+    setConfirmBusy(true);
     try {
       await api.deleteEvidence(id);
       setItems((prev) => prev.filter((item) => item.id !== id));
     } catch {
       setErrorMessage(t('delete_failed'));
+    } finally {
+      setConfirmBusy(false);
+      setPendingConfirm(null);
+    }
+  };
+
+  // Deleting an item or its stored file cannot be undone, so both ask first.
+  const [pendingConfirm, setPendingConfirm] = useState<{ kind: 'delete' | 'file'; item: CareerEvidence } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const runConfirmed = async () => {
+    if (!pendingConfirm) return;
+    if (pendingConfirm.kind === 'delete') {
+      await handleDelete(pendingConfirm.item.id);
+      return;
+    }
+    setConfirmBusy(true);
+    try {
+      await handleRemoveFile(pendingConfirm.item);
+    } finally {
+      setConfirmBusy(false);
+      setPendingConfirm(null);
     }
   };
 
@@ -230,19 +256,29 @@ export function EvidenceScreen({
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 px-4 py-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-career-navy dark:text-white sm:text-3xl">{t('title')}</h1>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{t('subtitle')}</p>
-        </div>
-        {!isCreating && (
-          <Button type="button" onClick={() => setIsCreating(true)} className="w-full sm:w-auto">
-            {t('add_evidence')}
-          </Button>
-        )}
-      </div>
+    <ScreenStack>
+      <PageHeader
+        title={t('title')}
+        description={t('subtitle')}
+        actions={
+          !isCreating ? (
+            <Button type="button" onClick={() => setIsCreating(true)}>
+              {t('add_evidence')}
+            </Button>
+          ) : null
+        }
+      />
+      <ConfirmDialog
+        open={pendingConfirm !== null}
+        title={pendingConfirm?.kind === 'file' ? t('confirm_file_title') : t('confirm_delete_title')}
+        body={pendingConfirm ? t(pendingConfirm.kind === 'file' ? 'confirm_file_body' : 'confirm_delete_body', { title: pendingConfirm.item.title }) : undefined}
+        confirmLabel={pendingConfirm?.kind === 'file' ? t('file_remove') : t('delete')}
+        cancelLabel={t('cancel')}
+        danger
+        busy={confirmBusy}
+        onConfirm={() => void runConfirmed()}
+        onCancel={() => setPendingConfirm(null)}
+      />
 
       {errorMessage && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
@@ -254,7 +290,7 @@ export function EvidenceScreen({
       {isCreating && (
         <Card className="p-6">
           <form onSubmit={handleCreate} className="space-y-4">
-            <h2 className="text-lg font-semibold text-career-navy dark:text-white">{t('create_heading')}</h2>
+            <h2 className="text-lg font-semibold text-career-ink">{t('create_heading')}</h2>
 
             <Input
               id="evidence-title"
@@ -430,37 +466,16 @@ export function EvidenceScreen({
                       type="button"
                       variant="ghost"
                       disabled={fileBusy === item.id}
-                      onClick={() => void handleRemoveFile(item)}
+                      onClick={() => setPendingConfirm({ kind: 'file', item })}
                       className="text-xs"
                     >
                       {t('file_remove')}
                     </Button>
-                    <div className="w-full space-y-1">
-                      <label className="block text-xs font-medium text-career-ink" htmlFor={`evidence-replace-${item.id}`}>
-                        {fileBusy === item.id ? t('file_uploading') : t('file_replace')}
-                      </label>
-                      <input
-                        id={`evidence-replace-${item.id}`}
-                        type="file"
-                        accept={FILE_ACCEPT}
-                        disabled={fileBusy === item.id}
-                        onChange={(event) => {
-                          const file = event.target.files?.[0];
-                          event.target.value = '';
-                          void handleUpload(item, file);
-                        }}
-                        className="block w-full text-xs text-career-muted file:mr-3 file:rounded-md file:border file:border-career-line file:bg-career-wash file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-career-ink"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-1 pt-2">
-                    <label className="block text-xs font-medium text-career-ink" htmlFor={`evidence-file-${item.id}`}>
-                      {fileBusy === item.id ? t('file_uploading') : t('file_attach')}
-                    </label>
-                    <input
-                      id={`evidence-file-${item.id}`}
-                      type="file"
+                    <FilePicker
+                      className="w-full"
+                      label={fileBusy === item.id ? t('file_uploading') : t('file_replace')}
+                      buttonLabel={t('file_choose')}
+                      emptyLabel={t('file_none_chosen')}
                       accept={FILE_ACCEPT}
                       disabled={fileBusy === item.id}
                       onChange={(event) => {
@@ -468,10 +483,23 @@ export function EvidenceScreen({
                         event.target.value = '';
                         void handleUpload(item, file);
                       }}
-                      className="block w-full text-xs text-career-muted file:mr-3 file:rounded-md file:border file:border-career-line file:bg-career-wash file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-career-ink"
                     />
-                    <p className="text-xs text-career-muted">{t('file_hint')}</p>
                   </div>
+                ) : (
+                  <FilePicker
+                    className="pt-2"
+                    label={fileBusy === item.id ? t('file_uploading') : t('file_attach')}
+                    buttonLabel={t('file_choose')}
+                    emptyLabel={t('file_none_chosen')}
+                    hint={t('file_hint')}
+                    accept={FILE_ACCEPT}
+                    disabled={fileBusy === item.id}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = '';
+                      void handleUpload(item, file);
+                    }}
+                  />
                 )}
 
                 {!item.attachmentStored && item.attachmentUrl && (
@@ -494,9 +522,9 @@ export function EvidenceScreen({
                 </span>
                 <Button
                   type="button"
-                  variant="ghost"
-                  onClick={() => handleDelete(item.id)}
-                  className="text-xs text-career-danger hover:bg-career-danger/10"
+                  variant="danger-ghost"
+                  onClick={() => setPendingConfirm({ kind: 'delete', item })}
+                  className="text-xs"
                 >
                   {t('delete')}
                 </Button>
@@ -505,6 +533,6 @@ export function EvidenceScreen({
           ))}
         </div>
       )}
-    </div>
+    </ScreenStack>
   );
 }

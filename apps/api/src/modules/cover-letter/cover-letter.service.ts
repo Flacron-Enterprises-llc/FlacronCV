@@ -19,6 +19,7 @@ import {
 } from '@flacroncv/shared-types';
 import { v4 as uuidv4 } from 'uuid';
 import { toLetterHtml } from './letter-html';
+import { CreateCoverLetterInput, StoredCoverLetter, UpdateCoverLetterInput } from './letter-locale';
 
 @Injectable()
 export class CoverLetterService {
@@ -36,7 +37,7 @@ export class CoverLetterService {
 
   async create(
     userId: string,
-    data: CreateCoverLetterData,
+    data: CreateCoverLetterInput,
     actor?: { uid: string; email?: string; role?: string },
   ): Promise<CoverLetter> {
     await this.abuse.assertNewConsumption(userId, 'create');
@@ -61,7 +62,7 @@ export class CoverLetterService {
     const id = uuidv4();
     const now = new Date();
 
-    const coverLetter: CoverLetter = {
+    const coverLetter: StoredCoverLetter = {
       id,
       userId,
       title: data.title,
@@ -83,6 +84,9 @@ export class CoverLetterService {
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
+      // Only written when sent: Firestore rejects `undefined` field values, and
+      // an absent field is how the client recognises a letter it must infer.
+      ...(data.letterLocale ? { letterLocale: data.letterLocale } : {}),
     };
 
     await this.firebaseAdmin.firestore.collection(this.collection).doc(id).set(coverLetter);
@@ -199,7 +203,7 @@ export class CoverLetterService {
     return { items: rows.slice(0, safeLimit), page: safePage, limit: safeLimit, hasMore };
   }
 
-  async update(id: string, userId: string, data: UpdateCoverLetterData): Promise<CoverLetter> {
+  async update(id: string, userId: string, data: UpdateCoverLetterInput): Promise<CoverLetter> {
     const current = await this.findByIdOrThrow(id, userId);
 
     // Block newly selecting a template above the user's plan. Re-sending the
@@ -218,7 +222,7 @@ export class CoverLetterService {
     // body cannot mass-assign immutable/ownership fields (userId, id, deletedAt,
     // createdAt, aiGenerated…). The DTO + pipe strip unknown keys first; this
     // list is defence in depth if a new field is added to the DTO by mistake.
-    const UPDATABLE_FIELDS: readonly (keyof UpdateCoverLetterData)[] = [
+    const UPDATABLE_FIELDS: readonly (keyof UpdateCoverLetterInput)[] = [
       'title',
       'recipientName',
       'recipientTitle',
@@ -229,6 +233,7 @@ export class CoverLetterService {
       'content',
       'templateId',
       'status',
+      'letterLocale',
     ];
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     for (const key of UPDATABLE_FIELDS) {

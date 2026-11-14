@@ -82,7 +82,12 @@ export default function NewsletterSignup() {
           <button
             type="submit"
             disabled={loading || !consent}
-            className="shrink-0 rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            // Disabled (until the consent box is ticked) is an outlined button,
+            // not a faded orange one: orange at 60% opacity on the navy footer
+            // all but vanished. The stone-400 outline is >=4.5:1 against the
+            // navy and black footers, so the control stays visible and reads
+            // as unavailable. The border is always present so nothing shifts.
+            className="shrink-0 rounded-lg border border-transparent bg-brand-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:border-stone-400 disabled:bg-transparent disabled:text-stone-200 disabled:hover:bg-transparent"
           >
             {loading ? t('subscribing') : t('subscribe')}
           </button>

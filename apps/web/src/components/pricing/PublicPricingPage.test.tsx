@@ -7,7 +7,9 @@ import { PublicPricingPage } from './PublicPricingPage';
 import CareerAddonTeaser from '@/components/landing/CareerAddonTeaser';
 
 // V1's own plan cards are reused unchanged; stand in for them here.
-vi.mock('@/components/landing/Pricing', () => ({ default: () => <section data-testid="v1-pricing" /> }));
+vi.mock('@/components/landing/Pricing', () => ({
+  default: ({ intro }: { intro?: ReactNode }) => <section data-testid="v1-pricing">{intro}</section>,
+}));
 vi.mock('./CareerPricing', () => ({ CareerPricing: () => <section data-testid="career-pricing" /> }));
 vi.mock('@/i18n/routing', () => ({
   Link: ({ href, children, ...rest }: { href: string; children: ReactNode }) => (
@@ -33,8 +35,8 @@ describe('public /pricing page', () => {
   it('shows only FlacronCV plans when the career build switch is off', () => {
     vi.stubEnv('NEXT_PUBLIC_CAREER_ENABLED', '');
     renderWithIntl(<PublicPricingPage />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Pricing' })).toBeTruthy();
-    expect(screen.getByTestId('v1-pricing')).toBeTruthy();
+    // The page heading is the plans section's intro, not a second heading above it.
+    expect(screen.getByTestId('v1-pricing').contains(screen.getByRole('heading', { level: 1, name: 'Pricing' }))).toBe(true);
     expect(screen.queryByTestId('career-pricing')).toBeNull();
     expect(screen.queryByText('See the career tools add-on')).toBeNull();
     expect(screen.queryByText(/career tools are an optional add-on/)).toBeNull();

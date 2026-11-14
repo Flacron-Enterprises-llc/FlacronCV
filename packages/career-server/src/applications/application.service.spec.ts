@@ -106,11 +106,11 @@ describe('ApplicationService', () => {
     const resume = await resumes.create(p, { title: 'Full', language: 'en' });
     let lastId = '';
     for (let index = 0; index < 25; index += 1) {
-      const listing = await opportunities.paste(p, { text: `Role ${index}\nA vacancy.` });
+      const listing = await opportunities.paste(p, { text: `Role ${index}\nA vacancy at the records desk, filing and upkeep.` });
       const saved = await applications.create(p, { opportunityId: listing.id, resumeVersionId: resume.version.id });
       lastId = saved.id;
     }
-    const extra = await opportunities.paste(p, { text: 'Role overflow\nA vacancy.' });
+    const extra = await opportunities.paste(p, { text: 'Role overflow\nA vacancy at the records desk, filing and upkeep.' });
     const refused = await applications
       .create(p, { opportunityId: extra.id, resumeVersionId: resume.version.id })
       .catch((error: unknown) => error);

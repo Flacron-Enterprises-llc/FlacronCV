@@ -54,6 +54,16 @@ describe('PortfolioService (CV16)', () => {
     }
   });
 
+  it('deletes a page for its owner only', async () => {
+    const owner = await person('delete-portfolio', 'starter');
+    const other = await person('delete-other', 'starter');
+    const page = await portfolios.create(owner, { title: 'Temporary', displayName: 'Ada', headline: '' });
+    const denied = await portfolios.remove(other, page.id).catch((error: unknown) => error);
+    expect(denied).toBeInstanceOf(Error);
+    expect(await portfolios.remove(owner, page.id)).toEqual({ ok: true });
+    expect((await portfolios.list(owner)).items).toEqual([]);
+  });
+
   it('publishes, hides contact and files, and unpublishes', async () => {
     const owner = await person('starter-portfolio', 'starter');
     const other = await person('other-portfolio', 'starter');

@@ -3,7 +3,7 @@
 import { ButtonHTMLAttributes, forwardRef } from 'react';
 import { cn } from '../cn';
 
-export type ButtonVariant = 'primary' | 'accent' | 'secondary' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'accent' | 'secondary' | 'ghost' | 'danger' | 'danger-ghost';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -12,11 +12,14 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<ButtonVariant, string> = {
-  primary: 'bg-career-navy text-white hover:bg-career-navy-hover',
+  primary: 'bg-career-navy text-white dark:text-stone-950 hover:bg-career-navy-hover',
   accent: 'bg-career-orange-text text-white hover:opacity-90',
   secondary: 'border border-career-line bg-career-surface text-career-ink hover:bg-career-wash',
   ghost: 'text-career-ink hover:bg-career-wash',
-  danger: 'bg-career-danger text-white hover:opacity-90',
+  danger: 'bg-career-danger text-white hover:opacity-90 dark:text-stone-950',
+  // A text-only destructive action. Its own variant: a className colour cannot
+  // override the ghost variant's text colour (cn does not merge classes).
+  'danger-ghost': 'text-career-danger hover:bg-career-danger/10',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(

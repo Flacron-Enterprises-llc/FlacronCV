@@ -84,6 +84,12 @@ export class VoiceController {
     return this.voice.consent(principal);
   }
 
+  /** Withdrawing recording consent; a privacy right, so it is never behind the feature switch. */
+  @Delete('interviews/voice/consent')
+  withdrawConsent(@CurrentPrincipal() principal: Principal) {
+    return this.voice.withdrawConsent(principal);
+  }
+
   @Post('interviews/voice')
   start(@CurrentPrincipal() principal: Principal, @Body() body: StartVoiceDto) {
     return this.voice.start(principal, body);

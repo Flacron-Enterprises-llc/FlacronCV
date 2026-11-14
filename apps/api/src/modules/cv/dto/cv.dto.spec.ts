@@ -114,6 +114,13 @@ describe('CV write DTOs (ValidationPipe)', () => {
         styling: { fontFamily: 'Inter', customCss: 'body{}' },
       });
     });
+
+    it('accepts a document language (or auto) and rejects an unknown one', async () => {
+      const result = await transformBody(UpdateCvDto, { styling: { documentLanguage: 'ar' } });
+      expect(result.styling?.documentLanguage).toBe('ar');
+      await transformBody(UpdateCvDto, { styling: { documentLanguage: 'auto' } });
+      await expectReject(UpdateCvDto, { styling: { documentLanguage: 'klingon' } });
+    });
   });
 
   describe('section DTOs', () => {

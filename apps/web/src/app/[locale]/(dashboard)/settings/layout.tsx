@@ -37,7 +37,9 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    // No padding of its own: DashboardShell's <main> already pads the page, and
+    // doubling it cost ~32px of input width on a 390px phone.
+    <div className="mx-auto max-w-6xl">
       <h1 className="mb-8 text-2xl font-bold text-stone-900 dark:text-white">
         {t('title')}
       </h1>
@@ -92,8 +94,9 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
           </ul>
         </nav>
 
-        {/* Content area */}
-        <main className="min-w-0 flex-1">{children}</main>
+        {/* Content area. A <div>, not <main>: it sits inside DashboardShell's
+            <main id="main-content">, and a page must have one main landmark. */}
+        <div className="min-w-0 flex-1">{children}</div>
       </div>
     </div>
   );

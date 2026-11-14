@@ -10,6 +10,8 @@ import {
   UseGuards,
   Res,
 } from '@nestjs/common';
+import { CreateCRMCustomerBody, UpdateCRMCustomerBody, AddCRMNoteBody } from './dto/crm-records.dto';
+import { positiveInt } from './paging';
 import { Response } from 'express';
 import { csvCell } from '../../common/utils/csv';
 import { toIsoString } from '../../common/utils/date';
@@ -20,9 +22,6 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, FirebaseUser } from '../../common/decorators/current-user.decorator';
 import {
-  CreateCRMCustomerDto,
-  UpdateCRMCustomerDto,
-  AddCRMNoteDto,
   CRMCustomerStatus,
   CRMCustomerSource,
 } from '@flacroncv/shared-types';
@@ -36,7 +35,7 @@ export class CRMCustomersController {
   constructor(private readonly customersService: CRMCustomersService) {}
 
   @Post()
-  create(@Body() dto: CreateCRMCustomerDto, @CurrentUser() user: FirebaseUser) {
+  create(@Body() dto: CreateCRMCustomerBody, @CurrentUser() user: FirebaseUser) {
     return this.customersService.create(dto, user.uid, user.email);
   }
 
@@ -53,8 +52,8 @@ export class CRMCustomersController {
     @Query('endDate') endDate?: string,
   ) {
     return this.customersService.list({
-      page: page ? parseInt(page, 10) : 1,
-      limit: limit ? parseInt(limit, 10) : 20,
+      page: positiveInt(page, 1),
+      limit: positiveInt(limit, 20),
       search,
       status,
       source,
@@ -106,7 +105,7 @@ export class CRMCustomersController {
   @Put(':id')
   update(
     @Param('id') id: string,
-    @Body() dto: UpdateCRMCustomerDto,
+    @Body() dto: UpdateCRMCustomerBody,
     @CurrentUser() user: FirebaseUser,
   ) {
     return this.customersService.update(id, dto, user.uid, user.email);
@@ -122,7 +121,7 @@ export class CRMCustomersController {
   @Post(':id/notes')
   addNote(
     @Param('id') id: string,
-    @Body() dto: AddCRMNoteDto,
+    @Body() dto: AddCRMNoteBody,
     @CurrentUser() user: FirebaseUser,
   ) {
     return this.customersService.addNote(id, dto, user.uid, user.email);

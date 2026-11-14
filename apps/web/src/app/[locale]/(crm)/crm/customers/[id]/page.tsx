@@ -1,5 +1,6 @@
 'use client';
-import React from 'react';
+
+import { customerSourceLabel } from '@/lib/crm-labels';import React from 'react';
 
 import { useId, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -280,7 +281,7 @@ export default function CustomerProfilePage(): React.JSX.Element | null {
               <div className="flex items-center gap-3">
                 <Globe className="h-4 w-4 flex-shrink-0 text-stone-400" />
                 <span className="text-sm capitalize text-stone-600 dark:text-stone-300">
-                  {t('customer_detail_source_label', { source: customer.source })}
+                  {t('customer_detail_source_label', { source: customerSourceLabel(t, customer.source) })}
                 </span>
               </div>
               {customer.lastActivity && (

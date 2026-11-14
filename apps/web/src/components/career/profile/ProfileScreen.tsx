@@ -118,7 +118,7 @@ export function ProfileScreen({
         title={t('signed_out_title')}
         body={t('signed_out_body')}
         action={
-          <a className="inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white" href={signInHref}>
+          <a className="inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white dark:text-stone-950" href={signInHref}>
             {t('go_sign_in')}
           </a>
         }

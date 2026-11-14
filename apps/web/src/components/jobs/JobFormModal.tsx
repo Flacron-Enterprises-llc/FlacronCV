@@ -6,9 +6,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import Button from '@/components/ui/Button';
-import { X } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
+import { useFormatDate, useFormatDateTime } from '@/lib/use-format-date';
+import { documentOptionLabels } from './document-option-labels';
 import {
   JobApplication,
   JobStatus,
@@ -44,6 +46,8 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
   const queryClient = useQueryClient();
   const titleId = useId();
   const dialogRef = useModalA11y<HTMLDivElement>(open, onClose);
+  const formatDate = useFormatDate();
+  const formatDateTime = useFormatDateTime();
 
   const [company, setCompany] = useState('');
   const [position, setPosition] = useState('');
@@ -62,6 +66,10 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
   // True from the moment Save is clicked until the mutation is handed off —
   // covers the awaited duplicate check, during which isPending is still false.
   const [submitting, setSubmitting] = useState(false);
+  // An existing application for the same role, found on Save. Confirmed inline
+  // in this dialog rather than with window.confirm (unstyled, ignores RTL and
+  // dark mode) or a second modal stacked on this one (two focus traps).
+  const [duplicateOf, setDuplicateOf] = useState<JobApplication | null>(null);
 
   // Documents the user can attach to this application.
   const { data: cvsData } = useQuery({
@@ -92,7 +100,22 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
     setFollowUpDate(job?.followUpDate ?? '');
     setLinkedCVId(job?.linkedCVId ?? '');
     setLinkedCoverLetterId(job?.linkedCoverLetterId ?? '');
+    setDuplicateOf(null);
   }, [open, job]);
+
+  // The warning is about the company/position it was raised for; editing
+  // either makes it stale, and the next Save checks again.
+  useEffect(() => {
+    setDuplicateOf(null);
+  }, [company, position]);
+
+  const optionLabelFormat = (pattern: 'cv_option' | 'cover_letter_option') => ({
+    date: formatDate,
+    dateTime: (value: unknown) => formatDateTime(value),
+    label: (title: string, when: string) => t(pattern, { title, date: when }),
+  });
+  const cvLabels = documentOptionLabels(cvsData?.items ?? [], optionLabelFormat('cv_option'));
+  const letterLabels = documentOptionLabels(clData?.items ?? [], optionLabelFormat('cover_letter_option'));
 
   const mutation = useMutation({
     mutationFn: (data: CreateJobData) =>
@@ -109,6 +132,10 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    await submit(false);
+  };
+
+  const submit = async (confirmedDuplicate: boolean) => {
     // The duplicate check below is awaited, so between the click and
     // `mutation.mutate()` the Save button is NOT yet in its pending state — a
     // second click in that window ran the whole handler again and created two
@@ -116,13 +143,13 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
     if (submitting || mutation.isPending) return;
     setSubmitting(true);
     try {
-      await runSubmit();
+      await runSubmit(confirmedDuplicate);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const runSubmit = async () => {
+  const runSubmit = async (confirmedDuplicate: boolean) => {
     if (!company.trim()) return toast.error(t('company_required'));
     if (!position.trim()) return toast.error(t('position_required'));
 
@@ -160,15 +187,13 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
 
     // Only on create, and only as a confirmation — applying to the same role
     // twice is legitimate, it just should not happen unnoticed.
-    if (!job) {
+    if (!job && !confirmedDuplicate) {
       try {
         const { duplicate } = await api.get<{ duplicate: JobApplication | null }>(
           `/jobs/duplicate-check?company=${encodeURIComponent(payload.company)}&position=${encodeURIComponent(payload.position)}`,
         );
-        if (
-          duplicate &&
-          !window.confirm(t('duplicate_confirm', { company: duplicate.company, position: duplicate.position }))
-        ) {
+        if (duplicate) {
+          setDuplicateOf(duplicate);
           return;
         }
       } catch {
@@ -376,7 +401,7 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
                   <option value="">{t('no_document')}</option>
                   {(cvsData?.items ?? []).map((cv) => (
                     <option key={cv.id} value={cv.id}>
-                      {cv.title}
+                      {cvLabels.get(cv.id) ?? cv.title}
                     </option>
                   ))}
                 </select>
@@ -394,7 +419,7 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
                   <option value="">{t('no_document')}</option>
                   {(clData?.items ?? []).map((cl) => (
                     <option key={cl.id} value={cl.id}>
-                      {cl.title}
+                      {letterLabels.get(cl.id) ?? cl.title}
                     </option>
                   ))}
                 </select>
@@ -416,14 +441,41 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-stone-200 px-5 py-3 dark:border-stone-700">
-            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-              {tCommon('cancel')}
-            </Button>
-            <Button type="submit" size="sm" loading={submitting || mutation.isPending}>
-              {tCommon('save')}
-            </Button>
-          </div>
+          {duplicateOf ? (
+            <div
+              role="alert"
+              className="border-t border-amber-200 bg-amber-50 px-5 py-3 dark:border-amber-900 dark:bg-amber-950/30"
+            >
+              <div className="flex gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+                <p className="text-sm text-stone-700 dark:text-stone-300">
+                  {t('duplicate_confirm', { company: duplicateOf.company, position: duplicateOf.position })}
+                </p>
+              </div>
+              <div className="mt-3 flex justify-end gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={() => setDuplicateOf(null)}>
+                  {tCommon('cancel')}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  loading={submitting || mutation.isPending}
+                  onClick={() => void submit(true)}
+                >
+                  {t('duplicate_add_anyway')}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-end gap-2 border-t border-stone-200 px-5 py-3 dark:border-stone-700">
+              <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+                {tCommon('cancel')}
+              </Button>
+              <Button type="submit" size="sm" loading={submitting || mutation.isPending}>
+                {tCommon('save')}
+              </Button>
+            </div>
+          )}
         </form>
       </div>
     </div>

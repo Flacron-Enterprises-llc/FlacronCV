@@ -309,4 +309,44 @@ describe('CVService template + layout tier enforcement', () => {
       );
     });
   });
+
+  describe('template CVs mark their example content (sample tagging)', () => {
+    it('tags every seeded item and stores the seeded summary text', async () => {
+      const { service, firestore } = makeService(SubscriptionPlan.FREE);
+      const cv = await service.create('u1', { title: 'Mine', templateId: 'modern' });
+      const stored: any = (await firestore.collection('cvs').doc(cv.id).get()).data();
+      expect(stored.sampleSummary).toBe(stored.personalInfo.summary);
+      expect(stored.sampleSummary.length).toBeGreaterThan(20);
+      const sections = await service.getSections(cv.id);
+      expect(sections.map((s) => s.type)).toEqual(['experience', 'education', 'skills']);
+      for (const s of sections) {
+        expect(s.items.length).toBeGreaterThan(0);
+        for (const item of s.items as any[]) expect(item.isSample).toBe(true);
+      }
+      // Personal details are the user's own, never tagged.
+      expect(stored.personalInfo.email).toBe('u1@example.com');
+      expect('isSample' in stored.personalInfo).toBe(false);
+    });
+  });
+
+  describe('CV limit refusals carry a stable code', () => {
+    it('create / duplicate answer 403 with code CV_LIMIT_REACHED', async () => {
+      const { service, firestore } = makeService(SubscriptionPlan.FREE);
+      (service as any).usersService.findByIdOrThrow.mockResolvedValue({
+        uid: 'u1', email: 'u1@example.com', photoURL: null,
+        profile: { website: '', linkedin: '', github: '' },
+        subscription: { plan: SubscriptionPlan.FREE, status: 'active' },
+        usage: { cvsCreated: 5 },
+      });
+      await seedCV(firestore);
+      for (const attempt of [
+        () => service.create('u1', { title: 'Sixth', templateId: 'modern' }),
+        () => service.duplicate('cv1', 'u1'),
+      ]) {
+        const err: any = await attempt().catch((e) => e);
+        expect(err).toBeInstanceOf(ForbiddenException);
+        expect(err.getResponse()).toMatchObject({ code: 'CV_LIMIT_REACHED' });
+      }
+    });
+  });
 });

@@ -1,8 +1,11 @@
 import { createHash } from 'crypto';
 import type { Pool } from 'pg';
 import {
+  MIN_LISTING_TEXT,
   UNSTATED_ORGANIZATION,
   computeTrustSignals,
+  extractListingFields,
+  statedOrganization,
   dedupeKey,
   listingLabel,
   localRadiusMiles,
@@ -184,26 +187,32 @@ export class OpportunityService {
 
   async paste(owner: ProfileOwner, input: { text?: string; sourceUrl?: string | null }): Promise<OpportunityDetail> {
     const text = input.text?.trim() ?? '';
-    if (text.length === 0 || text.length > 20000) throw new BillingError('validation_error', { field: 'text', reason: 'invalid' });
+    if (text.length > 20000) throw new BillingError('validation_error', { field: 'text', reason: 'invalid' });
+    // A title alone ("abc") is not a vacancy: nothing can be matched or written from it.
+    if (text.length < MIN_LISTING_TEXT) {
+      throw new BillingError('validation_error', { field: 'text', reason: 'too_short', minimum: MIN_LISTING_TEXT });
+    }
     const sourceUrl = input.sourceUrl?.trim() || null;
     if (sourceUrl !== null && !sourceUrl.startsWith('https://') && !sourceUrl.startsWith('http://')) {
       throw new BillingError('validation_error', { field: 'sourceUrl', reason: 'invalid' });
     }
-    const first = text.split('\n')[0]?.trim() ?? '';
-    const title = (first.length > 0 ? first : text).slice(0, 300);
+    // Fields the paste states plainly (employer, place, pay, sponsorship); the rest stays unknown.
+    const extracted = extractListingFields(text);
+    const title = (extracted.title.length > 0 ? extracted.title : text).slice(0, 300);
     const sourceId = `${owner.authUserId}:${createHash('sha256').update(text.replace(/\s+/g, ' ').toLowerCase()).digest('hex')}`.slice(0, 255);
     const saved = await this.ingestOne(owner.authUserId, {
       provider: 'paste',
       sourceId,
       title,
-      organization: UNSTATED_ORGANIZATION,
+      organization: extracted.organization ?? UNSTATED_ORGANIZATION,
       description: text,
-      locations: [],
+      locations: extracted.locations,
       sourceUrl: sourceUrl === null ? null : sourceUrl.slice(0, 2000),
       deadline: null,
-      compensation: { minimum: null, maximum: null, currency: null, period: null },
+      compensation: extracted.compensation,
       category: 'job',
       status: 'open',
+      sponsorship: extracted.sponsorship,
     });
     return this.get(owner, saved.id);
   }
@@ -324,7 +333,7 @@ export class OpportunityService {
         listing.title,
         listing.organization,
         JSON.stringify(listing.locations),
-        JSON.stringify({ sponsorship: 'unknown' }),
+        JSON.stringify({ sponsorship: listing.sponsorship ?? 'unknown' }),
         JSON.stringify(listing.compensation),
         listing.deadline,
         listing.sourceUrl,
@@ -406,7 +415,7 @@ export class OpportunityService {
       category: row.category,
       provider: row.provider,
       title: row.title,
-      organization: row.organization === UNSTATED_ORGANIZATION ? null : row.organization,
+      organization: statedOrganization(row.organization),
       status,
       label: listingLabel(status, row.deadline, this.today()),
       sourceUrl: row.source_url,

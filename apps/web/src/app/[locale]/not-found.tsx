@@ -10,9 +10,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('title'),
     description: t('desc'),
-    robots: { index: false, follow: true },
-    // No canonical: a 404 is not a document with a preferred URL. Indexing it
-    // at all is the defect; noindex is the fix.
+    // No robots entry: Next already injects <meta name="robots" content="noindex">
+    // into every 404 response, and a second, different robots tag here gave
+    // crawlers two conflicting directives. No canonical either: a 404 is not a
+    // document with a preferred URL.
   };
 }
 

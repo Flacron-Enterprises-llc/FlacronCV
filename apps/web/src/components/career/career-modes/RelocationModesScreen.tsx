@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   isApiError,
   type ApiClient,
@@ -21,6 +21,8 @@ import {
   LoadingState,
   PermissionDeniedState,
   ProviderUnavailableState,
+  PageHeader,
+  ScreenStack,
 } from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { profileLoadFailure } from '@/lib/career/profile-load';
@@ -37,6 +39,7 @@ export function RelocationModesScreen({
   signInHref: string;
 }) {
   const t = useTranslations('career.career_modes');
+  const locale = useLocale();
   const [load, setLoad] = useState<'loading' | 'permission' | 'unavailable' | 'signed-out' | 'ready'>('loading');
   const [activeTab, setActiveTab] = useState<'locations' | 'specialist'>('locations');
   
@@ -47,6 +50,11 @@ export function RelocationModesScreen({
   const [isAddingLocation, setIsAddingLocation] = useState(false);
   const [place, setPlace] = useState('');
   const [radiusMiles, setRadiusMiles] = useState(25);
+  // Radii are stored in miles; most interface languages read kilometres, so
+  // the display unit follows the language and can be switched.
+  const [unit, setUnit] = useState<'km' | 'mi'>(() => (locale === 'en' ? 'mi' : 'km'));
+  const shown = (miles: number) => (unit === 'km' ? Math.round(miles * 1.609344) : miles);
+  const unitLabel = unit === 'km' ? t('unit_km') : t('miles');
   const [targetTimeline, setTargetTimeline] = useState<TargetTimeline>('exploring');
   const [isRelocation, setIsRelocation] = useState(false);
   const [workAuth, setWorkAuth] = useState<WorkAuthorization>('authorized');
@@ -205,13 +213,20 @@ export function RelocationModesScreen({
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 px-4 py-8">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-career-navy dark:text-white sm:text-3xl">{t('title')}</h1>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{t('subtitle')}</p>
-        </div>
+    <ScreenStack>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <PageHeader title={t('title')} description={t('subtitle')} />
+        <label className="flex items-center gap-2 text-xs font-semibold text-career-muted">
+          {t('unit_label')}
+          <select
+            className="h-9 rounded-md border border-career-line bg-career-surface px-2 text-sm text-career-ink"
+            value={unit}
+            onChange={(event) => setUnit(event.target.value === 'mi' ? 'mi' : 'km')}
+          >
+            <option value="km">{t('unit_km')}</option>
+            <option value="mi">{t('miles')}</option>
+          </select>
+        </label>
 
         {/* Tab Toggle */}
         <div className="flex items-center rounded-lg border border-career-line bg-career-surface p-1">
@@ -262,7 +277,8 @@ export function RelocationModesScreen({
                 {t('locations_quota_hint', {
                   used: locations.length,
                   capacity,
-                  radius: allowedRadiusMiles,
+                  radius: shown(allowedRadiusMiles),
+                  unit: unitLabel,
                 })}
               </p>
             </div>
@@ -284,7 +300,7 @@ export function RelocationModesScreen({
                 <div className="flex items-center justify-between border-b border-career-line pb-3">
                   <h3 className="text-base font-bold text-career-ink">{t('form_add_location_title')}</h3>
                   <span className="text-xs font-medium text-career-muted">
-                    {t('max_radius_allowed', { radius: allowedRadiusMiles })}
+                    {t('max_radius_allowed', { radius: shown(allowedRadiusMiles), unit: unitLabel })}
                   </span>
                 </div>
 
@@ -306,7 +322,7 @@ export function RelocationModesScreen({
 
                   <div>
                     <label htmlFor="locRadius" className="block text-xs font-semibold uppercase tracking-wider text-career-ink">
-                      {t('field_radius')} ({radiusMiles} {t('miles')})
+                      {t('field_radius')} ({shown(radiusMiles)} {unitLabel})
                     </label>
                     <input
                       id="locRadius"
@@ -458,7 +474,7 @@ export function RelocationModesScreen({
 
                     <div className="space-y-1.5 text-xs text-career-muted">
                       <p>
-                        <span className="font-semibold text-career-ink">{t('radius')}:</span> ~{loc.radiusMiles} {t('miles')}
+                        <span className="font-semibold text-career-ink">{t('radius')}:</span> ~{shown(loc.radiusMiles)} {unitLabel}
                       </p>
                       <p>
                         <span className="font-semibold text-career-ink">{t('timeline')}:</span>{' '}
@@ -589,6 +605,6 @@ export function RelocationModesScreen({
           )}
         </div>
       )}
-    </div>
+    </ScreenStack>
   );
 }

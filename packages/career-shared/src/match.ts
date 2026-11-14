@@ -2,10 +2,33 @@ import { listingLabel } from './opportunities';
 
 const DIMENSIONS = 32;
 
+/**
+ * Words a listing uses for framing, not requirements. Without this list a
+ * comparison reports "looking", "team" or "hybrid" as skills the person lacks.
+ */
 const STOP = new Set([
+  // Function words.
   'the', 'and', 'for', 'with', 'that', 'this', 'from', 'your', 'you', 'are', 'was', 'were', 'will',
-  'not', 'but', 'have', 'has', 'job', 'role', 'work', 'must', 'know', 'into', 'over', 'than', 'then',
-  'them', 'they', 'our', 'out', 'all', 'any', 'can', 'its', 'who', 'what', 'when', 'where', 'which',
+  'not', 'but', 'have', 'has', 'into', 'over', 'than', 'then', 'them', 'they', 'our', 'out', 'all',
+  'any', 'can', 'its', 'who', 'what', 'when', 'where', 'which', 'about', 'also', 'able', 'across',
+  'after', 'been', 'being', 'both', 'each', 'every', 'here', 'how', 'more', 'most', 'much', 'other',
+  'own', 'some', 'such', 'very', 'well', 'would', 'could', 'should', 'may', 'might', 'there', 'their',
+  'these', 'those', 'via', 'per', 'etc', 'while', 'within', 'without', 'just', 'like', 'only', 'one',
+  'two', 'three', 'new', 'get', 'make', 'many', 'way', 'yourself', 'ourselves', 'whom', 'whose', 'why',
+  // Vacancy framing.
+  'job', 'jobs', 'role', 'roles', 'work', 'working', 'must', 'know', 'looking', 'seeking', 'seek',
+  'build', 'building', 'team', 'teams', 'hybrid', 'remote', 'onsite', 'office', 'company', 'candidate',
+  'candidates', 'ideal', 'join', 'joining', 'position', 'positions', 'opportunity', 'opportunities',
+  'year', 'years', 'month', 'months', 'week', 'weeks', 'day', 'days', 'hour', 'hours', 'experience',
+  'experienced', 'strong', 'skills', 'skill', 'ability', 'required', 'require', 'requires',
+  'requirement', 'requirements', 'responsibilities', 'responsible', 'preferred', 'plus', 'including',
+  'include', 'includes', 'using', 'use', 'apply', 'applicants', 'salary', 'pay', 'benefits', 'full',
+  'time', 'part', 'location', 'based', 'help', 'helping', 'want', 'need', 'needs', 'great', 'good',
+  'excellent', 'familiarity', 'knowledge', 'understanding', 'level', 'senior', 'junior', 'mid',
+  'lead', 'please', 'send', 'contact', 'email', 'deadline', 'start', 'starting', 'date', 'immediately',
+  'world', 'class', 'fast', 'paced', 'environment', 'culture', 'mission', 'values', 'passionate',
+  'exciting', 'collaborate', 'collaborative', 'members', 'member', 'people', 'person', 'staff',
+  'employee', 'employees', 'employer', 'hiring', 'hire', 'fictional', 'sample', 'example', 'demo',
 ]);
 
 export type MatchFit = 'blocked' | 'none' | 'partial' | 'strong';
@@ -127,9 +150,14 @@ export function explainMatch(listing: MatchListing, lines: MatchLine[], today: s
   return { fit, overlap, reasons, gaps, unknowns };
 }
 
-function tokens(text: string): string[] {
-  return (text.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter((token) => token.length >= 3 && !STOP.has(token));
+/** Words compared between a listing and facts: lower case, three letters or more, no stop word, no bare number. */
+export function matchTokens(text: string): string[] {
+  return (text.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter(
+    (token) => token.length >= 3 && !STOP.has(token) && !/^\d+$/.test(token),
+  );
 }
+
+const tokens = matchTokens;
 
 function round(value: number): number {
   return Math.round(value * 10000) / 10000;

@@ -15,6 +15,7 @@ import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { createV1CoverLetter, createV1Cv, PartialV1CopyError, planV1Cv } from '@/lib/career/to-v1';
 import { ResumeScreen } from '../resume/ResumeScreen';
 import { confirmLeaveIfUnsaved } from '../ui/UnsavedChangesGuard';
+import { PageHeader } from '../ui';
 
 /** V1 `cv_builder.*` keys for section titles, so the copy reads like a CV made in V1. */
 const SECTION_TITLE_KEY: Record<SharedCvSectionType, string> = {
@@ -38,6 +39,7 @@ const SECTION_TITLE_KEY: Record<SharedCvSectionType, string> = {
  */
 export function DocumentsScreen(props: { api: ApiClient; user: SignedInUser | null; ready: boolean; signInHref: string }) {
   const t = useTranslations('career.documents');
+  const tResume = useTranslations('career.resume');
   const tSections = useTranslations('cv_builder');
   const formatApiError = useApiErrorMessage();
   const router = useRouter();
@@ -113,6 +115,8 @@ export function DocumentsScreen(props: { api: ApiClient; user: SignedInUser | nu
 
   return (
     <div className="space-y-6">
+      {/* The page title comes first; the studio below does not repeat it. */}
+      <PageHeader title={tResume('title')} description={tResume('studio_lede')} />
       {resumes.length > 0 || letters.length > 0 ? (
         <Card padding="md">
           <h2 className="text-base font-semibold text-stone-900 dark:text-white">{t('copy_title')}</h2>
@@ -143,7 +147,7 @@ export function DocumentsScreen(props: { api: ApiClient; user: SignedInUser | nu
           </ul>
         </Card>
       ) : null}
-      <ResumeScreen {...props} />
+      <ResumeScreen {...props} hideTitle />
     </div>
   );
 }

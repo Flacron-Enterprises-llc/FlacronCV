@@ -38,6 +38,7 @@ import {
   Camera,
   Sparkles,
   Loader2,
+  Info,
 } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { CVSection, CVSectionType, CVSectionItem, SkillLevel } from '@flacroncv/shared-types';
@@ -46,8 +47,45 @@ import { TOUR_TARGETS } from '@/lib/app-tour';
 import { uploadCvPhotoBlob } from '@/lib/upload-cv-photo';
 import { fileToJpegBlob, ImageUploadError } from '@/lib/prepare-image-upload';
 import AISummaryModal from './AISummaryModal';
+import { hasSampleContent, hasSampleSummary, markEdited, stripSampleItems } from './sample-content';
+import { splitLegacyRange } from './templates/document-locale';
 
 const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+/**
+ * Marks the example career a template CV starts with, with a one-click way to
+ * remove it. Shown only while untouched example content remains; the user's
+ * personal details (name, email, links, photo) are never touched.
+ */
+function SampleContentNotice() {
+  const t = useTranslations('cv_builder');
+  const { cv, sections, updateSection, updatePersonalInfo, pushHistory } = useCVStore();
+  if (!cv || !hasSampleContent(cv, sections)) return null;
+
+  const clear = () => {
+    for (const change of stripSampleItems(sections)) updateSection(change.id, { items: change.items });
+    if (hasSampleSummary(cv)) updatePersonalInfo('summary', '');
+    pushHistory();
+    toast.success(t('sample_cleared'));
+  };
+
+  return (
+    <div
+      role="status"
+      data-testid="sample-content-notice"
+      className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:flex-row sm:items-center dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+    >
+      <Info className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold">{t('sample_notice_title')}</p>
+        <p className="mt-0.5 text-amber-800 dark:text-amber-200">{t('sample_notice_body')}</p>
+      </div>
+      <Button variant="secondary" size="sm" className="shrink-0" onClick={clear} data-testid="sample-clear-btn">
+        {t('sample_clear')}
+      </Button>
+    </div>
+  );
+}
 
 export default function CVEditor() {
   const t = useTranslations('cv_builder');
@@ -75,16 +113,27 @@ export default function CVEditor() {
         updateStyling('showPhoto', true);
       } catch (err) {
         const ext = file.name.split('.').pop()?.toLowerCase() ?? 'unknown';
+        // Firebase errors carry their reason in `.code` ("storage/…"); our own
+        // upload errors in the message.
+        const firebaseCode = (err as { code?: unknown } | null)?.code;
         const code = err instanceof ImageUploadError
           ? err.code
-          : err instanceof Error
-            ? err.message
-            : '';
+          : typeof firebaseCode === 'string' && firebaseCode.startsWith('storage/')
+            ? firebaseCode
+            : err instanceof Error
+              ? err.message
+              : '';
         const msg = code === 'INVALID_TYPE'
           ? t('photo_invalid', { ext })
           : code === 'TOO_LARGE'
             ? t('photo_too_large', { size: err instanceof ImageUploadError && err.sizeMb ? err.sizeMb : '5' })
-            : t(code === 'PHOTO_UNAVAILABLE' ? 'photo_unavailable' : 'photo_upload_failed');
+            // "Sign in again" only for a real auth problem; Storage being
+            // down or unconfigured is not the user's session.
+            : code === 'PHOTO_SIGNED_OUT' || code === 'storage/unauthenticated'
+              ? t('photo_unavailable')
+              : code === 'PHOTO_STORAGE_UNAVAILABLE'
+                ? t('photo_storage_unavailable')
+                : t('photo_upload_failed');
         setPhotoError(msg);
         toast.error(msg);
       } finally {
@@ -135,6 +184,8 @@ export default function CVEditor() {
 
   return (
     <div className="space-y-4">
+      <SampleContentNotice />
+
       {/* Personal Info Section */}
       <Card>
         <h3 className="mb-4 font-semibold text-stone-900 dark:text-white">{t('personal_info')}</h3>
@@ -429,7 +480,9 @@ function SectionContent({ section }: { section: CVSection }) {
 
   const updateItem = (index: number, data: Record<string, unknown>) => {
     const newItems = [...section.items];
-    newItems[index] = { ...newItems[index], ...data } as any;
+    // An edited example item is the user's own now — it stops counting as
+    // sample content (and is no longer removed by "Clear sample content").
+    newItems[index] = { ...markEdited(section, newItems[index]), ...data } as any;
     updateSection(section.id, { items: newItems });
   };
 
@@ -454,19 +507,52 @@ function SectionContent({ section }: { section: CVSection }) {
                 <Input label={t('field_position')} value={item.position || ''} onChange={(e) => updateItem(index, { position: e.target.value })} />
                 <Input label={t('field_company')} value={item.company || ''} onChange={(e) => updateItem(index, { company: e.target.value })} />
                 <Input label={t('field_start_date')} value={item.startDate || ''} onChange={(e) => updateItem(index, { startDate: e.target.value })} placeholder={t('ph_start_date')} />
-                <Input label={t('field_end_date')} value={item.endDate || ''} onChange={(e) => updateItem(index, { endDate: e.target.value })} placeholder={t('ph_present')} />
+                <Input
+                  label={t('field_end_date')}
+                  value={item.isCurrent ? '' : item.endDate || ''}
+                  onChange={(e) => updateItem(index, { endDate: e.target.value })}
+                  placeholder={item.isCurrent ? t('ph_present') : t('ph_end_date')}
+                  disabled={!!item.isCurrent}
+                />
+                <Input label={t('field_location')} value={item.location || ''} onChange={(e) => updateItem(index, { location: e.target.value })} placeholder={t('ph_location')} />
+                <label className="flex items-center gap-2 self-end pb-2 text-sm text-stone-700 dark:text-stone-300">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-stone-300 text-brand-600 focus:ring-brand-500"
+                    checked={!!item.isCurrent}
+                    // Clearing the end date when ticked keeps the stored item
+                    // consistent: the preview prints "Present" for a current role.
+                    onChange={(e) => updateItem(index, e.target.checked ? { isCurrent: true, endDate: null } : { isCurrent: false })}
+                  />
+                  {t('field_currently_working')}
+                </label>
               </div>
-              <textarea className="input-field min-h-[60px]" value={item.description || ''} onChange={(e) => updateItem(index, { description: e.target.value })} placeholder={t('ph_experience_desc')} />
+              <textarea aria-label={t('field_description')} className="input-field min-h-[60px]" value={item.description || ''} onChange={(e) => updateItem(index, { description: e.target.value })} placeholder={t('ph_experience_desc')} />
             </div>
           )}
-          {section.type === 'education' && (
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Input label={t('field_degree')} value={item.degree || ''} onChange={(e) => updateItem(index, { degree: e.target.value })} />
-              <Input label={t('field_field_of_study')} value={item.field || ''} onChange={(e) => updateItem(index, { field: e.target.value })} />
-              <Input label={t('field_institution')} value={item.institution || ''} onChange={(e) => updateItem(index, { institution: e.target.value })} />
-              <Input label={t('field_years')} value={item.startDate || ''} onChange={(e) => updateItem(index, { startDate: e.target.value })} placeholder={t('ph_years')} />
-            </div>
-          )}
+          {section.type === 'education' && (() => {
+            // Education used to have a single "Years" box that wrote only
+            // startDate, so stored items can hold "2019 - 2023" there. Show
+            // such a range split across the two date fields; the first edit
+            // writes both halves back properly.
+            const legacy = !item.endDate ? splitLegacyRange(item.startDate) : null;
+            const start = legacy ? legacy.start : item.startDate || '';
+            const end = legacy ? legacy.end : item.endDate || '';
+            return (
+              <div className="space-y-2">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Input label={t('field_degree')} value={item.degree || ''} onChange={(e) => updateItem(index, { degree: e.target.value })} />
+                  <Input label={t('field_field_of_study')} value={item.field || ''} onChange={(e) => updateItem(index, { field: e.target.value })} />
+                  <Input label={t('field_institution')} value={item.institution || ''} onChange={(e) => updateItem(index, { institution: e.target.value })} />
+                  <Input label={t('field_location')} value={item.location || ''} onChange={(e) => updateItem(index, { location: e.target.value })} placeholder={t('ph_location')} />
+                  <Input label={t('field_start_date')} value={start} onChange={(e) => updateItem(index, { startDate: e.target.value, endDate: end || null })} placeholder={t('ph_start_date')} />
+                  <Input label={t('field_end_date')} value={end} onChange={(e) => updateItem(index, { startDate: start, endDate: e.target.value })} placeholder={t('ph_end_date')} />
+                  <Input label={t('field_gpa')} value={item.gpa || ''} onChange={(e) => updateItem(index, { gpa: e.target.value })} placeholder={t('ph_gpa')} />
+                </div>
+                <textarea aria-label={t('field_description')} className="input-field min-h-[40px]" value={item.description || ''} onChange={(e) => updateItem(index, { description: e.target.value })} placeholder={t('ph_education_desc')} />
+              </div>
+            );
+          })()}
           {section.type === 'skills' && (
             <div className="grid gap-2 sm:grid-cols-2">
               <Input
@@ -501,7 +587,7 @@ function SectionContent({ section }: { section: CVSection }) {
                 onChange={(e) => updateItem(index, { technologies: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean) })}
                 placeholder={t('ph_technologies')}
               />
-              <textarea className="input-field min-h-[40px]" value={item.description || ''} onChange={(e) => updateItem(index, { description: e.target.value })} placeholder={t('ph_generic_desc')} />
+              <textarea aria-label={t('field_description')} className="input-field min-h-[40px]" value={item.description || ''} onChange={(e) => updateItem(index, { description: e.target.value })} placeholder={t('ph_generic_desc')} />
             </div>
           )}
           {section.type === 'certifications' && (
@@ -541,13 +627,13 @@ function SectionContent({ section }: { section: CVSection }) {
               <Input label={t('field_title')} value={item.title || item.name || ''} onChange={(e) => updateItem(index, { title: e.target.value, name: e.target.value })} />
               <Input label={t('field_subtitle')} value={item.subtitle || ''} onChange={(e) => updateItem(index, { subtitle: e.target.value })} />
               <Input label={t('field_date')} value={item.date || ''} onChange={(e) => updateItem(index, { date: e.target.value })} placeholder={t('ph_start_date')} />
-              <textarea className="input-field min-h-[40px]" value={item.description || ''} onChange={(e) => updateItem(index, { description: e.target.value })} placeholder={t('ph_generic_desc')} />
+              <textarea aria-label={t('field_description')} className="input-field min-h-[40px]" value={item.description || ''} onChange={(e) => updateItem(index, { description: e.target.value })} placeholder={t('ph_generic_desc')} />
             </div>
           )}
           {!['experience', 'education', 'skills', 'projects', 'certifications', 'languages', 'references', 'custom'].includes(section.type) && (
             <div className="space-y-2">
               <Input label={t('field_title')} value={item.name || item.title || ''} onChange={(e) => updateItem(index, { name: e.target.value, title: e.target.value })} />
-              <textarea className="input-field min-h-[40px]" value={item.description || ''} onChange={(e) => updateItem(index, { description: e.target.value })} placeholder={t('ph_generic_desc')} />
+              <textarea aria-label={t('field_description')} className="input-field min-h-[40px]" value={item.description || ''} onChange={(e) => updateItem(index, { description: e.target.value })} placeholder={t('ph_generic_desc')} />
             </div>
           )}
           <button

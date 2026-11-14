@@ -4,6 +4,8 @@ import { CVStyling, FontSize, Spacing } from '@flacroncv/shared-types';
 const CV_LAYOUTS = ['classic', 'sidebar', 'top-bar', 'compact', 'slate-gold'] as const;
 const SECTION_STYLES = ['underline', 'card', 'left-border', 'minimal'] as const;
 const BORDER_RADII = ['none', 'small', 'medium', 'large'] as const;
+/** The CV document's language (web Design panel); 'auto' = detect from content. */
+const DOCUMENT_LANGUAGES = ['auto', 'en', 'fr', 'de', 'es', 'ar', 'ur'] as const;
 
 /**
  * Nested write shape for `styling`. Extra keys rejected. All optional so a
@@ -53,4 +55,14 @@ export class CvStylingDto implements Partial<CVStyling> {
   @IsOptional()
   @IsIn(BORDER_RADII, { message: `borderRadius must be one of: ${BORDER_RADII.join(', ')}` })
   borderRadius?: CVStyling['borderRadius'];
+
+  /**
+   * Language the CV is written in, which can differ from the UI language. Sets
+   * the document's direction and the headings/dates the templates print.
+   * Not in the shared CVStyling type yet (packages/shared-types is frozen for
+   * this change); older clients simply never send it.
+   */
+  @IsOptional()
+  @IsIn(DOCUMENT_LANGUAGES, { message: `documentLanguage must be one of: ${DOCUMENT_LANGUAGES.join(', ')}` })
+  documentLanguage?: (typeof DOCUMENT_LANGUAGES)[number];
 }

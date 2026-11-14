@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { type ReactNode, useEffect, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import { Check, ShieldCheck, Lock, Trash2, Zap } from 'lucide-react';
 import Button from '@/components/ui/Button';
@@ -21,6 +21,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { localizedPlanFeatures } from '@/lib/plan-features';
 import { fcgePricingVisited, fcgeUpgradeClicked } from '@/lib/fcge';
 import { onConsentChange } from '@/lib/consent';
+import { formatUsd } from '@/lib/format-price';
 
 /** Per-plan presentation. Which of these actually render is decided by
  *  `customerFacingPlans()` — see the visibility rule in shared-types. */
@@ -50,8 +51,19 @@ const PLAN_PRESENTATION: Record<
   },
 };
 
-export default function Pricing() {
+export default function Pricing({
+  intro,
+}: {
+  /**
+   * Replaces the section's own heading and subtitle. `/pricing` passes its
+   * page <h1> here so the page does not stack two headings that say the same
+   * thing, and so its intro sits inside this section's padding and background.
+   */
+  intro?: ReactNode;
+} = {}) {
   const t = useTranslations();
+  const locale = useLocale();
+  const usd = (amount: number) => formatUsd(amount, locale);
   const tPricing = useTranslations('pricing');
   const { user } = useAuth();
   const [yearly, setYearly] = useState(false);
@@ -95,12 +107,16 @@ export default function Pricing() {
         className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 transition-all duration-700 ${isInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
       >
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-extrabold tracking-tight text-stone-900 sm:text-4xl dark:text-white">
-            {t('pricing.title')}
-          </h2>
-          <p className="mt-4 text-lg text-stone-600 dark:text-stone-400">
-            {t('pricing.subtitle')}
-          </p>
+          {intro ?? (
+            <>
+              <h2 className="text-3xl font-extrabold tracking-tight text-stone-900 sm:text-4xl dark:text-white">
+                {t('pricing.title')}
+              </h2>
+              <p className="mt-4 text-lg text-stone-600 dark:text-stone-400">
+                {t('pricing.subtitle')}
+              </p>
+            </>
+          )}
 
           {/* Billing interval toggle. Yearly billing has no real Stripe price
               yet, so the Yearly option is genuinely DISABLED rather than
@@ -161,7 +177,10 @@ export default function Pricing() {
         </div>
 
         {/* Trust strip */}
-        <div className="mt-8 grid grid-cols-2 items-center justify-items-center gap-x-4 gap-y-3 text-sm text-stone-500 sm:flex sm:flex-wrap sm:justify-center sm:gap-x-8 sm:gap-y-2 dark:text-stone-400">
+        {/* One left-aligned column on phones: a centred 2x2 grid of
+            different-length phrases wrapped into a ragged block at 390px. The
+            column itself is centred (w-fit mx-auto) so the icons line up. */}
+        <div className="mx-auto mt-8 flex w-fit flex-col items-start gap-y-2 text-sm text-stone-500 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-x-8 dark:text-stone-400">
           <div className="flex items-center gap-2">
             <Lock className="h-4 w-4 text-emerald-500" />
             {t('pricing.trust_stripe')}
@@ -219,7 +238,9 @@ export default function Pricing() {
                 <div className="mb-6">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="text-xl font-bold text-stone-900 dark:text-white">
-                      {config.name}
+                      {/* config.name is the English catalogue name; "Free" is a
+                          word, not a brand, so it must follow the page language. */}
+                      {t(`pricing.${key}`)}
                     </h3>
                     {featured && (
                       <Zap className="h-4 w-4 text-brand-500" />
@@ -235,7 +256,7 @@ export default function Pricing() {
                     <div className="mt-5">
                       <div className="flex items-baseline gap-1">
                         <span className="text-4xl font-extrabold text-stone-900 dark:text-white">
-                          ${config.priceYearly.toFixed(2)}
+                          {usd(config.priceYearly)}
                         </span>
                         <span className="text-sm text-stone-500 dark:text-stone-400">
                           {t('pricing.per_year')}
@@ -246,17 +267,20 @@ export default function Pricing() {
                       <p className="mt-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                         {t('pricing.save_vs_monthly', { percent: yearlySavingsPercent(key) })}
                         {' · '}
-                        {t('pricing.save_amount', { amount: `$${yearlySavings(key).toFixed(2)}` })}
+                        {/* The amount arrives already formatted with its currency
+                            symbol; the copy itself carries no "$" (it used to,
+                            which printed "Save $$59.89"). */}
+                        {t('pricing.save_amount', { amount: usd(yearlySavings(key)) })}
                       </p>
                       <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-                        ${(config.priceYearly / 12).toFixed(2)}
+                        {usd(config.priceYearly / 12)}
                         {t('pricing.per_month_billed_yearly')}
                       </p>
                     </div>
                   ) : (
                     <div className="mt-5 flex items-baseline gap-1">
                       <span className="text-4xl font-extrabold text-stone-900 dark:text-white">
-                        {monthlyPrice === 0 ? '$0' : `$${monthlyPrice.toFixed(2)}`}
+                        {usd(monthlyPrice)}
                       </span>
                       <span className="text-sm text-stone-500 dark:text-stone-400">
                         {t('pricing.per_month')}

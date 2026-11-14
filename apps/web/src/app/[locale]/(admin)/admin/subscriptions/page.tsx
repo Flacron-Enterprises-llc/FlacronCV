@@ -42,9 +42,18 @@ interface SubscriptionsResponse {
   };
 }
 
+/** Statuses with a billing.status.* translation. */
+const STRIPE_STATUSES: string[] = ['active', 'trialing', 'past_due', 'canceled', 'incomplete', 'unpaid', 'paused', 'incomplete_expired'];
+
 export default function AdminSubscriptionsPage(): React.JSX.Element | null {
   const formatDate = useFormatDate();
   const t = useTranslations('admin');
+  // Stripe statuses and plan names, translated (shared with billing and the CRM).
+  const tBilling = useTranslations('billing');
+  const tc = useTranslations('crm');
+  const statusLabel = (status: string) => (STRIPE_STATUSES.includes(status) ? tBilling(`status.${status}`) : status);
+  const planLabel = (plan: string) =>
+    ['free', 'pro', 'career_accelerator', 'enterprise'].includes(plan) ? tc(`plan_${plan}`) : plan;
 
   // Served by the working CRM subscriptions endpoint (list) + the admin revenue
   // analytics endpoint (plan/active stats); the CRM record stores amount in cents.
@@ -237,7 +246,7 @@ export default function AdminSubscriptionsPage(): React.JSX.Element | null {
                       </p>
                       {/* Columns hidden at this width, kept legible here. */}
                       <p className="text-xs text-stone-500 sm:hidden dark:text-stone-400">
-                        {sub.plan.toUpperCase()}
+                        {planLabel(sub.plan)}
                       </p>
                       <p className="text-xs text-stone-500 lg:hidden dark:text-stone-400">
                         {sub.amount > 0
@@ -263,7 +272,7 @@ export default function AdminSubscriptionsPage(): React.JSX.Element | null {
                     </Badge>
                   </td>
                   <td className="whitespace-nowrap px-4 py-4 sm:px-6">
-                    <Badge variant={statusVariant(sub.status)}>{sub.status}</Badge>
+                    <Badge variant={statusVariant(sub.status)}>{statusLabel(sub.status)}</Badge>
                   </td>
                   <td className="hidden whitespace-nowrap px-4 py-4 text-sm text-stone-900 lg:table-cell sm:px-6 dark:text-white">
                     {sub.amount > 0

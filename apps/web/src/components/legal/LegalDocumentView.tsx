@@ -51,13 +51,17 @@ export default function LegalDocumentView({ doc }: { doc: LegalDocumentViewDoc }
       </Link>
 
       <header className="mt-8 border-b border-stone-200 pb-6 dark:border-stone-800">
-        <h1 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-white sm:text-4xl">
+        {/* The documents are English-only (see legal/types.ts) while the chrome
+            around them is translated. On /ar and /ur the English text keeps its
+            own language and direction; otherwise it renders right-aligned with
+            punctuation flipped to the wrong end of each line. */}
+        <h1 lang="en" dir="ltr" className="text-3xl font-bold tracking-tight text-stone-900 dark:text-white sm:text-4xl">
           {doc.title}
         </h1>
         <p className="mt-3 text-sm font-medium text-brand-600 dark:text-brand-400">
           {t('legal.last_updated', { date: doc.lastUpdated })}
         </p>
-        <p className="mt-3 text-sm italic leading-relaxed text-stone-600 dark:text-stone-400">
+        <p lang="en" dir="ltr" className="mt-3 text-sm italic leading-relaxed text-stone-600 dark:text-stone-400">
           {CONTROLLING_VERSION}
         </p>
       </header>
@@ -70,7 +74,7 @@ export default function LegalDocumentView({ doc }: { doc: LegalDocumentViewDoc }
           <p className="text-xs font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">
             {t('legal.on_this_page')}
           </p>
-          <ul className="mt-3 space-y-2 border-s-2 border-brand-200 ps-3 dark:border-brand-900">
+          <ul lang="en" dir="ltr" className="mt-3 space-y-2 border-s-2 border-brand-200 ps-3 dark:border-brand-900">
             {doc.sections.map((s) => (
               <li key={s.id}>
                 <a
@@ -85,20 +89,22 @@ export default function LegalDocumentView({ doc }: { doc: LegalDocumentViewDoc }
         </nav>
 
         <article className="min-w-0 space-y-8">
-          <div className="space-y-3">
-            <Blocks blocks={doc.preamble} />
-          </div>
+          <div lang="en" dir="ltr" className="space-y-8">
+            <div className="space-y-3">
+              <Blocks blocks={doc.preamble} />
+            </div>
 
-          {doc.sections.map((s) => (
-            <section key={s.id} id={`section-${s.id}`} className="scroll-mt-24">
-              <h2 className="mb-3 border-s-4 border-brand-500 ps-3 text-xl font-bold text-stone-900 dark:text-white">
-                {s.title}
-              </h2>
-              <div className="space-y-3">
-                <Blocks blocks={s.blocks} />
-              </div>
-            </section>
-          ))}
+            {doc.sections.map((s) => (
+              <section key={s.id} id={`section-${s.id}`} className="scroll-mt-24">
+                <h2 className="mb-3 border-s-4 border-brand-500 ps-3 text-xl font-bold text-stone-900 dark:text-white">
+                  {s.title}
+                </h2>
+                <div className="space-y-3">
+                  <Blocks blocks={s.blocks} />
+                </div>
+              </section>
+            ))}
+          </div>
 
           <div className="pt-4">
             <button

@@ -142,6 +142,32 @@ describe('TemplatesService', () => {
       expect(cl.previewImages).toEqual([]);
     });
 
+    it('gives every seeded template a description in all six locales', async () => {
+      await service.seedDefaults();
+      const all = await service.list();
+      expect(all.length).toBeGreaterThanOrEqual(16);
+      for (const t of all) {
+        for (const locale of ['en', 'fr', 'de', 'es', 'ar', 'ur']) {
+          expect(t.descriptionLocalized?.[locale]?.trim()).toBeTruthy();
+        }
+        // The English entry is the same text as the base description.
+        expect(t.descriptionLocalized?.en).toBe(t.description);
+      }
+    });
+
+    it('backfills descriptionLocalized onto templates stored before it existed', async () => {
+      await service.create(
+        { name: 'Academic', slug: 'academic', category: TemplateCategory.CV, description: 'Research-focused CV with publications section' },
+        'system',
+      );
+      expect((await service.findById('academic')).descriptionLocalized).toEqual({});
+      await service.seedDefaults();
+      const academic = await service.findById('academic');
+      expect(academic.descriptionLocalized?.fr).toBeTruthy();
+      // The Academic layout has no publications section, so it must not promise one.
+      expect(academic.description).not.toMatch(/publication/i);
+    });
+
     it('does not overwrite thumbnailURL or previewImages on re-seed', async () => {
       await service.create(
         {

@@ -37,6 +37,22 @@ export type ApplicationOutcomeSource = (owner: ProfileOwner) => Promise<Applicat
 
 const systemClock: Clock = { now: () => new Date() };
 
+/** Business rows use uuid ids; anything else cannot exist, so it is not_found rather than a database error. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export interface BusinessOverview {
+  staff: Array<{ id: string; authUserId: string; role: string }>;
+  candidates: Array<{ id: string; email: string }>;
+}
+
+export interface DeveloperStatus {
+  /** Whether the API package add-on is on this account; creating a key needs it. */
+  apiPackage: boolean;
+  /** Whether the white-label add-on is on this account; saving a brand needs it. */
+  whiteLabel: boolean;
+  brand: { brandName: string; attribution: string } | null;
+}
+
 export const HUMAN_PROVIDERS = [
   { id: 'review-not-open', name: 'Named review desk', scope: 'A person reviews selected material', priceCents: null, bookingOpen: false },
 ] as const;
@@ -345,7 +361,25 @@ export class RemainingService {
     return { ok: true };
   }
 
+  /** Staff and invited candidates of the caller's own workspace, for the Business page's lists and pickers. */
+  async businessOverview(owner: ProfileOwner): Promise<BusinessOverview> {
+    await this.gate(owner, 'staffSeats');
+    const staff = await this.pool.query<{ id: string; auth_user_id: string; role: string }>(
+      `SELECT id, auth_user_id, role FROM business_staff WHERE workspace_id = $1 ORDER BY created_at, id`,
+      [owner.workspaceId],
+    );
+    const candidates = await this.pool.query<{ id: string; email: string }>(
+      `SELECT id, email FROM business_candidates WHERE workspace_id = $1 ORDER BY created_at, id`,
+      [owner.workspaceId],
+    );
+    return {
+      staff: staff.rows.map((row) => ({ id: row.id, authUserId: row.auth_user_id, role: row.role })),
+      candidates: candidates.rows,
+    };
+  }
+
   async getCandidate(owner: ProfileOwner, candidateId: string): Promise<{ id: string; email: string }> {
+    if (!UUID.test(candidateId)) throw new BillingError('not_found');
     const rows = await this.pool.query<{ id: string; email: string; workspace_id: string }>(
       `SELECT id, email, workspace_id FROM business_candidates WHERE id = $1`,
       [candidateId],
@@ -382,6 +416,15 @@ export class RemainingService {
 
   bookHumanService(): never {
     throw new BillingError('not_purchasable', { reason: 'commercial_terms_required' });
+  }
+
+  /** The saved choice; a person who never chose is not discoverable. */
+  async getOptIn(owner: ProfileOwner): Promise<{ discoverable: boolean }> {
+    const rows = await this.pool.query<{ discoverable: boolean }>(
+      `SELECT discoverable FROM recruiting_opt_ins WHERE workspace_id = $1 AND candidate_auth_user_id = $2`,
+      [owner.workspaceId, owner.authUserId],
+    );
+    return { discoverable: rows.rows[0]?.discoverable === true };
   }
 
   async setOptIn(owner: ProfileOwner, discoverable: boolean): Promise<{ discoverable: boolean }> {
@@ -438,6 +481,20 @@ export class RemainingService {
     return { readsRemaining: updated.rows[0].reads_remaining };
   }
 
+  /**
+   * What the Developer page can offer: each action is enabled only when its
+   * add-on is on the account, and a saved brand is shown again after reload.
+   */
+  async developerStatus(owner: ProfileOwner): Promise<DeveloperStatus> {
+    const [apiPackage, whiteLabel] = await Promise.all([this.entitlement(owner, 'api_package'), this.entitlement(owner, 'white_label')]);
+    const brand = await this.pool.query<{ brand_name: string; attribution: string }>(
+      `SELECT brand_name, attribution FROM white_label_configs WHERE workspace_id = $1`,
+      [owner.workspaceId],
+    );
+    const row = brand.rows[0];
+    return { apiPackage, whiteLabel, brand: row ? { brandName: row.brand_name, attribution: row.attribution } : null };
+  }
+
   async setWhiteLabel(owner: ProfileOwner, brandName: string, attribution: string): Promise<{ brandName: string; attribution: string }> {
     const entitlement = await this.entitlement(owner, 'white_label');
     if (!entitlement) throw new BillingError('not_purchasable', { addonId: 'white_label', priceCents: 9900 });
@@ -468,6 +525,7 @@ export class RemainingService {
   }
 
   private async ownedStaff(owner: ProfileOwner, staffId: string): Promise<{ id: string; role: string }> {
+    if (!UUID.test(staffId)) throw new BillingError('not_found');
     const rows = await this.pool.query<{ id: string; role: string; workspace_id: string }>(
       `SELECT id, role, workspace_id FROM business_staff WHERE id = $1`,
       [staffId],
@@ -478,6 +536,7 @@ export class RemainingService {
   }
 
   private async ownedCandidate(owner: ProfileOwner, candidateId: string): Promise<{ id: string }> {
+    if (!UUID.test(candidateId)) throw new BillingError('not_found');
     const rows = await this.pool.query<{ id: string; workspace_id: string }>(
       `SELECT id, workspace_id FROM business_candidates WHERE id = $1`,
       [candidateId],

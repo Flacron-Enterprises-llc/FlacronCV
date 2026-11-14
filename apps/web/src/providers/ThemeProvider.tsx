@@ -84,3 +84,8 @@ export function useTheme() {
   if (!context) throw new Error('useTheme must be used within ThemeProvider');
   return context;
 }
+
+/** Like {@link useTheme}, but undefined outside a ThemeProvider (e.g. isolated tests). */
+export function useOptionalTheme(): ThemeContextType | undefined {
+  return useContext(ThemeContext);
+}

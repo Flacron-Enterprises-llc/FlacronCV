@@ -5,6 +5,21 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from '@/i18n/routing';
 import { useTranslations, useLocale } from 'next-intl';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useFormatDate, useFormatDateTime } from '@/lib/use-format-date';
+import { cn } from '@/lib/utils';
+import CLThumbnail from '@/components/cover-letter/CLThumbnail';
+import { COVER_LETTER_TEMPLATES } from '@/components/cover-letter/CoverLetterPreview';
+import { coverLetterTemplateFromParam } from '@/components/cover-letter/template-param';
+import {
+  LETTER_LOCALES,
+  LETTER_LOCALE_NAMES,
+  aiLanguageName,
+  isLetterLocale,
+  isRtlLetterLocale,
+  type LetterLocale,
+} from '@/components/cover-letter/letter-locale';
+import { documentOptionLabels } from '@/components/jobs/document-option-labels';
+import { useCoverLetterAllowance, isCoverLetterLimitError } from '@/components/cover-letter/letter-allowance';
 import { useAuth } from '@/providers/AuthProvider';
 import { api, isAiCreditUnconfirmed } from '@/lib/api';
 import { serializeCVToText } from '@/lib/serializeCV';
@@ -16,8 +31,15 @@ import UpgradeModal from '@/components/shared/UpgradeModal';
 import InAppWarning from '@/components/shared/InAppWarning';
 import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
-import { CoverLetter, CV, CVSection, PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
-import { Sparkles, FileText, ChevronDown, Loader2, AlertTriangle, RefreshCw, Save, X } from 'lucide-react';
+import {
+  CoverLetter,
+  CV,
+  CVSection,
+  PLAN_CONFIGS,
+  resolveEffectivePlan,
+  canUseCoverLetterTemplate,
+} from '@flacroncv/shared-types';
+import { Sparkles, FileText, ChevronDown, Loader2, AlertTriangle, RefreshCw, Save, X, Lock } from 'lucide-react';
 
 const LOCALE_LANGUAGE_NAMES: Record<string, string> = {
   en: 'English', es: 'Spanish', fr: 'French',
@@ -32,6 +54,10 @@ const LENGTHS = ['short', 'medium', 'long'] as const;
 type Tone = (typeof TONES)[number];
 type Length = (typeof LENGTHS)[number];
 
+/** What a letter gets when nothing (or nothing valid) was chosen — matches the API default. */
+const DEFAULT_TEMPLATE_ID = 'modern';
+const TEMPLATE_IDS = COVER_LETTER_TEMPLATES.map((tmpl) => tmpl.id);
+
 /** Survives a refresh or a closed tab after the credit is spent, before save. */
 const GENERATED_DRAFT_KEY = 'cover_letter_generate_draft';
 
@@ -45,6 +71,8 @@ interface StoredGeneratedDraft {
   linkedCVId: string;
   tone: Tone;
   length: Length;
+  templateId?: string;
+  letterLocale?: LetterLocale;
 }
 
 function readStoredGeneratedDraft(): StoredGeneratedDraft | null {
@@ -64,6 +92,8 @@ function readStoredGeneratedDraft(): StoredGeneratedDraft | null {
       linkedCVId: typeof saved.linkedCVId === 'string' ? saved.linkedCVId : '',
       tone: TONES.includes(saved.tone as Tone) ? (saved.tone as Tone) : 'professional',
       length: LENGTHS.includes(saved.length as Length) ? (saved.length as Length) : 'medium',
+      templateId: TEMPLATE_IDS.includes(saved.templateId ?? '') ? saved.templateId : undefined,
+      letterLocale: isLetterLocale(saved.letterLocale) ? saved.letterLocale : undefined,
     };
   } catch {
     return null;
@@ -85,6 +115,8 @@ interface CreateCoverLetterPayload {
   jobTitle?: string;
   jobDescription?: string;
   linkedCVId?: string;
+  templateId?: string;
+  letterLocale?: LetterLocale;
 }
 
 const escapeHtml = (s: string) =>
@@ -112,6 +144,9 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
   const router = useRouter();
   const { user, refreshUser } = useAuth();
   const formatApiError = useApiErrorMessage();
+  const formatDate = useFormatDate();
+  const formatDateTime = useFormatDateTime();
+  const userPlan = resolveEffectivePlan(user?.subscription);
 
   const [title, setTitle] = useState('');
   const [recipientName, setRecipientName] = useState('');
@@ -121,12 +156,19 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
   const [linkedCVId, setLinkedCVId] = useState('');
   const [tone, setTone] = useState<Tone>('professional');
   const [length, setLength] = useState<Length>('medium');
+  const [templateId, setTemplateId] = useState<string>(DEFAULT_TEMPLATE_ID);
+  // The language the letter is written in. Defaults to the interface language;
+  // drives the AI's output language and, once saved, the letter's labels,
+  // date and direction (see letter-locale.ts).
+  const [letterLocale, setLetterLocale] = useState<LetterLocale>(
+    isLetterLocale(locale) ? locale : 'en',
+  );
   // The generated letter, held for review. Written to localStorage as soon as
   // generation succeeds so a refresh or a closed tab does not throw away a spent credit.
   const [draft, setDraft] = useState<string | null>(null);
   const draftRestored = useRef(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [upgradeReason, setUpgradeReason] = useState<'ai_credits' | 'cover_letters'>('ai_credits');
+  const [upgradeReason, setUpgradeReason] = useState<'ai_credits' | 'cover_letters' | 'templates'>('ai_credits');
 
   // If the blank create succeeded but writing the content back failed, reuse
   // the same document on retry instead of stacking duplicate cover letters.
@@ -146,7 +188,29 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
     setLinkedCVId(saved.linkedCVId);
     setTone(saved.tone);
     setLength(saved.length);
+    if (saved.templateId) setTemplateId(saved.templateId);
+    if (saved.letterLocale) setLetterLocale(saved.letterLocale);
   }, []);
+
+  // "Use this template" on the public /templates gallery lands here with
+  // ?template=cl-classic. Read once on mount; it wins over a restored draft
+  // because it is the user's latest explicit choice. Read from location rather
+  // than useSearchParams so the page needs no Suspense boundary.
+  useEffect(() => {
+    const fromGallery = coverLetterTemplateFromParam(
+      new URLSearchParams(window.location.search).get('template'),
+      TEMPLATE_IDS,
+    );
+    if (fromGallery) setTemplateId(fromGallery);
+  }, []);
+
+  /**
+   * The template to send on create. A template above the user's plan (a stale
+   * gallery link, a downgrade since the draft was saved) falls back to the
+   * default instead of making the server reject the whole create.
+   */
+  const templateForCreate = (): string =>
+    canUseCoverLetterTemplate(templateId, userPlan) ? templateId : DEFAULT_TEMPLATE_ID;
 
   useEffect(() => {
     if (!draftRestored.current || draft === null) return;
@@ -161,12 +225,14 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
         linkedCVId,
         tone,
         length,
+        templateId,
+        letterLocale,
       };
       localStorage.setItem(GENERATED_DRAFT_KEY, JSON.stringify(payload));
     } catch {
       /* private mode / quota — the in-memory draft still shows */
     }
-  }, [draft, title, recipientName, companyName, jobTitle, jobDescription, linkedCVId, tone, length]);
+  }, [draft, title, recipientName, companyName, jobTitle, jobDescription, linkedCVId, tone, length, templateId, letterLocale]);
 
   // Fetch existing CVs for the dropdown
   const { data: cvsData } = useQuery({
@@ -175,10 +241,32 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
   });
 
   const cvs = cvsData?.items || [];
+  const cvLabels = documentOptionLabels(cvs, {
+    date: formatDate,
+    dateTime: (value) => formatDateTime(value),
+    label: (cvTitle, when) => t('coverLetters.cv_option', { title: cvTitle, date: when }),
+  });
 
-  const letterLimit = PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)].limits.coverLetters;
-  const lettersCreated = user?.usage?.coverLettersCreated ?? 0;
-  const atLetterLimit = letterLimit !== 'unlimited' && lettersCreated >= letterLimit;
+  // At the cover-letter limit the form is blocked up front (as the CV flow
+  // is): letting someone fill in the whole letter only to refuse on the last
+  // click wasted their time. Usage is re-read on mount so the gate is fresh.
+  const { atLimit: atLetterLimit } = useCoverLetterAllowance({ refreshOnMount: true });
+  useEffect(() => {
+    if (!atLetterLimit) return;
+    setUpgradeReason('cover_letters');
+    setShowUpgradeModal(true);
+  }, [atLetterLimit]);
+
+  /** The server refused for the allowance: show the paywall, not an error toast. */
+  const handleCreateError = (error: Error) => {
+    if (isCoverLetterLimitError(error)) {
+      void refreshUser();
+      setUpgradeReason('cover_letters');
+      setShowUpgradeModal(true);
+      return;
+    }
+    toast.error(formatApiError(error));
+  };
 
   /** True when the user still has a cover-letter slot; opens the paywall when not. */
   const ensureLetterQuota = (): boolean => {
@@ -211,9 +299,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
       track('cover_letter_created', { withAI: false });
       router.push(`/cover-letters/${coverLetter.id}`);
     },
-    onError: (error: Error) => {
-      toast.error(formatApiError(error));
-    },
+    onError: handleCreateError,
   });
 
   const generateJobDescMutation = useMutation({
@@ -283,7 +369,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
         candidateSummary,
         tone: vars.tone,
         length: vars.length,
-        language: LOCALE_LANGUAGE_NAMES[locale] || 'English',
+        language: aiLanguageName(letterLocale),
       });
       const text = result.content.trim();
       try {
@@ -297,6 +383,8 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
           linkedCVId,
           tone: vars.tone,
           length: vars.length,
+          templateId,
+          letterLocale,
         };
         localStorage.setItem(GENERATED_DRAFT_KEY, JSON.stringify(payload));
       } catch {
@@ -329,6 +417,8 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
           jobTitle: jobTitle.trim() || undefined,
           jobDescription: jobDescription.trim() || undefined,
           linkedCVId: linkedCVId || undefined,
+          templateId: templateForCreate(),
+          letterLocale,
         });
         id = created.id;
         createdIdRef.current = id;
@@ -342,9 +432,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
       track('cover_letter_created', { withAI: true });
       router.push(`/cover-letters/${id}`);
     },
-    onError: (error: Error) => {
-      toast.error(formatApiError(error));
-    },
+    onError: handleCreateError,
   });
 
   const startGeneration = () => {
@@ -381,6 +469,8 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
       jobTitle: jobTitle.trim() || undefined,
       jobDescription: jobDescription.trim() || undefined,
       linkedCVId: linkedCVId || undefined,
+      templateId: templateForCreate(),
+      letterLocale,
     });
   };
 
@@ -392,6 +482,27 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
       <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
         {t('coverLetters.create_new')}
       </h1>
+
+      {atLetterLimit && (
+        <div
+          role="status"
+          data-testid="cover-letter-limit-notice"
+          className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between dark:border-amber-800/60 dark:bg-amber-900/20 dark:text-amber-200"
+        >
+          <span>{t('coverLetters.new_limit_reached')}</span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0"
+            onClick={() => {
+              setUpgradeReason('cover_letters');
+              setShowUpgradeModal(true);
+            }}
+          >
+            {t('common.upgrade')}
+          </Button>
+        </div>
+      )}
 
       <div className="space-y-6">
         {/* Basic info */}
@@ -415,6 +526,94 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
               onChange={(e) => setRecipientName(e.target.value)}
               placeholder={t('coverLetters.recipient_placeholder')}
             />
+            <div className="space-y-1.5">
+              <label
+                htmlFor="letterLocale"
+                className="block text-sm font-medium text-stone-700 dark:text-stone-300"
+              >
+                {t('coverLetters.letter_language')}
+              </label>
+              <div className="relative">
+                <select
+                  id="letterLocale"
+                  value={letterLocale}
+                  onChange={(e) => {
+                    if (isLetterLocale(e.target.value)) setLetterLocale(e.target.value);
+                  }}
+                  className="input-field appearance-none pe-10"
+                  aria-describedby="letterLocale-hint"
+                >
+                  {LETTER_LOCALES.map((code) => (
+                    <option key={code} value={code} lang={code}>
+                      {LETTER_LOCALE_NAMES[code]}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+              </div>
+              <p id="letterLocale-hint" className="text-xs text-stone-500">
+                {t('coverLetters.letter_language_hint')}
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Template — preselected when arriving from the /templates gallery. */}
+        <Card>
+          <h3 id="template-heading" className="mb-4 font-semibold text-stone-900 dark:text-white">
+            {t('coverLetters.choose_template')}
+          </h3>
+          <div
+            role="radiogroup"
+            aria-labelledby="template-heading"
+            className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+          >
+            {COVER_LETTER_TEMPLATES.map((tmpl) => {
+              const selected = templateId === tmpl.id;
+              const locked = !canUseCoverLetterTemplate(tmpl.id, userPlan);
+              return (
+                <button
+                  key={tmpl.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  aria-disabled={locked || undefined}
+                  title={locked ? t('coverLetters.template_locked') : undefined}
+                  onClick={() => {
+                    if (locked) {
+                      setUpgradeReason('templates');
+                      setShowUpgradeModal(true);
+                      return;
+                    }
+                    setTemplateId(tmpl.id);
+                  }}
+                  className={cn(
+                    'relative rounded-lg border-2 p-2 text-start transition-colors',
+                    selected
+                      ? 'border-brand-500 bg-brand-50 dark:border-brand-400 dark:bg-brand-950'
+                      : locked
+                        ? 'border-stone-200 opacity-60 dark:border-stone-700'
+                        : 'border-stone-200 hover:border-stone-300 dark:border-stone-700 dark:hover:border-stone-600',
+                  )}
+                >
+                  <div className="mb-1.5 h-10 overflow-hidden rounded bg-white">
+                    <CLThumbnail
+                      templateId={tmpl.id}
+                      color={tmpl.defaultColor}
+                      rtl={isRtlLetterLocale(letterLocale)}
+                    />
+                  </div>
+                  <span className="block text-xs font-semibold text-stone-800 dark:text-stone-200">
+                    {t(`coverLetters.${tmpl.nameKey}`)}
+                  </span>
+                  {locked && (
+                    <span className="absolute end-1.5 top-1.5 rounded-full bg-stone-700/80 p-0.5">
+                      <Lock className="h-2.5 w-2.5 text-white" aria-hidden="true" />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </Card>
 
@@ -499,7 +698,7 @@ export default function NewCoverLetterPage(): React.JSX.Element | null {
               <option value="">{t('coverLetters.no_cv_selected')}</option>
               {cvs.map((cv) => (
                 <option key={cv.id} value={cv.id}>
-                  {cv.title}
+                  {cvLabels.get(cv.id) ?? cv.title}
                 </option>
               ))}
             </select>

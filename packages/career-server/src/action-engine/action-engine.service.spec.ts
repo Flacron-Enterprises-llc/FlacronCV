@@ -9,8 +9,10 @@ import type { Principal } from '../identity/identity.service';
 import { MeteringService } from '../metering/metering.service';
 import { CareerProfileService } from '../profile/career-profile.service';
 import { TestClock } from '../testing/billing-fixture';
+import { UnconfiguredTextModel } from '../ai/text-model';
 import { FakeTextModel } from '../testing/fake-ai';
 import { createTestDatabase, TestDatabase } from '../testing/test-database';
+import { COVER_LETTER_TEMPLATE } from '../writing/writing-compose';
 import { ActionEngineService } from './action-engine.service';
 
 function identity(uid: string): VerifiedIdentity {
@@ -49,7 +51,21 @@ describe('ActionEngineService (CV12)', () => {
     model = new FakeTextModel();
     profiles = new CareerProfileService(db.pool, model, clock);
     metering = new MeteringService(db.pool, clock);
-    service = new ActionEngineService(db.pool, metering);
+    service = new ActionEngineService(db.pool, metering, model);
+    // A grounded letter: it names only the confirmed employer and the listing's
+    // own organization, which the prompt carries.
+    model.always(COVER_LETTER_TEMPLATE, (request) => {
+      const prompt = JSON.parse(request.prompt) as { requiredFactIds: string[]; listing: { organization: string | null } | null };
+      const target = prompt.listing?.organization;
+      return JSON.stringify({
+        opening: target
+          ? `I am writing to apply to ${target} and to share the work I did at Northwind Cataloguing.`
+          : 'I am writing to apply and to share the work I did at Northwind Cataloguing.',
+        body: 'At Northwind Cataloguing I worked as a cataloguer from 2019-03 to 2024-06 and used TypeScript every week to keep the inventory records accurate for the team. That confirmed experience is the evidence I can offer.',
+        closing: 'Thank you for your time and consideration.',
+        factIds: prompt.requiredFactIds,
+      });
+    });
   });
 
   afterAll(async () => {
@@ -57,7 +73,11 @@ describe('ActionEngineService (CV12)', () => {
   });
 
   let oppCount = 0;
-  async function seedOpportunity(title = 'Staff Engineer', org = 'Acme Labs'): Promise<string> {
+  async function seedOpportunity(
+    title = 'Staff Engineer',
+    org = 'Acme Labs',
+    description = 'TypeScript, PostgreSQL, and distributed systems required for our records platform.',
+  ): Promise<string> {
     oppCount += 1;
     const opp = await db.pool.query<{ id: string }>(
       `INSERT INTO opportunities (category, provider, source_id, title, organization, status)
@@ -66,8 +86,8 @@ describe('ActionEngineService (CV12)', () => {
     );
     const rev = await db.pool.query<{ id: string }>(
       `INSERT INTO opportunity_revisions (opportunity_id, revision, title, organization, description, status)
-       VALUES ($1, 1, $2, $3, 'TypeScript, PostgreSQL, and distributed systems required.', 'open') RETURNING id`,
-      [opp.rows[0].id, title, org],
+       VALUES ($1, 1, $2, $3, $4, 'open') RETURNING id`,
+      [opp.rows[0].id, title, org, description],
     );
     await db.pool.query(`UPDATE opportunities SET current_revision_id = $2 WHERE id = $1`, [
       opp.rows[0].id,
@@ -98,6 +118,12 @@ describe('ActionEngineService (CV12)', () => {
 
   it('requires plan upgrade on Free plan (actionPacks allowance is null)', async () => {
     const oppId = await seedOpportunity();
+    await profiles.createFact(ada, { factType: 'contact', value: { fullName: 'Ada Lovelace', email: 'ada@example.test' }, confirmation: 'confirmed' });
+    await profiles.createFact(ada, {
+      factType: 'experience',
+      value: { position: 'Cataloguer', company: 'Northwind Cataloguing', startDate: '2019-03', endDate: '2024-06' },
+      confirmation: 'confirmed',
+    });
     await profiles.createFact(ada, { factType: 'skill', value: { name: 'TypeScript' }, confirmation: 'confirmed' });
 
     const err = await service.create(ada, { opportunityId: oppId }, 'key-free-upgrade').catch((e) => e);
@@ -141,6 +167,12 @@ describe('ActionEngineService (CV12)', () => {
     expect(pack.tailoredResume).toBeDefined();
     expect(pack.coverLetter).toBeDefined();
     expect(pack.coverLetter.body).toContain('Acme Systems');
+    // Signed with the confirmed contact name, never a placeholder.
+    expect(pack.coverLetter.body.trim().endsWith('Ada Lovelace')).toBe(true);
+    expect(pack.coverLetter.body).not.toContain('Candidate');
+    // The confirmed skill is a reason, read from the fact text rather than its JSON keys.
+    expect(pack.fit.reasonTokens).toContain('typescript');
+    expect(pack.fit.gapTokens).not.toContain('name');
     expect(pack.checklist).toHaveLength(5);
     expect(pack.nextSteps.length).toBeGreaterThan(0);
 
@@ -196,5 +228,36 @@ describe('ActionEngineService (CV12)', () => {
 
     const updateErr = await service.updateChecklist(charles, pack.id, pack.checklist[0].id, true).catch((e) => e);
     expect(isBillingError(updateErr, 'permission_denied')).toBe(true);
+  });
+
+  it('refuses a listing too short to act on before charging', async () => {
+    const oppId = await seedOpportunity('abc', 'unstated', 'abc');
+    const before = (await service.list(ada)).actionPack.includedRemaining;
+    const err = await service.create(ada, { opportunityId: oppId }, 'key-short-listing').catch((e) => e);
+    expect(isBillingError(err, 'validation_error')).toBe(true);
+    if (isBillingError(err)) expect(err.details).toMatchObject({ field: 'opportunityId', reason: 'listing_too_short' });
+    expect((await service.list(ada)).actionPack.includedRemaining).toBe(before);
+  });
+
+  it('never writes the unstated marker and leaves the employer out instead', async () => {
+    const oppId = await seedOpportunity('Records Analyst', 'unstated');
+    const created = await service.create(ada, { opportunityId: oppId }, 'key-unstated-org');
+    const pack = created.result as any;
+    expect(pack.vacancySnapshot.organization).toBeNull();
+    const text = JSON.stringify([pack.coverLetter, pack.checklist]);
+    expect(text).not.toMatch(/unstated/i);
+    expect(pack.checklist[0].label).toBe('Review the tailored resume for Records Analyst');
+  });
+
+  it('releases the credit and saves nothing when no model is available', async () => {
+    const oppId = await seedOpportunity('Platform Engineer', 'Initech');
+    const before = await service.list(ada);
+    const offline = new ActionEngineService(db.pool, metering, new UnconfiguredTextModel());
+    const err = await offline.create(ada, { opportunityId: oppId }, 'key-no-model').catch((e) => e);
+    expect(isBillingError(err, 'provider_unavailable')).toBe(true);
+    if (isBillingError(err)) expect(err.details).toMatchObject({ released: true });
+    const after = await service.list(ada);
+    expect(after.items).toHaveLength(before.items.length);
+    expect(after.actionPack.includedRemaining).toBe(before.actionPack.includedRemaining);
   });
 });

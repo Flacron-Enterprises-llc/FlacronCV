@@ -1,11 +1,25 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { isApiError, type ApiClient, type OpportunityItem } from '@flacroncv/career-api-client';
-import { Button, Card, EmptyState, Input, LoadingState, NoResultsState, PermissionDeniedState, ProviderUnavailableState } from '@/components/career/ui';
+import { MIN_LISTING_TEXT } from '@flacroncv/career-shared';
+import {
+  Button,
+  Card,
+  EmptyState,
+  InlineNote,
+  Input,
+  LoadingState,
+  NoResultsState,
+  PageHeader,
+  PermissionDeniedState,
+  ProviderUnavailableState,
+  ScreenStack,
+} from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { profileLoadFailure } from '@/lib/career/profile-load';
+import { ListingFacts } from './ListingFacts';
 
 export function OpportunityScreen({
   api,
@@ -21,38 +35,44 @@ export function OpportunityScreen({
   locale: string;
 }) {
   const t = useTranslations('career.opportunities');
-  const [load, setLoad] = useState<'signed-out' | 'permission' | 'unavailable' | 'ready'>('ready');
+  const [load, setLoad] = useState<'loading' | 'signed-out' | 'permission' | 'unavailable' | 'ready'>('loading');
   const [query, setQuery] = useState('');
   const [paste, setPaste] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
-  const [items, setItems] = useState<OpportunityItem[] | null>(null);
+  const [items, setItems] = useState<OpportunityItem[]>([]);
+  const [searched, setSearched] = useState(false);
   const [pending, setPending] = useState(false);
   const [radiusLimit, setRadiusLimit] = useState<number | null>(null);
+  const [pasteNote, setPasteNote] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
 
-  if (!ready) return <LoadingState label={t('loading')} />;
-  if (load === 'permission') return <PermissionDeniedState title={t('permission_title')} body={t('permission_body')} />;
-  if (load === 'unavailable') {
-    return (
-      <ProviderUnavailableState
-        title={t('unavailable_title')}
-        body={t('unavailable_body')}
-        action={<Button type="button" onClick={() => setLoad('ready')}>{t('retry')}</Button>}
-      />
-    );
-  }
-  if (!user) {
-    return (
-      <EmptyState
-        title={t('signed_out_title')}
-        body={t('signed_out_body')}
-        action={
-          <a className="inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white" href={signInHref}>
-            {t('go_sign_in')}
-          </a>
-        }
-      />
-    );
-  }
+  const note = useCallback((error: unknown) => {
+    if (isApiError(error, 'validation_error') && error.body.field === 'radiusMiles' && typeof error.body.limit === 'number') {
+      setRadiusLimit(error.body.limit);
+      return;
+    }
+    const failure = profileLoadFailure(error);
+    setLoad(failure === 'signed-out' ? 'signed-out' : failure === 'permission' ? 'permission' : 'unavailable');
+  }, []);
+
+  // Saved listings show as soon as the page opens, not only after a search.
+  const loadSaved = useCallback(async () => {
+    setLoad('loading');
+    try {
+      setItems((await api.opportunities({ q: '' })).items);
+      setLoad('ready');
+    } catch (error) {
+      note(error);
+    }
+  }, [api, note]);
+
+  useEffect(() => {
+    if (!ready) return;
+    if (!user) {
+      setLoad('signed-out');
+      return;
+    }
+    void loadSaved();
+  }, [ready, user, loadSaved]);
 
   async function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,7 +80,7 @@ export function OpportunityScreen({
     setRadiusLimit(null);
     try {
       setItems((await api.opportunities({ q: query })).items);
-      setLoad('ready');
+      setSearched(query.trim().length > 0);
     } catch (error) {
       note(error);
     } finally {
@@ -70,74 +90,104 @@ export function OpportunityScreen({
 
   async function savePaste(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setPasteNote(null);
+    if (paste.trim().length < MIN_LISTING_TEXT) {
+      setPasteNote({ tone: 'error', text: t('paste_too_short', { count: MIN_LISTING_TEXT }) });
+      return;
+    }
     setPending(true);
     try {
       const created = await api.pasteOpportunity({ text: paste, sourceUrl: sourceUrl.trim() || undefined });
-      setItems((current) => [created, ...(current ?? []).filter((item) => item.id !== created.id)]);
+      setItems((current) => [created, ...current.filter((item) => item.id !== created.id)]);
       setPaste('');
+      setSourceUrl('');
+      setPasteNote({ tone: 'success', text: t('paste_saved') });
     } catch (error) {
-      note(error);
+      if (isApiError(error, 'validation_error')) {
+        setPasteNote({
+          tone: 'error',
+          text: error.body.field === 'sourceUrl' ? t('paste_bad_url') : t('paste_too_short', { count: MIN_LISTING_TEXT }),
+        });
+      } else {
+        note(error);
+      }
     } finally {
       setPending(false);
     }
   }
 
-  function note(error: unknown) {
-    if (isApiError(error, 'validation_error') && error.body.field === 'radiusMiles' && typeof error.body.limit === 'number') {
-      setRadiusLimit(error.body.limit);
-      return;
-    }
-    const failure = profileLoadFailure(error);
-    if (failure === 'signed-out') return;
-    setLoad(failure === 'permission' ? 'permission' : 'unavailable');
+  if (!ready || load === 'loading') return <LoadingState label={t('loading')} />;
+  if (load === 'permission') return <PermissionDeniedState title={t('permission_title')} body={t('permission_body')} />;
+  if (load === 'unavailable') {
+    return (
+      <ProviderUnavailableState
+        title={t('unavailable_title')}
+        body={t('unavailable_body')}
+        action={<Button type="button" onClick={() => void loadSaved()}>{t('retry')}</Button>}
+      />
+    );
+  }
+  if (load === 'signed-out' || !user) {
+    return (
+      <EmptyState
+        title={t('signed_out_title')}
+        body={t('signed_out_body')}
+        action={
+          <a className="inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white dark:text-stone-950" href={signInHref}>
+            {t('go_sign_in')}
+          </a>
+        }
+      />
+    );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold text-career-ink">{t('title')}</h1>
-      <form className="flex flex-col gap-3" onSubmit={(event) => void search(event)}>
-        <Input label={t('query_label')} name="q" value={query} onChange={(event) => setQuery(event.target.value)} />
+    <ScreenStack>
+      <PageHeader title={t('title')} />
+      <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={(event) => void search(event)}>
+        <div className="min-w-0 flex-1">
+          <Input label={t('query_label')} name="q" value={query} onChange={(event) => setQuery(event.target.value)} />
+        </div>
         <Button type="submit" disabled={pending}>{t('search')}</Button>
       </form>
-      {radiusLimit !== null ? <p role="status">{t('radius', { limit: radiusLimit })}</p> : null}
-      {items === null ? (
-        <EmptyState title={t('empty_title')} body={t('empty_body')} />
-      ) : items.length === 0 ? (
-        <NoResultsState title={t('no_results_title')} body={t('no_results_body')} />
+      {radiusLimit !== null ? <InlineNote>{t('radius', { limit: radiusLimit })}</InlineNote> : null}
+      {items.length === 0 ? (
+        searched ? (
+          <NoResultsState title={t('no_results_title')} body={t('no_results_body')} />
+        ) : (
+          <EmptyState title={t('empty_title')} body={t('empty_body')} />
+        )
       ) : (
         <ul className="grid grid-cols-1 gap-3">
           {items.map((item) => (
             <li key={item.id}>
               <Card>
-                <a className="text-lg font-semibold text-career-ink" href={`/${locale}/career/opportunities/${item.id}`}>{item.title}</a>
-                <p className="mt-1 text-sm text-career-muted">{item.organization ?? t('not_stated')}</p>
-                <p className="mt-1 text-sm text-career-ink">{item.locations.length > 0 ? item.locations.join(', ') : t('not_stated')}</p>
-                <p className="mt-1 text-sm text-career-ink">{payText(item, t('not_stated'))}</p>
-                <p className="mt-1 text-sm text-career-ink">{item.sponsorship === 'unknown' ? t('not_stated') : item.sponsorship}</p>
+                <a className="text-lg font-semibold text-career-ink hover:underline" dir="auto" href={`/${locale}/career/opportunities/${item.id}`}>{item.title}</a>
+                <ListingFacts item={item} className="mt-2" />
                 {item.label === 'expired' ? <p className="mt-1 text-sm text-career-orange-text">{t('expired')}</p> : null}
               </Card>
             </li>
           ))}
         </ul>
       )}
-      <form className="flex flex-col gap-3" onSubmit={(event) => void savePaste(event)}>
-        <label className="text-sm font-semibold text-career-ink" htmlFor="paste-text">{t('paste_label')}</label>
-        <textarea
-          id="paste-text"
-          className="min-h-[8rem] rounded-md border border-career-line bg-white p-3 text-sm text-career-ink"
-          value={paste}
-          onChange={(event) => setPaste(event.target.value)}
-        />
-        <Input label={t('paste_url')} name="sourceUrl" value={sourceUrl} onChange={(event) => setSourceUrl(event.target.value)} />
-        <Button type="submit" variant="secondary" disabled={pending}>{t('paste')}</Button>
-      </form>
-    </div>
+      <Card>
+        <form className="flex flex-col gap-3" onSubmit={(event) => void savePaste(event)}>
+          <h2 className="text-lg font-semibold text-career-ink">{t('paste_heading')}</h2>
+          <label className="text-sm font-semibold text-career-ink" htmlFor="paste-text">{t('paste_label')}</label>
+          <textarea
+            id="paste-text"
+            className="min-h-[8rem] rounded-md border border-career-line bg-career-surface p-3 text-sm text-career-ink placeholder:text-career-muted"
+            placeholder={t('paste_placeholder')}
+            value={paste}
+            onChange={(event) => setPaste(event.target.value)}
+          />
+          <Input label={t('paste_url')} name="sourceUrl" type="url" value={sourceUrl} onChange={(event) => setSourceUrl(event.target.value)} />
+          <div>
+            <Button type="submit" variant="secondary" disabled={pending}>{t('paste')}</Button>
+          </div>
+          {pasteNote ? <InlineNote tone={pasteNote.tone}>{pasteNote.text}</InlineNote> : null}
+        </form>
+      </Card>
+    </ScreenStack>
   );
-}
-
-function payText(item: OpportunityItem, notStated: string): string {
-  const { minimum, maximum, currency, period } = item.compensation;
-  if (minimum === null && maximum === null) return notStated;
-  const amount = minimum !== null && maximum !== null ? `${minimum}–${maximum}` : String(minimum ?? maximum);
-  return [amount, currency, period].filter((part) => part !== null && part.length > 0).join(' ');
 }

@@ -61,86 +61,92 @@ export default async function AiCvBuilderPage() {
         data={pageBreadcrumbs('en', tNav('nav.home'), copy.title, AI_CV_BUILDER_PATH)}
       />
 
-      <section className="border-b border-stone-200 bg-gradient-to-b from-brand-50 to-white dark:border-stone-800 dark:from-stone-900 dark:to-black">
-        <div className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 lg:px-8">
-          <h1 className="text-4xl font-bold tracking-tight text-stone-900 dark:text-white sm:text-5xl">
-            {copy.hero_title}
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-stone-600 dark:text-stone-400">
-            {copy.hero_desc}
-          </p>
-          <div className="mt-8">
-            <Link href="/register">
-              <Button size="lg" icon={<ArrowRight className="h-5 w-5 rtl:rotate-180" />}>
-                {copy.cta_btn}
-              </Button>
-            </Link>
+      {/* English-only copy (content/*.ts). On /ar and /ur it keeps its own
+          language and direction instead of rendering right-aligned inside the
+          RTL page; the translated pricing section below stays RTL. The arrow
+          icons drop rtl:rotate-180 because this block is always LTR. */}
+      <div lang="en" dir="ltr">
+        <section className="border-b border-stone-200 bg-gradient-to-b from-brand-50 to-white dark:border-stone-800 dark:from-stone-900 dark:to-black">
+          <div className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 lg:px-8">
+            <h1 className="text-4xl font-bold tracking-tight text-stone-900 dark:text-white sm:text-5xl">
+              {copy.hero_title}
+            </h1>
+            <p className="mx-auto mt-6 max-w-2xl text-lg text-stone-600 dark:text-stone-400">
+              {copy.hero_desc}
+            </p>
+            <div className="mt-8">
+              <Link href="/register">
+                <Button size="lg" icon={<ArrowRight className="h-5 w-5" />}>
+                  {copy.cta_btn}
+                </Button>
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="border-b border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950">
-        <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+        <section className="border-b border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950">
+          <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+            <h2 className="mb-2 text-center text-2xl font-bold text-stone-900 dark:text-white">
+              {copy.mid_title}
+            </h2>
+            <p className="mb-10 text-center text-stone-500 dark:text-stone-400">
+              {copy.mid_subtitle}
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <CopyCard icon={FileText} title={copy.mid1_title} desc={copy.mid1_desc} />
+              <CopyCard icon={List} title={copy.mid2_title} desc={copy.mid2_desc} />
+              <CopyCard icon={Mail} title={copy.mid3_title} desc={copy.mid3_desc} />
+              <CopyCard icon={Target} title={copy.mid4_title} desc={copy.mid4_desc} />
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
           <h2 className="mb-2 text-center text-2xl font-bold text-stone-900 dark:text-white">
-            {copy.mid_title}
+            {copy.close_title}
           </h2>
           <p className="mb-10 text-center text-stone-500 dark:text-stone-400">
-            {copy.mid_subtitle}
+            {copy.close_subtitle}
           </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <CopyCard icon={FileText} title={copy.mid1_title} desc={copy.mid1_desc} />
-            <CopyCard icon={List} title={copy.mid2_title} desc={copy.mid2_desc} />
-            <CopyCard icon={Mail} title={copy.mid3_title} desc={copy.mid3_desc} />
-            <CopyCard icon={Target} title={copy.mid4_title} desc={copy.mid4_desc} />
+          <div className="grid gap-4 sm:grid-cols-3">
+            <CopyCard icon={LayoutTemplate} title={copy.close1_title} desc={copy.close1_desc} />
+            <CopyCard icon={Sparkles} title={copy.close2_title} desc={copy.close2_desc} />
+            <CopyCard icon={Download} title={copy.close3_title} desc={copy.close3_desc} />
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
-        <h2 className="mb-2 text-center text-2xl font-bold text-stone-900 dark:text-white">
-          {copy.close_title}
-        </h2>
-        <p className="mb-10 text-center text-stone-500 dark:text-stone-400">
-          {copy.close_subtitle}
-        </p>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <CopyCard icon={LayoutTemplate} title={copy.close1_title} desc={copy.close1_desc} />
-          <CopyCard icon={Sparkles} title={copy.close2_title} desc={copy.close2_desc} />
-          <CopyCard icon={Download} title={copy.close3_title} desc={copy.close3_desc} />
-        </div>
-      </section>
+        <section className="border-t border-stone-200 bg-gradient-to-br from-brand-600 to-brand-700 dark:border-stone-800">
+          <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 lg:px-8">
+            <h2 className="text-3xl font-bold text-white">{copy.cta_title}</h2>
+            <div className="mt-8">
+              <Link href="/register">
+                <Button
+                  size="lg"
+                  icon={<ArrowRight className="h-5 w-5" />}
+                  className="bg-white text-brand-700 hover:bg-brand-50"
+                >
+                  {copy.cta_btn}
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
 
-      <section className="border-t border-stone-200 bg-gradient-to-br from-brand-600 to-brand-700 dark:border-stone-800">
-        <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-white">{copy.cta_title}</h2>
-          <div className="mt-8">
-            <Link href="/register">
-              <Button
-                size="lg"
-                icon={<ArrowRight className="h-5 w-5 rtl:rotate-180" />}
-                className="bg-white text-brand-700 hover:bg-brand-50"
+        <section className="border-b border-stone-200 bg-white py-12 dark:border-stone-800 dark:bg-stone-950">
+          <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
+            <p className="text-stone-600 dark:text-stone-400">{copy.related_title}</p>
+            <div className="mt-4">
+              <Link
+                href="/ai-cover-letter-generator"
+                locale="en"
+                className="text-sm font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
               >
-                {copy.cta_btn}
-              </Button>
-            </Link>
+                {copy.related_cta}
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
-
-      <section className="border-b border-stone-200 bg-white py-12 dark:border-stone-800 dark:bg-stone-950">
-        <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
-          <p className="text-stone-600 dark:text-stone-400">{copy.related_title}</p>
-          <div className="mt-4">
-            <Link
-              href="/ai-cover-letter-generator"
-              locale="en"
-              className="text-sm font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
-            >
-              {copy.related_cta}
-            </Link>
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <Pricing />
       <FAQ />

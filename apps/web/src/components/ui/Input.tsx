@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, InputHTMLAttributes, useState } from 'react';
+import { forwardRef, InputHTMLAttributes, useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -12,22 +12,33 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, hint, id, type, ...props }, ref) => {
+  ({ className, label, error, hint, id, type, 'aria-describedby': ariaDescribedBy, ...props }, ref) => {
     const t = useTranslations('common');
     const [revealed, setRevealed] = useState(false);
+    // Most call sites pass a label but no id, which left <label htmlFor> empty:
+    // the label was not linked to its field (clicking it did nothing, and a
+    // screen reader announced an unlabelled edit box). A generated id fixes
+    // that everywhere; an explicit id still wins, so existing ids, tests and
+    // anchors are unchanged.
+    const generatedId = useId();
+    const inputId = id ?? generatedId;
 
     // Any password field gets a reveal toggle automatically, so login/register
     // (and anything added later) stay consistent without per-page wiring.
     const isPassword = type === 'password';
 
-    const errorId = id ? `${id}-error` : undefined;
-    const hintId = id ? `${id}-hint` : undefined;
-    const describedBy = error ? errorId : hint ? hintId : undefined;
+    const errorId = `${inputId}-error`;
+    const hintId = `${inputId}-hint`;
+    // The visible error/hint is announced with the field; a caller's own
+    // aria-describedby is kept alongside it.
+    const describedBy = [error ? errorId : hint ? hintId : undefined, ariaDescribedBy]
+      .filter(Boolean)
+      .join(' ') || undefined;
 
     const field = (
       <input
         ref={ref}
-        id={id}
+        id={inputId}
         type={isPassword ? (revealed ? 'text' : 'password') : type}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
@@ -45,7 +56,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="space-y-1.5">
         {label && (
-          <label htmlFor={id} className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+          <label htmlFor={inputId} className="block text-sm font-medium text-stone-700 dark:text-stone-300">
             {label}
           </label>
         )}

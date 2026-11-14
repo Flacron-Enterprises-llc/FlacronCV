@@ -4,13 +4,11 @@ import {
   DEFAULT_COVER_LETTER_TEMPLATE,
   coverLetterPromptFacts,
   coverLetterReady,
-  evaluateCoverLetter,
   factLineText,
   isCoverLetterTemplateId,
   isFactType,
   isWritingType,
   keptGenerateFactIds,
-  UNSTATED_ORGANIZATION,
   writingBody,
   writingTitle,
   type CoverLetterTemplateId,
@@ -29,14 +27,13 @@ import { MeteringService } from '../metering/metering.service';
 import type { ProfileOwner } from '../profile/career-profile.service';
 import type { DocumentCreditView, ResumeFile } from '../resumes/resume.service';
 import {
-  COVER_LETTER_SYSTEM,
   COVER_LETTER_TEMPLATE,
   WRITING_SYSTEM,
   WRITING_TEMPLATE,
-  parseCoverLetterReply,
   parseWritingReply,
 } from './writing-compose';
 import { exportFileName, renderCoverLetterDocx, renderCoverLetterPdf } from './writing-document';
+import { confirmedFullName, generateCoverLetter, targetOrganizationName } from './cover-letter-generation';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_BODY = 20_000;
@@ -48,27 +45,6 @@ interface Listing {
   title: string;
   organization: string;
   description: string;
-}
-
-function targetOrganizationName(listing: Listing): string | null {
-  const stored = listing.organization.trim();
-  if (stored.length >= 2 && stored !== UNSTATED_ORGANIZATION) return stored;
-  const title = listing.title.trim().toLowerCase();
-  const lines = listing.description
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length >= 2);
-  for (const line of lines.slice(0, 5)) {
-    if (line.toLowerCase() === title) continue;
-    if (line.length > 120) continue;
-    if (/^[A-Z]{2,}(?:[,\s-]+[A-Z]{2,})*$/.test(line)) continue;
-    if (/\b(?:remote|hybrid|montreal|montréal|toronto|vancouver|qc|on|bc|canada)\b/i.test(line) && line.split(/\s+/).length <= 4) {
-      continue;
-    }
-    if (/\b(?:must|required|responsibilities|qualifications|salary|apply|deadline|keep|help|work|know)\b/i.test(line)) continue;
-    return line;
-  }
-  return null;
 }
 
 interface WritingRow {
@@ -251,39 +227,24 @@ export class WritingService {
         inputVersions: { opportunityRevisionId: listing?.revisionId ?? null },
       },
       execute: async () => {
-        const response = await completeWithin(this.model, {
-          template,
-          system: coverLetter ? COVER_LETTER_SYSTEM : WRITING_SYSTEM,
-          prompt,
-          maxTokens: coverLetter ? 1200 : 800,
-          temperature: 0,
-        });
         if (coverLetter) {
-          const reply = parseCoverLetterReply(response.text);
-          if (!reply) throw new BillingError('provider_unavailable', { reason: 'unusable_output' });
-          const evaluated = evaluateCoverLetter(reply, facts, {
-            listingOrganization: targetOrganization,
-            listingTitle: listing?.title ?? null,
-            listingDescription: listing?.description ?? null,
-          });
-          if (!evaluated.ok || evaluated.body.length > MAX_BODY) {
-            throw new BillingError('provider_unavailable', {
-              reason: evaluated.ok ? 'unusable_output' : evaluated.reason,
-              ...(!evaluated.ok && evaluated.claim ? { claim: evaluated.claim } : {}),
-            });
-          }
+          const letter = await generateCoverLetter(this.model, facts, listing);
           return {
-            title: writingTitle(
-              type,
-              targetOrganization,
-            ),
-            body: evaluated.body,
-            factIds: evaluated.factIds,
+            title: writingTitle(type, targetOrganization),
+            body: letter.body,
+            factIds: letter.factIds,
             opportunityRevisionId: listing?.revisionId ?? null,
-            provider: response.provider,
-            model: response.model,
+            provider: letter.provider,
+            model: letter.model,
           };
         }
+        const response = await completeWithin(this.model, {
+          template,
+          system: WRITING_SYSTEM,
+          prompt,
+          maxTokens: 800,
+          temperature: 0,
+        });
         const reply = parseWritingReply(response.text);
         if (!reply) throw new BillingError('provider_unavailable', { reason: 'unusable_output' });
         const composed = writingBody(facts, reply.factIds);
@@ -374,12 +335,7 @@ export class WritingService {
   }
 
   private async senderName(owner: ProfileOwner): Promise<string | undefined> {
-    for (const fact of await this.facts(owner)) {
-      if (fact.factType !== 'contact' || fact.confirmation !== 'confirmed') continue;
-      const fullName = typeof fact.value.fullName === 'string' ? fact.value.fullName.trim() : '';
-      if (fullName) return fullName;
-    }
-    return undefined;
+    return confirmedFullName(await this.facts(owner));
   }
 
   private async facts(owner: ProfileOwner): Promise<ResumeFactInput[]> {

@@ -112,6 +112,23 @@ export class AuthController {
     return { message: 'If an account exists for that address, a reset link has been sent' };
   }
 
+  /**
+   * Password reset for the signed-in user's own address (Settings). Unlike the
+   * anonymous endpoint above, a delivery failure is reported: the caller already
+   * knows the account exists, so an error discloses nothing and tells them the
+   * email did not go out.
+   */
+  @Post('me/reset-password')
+  @UseGuards(FirebaseAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 900000 } })
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  async resetOwnPassword(@CurrentUser() user: FirebaseUser) {
+    if (!user.email) throw new BadRequestException('This account has no email address');
+    await this.authService.sendPasswordReset(user.email, { surfaceDeliveryFailure: true });
+    return { message: 'Password reset email sent' };
+  }
+
   @Post('send-verification')
   @UseGuards(FirebaseAuthGuard)
   @Throttle({ default: { limit: 5, ttl: 900000 } })

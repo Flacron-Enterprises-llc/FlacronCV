@@ -45,6 +45,8 @@ import {
 } from '@flacroncv/shared-types';
 import { Link } from '@/i18n/routing';
 import { PUBLIC_TEMPLATES_EN } from '@/content/public-templates';
+import { LetterThumb, letterTemplateId } from '@/components/landing/showcase/DocumentThumb';
+import LetterPreviewModal from '@/components/landing/showcase/LetterPreviewModal';
 
 /* ─── Constants ─── */
 
@@ -167,19 +169,18 @@ function CVTemplateThumbnail({ slug }: { slug: string }) {
   );
 }
 
-/* ─── Cover-letter placeholder thumbnail ─── */
+/* ─── Cover-letter thumbnail ─── */
 
-function CLPlaceholderThumbnail({ color }: { color: string }) {
+/**
+ * The real letter, rendered by the same component as the homepage showcase and
+ * the editor. Every cover-letter card used to show one identical grey
+ * placeholder, so the six designs were indistinguishable. The decorative copy
+ * is hidden from assistive tech: the card's button already names the template.
+ */
+function CLTemplateThumbnail({ slug, label }: { slug: string; label: string }) {
   return (
-    <div className="flex h-full w-full flex-col gap-2 bg-white p-5">
-      <div className="h-3 w-1/2 rounded" style={{ background: color }} />
-      <div className="h-1.5 w-1/3 rounded bg-stone-200" />
-      <div className="mt-3 h-px w-full bg-stone-200" />
-      <div className="mt-1 space-y-1.5">
-        {[100, 95, 100, 80, 100, 70].map((w, i) => (
-          <div key={i} className="rounded bg-stone-100" style={{ height: 6, width: `${w}%` }} />
-        ))}
-      </div>
+    <div className="absolute inset-x-0 top-0" aria-hidden="true">
+      <LetterThumb slug={slug} label={label} />
     </div>
   );
 }
@@ -327,6 +328,11 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
   // Canonical English — see tierCanonicalMap. Do NOT localize this.
   const previewTierLabel = previewTemplate ? tierCanonicalMap[previewTemplate.tier] : 'Pro';
   const previewAccess   = previewTemplate ? canUseTemplate(previewTemplate) : false;
+  // Cover letters get their own preview: the CV modal can only render a CV.
+  // A letter slug the renderer does not know falls back to the CV modal's
+  // behaviour rather than opening an empty frame.
+  const previewIsLetter =
+    previewTemplate?.category === TemplateCategory.COVER_LETTER && letterTemplateId(previewTemplate.slug) !== null;
 
   return (
     <>
@@ -516,7 +522,6 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
             {filteredTemplates.map((template) => {
               const isLocked  = user ? !canUseTemplate(template) : false;
               const isCVTemplate = template.category === TemplateCategory.CV;
-              const accentColor  = templateMeta[template.slug]?.color ?? '#2563eb';
 
               return (
                 <Card
@@ -545,11 +550,14 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
                   <div className="relative shrink-0">
                     <div className="relative h-52 overflow-hidden bg-white dark:bg-stone-950">
 
-                      {/* Real template render (CV) or simple placeholder (Cover Letter) */}
+                      {/* Real template render, CV or cover letter */}
                       {isCVTemplate ? (
                         <CVTemplateThumbnail slug={template.slug} />
                       ) : (
-                        <CLPlaceholderThumbnail color={accentColor} />
+                        <CLTemplateThumbnail
+                          slug={template.slug}
+                          label={localizedTemplateField(template.nameLocalized, template.name, locale)}
+                        />
                       )}
 
                       {/* Lock overlay */}
@@ -742,7 +750,21 @@ export default function PublicTemplatesPage(): React.JSX.Element | null {
       )}
 
       {/* Full-screen preview modal — uses real template renderer */}
-      {previewTemplate && (
+      {previewTemplate && previewIsLetter && (
+        <LetterPreviewModal
+          onClose={() => setPreviewTemplate(null)}
+          slug={previewTemplate.slug}
+          templateName={localizedTemplateField(previewTemplate.nameLocalized, previewTemplate.name, locale)}
+          tier={previewTemplate.tier}
+          tierName={t(tierKeyMap[previewTemplate.tier])}
+          userCanAccess={previewAccess}
+          // handleUseTemplate already routes every case: sign-in when signed
+          // out, billing when the plan is too low, the editor otherwise.
+          onSelect={() => handleUseTemplate(previewTemplate)}
+          onUpgrade={() => handleUseTemplate(previewTemplate)}
+        />
+      )}
+      {previewTemplate && !previewIsLetter && (
         <TemplatePreviewModal
           isOpen={true}
           onClose={() => setPreviewTemplate(null)}

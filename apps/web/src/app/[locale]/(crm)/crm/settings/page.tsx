@@ -239,7 +239,7 @@ export default function CRMSettingsPage(): React.JSX.Element {
                   plan === SubscriptionPlan.PRO ? 'text-brand-600 dark:text-brand-400' :
                   'text-violet-600 dark:text-violet-400',
                 )}>
-                  {t('settings_plan_heading', { plan })}
+                  {t('settings_plan_heading', { plan: t(`plan_${plan}`) })}
                 </h3>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

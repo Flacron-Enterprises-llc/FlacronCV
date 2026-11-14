@@ -12,7 +12,12 @@ export class AdminService {
       db.collection('users').where('isActive', '==', true).count().get(),
       db.collection('cvs').where('deletedAt', '==', null).count().get(),
       db.collection('cover_letters').where('deletedAt', '==', null).count().get(),
-      db.collection('support_tickets').where('status', '==', 'open').count().get(),
+      // "Open" = still needs attention: everything that is not resolved or closed.
+      db
+        .collection('support_tickets')
+        .where('status', 'in', ['open', 'in_progress', 'waiting_on_customer'])
+        .count()
+        .get(),
     ]);
 
     const proUsers = await db
@@ -89,36 +94,46 @@ export class AdminService {
     };
   }
 
+  /**
+   * Plan breakdown and revenue for the admin overview and Subscriptions page.
+   *
+   * The plan a user is on lives on `users/{uid}.subscription.plan`. Stripe's
+   * `subscriptions` collection only covers people paying through Stripe, so
+   * plans granted by an operator (CRM "Change plan"), Apple/Google purchases and
+   * comped accounts never appear there; counting only that collection showed
+   * "Pro 0 / Active 0" while several users were on Pro. Counts now come from the
+   * users themselves; revenue still comes from the Stripe records, and the number
+   * of those is reported separately as `payingSubscriptions`.
+   */
   async getRevenueAnalytics() {
     const db = this.firebaseAdmin.firestore;
-    const [snapshot, activeUsers] = await Promise.all([
+    const [snapshot, usersSnap] = await Promise.all([
       db.collection('subscriptions').where('status', '==', 'active').get(),
-      db.collection('users').where('isActive', '==', true).count().get(),
+      db.collection('users').where('isActive', '==', true).select('subscription').get(),
     ]);
 
     let monthlyRevenue = 0;
-    const planBreakdown: Record<string, number> = {};
-
     snapshot.docs.forEach((doc: any) => {
       const sub = doc.data();
-      const amount = sub.amount / 100;
-      const monthly = sub.interval === 'year' ? amount / 12 : amount;
-      monthlyRevenue += monthly;
-      planBreakdown[sub.plan] = (planBreakdown[sub.plan] || 0) + 1;
+      const amount = (Number(sub.amount) || 0) / 100;
+      monthlyRevenue += sub.interval === 'year' ? amount / 12 : amount;
     });
 
-    // Free users never get a `subscriptions` doc, so planBreakdown.free would
-    // always be 0. Derive it from the active-user total minus everyone on a paid
-    // plan so the admin "Free Plan" stat reflects reality.
-    const paidUsers =
-      (planBreakdown.pro || 0) +
-      (planBreakdown.career_accelerator || 0) +
-      (planBreakdown.enterprise || 0);
-    planBreakdown.free = Math.max(0, activeUsers.data().count - paidUsers);
+    const planBreakdown: Record<string, number> = { free: 0, pro: 0, career_accelerator: 0, enterprise: 0 };
+    usersSnap.docs.forEach((doc: any) => {
+      const plan = (doc.data()?.subscription?.plan as string | undefined) ?? 'free';
+      planBreakdown[plan] = (planBreakdown[plan] || 0) + 1;
+    });
+    const activeSubscriptions = Object.entries(planBreakdown)
+      .filter(([plan]) => plan !== 'free')
+      .reduce((sum, [, count]) => sum + count, 0);
 
     return {
       monthlyRevenue: Math.round(monthlyRevenue * 100) / 100,
-      activeSubscriptions: snapshot.size,
+      /** Users on any paid plan, however they got it. */
+      activeSubscriptions,
+      /** Active Stripe subscriptions (the ones that produce monthlyRevenue). */
+      payingSubscriptions: snapshot.size,
       planBreakdown,
     };
   }

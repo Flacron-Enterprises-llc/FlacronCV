@@ -116,7 +116,7 @@ export function DashboardScreen({
         <EmptyState
           title={t('signed_out_title')}
           body={t('signed_out_body')}
-          action={<a className="inline-flex min-h-career-touch cursor-pointer items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white" href={signInHref}>{t('go_sign_in')}</a>}
+          action={<a className="inline-flex min-h-career-touch cursor-pointer items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white dark:text-stone-950" href={signInHref}>{t('go_sign_in')}</a>}
         />
       </div>
     );
@@ -126,7 +126,7 @@ export function DashboardScreen({
       <EmptyState
         title={t('empty_title')}
         body={t('empty_body')}
-        action={<a className="inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white" href={`/${locale}/career/profile`}>{t('open_profile')}</a>}
+        action={<a className="inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white dark:text-stone-950" href={`/${locale}/career/profile`}>{t('open_profile')}</a>}
       />
     );
   }
@@ -155,7 +155,7 @@ export function DashboardScreen({
         <Card accent>
           <h2 className="text-2xl font-semibold text-career-ink">{t('next_title')}</h2>
           <p className="mt-2 text-sm text-career-muted">{t('next_body')}</p>
-          <a className="mt-3 inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white" href={actionHref(action, locale)}>
+          <a className="mt-3 inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white dark:text-stone-950" href={actionHref(action, locale)}>
             {actionLabel(action, t)}
           </a>
         </Card>
@@ -180,7 +180,7 @@ export function DashboardScreen({
         <Card>
           <h2 className="text-lg font-bold text-career-ink">{t('profile_title')}</h2>
           <p className="mt-2 text-sm text-career-ink">{t('confirmed_count', { count: counts.confirmed })}</p>
-          {counts.missingCore.length > 0 ? <p className="mt-1 text-sm text-career-muted">{t('missing_core', { sections: counts.missingCore.join(', ') })}</p> : null}
+          {counts.missingCore.length > 0 ? <p className="mt-1 text-sm text-career-muted">{t('missing_core', { sections: new Intl.ListFormat(locale, { type: 'conjunction' }).format(counts.missingCore.map((type) => factLabel(type, t))) })}</p> : null}
           <ul className="mt-3 flex flex-col gap-2">
             {facts.map((fact) => (
               <li key={fact.id} className="flex items-center gap-2 text-sm text-career-ink">

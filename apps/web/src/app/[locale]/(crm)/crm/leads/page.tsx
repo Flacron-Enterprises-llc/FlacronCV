@@ -1,5 +1,6 @@
 'use client';
-import React from 'react';
+
+import { leadStageLabel, customerSourceLabel } from '@/lib/crm-labels';import React from 'react';
 
 import { useTranslations } from 'next-intl';
 import { useId, useState } from 'react';
@@ -243,8 +244,8 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
                       <td className="px-4 py-3 text-stone-600 dark:text-stone-300">
                         {lead.company ?? '—'}
                       </td>
-                      <td className="px-4 py-3 capitalize text-stone-600 dark:text-stone-300">
-                        {lead.source}
+                      <td className="px-4 py-3 text-stone-600 dark:text-stone-300">
+                        {customerSourceLabel(t, lead.source)}
                       </td>
                       <td className="px-4 py-3">
                         {editingLead?.id === lead.id ? (
@@ -256,7 +257,7 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
                               className="rounded border border-stone-300 px-2 py-1 text-xs dark:border-stone-600 dark:bg-stone-800 dark:text-white"
                             >
                               {Object.values(CRMLeadStage).map((v) => (
-                                <option key={v} value={v}>{v.replace('_', ' ')}</option>
+                                <option key={v} value={v}>{leadStageLabel(t, v)}</option>
                               ))}
                             </select>
                             <button
@@ -404,7 +405,7 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
                     className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-white"
                   >
                     {Object.values(CRMLeadStage).map((v) => (
-                      <option key={v} value={v}>{v.replace('_', ' ')}</option>
+                      <option key={v} value={v}>{leadStageLabel(t, v)}</option>
                     ))}
                   </select>
                 </div>
@@ -417,7 +418,7 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
                     className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-white"
                   >
                     {Object.values(CRMCustomerSource).map((v) => (
-                      <option key={v} value={v}>{v}</option>
+                      <option key={v} value={v}>{customerSourceLabel(t, v)}</option>
                     ))}
                   </select>
                 </div>

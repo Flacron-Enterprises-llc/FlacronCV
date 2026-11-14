@@ -55,7 +55,7 @@ function resolveRange(range?: AnalyticsRange): { from: Date | null; to: Date | n
  * date filter was applied — `inRange` rejected every single record rather than
  * erroring, so the numbers looked plausible and simply were not.
  */
-function toDate(value: unknown): Date | null {
+export function toDate(value: unknown): Date | null {
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
   // Firestore Timestamp — duck-typed so this does not need the Firestore import.
   if (value && typeof (value as { toDate?: unknown }).toDate === 'function') {
@@ -74,6 +74,14 @@ function toDate(value: unknown): Date | null {
     return Number.isNaN(d.getTime()) ? null : d;
   }
   return null;
+}
+
+/**
+ * `toDate` for comparisons and month bucketing: an unreadable value becomes an
+ * Invalid Date, which compares false and lands in no bucket (instead of throwing).
+ */
+export function asDate(value: unknown): Date {
+  return toDate(value) ?? new Date(NaN);
 }
 
 /** True when `value` falls inside the (possibly open-ended) window. */
@@ -126,31 +134,31 @@ export class CRMAnalyticsService {
     const activeCustomers = customers.filter((c: CRMCustomer) => c.status === CRMCustomerStatus.ACTIVE).length;
 
     const newCustomersThisMonth = customers.filter(
-      (c: CRMCustomer) => new Date(c.createdAt) >= startOfMonth,
+      (c: CRMCustomer) => asDate(c.createdAt) >= startOfMonth,
     ).length;
 
     const newCustomersLastMonth = customers.filter((c: CRMCustomer) => {
-      const d = new Date(c.createdAt);
+      const d = asDate(c.createdAt);
       return d >= startOfLastMonth && d <= endOfLastMonth;
     }).length;
 
     const totalRevenue = completedTx.reduce((s: number, t: CRMTransaction) => s + t.amount, 0);
 
     const monthlyRevenue = completedTx
-      .filter((t: CRMTransaction) => new Date(t.date) >= startOfMonth)
+      .filter((t: CRMTransaction) => asDate(t.date) >= startOfMonth)
       .reduce((s: number, t: CRMTransaction) => s + t.amount, 0);
 
     const lastMonthRevenue = completedTx
       .filter((t: CRMTransaction) => {
-        const d = new Date(t.date);
+        const d = asDate(t.date);
         return d >= startOfLastMonth && d <= endOfLastMonth;
       })
       .reduce((s: number, t: CRMTransaction) => s + t.amount, 0);
 
     const totalLeads = leads.length;
-    const newLeadsThisMonth = leads.filter((l: CRMLead) => new Date(l.createdAt) >= startOfMonth).length;
+    const newLeadsThisMonth = leads.filter((l: CRMLead) => asDate(l.createdAt) >= startOfMonth).length;
     const newLeadsLastMonth = leads.filter((l: CRMLead) => {
-      const d = new Date(l.createdAt);
+      const d = asDate(l.createdAt);
       return d >= startOfLastMonth && d <= endOfLastMonth;
     }).length;
 
@@ -198,7 +206,7 @@ export class CRMAnalyticsService {
     const byMonth = new Map<string, { revenue: number; transactions: number; label: string }>();
 
     for (const t of transactions) {
-      const d = new Date(t.date);
+      const d = asDate(t.date);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const label = d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
 
@@ -218,7 +226,7 @@ export class CRMAnalyticsService {
     let anchor = now;
     let months = 12;
     if (from || to) {
-      const start = from ?? new Date(Math.min(...transactions.map((t) => new Date(t.date).getTime()), now.getTime()));
+      const start = from ?? new Date(Math.min(...transactions.map((t) => asDate(t.date).getTime()).filter((ms) => !Number.isNaN(ms)), now.getTime()));
       const end = to ?? now;
       anchor = end;
       months = Math.min(
@@ -267,13 +275,13 @@ export class CRMAnalyticsService {
     }
 
     for (const c of customers) {
-      const d = new Date(c.createdAt);
+      const d = asDate(c.createdAt);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       if (byMonth.has(key)) byMonth.get(key)!.customers += 1;
     }
 
     for (const l of leads) {
-      const d = new Date(l.createdAt);
+      const d = asDate(l.createdAt);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       if (byMonth.has(key)) byMonth.get(key)!.leads += 1;
     }

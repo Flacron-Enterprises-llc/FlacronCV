@@ -2,13 +2,16 @@ import { randomUUID } from 'crypto';
 import type { Pool } from 'pg';
 import {
   DEFAULT_RESUME_TEMPLATE,
+  MIN_LISTING_TEXT,
   composeResume,
+  coverLetterReady,
   defaultActionPackChecklist,
   defaultActionPackNextSteps,
   explainMatch,
+  factLineText,
   isFactType,
   resumeFactIds,
-  writingBody,
+  statedOrganization,
 } from '@flacroncv/career-shared';
 import type {
   ActionPack,
@@ -29,6 +32,8 @@ import { BillingError, isBillingError } from '../billing/errors';
 import type { JsonValue, MeteredResult } from '../metering/metering.service';
 import { MeteringService } from '../metering/metering.service';
 import type { ProfileOwner } from '../profile/career-profile.service';
+import type { TextModel } from '../ai/text-model';
+import { confirmedFullName, generateCoverLetter } from '../writing/cover-letter-generation';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -85,6 +90,7 @@ export class ActionEngineService {
   constructor(
     private readonly pool: Pool,
     private readonly metering: MeteringService,
+    private readonly model: TextModel,
   ) {}
 
   async list(owner: ProfileOwner): Promise<ActionPackList> {
@@ -119,11 +125,20 @@ export class ActionEngineService {
     }
 
     const listing = await this.loadListing(opportunityId);
+    // A title-only paste ("abc") gives the matcher and the letter nothing to work
+    // from; refuse it before anything is charged.
+    if (listing.description.trim().length < MIN_LISTING_TEXT) {
+      throw new BillingError('validation_error', { field: 'opportunityId', reason: 'listing_too_short' });
+    }
     const facts = await this.loadFacts(owner);
     const confirmedFacts = facts.filter((f) => f.confirmation === 'confirmed');
     if (confirmedFacts.length === 0) {
       throw new BillingError('validation_error', { field: 'facts', reason: 'no_confirmed_facts' });
     }
+    // The letter needs the same facts as the writing studio's cover letter.
+    const ready = coverLetterReady(facts);
+    if (!ready.ok) throw new BillingError('validation_error', { field: ready.field, reason: ready.reason });
+    const organization = statedOrganization(listing.organization);
 
     return this.metering.run<ActionPackRow, JsonValue>({
       spender: owner,
@@ -134,38 +149,41 @@ export class ActionEngineService {
       body: { opportunityId },
       requestId: randomUUID(),
       provenance: {
-        promptTemplateVersion: 'action-engine@2026-10-10',
-        outputSchemaVersion: 'action-pack@1',
+        promptTemplateVersion: 'action-engine@2026-11-14',
+        outputSchemaVersion: 'action-pack@2',
         inputVersions: {
           opportunityRevisionId: listing.revision_id,
           profileFactCount: confirmedFacts.length,
         },
       },
       execute: async () => {
-        // 1. Calculate explainable match and skill gaps
-        const matchLines: MatchLine[] = confirmedFacts.map((f) => ({
-          factId: f.id,
-          text: JSON.stringify(f.value),
-          confirmed: true,
-        }));
+        // 1. Explainable match on the facts' readable text (not their JSON, whose
+        // keys would otherwise "match" listing words).
+        const matchLines: MatchLine[] = confirmedFacts
+          .map((f) => ({ factId: f.id, text: factLineText(f.factType, f.value), confirmed: true }))
+          .filter((line) => line.text.length > 0);
         const matchListing: MatchListing = {
           status: listing.status,
           deadline: listing.deadline,
           title: listing.title,
           description: listing.description,
           locations: Array.isArray(listing.locations) ? listing.locations : [],
-          payKnown: Object.keys(listing.compensation ?? {}).length > 0,
-          sponsorship: 'unknown',
+          payKnown: compensationKnown(listing.compensation),
+          sponsorship: sponsorshipOf(listing.eligibility),
         };
         const today = new Date().toISOString().slice(0, 10);
         const explanation = explainMatch(matchListing, matchLines, today);
+        const reasonTokens = [...new Set(explanation.reasons.map((r) => r.token))];
+        const gapTokens = explanation.gaps.map((g) => g.token);
 
         const fit: ActionPackFit = {
           fit: explanation.fit,
           overlap: explanation.overlap,
-          reasons: explanation.reasons.map((r) => `Confirmed experience matching ${r.token}`),
-          gaps: explanation.gaps.map((g) => `Missing direct evidence for ${g.token}`),
+          reasons: reasonTokens.map((token) => `Confirmed experience matching ${token}`),
+          gaps: gapTokens.map((token) => `Missing direct evidence for ${token}`),
           unknowns: explanation.unknowns.map((u) => u.code),
+          reasonTokens,
+          gapTokens,
         };
 
         // 2. Compose Tailored Resume Lines
@@ -176,28 +194,31 @@ export class ActionEngineService {
           factIds: resumeFactIds(resumeBody),
         };
 
-        // 3. Compose Grounded Cover Letter
-        const letterContent = writingBody(confirmedFacts);
-        const intro = `Dear Hiring Team at ${listing.organization || 'the company'},\n\nI am writing to express my strong interest in the ${listing.title} position.`;
-        const bodyText = letterContent.body.length > 0
-          ? `${intro}\n\n${letterContent.body}\n\nI look forward to discussing how my experience aligns with your team's goals.\n\nSincerely,\nCandidate`
-          : `${intro}\n\nBased on my confirmed background, I look forward to contributing to your engineering objectives.\n\nSincerely,\nCandidate`;
+        // 3. The cover letter comes from the same grounded generator as the
+        // writing studio. Without a model this throws provider_unavailable and
+        // the metering run releases the credit: no placeholder letter is saved.
+        const letter = await generateCoverLetter(this.model, facts, {
+          title: listing.title,
+          organization: listing.organization,
+          description: listing.description,
+        });
+        const signer = confirmedFullName(confirmedFacts);
         const coverLetter: ActionPackLetter = {
-          title: `Cover Letter - ${listing.title} at ${listing.organization}`,
-          body: bodyText,
-          factIds: letterContent.factIds.length > 0 ? letterContent.factIds : confirmedFacts.map((f) => f.id),
+          title: organization ? `Cover Letter - ${listing.title} at ${organization}` : `Cover Letter - ${listing.title}`,
+          body: signer ? `${letter.body}\n\n${signer}` : letter.body,
+          factIds: letter.factIds,
         };
 
         // 4. Preparation Checklist
-        const checklist = defaultActionPackChecklist(listing.title, listing.organization);
+        const checklist = defaultActionPackChecklist(listing.title, organization);
 
         // 5. Next Steps
-        const nextSteps = defaultActionPackNextSteps(fit.fit, fit.gaps.length);
+        const nextSteps = defaultActionPackNextSteps(fit.fit, gapTokens.length);
 
         // 6. Freeze Snapshots
         const vacancySnapshot: ActionPackVacancySnapshot = {
           title: listing.title,
-          organization: listing.organization,
+          organization,
           description: listing.description,
           sourceUrl: listing.source_url,
           deadline: listing.deadline,
@@ -360,7 +381,8 @@ export class ActionEngineService {
       id: row.id,
       opportunityId: row.opportunity_id,
       opportunityRevisionId: row.opportunity_revision_id,
-      vacancySnapshot: row.vacancy_snapshot,
+      // Packs saved before the fix may hold the storage marker; it is never shown.
+      vacancySnapshot: { ...row.vacancy_snapshot, organization: statedOrganization(row.vacancy_snapshot.organization) },
       profileSnapshot: row.profile_snapshot,
       fit: row.fit,
       tailoredResume: row.tailored_resume,
@@ -371,4 +393,14 @@ export class ActionEngineService {
       updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
     };
   }
+}
+
+function compensationKnown(value: Record<string, unknown> | null): boolean {
+  if (!isRecord(value)) return false;
+  return Object.values(value).some((entry) => typeof entry === 'number' && Number.isFinite(entry));
+}
+
+function sponsorshipOf(value: Record<string, unknown> | null): MatchListing['sponsorship'] {
+  if (!isRecord(value)) return 'unknown';
+  return value.sponsorship === 'stated_yes' || value.sponsorship === 'stated_no' ? value.sponsorship : 'unknown';
 }

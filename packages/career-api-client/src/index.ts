@@ -54,6 +54,8 @@ export type {
   ScenarioResult,
   ScopeUsage,
   WhiteLabelConfig,
+  BusinessOverview,
+  DeveloperStatus,
   AccountDeletion,
   AccountExport,
   AdminAuditEntry,

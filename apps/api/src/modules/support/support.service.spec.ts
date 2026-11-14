@@ -208,3 +208,47 @@ describe('SupportService', () => {
     });
   });
 });
+
+// ─── Customer display name on tickets and replies ────────────────────────────
+describe('customer display name', () => {
+  function customerApi(service: SupportService) {
+    return new SupportController(service, { logUserAction: jest.fn() } as any);
+  }
+
+  it('labels the opening message with the profile name when the token has none', async () => {
+    const { service, firestore } = makeService();
+    await firestore.collection('users').doc('owner-1').set({ displayName: 'Amara Whitfield' });
+    const ticket = await service.createTicket('owner-1', 'owner-1@example.com', '', {
+      subject: 'Need help',
+      category: TicketCategory.GENERAL,
+      message: 'Hello',
+    });
+    expect(ticket.userDisplayName).toBe('Amara Whitfield');
+    const [first] = await service.getMessages(ticket.id);
+    expect(first.authorName).toBe('Amara Whitfield');
+  });
+
+  it('labels a customer reply with the display name, not the raw email', async () => {
+    const { service, firestore } = makeService();
+    await firestore.collection('users').doc('owner-1').set({ displayName: 'Amara Whitfield' });
+    const ticket = await seedTicket(service);
+
+    const reply = await customerApi(service).addMessage(
+      { uid: 'owner-1', email: 'owner-1@example.com' } as any,
+      ticket.id,
+      { content: 'More detail' },
+    );
+    expect(reply.authorName).toBe('Amara Whitfield');
+  });
+
+  it('falls back to the email only when no name is known', async () => {
+    const { service } = makeService();
+    const ticket = await seedTicket(service);
+    const reply = await customerApi(service).addMessage(
+      { uid: 'owner-1', email: 'owner-1@example.com' } as any,
+      ticket.id,
+      { content: 'More detail' },
+    );
+    expect(reply.authorName).toBe('owner-1@example.com');
+  });
+});

@@ -1,5 +1,6 @@
 'use client';
-import React from 'react';
+
+import { customerStatusLabel, customerSourceLabel } from '@/lib/crm-labels';import React from 'react';
 
 import { useState, useCallback, useId } from 'react';
 import { useTranslations } from 'next-intl';
@@ -284,7 +285,7 @@ export default function CRMCustomersPage(): React.JSX.Element | null {
                             {customer.company ?? '—'} · ${customer.totalRevenue.toLocaleString()}
                           </p>
                           <p className="text-xs text-stone-500 lg:hidden dark:text-stone-400">
-                            <span className="capitalize">{customer.source}</span> ·{' '}
+                            <span>{customerSourceLabel(t, customer.source)}</span> ·{' '}
                             {safeFormat(customer.lastActivity, 'MMM d, yyyy')} ·{' '}
                             {safeFormat(customer.createdAt, 'MMM d, yyyy')}
                           </p>
@@ -297,7 +298,7 @@ export default function CRMCustomersPage(): React.JSX.Element | null {
                         <CRMStatusBadge value={customer.status} type="customer" />
                       </td>
                       <td className="hidden px-4 py-3 capitalize text-stone-600 lg:table-cell sm:px-6 dark:text-stone-300">
-                        {customer.source}
+                        {customerSourceLabel(t, customer.source)}
                       </td>
                       <td className="hidden px-4 py-3 font-medium text-stone-900 md:table-cell sm:px-6 dark:text-white">
                         ${customer.totalRevenue.toLocaleString()}
@@ -426,7 +427,7 @@ export default function CRMCustomersPage(): React.JSX.Element | null {
                     className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-white"
                   >
                     {Object.values(CRMCustomerStatus).map((v) => (
-                      <option key={v} value={v} className="capitalize">{v}</option>
+                      <option key={v} value={v}>{customerStatusLabel(t, v)}</option>
                     ))}
                   </select>
                 </div>
@@ -444,7 +445,7 @@ export default function CRMCustomersPage(): React.JSX.Element | null {
                     className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-white"
                   >
                     {Object.values(CRMCustomerSource).map((v) => (
-                      <option key={v} value={v} className="capitalize">{v}</option>
+                      <option key={v} value={v}>{customerSourceLabel(t, v)}</option>
                     ))}
                   </select>
                 </div>

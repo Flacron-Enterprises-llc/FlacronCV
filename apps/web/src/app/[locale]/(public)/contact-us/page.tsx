@@ -4,7 +4,8 @@ import React from 'react';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
+import { fieldForServerMessage, isValidContactEmail, type ContactField } from './contact-validation';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { useAuth } from '@/providers/AuthProvider';
 import { useRouter } from '@/i18n/routing';
@@ -65,15 +66,31 @@ export default function ContactUsPage(): React.JSX.Element | null {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [failed, setFailed] = useState(false);
+  // A validation problem stays on the form, next to the field it concerns. The
+  // full "We couldn't send" card is for failures the visitor cannot fix by
+  // editing (network, server); it used to replace the form on a 400 too, which
+  // threw away what they had typed from view for a one-character typo.
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<ContactField, string>>>({});
+  const [formError, setFormError] = useState<string | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    if (name in fieldErrors) setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+    setFormError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValidContactEmail(form.email)) {
+      setFieldErrors({ email: t('email_invalid') });
+      document.getElementById('email')?.focus();
+      return;
+    }
+    setFieldErrors({});
+    setFormError(null);
     setLoading(true);
     setFailed(false);
     const categoryLabel = labels[form.category];
@@ -95,6 +112,16 @@ export default function ContactUsPage(): React.JSX.Element | null {
       setSent(true);
       toast.success(t('success_title'));
     } catch (err) {
+      if (err instanceof ApiError && err.status === 400) {
+        const field = fieldForServerMessage(err.message);
+        if (field) {
+          setFieldErrors({ [field]: field === 'email' ? t('email_invalid') : t('field_invalid') });
+          document.getElementById(field)?.focus();
+        } else {
+          setFormError(formatApiError(err, t('error')));
+        }
+        return;
+      }
       setFailed(true);
       toast.error(formatApiError(err, t('error')));
     } finally {
@@ -211,8 +238,9 @@ export default function ContactUsPage(): React.JSX.Element | null {
                 >
                   {t('info_email')}
                 </a>
+                {/* A button label, not the "Please try again." sentence above it. */}
                 <Button variant="secondary" className="mt-6" onClick={() => setFailed(false)}>
-                  {t('error_retry')}
+                  {t('retry_button')}
                 </Button>
               </Card>
             ) : (
@@ -230,6 +258,7 @@ export default function ContactUsPage(): React.JSX.Element | null {
                       onChange={handleChange}
                       placeholder={t('name_placeholder')}
                       required
+                      error={fieldErrors.name}
                     />
                     <Input
                       id="email"
@@ -240,6 +269,7 @@ export default function ContactUsPage(): React.JSX.Element | null {
                       onChange={handleChange}
                       placeholder={t('email_placeholder')}
                       required
+                      error={fieldErrors.email}
                     />
                   </div>
 
@@ -280,9 +310,23 @@ export default function ContactUsPage(): React.JSX.Element | null {
                       placeholder={t('message_placeholder')}
                       rows={5}
                       required
-                      className="input-field resize-none"
+                      aria-invalid={fieldErrors.message ? true : undefined}
+                      aria-describedby={fieldErrors.message ? 'message-error' : undefined}
+                      className={`input-field resize-none${fieldErrors.message ? ' border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                     />
+                    {fieldErrors.message ? (
+                      <p id="message-error" className="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                        {fieldErrors.message}
+                      </p>
+                    ) : null}
                   </div>
+
+                  {formError ? (
+                    <p role="alert" className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                      {formError}
+                    </p>
+                  ) : null}
 
                   <Button
                     type="submit"

@@ -125,19 +125,19 @@ export const DISCLAIMER: LegalDocument = {
         'These are informational tools and should not be treated as a guarantee or individualized professional employment-service representation.',
       ),
     ]),
-    section('app-wide', 'Required App-Wide Disclaimer', [
-      p('Display on relevant ATS and AI screens:'),
+    section('app-wide', 'In-App Disclaimer', [
+      p('The following notice appears on relevant ATS and AI screens:'),
       p(
         'AI-generated suggestions may contain errors. Review all content before submitting your CV. ATS scores are estimates and do not guarantee interviews, rankings, job offers, or employment.',
       ),
     ]),
-    section('export', 'Required Export Disclaimer', [
-      p('Where appropriate, exported documents may be accompanied by:'),
+    section('export', 'Export Disclaimer', [
+      p('Where appropriate, exported documents may be accompanied by the following notice:'),
       p(
         'This document was created using AI-assisted tools. The user is responsible for reviewing all information for accuracy before submission.',
       ),
       p(
-        "This disclaimer does not necessarily need to appear directly on the user's CV unless FlacronCV chooses to require it.",
+        'This notice is not added to the content of your CV unless FlacronCV states otherwise.',
       ),
     ]),
     section('contact', 'Contact', [
@@ -148,7 +148,7 @@ export const DISCLAIMER: LegalDocument = {
       p('United States'),
       p('Phone: 929-990-1182'),
       p('FlacronCV Email: contact@flacroncv.com'),
-      p('Parent Company Email: Contact@flacronenterprises.com'),
+      p('Parent Company Email: contact@flacronenterprises.com'),
       p('Powered by Flacron Engine'),
     ]),
   ],

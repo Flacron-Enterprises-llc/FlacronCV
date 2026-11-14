@@ -631,7 +631,11 @@ export class PaymentService {
     // letting Stripe's "No such customer" escape as a 500.
     const customerId = await this.liveCustomerId(user.subscription?.stripeCustomerId);
     if (!customerId) {
-      throw new BadRequestException('No active subscription found. Please subscribe to a plan first.');
+      // `code` lets the web show this in the user's language.
+      throw new BadRequestException({
+        code: 'NO_SUBSCRIPTION',
+        message: 'No active subscription found. Please subscribe to a plan first.',
+      });
     }
 
     // FlacronCV's own portal configuration: the account default is shared by

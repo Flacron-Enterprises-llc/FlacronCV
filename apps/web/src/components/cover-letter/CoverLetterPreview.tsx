@@ -1,9 +1,18 @@
 'use client';
-import React from 'react';
-import { useTranslations, useLocale } from 'next-intl';
+import React, { useEffect, useState } from 'react';
+import { useLocale, useMessages } from 'next-intl';
 import { useAuth } from '@/providers/AuthProvider';
 import type { CoverLetter } from '@flacroncv/shared-types';
 import type { CLLabels } from './templates/types';
+import {
+  buildCoverLetterLabels,
+  formatLetterDate,
+  isLetterLocale,
+  isRtlLetterLocale,
+  resolveLetterLocale,
+  type CoverLetterWithLocale,
+  type LetterLocale,
+} from './letter-locale';
 import ClassicTemplate    from './templates/ClassicTemplate';
 import ModernTemplate     from './templates/ModernTemplate';
 import MinimalistTemplate from './templates/MinimalistTemplate';
@@ -42,11 +51,59 @@ export const COVER_LETTER_TEMPLATES = [
   { id: 'executive',  nameKey: 'tpl_executive',  descKey: 'tpl_executive_desc',  defaultColor: '#0c0c0c', tier: SubscriptionPlan.ENTERPRISE },
 ];
 
-const RTL_LOCALES = ['ar', 'ur'];
+type Messages = Record<string, unknown>;
+
+/**
+ * The `coverLetters` messages of the LETTER's language.
+ *
+ * Same language as the interface (the common case): the messages next-intl
+ * already has. Otherwise that locale's file is loaded on demand — the same
+ * per-locale JSON the server loads — so only letters written in another
+ * language pay for a second message file. Until it arrives the interface
+ * strings stand in, which is a moment's flash rather than a blank letter.
+ */
+function useLetterMessages(letterLocale: LetterLocale, uiLocale: string): Messages {
+  const uiMessages = (useMessages() as Messages).coverLetters as Messages | undefined;
+  const [loaded, setLoaded] = useState<{ locale: LetterLocale; messages: Messages } | null>(null);
+
+  useEffect(() => {
+    if (letterLocale === uiLocale) return;
+    let cancelled = false;
+    import(`../../../public/locales/${letterLocale}/common.json`)
+      .then((mod: { default?: Messages } & Messages) => {
+        const all = (mod.default ?? mod) as Messages;
+        if (!cancelled) setLoaded({ locale: letterLocale, messages: (all.coverLetters ?? {}) as Messages });
+      })
+      .catch(() => {
+        /* keep the interface strings — still a complete, readable letter */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [letterLocale, uiLocale]);
+
+  if (letterLocale !== uiLocale && loaded?.locale === letterLocale) return loaded.messages;
+  return uiMessages ?? {};
+}
+
+/**
+ * The letter's language and its labels — for the preview and for the DOCX
+ * export, which must be given the same labels (`exportCoverLetterToDocx`
+ * cannot read messages itself).
+ */
+export function useCoverLetterLabels(
+  coverLetter: CoverLetter | null,
+): { letterLocale: LetterLocale; labels: CLLabels } {
+  const locale = useLocale();
+  // Null while the letter loads: the interface language stands in.
+  const letterLocale = coverLetter
+    ? resolveLetterLocale(coverLetter as CoverLetterWithLocale, locale)
+    : isLetterLocale(locale) ? locale : 'en';
+  const labels = buildCoverLetterLabels(useLetterMessages(letterLocale, locale));
+  return { letterLocale, labels };
+}
 
 export default function CoverLetterPreview({ coverLetter, senderName, senderEmail }: Props) {
-  const t = useTranslations('coverLetters');
-  const locale = useLocale();
   const { user } = useAuth();
   // Graceful tier fallback: a premium template on a downgraded account renders as
   // the free default (stored id untouched; server blocks new premium selections).
@@ -56,32 +113,17 @@ export default function CoverLetterPreview({ coverLetter, senderName, senderEmai
   );
   const Template = (TEMPLATES as any)[templateId] ?? ModernTemplate;
 
-  // Locale-aware date so the letter's date matches its language.
-  let today: string;
-  try {
-    today = new Date().toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' });
-  } catch {
-    today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  }
-
-  const labels: CLLabels = {
-    dear: t('cl_dear'),
-    hiringManager: t('cl_hiring_manager'),
-    placeholder: t('cl_placeholder'),
-    yourName: t('cl_your_name'),
-    re: t('cl_re'),
-    subjectApplication: t('cl_subject_application'),
-    position: t('cl_position'),
-    closingSincerely: t('closing_sincerely'),
-    closingBestRegards: t('closing_best_regards'),
-    closingRegards: t('closing_regards'),
-    closingEnthusiasm: t('closing_enthusiasm'),
-    closingFaithfully: t('closing_faithfully'),
-    closingRespectfully: t('closing_respectfully'),
-  };
+  // Labels, date and direction follow the language the letter is written in,
+  // not the interface: an English letter viewed in /ar stays an English letter.
+  const { letterLocale, labels } = useCoverLetterLabels(coverLetter);
+  const today = formatLetterDate(letterLocale);
 
   return (
-    <div id="cl-preview-content" dir={RTL_LOCALES.includes(locale) ? 'rtl' : 'ltr'}>
+    <div
+      id="cl-preview-content"
+      lang={letterLocale}
+      dir={isRtlLetterLocale(letterLocale) ? 'rtl' : 'ltr'}
+    >
       <Template
         coverLetter={coverLetter}
         senderName={senderName}

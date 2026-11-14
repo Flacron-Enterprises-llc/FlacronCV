@@ -12,7 +12,10 @@ import { buildIcsEvent, downloadIcs } from '@/lib/ics';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
+import Modal from '@/components/ui/Modal';
 import JobFormModal from '@/components/jobs/JobFormModal';
+import { followUpState } from '@/components/jobs/follow-up';
+import { Link } from '@/i18n/routing';
 import {
   Plus,
   Briefcase,
@@ -29,10 +32,13 @@ import {
   CalendarClock,
   CalendarPlus,
   BellRing,
+  FileText,
+  Mail,
+  SearchX,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
-import { JobApplication, JobStatus } from '@flacroncv/shared-types';
+import { CoverLetter, CV, JobApplication, JobStatus } from '@flacroncv/shared-types';
 import { TOUR_TARGETS } from '@/lib/app-tour';
 
 const STATUS_ORDER: JobStatus[] = [
@@ -80,6 +86,7 @@ const SORTERS: Record<SortKey, (a: JobApplication, b: JobApplication) => number>
 
 export default function JobsPage(): React.JSX.Element | null {
   const t = useTranslations('jobs');
+  const tCommon = useTranslations('common');
   const formatApiError = useApiErrorMessage();
   const formatDate = useFormatDate();
   const { user } = useAuth();
@@ -91,12 +98,29 @@ export default function JobsPage(): React.JSX.Element | null {
   const [showArchived, setShowArchived] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<JobApplication | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<JobApplication | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const { data: jobs, isLoading, isError, refetch } = useQuery({
     queryKey: ['jobs'],
     queryFn: () => api.get<JobApplication[]>('/jobs'),
     enabled: !!user,
   });
+
+  // Titles for the documents linked to each application. Same keys and shape
+  // as the CV / cover-letter lists, so these are usually already cached.
+  const { data: cvsData } = useQuery({
+    queryKey: ['cvs'],
+    queryFn: () => api.get<{ items: CV[] }>('/cvs?limit=100'),
+    enabled: !!user,
+  });
+  const { data: lettersData } = useQuery({
+    queryKey: ['cover-letters'],
+    queryFn: () => api.get<{ items: CoverLetter[] }>('/cover-letters?limit=100'),
+    enabled: !!user,
+  });
+  const cvTitles = new Map((cvsData?.items ?? []).map((cv) => [cv.id, cv.title]));
+  const letterTitles = new Map((lettersData?.items ?? []).map((cl) => [cl.id, cl.title]));
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['jobs'] });
 
@@ -123,6 +147,16 @@ export default function JobsPage(): React.JSX.Element | null {
     )
     .sort(SORTERS[sort]);
 
+  // Applications exist but the current view hides all of them (status tab,
+  // search, or the archived toggle). "No applications yet — add your first"
+  // would be false here; offer to clear the view instead.
+  const hasApplications = (jobs ?? []).length > 0;
+  const clearFilters = () => {
+    setFilter('all');
+    setSearch('');
+    setShowArchived(false);
+  };
+
   // Optimistic inline status change: the <select> reflects the new value
   // immediately (writing it into the cache), rolls back on failure, and
   // reconciles with the server on settle — so it never snaps back to the stale
@@ -145,18 +179,20 @@ export default function JobsPage(): React.JSX.Element | null {
     onSettled: invalidate,
   });
 
-  const handleDelete = async (job: JobApplication) => {
-    // Name the application in the prompt so the user can see exactly which one
-    // they are about to remove.
-    if (!window.confirm(t('delete_confirm_named', { position: job.position, company: job.company }))) {
-      return;
-    }
+  /** Confirmed in the styled modal (RTL/dark aware), not window.confirm. */
+  const confirmDelete = async () => {
+    const job = deleteTarget;
+    if (!job || deleting) return;
+    setDeleting(true);
     try {
       await api.delete(`/jobs/${job.id}`);
       invalidate();
       toast.success(t('deleted'));
+      setDeleteTarget(null);
     } catch (e) {
       toast.error(formatApiError(e, t('save_error')));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -319,6 +355,15 @@ export default function JobsPage(): React.JSX.Element | null {
             {t('retry')}
           </Button>
         </Card>
+      ) : filtered.length === 0 && hasApplications ? (
+        <Card className="flex flex-col items-center justify-center py-16 text-center">
+          <SearchX className="mb-4 h-12 w-12 text-stone-300 dark:text-stone-600" />
+          <h3 className="text-lg font-semibold text-stone-900 dark:text-white">{t('no_match_title')}</h3>
+          <p className="mt-1 max-w-sm text-sm text-stone-500 dark:text-stone-400">{t('no_match_desc')}</p>
+          <Button className="mt-6" variant="secondary" onClick={clearFilters}>
+            {t('clear_filters')}
+          </Button>
+        </Card>
       ) : filtered.length === 0 ? (
         <Card className="flex flex-col items-center justify-center py-16 text-center">
           <Briefcase className="mb-4 h-12 w-12 text-stone-300 dark:text-stone-600" />
@@ -378,12 +423,31 @@ export default function JobsPage(): React.JSX.Element | null {
                         {t('interview_on', { date: formatDate(job.interviewDate) })}
                       </span>
                     )}
-                    {job.followUpDate && (
-                      <span className="flex items-center gap-1">
-                        <BellRing className="h-3.5 w-3.5" />
-                        {t('follow_up_on', { date: formatDate(job.followUpDate) })}
-                      </span>
-                    )}
+                    {job.followUpDate && (() => {
+                      // Only a live application needs chasing: a reminder left
+                      // on an archived, rejected or accepted one is history.
+                      const live =
+                        !job.archived && job.status !== JobStatus.REJECTED && job.status !== JobStatus.ACCEPTED;
+                      const due = live ? followUpState(job.followUpDate) : null;
+                      const date = formatDate(job.followUpDate);
+                      // Colour plus words: the state is in the text, not only the hue.
+                      return due === 'overdue' ? (
+                        <span className="flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                          <BellRing className="h-3.5 w-3.5" aria-hidden="true" />
+                          {t('follow_up_overdue', { date })}
+                        </span>
+                      ) : due === 'today' ? (
+                        <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                          <BellRing className="h-3.5 w-3.5" aria-hidden="true" />
+                          {t('follow_up_today')}
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <BellRing className="h-3.5 w-3.5" aria-hidden="true" />
+                          {t('follow_up_on', { date })}
+                        </span>
+                      );
+                    })()}
                     {job.jobUrl && (
                       <a
                         href={job.jobUrl}
@@ -396,6 +460,35 @@ export default function JobsPage(): React.JSX.Element | null {
                       </a>
                     )}
                   </div>
+                  {/* The documents actually sent for this application. A link
+                      to a since-deleted document is simply not shown. */}
+                  {((job.linkedCVId && cvTitles.has(job.linkedCVId)) ||
+                    (job.linkedCoverLetterId && letterTitles.has(job.linkedCoverLetterId))) && (
+                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                      {job.linkedCVId && cvTitles.has(job.linkedCVId) && (
+                        <Link
+                          href={`/cv/${job.linkedCVId}`}
+                          className="flex min-w-0 items-center gap-1 text-brand-600 hover:underline dark:text-brand-400"
+                        >
+                          <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          <span className="truncate">
+                            {t('linked_cv_link', { title: cvTitles.get(job.linkedCVId) ?? '' })}
+                          </span>
+                        </Link>
+                      )}
+                      {job.linkedCoverLetterId && letterTitles.has(job.linkedCoverLetterId) && (
+                        <Link
+                          href={`/cover-letters/${job.linkedCoverLetterId}`}
+                          className="flex min-w-0 items-center gap-1 text-brand-600 hover:underline dark:text-brand-400"
+                        >
+                          <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          <span className="truncate">
+                            {t('linked_cover_letter_link', { title: letterTitles.get(job.linkedCoverLetterId) ?? '' })}
+                          </span>
+                        </Link>
+                      )}
+                    </div>
+                  )}
                   {job.notes && (
                     <p className="mt-2 whitespace-pre-wrap break-words text-sm text-stone-500 dark:text-stone-400">
                       {job.notes}
@@ -447,7 +540,7 @@ export default function JobsPage(): React.JSX.Element | null {
                     <Archive className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => handleDelete(job)}
+                    onClick={() => setDeleteTarget(job)}
                     aria-label={t('delete')}
                     title={t('delete')}
                     className="rounded-lg p-1.5 text-stone-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
@@ -462,6 +555,27 @@ export default function JobsPage(): React.JSX.Element | null {
       )}
 
       <JobFormModal open={modalOpen} onClose={() => setModalOpen(false)} job={editing} />
+
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={() => !deleting && setDeleteTarget(null)}
+        title={t('delete_confirm_title')}
+        size="sm"
+      >
+        {/* Names the application so the user sees exactly which one goes. */}
+        <p className="text-sm text-stone-600 dark:text-stone-400">
+          {deleteTarget &&
+            t('delete_confirm_named', { position: deleteTarget.position, company: deleteTarget.company })}
+        </p>
+        <div className="mt-6 flex justify-end gap-3">
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+            {tCommon('cancel')}
+          </Button>
+          <Button variant="danger" loading={deleting} onClick={() => void confirmDelete()}>
+            {t('delete')}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

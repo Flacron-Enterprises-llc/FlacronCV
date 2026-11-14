@@ -11,6 +11,7 @@ import { getPostLoginRedirect } from '@/lib/post-auth-redirect';
 import { currentUserRole } from '@/lib/current-user-role';
 import { authErrorKey, isAccountExistsError, accountExistsEmail } from '@/lib/auth-errors';
 import { recordAcceptanceAfterSignup } from '@/lib/legal-acceptance';
+import { useHydrated } from '@/hooks/useHydrated';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import GoogleIcon from '@/components/shared/GoogleIcon';
@@ -37,6 +38,11 @@ function RegisterForm(): React.JSX.Element {
   const [pendingSignup, setPendingSignup] = useState<PendingSignup>(null);
   const redirectHandled = useRef(false);
   const signupStarted = useRef(false);
+  // Errors about a specific field are shown under it (aria-describedby), not
+  // only in a toast. Everything else (network, rate limit…) stays a toast.
+  const [fieldError, setFieldError] = useState<{ field: 'email' | 'password'; key: string } | null>(null);
+  // As on login: no native GET submit (password in the URL) before hydration.
+  const hydrated = useHydrated();
 
   // Show Google auth error stored by a previous attempt (account-exists case)
   useEffect(() => {
@@ -76,8 +82,9 @@ function RegisterForm(): React.JSX.Element {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFieldError(null);
     if (password.length < 8) {
-      toast.error(t('password_min'));
+      setFieldError({ field: 'password', key: 'password_min' });
       return;
     }
     setPendingSignup('password');
@@ -102,7 +109,10 @@ function RegisterForm(): React.JSX.Element {
       redirectHandled.current = true;
       router.push('/verify-email');
     } catch (error) {
-      toast.error(t(authErrorKey(error)));
+      const key = authErrorKey(error);
+      if (key === 'errors.email_in_use' || key === 'errors.invalid_email') setFieldError({ field: 'email', key });
+      else if (key === 'errors.weak_password') setFieldError({ field: 'password', key });
+      else toast.error(t(key));
     } finally {
       setFormLoading(false);
     }
@@ -157,7 +167,8 @@ function RegisterForm(): React.JSX.Element {
           <div className="w-full border-t border-stone-200 dark:border-stone-700" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="bg-white px-4 text-stone-500 dark:bg-black dark:text-stone-400">
+          {/* Matches the dark page (stone-950) so the label is not a black box. */}
+          <span className="bg-white px-4 text-stone-500 dark:bg-stone-950 dark:text-stone-400">
             {t('or_continue')}
           </span>
         </div>
@@ -165,9 +176,49 @@ function RegisterForm(): React.JSX.Element {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input id="name" type="text" autoComplete="name" label={t('name')} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('name_placeholder')} required />
-        <Input id="email" type="email" autoComplete="email" label={t('email')} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required />
-        <Input id="password" type="password" autoComplete="new-password" label={t('password')} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" hint={t('password_hint')} required />
-        <Button type="submit" loading={formLoading} disabled={googleLoading} className="w-full" size="lg">
+        <div>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            label={t('email')}
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setFieldError(null);
+            }}
+            error={fieldError?.field === 'email' ? t(fieldError.key) : undefined}
+            placeholder="you@example.com"
+            // Addresses are always left-to-right; without this an RTL page mirrors them.
+            dir="ltr"
+            required
+          />
+          {fieldError?.key === 'errors.email_in_use' && (
+            // Someone who deleted their account can neither sign in nor
+            // re-register with that address; support is their way forward.
+            <p className="mt-1 text-xs">
+              <Link href="/contact-us" className="font-medium text-brand-600 underline underline-offset-2 hover:text-brand-700">
+                {t('contact_support')}
+              </Link>
+            </p>
+          )}
+        </div>
+        <Input
+          id="password"
+          type="password"
+          autoComplete="new-password"
+          label={t('password')}
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setFieldError(null);
+          }}
+          error={fieldError?.field === 'password' ? t(fieldError.key) : undefined}
+          placeholder="••••••••"
+          hint={t('password_hint')}
+          required
+        />
+        <Button type="submit" loading={formLoading} disabled={googleLoading || !hydrated} className="w-full" size="lg">
           {t('register_btn')}
         </Button>
       </form>

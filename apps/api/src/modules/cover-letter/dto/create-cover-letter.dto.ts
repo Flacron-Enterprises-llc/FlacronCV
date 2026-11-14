@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { CoverLetterStatus, CreateCoverLetterData } from '@flacroncv/shared-types';
 import { CoverLetterStylingDto } from './cover-letter-styling.dto';
+import { LETTER_LOCALES, LetterLocale } from '../letter-locale';
 
 const TONES = ['professional', 'friendly', 'enthusiastic', 'formal'] as const;
 
@@ -62,6 +63,16 @@ export class CreateCoverLetterDto implements CreateCoverLetterData {
   @IsString()
   @MaxLength(40)
   language?: string;
+
+  /**
+   * Locale code of the language the letter is WRITTEN in (not the interface
+   * language). Drives the salutation/closing labels, date format and text
+   * direction of the preview and export. Optional: letters created without it
+   * (older clients, mobile) have their language inferred by the web client.
+   */
+  @IsOptional()
+  @IsIn(LETTER_LOCALES, { message: `letterLocale must be one of: ${LETTER_LOCALES.join(', ')}` })
+  letterLocale?: LetterLocale;
 
   /** Mobile compatibility only (`apps/mobile/.../cover-letters/new.tsx`). Intentionally not persisted. */
   @IsOptional()

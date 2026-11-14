@@ -33,6 +33,19 @@ import { User } from '@flacroncv/shared-types';
 import { retryPendingLegalAcceptance } from '@/lib/legal-acceptance';
 import { createInFlight } from '@/lib/in-flight';
 import { fcgeReset } from '@/lib/fcge';
+import { useOptionalTheme } from '@/providers/ThemeProvider';
+
+const THEMES = ['light', 'dark', 'system'] as const;
+type ThemeValue = (typeof THEMES)[number];
+const isThemeValue = (v: unknown): v is ThemeValue => THEMES.includes(v as ThemeValue);
+
+/**
+ * How long after an intentional sign-out the dashboard guard treats a missing
+ * user as "signed out on purpose" (go home) rather than "session lost" (go to
+ * login with a callbackUrl). Long enough to cover the redirect, short enough
+ * that a later visit to a protected page still asks the user to sign in.
+ */
+const INTENTIONAL_SIGN_OUT_WINDOW_MS = 10_000;
 
 interface AuthContextType {
   firebaseUser: FirebaseUser | null;
@@ -56,8 +69,20 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
-  logout: () => Promise<void>;
+  /**
+   * Signs out on purpose. `skipAudit` skips the sign-out audit call — use it
+   * after account deletion, when the API no longer accepts this session and
+   * the call could only fail with a 401.
+   */
+  logout: (options?: { skipAudit?: boolean }) => Promise<void>;
+  /**
+   * True right after {@link logout}: lets route guards send the user home
+   * instead of to `/login?callbackUrl=<page they just left>`.
+   */
+  signedOutIntentionally: () => boolean;
   resetPassword: (email: string) => Promise<void>;
+  /** Reset email for the signed-in user's own address; rejects if it was not sent. */
+  resetOwnPassword: () => Promise<void>;
   resendVerification: () => Promise<void>;
   /** Re-reads the Firebase user and resolves to the FRESH verified state, so
    *  callers can tell "checked, still unverified" from "checked, now verified". */
@@ -121,6 +146,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // race and both can take the API's new-user branch (duplicate verification
   // emails + REGISTERED audit rows). Concurrent callers share one request.
   const postVerify = useRef(createInFlight<User>()).current;
+  const signedOutAt = useRef<number | null>(null);
+
+  // The account's saved theme is the source of truth: the settings page shows
+  // it in its select, and with "Reject non-essential" nothing is remembered in
+  // this browser at all. It is applied once per signed-in account (on the
+  // first successful sync), so a later refresh cannot undo a pick the user
+  // just made. `themeAccountUid` also gates the write-back effect below.
+  const themeCtx = useOptionalTheme();
+  const setThemeRef = useRef(themeCtx?.setTheme);
+  setThemeRef.current = themeCtx?.setTheme;
+  const themeAccountUid = useRef<string | null>(null);
+  const applyAccountTheme = useCallback((account: User) => {
+    if (themeAccountUid.current === account.uid) return;
+    themeAccountUid.current = account.uid;
+    const saved = account.preferences?.theme;
+    if (isThemeValue(saved)) setThemeRef.current?.(saved);
+  }, []);
 
   const clearRetry = useCallback(() => {
     if (retryTimer.current) clearTimeout(retryTimer.current);
@@ -132,6 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const userData = await postVerify('verify', () => api.post<User>('/auth/verify'));
         setUser(userData);
+        applyAccountTheme(userData);
         setDegraded(false);
         hasRealAccount.current = true;
         setPlaceholderAccount(false);
@@ -160,8 +203,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [clearRetry, postVerify],
+    [clearRetry, postVerify, applyAccountTheme],
   );
+
+  // Write a theme change made anywhere (header toggle, settings select) back
+  // to the account, so the next visit — on any device — applies the same one.
+  // Skipped until the account's own theme has been applied, so the value read
+  // from this browser at startup can never overwrite the saved preference.
+  const currentTheme = themeCtx?.theme;
+  useEffect(() => {
+    if (!user || degraded || placeholderAccount || !currentTheme) return;
+    if (themeAccountUid.current !== user.uid) return;
+    if (user.preferences?.theme === currentTheme) return;
+    const uid = user.uid;
+    setUser((prev) =>
+      prev && prev.uid === uid
+        ? { ...prev, preferences: { ...prev.preferences, theme: currentTheme as User['preferences']['theme'] } }
+        : prev,
+    );
+    // Best-effort: the theme already applies locally; a failed write only
+    // means the next visit starts from the previously saved one.
+    api.patch('/users/me/preferences', { theme: currentTheme }).catch(() => {});
+  }, [currentTheme, user, degraded, placeholderAccount]);
 
   useEffect(() => {
     syncRef.current = syncUser;
@@ -182,6 +245,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       hasRealAccount.current = false;
 
       if (fbUser) {
+        signedOutAt.current = null;
         await syncUser(fbUser);
       } else {
         setUser(null);
@@ -296,19 +360,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = async () => {
+  const logout = async (options: { skipAudit?: boolean } = {}) => {
     if (!auth) return;
     // Record the sign-out BEFORE signing out — afterwards there is no ID token
     // left to authenticate the call. Awaited but non-fatal: sign-out must
     // proceed even if the audit write fails.
-    await api.post('/auth/logout').catch(() => {});
+    if (!options.skipAudit) await api.post('/auth/logout').catch(() => {});
+    // Set before the user is cleared: the dashboard guard reacts to `user`
+    // becoming null and must already know this was deliberate.
+    signedOutAt.current = Date.now();
+    themeAccountUid.current = null;
     fcgeReset();
     await signOut(auth);
     setUser(null);
   };
 
+  const signedOutIntentionally = useCallback(
+    () =>
+      signedOutAt.current !== null &&
+      Date.now() - signedOutAt.current < INTENTIONAL_SIGN_OUT_WINDOW_MS,
+    [],
+  );
+
+  // Anonymous "forgot password": the API answers the same whether or not the
+  // address has an account (and whether or not the email went out).
   const resetPassword = async (email: string) => {
     await api.post('/auth/reset-password', { email });
+  };
+
+  // Signed-in: the API reports a delivery failure, so Settings can say so.
+  const resetOwnPassword = async () => {
+    await api.post('/auth/me/reset-password');
   };
 
   const resendVerification = async () => {
@@ -352,7 +434,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         loginWithGoogle,
         logout,
+        signedOutIntentionally,
         resetPassword,
+        resetOwnPassword,
         resendVerification,
         refreshEmailVerified,
         refreshUser,

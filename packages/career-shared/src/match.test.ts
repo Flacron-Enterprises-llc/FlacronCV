@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cosine, explainMatch, fakeEmbedding } from './match';
+import { cosine, explainMatch, fakeEmbedding, matchTokens } from './match';
 
 describe('explainMatch', () => {
   const listing = {
@@ -45,5 +45,17 @@ describe('explainMatch', () => {
     const left = fakeEmbedding('SQL ledger');
     expect(cosine(left, fakeEmbedding('ledger SQL'))).toBe(1);
     expect(cosine(left, fakeEmbedding(''))).toBe(0);
+  });
+});
+
+describe('matchTokens', () => {
+  it('drops vacancy framing words and bare numbers so gaps name requirements', () => {
+    expect(matchTokens('We are looking for someone to build our hybrid team in 2026 using PostgreSQL')).toEqual(['someone', 'postgresql']);
+    const explained = explainMatch(
+      { status: 'open', deadline: null, title: 'Analyst', description: 'Looking to build a hybrid team. Tableau required.', locations: [], payKnown: false, sponsorship: 'unknown' },
+      [{ factId: 's1', text: 'SQL', confirmed: true }],
+      '2026-10-17',
+    );
+    expect(explained.gaps.map((gap) => gap.token)).toEqual(['analyst', 'tableau']);
   });
 });

@@ -4,7 +4,7 @@ import { useState, useId } from 'react';
 import { useTranslations } from 'next-intl';
 import { useCVStore } from '@/store/cv-store';
 import { useAuth } from '@/providers/AuthProvider';
-import { api, isAiCreditUnconfirmed } from '@/lib/api';
+import { api } from '@/lib/api';
 import { track } from '@/lib/analytics';
 import { fcgeTrack } from '@/lib/fcge';
 import { serializeCVToText } from '@/lib/serializeCV';
@@ -15,7 +15,7 @@ import UpgradeModal from '@/components/shared/UpgradeModal';
 import InAppWarning from '@/components/shared/InAppWarning';
 import { X, Target, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
+import { useAiFailureToast } from './useAiFailureToast';
 import { PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
 
 interface ATSCheckModalProps {
@@ -62,7 +62,7 @@ export default function ATSCheckModal({ open, onClose }: ATSCheckModalProps) {
   const t = useTranslations('ats');
   const tcv = useTranslations('cv_builder');
   const tCommon = useTranslations('common');
-  const formatApiError = useApiErrorMessage();
+  const showAiFailure = useAiFailureToast();
   const tw = useTranslations('in_app_warnings');
   const { cv, sections } = useCVStore();
   const { user, refreshUser } = useAuth();
@@ -122,14 +122,7 @@ export default function ATSCheckModal({ open, onClose }: ATSCheckModalProps) {
       fcgeTrack('feature_used', { feature: 'ats_check_run' });
       refreshUser();
     } catch (error) {
-      const message = formatApiError(error, t('error'));
-      toast.error(message, {
-        description: tCommon(
-          isAiCreditUnconfirmed(error)
-            ? 'generate_failed_charge_unconfirmed'
-            : 'generate_failed_no_charge',
-        ),
-      });
+      showAiFailure(error, t('error'));
     } finally {
       setIsAnalyzing(false);
     }

@@ -10,6 +10,7 @@ import { auth } from '@/lib/firebase';
 import { getPostLoginRedirect } from '@/lib/post-auth-redirect';
 import { currentUserRole } from '@/lib/current-user-role';
 import { authErrorKey, isAccountExistsError, accountExistsEmail } from '@/lib/auth-errors';
+import { useHydrated } from '@/hooks/useHydrated';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import GoogleIcon from '@/components/shared/GoogleIcon';
@@ -27,6 +28,14 @@ function LoginForm(): React.JSX.Element {
   const [formLoading, setFormLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const redirectHandled = useRef(false);
+  // Credential errors are shown under the field they concern (and announced via
+  // aria-describedby) rather than only in a toast that disappears. Wrong
+  // password and unknown user share one message so neither reveals which it was.
+  const [fieldError, setFieldError] = useState<{ field: 'email' | 'password'; key: string } | null>(null);
+  // Until React hydrates, the form is plain HTML: submitting it would do a native
+  // GET to /login?email=…&password=… and lose callbackUrl. Keep submit disabled
+  // until the handler is attached.
+  const hydrated = useHydrated();
 
   // Show Google auth error stored by a previous attempt (account-exists case)
   useEffect(() => {
@@ -53,6 +62,7 @@ function LoginForm(): React.JSX.Element {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormLoading(true);
+    setFieldError(null);
     try {
       await login(email, password);
       track('sign_in', { method: 'password' });
@@ -62,7 +72,11 @@ function LoginForm(): React.JSX.Element {
       redirectHandled.current = true;
       router.push(getPostLoginRedirect(callbackUrl, await currentUserRole()));
     } catch (error) {
-      toast.error(t(authErrorKey(error)));
+      const key = authErrorKey(error);
+      if (key === 'errors.invalid_email') setFieldError({ field: 'email', key });
+      else if (key === 'errors.invalid_credentials' || key === 'errors.account_disabled') {
+        setFieldError({ field: 'password', key });
+      } else toast.error(t(key));
     } finally {
       setFormLoading(false);
     }
@@ -108,7 +122,9 @@ function LoginForm(): React.JSX.Element {
           <div className="w-full border-t border-stone-200 dark:border-stone-700" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="bg-white px-4 text-stone-500 dark:bg-black dark:text-stone-400">
+          {/* Same colour as the page behind it (body is stone-950 in dark mode),
+              so the label reads as a gap in the rule, not a black box. */}
+          <span className="bg-white px-4 text-stone-500 dark:bg-stone-950 dark:text-stone-400">
             {t('or_continue')}
           </span>
         </div>
@@ -121,8 +137,14 @@ function LoginForm(): React.JSX.Element {
           autoComplete="email"
           label={t('email')}
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setFieldError(null);
+          }}
+          error={fieldError?.field === 'email' ? t(fieldError.key) : undefined}
           placeholder="you@example.com"
+          // Addresses are always left-to-right; without this an RTL page mirrors them.
+          dir="ltr"
           required
         />
         <div>
@@ -132,17 +154,30 @@ function LoginForm(): React.JSX.Element {
             autoComplete="current-password"
             label={t('password')}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setFieldError(null);
+            }}
+            error={fieldError?.field === 'password' ? t(fieldError.key) : undefined}
             placeholder="••••••••"
             required
           />
+          {fieldError?.key === 'errors.account_disabled' && (
+            // A deleted or suspended account has no self-service way back, so
+            // point at the one place that can help.
+            <p className="mt-1 text-xs">
+              <Link href="/contact-us" className="font-medium text-brand-600 underline underline-offset-2 hover:text-brand-700">
+                {t('contact_support')}
+              </Link>
+            </p>
+          )}
           <div className="mt-1 text-end">
             <Link href="/forgot-password" className="text-xs text-brand-600 hover:text-brand-700">
               {t('forgot_password')}
             </Link>
           </div>
         </div>
-        <Button type="submit" loading={formLoading} disabled={googleLoading} className="w-full" size="lg">
+        <Button type="submit" loading={formLoading} disabled={googleLoading || !hydrated} className="w-full" size="lg">
           {t('login_btn')}
         </Button>
       </form>

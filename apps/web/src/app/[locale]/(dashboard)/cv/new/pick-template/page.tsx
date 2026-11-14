@@ -16,6 +16,8 @@ import { ArrowLeft, Lock, Zap, Crown } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import TemplateCard from '@/components/cv-builder/TemplateCard';
+import UpgradeModal from '@/components/shared/UpgradeModal';
+import { useCvAllowance, isCvLimitError } from '@/components/cv-builder/cv-allowance';
 import {
   CV,
   Template,
@@ -35,18 +37,22 @@ const PLAN_ORDER: SubscriptionPlan[] = [
   SubscriptionPlan.ENTERPRISE,
 ];
 
+// `personality` is an i18n key under template_picker.personality — one per
+// template, describing that template's actual styling (cv.service.ts
+// getTemplateStyling). It used to be hard-coded English, and several templates
+// shared a label that did not describe them.
 const templateMeta: Record<string, { layout: CVLayout; color: string; personality: string }> = {
-  classic:       { layout: 'classic',    color: '#1e3a5f', personality: 'Modern Minimal'          },
-  modern:        { layout: 'sidebar',    color: '#2563eb', personality: 'Corporate Professional'   },
-  minimal:       { layout: 'classic',    color: '#374151', personality: 'Clean & Simple'           },
-  professional:  { layout: 'top-bar',   color: '#0f766e', personality: 'Creative Bold'            },
-  creative:      { layout: 'top-bar',   color: '#7c3aed', personality: 'Creative Bold'            },
-  executive:     { layout: 'compact',   color: '#0c0c0c', personality: 'Executive Dense'          },
-  compact:       { layout: 'compact',   color: '#1d4ed8', personality: 'Executive Dense'          },
-  'two-column':  { layout: 'sidebar',    color: '#059669', personality: 'Corporate Professional'   },
-  academic:      { layout: 'classic',    color: '#6b21a8', personality: 'Clean & Simple'           },
-  bold:          { layout: 'top-bar',   color: '#dc2626', personality: 'Creative Bold'            },
-  'slate-gold':  { layout: 'slate-gold', color: '#C9A84C', personality: 'High-Impact Minimalist'  },
+  classic:       { layout: 'classic',    color: '#1e3a5f', personality: 'classic'      },
+  modern:        { layout: 'sidebar',    color: '#2563eb', personality: 'modern'       },
+  minimal:       { layout: 'classic',    color: '#374151', personality: 'minimal'      },
+  professional:  { layout: 'top-bar',    color: '#0f766e', personality: 'professional' },
+  creative:      { layout: 'top-bar',    color: '#7c3aed', personality: 'creative'     },
+  executive:     { layout: 'compact',    color: '#0c0c0c', personality: 'executive'    },
+  compact:       { layout: 'compact',    color: '#1d4ed8', personality: 'compact'      },
+  'two-column':  { layout: 'sidebar',    color: '#059669', personality: 'two_column'   },
+  academic:      { layout: 'classic',    color: '#6b21a8', personality: 'academic'     },
+  bold:          { layout: 'top-bar',    color: '#dc2626', personality: 'bold'         },
+  'slate-gold':  { layout: 'slate-gold', color: '#C9A84C', personality: 'slate_gold'   },
 };
 
 type TierFilter = 'all' | SubscriptionPlan;
@@ -80,6 +86,8 @@ export default function PickTemplatePage(): React.JSX.Element | null {
   const [cvTitle, setCvTitle] = useState<string | null>(null);
   // Track which template ID is currently being created
   const [creatingId, setCreatingId] = useState<string | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const { atLimit, refreshUser } = useCvAllowance();
 
   // Read the draft title from sessionStorage. If missing, the user navigated
   // here directly without completing step 1 — send them back.
@@ -110,9 +118,10 @@ export default function PickTemplatePage(): React.JSX.Element | null {
   const canUseTemplate = (tmpl: Template): boolean =>
     PLAN_ORDER.indexOf(userPlan) >= PLAN_ORDER.indexOf(tmpl.tier as SubscriptionPlan);
 
+  // Tabs in plan order (Free, Pro, Enterprise), not catalogue order.
   const availableTiers = Array.from(
     new Set(cvTemplates.map((t) => t.tier as SubscriptionPlan)),
-  );
+  ).sort((a, b) => PLAN_ORDER.indexOf(a) - PLAN_ORDER.indexOf(b));
 
   const filteredTemplates = cvTemplates.filter(
     (t) => tierFilter === 'all' || t.tier === tierFilter,
@@ -126,16 +135,27 @@ export default function PickTemplatePage(): React.JSX.Element | null {
       toast.success(t('created_toast'));
       track('cv_created', { source: 'template' });
       fcgeTrack('feature_used', { feature: 'resume_created' });
+      // Creation used an allowance: keep usage (and /cv's counter) current.
+      void refreshUser();
       router.push(`/cv/${cv.id}`);
     },
     onError: (error: Error) => {
       setCreatingId(null);
+      if (isCvLimitError(error)) {
+        void refreshUser();
+        setShowUpgrade(true);
+        return;
+      }
       toast.error(formatApiError(error, t('create_error')));
     },
   });
 
   const handleSelect = (templateId: string) => {
     if (!cvTitle) return;
+    if (atLimit) {
+      setShowUpgrade(true);
+      return;
+    }
     setCreatingId(templateId);
     createMutation.mutate({ title: cvTitle, templateId });
   };
@@ -274,10 +294,13 @@ export default function PickTemplatePage(): React.JSX.Element | null {
             const meta = templateMeta[tmpl.slug] ?? {
               layout: 'classic' as CVLayout,
               color: '#374151',
-              personality: 'Clean & Simple',
+              personality: 'classic',
             };
             const tier = tmpl.tier as SubscriptionPlan;
             const isPro = tier !== SubscriptionPlan.FREE;
+            // Canonical tier id label ('Pro' | 'Enterprise'): TemplateCard keys its
+            // icon and copy on it and translates it itself — passing an already
+            // translated name made it translate twice ("common.مؤسسي").
             const tierLabel =
               tier === SubscriptionPlan.ENTERPRISE ? 'Enterprise' :
               tier === SubscriptionPlan.PRO        ? 'Pro'        : 'Free';
@@ -290,7 +313,7 @@ export default function PickTemplatePage(): React.JSX.Element | null {
                 description={localizedTemplateField(tmpl.descriptionLocalized, tmpl.description, locale)}
                 layout={meta.layout}
                 color={meta.color}
-                personality={meta.personality}
+                personality={t(`personality.${meta.personality}`)}
                 isPro={isPro}
                 tierLabel={tierLabel}
                 userCanAccess={canUseTemplate(tmpl)}
@@ -303,6 +326,8 @@ export default function PickTemplatePage(): React.JSX.Element | null {
           })}
         </div>
       )}
+
+      <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} reason="cvs" />
     </div>
   );
 }

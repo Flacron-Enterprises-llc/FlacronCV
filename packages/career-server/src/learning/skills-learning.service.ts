@@ -15,12 +15,15 @@ import {
   type SkillGapReport,
   type SkillLevel,
 } from '@flacroncv/career-shared';
+import { completeWithin } from '../ai/text-model';
+import type { TextModel } from '../ai/text-model';
 import { readAccount } from '../billing/accounts';
 import { unitBalance } from '../billing/entitlements';
 import { CatalogStore } from '../billing/catalog';
 import { BillingError, isBillingError } from '../billing/errors';
 import { MeteringService, type JsonValue, type MeteredResult } from '../metering/metering.service';
 import type { ProfileOwner } from '../profile/career-profile.service';
+import { LEARNING_PLAN_SYSTEM, LEARNING_PLAN_TEMPLATE, learningPlanPrompt, parseLearningPlan } from './learning-plan-compose';
 
 interface SkillReportGeneratedData {
   skillGaps: SkillGapItem[];
@@ -68,6 +71,7 @@ export class SkillsLearningService {
   constructor(
     private readonly pool: Pool,
     private readonly metering: MeteringService,
+    private readonly model: TextModel,
   ) {}
 
   async list(owner: ProfileOwner): Promise<SkillReportList> {
@@ -130,8 +134,8 @@ export class SkillsLearningService {
       body,
       requestId: randomUUID(),
       provenance: {
-        promptTemplateVersion: 'learning-plan@2026-10-10',
-        outputSchemaVersion: 'skill-report@1',
+        promptTemplateVersion: LEARNING_PLAN_TEMPLATE,
+        outputSchemaVersion: 'skill-report@2',
         inputVersions: {
           profileFactCount: confirmedFacts.length,
         },
@@ -278,155 +282,39 @@ export class SkillsLearningService {
     return facts;
   }
 
-  private generateReport(
+  /**
+   * The plan comes from the text model and is specific to the role; the
+   * person's current level for each skill is read from confirmed facts only
+   * (`currentSkillLevel`). A missing model or an unusable reply is
+   * `provider_unavailable`, so the metering run releases the credit: a
+   * generic plan is never charged for.
+   */
+  private async generateReport(
     targetRole: string,
     targetIndustry: string | null,
     timeBudget: number,
     financialBudget: number,
     includeProjectBrief: boolean,
     facts: ResumeFactInput[],
-  ) {
-    const candidateSkillNames = new Set<string>();
-    for (const f of facts) {
-      if (f.factType === 'skill' && typeof f.value.name === 'string') {
-        candidateSkillNames.add(f.value.name.toLowerCase());
-      }
-    }
-
-    // Role-specific target skill competencies
-    const standardRequirements: Array<{ skill: string; importance: GapImportance; requiredLevel: 'intermediate' | 'advanced' | 'expert' }> = [
-      { skill: 'System Design', importance: 'critical', requiredLevel: 'advanced' },
-      { skill: 'Distributed Consensus', importance: 'critical', requiredLevel: 'advanced' },
-      { skill: 'PostgreSQL Internals', importance: 'preferred', requiredLevel: 'intermediate' },
-      { skill: 'Cloud Architecture (AWS)', importance: 'preferred', requiredLevel: 'intermediate' },
-      { skill: 'Observability & Telemetry', importance: 'optional', requiredLevel: 'intermediate' },
-    ];
-
-    const skillGaps: SkillGapItem[] = standardRequirements.map((req) => {
-      const hasSkill = candidateSkillNames.has(req.skill.toLowerCase());
-      const currentLevel: SkillLevel = hasSkill ? 'intermediate' : 'none';
-      return {
-        skill: req.skill,
-        currentLevel,
-        requiredLevel: req.requiredLevel,
-        importance: req.importance,
-      };
+  ): Promise<SkillReportGeneratedData> {
+    const input = {
+      targetRole,
+      targetIndustry,
+      timeBudgetHoursPerWeek: timeBudget,
+      financialBudgetCents: financialBudget,
+      includeProjectBrief,
+      facts,
+    };
+    const response = await completeWithin(this.model, {
+      template: LEARNING_PLAN_TEMPLATE,
+      system: LEARNING_PLAN_SYSTEM,
+      prompt: learningPlanPrompt(input),
+      maxTokens: 2000,
+      temperature: 0,
     });
-
-    const learningPlan: LearningPlanMilestone[] = [
-      {
-        id: 'milestone-1',
-        title: 'Core System Design & Scalability',
-        description: `Bridge critical gap in System Design for ${targetRole}. Covers distributed consensus, data partitioning, and fault tolerance.`,
-        targetSkill: 'System Design',
-        estimatedHours: Math.max(10, timeBudget * 2),
-        estimatedCostCents: financialBudget > 5000 ? 4900 : 0,
-        resources: [
-          {
-            title: 'Designing Data-Intensive Applications',
-            provider: 'O’Reilly Media',
-            url: 'https://dataintensive.net',
-            type: 'book',
-            isFree: false,
-          },
-          {
-            title: 'System Design Primer',
-            provider: 'GitHub Open Source',
-            url: 'https://github.com/donnemartin/system-design-primer',
-            type: 'documentation',
-            isFree: true,
-          },
-        ],
-      },
-      {
-        id: 'milestone-2',
-        title: 'Distributed Consensus & Replication',
-        description: 'Practical study of Raft consensus, Paxos protocol, and replication logs.',
-        targetSkill: 'Distributed Consensus',
-        estimatedHours: Math.max(8, timeBudget * 2),
-        estimatedCostCents: 0,
-        resources: [
-          {
-            title: 'The Raft Consensus Algorithm',
-            provider: 'Stanford University',
-            url: 'https://raft.github.io',
-            type: 'documentation',
-            isFree: true,
-          },
-        ],
-      },
-      {
-        id: 'milestone-3',
-        title: 'High-Performance Relational Indexing',
-        description: 'Query planning, EXPLAIN ANALYZE, and advanced index optimization.',
-        targetSkill: 'PostgreSQL Internals',
-        estimatedHours: Math.max(6, timeBudget),
-        estimatedCostCents: 0,
-        resources: [
-          {
-            title: 'Use The Index, Luke!',
-            provider: 'Markus Winand',
-            url: 'https://use-the-index-luke.com',
-            type: 'documentation',
-            isFree: true,
-          },
-        ],
-      },
-    ];
-
-    let projectBrief: ProjectBrief | null = null;
-    if (includeProjectBrief) {
-      projectBrief = {
-        title: `${targetRole} Capstone Implementation`,
-        summary: `Practical reference implementation to produce verified career evidence for ${targetRole}.`,
-        requirements: [
-          'Design and implement a partition-tolerant distributed key-value store with Raft consensus.',
-          'Provide automated chaos tests validating partition recovery and leader reelection.',
-          'Integrate structured structured metrics and tracing conforming to OpenTelemetry standards.',
-        ],
-        deliverables: [
-          'Working GitHub repository with unit, integration, and chaos test suites.',
-          'Architecture RFC document detailing consistency tradeoffs and failure modes.',
-          'Benchmark report demonstrating sub-10ms write latency under load.',
-        ],
-        rubrics: [
-          {
-            id: 'rubric-1',
-            name: 'Consensus Correctness',
-            description: 'Accurately implements leader election, log replication, and safe commit rules.',
-            weight: 40,
-            evidenceType: 'project',
-          },
-          {
-            id: 'rubric-2',
-            name: 'Fault Recovery & Robustness',
-            description: 'Handles network partitions without split-brain or data loss.',
-            weight: 35,
-            evidenceType: 'project',
-          },
-          {
-            id: 'rubric-3',
-            name: 'Technical Documentation & Provenance',
-            description: 'Provides clean architectural diagrams and reproducible test instructions.',
-            weight: 25,
-            evidenceType: 'work_sample',
-          },
-        ],
-        estimatedHours: Math.max(20, timeBudget * 4),
-      };
-    }
-
-    const progress: LearningProgress = {
-      completedMilestoneIds: [],
-      percent: 0,
-    };
-
-    return {
-      skillGaps,
-      learningPlan,
-      projectBrief,
-      progress,
-    };
+    const plan = parseLearningPlan(response.text, input);
+    if (!plan) throw new BillingError('provider_unavailable', { reason: 'unusable_output' });
+    return { ...plan, progress: { completedMilestoneIds: [], percent: 0 } };
   }
 
   private async skillReportBalance(owner: ProfileOwner): Promise<SkillReportBalanceView> {

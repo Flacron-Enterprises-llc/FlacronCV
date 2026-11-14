@@ -6,16 +6,16 @@
  */
 
 import React from 'react';
-import { useTranslations } from 'next-intl';
 import type { LayoutProps } from './shared';
 import {
   getTokens, ensureDarkSurface, INK,
   splitSections, SidebarSectionHeading, SectionHeading,
-  ItemRenderer, SkillLines, contactSidebarLines,
+  ItemRenderer, SkillLines, sidebarContactParts,
+  useCVDocument, CVDocumentProvider,
 } from './shared';
 
-export default function SidebarLayout({ cv, sections }: LayoutProps) {
-  const t = useTranslations('cv_builder');
+export default function SidebarLayout({ cv, sections, nameAs: NameTag = 'div' }: LayoutProps) {
+  const doc = useCVDocument(cv, sections);
   const { primary, bodyFont, headingFont, fs, sp, br, sectionStyle } = getTokens(cv);
   const showPhoto = cv.styling.showPhoto && cv.personalInfo.photoURL;
   const { sidebar: sidebarSections, main: mainSections } = splitSections(sections);
@@ -28,7 +28,8 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
   const mainWidth = '70%';
 
   return (
-    <div style={{
+    <CVDocumentProvider doc={doc}>
+    <div dir={doc.dir} lang={doc.lang} style={{
       fontFamily: bodyFont,
       color: '#1a1a1a',
       background: '#fff',
@@ -82,7 +83,7 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
               land mid-word, and the weight contrast turns the forced break into
               part of the design. overflowWrap catches the genuinely long single
               name that still will not fit on one line. */}
-          <h1 style={{
+          <NameTag style={{
             fontFamily: headingFont,
             fontSize: `${fs.nameTop}px`,
             fontWeight: 300,
@@ -99,7 +100,7 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
                 <span style={{ fontWeight: 800, color: '#fff' }}>{cv.personalInfo.lastName}</span>
               </>
             )}
-          </h1>
+          </NameTag>
 
           {cv.personalInfo.headline && (
             <p style={{
@@ -116,10 +117,10 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
 
         {/* Contact */}
         <div>
-          <SidebarSectionHeading title={t('template_contact')} headingFont={headingFont} fs={fs} />
-          {contactSidebarLines(cv).map((line, i) => (
+          <SidebarSectionHeading title={doc.labels.contact} headingFont={headingFont} fs={fs} />
+          {sidebarContactParts(cv).map((part, i) => (
             <p key={i} style={{ fontSize: `${fs.body}px`, color: 'rgba(255,255,255,0.84)', margin: '4px 0', lineHeight: 1.45, wordBreak: 'break-word' }}>
-              {line}
+              <bdi data-pdf-link={part.href}>{part.text}</bdi>
             </p>
           ))}
         </div>
@@ -151,8 +152,8 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
         {/* Summary */}
         {cv.personalInfo.summary && (
           <div>
-            <SectionHeading title={t('template_profile')} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
-            <p style={{ fontSize: `${fs.name}px`, lineHeight: 1.75, color: INK.body, margin: 0, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
+            <SectionHeading title={doc.labels.profile} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
+            <p dir="auto" style={{ fontSize: `${fs.name}px`, lineHeight: 1.75, color: INK.body, margin: 0, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
               {cv.personalInfo.summary}
             </p>
           </div>
@@ -169,5 +170,6 @@ export default function SidebarLayout({ cv, sections }: LayoutProps) {
         ))}
       </div>
     </div>
+    </CVDocumentProvider>
   );
 }

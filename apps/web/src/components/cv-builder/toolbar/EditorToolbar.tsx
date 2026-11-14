@@ -7,7 +7,10 @@ import Badge from '@/components/ui/Badge';
 import UpgradeModal from '@/components/shared/UpgradeModal';
 import InAppWarning from '@/components/shared/InAppWarning';
 import { api } from '@/lib/api';
-import { exportToPDF, exportToDocx, type DocxLabels } from '@/lib/export-cv';
+import { exportToPDF, exportToDocx } from '@/lib/export-cv';
+import { useAuth } from '@/providers/AuthProvider';
+import { SubscriptionPlan, resolveEffectivePlan } from '@flacroncv/shared-types';
+import DocxUpgradeModal from '@/components/cv-builder/DocxUpgradeModal';
 import { track } from '@/lib/analytics';
 import { fcgeTrack } from '@/lib/fcge';
 import { TOUR_TARGETS } from '@/lib/app-tour';
@@ -22,6 +25,7 @@ import {
   Target,
   MessagesSquare,
   Linkedin,
+  Lock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState } from 'react';
@@ -46,12 +50,25 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [showDocxUpgrade, setShowDocxUpgrade] = useState(false);
+  const { user, degraded, placeholderAccount } = useAuth();
+  // DOCX is a paid feature. Marked in the menu up front, and a Free user's
+  // click goes straight to an explanation instead of a doomed reservation.
+  // While the profile is degraded/placeholder (API blip) the plan is unknown,
+  // so nothing is locked client-side and the server's answer decides.
+  const docxLocked = Boolean(user) && !degraded && !placeholderAccount
+    && resolveEffectivePlan(user?.subscription) === SubscriptionPlan.FREE;
   const [showATS, setShowATS] = useState(false);
   const [showInterview, setShowInterview] = useState(false);
   const [showLinkedIn, setShowLinkedIn] = useState(false);
 
   const handleExport = async (format: 'pdf' | 'docx') => {
     if (!cv) return;
+    if (format === 'docx' && docxLocked) {
+      setExportOpen(false);
+      setShowDocxUpgrade(true);
+      return;
+    }
     setExporting(true);
     let reservationId: string | undefined;
     try {
@@ -63,23 +80,19 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
         reservationId?: string;
       }>('/exports/record', { format, type: 'cv', documentId: cv.id });
       if (!decision.allowed) {
-        setShowUpgrade(true);
+        // The server says WHY. "DOCX needs a paid plan" (plan state changed
+        // since this page loaded) is not "you have no exports left".
+        if (decision.reason === 'docx_requires_paid') setShowDocxUpgrade(true);
+        else setShowUpgrade(true);
         return;
       }
       reservationId = decision.reservationId;
       if (format === 'pdf') {
         await exportToPDF(cv, sections, locale);
       } else {
-        // Labels come directly from next-intl — same strings as the editor,
-        // correct language with no static fallback table.
-        const labels: DocxLabels = {
-          professionalSummary: t('template_professional_summary'),
-          profile:             t('template_profile'),
-          contact:             t('template_contact'),
-          aboutMe:             t('template_about_me'),
-          summary:             t('template_summary'),
-        };
-        await exportToDocx(cv, sections, locale, labels);
+        // Headings, dates and "Present" follow the CV's own language — the
+        // same resolution the preview uses — so the DOCX matches the PDF.
+        await exportToDocx(cv, sections, locale);
       }
       if (reservationId) {
         await api.post('/exports/confirm', {
@@ -226,10 +239,19 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
                   onClick={() => handleExport('docx')}
                 >
                   <FileSpreadsheet className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
-                  <span className="min-w-0">
+                  <span className="min-w-0 flex-1">
                     {t('export_docx')}
                     <span className="block text-xs text-stone-400">{t('export_docx_hint')}</span>
                   </span>
+                  {docxLocked && (
+                    <span
+                      className="ms-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                      data-testid="docx-pro-badge"
+                    >
+                      <Lock className="h-3 w-3" aria-hidden="true" />
+                      {t('docx_pro_badge')}
+                    </span>
+                  )}
                 </button>
               </div>
             </>
@@ -248,6 +270,8 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
         onClose={() => setShowUpgrade(false)}
         reason="exports"
       />
+
+      <DocxUpgradeModal isOpen={showDocxUpgrade} onClose={() => setShowDocxUpgrade(false)} />
     </div>
   );
 }

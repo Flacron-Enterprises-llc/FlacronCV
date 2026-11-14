@@ -877,6 +877,18 @@ export interface WhiteLabelConfig {
   attribution: string;
 }
 
+/** Which Developer actions this account can use, and its saved brand. */
+export interface DeveloperStatus {
+  apiPackage: boolean;
+  whiteLabel: boolean;
+  brand: WhiteLabelConfig | null;
+}
+
+export interface BusinessOverview {
+  staff: Array<{ id: string; authUserId: string; role: string }>;
+  candidates: Array<{ id: string; email: string }>;
+}
+
 
 
 

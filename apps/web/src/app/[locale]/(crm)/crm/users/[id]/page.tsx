@@ -368,7 +368,11 @@ export default function CRMUserDetailPage(): React.JSX.Element {
                       {['free', 'pro', 'career_accelerator', 'enterprise'].map((p) => (
                         <button
                           key={p}
-                          onClick={() => changePlanMutation.mutate(p)}
+                          onClick={() => {
+                            // Granting a paid plan here skips payment; confirm it.
+                            if (p !== 'free' && !confirm(t('confirm_plan_change', { name: user.displayName || user.email, plan: t(`plan_${p}`) }))) return;
+                            changePlanMutation.mutate(p);
+                          }}
                           disabled={changePlanMutation.isPending}
                           className={cn(
                             'rounded px-2 py-0.5 text-xs font-semibold capitalize transition-colors',
@@ -438,7 +442,10 @@ export default function CRMUserDetailPage(): React.JSX.Element {
                   <button
                     key={r}
                     onClick={() => {
-                      if (user.role !== r) changeRoleMutation.mutate(r);
+                      if (user.role === r) return;
+                      // Staff roles grant access to the admin panel and the CRM.
+                      if (r !== 'user' && !confirm(t('confirm_role_change', { name: user.displayName || user.email, role: t(`role_${r}`) }))) return;
+                      changeRoleMutation.mutate(r);
                     }}
                     disabled={changeRoleMutation.isPending}
                     className={cn(

@@ -255,10 +255,10 @@ export default function CRMUsersPage(): React.JSX.Element {
                 {[
                   { label: t('col_user'), cls: '' },
                   { label: t('col_plan'), cls: 'hidden md:table-cell' },
-                  { label: t('col_role'), cls: 'hidden lg:table-cell' },
+                  { label: t('col_role'), cls: 'hidden xl:table-cell' },
                   { label: t('users_col_cvs'), cls: 'hidden xl:table-cell' },
                   { label: t('users_col_cover_letters'), cls: 'hidden xl:table-cell' },
-                  { label: t('col_joined'), cls: 'hidden lg:table-cell' },
+                  { label: t('col_joined'), cls: 'hidden xl:table-cell' },
                   { label: t('col_status'), cls: '' },
                   { label: t('col_actions'), cls: '' },
                 ].map((h) => (
@@ -321,7 +321,7 @@ export default function CRMUsersPage(): React.JSX.Element {
                                   ? t(`plan_${user.subscriptionPlan}`)
                                   : user.subscriptionPlan}
                               </p>
-                              <p className="truncate text-xs text-stone-400 lg:hidden">
+                              <p className="truncate text-xs text-stone-400 xl:hidden">
                                 {['user', 'admin', 'super_admin'].includes(user.role)
                                   ? t(`role_${user.role}`)
                                   : user.role.replace('_', ' ')}
@@ -338,7 +338,7 @@ export default function CRMUsersPage(): React.JSX.Element {
                           </span>
                         </td>
 
-                        <td className="hidden px-4 py-3 lg:table-cell">
+                        <td className="hidden px-4 py-3 xl:table-cell">
                           <span className={cn('flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold capitalize', ROLE_COLORS[user.role] ?? ROLE_COLORS.user)}>
                             <RoleIcon className="h-3 w-3" />
                             {['user', 'admin', 'super_admin'].includes(user.role) ? t(`role_${user.role}`) : user.role.replace('_', ' ')}
@@ -359,7 +359,7 @@ export default function CRMUsersPage(): React.JSX.Element {
                           </div>
                         </td>
 
-                        <td className="hidden px-4 py-3 text-stone-600 lg:table-cell dark:text-stone-400">
+                        <td className="hidden whitespace-nowrap px-4 py-3 text-stone-600 xl:table-cell dark:text-stone-400">
                           {formatDate(user.createdAt)}
                         </td>
 
@@ -376,15 +376,21 @@ export default function CRMUsersPage(): React.JSX.Element {
 
                         <td className="px-4 py-3">
                           <div className="relative flex items-center gap-1">
-                            <Link href={`/crm/users/${user.uid}`}>
-                              <button className="rounded p-1.5 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-200" title={t('view')}>
-                                <Eye className="h-4 w-4" />
-                              </button>
+                            <Link
+                              href={`/crm/users/${user.uid}`}
+                              className="rounded p-1.5 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-200"
+                              title={t('view')}
+                              aria-label={t('view')}
+                            >
+                              <Eye className="h-4 w-4" />
                             </Link>
 
                             {user.isActive ? (
                               <button
-                                onClick={() => suspendMutation.mutate(user.uid)}
+                                onClick={() => {
+                                  // Suspension blocks sign-in; same confirmation as the detail page.
+                                  if (confirm(t('user_detail_confirm_suspend', { email: user.email }))) suspendMutation.mutate(user.uid);
+                                }}
                                 disabled={suspendMutation.isPending}
                                 className="rounded p-1.5 text-stone-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
                                 title={t('suspend')}
@@ -394,6 +400,7 @@ export default function CRMUsersPage(): React.JSX.Element {
                             ) : (
                               <button
                                 onClick={() => reactivateMutation.mutate(user.uid)}
+                                aria-label={t('reactivate')}
                                 disabled={reactivateMutation.isPending}
                                 className="rounded p-1.5 text-stone-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950 dark:hover:text-emerald-400"
                                 title={t('reactivate')}
@@ -432,7 +439,11 @@ export default function CRMUsersPage(): React.JSX.Element {
                                     {['free', 'pro', 'career_accelerator', 'enterprise'].map((p) => (
                                       <button
                                         key={p}
-                                        onClick={() => changePlanMutation.mutate({ uid: user.uid, plan: p })}
+                                        onClick={() => {
+                                          // Granting a paid plan here skips payment; confirm it.
+                                          if (p !== 'free' && !confirm(t('confirm_plan_change', { name: user.displayName || user.email, plan: t(`plan_${p}`) }))) return;
+                                          changePlanMutation.mutate({ uid: user.uid, plan: p });
+                                        }}
                                         disabled={changePlanMutation.isPending}
                                         className={cn(
                                           'flex w-full items-center gap-2 px-3 py-1.5 text-sm capitalize transition-colors hover:bg-stone-50 disabled:opacity-50 dark:hover:bg-stone-800',
@@ -450,7 +461,11 @@ export default function CRMUsersPage(): React.JSX.Element {
                                     {['user', 'admin', 'super_admin'].map((r) => (
                                       <button
                                         key={r}
-                                        onClick={() => changeRoleMutation.mutate({ uid: user.uid, role: r })}
+                                        onClick={() => {
+                                          // Staff roles grant access to the admin panel and the CRM.
+                                          if (r !== 'user' && !confirm(t('confirm_role_change', { name: user.displayName || user.email, role: t(`role_${r}`) }))) return;
+                                          changeRoleMutation.mutate({ uid: user.uid, role: r });
+                                        }}
                                         disabled={changeRoleMutation.isPending}
                                         className={cn(
                                           'flex w-full items-center gap-2 px-3 py-1.5 text-sm capitalize transition-colors hover:bg-stone-50 disabled:opacity-50 dark:hover:bg-stone-800',

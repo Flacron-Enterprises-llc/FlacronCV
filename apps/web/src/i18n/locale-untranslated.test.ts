@@ -34,6 +34,8 @@ const LOCALES_DIR = join(__dirname, '..', '..', 'public', 'locales');
 const ALLOWED: Record<string, string> = {
   // Brands and proper nouns.
   'app.name': 'product name',
+  'cv_builder.docx_pro_badge': 'plan name "Pro", a brand used untranslated on the pricing page',
+  'career.scope.site_placeholder': 'example domain name; hostnames are Latin script',
   'parent_company.product1_title': 'product name',
   'footer.parent_company': 'company name',
   'parent_company.title': 'company name',

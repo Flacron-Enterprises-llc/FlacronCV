@@ -1,14 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { CRMAuditService } from './crm-audit.service';
-import { AppSettings, UpdateAppSettingsDto } from '@flacroncv/shared-types';
+import { AppSettings, UpdateAppSettingsDto, PLAN_CONFIGS, SubscriptionPlan } from '@flacroncv/shared-types';
+
+/**
+ * Plan limits as actually enforced (PLAN_CONFIGS). The CRM shows these for
+ * reference only; the stored copy used to drift (it said free = 3 CVs while the
+ * product enforces 5), so it is always replaced by the real values on read.
+ */
+function enforcedLimits(plan: SubscriptionPlan) {
+  const l = PLAN_CONFIGS[plan].limits as unknown as Record<string, number>;
+  const n = (v: number) => (Number.isFinite(v) && v >= 0 ? v : -1);
+  return { cvsLimit: n(l.cvs), coverLettersLimit: n(l.coverLetters), aiCreditsLimit: n(l.aiCredits), exportsLimit: n(l.exports) };
+}
+
+const ENFORCED_PLAN_LIMITS: AppSettings['planLimits'] = {
+  free: enforcedLimits(SubscriptionPlan.FREE),
+  pro: enforcedLimits(SubscriptionPlan.PRO),
+  enterprise: enforcedLimits(SubscriptionPlan.ENTERPRISE),
+};
 
 const DEFAULT_SETTINGS: AppSettings = {
-  planLimits: {
-    free: { cvsLimit: 3, coverLettersLimit: 2, aiCreditsLimit: 5, exportsLimit: 2 },
-    pro: { cvsLimit: 50, coverLettersLimit: 50, aiCreditsLimit: 100, exportsLimit: 50 },
-    enterprise: { cvsLimit: -1, coverLettersLimit: -1, aiCreditsLimit: -1, exportsLimit: -1 },
-  },
+  planLimits: ENFORCED_PLAN_LIMITS,
   featureFlags: {
     aiEnabled: true,
     templatesEnabled: true,
@@ -34,7 +47,7 @@ export class CRMSettingsService {
   async getSettings(): Promise<AppSettings> {
     const doc = await this.docRef().get();
     if (!doc.exists) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...(doc.data() as Partial<AppSettings>) };
+    return { ...DEFAULT_SETTINGS, ...(doc.data() as Partial<AppSettings>), planLimits: ENFORCED_PLAN_LIMITS };
   }
 
   async updateSettings(

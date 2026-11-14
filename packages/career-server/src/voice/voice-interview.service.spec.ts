@@ -98,6 +98,13 @@ describe('VoiceInterviewService', () => {
     const noConsent = await voice.start(owner, { kind: 'practice', opportunityId, stage: 'behavioral' }).catch((error: unknown) => error);
     expect(isBillingError(noConsent, 'validation_error')).toBe(true);
 
+    // Consent can be withdrawn, and starting is refused again until it is given back.
+    await voice.consent(owner);
+    expect(await voice.withdrawConsent(owner)).toEqual({ consent: false });
+    expect((await voice.list(owner)).consent).toBe(false);
+    const withdrawn = await voice.start(owner, { kind: 'practice', opportunityId, stage: 'behavioral' }).catch((error: unknown) => error);
+    expect(isBillingError(withdrawn, 'validation_error')).toBe(true);
+
     await voice.consent(owner);
     const before = await voice.list(owner);
     expect(before.remainingSeconds).toBe(1800);

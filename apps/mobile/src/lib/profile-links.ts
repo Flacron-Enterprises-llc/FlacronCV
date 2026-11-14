@@ -53,6 +53,12 @@ export function validateProfileLink(
     return { value: trimmed, error: `${label} link must be at most ${maxLength} characters.` };
   }
 
+  // Same rule as the shared validator: a link with whitespace in it is a typo,
+  // not something to percent-encode into a "valid" URL.
+  if (/\s/.test(trimmed)) {
+    return { value: trimmed, error: `${label} must be a valid link.` };
+  }
+
   const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(trimmed);
   const candidate = hasScheme ? trimmed : `https://${trimmed}`;
 
@@ -64,7 +70,10 @@ export function validateProfileLink(
     return { value: trimmed, error: `${label} must be an http or https link.` };
   }
   const url = parsed.url;
-  if (!url.hostname) {
+  // A public link needs a real domain: no single-label hosts ("localhost") and
+  // no percent-encoded hosts — mirrors the shared validator so phone and web agree.
+  const hostname = url.hostname.toLowerCase().replace(/\.$/, '');
+  if (!hostname || hostname.includes('%') || !hostname.includes('.')) {
     return { value: trimmed, error: `${label} must be a valid link.` };
   }
 

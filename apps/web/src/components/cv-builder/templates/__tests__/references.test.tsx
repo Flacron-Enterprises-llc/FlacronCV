@@ -19,6 +19,7 @@ import type { CV, CVSection, CVLayout } from '@flacroncv/shared-types';
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
+  useLocale: () => 'en',
 }));
 
 import { ItemRenderer, getTokens } from '../shared';

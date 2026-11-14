@@ -289,6 +289,19 @@ describe('UsersService', () => {
       expect(updated.profile.lastName).toBe('');
     });
 
+    it('rejects a bad profile link with a 400 whose code names the field and reason', async () => {
+      await service.create({ uid: 'v-link', email: 'link@b.com', displayName: 'Link User', photoURL: null });
+      // The web form maps this code to a translated message under the field.
+      const err = await service
+        .update('v-link', { profile: { website: 'not a url' } })
+        .catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(BadRequestException);
+      expect((err as BadRequestException).getResponse()).toMatchObject({
+        code: 'PROFILE_LINK_WEBSITE_INVALID',
+        message: 'Website must be a valid link.',
+      });
+    });
+
     it('rejects an over-length bio with 400', async () => {
       await service.create({ uid: 'v-3', email: 'v3@b.com', displayName: 'V3', photoURL: null });
       await expect(

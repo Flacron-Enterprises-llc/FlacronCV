@@ -146,10 +146,16 @@ const ga4Adapter: AnalyticsAdapter = {
   init() {
     if (typeof window === 'undefined') return;
     if (!GA4_MEASUREMENT_ID) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        '[analytics] GA4 is selected but NEXT_PUBLIC_GA4_MEASUREMENT_ID is not set — no events will be sent.',
-      );
+      // A developer hint only. GA4 is the default provider, so an unset id is
+      // the normal state of a deploy that has not been given one, and in
+      // production this line was console noise on every page. init() runs at
+      // most once per page load (see ensureInit).
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        console.warn(
+          '[analytics] GA4 is selected but NEXT_PUBLIC_GA4_MEASUREMENT_ID is not set — no events will be sent.',
+        );
+      }
       return;
     }
     if (window.gtag) return; // already initialised

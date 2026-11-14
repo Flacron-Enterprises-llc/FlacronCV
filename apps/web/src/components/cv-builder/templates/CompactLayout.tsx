@@ -6,9 +6,8 @@
  */
 
 import React from 'react';
-import { useTranslations } from 'next-intl';
 import type { LayoutProps } from './shared';
-import { getTokens, readableOn, INK, buildContactLine, buildLinksLine, SectionHeading, ItemRenderer, SkillLines } from './shared';
+import { getTokens, readableOn, INK, contactParts, linkParts, ContactRun, SectionHeading, ItemRenderer, SkillLines, useCVDocument, CVDocumentProvider } from './shared';
 import { CVSectionType } from '@flacroncv/shared-types';
 
 // Sections that belong in the right column (secondary)
@@ -21,8 +20,8 @@ const RIGHT_TYPES = new Set<string>([
   CVSectionType.REFERENCES,
 ]);
 
-export default function CompactLayout({ cv, sections }: LayoutProps) {
-  const t = useTranslations('cv_builder');
+export default function CompactLayout({ cv, sections, nameAs: NameTag = 'div' }: LayoutProps) {
+  const doc = useCVDocument(cv, sections);
   const { primary, bodyFont, headingFont, fs, sp, br, sectionStyle } = getTokens(cv);
   const showPhoto = cv.styling.showPhoto && cv.personalInfo.photoURL;
 
@@ -33,7 +32,8 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
   const rightSections = sections.filter(s => RIGHT_TYPES.has(s.type));
 
   return (
-    <div style={{
+    <CVDocumentProvider doc={doc}>
+    <div dir={doc.dir} lang={doc.lang} style={{
       fontFamily: bodyFont,
       color: '#1a1a1a',
       background: '#fff',
@@ -67,7 +67,7 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
 
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
-            <h1 style={{
+            <NameTag style={{
               fontFamily: headingFont,
               fontSize: `${fs.nameTop}px`,
               fontWeight: 800,
@@ -77,7 +77,7 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
               letterSpacing: '-0.3px',
             }}>
               {cv.personalInfo.firstName} {cv.personalInfo.lastName}
-            </h1>
+            </NameTag>
             {/* The job title sits inline beside the name, so it needs a visible
                 separator to stop the two running together as one phrase — and
                 enough ink to be read at 12px next to an 800-weight name. */}
@@ -89,9 +89,9 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
             )}
           </div>
           <p style={{ fontSize: `${fs.body}px`, color: INK.meta, margin: '5px 0 0', letterSpacing: '0.2px' }}>
-            {buildContactLine(cv)}
+            <ContactRun parts={contactParts(cv)} />
             {(cv.personalInfo.linkedin || cv.personalInfo.website || cv.personalInfo.github) && (
-              <span style={{ marginInlineStart: '10px', color: INK.meta }}>{buildLinksLine(cv)}</span>
+              <span style={{ marginInlineStart: '10px', color: INK.meta }}><ContactRun parts={linkParts(cv)} /></span>
             )}
           </p>
         </div>
@@ -100,8 +100,8 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
       {/* ── Summary (full-width) ── */}
       {cv.personalInfo.summary && (
         <div style={{ marginBottom: `${tightSp.section}px` }}>
-          <SectionHeading title={t('template_summary')} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
-          <p style={{ fontSize: `${fs.body}px`, lineHeight: 1.65, color: INK.body, margin: 0, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
+          <SectionHeading title={doc.labels.summary} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
+          <p dir="auto" style={{ fontSize: `${fs.body}px`, lineHeight: 1.65, color: INK.body, margin: 0, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
             {cv.personalInfo.summary}
           </p>
         </div>
@@ -141,5 +141,6 @@ export default function CompactLayout({ cv, sections }: LayoutProps) {
         </div>
       </div>
     </div>
+    </CVDocumentProvider>
   );
 }

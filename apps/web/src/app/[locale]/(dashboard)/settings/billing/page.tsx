@@ -4,6 +4,7 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams, usePathname } from 'next/navigation';
+import { Link } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import { api, ApiError } from '@/lib/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -33,6 +34,7 @@ import {
   ExternalLink,
   Receipt,
   AlertCircle,
+  Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
@@ -40,6 +42,7 @@ import { fcgeTrack, fcgeUpgradeClicked } from '@/lib/fcge';
 import { toDate } from '@/lib/format-date';
 import { shouldClaimCheckoutSuccess } from '@/lib/checkout-verify';
 import { localizedPlanFeatures } from '@/lib/plan-features';
+import { formatUsd } from '@/lib/format-price';
 import { legalDocLinks } from '@/components/auth/LegalAcceptanceModal';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { CareerAddonBillingCard } from '@/components/career/CareerAddonBillingCard';
@@ -47,6 +50,12 @@ import { CareerAddonBillingCard } from '@/components/career/CareerAddonBillingCa
 export default function BillingPage(): React.JSX.Element | null {
   const t = useTranslations('billing');
   const tPricing = useTranslations('pricing');
+  // Plan names and prices in the visitor's language, as on the pricing page;
+  // PLAN_CONFIGS names are English.
+  const planName = (plan: SubscriptionPlan) =>
+    (['free', 'pro', 'enterprise', 'career_accelerator'] as string[]).includes(plan)
+      ? tPricing(plan)
+      : PLAN_CONFIGS[plan].name;
   const tUpgrade = useTranslations('upgrade_modal');
   const formatApiError = useApiErrorMessage();
   const queryClient = useQueryClient();
@@ -58,6 +67,9 @@ export default function BillingPage(): React.JSX.Element | null {
   const [syncSuccess, setSyncSuccess] = useState(false);
   const [syncFailed, setSyncFailed] = useState(false);
   const [verifying, setVerifying] = useState(searchParams.get('success') === 'true');
+  // Stripe sends the user back with ?canceled=true when they leave checkout.
+  // Without a word here the page looked as if nothing had happened at all.
+  const checkoutCanceled = searchParams.get('canceled') === 'true';
 
   // Stripe puts ?success=true on the return URL even when payment did not
   // complete. Only a successful verify-session with a paid plan may show the
@@ -111,6 +123,11 @@ export default function BillingPage(): React.JSX.Element | null {
   const currentPlan = user?.subscription?.plan || SubscriptionPlan.FREE;
   const currentPlanConfig = PLAN_CONFIGS[currentPlan];
   const isFreePlan = currentPlan === SubscriptionPlan.FREE;
+  // The Stripe portal only exists for accounts with a Stripe customer. A paid
+  // plan without one (granted by support/admin, or billed by a mobile store)
+  // has nothing to open, and the button used to fail with "please subscribe
+  // first" — so those accounts get a pointer to support instead.
+  const hasStripeCustomer = !!user?.subscription?.stripeCustomerId;
 
   // Server is the source of truth for the Pro trial label. Fail closed: never
   // show Start trial from Firestore flags alone (MC2 residual / MC5).
@@ -232,7 +249,9 @@ export default function BillingPage(): React.JSX.Element | null {
       past_due: 'warning',
       canceled: 'danger',
       incomplete: 'warning',
+      incomplete_expired: 'danger',
       unpaid: 'danger',
+      paused: 'warning',
     };
     return (
       <Badge variant={variantMap[status] || 'default'} size="md">
@@ -318,7 +337,7 @@ export default function BillingPage(): React.JSX.Element | null {
   const plans = visiblePlans.map((key) =>
     key === SubscriptionPlan.FREE
       ? { key, price: '$0', period: t('plans.free') }
-      : { key, price: `$${planAmount(key).toFixed(2)}`, period: intervalSuffix },
+      : { key, price: formatUsd(planAmount(key), locale), period: intervalSuffix },
   );
 
   // Career Accelerator becomes purchasable — and publicly visible — only once
@@ -339,7 +358,7 @@ export default function BillingPage(): React.JSX.Element | null {
     trialEligible
       ? t('trial_disclosure', {
           days: TRIAL_PERIOD_DAYS,
-          price: `$${planAmount(SubscriptionPlan.PRO).toFixed(2)}`,
+          price: formatUsd(planAmount(SubscriptionPlan.PRO), locale),
           interval: billingInterval === 'yearly' ? t('plans.year') : t('plans.month'),
         })
       : null;
@@ -406,6 +425,16 @@ export default function BillingPage(): React.JSX.Element | null {
         </div>
       )}
 
+      {checkoutCanceled && !verifying && !syncSuccess && (
+        <div
+          role="status"
+          className="flex items-center gap-3 rounded-xl border border-stone-200 bg-white px-5 py-4 dark:border-stone-700 dark:bg-stone-900"
+        >
+          <Info className="h-5 w-5 shrink-0 text-stone-500 dark:text-stone-400" aria-hidden />
+          <p className="text-sm text-stone-700 dark:text-stone-300">{t('checkout_canceled')}</p>
+        </div>
+      )}
+
       {verifying && !syncSuccess && !syncFailed && (
         <div className="flex items-center gap-3 rounded-xl border border-brand-200 bg-brand-50 px-5 py-4 dark:border-brand-800 dark:bg-brand-900/20">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
@@ -424,7 +453,7 @@ export default function BillingPage(): React.JSX.Element | null {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-semibold text-stone-900 dark:text-white">
-                    {currentPlanConfig.name} {t('plan')}
+                    {planName(currentPlan)} {t('plan')}
                   </h3>
                   {getStatusBadge()}
                 </div>
@@ -441,7 +470,7 @@ export default function BillingPage(): React.JSX.Element | null {
             </div>
           </div>
 
-          {!isFreePlan && (
+          {!isFreePlan && hasStripeCustomer && (
             <Button
               variant="secondary"
               onClick={() => portalMutation.mutate()}
@@ -450,6 +479,20 @@ export default function BillingPage(): React.JSX.Element | null {
             >
               {t('manageSubscription')}
             </Button>
+          )}
+          {!isFreePlan && !hasStripeCustomer && (
+            <p className="max-w-xs text-sm text-stone-500 dark:text-stone-400">
+              {t.rich('managed_by_support', {
+                link: (chunks) => (
+                  <Link
+                    href="/contact-us"
+                    className="font-medium text-brand-600 underline underline-offset-2 hover:text-brand-700 dark:text-brand-400"
+                  >
+                    {chunks}
+                  </Link>
+                ),
+              })}
+            </p>
           )}
         </div>
       </Card>
@@ -465,6 +508,8 @@ export default function BillingPage(): React.JSX.Element | null {
           <div className="flex justify-center">
             <div className="inline-flex items-center gap-3 rounded-full border border-stone-200 bg-white p-1 dark:border-stone-700 dark:bg-stone-800">
               <button
+                type="button"
+                aria-pressed={billingInterval === 'monthly'}
                 className={`rounded-full px-6 py-2 text-sm font-medium transition-all ${
                   billingInterval === 'monthly'
                     ? 'bg-brand-600 text-white shadow-sm'
@@ -497,7 +542,15 @@ export default function BillingPage(): React.JSX.Element | null {
               >
                 {t('yearly')}
                 {YEARLY_BILLING_ENABLED ? (
-                  <span className="ms-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  // On the selected (brand-filled) pill green-on-blue is unreadable,
+                  // so the badge turns white there and stays green otherwise.
+                  <span
+                    className={`ms-1.5 text-xs font-semibold ${
+                      billingInterval === 'yearly'
+                        ? 'text-white'
+                        : 'text-emerald-600 dark:text-emerald-400'
+                    }`}
+                  >
                     {t('yearly_save', { percent: yearlySavingsPercent(SubscriptionPlan.PRO) })}
                   </span>
                 ) : (
@@ -575,7 +628,7 @@ export default function BillingPage(): React.JSX.Element | null {
           <Card className="relative overflow-hidden">
             <div className="mb-6">
               <h4 className="text-lg font-semibold text-stone-900 dark:text-white">
-                {PLAN_CONFIGS[SubscriptionPlan.CAREER_ACCELERATOR].name}
+                {planName(SubscriptionPlan.CAREER_ACCELERATOR)}
               </h4>
               {/* flex-wrap: the Card is overflow-hidden (for the corner badge), so
                   without wrapping the "/month" suffix is clipped on narrow cards. */}
@@ -778,7 +831,7 @@ export default function BillingPage(): React.JSX.Element | null {
             >
               <div className="mb-3 border-b border-stone-100 pb-3 dark:border-stone-700/50">
                 <p className="font-semibold text-stone-900 dark:text-white">
-                  {PLAN_CONFIGS[plan.key].name}
+                  {planName(plan.key)}
                 </p>
                 <p className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">
                   {plan.price}
@@ -829,7 +882,7 @@ export default function BillingPage(): React.JSX.Element | null {
                     key={plan.key}
                     className="px-6 py-3 text-center text-sm font-medium text-stone-500 dark:text-stone-400"
                   >
-                    <div>{PLAN_CONFIGS[plan.key].name}</div>
+                    <div>{planName(plan.key)}</div>
                     <div className="mt-0.5 text-xs font-normal">
                       {plan.price}
                       {plan.key !== SubscriptionPlan.FREE && <span>{intervalSuffix}</span>}
@@ -947,7 +1000,7 @@ export default function BillingPage(): React.JSX.Element | null {
             <p className="text-sm text-stone-500 dark:text-stone-400">
               {t('history.empty')}
             </p>
-            {!isFreePlan && (
+            {!isFreePlan && hasStripeCustomer && (
               <Button
                 variant="ghost"
                 size="sm"

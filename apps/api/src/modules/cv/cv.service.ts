@@ -64,6 +64,18 @@ export class CVService {
     return styles[templateId] || styles['modern'];
   }
 
+  /**
+   * The plan's CV-creation limit was hit. Carries a stable `code` (forwarded by
+   * AllExceptionsFilter) so clients open their upgrade prompt instead of
+   * pattern-matching this English message.
+   */
+  private cvLimitReached(): ForbiddenException {
+    return new ForbiddenException({
+      message: 'CV limit reached for your plan. Please upgrade.',
+      code: 'CV_LIMIT_REACHED',
+    });
+  }
+
   private getSampleContent(_user: any): { summary: string; experience: any[]; education: any[]; skills: any[] } {
     return {
       summary: `Results-driven professional with a strong background in delivering impactful solutions. Passionate about innovation, collaboration, and continuous improvement. Seeking opportunities to leverage expertise and contribute to organizational success.`,
@@ -151,7 +163,7 @@ export class CVService {
     const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
 
     if (limits.cvs !== 'unlimited' && user.usage.cvsCreated >= limits.cvs) {
-      throw new ForbiddenException('CV limit reached for your plan. Please upgrade.');
+      throw this.cvLimitReached();
     }
 
     const id = uuidv4();
@@ -200,15 +212,22 @@ export class CVService {
       updatedAt: now,
       deletedAt: null,
     };
+    // The example career is marked as such so the editor can say so and offer
+    // to clear it: the seeded summary text is stored alongside (the summary is
+    // "still the example" exactly while it equals this), and every seeded item
+    // carries `isSample: true` (item extra keys are allowed by
+    // IsLooseSectionItemArray). The user's own personal info is never tagged.
+    const doc = { ...cv, sampleSummary: sample.summary };
 
-    await this.firebaseAdmin.firestore.collection(this.collection).doc(id).set(cv);
+    await this.firebaseAdmin.firestore.collection(this.collection).doc(id).set(doc);
     await this.usersService.incrementUsage(userId, 'cvsCreated');
 
     // Create default sections with sample content
+    const tag = (items: any[]) => items.map((item) => ({ ...item, isSample: true }));
     const sectionConfigs = [
-      { type: 'experience', title: 'Experience', items: sample.experience },
-      { type: 'education',  title: 'Education',  items: sample.education },
-      { type: 'skills',     title: 'Skills',     items: sample.skills },
+      { type: 'experience', title: 'Experience', items: tag(sample.experience) },
+      { type: 'education',  title: 'Education',  items: tag(sample.education) },
+      { type: 'skills',     title: 'Skills',     items: tag(sample.skills) },
     ];
 
     for (let i = 0; i < sectionConfigs.length; i++) {
@@ -325,7 +344,7 @@ export class CVService {
     const user = await this.usersService.findByIdOrThrow(userId);
     const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
     if (limits.cvs !== 'unlimited' && user.usage.cvsCreated >= limits.cvs) {
-      throw new ForbiddenException('CV limit reached for your plan. Please upgrade.');
+      throw this.cvLimitReached();
     }
 
     // Parse first — if the AI call itself fails (credits/provider), no CV is created.
@@ -575,7 +594,7 @@ export class CVService {
     const user = await this.usersService.findByIdOrThrow(userId);
     const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
     if (limits.cvs !== 'unlimited' && user.usage.cvsCreated >= limits.cvs) {
-      throw new ForbiddenException('CV limit reached for your plan. Please upgrade.');
+      throw this.cvLimitReached();
     }
 
     const original = await this.findByIdOrThrow(id, userId);

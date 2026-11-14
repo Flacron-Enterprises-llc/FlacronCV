@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError, type AlertList } from '@flacroncv/career-api-client';
@@ -101,6 +101,8 @@ describe('AlertsScreen saved searches', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
     expect(updateSavedSearch).toHaveBeenCalledWith('s1', { paused: true });
     fireEvent.click(await screen.findByRole('button', { name: 'Delete saved search All opportunities' }));
+    expect(deleteSavedSearch).not.toHaveBeenCalled();
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }));
     expect(deleteSavedSearch).toHaveBeenCalledWith('s2');
     await screen.findByText('data analyst');
     expect(screen.queryByText('All opportunities')).toBeNull();

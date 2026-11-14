@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   MaxLength,
@@ -8,6 +9,7 @@ import {
 } from 'class-validator';
 import { CoverLetterStatus, UpdateCoverLetterData } from '@flacroncv/shared-types';
 import { CoverLetterStylingDto } from './cover-letter-styling.dto';
+import { LETTER_LOCALES, LetterLocale } from '../letter-locale';
 
 export class UpdateCoverLetterDto implements UpdateCoverLetterData {
   @IsOptional()
@@ -59,6 +61,11 @@ export class UpdateCoverLetterDto implements UpdateCoverLetterData {
   @ValidateNested()
   @Type(() => CoverLetterStylingDto)
   styling?: CoverLetterStylingDto;
+
+  /** See CreateCoverLetterDto.letterLocale — the language the letter is written in. */
+  @IsOptional()
+  @IsIn(LETTER_LOCALES, { message: `letterLocale must be one of: ${LETTER_LOCALES.join(', ')}` })
+  letterLocale?: LetterLocale;
 
   @IsOptional()
   @IsEnum(CoverLetterStatus, {

@@ -119,6 +119,22 @@ describe('OpportunityService', () => {
     expect(near.items).toHaveLength(1);
   });
 
+  it('reads the fields a paste states and refuses a paste too short to be a listing', async () => {
+    const owner = await person('opp-paste-fields');
+    const created = await opportunities.paste(owner, {
+      text: 'Records Analyst at Northwind Traders, Montreal\nSalary: $60,000 - $70,000 per year\nVisa sponsorship is not available.\nKeep the records accurate.',
+    });
+    expect(created.title).toBe('Records Analyst');
+    expect(created.organization).toBe('Northwind Traders');
+    expect(created.locations).toEqual(['Montreal']);
+    expect(created.compensation).toEqual({ minimum: 60000, maximum: 70000, currency: 'USD', period: 'year' });
+    expect(created.sponsorship).toBe('stated_no');
+
+    const short = await opportunities.paste(owner, { text: 'abc' }).catch((error: unknown) => error);
+    expect(isBillingError(short, 'validation_error')).toBe(true);
+    if (isBillingError(short)) expect(short.details).toMatchObject({ field: 'text', reason: 'too_short', minimum: 40 });
+  });
+
   it('does not call a live feed', async () => {
     const failed = await new UnconfiguredJobFeed().load('adzuna').catch((error: unknown) => error);
     expect(isBillingError(failed, 'provider_unavailable')).toBe(true);

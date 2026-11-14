@@ -9,6 +9,8 @@ import {
   UseGuards,
   Res,
 } from '@nestjs/common';
+import { CreateCRMTransactionBody } from './dto/crm-records.dto';
+import { positiveInt } from './paging';
 import { Response } from 'express';
 import { csvCell } from '../../common/utils/csv';
 import { toIsoString } from '../../common/utils/date';
@@ -17,7 +19,7 @@ import { CRMTransactionsService } from './crm-transactions.service';
 import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { CreateCRMTransactionDto, CRMTransactionStatus } from '@flacroncv/shared-types';
+import { CRMTransactionStatus } from '@flacroncv/shared-types';
 
 @ApiTags('crm-transactions')
 @Controller('crm/transactions')
@@ -28,7 +30,7 @@ export class CRMTransactionsController {
   constructor(private readonly transactionsService: CRMTransactionsService) {}
 
   @Post()
-  create(@Body() dto: CreateCRMTransactionDto) {
+  create(@Body() dto: CreateCRMTransactionBody) {
     return this.transactionsService.create(dto);
   }
 
@@ -42,8 +44,8 @@ export class CRMTransactionsController {
     @Query('endDate') endDate?: string,
   ) {
     return this.transactionsService.list({
-      page: page ? parseInt(page, 10) : 1,
-      limit: limit ? parseInt(limit, 10) : 20,
+      page: positiveInt(page, 1),
+      limit: positiveInt(limit, 20),
       customerId,
       status,
       startDate,

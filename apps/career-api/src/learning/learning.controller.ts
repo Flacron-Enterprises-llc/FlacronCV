@@ -14,7 +14,9 @@ import {
   SkillsLearningService,
   MeteringService,
   type Principal,
+  type TextModel,
 } from '@flacroncv/career-server';
+import { TEXT_MODEL } from '../ai/ai.providers';
 import { CurrentPrincipal } from '../auth/auth.guard';
 import { DatabaseService } from '../database/database.service';
 import { IdempotencyKey } from '../metering/metering.providers';
@@ -106,8 +108,8 @@ export class LearningController {
 export const learningProviders: Provider[] = [
   {
     provide: SkillsLearningService,
-    useFactory: (db: DatabaseService, metering: MeteringService) =>
-      new SkillsLearningService(db.connectionPool, metering),
-    inject: [DatabaseService, MeteringService],
+    useFactory: (db: DatabaseService, metering: MeteringService, model: TextModel) =>
+      new SkillsLearningService(db.connectionPool, metering, model),
+    inject: [DatabaseService, MeteringService, TEXT_MODEL],
   },
 ];

@@ -1,4 +1,9 @@
-import { validateProfileLink } from '@flacroncv/shared-types';
+import {
+  checkProfileLink,
+  parseProfileLinkErrorCode,
+  profileLinkErrorCode,
+  validateProfileLink,
+} from '@flacroncv/shared-types';
 
 /**
  * The profile form has three link fields side by side. Before this rule the
@@ -87,4 +92,52 @@ describe('validateProfileLink', () => {
   it('is case-insensitive about the host', () => {
     expect(validateProfileLink('github', 'https://GitHub.COM/someone').error).toBeUndefined();
   });
+  // Chrome normalises "not a url" to https://not%20a%20url/ while Node's URL
+  // rejects it, so the form accepted what the API refused. These inputs must be
+  // rejected by the shared rule itself, whichever runtime parses them.
+  describe('rejects typos that a forgiving URL parser would accept', () => {
+    it.each([
+      ['website', 'not a url'],
+      ['website', 'my site.com'],
+      ['website', 'https://example.com/a b'],
+      ['website', 'example.com	/a'],
+      ['github', 'https://github.com/jane doe'],
+      ['website', 'jane'],
+      ['website', 'https://localhost/x'],
+      ['website', 'https://[::1]/x'],
+    ] as const)('%s ✗ %j', (field, input) => {
+      expect(checkProfileLink(field, input).issue).toEqual({ code: 'invalid' });
+    });
+
+    it('still accepts an IPv4 address and a trailing-dot domain', () => {
+      expect(checkProfileLink('website', 'https://127.0.0.1/x').issue).toBeUndefined();
+      expect(checkProfileLink('website', 'https://example.com./').issue).toBeUndefined();
+    });
+  });
+
+  describe('reports the reason as a code so clients can translate it', () => {
+    it.each([
+      ['github', 'x'.repeat(30), { code: 'too_long', max: 20 }, 20],
+      ['website', 'ftp://example.com/x', { code: 'scheme' }, 500],
+      ['linkedin', 'https://github.com/jane', { code: 'host', host: 'linkedin.com' }, 500],
+      ['github', 'https://github.com', { code: 'profile_path', host: 'github.com' }, 500],
+    ] as const)('%s %j', (field, input, issue, max) => {
+      expect(checkProfileLink(field, input, max).issue).toEqual(issue);
+    });
+
+    it('keeps an English sentence for the API message', () => {
+      expect(validateProfileLink('linkedin', 'https://github.com/jane').error).toBe(
+        'LinkedIn link must be on linkedin.com.',
+      );
+    });
+
+    it('round-trips the 400 error code', () => {
+      const code = profileLinkErrorCode('website', { code: 'invalid' });
+      expect(code).toBe('PROFILE_LINK_WEBSITE_INVALID');
+      expect(parseProfileLinkErrorCode(code)).toEqual({ field: 'website', issue: 'invalid' });
+      expect(parseProfileLinkErrorCode('NO_SUBSCRIPTION')).toBeUndefined();
+      expect(parseProfileLinkErrorCode(undefined)).toBeUndefined();
+    });
+  });
 });
+

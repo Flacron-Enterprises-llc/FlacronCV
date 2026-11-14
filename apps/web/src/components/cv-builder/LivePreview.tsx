@@ -59,7 +59,9 @@ export default function LivePreview() {
   // threading a new prop through all five templates. Export clones this same
   // DOM, so the PDF matches the preview exactly.
   const fittedCV = fit === 1 ? cv : { ...cv, styling: { ...cv.styling, __autoFit: fit } };
-  const props = { cv: fittedCV, sections: visibleSections };
+  // The editor preview is the one place the candidate's name is the subject of
+  // the page, so it is the heading here (thumbnails default to a plain div).
+  const props = { cv: fittedCV, sections: visibleSections, nameAs: 'h1' as const };
 
   return (
     <div className="mx-auto max-w-[595px]">

@@ -7,7 +7,6 @@ import { Link } from '@/i18n/routing';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { useFormatDate } from '@/lib/use-format-date';
 import {
@@ -37,6 +36,7 @@ interface AdminStats {
 export default function AdminDashboardPage(): React.JSX.Element | null {
   const formatDate = useFormatDate();
   const t = useTranslations('admin');
+  const tc = useTranslations('crm');
 
   const {
     data: stats,
@@ -122,21 +122,6 @@ export default function AdminDashboardPage(): React.JSX.Element | null {
         ))}
       </div>
 
-      {/* Revenue Chart Placeholder */}
-      <Card>
-        <h2 className="mb-4 text-lg font-semibold text-stone-900 dark:text-white">
-          {t('revenue_overview')}
-        </h2>
-        <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50">
-          <div className="text-center">
-            <DollarSign className="mx-auto h-10 w-10 text-stone-400" />
-            <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
-              {t('revenue_chart_placeholder')}
-            </p>
-          </div>
-        </div>
-      </Card>
-
       {/* Recent Users & Quick Actions */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Recent Users */}
@@ -146,11 +131,12 @@ export default function AdminDashboardPage(): React.JSX.Element | null {
               <h2 className="text-lg font-semibold text-stone-900 dark:text-white">
                 {t('recent_users')}
               </h2>
-              <Link href="/admin/users">
-                <Button variant="ghost" size="sm">
-                  {t('view_all')}
-                  <ArrowRight className="ms-1 h-4 w-4" />
-                </Button>
+              <Link
+                href="/admin/users"
+                className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white"
+              >
+                {t('view_all')}
+                <ArrowRight className="ms-1 h-4 w-4 rtl:-scale-x-100" />
               </Link>
             </div>
             <div className="overflow-x-auto">
@@ -184,8 +170,8 @@ export default function AdminDashboardPage(): React.JSX.Element | null {
                         {u.email}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4">
-                        <Badge variant={u.role === 'admin' ? 'brand' : 'default'}>
-                          {u.role}
+                        <Badge variant={u.role === 'admin' || u.role === 'super_admin' ? 'brand' : 'default'}>
+                          {['user', 'admin', 'super_admin'].includes(u.role) ? tc(`role_${u.role}`) : u.role}
                         </Badge>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-stone-600 dark:text-stone-400">

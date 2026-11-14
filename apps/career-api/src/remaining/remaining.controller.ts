@@ -267,6 +267,11 @@ export class RemainingController {
     return this.remaining.assignCounselor(principal, body.staffId, body.candidateId);
   }
 
+  @Get('business')
+  businessOverview(@CurrentPrincipal() principal: Principal) {
+    return this.remaining.businessOverview(principal);
+  }
+
   @Get('business/candidates/:candidateId')
   getCandidate(@CurrentPrincipal() principal: Principal, @Param('candidateId') candidateId: string) {
     return this.remaining.getCandidate(principal, candidateId);
@@ -282,6 +287,11 @@ export class RemainingController {
     return this.remaining.bookHumanService();
   }
 
+  @Get('recruiting/opt-in')
+  getOptIn(@CurrentPrincipal() principal: Principal) {
+    return this.remaining.getOptIn(principal);
+  }
+
   @Post('recruiting/opt-in')
   setOptIn(@CurrentPrincipal() principal: Principal, @Body() body: OptInDto) {
     return this.remaining.setOptIn(principal, body.discoverable);
@@ -295,6 +305,11 @@ export class RemainingController {
   @Post('recruiting/checkout')
   employerCheckout() {
     return this.remaining.employerCheckout();
+  }
+
+  @Get('developer')
+  developerStatus(@CurrentPrincipal() principal: Principal) {
+    return this.remaining.developerStatus(principal);
   }
 
   @Post('developer/keys')

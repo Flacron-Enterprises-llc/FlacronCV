@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { newIdempotencyKey, isApiError, type ApiClient, type Resume, type ResumeVersion } from '@flacroncv/career-api-client';
+import { newIdempotencyKey, isApiError, type ApiClient, type OpportunityItem, type Resume, type ResumeVersion } from '@flacroncv/career-api-client';
 import type { DocumentCredit, ResumeDetail, WritingDocument, WritingType } from '@flacroncv/career-api-client';
 import {
   COVER_LETTER_TEMPLATES,
@@ -27,12 +27,14 @@ import {
   PlanUpgradeState,
   ProviderUnavailableState,
   QuotaExhaustedState,
+  InlineNote,
+  PageHeader,
 } from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { profileLoadFailure } from '@/lib/career/profile-load';
 import { useUnsavedChangesGuard } from '@/components/career/ui/UnsavedChangesGuard';
 
-type Problem = 'failed' | 'quota' | 'capacity' | 'upgrade' | 'missing' | 'clarify' | 'unusable' | 'conflict' | 'download' | null;
+type Problem = 'failed' | 'ai_unavailable' | 'quota' | 'capacity' | 'upgrade' | 'missing' | 'clarify' | 'unusable' | 'conflict' | 'download' | null;
 
 /** "Marie Curie — CV.pdf"-style names from the document title; unsafe characters removed, fallback when empty. */
 export function downloadName(title: string, fallback: string, format: string): string {
@@ -64,11 +66,14 @@ export function ResumeScreen({
   user,
   ready,
   signInHref,
+  hideTitle = false,
 }: {
   api: ApiClient;
   user: SignedInUser | null;
   ready: boolean;
   signInHref: string;
+  /** The Documents page shows its own header above the copy card. */
+  hideTitle?: boolean;
 }) {
   const t = useTranslations('career.resume');
   const tHome = useTranslations('career.home');
@@ -89,6 +94,9 @@ export function ResumeScreen({
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [confirming, setConfirming] = useState(false);
   const [opportunityId, setOpportunityId] = useState('');
+  // The person's saved listings, so a document is targeted by choosing one rather than typing its id.
+  const [listings, setListings] = useState<OpportunityItem[]>([]);
+  const [generateNote, setGenerateNote] = useState<'unavailable' | 'failed' | null>(null);
   const [problem, setProblem] = useState<Problem>(null);
   const [released, setReleased] = useState(false);
   const [limit, setLimit] = useState<number | null>(null);
@@ -114,6 +122,10 @@ export function ResumeScreen({
   const loadResumes = useCallback(async () => {
     setLoad('loading');
     setProblem(null);
+    api
+      .opportunities({ q: '' })
+      .then((found) => setListings(found.items))
+      .catch(() => setListings([]));
     try {
       const list = await api.resumes();
       setCredit(list.documentCredit);
@@ -238,7 +250,7 @@ export function ResumeScreen({
           title={t('signed_out_title')}
           body={t('signed_out_body')}
           action={
-            <a className="inline-flex min-h-career-touch cursor-pointer items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white" href={signInHref}>
+            <a className="inline-flex min-h-career-touch cursor-pointer items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white dark:text-stone-950" href={signInHref}>
               {t('go_sign_in')}
             </a>
           }
@@ -351,6 +363,7 @@ export function ResumeScreen({
     if (!detail) return;
     setPending(true);
     setProblem(null);
+    setGenerateNote(null);
     try {
       const action = `generate:${detail.id}`;
       const paid = await settlePaid(action, (key) => api.generateResume(detail.id, '', key));
@@ -364,6 +377,10 @@ export function ResumeScreen({
       setConfirming(false);
     } catch (error) {
       note(error);
+      // Say it beside the button that was pressed and close the confirm panel:
+      // nothing was generated or charged, and the panel would only invite a retry.
+      setGenerateNote(isApiError(error, 'provider_unavailable') ? 'unavailable' : 'failed');
+      setConfirming(false);
     } finally {
       setPending(false);
     }
@@ -604,7 +621,18 @@ export function ResumeScreen({
     } else if (isApiError(error, 'provider_unavailable')) {
       setReleased(error.body.released === true);
       const reason = typeof error.body.reason === 'string' ? error.body.reason : '';
-      setProblem(UNUSABLE_LETTER_REASONS.has(reason) ? 'unusable' : 'failed');
+      // No AI configured (or it is down) is not a failed job: say so plainly.
+      // Anything else under provider_unavailable (not configured, provider
+      // error, empty reply) means the AI service is unavailable right now.
+      // Its text says no credit was used, so only when the server confirms the
+      // release; otherwise the generic failure says whether it was kept.
+      setProblem(
+        UNUSABLE_LETTER_REASONS.has(reason)
+          ? 'unusable'
+          : error.body.released === true
+            ? 'ai_unavailable'
+            : 'failed',
+      );
     } else if (isApiError(error, 'validation_error')) {
       const reason = error.body.reason;
       if (
@@ -621,10 +649,7 @@ export function ResumeScreen({
   return (
     <div className="flex flex-col gap-4">
       {guard.dialog}
-      <div>
-        <h1 className="text-balance text-2xl font-bold text-career-ink">{t('title')}</h1>
-        <p className="mt-2 max-w-2xl text-pretty text-sm text-career-muted">{t('studio_lede')}</p>
-      </div>
+      {hideTitle ? null : <PageHeader title={t('title')} description={t('studio_lede')} />}
       {library.length > 0 ? (
         <div className="flex min-w-0 flex-col gap-3 rounded-lg border border-career-line bg-career-surface p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -698,7 +723,7 @@ export function ResumeScreen({
             <button
               type="button"
               aria-pressed={pane === 'edit'}
-              className={`min-h-career-touch rounded px-3 text-sm font-semibold transition-colors duration-200 ${pane === 'edit' ? 'bg-career-navy text-white' : 'text-career-ink'}`}
+              className={`min-h-career-touch rounded px-3 text-sm font-semibold transition-colors duration-200 ${pane === 'edit' ? 'bg-career-navy text-white dark:text-stone-950' : 'text-career-ink'}`}
               onClick={() => setPane('edit')}
             >
               {t('pane_edit')}
@@ -706,7 +731,7 @@ export function ResumeScreen({
             <button
               type="button"
               aria-pressed={pane === 'preview'}
-              className={`min-h-career-touch rounded px-3 text-sm font-semibold transition-colors duration-200 ${pane === 'preview' ? 'bg-career-navy text-white' : 'text-career-ink'}`}
+              className={`min-h-career-touch rounded px-3 text-sm font-semibold transition-colors duration-200 ${pane === 'preview' ? 'bg-career-navy text-white dark:text-stone-950' : 'text-career-ink'}`}
               onClick={() => setPane('preview')}
             >
               {t('pane_preview')}
@@ -773,12 +798,17 @@ export function ResumeScreen({
               {version.body.confirmation === 'draft' ? (
                 <Button type="button" variant="secondary" disabled={pending} onClick={() => void confirmVersion()}>{t('confirm')}</Button>
               ) : null}
-              <Button type="button" disabled={pending} onClick={() => setConfirming(true)}>{t('generate')}</Button>
+              <Button type="button" disabled={pending} onClick={() => { setGenerateNote(null); setConfirming(true); }}>{t('generate')}</Button>
               <Button type="button" variant="secondary" onClick={() => void download('pdf')}>{t('pdf')}</Button>
               <Button type="button" variant="secondary" onClick={() => void download('docx')}>{t('docx')}</Button>
               {dirty ? <p className="self-center text-sm text-career-muted">{t('export_unsaved')}</p> : null}
               <Button type="button" variant="secondary" onClick={() => void checkReadability()}>{t('readability')}</Button>
             </div>
+            {generateNote ? (
+              <InlineNote tone="error" className="mt-3">
+                {generateNote === 'unavailable' ? t('generate_unavailable') : t('generate_failed')}
+              </InlineNote>
+            ) : null}
             {confirming ? (
               <div className="mt-4 rounded-md border border-career-line p-4">
                 <h2 className="text-lg font-semibold text-career-ink">{t('generate_title')}</h2>
@@ -857,11 +887,12 @@ export function ResumeScreen({
                   </select>
                 </label>
               ) : null}
-              <Input
+              <ListingSelect
                 label={t('writing_opportunity')}
-                name="writingOpportunityId"
+                none={t('listing_none')}
+                listings={listings}
                 value={writingOpportunity}
-                onChange={(event) => setWritingOpportunity(event.target.value)}
+                onChange={setWritingOpportunity}
               />
               <p className="text-sm text-career-muted">{t('writing_draft_only')}</p>
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -935,8 +966,8 @@ export function ResumeScreen({
               </form>
             ) : null}
             <form className="mt-4 flex flex-col gap-2" onSubmit={(event) => { event.preventDefault(); void tailor(); }}>
-              <Input label={t('tailor_label')} name="opportunityId" value={opportunityId} onChange={(event) => setOpportunityId(event.target.value)} />
-              <Button type="submit" variant="secondary" disabled={pending}>{t('tailor')}</Button>
+              <ListingSelect label={t('tailor_label')} none={t('listing_choose')} listings={listings} value={opportunityId} onChange={setOpportunityId} />
+              <Button type="submit" variant="secondary" disabled={pending || !opportunityId}>{t('tailor')}</Button>
             </form>
           </Card>
           <div className={pane === 'edit' ? 'max-xl:hidden' : undefined}>
@@ -955,6 +986,9 @@ export function ResumeScreen({
       {problem === 'upgrade' ? <PlanUpgradeState title={t('upgrade_title')} body={t('upgrade_body')} /> : null}
       {problem === 'quota' ? (
         <QuotaExhaustedState title={t('quota_title')} body={t('quota_body', { date: credit?.renewalDate?.slice(0, 10) ?? '' })} />
+      ) : null}
+      {problem === 'ai_unavailable' ? (
+        <FailedJobState title={t('failed_title')} body={t('generate_unavailable')} />
       ) : null}
       {problem === 'failed' ? (
         <FailedJobState title={t('failed_title')} body={released ? t('failed_released') : t('failed_kept')} />
@@ -1022,7 +1056,7 @@ function ResumePreview({
           <button
             type="button"
             aria-pressed={scale === 'fit'}
-            className={`min-h-career-touch rounded px-2 text-xs font-semibold ${scale === 'fit' ? 'bg-career-navy text-white' : 'text-career-ink'}`}
+            className={`min-h-career-touch rounded px-2 text-xs font-semibold ${scale === 'fit' ? 'bg-career-navy text-white dark:text-stone-950' : 'text-career-ink'}`}
             onClick={() => onScale('fit')}
           >
             {t('preview_fit')}
@@ -1030,7 +1064,7 @@ function ResumePreview({
           <button
             type="button"
             aria-pressed={scale === 'full'}
-            className={`min-h-career-touch rounded px-2 text-xs font-semibold ${scale === 'full' ? 'bg-career-navy text-white' : 'text-career-ink'}`}
+            className={`min-h-career-touch rounded px-2 text-xs font-semibold ${scale === 'full' ? 'bg-career-navy text-white dark:text-stone-950' : 'text-career-ink'}`}
             onClick={() => onScale('full')}
           >
             {t('preview_full')}
@@ -1058,5 +1092,38 @@ function ResumePreview({
         </div>
       )}
     </aside>
+  );
+}
+
+/** A picker over the person's saved listings; the value is the opportunity id. */
+function ListingSelect({
+  label,
+  none,
+  listings,
+  value,
+  onChange,
+}: {
+  label: string;
+  none: string;
+  listings: OpportunityItem[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block space-y-1.5 text-sm font-semibold text-career-ink">
+      <span>{label}</span>
+      <select
+        className="block h-11 w-full rounded-md border border-career-line bg-career-surface px-3 text-base font-normal text-career-ink focus:border-career-navy focus:outline-none focus:ring-2 focus:ring-career-orange-text/40"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="">{none}</option>
+        {listings.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.organization ? `${item.title} · ${item.organization}` : item.title}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

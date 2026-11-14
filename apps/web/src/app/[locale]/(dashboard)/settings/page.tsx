@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Link, useRouter, usePathname } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -16,7 +16,10 @@ import {
   Locale,
   Theme,
   ProfileLinkField,
-  validateProfileLink,
+  ProfileLinkIssue,
+  PROFILE_LINK_HOSTS,
+  checkProfileLink,
+  parseProfileLinkErrorCode,
 } from '@flacroncv/shared-types';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -46,13 +49,16 @@ import { TOUR_TARGETS } from '@/lib/app-tour';
 import { isCareerEnabled, useCareerApi } from '@/components/career/CareerServices';
 import { CareerErasureNeedsFreshSignIn, eraseCareerDataBeforeAccountDeletion } from '@/lib/career/account-deletion';
 
+/** The avatar is a ≤512px JPEG; 30 s is far beyond any healthy upload of it. */
+const AVATAR_UPLOAD_TIMEOUT_MS = 30_000;
+
 export default function SettingsPage(): React.JSX.Element | null {
   const t = useTranslations('settings');
   const tTour = useTranslations('tour');
   const tCareerData = useTranslations('career.data');
   const careerApi = useCareerApi();
   const formatApiError = useApiErrorMessage();
-  const { user, resetPassword, refreshUser, logout } = useAuth();
+  const { user, resetOwnPassword, refreshUser, logout } = useAuth();
   const { setTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
@@ -67,6 +73,24 @@ export default function SettingsPage(): React.JSX.Element | null {
   // is actually wrong rather than as one generic "save failed" toast.
   const [linkErrors, setLinkErrors] = useState<Partial<Record<ProfileLinkField, string>>>({});
   const [nameErrors, setNameErrors] = useState<{ firstName?: string; lastName?: string }>({});
+
+  // The shared validator returns a reason code, not a sentence, so the message
+  // is in the user's language. Static keys so keys-resolve can check them.
+  const linkErrorMessage = (issue: ProfileLinkIssue): string => {
+    switch (issue.code) {
+      case 'too_long':
+        return t('profile.linkErrors.too_long', { max: issue.max });
+      case 'scheme':
+        return t('profile.linkErrors.scheme');
+      case 'host':
+        return t('profile.linkErrors.host', { host: issue.host });
+      case 'profile_path':
+        return t('profile.linkErrors.profile_path', { host: issue.host });
+      case 'invalid':
+      default:
+        return t('profile.linkErrors.invalid');
+    }
+  };
 
   // Profile form state
   const [profile, setProfile] = useState<Partial<UserProfile>>({
@@ -101,9 +125,14 @@ export default function SettingsPage(): React.JSX.Element | null {
   const [downloadingData, setDownloadingData] = useState(false);
   const [showSignOutAllModal, setShowSignOutAllModal] = useState(false);
 
-  // Populate form from user data
+  // Populate the form once per account, not on every `user` change: the user
+  // object also changes when a theme pick is written back to the account (see
+  // AuthProvider) or after a save, and re-populating then would discard edits
+  // the user has typed but not saved yet.
+  const populatedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (user) {
+    if (user && populatedFor.current !== user.uid) {
+      populatedFor.current = user.uid;
       setProfile({
         firstName: user.profile?.firstName || '',
         lastName: user.profile?.lastName || '',
@@ -132,6 +161,22 @@ export default function SettingsPage(): React.JSX.Element | null {
       queryClient.invalidateQueries({ queryKey: ['user'] });
     },
     onError: (error: Error) => {
+      // A link the server rejected belongs under its field, like the ones the
+      // browser catches — not in an English toast.
+      const linkError = error instanceof ApiError ? parseProfileLinkErrorCode(error.code) : undefined;
+      if (linkError) {
+        const { field, issue } = linkError;
+        const host = PROFILE_LINK_HOSTS[field][0] ?? '';
+        const detail: ProfileLinkIssue =
+          issue === 'too_long'
+            ? { code: 'too_long', max: 500 }
+            : issue === 'host' || issue === 'profile_path'
+              ? { code: issue, host }
+              : { code: issue };
+        setLinkErrors((errs) => ({ ...errs, [field]: linkErrorMessage(detail) }));
+        toast.error(t('profile.fixLinks'));
+        return;
+      }
       toast.error(formatApiError(error, t('profile.saveError')));
     },
   });
@@ -174,9 +219,11 @@ export default function SettingsPage(): React.JSX.Element | null {
     onSuccess: async () => {
       toast.success(t('account.deleteSuccess'));
       // Clear the local session — the server has revoked this account's refresh
-      // token, so the client must not keep a signed-in state around.
+      // token, so the client must not keep a signed-in state around. No
+      // sign-out audit call: the API refuses the deleted account's token, so
+      // it could only fail with a 401 in the console.
       try {
-        await logout();
+        await logout({ skipAudit: true });
       } catch {
         /* already deleted server-side; ignore */
       }
@@ -262,10 +309,27 @@ export default function SettingsPage(): React.JSX.Element | null {
       const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}.jpg`);
       const uploadTask = uploadBytesResumable(storageRef, blob, { contentType: 'image/jpeg' });
 
+      // An upload that never settles (unreachable Storage host, a stalled
+      // connection) used to leave the spinner on the avatar forever. Give up
+      // after AVATAR_UPLOAD_TIMEOUT_MS: cancel the task and report the failure.
       const downloadURL = await new Promise<string>((resolve, reject) => {
-        uploadTask.on('state_changed', null, reject, async () => {
-          resolve(await getDownloadURL(uploadTask.snapshot.ref));
-        });
+        const timer = setTimeout(() => {
+          reject(new Error('avatar upload timed out'));
+          uploadTask.cancel();
+        }, AVATAR_UPLOAD_TIMEOUT_MS);
+        uploadTask.on(
+          'state_changed',
+          null,
+          (error) => {
+            clearTimeout(timer);
+            reject(error);
+          },
+          () => {
+            getDownloadURL(uploadTask.snapshot.ref)
+              .then(resolve, reject)
+              .finally(() => clearTimeout(timer));
+          },
+        );
       });
 
       // Sync Firebase Auth profile
@@ -285,10 +349,12 @@ export default function SettingsPage(): React.JSX.Element | null {
         toast.error(t('avatar.invalidType'));
       } else if (err instanceof ImageUploadError && err.code === 'TOO_LARGE') {
         toast.error(t('avatar.tooLarge', { max: '5 MB' }));
-      } else if (err instanceof ImageUploadError) {
-        toast.error(t('avatar.uploadFailed'));
-      } else {
+      } else if (err instanceof ApiError) {
         toast.error(formatApiError(err, t('avatar.uploadFailed')));
+      } else {
+        // Storage/Auth SDK errors (and the timeout) carry English SDK text
+        // such as "Firebase Storage: User canceled the upload" — never shown.
+        toast.error(t('avatar.uploadFailed'));
       }
     } finally {
       setUploading(false);
@@ -341,8 +407,8 @@ export default function SettingsPage(): React.JSX.Element | null {
     if (!profile.lastName?.trim()) nextNameErrors.lastName = t('profile.lastNameRequired');
 
     (['linkedin', 'github', 'website'] as ProfileLinkField[]).forEach((field) => {
-      const result = validateProfileLink(field, profile[field] ?? '');
-      if (result.error) errors[field] = result.error;
+      const result = checkProfileLink(field, profile[field] ?? '');
+      if (result.issue) errors[field] = linkErrorMessage(result.issue);
       else normalized[field] = result.value;
     });
 
@@ -378,11 +444,13 @@ export default function SettingsPage(): React.JSX.Element | null {
     if (!user?.email || sendingReset) return;
     setSendingReset(true);
     try {
-      await resetPassword(user.email);
+      // The signed-in endpoint, unlike the anonymous forgot-password one,
+      // reports a failed email — so the error below is real, not a guess.
+      await resetOwnPassword();
       setPasswordResetSent(true);
       toast.success(t('account.passwordResetEmailSent'));
     } catch (error) {
-      toast.error(t('account.passwordResetFailed'));
+      toast.error(formatApiError(error, t('account.passwordResetFailed')));
     } finally {
       setSendingReset(false);
     }
@@ -498,6 +566,8 @@ export default function SettingsPage(): React.JSX.Element | null {
             value={profile.headline}
             onChange={(e) => setProfile((p) => ({ ...p, headline: e.target.value }))}
             placeholder={t('profile.headlinePlaceholder')}
+            // Free text may be in either script; let the browser pick per value.
+            dir="auto"
           />
           <div className="space-y-1.5">
             <label
@@ -510,6 +580,7 @@ export default function SettingsPage(): React.JSX.Element | null {
               id="bio"
               rows={4}
               className="input-field resize-none"
+              dir="auto"
               value={profile.bio}
               onChange={(e) => setProfile((p) => ({ ...p, bio: e.target.value }))}
               placeholder={t('profile.bioPlaceholder')}
@@ -521,6 +592,7 @@ export default function SettingsPage(): React.JSX.Element | null {
             value={profile.location}
             onChange={(e) => setProfile((p) => ({ ...p, location: e.target.value }))}
             placeholder={t('profile.locationPlaceholder')}
+            dir="auto"
           />
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Input
@@ -536,6 +608,10 @@ export default function SettingsPage(): React.JSX.Element | null {
               }}
               error={linkErrors.linkedin}
               placeholder="https://linkedin.com/in/username"
+              // URLs are left-to-right; in /ar and /ur they otherwise render
+              // mirrored ("/https://example.org").
+              dir="ltr"
+              inputMode="url"
             />
             <Input
               id="github"
@@ -547,6 +623,8 @@ export default function SettingsPage(): React.JSX.Element | null {
               }}
               error={linkErrors.github}
               placeholder="https://github.com/username"
+              dir="ltr"
+              inputMode="url"
             />
           </div>
           <Input
@@ -559,6 +637,8 @@ export default function SettingsPage(): React.JSX.Element | null {
             }}
             error={linkErrors.website}
             placeholder="https://yoursite.com"
+            dir="ltr"
+            inputMode="url"
           />
           <div className="flex justify-end">
             <Button
@@ -750,6 +830,7 @@ export default function SettingsPage(): React.JSX.Element | null {
             id="email"
             label={t('account.email')}
             value={user?.email || ''}
+            dir="ltr"
             readOnly
             hint={t('account.emailHint')}
           />

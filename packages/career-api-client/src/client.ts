@@ -56,6 +56,8 @@ import type {
   RecruitingSearch,
   ScenarioResult,
   WhiteLabelConfig,
+  BusinessOverview,
+  DeveloperStatus,
   BillingAccount,
   UsageSummary,
   CareerAccessView,
@@ -354,6 +356,8 @@ export function createApiClient(options: ApiClientOptions) {
 
     voiceInterviews: () => request<VoiceList>('GET', '/interviews/voice'),
     consentVoice: () => request<{ consent: true; version: string }>('POST', '/interviews/voice/consent'),
+    /** Withdraws recording consent; new recordings need consent again. */
+    withdrawVoiceConsent: () => request<{ consent: false }>('DELETE', '/interviews/voice/consent'),
     startVoice: (input: { kind: 'practice' | 'negotiation'; opportunityId?: string; stage?: InterviewStage; offer?: string; salarySource?: string }) =>
       request<VoiceSession>('POST', '/interviews/voice', { body: input }),
     recordVoice: (
@@ -393,13 +397,16 @@ export function createApiClient(options: ApiClientOptions) {
       request<{ id: string }>('POST', '/business/candidates', { body: { email, consent } }),
     assignCounselor: (staffId: string, candidateId: string) =>
       request<{ ok: true }>('POST', '/business/assignments', { body: { staffId, candidateId } }),
+    businessOverview: () => request<BusinessOverview>('GET', '/business'),
     businessCandidate: (candidateId: string) => request<{ id: string; email: string }>('GET', `/business/candidates/${id(candidateId)}`),
     humanServices: () => request<HumanServiceList>('GET', '/human-services'),
     bookHumanService: (providerId: string) => request<{ ok: false }>('POST', `/human-services/${id(providerId)}/bookings`),
+    recruitingOptIn: () => request<{ discoverable: boolean }>('GET', '/recruiting/opt-in'),
     setRecruitingOptIn: (discoverable: boolean) =>
       request<{ discoverable: boolean }>('POST', '/recruiting/opt-in', { body: { discoverable } }),
     recruitingSearch: () => request<RecruitingSearch>('GET', '/recruiting/search'),
     employerCheckout: () => request<{ ok: false }>('POST', '/recruiting/checkout'),
+    developerStatus: () => request<DeveloperStatus>('GET', '/developer'),
     createDeveloperKey: () => request<DeveloperKey>('POST', '/developer/keys'),
     consumeDeveloperRead: (token: string, workspaceId: string) =>
       request<{ readsRemaining: number }>('POST', '/developer/reads', { body: { token, workspaceId } }),
@@ -458,6 +465,7 @@ export function createApiClient(options: ApiClientOptions) {
     portfolios: () => request<{ items: PortfolioPage[] }>('GET', '/portfolios'),
     portfolio: (portfolioId: string) => request<PortfolioPage>('GET', `/portfolios/${id(portfolioId)}`),
     createPortfolio: (input: CreatePortfolioInput) => request<PortfolioPage>('POST', '/portfolios', { body: input }),
+    deletePortfolio: (portfolioId: string) => request<{ ok: true }>('DELETE', `/portfolios/${id(portfolioId)}`),
     updatePortfolio: (portfolioId: string, input: UpdatePortfolioInput) =>
       request<PortfolioPage>('PATCH', `/portfolios/${id(portfolioId)}`, { body: input }),
     publishPortfolio: (portfolioId: string, visibility: 'public' | 'private') =>

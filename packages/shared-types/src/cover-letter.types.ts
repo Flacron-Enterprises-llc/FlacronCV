@@ -1,5 +1,8 @@
 import { CoverLetterStatus } from './enums';
 
+/** Languages a cover letter can be written in (the site's six locales). */
+export type CoverLetterLocale = 'en' | 'es' | 'fr' | 'de' | 'ar' | 'ur';
+
 export interface CoverLetterStyling {
   fontFamily: string;
   fontSize: string;
@@ -9,6 +12,8 @@ export interface CoverLetterStyling {
 }
 
 export interface CoverLetter {
+  /** Language the letter is written in (labels, date, direction). Absent on older letters: clients infer it. */
+  letterLocale?: CoverLetterLocale;
   id: string;
   userId: string;
   title: string;
@@ -31,6 +36,8 @@ export interface CoverLetter {
 }
 
 export interface CreateCoverLetterData {
+  /** Language the letter is written in (labels, date, direction). Absent on older letters: clients infer it. */
+  letterLocale?: CoverLetterLocale;
   title: string;
   templateId?: string;
   linkedCVId?: string;
@@ -45,6 +52,8 @@ export interface CreateCoverLetterData {
 }
 
 export interface UpdateCoverLetterData {
+  /** Language the letter is written in (labels, date, direction). Absent on older letters: clients infer it. */
+  letterLocale?: CoverLetterLocale;
   title?: string;
   recipientName?: string;
   recipientTitle?: string;

@@ -10,6 +10,8 @@ import {
   UseGuards,
   Res,
 } from '@nestjs/common';
+import { CreateCRMLeadBody, UpdateCRMLeadBody } from './dto/crm-records.dto';
+import { positiveInt } from './paging';
 import { Response } from 'express';
 import { csvCell } from '../../common/utils/csv';
 import { toIsoString } from '../../common/utils/date';
@@ -19,7 +21,7 @@ import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, FirebaseUser } from '../../common/decorators/current-user.decorator';
-import { CreateCRMLeadDto, UpdateCRMLeadDto, CRMLeadStage } from '@flacroncv/shared-types';
+import { CRMLeadStage } from '@flacroncv/shared-types';
 
 @ApiTags('crm-leads')
 @Controller('crm/leads')
@@ -30,7 +32,7 @@ export class CRMLeadsController {
   constructor(private readonly leadsService: CRMLeadsService) {}
 
   @Post()
-  create(@Body() dto: CreateCRMLeadDto) {
+  create(@Body() dto: CreateCRMLeadBody) {
     return this.leadsService.create(dto);
   }
 
@@ -43,8 +45,8 @@ export class CRMLeadsController {
     @Query('assignedTo') assignedTo?: string,
   ) {
     return this.leadsService.list({
-      page: page ? parseInt(page, 10) : 1,
-      limit: limit ? parseInt(limit, 10) : 20,
+      page: positiveInt(page, 1),
+      limit: positiveInt(limit, 20),
       search,
       stage,
       assignedTo,
@@ -87,7 +89,7 @@ export class CRMLeadsController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateCRMLeadDto) {
+  update(@Param('id') id: string, @Body() dto: UpdateCRMLeadBody) {
     return this.leadsService.update(id, dto);
   }
 

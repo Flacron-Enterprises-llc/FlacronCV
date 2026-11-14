@@ -6,12 +6,11 @@
  */
 
 import React from 'react';
-import { useTranslations } from 'next-intl';
 import type { LayoutProps } from './shared';
-import { getTokens, readableOn, INK, buildContactLine, buildLinksLine, SectionHeading, ItemRenderer, SkillList } from './shared';
+import { getTokens, readableOn, INK, contactParts, linkParts, ContactRun, SectionHeading, ItemRenderer, SkillList, useCVDocument, CVDocumentProvider } from './shared';
 
-export default function ClassicLayout({ cv, sections }: LayoutProps) {
-  const t = useTranslations('cv_builder');
+export default function ClassicLayout({ cv, sections, nameAs: NameTag = 'div' }: LayoutProps) {
+  const doc = useCVDocument(cv, sections);
   const { primary, bodyFont, headingFont, fs, sp, br, sectionStyle } = getTokens(cv);
   const showPhoto = cv.styling.showPhoto && cv.personalInfo.photoURL;
   // The name is set in the accent at 28px. Large text only needs 3:1, but a
@@ -20,7 +19,8 @@ export default function ClassicLayout({ cv, sections }: LayoutProps) {
   const nameInk = readableOn(primary, '#ffffff', 3.0);
 
   return (
-    <div style={{
+    <CVDocumentProvider doc={doc}>
+    <div dir={doc.dir} lang={doc.lang} style={{
       fontFamily: bodyFont,
       color: '#1a1a1a',
       background: '#fff',
@@ -41,7 +41,7 @@ export default function ClassicLayout({ cv, sections }: LayoutProps) {
           />
         )}
 
-        <h1 style={{
+        <NameTag style={{
           fontFamily: headingFont,
           fontSize: `${fs.nameHero}px`,
           fontWeight: 800,
@@ -51,7 +51,7 @@ export default function ClassicLayout({ cv, sections }: LayoutProps) {
           letterSpacing: '-0.5px',
         }}>
           {cv.personalInfo.firstName} {cv.personalInfo.lastName}
-        </h1>
+        </NameTag>
 
         {/* Job title, set in small caps under the name. Tracked uppercase at a
             step down from the name reads as a standing subtitle rather than as
@@ -73,12 +73,12 @@ export default function ClassicLayout({ cv, sections }: LayoutProps) {
             read once, when someone decides to make contact, and they have to
             survive a laser printer to be usable at all. #888/#aaa did not. */}
         <p style={{ fontSize: `${fs.body}px`, color: INK.meta, margin: '8px 0 0', letterSpacing: '0.3px' }}>
-          {buildContactLine(cv)}
+          <ContactRun parts={contactParts(cv)} />
         </p>
 
         {(cv.personalInfo.linkedin || cv.personalInfo.website || cv.personalInfo.github) && (
           <p style={{ fontSize: `${fs.meta}px`, color: INK.meta, margin: '3px 0 0' }}>
-            {buildLinksLine(cv)}
+            <ContactRun parts={linkParts(cv)} />
           </p>
         )}
       </div>
@@ -94,8 +94,8 @@ export default function ClassicLayout({ cv, sections }: LayoutProps) {
       {/* ── Summary ── */}
       {cv.personalInfo.summary && (
         <div style={{ marginBottom: `${sp.section}px` }}>
-          <SectionHeading title={t('template_professional_summary')} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
-          <p style={{ fontSize: `${fs.name}px`, lineHeight: 1.75, color: INK.body, margin: 0, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
+          <SectionHeading title={doc.labels.professionalSummary} primary={primary} headingFont={headingFont} fs={fs} sectionStyle={sectionStyle} br={br} />
+          <p dir="auto" style={{ fontSize: `${fs.name}px`, lineHeight: 1.75, color: INK.body, margin: 0, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
             {cv.personalInfo.summary}
           </p>
         </div>
@@ -116,5 +116,6 @@ export default function ClassicLayout({ cv, sections }: LayoutProps) {
         </div>
       ))}
     </div>
+    </CVDocumentProvider>
   );
 }

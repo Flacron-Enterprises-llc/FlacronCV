@@ -22,15 +22,15 @@ const es = JSON.parse(
   readFileSync(join(__dirname, '..', '..', 'public', 'locales', 'es', 'common.json'), 'utf8'),
 ) as Record<string, unknown>;
 
-function Probe({ error }: { error: unknown }) {
+function Probe({ error, fallback }: { error: unknown; fallback?: string }) {
   const format = useApiErrorMessage();
-  return <p data-testid="msg">{format(error)}</p>;
+  return <p data-testid="msg">{format(error, fallback)}</p>;
 }
 
-function readMsg(locale: string, messages: Record<string, unknown>, error: unknown): string {
+function readMsg(locale: string, messages: Record<string, unknown>, error: unknown, fallback?: string): string {
   const { getByTestId, unmount } = render(
     <NextIntlClientProvider locale={locale} messages={messages}>
-      <Probe error={error} />
+      <Probe error={error} fallback={fallback} />
     </NextIntlClientProvider>,
   );
   const text = getByTestId('msg').textContent ?? '';
@@ -52,15 +52,43 @@ describe('useApiErrorMessage', () => {
     );
   });
 
-  it('localizes the HTTP fallback and leaves a real API body.message alone', () => {
+  it('never shows a 5xx body: uses the caller fallback, else the generic message', () => {
+    const err = new ApiError('Internal server error', { kind: 'http', status: 500 });
+    expect(readMsg('es', es, err, 'No se pudo guardar')).toBe('No se pudo guardar');
+    expect(readMsg('en', en, err)).toBe((en.auth as { errors: { generic: string } }).errors.generic);
     expect(readMsg('en', en, new ApiError('Request failed (HTTP 502)', { kind: 'http', status: 502 }))).toBe(
-      'Request failed (HTTP 502)',
+      (en.auth as { errors: { generic: string } }).errors.generic,
     );
-    expect(readMsg('es', es, new ApiError('Request failed (HTTP 502)', { kind: 'http', status: 502 }))).toBe(
-      (es.auth as { errors: { http: string } }).errors.http.replace('{status}', '502'),
+  });
+
+  it('localizes the client-built HTTP text when there is no fallback', () => {
+    expect(readMsg('es', es, new ApiError('Request failed (HTTP 404)', { kind: 'http', status: 404 }))).toBe(
+      (es.auth as { errors: { http: string } }).errors.http.replace('{status}', '404'),
     );
-    expect(readMsg('es', es, new ApiError('Plan limit reached', { kind: 'http', status: 403 }))).toBe(
-      'Plan limit reached',
+  });
+
+  it('maps known error codes to their own translation', () => {
+    const err = new ApiError('No active subscription found. Please subscribe to a plan first.', {
+      kind: 'http',
+      status: 400,
+      code: 'NO_SUBSCRIPTION',
+    });
+    expect(readMsg('es', es, err, 'fallback')).toBe(
+      (es.billing as { errors: { noSubscription: string } }).errors.noSubscription,
+    );
+  });
+
+  it('keeps an English 4xx sentence in English, prefers the localized fallback elsewhere', () => {
+    const err = new ApiError('Plan limit reached', { kind: 'http', status: 403 });
+    expect(readMsg('en', en, err, 'Could not save')).toBe('Plan limit reached');
+    expect(readMsg('es', es, err, 'No se pudo guardar')).toBe('No se pudo guardar');
+    // No fallback: the specific English sentence beats a vague generic one.
+    expect(readMsg('es', es, err)).toBe('Plan limit reached');
+  });
+
+  it('uses the localized rate-limit message for 429', () => {
+    expect(readMsg('es', es, new ApiError('ThrottlerException: Too Many Requests', { kind: 'http', status: 429 }))).toBe(
+      (es.auth as { errors: { too_many_attempts: string } }).errors.too_many_attempts,
     );
   });
 });

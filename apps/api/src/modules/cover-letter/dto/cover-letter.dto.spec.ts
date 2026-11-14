@@ -105,3 +105,15 @@ describe('Cover-letter write DTOs (ValidationPipe)', () => {
     });
   });
 });
+
+describe('Cover-letter letterLocale (ValidationPipe)', () => {
+  it('accepts a supported letter language on create and update', async () => {
+    expect((await transformBody(CreateCoverLetterDto, { title: 'X', letterLocale: 'ur' })).letterLocale).toBe('ur');
+    expect((await transformBody(UpdateCoverLetterDto, { letterLocale: 'en' })).letterLocale).toBe('en');
+  });
+
+  it('rejects an unsupported letter language', async () => {
+    await expectReject(CreateCoverLetterDto, { title: 'X', letterLocale: 'English' });
+    await expectReject(UpdateCoverLetterDto, { letterLocale: 'pt' });
+  });
+});

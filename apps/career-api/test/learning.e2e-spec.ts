@@ -1,6 +1,8 @@
 import request from 'supertest';
 import { randomUUID } from 'crypto';
-import { bearer } from '@flacroncv/career-server/src/testing';
+import { bearer, FakeTextModel } from '@flacroncv/career-server/src/testing';
+import { LEARNING_PLAN_TEMPLATE } from '@flacroncv/career-server/src/learning/learning-plan-compose';
+import { TEXT_MODEL } from '../src/ai/ai.providers';
 import { createTestApp, TestApp } from './support';
 import { openBalances, readAccount } from '@flacroncv/career-server/src/billing/accounts';
 import { CatalogStore } from '@flacroncv/career-server/src/billing/catalog';
@@ -8,9 +10,32 @@ import { CatalogStore } from '@flacroncv/career-server/src/billing/catalog';
 describe('skills and learning over HTTP (CV13)', () => {
   let t: TestApp;
   const http = () => request(t.app.getHttpServer());
+  const model = new FakeTextModel().always(LEARNING_PLAN_TEMPLATE, JSON.stringify({
+    requirements: [
+      { skill: 'Consensus protocols', importance: 'critical', requiredLevel: 'advanced' },
+      { skill: 'Distributed Systems & PostgreSQL', importance: 'preferred', requiredLevel: 'advanced' },
+    ],
+    milestones: [
+      { title: 'Raft in practice', description: 'Build a small replicated log.', targetSkill: 'Consensus protocols', estimatedHours: 20, estimatedCostCents: 0, resources: [] },
+    ],
+    projectBrief: {
+      title: 'Replicated store',
+      summary: 'A small replicated key-value store.',
+      requirements: ['Leader election'],
+      deliverables: ['Repository'],
+      rubrics: [
+        { name: 'Correctness', description: 'Elects one leader.', weight: 40, evidenceType: 'project' },
+        { name: 'Recovery', description: 'Survives a partition.', weight: 35, evidenceType: 'project' },
+        { name: 'Write-up', description: 'Explains tradeoffs.', weight: 25, evidenceType: 'work_sample' },
+      ],
+      estimatedHours: 30,
+    },
+  }));
 
   beforeAll(async () => {
-    t = await createTestApp('api_learning');
+    t = await createTestApp('api_learning', {
+      customize: (builder) => builder.overrideProvider(TEXT_MODEL).useValue(model),
+    });
     // Ensure the Phase 2 skillReports flags are enabled
     await t.db.pool.query(
       `INSERT INTO feature_flags (feature, enabled) VALUES ('skillReports', true), ('projectBriefInSkillReport', true)

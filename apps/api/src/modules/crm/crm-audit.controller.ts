@@ -1,4 +1,5 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { positiveInt } from './paging';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CRMAuditService } from './crm-audit.service';
 import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
@@ -24,8 +25,8 @@ export class CRMAuditController {
     @Query('endDate') endDate?: string,
   ) {
     return this.auditService.list({
-      page: page ? parseInt(page, 10) : 1,
-      limit: limit ? parseInt(limit, 10) : 50,
+      page: positiveInt(page, 1),
+      limit: positiveInt(limit, 50),
       action,
       actorId,
       targetType,

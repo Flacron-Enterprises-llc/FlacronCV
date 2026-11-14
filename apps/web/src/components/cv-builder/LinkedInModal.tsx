@@ -4,7 +4,7 @@ import { useState, useId } from 'react';
 import { useTranslations } from 'next-intl';
 import { useCVStore } from '@/store/cv-store';
 import { useAuth } from '@/providers/AuthProvider';
-import { api, isAiCreditUnconfirmed } from '@/lib/api';
+import { api } from '@/lib/api';
 import { track } from '@/lib/analytics';
 import { serializeCVToText } from '@/lib/serializeCV';
 import { extractJsonObject } from '@/lib/ai-json';
@@ -14,7 +14,7 @@ import UpgradeModal from '@/components/shared/UpgradeModal';
 import InAppWarning from '@/components/shared/InAppWarning';
 import { X, Linkedin, RefreshCw, Copy } from 'lucide-react';
 import { toast } from 'sonner';
-import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
+import { useAiFailureToast } from './useAiFailureToast';
 import { PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
 
 interface LinkedInModalProps {
@@ -53,7 +53,7 @@ export default function LinkedInModal({ open, onClose }: LinkedInModalProps) {
   const t = useTranslations('linkedin');
   const tcv = useTranslations('cv_builder');
   const tCommon = useTranslations('common');
-  const formatApiError = useApiErrorMessage();
+  const showAiFailure = useAiFailureToast();
   const tw = useTranslations('in_app_warnings');
   const { cv, sections } = useCVStore();
   const { user, refreshUser } = useAuth();
@@ -115,14 +115,7 @@ export default function LinkedInModal({ open, onClose }: LinkedInModalProps) {
       track('ai_generation', { feature: 'linkedin' });
       refreshUser();
     } catch (error) {
-      const message = formatApiError(error, t('error'));
-      toast.error(message, {
-        description: tCommon(
-          isAiCreditUnconfirmed(error)
-            ? 'generate_failed_charge_unconfirmed'
-            : 'generate_failed_no_charge',
-        ),
-      });
+      showAiFailure(error, t('error'));
     } finally {
       setIsGenerating(false);
     }

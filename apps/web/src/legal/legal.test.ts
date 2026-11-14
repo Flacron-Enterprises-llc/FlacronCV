@@ -53,6 +53,43 @@ describe('cookie policy holds', () => {
   });
 });
 
+describe('published legal text', () => {
+  // Phrases from the drafting brief that once shipped verbatim as policy text.
+  const DRAFTING_NOTES = [
+    /should be updated to reflect/i,
+    /Implement a cookie banner/i,
+    /^Toggle:$/m,
+    /^Buttons:$/m,
+    /Add a permanent footer control/i,
+    /Users should be able to/i,
+    /^Display on relevant/m,
+    /Required (App-Wide|Export) Disclaimer/,
+  ];
+
+  it.each([
+    ['cookies', COOKIES],
+    ['terms', TERMS],
+    ['disclaimer', DISCLAIMER],
+    ['refund', REFUND],
+  ])('%s carries no drafting instructions', (_name, doc) => {
+    const text = [flattenText(doc), ...doc.sections.map((s) => s.title)].join('\n');
+    for (const note of DRAFTING_NOTES) expect(text).not.toMatch(note);
+  });
+
+  it('names the deployed analytics and chat technology in the cookie policy', () => {
+    const text = flattenText(COOKIES);
+    expect(text).toMatch(/Flacron Growth Engine/);
+    expect(text).toMatch(/support chat/);
+    expect(text).toMatch(/local storage/);
+  });
+
+  it('prints the parent-company address in lower case', () => {
+    for (const doc of [COOKIES, TERMS, DISCLAIMER, REFUND]) {
+      expect(flattenText(doc)).not.toMatch(/Contact@flacronenterprises/);
+    }
+  });
+});
+
 describe('terms of service', () => {
   it('ships all 30 numbered sections', () => {
     expect(TERMS.sections.filter((s) => /^\d+$/.test(s.id))).toHaveLength(30);

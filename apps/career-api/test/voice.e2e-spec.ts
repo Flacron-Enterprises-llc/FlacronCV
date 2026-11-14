@@ -48,7 +48,7 @@ describe('voice interviews over HTTP', () => {
       .set('Authorization', auth)
       .send({ factType: 'skill', value: { name: 'SQL' }, confirmation: 'confirmed' });
     expect(fact.status).toBe(201);
-    const pasted = await http().post('/api/career/v1/opportunities').set('Authorization', auth).send({ text: 'SQL analyst\nKeep the ledger.' });
+    const pasted = await http().post('/api/career/v1/opportunities').set('Authorization', auth).send({ text: 'SQL analyst\nKeep the ledger accurate and reconcile it weekly.' });
     expect(pasted.status).toBe(201);
 
     const before = await http().get('/api/career/v1/interviews/voice').set('Authorization', auth);

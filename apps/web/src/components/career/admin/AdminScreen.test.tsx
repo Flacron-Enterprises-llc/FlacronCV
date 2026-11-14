@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@flacroncv/career-api-client';
@@ -49,12 +49,18 @@ describe('AdminScreen', () => {
       setAdminFlag,
     });
     renderAdmin(api);
-    expect(await screen.findByText('stripe: Unconfigured')).toBeTruthy();
+    expect(await screen.findByText('Stripe payments')).toBeTruthy();
+    expect(screen.getByText('Unconfigured')).toBeTruthy();
     expect(screen.getByText('2026-10-10')).toBeTruthy();
-    expect(screen.getByText('catalog.unchanged')).toBeTruthy();
+    expect(screen.getByText('Catalog checked, no change')).toBeTruthy();
     expect(screen.queryByRole('textbox')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'documentCredits: On' }));
-    expect(await screen.findByRole('button', { name: 'documentCredits: Off' })).toBeTruthy();
+    const toggle = screen.getByRole('switch', { name: 'Document credits' });
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(toggle);
+    // A switch asks before it changes what every customer can do.
+    expect(setAdminFlag).not.toHaveBeenCalled();
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Turn off' }));
+    await vi.waitFor(() => expect(screen.getByRole('switch', { name: 'Document credits' }).getAttribute('aria-checked')).toBe('false'));
     expect(setAdminFlag).toHaveBeenCalledWith('documentCredits', false);
     expect(screen.getByText('No listings are waiting for review.')).toBeTruthy();
   });

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useCVStore } from '@/store/cv-store';
 import { Type, ChevronDown } from 'lucide-react';
+import { usePopover, POPOVER_SHEET } from './usePopover';
 
 const FONT_OPTIONS = [
   { value: 'Inter', label: 'Inter' },
@@ -39,7 +39,8 @@ const FONT_SIZE_OPTIONS = [
 export default function FontPanel() {
   const t = useTranslations('cv_builder');
   const { cv, updateStyling } = useCVStore();
-  const [open, setOpen] = useState(false);
+  // Escape closes and focus returns to the button (see usePopover).
+  const { open, setOpen, triggerRef } = usePopover();
 
   if (!cv) return null;
 
@@ -50,6 +51,7 @@ export default function FontPanel() {
   return (
     <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         aria-label={t('font_family')}
         aria-haspopup="dialog"
@@ -65,13 +67,19 @@ export default function FontPanel() {
 
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute start-0 z-20 mt-1 w-64 animate-scale-in rounded-lg border border-stone-200 bg-white p-3 shadow-lg dark:border-stone-700 dark:bg-stone-800">
+          <div className="fixed inset-0 z-30 bg-black/30 sm:z-10 sm:bg-transparent" onClick={() => setOpen(false)} />
+          <div
+            role="dialog"
+            aria-label={t('font_family')}
+            className={`${POPOVER_SHEET} p-3 sm:start-0 sm:z-20 sm:mt-1 sm:w-64 sm:animate-scale-in sm:rounded-lg`}
+            data-testid="font-panel"
+          >
             {/* Body Font */}
-            <label className="mb-1 block text-xs font-semibold text-stone-500 dark:text-stone-400">
+            <label htmlFor="cv-body-font" className="mb-1 block text-xs font-semibold text-stone-500 dark:text-stone-400">
               {t('body_font')}
             </label>
             <select
+              id="cv-body-font"
               className="mb-3 w-full rounded-md border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-700 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-300"
               value={currentBodyFont}
               onChange={(e) => updateStyling('fontFamily', e.target.value)}
@@ -85,10 +93,11 @@ export default function FontPanel() {
             </select>
 
             {/* Heading Font */}
-            <label className="mb-1 block text-xs font-semibold text-stone-500 dark:text-stone-400">
+            <label htmlFor="cv-heading-font" className="mb-1 block text-xs font-semibold text-stone-500 dark:text-stone-400">
               {t('heading_font')}
             </label>
             <select
+              id="cv-heading-font"
               className="mb-3 w-full rounded-md border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-700 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-300"
               value={currentHeadingFont}
               onChange={(e) => updateStyling('headingFontFamily' as any, e.target.value)}

@@ -32,6 +32,74 @@ function flatten(value: unknown, prefix = '', out = new Set<string>()): Set<stri
   return out;
 }
 
+/**
+ * Argument names used in an ICU message: `{name}`, `{n, number}`, and the
+ * selector plus every argument inside the branches of `{n, plural, one {…} …}`
+ * / `select` / `selectordinal`. Branch text itself is message text, not a name.
+ * Apostrophe quoting is honoured ('{' is a literal brace).
+ */
+function icuArgumentNames(message: string): Set<string> {
+  const names = new Set<string>();
+  let i = 0;
+
+  // Message text until an unmatched `}` (end of a branch) or the end.
+  const parseText = (): void => {
+    while (i < message.length) {
+      const ch = message[i];
+      if (ch === "'" && message[i + 1] === "'") {
+        i += 2;
+      } else if (ch === "'" && (message[i + 1] === '{' || message[i + 1] === '}')) {
+        const close = message.indexOf("'", i + 1);
+        i = close === -1 ? message.length : close + 1;
+      } else if (ch === '{') {
+        i++;
+        parseArgument();
+      } else if (ch === '}') {
+        return;
+      } else {
+        i++;
+      }
+    }
+  };
+
+  // After `{`: name [, type [, style | branches]] `}`.
+  const parseArgument = (): void => {
+    const nameMatch = /^\s*([\w.]+)\s*/.exec(message.slice(i));
+    if (!nameMatch) return;
+    names.add(nameMatch[1]);
+    i += nameMatch[0].length;
+    if (message[i] === '}') {
+      i++;
+      return;
+    }
+    if (message[i] !== ',') return;
+    i++;
+    const typeMatch = /^\s*(\w+)\s*/.exec(message.slice(i));
+    const type = typeMatch?.[1] ?? '';
+    i += typeMatch?.[0].length ?? 0;
+    if (type === 'plural' || type === 'select' || type === 'selectordinal') {
+      if (message[i] === ',') i++;
+      // Branches: (offset:n)? (selector {text})+ then `}`.
+      while (i < message.length) {
+        const sel = /^\s*(offset:\d+\s*)?(=?[\w-]+)\s*/.exec(message.slice(i));
+        if (!sel || message[i + sel[0].length] !== '{') break;
+        i += sel[0].length + 1;
+        parseText();
+        i++; // the branch's closing `}`
+      }
+      while (i < message.length && message[i] !== '}') i++;
+      i++;
+    } else {
+      // number/date/time with an optional style: skip to the closing brace.
+      while (i < message.length && message[i] !== '}') i++;
+      i++;
+    }
+  };
+
+  parseText();
+  return names;
+}
+
 function load(locale: string): Record<string, unknown> {
   return JSON.parse(readFileSync(join(LOCALES_DIR, locale, 'common.json'), 'utf8'));
 }
@@ -71,12 +139,26 @@ describe('locale parity', () => {
     expect(empty).toEqual([]);
   });
 
+  it('reads ICU argument names, not branch text', () => {
+    const names = (s: string) => [...icuArgumentNames(s)].sort();
+    expect(names('Hello {name}, {n, number}')).toEqual(['n', 'name']);
+    expect(names('{count, plural, one {Add # item at {place}} other {Add # items}}')).toEqual(['count', 'place']);
+    expect(names("{g, select, female {Elle} other {Il}} a dit '{'not an arg'}'")).toEqual(['g']);
+    expect(names('{count, plural, offset:1 =0 {none} other {# more}}')).toEqual(['count']);
+    // A dropped argument is still a difference.
+    expect(names('Saved on {date}')).not.toEqual(names('Saved on'));
+  });
+
   it('ICU placeholders match en in every locale', () => {
     // A translation that drops `{date}` or renames it to `{fecha}` renders the
     // literal braces to the user — invisible to a key-set comparison.
     const mismatches: string[] = [];
-    const placeholders = (s: string) =>
-      [...s.matchAll(/\{(\w+)[^}]*\}/g)].map((m) => m[1]).sort();
+    // The SET of argument names, read with a small ICU parser. A regex over
+    // `{word…}` also matched the first word of every plural/select branch
+    // (`one {Add evidence…}` → "Add"), so any natural translation that starts a
+    // branch differently "failed", and an argument used twice in en but once in
+    // a translation counted as a mismatch although nothing renders wrongly.
+    const placeholders = (s: string) => [...icuArgumentNames(s)].sort();
 
     for (const locale of LOCALES.filter((l) => l !== 'en')) {
       const en = load('en');

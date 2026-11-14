@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useAuth } from '@/providers/AuthProvider';
-import { api, isAiCreditUnconfirmed } from '@/lib/api';
+import { api } from '@/lib/api';
 import { track } from '@/lib/analytics';
 import { fcgeTrack } from '@/lib/fcge';
 import { extractResumeText, ResumeExtractError, RESUME_UPLOAD_ACCEPT } from '@/lib/extractResumeText';
@@ -13,7 +13,8 @@ import Button from '@/components/ui/Button';
 import UpgradeModal from '@/components/shared/UpgradeModal';
 import { X, Upload, FileUp } from 'lucide-react';
 import { toast } from 'sonner';
-import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
+import { useAiFailureToast } from './useAiFailureToast';
+import { isCvLimitError } from './cv-allowance';
 import { PLAN_CONFIGS, resolveEffectivePlan, type CV } from '@flacroncv/shared-types';
 import { CV_NEW_DRAFT_KEY as DRAFT_KEY } from '@/app/[locale]/(dashboard)/cv/new/constants';
 
@@ -28,7 +29,7 @@ export default function ImportResumeModal({ open, onClose, title }: ImportResume
   const t = useTranslations('resume_import');
   const tcv = useTranslations('cv_builder');
   const tCommon = useTranslations('common');
-  const formatApiError = useApiErrorMessage();
+  const showAiFailure = useAiFailureToast();
   const router = useRouter();
   const { user, refreshUser } = useAuth();
 
@@ -36,6 +37,7 @@ export default function ImportResumeModal({ open, onClose, title }: ImportResume
   const [isImporting, setIsImporting] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<'ai_credits' | 'cvs'>('ai_credits');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const titleId = useId();
 
@@ -76,6 +78,7 @@ export default function ImportResumeModal({ open, onClose, title }: ImportResume
 
   const handleImport = async () => {
     if (outOfCredits) {
+      setUpgradeReason('ai_credits');
       setShowUpgrade(true);
       return;
     }
@@ -98,15 +101,16 @@ export default function ImportResumeModal({ open, onClose, title }: ImportResume
       toast.success(t('success'));
       router.push(`/cv/${cv.id}`);
     } catch (error) {
-      const message = formatApiError(error, t('error'));
-      toast.error(message, {
-        description: tCommon(
-          isAiCreditUnconfirmed(error)
-            ? 'generate_failed_charge_unconfirmed'
-            : 'generate_failed_no_charge',
-        ),
-      });
       setIsImporting(false);
+      if (isCvLimitError(error)) {
+        // Out of CV creations, not an AI failure — same upgrade prompt as the
+        // other create paths.
+        void refreshUser();
+        setUpgradeReason('cvs');
+        setShowUpgrade(true);
+        return;
+      }
+      showAiFailure(error, t('error'));
     }
   };
 
@@ -213,7 +217,7 @@ export default function ImportResumeModal({ open, onClose, title }: ImportResume
         </div>
       </div>
 
-      <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} reason="ai_credits" />
+      <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} reason={upgradeReason} />
     </>
   );
 }

@@ -11,6 +11,9 @@ import Button from '@/components/ui/Button';
 import { PLAN_CONFIGS, SubscriptionPlan, User } from '@flacroncv/shared-types';
 import { fcgeUpgradeClicked } from '@/lib/fcge';
 import { TOUR_TARGETS } from '@/lib/app-tour';
+import { TEMPLATE_GALLERY_HREF, seedTemplateGalleryDraft } from '@/components/dashboard/Sidebar';
+import { isFirstVisit } from './first-visit';
+import RecentActivity from './RecentActivity';
 import {
   FileText,
   Mail,
@@ -53,6 +56,7 @@ function StatSkeleton() {
 
 export default function DashboardPage(): React.JSX.Element | null {
   const t = useTranslations('dashboard');
+  const tCv = useTranslations('cv_builder');
   const tPricing = useTranslations('pricing');
   const tBilling = useTranslations('billing');
   const { user, degraded, refreshUser } = useAuth();
@@ -85,6 +89,14 @@ export default function DashboardPage(): React.JSX.Element | null {
 
   const firstName = user?.profile?.firstName || user?.displayName?.split(' ')[0] || '';
   const aiLimit = usage?.aiCreditsLimit || planLimits.aiCredits;
+  const firstVisit = isFirstVisit(user);
+  const greeting = firstVisit
+    ? firstName
+      ? t('greeting_first_named', { name: firstName })
+      : t('greeting_first')
+    : firstName
+      ? t('greeting_named', { name: firstName })
+      : t('greeting');
 
   const stats = usage
     ? [
@@ -100,6 +112,21 @@ export default function DashboardPage(): React.JSX.Element | null {
               : `${usage.cvsCreated || 0} / ${planLimits.cvs}`,
           bar: planLimits.cvs === 'unlimited' ? null : { used: usage.cvsCreated || 0, limit: planLimits.cvs as number },
           icon: FileText,
+          color: 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300',
+        },
+        // Free accounts get one cover letter; showing it here means they learn
+        // the limit before the paywall, not from it.
+        {
+          label: t('cover_letters_created'),
+          value:
+            planLimits.coverLetters === 'unlimited'
+              ? `${usage.coverLettersCreated || 0} · ${tBilling('features.unlimited')}`
+              : `${usage.coverLettersCreated || 0} / ${planLimits.coverLetters}`,
+          bar:
+            planLimits.coverLetters === 'unlimited'
+              ? null
+              : { used: usage.coverLettersCreated || 0, limit: planLimits.coverLetters as number },
+          icon: Mail,
           color: 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300',
         },
         {
@@ -148,7 +175,8 @@ export default function DashboardPage(): React.JSX.Element | null {
       color: 'bg-brand-50 text-brand-600 dark:bg-brand-950 dark:text-brand-400',
     },
     {
-      href: '/templates' as const,
+      // The in-app gallery (not the public /templates page, which leaves the app shell).
+      href: TEMPLATE_GALLERY_HREF,
       title: t('templates'),
       desc: t('templates_desc'),
       icon: FileText,
@@ -161,7 +189,7 @@ export default function DashboardPage(): React.JSX.Element | null {
       {/* Welcome */}
       <div data-tour={TOUR_TARGETS.welcome}>
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
-          {firstName ? t('greeting_named', { name: firstName }) : t('greeting')}
+          {greeting}
         </h1>
         <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
           {t('overview_subtitle')}
@@ -189,8 +217,8 @@ export default function DashboardPage(): React.JSX.Element | null {
         <>
           {/* Stats */}
           {isPending ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[0, 1, 2, 3].map((i) => (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {[0, 1, 2, 3, 4].map((i) => (
                 <StatSkeleton key={i} />
               ))}
             </div>
@@ -206,7 +234,7 @@ export default function DashboardPage(): React.JSX.Element | null {
               </div>
             </Card>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-tour={TOUR_TARGETS.usage}>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" data-tour={TOUR_TARGETS.usage}>
               {stats.map((stat) => (
                 <Card key={stat.label} padding="sm">
                   {/* items-start, not items-center: with a wrapping value the
@@ -247,6 +275,7 @@ export default function DashboardPage(): React.JSX.Element | null {
               key={href}
               href={href}
               data-tour={href === '/cv/new' ? TOUR_TARGETS.createCv : undefined}
+              onClick={href === TEMPLATE_GALLERY_HREF ? () => seedTemplateGalleryDraft(tCv('untitled_cv')) : undefined}
               className="group h-full focus:outline-none"
             >
               {/* h-full on both: the Link is the grid item (stretches to the row),
@@ -270,6 +299,10 @@ export default function DashboardPage(): React.JSX.Element | null {
           ))}
         </div>
       </div>
+
+      {/* Recent documents + job tracker summary. Not on placeholder data: the
+          lists would be fetched for an account that has not synced. */}
+      {!degraded && <RecentActivity />}
 
       {/* Upgrade banner — free plan only, and never on placeholder data */}
       {!degraded && user?.subscription?.plan === 'free' && (

@@ -1,14 +1,64 @@
 'use client';
 
-import React from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
+import { useLocale } from 'next-intl';
 import type { CV, CVSection } from '@flacroncv/shared-types';
 import { fontNameToCssVar } from '../toolbar/FontPanel';
 import { hexToRgba, contrastRatio, readableOn, INK } from '@/lib/design-tokens';
+import {
+  cvDocLabels, formatDocDate, formatDocDateRange, resolveCVDocumentLocale,
+  type CVDocDir, type CVDocLabels, type CVDocLang,
+} from './document-locale';
+
+/** Element the candidate's name is rendered as. */
+export type NameHeadingTag = 'h1' | 'h2' | 'div';
 
 export interface LayoutProps {
   cv: CV;
   sections: CVSection[];
+  /**
+   * Element for the candidate's name. Defaults to a plain `div`: the layouts are
+   * also rendered as thumbnails on the homepage and /templates, where a dozen
+   * CV names as `<h1>` drowned out the page's own heading. The editor preview
+   * (the only place the name IS the page's subject) passes 'h1'.
+   */
+  nameAs?: NameHeadingTag;
 }
+
+// ─── Document language context ───────────────────────────────────────────────
+
+export interface CVDocument {
+  lang: CVDocLang;
+  dir: CVDocDir;
+  labels: CVDocLabels;
+}
+
+const DEFAULT_DOC: CVDocument = { lang: 'en', dir: 'ltr', labels: cvDocLabels('en') };
+const CVDocumentContext = createContext<CVDocument>(DEFAULT_DOC);
+
+/** Resolve a CV's document language (see document-locale.ts). Used by every layout root. */
+export function useCVDocument(cv: CV, sections: CVSection[]): CVDocument {
+  const uiLocale = useLocale();
+  const { lang, dir } = resolveCVDocumentLocale(cv, sections, uiLocale);
+  return useMemo(() => ({ lang, dir, labels: cvDocLabels(lang) }), [lang, dir]);
+}
+
+/** Read the enclosing layout's document language (English when rendered standalone). */
+export function useDocument(): CVDocument {
+  return useContext(CVDocumentContext);
+}
+
+/**
+ * Wraps a layout's content so items render dates and labels in the document's
+ * language. Each layout also sets `dir` and `lang` on its own root element
+ * rather than inheriting them from the page, so an English CV stays LTR inside
+ * an Arabic UI and an Arabic CV is RTL inside an English one.
+ */
+export function CVDocumentProvider({ doc, children }: { doc: CVDocument; children: React.ReactNode }) {
+  return <CVDocumentContext.Provider value={doc}>{children}</CVDocumentContext.Provider>;
+}
+
+export { formatDocDate, formatDocDateRange };
 
 // ─── Style token resolution ──────────────────────────────────────────────────
 
@@ -106,7 +156,7 @@ export function SectionHeading({ title, primary, headingFont, fs, sectionStyle, 
     // hierarchy; a 2px stub plus a 1px neutral rule keeps the accent present
     // without letting six section headings out-shout the person's name.
     return (
-      <div style={{ marginBottom: base.marginBottom, position: 'relative' }}>
+      <div data-pdf-keep-next="" style={{ marginBottom: base.marginBottom, position: 'relative' }}>
         <h2 style={{ ...base, color: ink, marginBottom: 0, paddingBottom: '5px' }}>
           {title}
         </h2>
@@ -125,7 +175,7 @@ export function SectionHeading({ title, primary, headingFont, fs, sectionStyle, 
       ? '#ffffff'
       : '#1f2933';
     return (
-      <h2 style={{ ...base, color: label, background: primary, padding: '4px 11px', borderRadius: br, display: 'inline-block', marginBottom: '10px' }}>
+      <h2 data-pdf-keep-next="" style={{ ...base, color: label, background: primary, padding: '4px 11px', borderRadius: br, display: 'inline-block', marginBottom: '10px' }}>
         {title}
       </h2>
     );
@@ -138,14 +188,14 @@ export function SectionHeading({ title, primary, headingFont, fs, sectionStyle, 
     // resolves border-inline-start correctly under dir=rtl, so the PDF export
     // mirrors along with the preview.
     return (
-      <h2 style={{ ...base, color: ink, borderInlineStart: `3px solid ${primary}`, paddingInlineStart: '9px' }}>
+      <h2 data-pdf-keep-next="" style={{ ...base, color: ink, borderInlineStart: `3px solid ${primary}`, paddingInlineStart: '9px' }}>
         {title}
       </h2>
     );
   }
   // minimal
   return (
-    <h2 style={{ ...base, color: INK.meta, borderBottom: `1px solid ${INK.hair}`, paddingBottom: '5px' }}>
+    <h2 data-pdf-keep-next="" style={{ ...base, color: INK.meta, borderBottom: `1px solid ${INK.hair}`, paddingBottom: '5px' }}>
       {title}
     </h2>
   );
@@ -155,7 +205,7 @@ export function SectionHeading({ title, primary, headingFont, fs, sectionStyle, 
 
 export function SidebarSectionHeading({ title, headingFont, fs }: { title: string; headingFont: string; fs: HeadingProps['fs'] }) {
   return (
-    <h3 style={{
+    <h3 data-pdf-keep-next="" style={{
       fontFamily: headingFont,
       fontSize: `${fs.sectionTitle - 1}px`,
       fontWeight: 700,
@@ -184,6 +234,7 @@ interface ItemProps {
 }
 
 export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant = 'default' }: ItemProps) {
+  const { lang, labels } = useDocument();
   const isCard = variant === 'card';
   const isSidebar = variant === 'sidebar';
 
@@ -211,7 +262,17 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
   // Dates sit opposite the title, so they read as a column of their own. Giving
   // them a little weight and tracking keeps that column crisp at 9–11px instead
   // of dissolving into grey the way a plain light-grey date does in print.
-  const dateStyle: React.CSSProperties = {
+  const dateStyle: React.CSSProperties = isSidebar ? {
+    // The sidebar column is ~30% of the page: a nowrap date beside the title
+    // pushed long certification dates past the column edge, where they were
+    // clipped. In the sidebar the date goes on its own line under the title.
+    display: 'block',
+    fontSize: `${fs.meta}px`,
+    fontWeight: 500,
+    letterSpacing: '0.2px',
+    color: metaColor,
+    marginTop: '2px',
+  } : {
     fontSize: `${fs.meta}px`,
     fontWeight: 500,
     letterSpacing: '0.2px',
@@ -220,12 +281,22 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
     flexShrink: 0,
   };
 
+  // Title + date row. In the sidebar it stacks (see dateStyle).
+  const rowStyle: React.CSSProperties = isSidebar
+    ? { display: 'block' }
+    : { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' };
+
   // Generic item lines (project, certification, language, custom, award…, and
   // references). One definition so a reference reads exactly like the other
   // name-plus-detail entries on the page.
-  const genericRowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' };
   const genericLabelStyle: React.CSSProperties = { fontSize: `${fs.name}px`, fontWeight: 600, color: titleColor, lineHeight: 1.3 };
   const genericDetailStyle: React.CSSProperties = { fontSize: `${fs.body}px`, color: textColor, marginTop: '3px', marginBottom: 0, lineHeight: 1.55, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' };
+  const lineStyles: Record<ItemLine['kind'], React.CSSProperties> = {
+    subtitle: { ...genericDetailStyle, fontSize: `${fs.name}px`, fontWeight: 500, color: subtitleColor },
+    detail:   genericDetailStyle,
+    meta:     { ...genericDetailStyle, fontSize: `${fs.meta}px`, color: metaColor },
+    link:     { ...genericDetailStyle, fontSize: `${fs.meta}px`, color: isSidebar ? textColor : readableOn(primary, '#ffffff', 4.5), wordBreak: 'break-all' },
+  };
 
   // References are keyed on the section type, before the experience branch: a
   // reference has a `company` and would otherwise render as a job (no name, a
@@ -233,37 +304,36 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
   if (sectionType === 'references') {
     const lines = referenceLines(item);
     return (
-      <div style={cardWrapper}>
+      <div style={cardWrapper} data-pdf-card={isCard ? '' : undefined}>
         {lines.name && (
-          <div style={genericRowStyle}>
-            <span style={genericLabelStyle}>{lines.name}</span>
+          <div data-pdf-keep-next="" style={rowStyle}>
+            <span dir="auto" style={genericLabelStyle}>{lines.name}</span>
           </div>
         )}
         {lines.details.map((line, i) => (
-          <p key={i} style={genericDetailStyle}>{line}</p>
+          <p key={i} dir="auto" style={genericDetailStyle}>{line}</p>
         ))}
       </div>
     );
   }
 
   if (item.position || item.company) {
-    const start = formatCVDate(item.startDate);
-    const end   = item.isCurrent ? 'Present' : formatCVDate(item.endDate) || 'Present';
+    const range = formatDocDateRange(item.startDate, item.endDate, lang, { current: !!item.isCurrent, openEndedIsPresent: true });
     return (
-      <div style={cardWrapper}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' }}>
-          <span style={{ fontSize: `${fs.headline}px`, fontWeight: 600, color: titleColor, lineHeight: 1.3 }}>
+      <div style={cardWrapper} data-pdf-card={isCard ? '' : undefined}>
+        <div data-pdf-keep-next="" style={rowStyle}>
+          <span dir="auto" style={{ fontSize: `${fs.headline}px`, fontWeight: 600, color: titleColor, lineHeight: 1.3 }}>
             {item.position}
           </span>
           <span style={dateStyle}>
-            {start}{start ? ` – ${end}` : end}
+            {range}
           </span>
         </div>
-        <p style={{ fontSize: `${fs.name}px`, fontWeight: 500, color: subtitleColor, margin: '3px 0 0' }}>
+        <p dir="auto" data-pdf-keep-next="" style={{ fontSize: `${fs.name}px`, fontWeight: 500, color: subtitleColor, margin: '3px 0 0' }}>
           {item.company}{item.location ? ` · ${item.location}` : ''}
         </p>
         {item.description && (
-          <p style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '5px', marginBottom: 0, lineHeight: 1.65, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
+          <p dir="auto" style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '5px', marginBottom: 0, lineHeight: 1.65, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
             {item.description}
           </p>
         )}
@@ -272,24 +342,25 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
   }
 
   if (item.institution) {
-    const start = formatCVDate(item.startDate);
-    const end   = formatCVDate(item.endDate);
-    const dateRange = [start, end].filter(Boolean).join(' – ');
+    const dateRange = formatDocDateRange(item.startDate, item.endDate, lang);
     return (
-      <div style={cardWrapper}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' }}>
-          <span style={{ fontSize: `${fs.headline}px`, fontWeight: 600, color: titleColor, lineHeight: 1.3 }}>
+      <div style={cardWrapper} data-pdf-card={isCard ? '' : undefined}>
+        <div data-pdf-keep-next="" style={rowStyle}>
+          <span dir="auto" style={{ fontSize: `${fs.headline}px`, fontWeight: 600, color: titleColor, lineHeight: 1.3 }}>
             {formatDegree(item)}
           </span>
           <span style={dateStyle}>
             {dateRange}
           </span>
         </div>
-        <p style={{ fontSize: `${fs.name}px`, fontWeight: 500, color: subtitleColor, margin: '3px 0 0' }}>
-          {item.institution}
+        <p dir="auto" data-pdf-keep-next="" style={{ fontSize: `${fs.name}px`, fontWeight: 500, color: subtitleColor, margin: '3px 0 0' }}>
+          {item.institution}{item.location ? ` · ${item.location}` : ''}
         </p>
+        {item.gpa && (
+          <p style={lineStyles.meta}>{labels.gpa}: <bdi>{item.gpa}</bdi></p>
+        )}
         {item.description && (
-          <p style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '5px', marginBottom: 0, lineHeight: 1.6, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
+          <p dir="auto" style={{ fontSize: `${fs.body}px`, color: textColor, marginTop: '5px', marginBottom: 0, lineHeight: 1.6, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
             {item.description}
           </p>
         )}
@@ -298,21 +369,155 @@ export function ItemRenderer({ item, sectionType, primary, fs, sp, br, variant =
   }
 
   // Generic (project, certification, language, custom, award…)
-  const label = item.name || item.title || '';
-  const detail = item.description || item.issuer || item.proficiency || '';
-  const date = formatCVDate(item.date || item.startDate);
+  const parts = genericItemParts(item, sectionType, lang);
   return (
-    <div style={cardWrapper}>
-      <div style={genericRowStyle}>
-        <span style={genericLabelStyle}>
-          {label}
+    <div style={cardWrapper} data-pdf-card={isCard ? '' : undefined}>
+      <div data-pdf-keep-next="" style={rowStyle}>
+        <span dir="auto" style={genericLabelStyle}>
+          {parts.label}
         </span>
-        {date && <span style={dateStyle}>{date}</span>}
+        {parts.date && <span style={dateStyle}>{parts.date}</span>}
       </div>
-      {detail && (
-        <p style={genericDetailStyle}>{detail}</p>
-      )}
+      {parts.lines.map((line, i) => <ItemLineView key={i} line={line} style={lineStyles[line.kind]} />)}
     </div>
+  );
+}
+
+// ─── Generic item content ────────────────────────────────────────────────────
+
+export interface ItemLine {
+  kind: 'subtitle' | 'detail' | 'meta' | 'link';
+  text: string;
+  /** Target for a clickable line (a project or credential URL). */
+  href?: string;
+}
+
+/**
+ * What a non-experience, non-education item prints, in order. One definition
+ * shared by every layout (and mirrored by the DOCX builder) so the project URL,
+ * dates and technologies and the certification issuer, expiry, credential ID
+ * and URL that the editor collects actually reach the page. They used to be
+ * collected and then silently dropped by a generic "name + one detail" row.
+ */
+export function genericItemParts(item: any, sectionType: string, lang: string): { label: string; date: string; lines: ItemLine[] } {
+  const labels = cvDocLabels(lang);
+  const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+  const lines: ItemLine[] = [];
+
+  if (sectionType === 'projects') {
+    const description = str(item.description);
+    const url = str(item.url);
+    const tech: string[] = Array.isArray(item.technologies) ? item.technologies.map(str).filter(Boolean) : [];
+    if (description) lines.push({ kind: 'detail', text: description });
+    if (tech.length) lines.push({ kind: 'meta', text: `${labels.technologies}: ${tech.join(', ')}` });
+    if (url) lines.push({ kind: 'link', text: url, href: toHref('url', url) });
+    return {
+      label: str(item.name) || str(item.title),
+      date: formatDocDateRange(item.startDate, item.endDate, lang),
+      lines,
+    };
+  }
+
+  if (sectionType === 'certifications') {
+    const issuer = str(item.issuer);
+    const expiry = formatDocDate(item.expiryDate, lang);
+    const credentialId = str(item.credentialId);
+    const url = str(item.url);
+    if (issuer) lines.push({ kind: 'subtitle', text: issuer });
+    const meta = [expiry ? `${labels.expires} ${expiry}` : '', credentialId ? `${labels.credentialId}: ${credentialId}` : '']
+      .filter(Boolean).join(' · ');
+    if (meta) lines.push({ kind: 'meta', text: meta });
+    if (url) lines.push({ kind: 'link', text: url, href: toHref('url', url) });
+    return { label: str(item.name) || str(item.title), date: formatDocDate(item.date, lang), lines };
+  }
+
+  // Languages, custom, awards, publications, volunteer…
+  const subtitle = str(item.subtitle);
+  const detail = str(item.description) || str(item.issuer) || str(item.proficiency);
+  if (subtitle) lines.push({ kind: 'subtitle', text: subtitle });
+  if (detail) lines.push({ kind: 'detail', text: detail });
+  return {
+    label: str(item.name) || str(item.title),
+    date: formatDocDate(item.date || item.startDate, lang),
+    lines,
+  };
+}
+
+/** One line of {@link genericItemParts}, with links marked for the PDF exporter. */
+export function ItemLineView({ line, style }: { line: ItemLine; style: React.CSSProperties }) {
+  if (line.kind === 'link' && line.href) {
+    return (
+      <p style={style}>
+        <bdi data-pdf-link={line.href}>{line.text}</bdi>
+      </p>
+    );
+  }
+  return <p dir="auto" style={style}>{line.text}</p>;
+}
+
+// ─── Links ───────────────────────────────────────────────────────────────────
+
+/**
+ * Turn a contact value into a link target, or undefined when it does not look
+ * like one. The exported PDF is an image, so links only work because the
+ * exporter lays a clickable rectangle over every `[data-pdf-link]` element.
+ */
+export function toHref(kind: 'email' | 'phone' | 'url', raw: string | null | undefined): string | undefined {
+  const v = (raw ?? '').trim();
+  if (!v) return undefined;
+  if (kind === 'email') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? `mailto:${v}` : undefined;
+  if (kind === 'phone') {
+    const dial = v.replace(/[^\d+]/g, '');
+    return dial.replace(/\D/g, '').length >= 5 ? `tel:${dial}` : undefined;
+  }
+  if (/^https?:\/\/\S+$/i.test(v)) return v;
+  // "linkedin.com/in/jane", "www.site.dev" — typed without a scheme.
+  if (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/i.test(v)) return `https://${v}`;
+  return undefined;
+}
+
+export interface ContactPart { text: string; href?: string }
+
+/** Email · phone · location, as separate parts so each can carry a link. */
+export function contactParts(cv: CV): ContactPart[] {
+  const p = cv.personalInfo;
+  const location = locationLine(cv);
+  const parts: ContactPart[] = [];
+  if (p.email) parts.push({ text: p.email, href: toHref('email', p.email) });
+  if (p.phone) parts.push({ text: p.phone, href: toHref('phone', p.phone) });
+  if (location) parts.push({ text: location });
+  return parts;
+}
+
+/** LinkedIn · website · GitHub. */
+export function linkParts(cv: CV): ContactPart[] {
+  const p = cv.personalInfo;
+  return [p.linkedin, p.website, p.github]
+    .filter((v): v is string => Boolean(v))
+    .map((text) => ({ text, href: toHref('url', text) }));
+}
+
+/** The stacked sidebar contact list — same entries and order as contactSidebarLines. */
+export function sidebarContactParts(cv: CV): ContactPart[] {
+  return [...contactParts(cv), ...linkParts(cv)];
+}
+
+/**
+ * A run of contact parts separated by `sep`. Each part is its own element
+ * carrying `data-pdf-link`, which the PDF exporter turns into a clickable area,
+ * and is bidi-isolated so an email address or URL inside an RTL CV is never
+ * reordered. Text content is identical to buildContactLine / buildLinksLine.
+ */
+export function ContactRun({ parts, sep = '  ·  ' }: { parts: ContactPart[]; sep?: string }) {
+  return (
+    <>
+      {parts.map((part, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <span style={{ whiteSpace: 'pre' }}>{sep}</span>}
+          <bdi data-pdf-link={part.href}>{part.text}</bdi>
+        </React.Fragment>
+      ))}
+    </>
   );
 }
 
@@ -453,20 +658,11 @@ export function SkillLines({ items, primary, fs, tone = 'dark' }: {
 //   "2024"     → "2024"
 //   "Present"  → "Present"
 //   ""         → ""
+// Month names and "Present" follow `lang` (the CV's document language — see
+// document-locale.ts); English is the default and is unchanged.
 
-const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-export function formatCVDate(dateStr?: string | null): string {
-  if (!dateStr) return '';
-  const s = dateStr.trim();
-  if (!s) return '';
-  if (s.toLowerCase() === 'present') return 'Present';
-  const ym = s.match(/^(\d{4})-(\d{2})$/);
-  if (ym) {
-    const m = parseInt(ym[2], 10);
-    if (m >= 1 && m <= 12) return `${MONTH_NAMES[m - 1]} ${ym[1]}`;
-  }
-  return s; // year-only "2024" or freeform text passed through as-is
+export function formatCVDate(dateStr?: string | null, lang: string = 'en'): string {
+  return formatDocDate(dateStr, lang);
 }
 
 // ─── Contact line builder ─────────────────────────────────────────────────────

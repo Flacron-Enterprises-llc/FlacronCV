@@ -55,8 +55,11 @@
     --border: 68 64 60;
     --ring: 251 146 60;
 
-    --career-navy: #1e3a5f;
-    --career-navy-hover: #274b78;
+    /* Light navy in dark: it is read as text (headings, links, badges) far
+       more than it fills a button, and filled navy controls switch their
+       text to dark (`dark:text-stone-950`) to keep contrast. */
+    --career-navy: #a8c7ee;
+    --career-navy-hover: #c4daf4;
     --career-orange: #f97316;
     --career-orange-text: #fb923c;
     --career-orange-tint: #431407;
@@ -108,9 +111,13 @@
     @apply bg-brand-500/30 text-brand-50;
   }
 
-  /* RTL support */
+  /* RTL support. `start`, not `right`: text-align inherits, and a physical
+     `right` kept LTR content nested inside an RTL page (dir="ltr"/"auto" —
+     an English cover letter in /ar, an email address) right-aligned with its
+     punctuation and list markers on the wrong side. `start` resolves against
+     each element's own direction, so RTL text is still right-aligned. */
   [dir="rtl"] {
-    text-align: right;
+    text-align: start;
   }
 }
 

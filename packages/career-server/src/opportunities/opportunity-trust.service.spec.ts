@@ -184,7 +184,7 @@ describe('OpportunityTrustService', () => {
   it('refuses a report on another person pasted listing', async () => {
     const owner = await person('paste-owner-trust');
     const other = await person('paste-other-trust');
-    const inserted = await opportunities.paste(owner, { text: 'Private paste role\nDesk work only.' });
+    const inserted = await opportunities.paste(owner, { text: 'Private paste role\nDesk work only, filing and records upkeep.' });
     try {
       await trustService.reportListing(other, inserted.id, { reason: 'other' });
       throw new Error('expected permission_denied');

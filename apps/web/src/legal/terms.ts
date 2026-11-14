@@ -26,7 +26,7 @@ export const TERMS: LegalDocument = {
     p('United States'),
     p('Phone: 929-990-1182'),
     p('FlacronCV Email: contact@flacroncv.com'),
-    p('Parent Company Email: Contact@flacronenterprises.com'),
+    p('Parent Company Email: contact@flacronenterprises.com'),
     p('Powered by Flacron Engine'),
     p(
       'By creating an account, purchasing a subscription, starting a trial, or using FlacronCV, you agree to these Terms.',
@@ -123,7 +123,7 @@ export const TERMS: LegalDocument = {
       p('FlacronCV may offer a limited Free Plan.'),
       p('The Free Plan may currently include limits such as:'),
       ul(['5 CVs', '1 Cover Letter', '5 AI Credits', '2 Exports']),
-      p('The current allowance displayed in the application controls.'),
+      p('If these limits differ from the allowance displayed in the application, the allowance displayed in the application controls.'),
       p('The Free Plan is intended for legitimate eligible users.'),
       p(
         'Creating multiple accounts or using technical methods to repeatedly obtain additional Free Plan allowances is prohibited.',
@@ -164,7 +164,7 @@ export const TERMS: LegalDocument = {
       p('Trial availability may be limited to eligible users.'),
       p('A user may not repeatedly create accounts to receive additional promotional trials.'),
       p(
-        'If a trial converts automatically into a paid subscription, the price, billing frequency, trial expiration date, and cancellation terms must be disclosed before the user authorizes the subscription.',
+        'If a trial converts automatically into a paid subscription, the price, billing frequency, trial expiration date, and cancellation terms are disclosed before you authorize the subscription.',
       ),
     ]),
     section('9', '9. Recurring Billing', [
@@ -174,7 +174,7 @@ export const TERMS: LegalDocument = {
       ),
     ]),
     section('10', '10. Cancellation', [
-      p('Users should be able to manage or cancel subscriptions through:'),
+      p('You can manage or cancel your subscription through:'),
       p('Settings → Billing → Manage Subscription'),
       p('or through an authorized payment-provider portal where available.'),
       p(
@@ -434,7 +434,7 @@ export const TERMS: LegalDocument = {
       p('United States'),
       p('Phone: 929-990-1182'),
       p('FlacronCV Email: contact@flacroncv.com'),
-      p('Parent Company Email: Contact@flacronenterprises.com'),
+      p('Parent Company Email: contact@flacronenterprises.com'),
       p('Powered by Flacron Engine'),
     ]),
   ],

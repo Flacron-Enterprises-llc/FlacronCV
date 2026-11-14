@@ -145,6 +145,19 @@ export class VoiceInterviewService {
     return { consent: true, version: VOICE_CONSENT_VERSION };
   }
 
+  /**
+   * Withdraws recording consent (every version). New recordings are refused
+   * until the person agrees again; recordings already made stay until they
+   * delete them. Not behind the feature switch: withdrawing must always work.
+   */
+  async withdrawConsent(owner: ProfileOwner): Promise<{ consent: false }> {
+    await this.pool.query(
+      `DELETE FROM recording_consents WHERE workspace_id = $1 AND candidate_auth_user_id = $2`,
+      [owner.workspaceId, owner.authUserId],
+    );
+    return { consent: false };
+  }
+
   async start(
     owner: ProfileOwner,
     input: { kind?: string; opportunityId?: string; stage?: string; offer?: string; salarySource?: string },

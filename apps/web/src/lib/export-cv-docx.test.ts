@@ -45,7 +45,10 @@ async function documentXml(layout: CVLayout, sections: CVSection[]): Promise<str
   });
   const buf = Buffer.from(ab);
   const zip = await JSZip.loadAsync(buf);
-  return zip.file('word/document.xml').async('string');
+  const xml: string = await zip.file('word/document.xml').async('string');
+  // docx gives each hyperlink a random relationship id; normalise it so the
+  // snapshot pins content, not randomness.
+  return xml.replace(/r:id="rId[^"]+"/g, 'r:id="rId"');
 }
 
 /** Paragraph texts (all <w:t> runs of a <w:p> joined), in order. */
@@ -132,5 +135,112 @@ const OTHER_SECTIONS: CVSection[] = [
 describe('web CV DOCX — other section types are byte-identical (pinned before the reference fix)', () => {
   it.each(LAYOUTS)('%s layout', async (layout) => {
     expect(await documentXml(layout, OTHER_SECTIONS)).toMatchSnapshot();
+  });
+});
+
+// ── Certifications: every field the editor collects reaches the DOCX ──────────
+describe('web CV DOCX — certification details', () => {
+  it('includes expiry, credential ID and URL under the certification', async () => {
+    const certs = section('certifications', 'Certifications', [
+      { id: 'c1', order: 0, name: 'AWS SA', issuer: 'Amazon', date: '2023-04', expiryDate: '2026-04', credentialId: 'AWS-1', url: 'https://aws.example/verify' },
+    ]);
+    const paras = paragraphs(await documentXml('classic', [certs]));
+    expect(paras).toContain('AWS SA  •  Amazon  |  Apr 2023');
+    expect(paras).toContain('Expires Apr 2026 · Credential ID: AWS-1');
+    expect(paras).toContain('https://aws.example/verify');
+  });
+});
+
+// ── Cover letter DOCX: same wording, language and direction as the preview ────
+describe('cover letter DOCX', () => {
+  const { buildCoverLetterDocx } = __testables as any;
+  async function letterParas(letter: any, opts: any): Promise<{ texts: string[]; xml: string }> {
+    const blob = await buildCoverLetterDocx(letter, opts);
+    const ab = await new Promise<ArrayBuffer>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as ArrayBuffer);
+      r.onerror = () => reject(r.error);
+      r.readAsArrayBuffer(blob);
+    });
+    const zip = await JSZip.loadAsync(Buffer.from(ab));
+    const xml = await zip.file('word/document.xml').async('string');
+    // <w:t> holds XML-escaped text; unescape once to get what Word shows.
+    const unxml = (t: string) => t.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+    return { texts: paragraphs(xml).map(unxml), xml };
+  }
+  const letter = {
+    title: 'Letter', templateId: 'modern', jobTitle: 'Engineer', recipientName: '',
+    content: '<p>It&#39;s a pleasure &amp; an honour.</p><ul><li>One</li></ul>',
+    styling: { primaryColor: '#2563eb', senderName: 'Amara', senderEmail: 'a@example.com' },
+  };
+
+  it('uses the template wording and decodes entities once', async () => {
+    const { texts } = await letterParas(letter, { locale: 'en' });
+    expect(texts).toContain('Position: Engineer');
+    expect(texts).toContain('Dear Hiring Manager,');
+    expect(texts).toContain("It's a pleasure & an honour.");
+    expect(texts).toContain('• One');
+    expect(texts).toContain('Best regards,');
+    // The HTML entity must not survive into Word (it used to arrive as &amp;#39;).
+    expect(texts.join(' ')).not.toMatch(/&#39;|&amp;/);
+  });
+
+  it('uses the labels and locale it is given, right-to-left for Arabic', async () => {
+    const labels = {
+      dear: 'عزيزي', hiringManager: 'مدير التوظيف', placeholder: '', yourName: '', re: 'بخصوص:',
+      subjectApplication: '', position: 'الوظيفة:', closingSincerely: 'مع خالص التحية،', closingBestRegards: 'مع أطيب التحيات،',
+      closingRegards: '', closingEnthusiasm: '', closingFaithfully: '', closingRespectfully: '',
+    };
+    const { texts, xml } = await letterParas({ ...letter, templateId: 'classic' }, { labels, locale: 'ar' });
+    expect(texts).toContain('بخصوص: Engineer');
+    expect(texts).toContain('عزيزي مدير التوظيف،'); // Arabic comma, as in the preview
+    expect(texts).toContain('مع خالص التحية،');
+    expect(xml).toContain('<w:bidi');
+  });
+});
+
+describe('cover letter DOCX — per-paragraph direction', () => {
+  const { buildCoverLetterDocx } = __testables as any;
+  it('keeps an English body paragraph LTR inside an Arabic letter', async () => {
+    const blob = await buildCoverLetterDocx(
+      { title: 'L', templateId: 'modern', jobTitle: '', recipientName: '', content: '<p>English paragraph.</p><p>فقرة عربية.</p>', styling: {} },
+      { locale: 'ar' },
+    );
+    const ab = await new Promise<ArrayBuffer>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as ArrayBuffer);
+      r.onerror = () => reject(r.error);
+      r.readAsArrayBuffer(blob);
+    });
+    const xml: string = await (await JSZip.loadAsync(Buffer.from(ab))).file('word/document.xml').async('string');
+    const paraOf = (needle: string) => (xml.match(/<w:p[ >][\s\S]*?<\/w:p>/g) ?? []).find((p) => p.includes(needle)) ?? '';
+    expect(paraOf('English paragraph.')).not.toContain('<w:bidi');
+    expect(paraOf('فقرة عربية.')).toContain('<w:bidi');
+  });
+});
+
+describe('web CV DOCX — links are real hyperlinks', () => {
+  it('wraps email, profile URLs and project URLs in w:hyperlink', async () => {
+    const projects = section('projects', 'Projects', [
+      { id: 'p1', order: 0, name: 'Ledger', url: 'https://github.com/a/ledger', technologies: [], description: '' },
+    ]);
+    const cv = buildSampleCV('classic', '#1e3a5f') as any;
+    cv.personalInfo = { ...cv.personalInfo, email: 'a@example.com', linkedin: 'linkedin.com/in/a', city: 'London' };
+    const blob = await buildCVDocx(cv, [projects], LABELS);
+    const ab = await new Promise<ArrayBuffer>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as ArrayBuffer);
+      r.onerror = () => reject(r.error);
+      r.readAsArrayBuffer(blob);
+    });
+    const zip = await JSZip.loadAsync(Buffer.from(ab));
+    const rels: string = await zip.file('word/_rels/document.xml.rels').async('string');
+    const xml: string = await zip.file('word/document.xml').async('string');
+    expect(xml).toContain('<w:hyperlink');
+    expect(rels).toContain('mailto:a@example.com');
+    expect(rels).toContain('https://linkedin.com/in/a');
+    expect(rels).toContain('https://github.com/a/ledger');
+    // A location is not a link.
+    expect(rels).not.toContain('London');
   });
 });

@@ -6,11 +6,11 @@ export type BadgeTone = 'neutral' | 'recommended' | 'later' | RecordState;
 
 const tones: Record<BadgeTone, string> = {
   neutral: 'bg-career-wash text-career-ink',
-  recommended: 'bg-career-navy text-white',
+  recommended: 'bg-career-navy text-white dark:text-stone-950',
   later: 'bg-career-wash text-career-muted',
   draft: 'bg-career-wash text-career-ink',
   confirmed: 'bg-career-orange-tint text-career-navy',
-  submitted: 'bg-career-navy text-white',
+  submitted: 'bg-career-navy text-white dark:text-stone-950',
 };
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {

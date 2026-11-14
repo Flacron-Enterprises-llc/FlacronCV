@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError, type CareerEvidence } from '@flacroncv/career-api-client';
@@ -152,6 +152,10 @@ describe('EvidenceScreen (CV11)', () => {
       await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Remove file' })).toHaveProperty('disabled', false));
 
       fireEvent.click(screen.getByRole('button', { name: 'Remove file' }));
+      // Removing a stored file asks first.
+      expect(removeEvidenceAttachment).not.toHaveBeenCalled();
+      const dialog = await screen.findByRole('dialog');
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Remove file' }));
       expect(await screen.findByLabelText('Attach a file')).toBeDefined();
       expect(removeEvidenceAttachment).toHaveBeenCalledWith(linkOnly.id);
     } finally {

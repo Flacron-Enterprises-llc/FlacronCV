@@ -6,12 +6,11 @@
  */
 
 import React from 'react';
-import { useTranslations } from 'next-intl';
 import type { LayoutProps } from './shared';
-import { getTokens, hexToRgba, darken, ensureDarkSurface, INK, buildContactLine, buildLinksLine, SectionHeading, ItemRenderer, SkillList } from './shared';
+import { getTokens, hexToRgba, darken, ensureDarkSurface, INK, contactParts, linkParts, ContactRun, SectionHeading, ItemRenderer, SkillList, useCVDocument, CVDocumentProvider } from './shared';
 
-export default function TopBarLayout({ cv, sections }: LayoutProps) {
-  const t = useTranslations('cv_builder');
+export default function TopBarLayout({ cv, sections, nameAs: NameTag = 'div' }: LayoutProps) {
+  const doc = useCVDocument(cv, sections);
   const { primary, bodyFont, headingFont, fs, sp, br, sectionStyle } = getTokens(cv);
   const showPhoto = cv.styling.showPhoto && cv.personalInfo.photoURL;
   // The hero band carries the name, the job title and the contact line, all in
@@ -25,7 +24,8 @@ export default function TopBarLayout({ cv, sections }: LayoutProps) {
   const fullName = `${cv.personalInfo.firstName ?? ''} ${cv.personalInfo.lastName ?? ''}`.trim();
 
   return (
-    <div style={{
+    <CVDocumentProvider doc={doc}>
+    <div dir={doc.dir} lang={doc.lang} style={{
       fontFamily: bodyFont,
       color: INK.heading,
       background: '#fff',
@@ -69,7 +69,7 @@ export default function TopBarLayout({ cv, sections }: LayoutProps) {
               looked empty except for the contact line, which is exactly how a
               half-finished CV ends up looking broken rather than incomplete. */}
           {fullName && (
-            <h1 style={{
+            <NameTag style={{
               fontFamily: headingFont,
               fontSize: `${fs.nameHero}px`,
               fontWeight: 900,
@@ -79,7 +79,7 @@ export default function TopBarLayout({ cv, sections }: LayoutProps) {
               letterSpacing: '-0.8px',
             }}>
               {fullName}
-            </h1>
+            </NameTag>
           )}
 
           {cv.personalInfo.headline && (
@@ -100,12 +100,12 @@ export default function TopBarLayout({ cv, sections }: LayoutProps) {
             margin: '8px 0 0',
             letterSpacing: '0.2px',
           }}>
-            {buildContactLine(cv)}
+            <ContactRun parts={contactParts(cv)} />
           </p>
 
           {(cv.personalInfo.linkedin || cv.personalInfo.website || cv.personalInfo.github) && (
             <p style={{ fontSize: `${fs.meta}px`, color: 'rgba(255,255,255,0.55)', margin: '3px 0 0' }}>
-              {buildLinksLine(cv)}
+              <ContactRun parts={linkParts(cv)} />
             </p>
           )}
         </div>
@@ -119,8 +119,8 @@ export default function TopBarLayout({ cv, sections }: LayoutProps) {
         {/* Summary */}
         {cv.personalInfo.summary && (
           <div style={{ marginBottom: `${sp.section}px` }}>
-            <SectionHeading title={t('template_about_me')} primary={primary} headingFont={headingFont} fs={fs} sectionStyle="left-border" br={br} />
-            <p style={{ fontSize: `${fs.name}px`, lineHeight: 1.8, color: INK.body, margin: 0, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
+            <SectionHeading title={doc.labels.aboutMe} primary={primary} headingFont={headingFont} fs={fs} sectionStyle="left-border" br={br} />
+            <p dir="auto" style={{ fontSize: `${fs.name}px`, lineHeight: 1.8, color: INK.body, margin: 0, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
               {cv.personalInfo.summary}
             </p>
           </div>
@@ -145,5 +145,6 @@ export default function TopBarLayout({ cv, sections }: LayoutProps) {
         ))}
       </div>
     </div>
+    </CVDocumentProvider>
   );
 }

@@ -30,7 +30,7 @@ const SIDEBAR_COLLAPSED_KEY = 'flacroncv_sidebar_collapsed';
  */
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations('footer');
-  const { user, loading, emailVerified } = useAuth();
+  const { user, loading, emailVerified, signedOutIntentionally } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -65,13 +65,19 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
+      // A deliberate sign-out (account menu, "sign out everywhere", account
+      // deletion) ends here too, because it clears `user` while this page is
+      // still mounted. Coming back to the page just left is not what the user
+      // asked for, so that case goes home with no return URL; only a lost or
+      // missing session asks them to sign in and come back.
+      if (signedOutIntentionally()) router.replace('/');
+      else router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
       return;
     }
     if (!emailVerified) {
       router.push('/verify-email');
     }
-  }, [loading, user, emailVerified, router, pathname]);
+  }, [loading, user, emailVerified, router, pathname, signedOutIntentionally]);
 
   if (loading || !user || !emailVerified) {
     return (

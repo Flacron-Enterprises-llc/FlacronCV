@@ -65,7 +65,9 @@ describe('PortfolioScreen', () => {
       portfolioQr,
     }));
     expect(await screen.findByText(/Selected work/)).toBeTruthy();
-    expect(screen.getByText('/en/portfolio/ab12cd34ef56')).toBeTruthy();
+    // The share link is a real link with a copy button, not bare text.
+    expect(screen.getByRole('link', { name: /\/en\/portfolio\/ab12cd34ef56$/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Copy link' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Download QR code' }));
     expect(screen.queryByText('The QR code was downloaded.')).toBeNull();
     expect(portfolioQr).toHaveBeenCalledTimes(1);

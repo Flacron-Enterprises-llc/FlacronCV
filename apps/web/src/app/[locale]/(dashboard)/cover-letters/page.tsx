@@ -3,13 +3,22 @@ import React from 'react';
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Link, useRouter } from '@/i18n/routing';
 import { api } from '@/lib/api';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
+import UpgradeModal from '@/components/shared/UpgradeModal';
+import { useCoverLetterAllowance, isCoverLetterLimitError } from '@/components/cover-letter/letter-allowance';
+import CLThumbnail from '@/components/cover-letter/CLThumbnail';
+import { COVER_LETTER_TEMPLATES } from '@/components/cover-letter/CoverLetterPreview';
+import {
+  isRtlLetterLocale,
+  resolveLetterLocale,
+  type CoverLetterWithLocale,
+} from '@/components/cover-letter/letter-locale';
 import {
   Plus,
   Mail,
@@ -20,7 +29,11 @@ import {
   Loader2,
   AlertTriangle,
 } from 'lucide-react';
-import { CoverLetter, PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
+import {
+  CoverLetter,
+  resolveEffectivePlan,
+  effectiveCoverLetterTemplate,
+} from '@flacroncv/shared-types';
 import { useFormatDate } from '@/lib/use-format-date';
 import { toast } from 'sonner';
 import { useAuth } from '@/providers/AuthProvider';
@@ -30,13 +43,12 @@ import { TOUR_TARGETS } from '@/lib/app-tour';
 export default function CoverLettersPage(): React.JSX.Element | null {
   const t = useTranslations();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const formatApiError = useApiErrorMessage();
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  const letterLimit = PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)].limits.coverLetters;
-  const lettersCreated = user?.usage?.coverLettersCreated ?? 0;
-  const atLimit = letterLimit !== 'unlimited' && lettersCreated >= letterLimit;
+  // Same allowance rule (and degraded-profile guard) as the new-letter gate.
+  const { atLimit, refreshUser } = useCoverLetterAllowance();
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['cover-letters'],
@@ -61,10 +73,28 @@ export default function CoverLettersPage(): React.JSX.Element | null {
       queryClient.invalidateQueries({ queryKey: ['cover-letters'] });
       toast.success(t('coverLetters.duplicated'));
     },
-    onError: () => {
-      toast.error(t('coverLetters.duplicate_failed'));
+    onError: (error: Error) => {
+      // A copy counts as a new letter. If the allowance ran out (e.g. the
+      // usage counter was stale on this page) the server answers 403 — that is
+      // an upgrade decision, not a failure, so it gets the paywall.
+      if (isCoverLetterLimitError(error)) {
+        void refreshUser();
+        setShowUpgradeModal(true);
+        return;
+      }
+      toast.error(formatApiError(error, t('coverLetters.duplicate_failed')));
     },
   });
+
+  const handleDuplicate = (id: string) => {
+    // Known to be at the limit: show the paywall without a request that can
+    // only be refused.
+    if (atLimit) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    duplicateMutation.mutate(id);
+  };
 
   const coverLetters = data?.items || [];
   const listReady = !isLoading && !isError;
@@ -121,7 +151,7 @@ export default function CoverLettersPage(): React.JSX.Element | null {
               key={cl.id}
               coverLetter={cl}
               onDelete={() => setDeleteId(cl.id)}
-              onDuplicate={() => duplicateMutation.mutate(cl.id)}
+              onDuplicate={() => handleDuplicate(cl.id)}
               duplicating={duplicateMutation.isPending && duplicateMutation.variables === cl.id}
             />
           ))}
@@ -156,6 +186,12 @@ export default function CoverLettersPage(): React.JSX.Element | null {
           </Button>
         </div>
       </Modal>
+
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        reason="cover_letters"
+      />
     </div>
   );
 }
@@ -173,7 +209,20 @@ function CoverLetterCard({
 }) {
   const router = useRouter();
   const t = useTranslations('coverLetters');
+  const locale = useLocale();
+  const { user } = useAuth();
   const formatDate = useFormatDate();
+  // Draw the design the letter actually renders with: the same tier fallback
+  // as the preview, its own accent, and its own (letter) direction.
+  const templateId = effectiveCoverLetterTemplate(
+    coverLetter.templateId,
+    resolveEffectivePlan(user?.subscription),
+  );
+  const accent =
+    coverLetter.styling?.primaryColor ||
+    COVER_LETTER_TEMPLATES.find((tmpl) => tmpl.id === templateId)?.defaultColor ||
+    '#2563eb';
+  const rtl = isRtlLetterLocale(resolveLetterLocale(coverLetter as CoverLetterWithLocale, locale));
   const statusLabel = coverLetter.status === 'final' ? t('status_final') : t('status_draft');
 
   return (
@@ -184,17 +233,8 @@ function CoverLetterCard({
         onClick={() => router.push(`/cover-letters/${coverLetter.id}`)}
         aria-label={t('card_open', { title: coverLetter.title })}
       >
-        <div className="w-24 rounded border border-stone-200 bg-white p-2 shadow-sm dark:border-stone-600 dark:bg-stone-700">
-          <div className="mb-1 h-1 w-10 rounded bg-stone-300 dark:bg-stone-500" />
-          <div className="mb-2 h-px w-full bg-brand-400" />
-          <div className="space-y-0.5">
-            <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-500" />
-            <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-500" />
-            <div className="h-1 w-4/5 rounded bg-stone-200 dark:bg-stone-500" />
-            <div className="h-1 w-full rounded bg-stone-200 dark:bg-stone-500" />
-            <div className="h-1 w-3/5 rounded bg-stone-200 dark:bg-stone-500" />
-          </div>
-          <div className="mt-2 h-1 w-8 rounded bg-stone-300 dark:bg-stone-500" />
+        <div className="h-32 w-[90px] overflow-hidden rounded border border-stone-200 bg-white shadow-sm dark:border-stone-600">
+          <CLThumbnail templateId={templateId} color={accent} rtl={rtl} page />
         </div>
         <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all group-hover:bg-black/20">
           <span className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-stone-800 opacity-0 shadow transition-opacity group-hover:opacity-100">

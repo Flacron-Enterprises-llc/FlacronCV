@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError, type PaidScope, type ScenarioResult } from '@flacroncv/career-api-client';
@@ -6,6 +6,7 @@ import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { testApi } from '@/components/career/test-api';
 import messages from '../../../../public/locales/en/common.json';
 import { ScopeScreen, type ScopeMode } from './ScopeScreen';
+import { payToCents } from './ScenariosPanel';
 
 const user: SignedInUser = {
   uid: 'ada',
@@ -14,10 +15,10 @@ const user: SignedInUser = {
   getIdToken: async () => 'token',
 };
 
-function renderMode(mode: ScopeMode, api = testApi()) {
+function renderMode(mode: ScopeMode, api = testApi(), careerPlan?: string) {
   return render(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="UTC">
-      <ScopeScreen mode={mode} api={api} user={user} ready signInHref="/en/sign-in" />
+      <ScopeScreen mode={mode} api={api} user={user} ready signInHref="/en/sign-in" careerPlan={careerPlan} />
     </NextIntlClientProvider>,
   );
 }
@@ -36,6 +37,8 @@ const paid = {
   replayed: false,
 };
 
+const overview = { staff: [], candidates: [{ id: '22222222-2222-4222-8222-222222222222', email: 'person@example.test' }] };
+
 describe('ScopeScreen', () => {
   it('says a switched-off tool is not open yet instead of offering a retry', async () => {
     const off = async () => {
@@ -47,25 +50,51 @@ describe('ScopeScreen', () => {
     expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
   });
 
-  it('shows unknown pay only after the comparison is saved', async () => {
+  it('converts whole-currency pay to cents and refuses text', () => {
+    expect(payToCents('55,000')).toBe(5_500_000);
+    expect(payToCents(' ')).toBeNull();
+    expect(Number.isNaN(payToCents('lots'))).toBe(true);
+  });
+
+  it('starts with empty routes, asks before using the credit, and shows a result table', async () => {
     const pending = gate<PaidScope<ScenarioResult>>();
     const createScenario = vi.fn(() => pending.promise);
     renderMode('scenarios', testApi({ createScenario }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Compare' }));
-    expect(screen.queryByText('Pay unknown')).toBeNull();
+    expect(((await screen.findByLabelText('Route name')) as HTMLInputElement).value).toBe('');
+    fireEvent.click(screen.getByRole('button', { name: 'Compare' }));
+    expect(await screen.findByText('Enter a name and a destination for at least one route.')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Route name'), { target: { value: 'Move' } });
+    fireEvent.change(screen.getByLabelText('Destination'), { target: { value: 'Lyon' } });
+    fireEvent.change(screen.getByLabelText('Expected yearly pay'), { target: { value: '48000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Compare' }));
+    expect(createScenario).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Use 1 comparison' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Use 1 comparison' }));
+    expect(createScenario).toHaveBeenCalledTimes(1);
+    expect(createScenario).toHaveBeenCalledWith(
+      [{ name: 'Move', destination: 'Lyon', costCents: 0, months: 12, wageCents: 4_800_000, source: 'user' }],
+      expect.any(String),
+    );
     pending.resolve({
       ...paid,
       result: {
         id: '11111111-1111-4111-8111-111111111111',
-        tradeoff: 'This is not a promise of earnings or employment.',
-        options: [{ name: 'Stay', costCents: 0, months: 12, destination: 'London', wageCents: null, wageLabel: 'unknown', source: 'user' }],
+        tradeoff: 'server text',
+        options: [
+          { name: 'Move', costCents: 0, months: 12, destination: 'Lyon', wageCents: 4_800_000, wageLabel: 'user_supplied', source: 'user' },
+          { name: 'Stay', costCents: 0, months: 12, destination: 'Leeds', wageCents: null, wageLabel: 'unknown', source: 'user' },
+        ],
       },
     });
-    expect(await screen.findByText('Pay unknown')).toBeTruthy();
-    expect(screen.getByText('This is not a promise of earnings or employment.')).toBeTruthy();
+    const table = await screen.findByRole('table');
+    expect(within(table).getByText('48,000')).toBeTruthy();
+    expect(within(table).getByText('Pay unknown')).toBeTruthy();
+    expect(within(table).getByText('Leeds')).toBeTruthy();
+    expect(screen.queryByText('server text')).toBeNull();
   });
 
-  it('shows the observed interview rate from the recorded sample', async () => {
+  it('words the observed interview rate on the client', async () => {
     renderMode('loop', testApi({
       learningLoop: async () => ({
         sampleSize: 11,
@@ -75,47 +104,23 @@ describe('ScopeScreen', () => {
         interviews: 2,
         offers: 1,
         interviewRatePercent: 20,
-        statement: '2 interviews from 10 recorded applications is a 20 percent observed interview rate in that sample, not a future hiring probability.',
+        statement: 'server sentence',
         suggestion: null,
         level: 'breakdowns',
       }),
     }));
-    expect(await screen.findByText(/20 percent observed interview rate/)).toBeTruthy();
+    expect(await screen.findByText(/2 interviews from 10 recorded applications: a 20% observed interview rate/)).toBeTruthy();
+    expect(screen.queryByText('server sentence')).toBeNull();
   });
 
-  it('says the form was not sent only after review', async () => {
-    const pending = gate<{ id: string; externalSubmitted: false; message: string }>();
-    const fill = gate<{
-      site: string;
-      submit: false;
-      extension: 'unpacked_local';
-      distribution: 'unpublished';
-      fields: Record<string, string>;
-      message: string;
-    }>();
-    renderMode('forms', testApi({
-      createForm: async () => ({ ...paid, result: { id: 'form-1', site: 'example-jobs.test', externalSubmitted: false, reviewed: false } }),
-      reviewForm: () => pending.promise,
-      fillForm: () => fill.promise,
-    }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Prepare the form' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'I reviewed it' }));
-    const fillMessage =
-      'A local unpacked Chrome extension can fill this site after you start it. FlacronCV does not send the form. Other sites and a store listing are not published.';
-    expect(screen.queryByText(fillMessage)).toBeNull();
-    pending.resolve({ id: 'form-1', externalSubmitted: false, message: 'FlacronCV does not send this form.' });
-    fill.resolve({
-      site: 'example-jobs.test',
-      submit: false,
-      extension: 'unpacked_local',
-      distribution: 'unpublished',
-      fields: { full_name: '', email: '', phone: '', notes: '' },
-      message: fillMessage,
-    });
-    expect(await screen.findByText(fillMessage)).toBeTruthy();
+  it('shows form filling as coming soon without test-site internals', async () => {
+    renderMode('forms');
+    expect(await screen.findByText('Form filling is coming soon')).toBeTruthy();
+    expect(document.body.textContent).not.toContain('example-jobs.test');
+    expect(document.body.textContent).not.toMatch(/unpacked|Chrome extension/i);
   });
 
-  it('keeps the listing list when the map allowance is used up', async () => {
+  it('asks before a map session and keeps the list when the allowance is used up', async () => {
     renderMode('map', testApi({
       mapOpportunities: async () => ({ items: [{ id: 'job-1', title: 'Analyst', approximate: true, coordinates: null }], tiles: null, attribution: null, provider: null }),
       startMap: async () => {
@@ -123,104 +128,109 @@ describe('ScopeScreen', () => {
       },
     }));
     expect(await screen.findByText('Analyst')).toBeTruthy();
-    expect(screen.getByText(/No map tiles are connected/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Start 15 minutes' }));
-    expect(await screen.findByText('The allowance is used up')).toBeTruthy();
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Start 15 minutes' }));
+    expect(await screen.findByText(messages.career.scope.quota_used_body)).toBeTruthy();
     expect(screen.getByText('Analyst')).toBeTruthy();
-    expect(screen.queryByText(/This session is/)).toBeNull();
   });
 
-  it('saves a promotion goal without calling it a confirmed fact', async () => {
-    const pending = gate<{ id: string; desiredTitle: string }>();
+  it('lists saved goals and every credential, confirms saves and clears the inputs', async () => {
+    const addCredential = vi.fn(async (name: string, expiresOn: string) => ({ id: 'cred-2', name, expiresOn, due: false }));
     renderMode('maintenance', testApi({
       maintenance: async () => ({
         achievements: [],
-        promotionGoals: [],
+        promotionGoals: [{ id: 'goal-0', desiredTitle: 'Team lead' }],
         credentials: [{ id: 'cred-1', name: 'First aid', expiresOn: '2026-11-01', due: true }],
       }),
-      addPromotionGoal: () => pending.promise,
+      addPromotionGoal: async (desiredTitle: string) => ({ id: 'goal-1', desiredTitle }),
+      addCredential,
     }));
-    expect(await screen.findByText('First aid is due within 90 days')).toBeTruthy();
+    expect(await screen.findByText('Team lead')).toBeTruthy();
+    expect(screen.getByText('First aid')).toBeTruthy();
+    expect(screen.getByText('Renew soon')).toBeTruthy();
+    const goal = screen.getByLabelText('Promotion goal') as HTMLInputElement;
+    fireEvent.change(goal, { target: { value: 'Staff engineer' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save goal' }));
-    expect(screen.queryByText(/not a confirmed fact/)).toBeNull();
-    pending.resolve({ id: 'goal-1', desiredTitle: 'Staff engineer' });
-    expect(await screen.findByText(/not a confirmed fact/)).toBeTruthy();
+    expect(await screen.findByText('Staff engineer')).toBeTruthy();
+    expect(screen.getByText(/not a confirmed fact/)).toBeTruthy();
+    expect(goal.value).toBe('');
+    fireEvent.change(screen.getByLabelText('Credential'), { target: { value: 'Forklift' } });
+    const date = screen.getByLabelText('Expires on') as HTMLInputElement;
+    expect(date.type).toBe('date');
+    fireEvent.change(date, { target: { value: '2027-12-31' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save credential' }));
+    expect(await screen.findByText('Forklift saved.')).toBeTruthy();
+    expect(addCredential).toHaveBeenCalledWith('Forklift', '2027-12-31');
+    expect(screen.getByText('Forklift')).toBeTruthy();
+    expect(date.value).toBe('');
   });
 
-  it('keeps booking closed and does not show a purchased review', async () => {
-    const bookHumanService = vi.fn(async () => {
-      throw new ApiError(409, 'not_purchasable', { code: 'not_purchasable' });
-    });
+  it('shows a closed booking as closed with its button disabled', async () => {
+    const bookHumanService = vi.fn();
     renderMode('services', testApi({
       humanServices: async () => ({
-        items: [{ id: 'review-not-open', name: 'Named review desk', scope: 'A person reviews selected material', priceCents: null, bookingOpen: false, note: 'This is not AI feedback. Booking stays closed until commercial terms are set.' }],
+        items: [{ id: 'review-not-open', name: 'Named review desk', scope: 'A person reviews selected material', priceCents: null, bookingOpen: false, note: 'server note' }],
       }),
       bookHumanService,
     }));
-    expect(await screen.findByText(/This is not AI feedback/)).toBeTruthy();
-    expect(screen.queryByText('This is not for sale')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Request a booking' }));
-    expect(await screen.findByText('This is not for sale')).toBeTruthy();
-    expect(bookHumanService).toHaveBeenCalledWith('review-not-open');
+    expect(await screen.findByText('Closed')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Request a booking' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(bookHumanService).not.toHaveBeenCalled();
   });
 
-  it('lists an opted-in label and not an email', async () => {
+  it('loads the saved opt-in and counts opted-in people without showing an email', async () => {
     renderMode('recruiting', testApi({
+      recruitingOptIn: async () => ({ discoverable: true }),
       recruitingSearch: async () => ({ items: [{ candidateAuthUserId: 'ada', label: 'Opted-in candidate' }] }),
     }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Search opted-in people' }));
-    expect(await screen.findByText('Opted-in candidate')).toBeTruthy();
+    expect(((await screen.findByRole('checkbox')) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Search opted-in people' }));
+    expect(await screen.findByText('1 person has opted in.')).toBeTruthy();
     expect(document.body.textContent).not.toContain('@');
   });
 
-  it('hides a candidate the counselor is not assigned to', async () => {
+  it('sends a non-Business plan to the plans page instead of a workspace it cannot use', async () => {
+    const businessOverview = vi.fn();
+    renderMode('business', testApi({ businessOverview }), 'professional');
+    expect(await screen.findByText(messages.career.scope.business_plan_title)).toBeTruthy();
+    expect(businessOverview).not.toHaveBeenCalled();
+  });
+
+  it('opens candidates from the list and explains a refusal beside the list', async () => {
     renderMode('business', testApi({
+      businessOverview: async () => overview,
       businessCandidate: async () => {
         throw new ApiError(403, 'permission_denied', { code: 'permission_denied' });
       },
-    }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Open candidate' }));
-    expect(await screen.findByText('This record is not available')).toBeTruthy();
+    }), 'business');
+    expect((await screen.findAllByText('person@example.test')).length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText(/Candidate id/i)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Open candidate' }));
+    expect(await screen.findByText(messages.career.scope.permission_body)).toBeTruthy();
   });
 
-  it('keeps three routes and sends one comparison when Compare is clicked twice', async () => {
-    const pending = gate<PaidScope<ScenarioResult>>();
-    const createScenario = vi.fn(() => pending.promise);
-    renderMode('scenarios', testApi({ createScenario }));
-    const add = await screen.findByRole('button', { name: 'Add a route' });
-    fireEvent.click(add);
-    fireEvent.click(add);
-    expect((add as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getAllByLabelText(/Route/)).toHaveLength(3);
-    const compare = screen.getByRole('button', { name: 'Compare' });
-    fireEvent.click(compare);
-    fireEvent.click(compare);
-    expect(createScenario).toHaveBeenCalledTimes(1);
-    pending.resolve({
-      ...paid,
-      result: {
-        id: '11111111-1111-4111-8111-111111111111',
-        tradeoff: 'This is not a promise of earnings or employment.',
-        options: [{ name: 'Stay', costCents: 0, months: 12, destination: 'London', wageCents: null, wageLabel: 'unknown', source: 'user' }],
-      },
-    });
-    expect(await screen.findByText('Pay unknown')).toBeTruthy();
-  });
-
-  it('shows the staff allowance message after the seat is refused', async () => {
+  it('shows the staff allowance message beside Add staff', async () => {
     renderMode('business', testApi({
+      businessOverview: async () => overview,
       addStaff: async () => {
         throw new ApiError(409, 'capacity_exceeded', { code: 'capacity_exceeded', field: 'staffSeats', limit: 3 });
       },
-    }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Add staff' }));
-    expect(await screen.findByText('The allowance is used up')).toBeTruthy();
+    }), 'business');
+    fireEvent.change(await screen.findByLabelText(messages.career.scope.staff_user), { target: { value: 'uid-1' } });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add staff' })[0]);
+    expect(await screen.findByText(messages.career.scope.quota_body)).toBeTruthy();
   });
 
-  it('shows an API key only after it is created', async () => {
+  it('enables only the developer actions the account has, and loads the saved brand', async () => {
     const pending = gate<{ id: string; token: string; prefix: string }>();
-    renderMode('developer', testApi({ createDeveloperKey: () => pending.promise }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Create an API key' }));
+    renderMode('developer', testApi({
+      developerStatus: async () => ({ apiPackage: true, whiteLabel: false, brand: { brandName: 'North', attribution: 'Source: FlacronCV' } }),
+      createDeveloperKey: () => pending.promise,
+    }));
+    expect(((await screen.findByLabelText('Brand name')) as HTMLInputElement).value).toBe('North');
+    expect((screen.getByRole('button', { name: 'Save brand' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(messages.career.scope.white_label_missing)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Create an API key' }));
     expect(screen.queryByText(/Copy this key now/)).toBeNull();
     pending.resolve({ id: 'key-1', token: 'flc_once', prefix: 'flc_once' });
     expect(await screen.findByText(/flc_once/)).toBeTruthy();

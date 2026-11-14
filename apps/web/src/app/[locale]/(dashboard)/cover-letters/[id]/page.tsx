@@ -11,14 +11,36 @@ import { api, isAiCreditUnconfirmed } from '@/lib/api';
 import { track } from '@/lib/analytics';
 import { fcgeUpgradeClicked } from '@/lib/fcge';
 import { useCoverLetterStore } from '@/store/cover-letter-store';
-import { CoverLetter, UpdateCoverLetterData, CoverLetterStatus, SubscriptionPlan, PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
+import {
+  CoverLetter,
+  UpdateCoverLetterData,
+  CoverLetterStatus,
+  SubscriptionPlan,
+  PLAN_CONFIGS,
+  resolveEffectivePlan,
+  effectiveCoverLetterTemplate,
+  canUseCoverLetterTemplate,
+} from '@flacroncv/shared-types';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import UpgradeModal from '@/components/shared/UpgradeModal';
 import InAppWarning from '@/components/shared/InAppWarning';
-import CoverLetterPreview, { COVER_LETTER_TEMPLATES } from '@/components/cover-letter/CoverLetterPreview';
-import { ensureDarkSurface, readableOn, INK } from '@/lib/design-tokens';
+import CoverLetterPreview, {
+  COVER_LETTER_TEMPLATES,
+  useCoverLetterLabels,
+} from '@/components/cover-letter/CoverLetterPreview';
+import CLThumbnail from '@/components/cover-letter/CLThumbnail';
+import {
+  LETTER_LOCALES,
+  LETTER_LOCALE_NAMES,
+  aiLanguageName,
+  isLetterLocale,
+  isRtlLetterLocale,
+  resolveLetterLocale,
+  type CoverLetterWithLocale,
+  type LetterLocale,
+} from '@/components/cover-letter/letter-locale';
 import { exportCoverLetterToPDF, exportCoverLetterToDocx } from '@/lib/export-cv';
 import { toast } from 'sonner';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
@@ -50,6 +72,7 @@ import {
   Eye,
   AlertTriangle,
   Wand2,
+  Languages,
 } from 'lucide-react';
 import type { Editor } from '@tiptap/react';
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -175,6 +198,9 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
 
   // Tiptap editor
   const editor = useEditor({
+    // The page is server-rendered first; rendering the editor during SSR
+    // produces a hydration mismatch (and Tiptap warns about it on every load).
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       UnderlineExtension,
@@ -188,8 +214,16 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     },
     editorProps: {
       attributes: {
-        class:
-          'prose prose-sm dark:prose-invert max-w-none min-h-[400px] focus:outline-none p-4',
+        // `auto`: the letter's language is not necessarily the interface's.
+        // Inheriting dir=rtl in /ar and /ur laid English text out right-to-left,
+        // throwing full stops and commas to the wrong end of each line.
+        dir: 'auto',
+        // Reuses the preview's letter typography (globals.css [data-cl-body]):
+        // paragraph spacing and list markers. The old `prose` classes did
+        // nothing — there is no typography plugin — so lists had no bullets
+        // and paragraphs ran together while the preview beside them did not.
+        'data-cl-body': '',
+        class: 'min-h-[400px] p-4 text-sm leading-relaxed text-stone-800 focus:outline-none dark:text-stone-200',
       },
     },
   });
@@ -253,6 +287,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
           jobDescription: cl.jobDescription,
           content: cl.content,
           styling: cl.styling,
+          ...letterLocalePatch(cl),
         }).then(() => clearBackup(coverLetterId)).catch(() => {});
       }
       reset();
@@ -279,7 +314,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
 
     setSaving(true);
     try {
-      const updateData: UpdateCoverLetterData = {
+      const updateData: UpdateCoverLetterData & { letterLocale?: LetterLocale } = {
         title: snapshot.title,
         templateId: snapshot.templateId,
         recipientName: snapshot.recipientName,
@@ -290,6 +325,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
         jobDescription: snapshot.jobDescription,
         content: snapshot.content,
         styling: snapshot.styling,
+        ...letterLocalePatch(snapshot),
       };
 
       await api.put(`/cover-letters/${coverLetterId}`, updateData);
@@ -396,10 +432,10 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
     aiMutation.mutate();
   };
 
-  const LOCALE_LANGUAGE_NAMES: Record<string, string> = {
-    en: 'English', es: 'Spanish', fr: 'French',
-    de: 'German',  ar: 'Arabic',  ur: 'Urdu',
-  };
+  // Generation writes in the letter's language, not the interface's: rewriting
+  // one paragraph of an English letter must not come back in Arabic because the
+  // user happens to browse in /ar.
+  const { letterLocale, labels: letterLabels } = useCoverLetterLabels(coverLetter);
 
   // AI improve mutation
   const aiMutation = useMutation({
@@ -409,7 +445,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
         jobDescription: coverLetter?.jobDescription || '',
         companyName: coverLetter?.companyName || '',
         tone: 'professional',
-        language: LOCALE_LANGUAGE_NAMES[locale] || 'English',
+        language: aiLanguageName(letterLocale),
         linkedCVId: coverLetter?.linkedCVId || undefined,
       }),
     onSuccess: (data) => {
@@ -444,7 +480,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
       api.post<{ content: string }>('/ai/regenerate-paragraph', {
         letter: vars.letter,
         paragraph: vars.paragraph,
-        language: LOCALE_LANGUAGE_NAMES[locale] || 'English',
+        language: aiLanguageName(letterLocale),
       }),
     onSuccess: (data, vars) => {
       setParagraphDraft({ original: vars.paragraph, suggestion: data.content.trim() });
@@ -532,7 +568,16 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
       if (format === 'pdf') {
         await exportCoverLetterToPDF(coverLetter.title);
       } else {
-        await exportCoverLetterToDocx(coverLetter);
+        // Same labels, language and (plan-resolved) template as the preview,
+        // so the Word file says what the on-screen letter says.
+        await exportCoverLetterToDocx(coverLetter, {
+          labels: letterLabels,
+          locale: letterLocale,
+          templateId: effectiveCoverLetterTemplate(
+            coverLetter.templateId,
+            resolveEffectivePlan(user?.subscription),
+          ),
+        });
       }
       if (reservationId) {
         await api.post('/exports/confirm', {
@@ -704,8 +749,9 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
                     {COVER_LETTER_TEMPLATES.map((tmpl) => {
                       const isActive = (coverLetter.templateId || 'modern') === tmpl.id;
                       const userPlan = resolveEffectivePlan(user?.subscription);
-                      const planOrder = [SubscriptionPlan.FREE, SubscriptionPlan.PRO, SubscriptionPlan.ENTERPRISE];
-                      const locked = planOrder.indexOf(userPlan as SubscriptionPlan) < planOrder.indexOf(tmpl.tier);
+                      // Shared rule (handles every plan; a three-plan list ranked
+                      // Career Accelerator like Free and wrongly locked templates).
+                      const locked = !canUseCoverLetterTemplate(tmpl.id, userPlan as SubscriptionPlan);
                       return (
                         <button
                           key={tmpl.id}
@@ -747,7 +793,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
                             <CLThumbnail
                               templateId={tmpl.id}
                               color={isActive ? (coverLetter.styling.primaryColor || tmpl.defaultColor) : tmpl.defaultColor}
-                              rtl={locale === 'ar' || locale === 'ur'}
+                              rtl={isRtlLetterLocale(letterLocale)}
                             />
                           </div>
                           <div className="text-xs font-semibold text-stone-800 dark:text-stone-200">{t(`coverLetters.${tmpl.nameKey}`)}</div>
@@ -991,6 +1037,29 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
                 <option value="20px">20px</option>
               </select>
 
+              {/* Letter language: salutation, closing, date and direction of the
+                  preview and export follow this, not the interface language. */}
+              <label className="flex items-center gap-1 text-xs text-stone-500 dark:text-stone-400">
+                <Languages className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="sr-only">{t('coverLetters.letter_language')}</span>
+                <select
+                  value={letterLocale}
+                  onChange={(e) => {
+                    if (!isLetterLocale(e.target.value)) return;
+                    setCoverLetter({ ...coverLetter, letterLocale: e.target.value } as CoverLetter);
+                    setDirty(true);
+                  }}
+                  className="text-xs rounded px-2 py-1 bg-white dark:bg-stone-700 border border-stone-300 dark:border-stone-600 text-stone-700 dark:text-stone-300"
+                  title={t('coverLetters.letter_language')}
+                >
+                  {LETTER_LOCALES.map((code) => (
+                    <option key={code} value={code} lang={code}>
+                      {LETTER_LOCALE_NAMES[code]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
               <div className="mx-1 h-5 w-px bg-stone-300 dark:bg-stone-600" />
 
               {/* Rewrite just the paragraph the cursor is in */}
@@ -1192,6 +1261,17 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
 }
 
 /**
+ * The stored letter language for a save payload — only when the letter has
+ * one. A letter that predates the field keeps being inferred until the user
+ * actually picks a language, rather than freezing whatever the current
+ * interface locale happened to infer.
+ */
+function letterLocalePatch(cl: CoverLetter): { letterLocale?: LetterLocale } {
+  const stored = (cl as CoverLetterWithLocale).letterLocale;
+  return isLetterLocale(stored) ? { letterLocale: stored } : {};
+}
+
+/**
  * Plain text of the top-level block the cursor sits in, or '' when the cursor
  * is not inside a non-empty paragraph.
  */
@@ -1230,102 +1310,6 @@ function isFactoryColor(color?: string | null): boolean {
   const c = (color || '').trim().toLowerCase();
   if (!c) return true;
   return COVER_LETTER_TEMPLATES.some((t) => t.defaultColor.toLowerCase() === c);
-}
-
-/**
- * Mini thumbnail for the template picker.
- *
- * Colours are derived exactly as the real templates derive them: `band` for
- * surfaces that carry white marks, `ink` for anything standing in for text on
- * white. Painting the raw accent here would show a legible preview of an
- * illegible letter — the same divergence the CV picker had.
- */
-function CLThumbnail({ templateId, color, rtl }: { templateId: string; color: string; rtl?: boolean }) {
-  const c = readableOn(color, '#ffffff', 4.5);   // stands in for accent text
-  const band = ensureDarkSurface(color, 5);      // surfaces carrying white marks
-  const rule = color;                            // decorative rules, as chosen
-  const head = INK.heading;                      // the sender's name
-  const meta = INK.meta;                         // dates, secondary lines
-  const body = '#dcdfe4';                        // body copy
-  // Every template now mirrors under dir=rtl (Executive's header moved from a
-  // physical 'right' to a logical 'end'), so the whole card can mirror with a
-  // single transform rather than six sets of hand-flipped coordinates.
-  const g = rtl ? 'translate(120,0) scale(-1,1)' : undefined;
-  const Frame = ({ children }: { children: React.ReactNode }) => (
-    <svg viewBox="0 0 120 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <rect width="120" height="48" fill="#fff"/>
-      <g transform={g}>{children}</g>
-    </svg>
-  );
-
-  if (templateId === 'classic') return (
-    <Frame>
-      <rect x="8" y="6" width="60" height="3" rx="1" fill={head}/>
-      <rect x="8" y="11" width="40" height="2" rx="1" fill={meta}/>
-      <rect x="8" y="16" width="104" height="1.5" fill={rule}/>
-      <rect x="8" y="21" width="80" height="2" rx="1" fill={body}/>
-      <rect x="8" y="25" width="104" height="2" rx="1" fill={body}/>
-      <rect x="8" y="29" width="90" height="2" rx="1" fill={body}/>
-      <rect x="8" y="33" width="70" height="2" rx="1" fill={body}/>
-    </Frame>
-  );
-  if (templateId === 'modern') return (
-    <Frame>
-      <rect width="120" height="14" fill={band}/>
-      <rect x="8" y="3" width="50" height="4" rx="1" fill="#fff"/>
-      <rect x="8" y="9" width="30" height="2" rx="1" fill="#fff" opacity="0.75"/>
-      <rect x="8" y="18" width="80" height="2" rx="1" fill={body}/>
-      <rect x="8" y="22" width="104" height="2" rx="1" fill={body}/>
-      <rect x="8" y="26" width="90" height="2" rx="1" fill={body}/>
-      <rect x="8" y="30" width="70" height="2" rx="1" fill={body}/>
-      <rect x="8" y="36" width="40" height="2" rx="1" fill={c}/>
-    </Frame>
-  );
-  if (templateId === 'minimalist') return (
-    <Frame>
-      <rect x="8" y="6" width="35" height="2" rx="1" fill={c}/>
-      <rect x="8" y="14" width="104" height="2" rx="1" fill={body}/>
-      <rect x="8" y="19" width="80" height="2" rx="1" fill={body}/>
-      <rect x="8" y="24" width="104" height="2" rx="1" fill={body}/>
-      <rect x="8" y="29" width="60" height="2" rx="1" fill={body}/>
-      <rect x="8" y="36" width="30" height="2" rx="1" fill={meta}/>
-    </Frame>
-  );
-  if (templateId === 'creative') return (
-    <Frame>
-      <rect width="5" height="48" fill={rule}/>
-      <rect x="12" y="6" width="50" height="4" rx="1" fill={c}/>
-      <rect x="12" y="12" width="30" height="2" rx="1" fill={meta}/>
-      <rect x="12" y="18" width="100" height="2" rx="1" fill={body}/>
-      <rect x="12" y="23" width="90" height="2" rx="1" fill={body}/>
-      <rect x="12" y="28" width="100" height="2" rx="1" fill={body}/>
-      <rect x="12" y="33" width="55" height="2" rx="1" fill={body}/>
-    </Frame>
-  );
-  if (templateId === 'corporate') return (
-    <Frame>
-      <rect width="120" height="4" fill={rule}/>
-      <rect x="8" y="8" width="55" height="3" rx="1" fill={c}/>
-      <rect x="8" y="13" width="35" height="2" rx="1" fill={meta}/>
-      <rect x="8" y="17" width="104" height="1" fill={INK.hair}/>
-      <rect x="8" y="21" width="80" height="2" rx="1" fill={body}/>
-      <rect x="8" y="25" width="104" height="2" rx="1" fill={body}/>
-      <rect x="8" y="29" width="90" height="2" rx="1" fill={body}/>
-      <rect x="8" y="36" width="40" height="2" rx="1" fill={meta}/>
-    </Frame>
-  );
-  // executive
-  return (
-    <Frame>
-      <rect x="50" y="6" width="62" height="3" rx="1" fill={head}/>
-      <rect x="70" y="11" width="42" height="2" rx="1" fill={meta}/>
-      <rect x="8" y="16" width="104" height="2" rx="1" fill={rule}/>
-      <rect x="8" y="22" width="80" height="2" rx="1" fill={body}/>
-      <rect x="8" y="26" width="104" height="2" rx="1" fill={body}/>
-      <rect x="8" y="30" width="70" height="2" rx="1" fill={body}/>
-      <rect x="8" y="38" width="40" height="2" rx="1" fill={meta}/>
-    </Frame>
-  );
 }
 
 function ToolbarButton({

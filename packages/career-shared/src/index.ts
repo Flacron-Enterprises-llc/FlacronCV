@@ -154,9 +154,11 @@ export type { DashboardAction, DashboardApplication } from './dashboard';
 export { interviewFeedback, interviewQuestions, interviewSummary, isInterviewStage, numbersMissingFrom, INTERVIEW_STAGES, MAX_INTERVIEW_QUESTIONS } from './interview';
 export type { InterviewFeedback, InterviewQuestion, InterviewStage } from './interview';
 export type { ApplicationStatus, ChecklistItem } from './applications';
-export { cosine, explainMatch, fakeEmbedding } from './match';
+export { cosine, explainMatch, fakeEmbedding, matchTokens } from './match';
 export type { MatchExplanation, MatchFit, MatchGap, MatchLine, MatchListing, MatchReason, MatchUnknown } from './match';
-export { dedupeKey, isStaleListing, listingLabel, localRadiusMiles, LOCAL_RADIUS_MILES, STALE_LISTING_DAYS, UNSTATED_ORGANIZATION } from './opportunities';
+export { dedupeKey, isStaleListing, listingLabel, localRadiusMiles, statedOrganization, LOCAL_RADIUS_MILES, STALE_LISTING_DAYS, UNSTATED_ORGANIZATION } from './opportunities';
+export { extractCompensation, extractListingFields, extractSponsorship, MIN_LISTING_TEXT } from './listing-extract';
+export type { ExtractedListing, ListingSponsorship } from './listing-extract';
 export type { ListingCompensation } from './opportunities';
 export {
   COVER_LETTER_TEMPLATES,
@@ -211,9 +213,12 @@ export type {
   UpdateEvidenceInput,
 } from './evidence';
 export {
+  actionPackNextStepCodes,
   defaultActionPackChecklist,
   defaultActionPackNextSteps,
+  ACTION_PACK_CHECKLIST_IDS,
 } from './action-pack';
+export type { ActionPackNextStepCode } from './action-pack';
 export type {
   ActionPack,
   ActionPackChecklistItem,

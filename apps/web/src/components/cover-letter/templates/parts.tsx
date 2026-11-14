@@ -15,6 +15,7 @@ import React from 'react';
 import type { CoverLetter } from '@flacroncv/shared-types';
 import type { CLLabels } from './types';
 import { INK } from './shared';
+import { salutationComma } from '../letter-locale';
 
 /* ─── Salutation ─────────────────────────────────────────────────────────── */
 
@@ -35,7 +36,7 @@ export function Salutation({ coverLetter, labels, style }: {
           rendered as ",Amara Whitfield" — comma on the left. Isolating the
           name together with its punctuation resolves the comma against the
           name instead, which is what a reader expects. */}
-      <bdi>{name || labels.hiringManager},</bdi>
+      <bdi>{name || labels.hiringManager}{salutationComma(labels)}</bdi>
     </div>
   );
 }
@@ -74,7 +75,10 @@ export function LetterBody({ coverLetter, labels, style }: {
       // the wrong end of every line. `auto` takes the direction from the text
       // itself, which is correct whichever way round the two are.
       dir="auto"
-      style={style}
+      // `start`, not inherited: an inherited physical `right` (from an RTL
+      // ancestor) would keep an LTR body right-aligned and push its bullets
+      // away from the text even after `dir=auto` resolved it to LTR.
+      style={{ textAlign: 'start', ...style }}
       dangerouslySetInnerHTML={{ __html: content }}
     />
   );

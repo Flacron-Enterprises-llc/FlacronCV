@@ -35,6 +35,7 @@ import {
   writeTourCache,
 } from '@/lib/app-tour';
 import AppTourOverlay from './AppTourOverlay';
+import { canAutoStartTourOn, userLeftTour } from './tour-navigation';
 
 /**
  * Last tour record saved in this tab. The auth profile is not rewritten after
@@ -135,6 +136,9 @@ function stepCopy(
   }
 }
 
+/** How long a tour step waits for its page to load before the tour stops. */
+const ROUTE_ARRIVAL_TIMEOUT_MS = 20_000;
+
 function waitFrames(count: number): Promise<void> {
   return new Promise((resolve) => {
     const step = (left: number) => {
@@ -225,6 +229,8 @@ export default function AppTourProvider({
   const sidebarCollapsedRef = useRef(sidebarCollapsed);
   const tRef = useRef(t);
   const chromeRef = useRef<ChromeMemory>({ touchedMobile: false, mobileWasOpen: false, collapsedBefore: null });
+  /** Path the running tour is on or navigating to; null when no tour runs. */
+  const tourPathRef = useRef<string | null>(null);
 
   userRef.current = user;
   pathnameRef.current = pathname;
@@ -307,6 +313,8 @@ export default function AppTourProvider({
     moveRef.current?.('cancel');
     const token = ++epoch.current;
     const alive = () => epoch.current === token;
+    // From here on, a path change the tour did not make closes the tour.
+    tourPathRef.current = pathnameRef.current;
     recordRef.current = accountTour(currentUser);
     cvIdRef.current = null;
     if (!focusRef.current) {
@@ -314,6 +322,7 @@ export default function AppTourProvider({
     }
 
     if (document.querySelector('[role="dialog"]')) {
+      tourPathRef.current = null;
       if (replay) toast.error(tRef.current('blocked'));
       return replay ? 'settled' : 'retry';
     }
@@ -345,10 +354,19 @@ export default function AppTourProvider({
           stoppedForUnsaved = true;
           return 'blocked';
         }
+        // Claimed before pushing, so the arrival is recognised as the tour's own.
+        tourPathRef.current = route;
         routerRef.current.push(route);
         navigated = true;
-        const arrived = await waitFor(() => pathsMatch(pathnameRef.current, route), 5000, alive);
-        if (!arrived) return alive() ? 'missing' : 'blocked';
+        // A first visit to a route can take well over 5 s (cold compile, slow
+        // network). The old 5 s limit marked the step missing and pushed the
+        // NEXT step's route while this navigation was still in flight; Next
+        // aborted it with a hard reload and the tour reappeared mid-way.
+        // So: wait generously, and if the page still has not arrived, stop the
+        // tour here instead of navigating again. Progress is saved per shown
+        // step, so the next dashboard load resumes from the last one seen.
+        const arrived = await waitFor(() => pathsMatch(pathnameRef.current, route), ROUTE_ARRIVAL_TIMEOUT_MS, alive);
+        if (!arrived) return 'blocked';
         await syncChrome(step);
         if (!alive()) return 'blocked';
       }
@@ -420,6 +438,7 @@ export default function AppTourProvider({
       }
     } finally {
       if (alive()) {
+        tourPathRef.current = null;
         restoreRef.current();
         setView(null);
         const previous = focusRef.current;
@@ -433,9 +452,25 @@ export default function AppTourProvider({
     return retryWhenReady && !shownAny ? 'retry' : 'settled';
   };
 
+  // The user navigated somewhere the tour did not take them (sidebar, URL,
+  // back button). Close the tour where it is — never send them back. Progress
+  // is saved per shown step, so the next session resumes from there; it does
+  // not restart in this one (`decided` stays set).
+  useEffect(() => {
+    if (!userLeftTour(tourPathRef.current, pathname)) return;
+    tourPathRef.current = null;
+    epoch.current += 1;
+    moveRef.current?.('cancel');
+    moveRef.current = null;
+    restoreRef.current();
+    setView(null);
+    focusRef.current = null;
+  }, [pathname]);
+
   useEffect(() => {
     return () => {
       epoch.current += 1;
+      tourPathRef.current = null;
       moveRef.current?.('cancel');
       moveRef.current = null;
       restoreRef.current();
@@ -457,6 +492,9 @@ export default function AppTourProvider({
       if (readConsent() === null) return;
       if (document.querySelector('[role="dialog"]')) return;
       if (document.querySelector('[data-maintenance]')) return;
+      // Wait (keep polling) until the user is on the dashboard: starting from
+      // another page would make the first step push them away from it.
+      if (!canAutoStartTourOn(pathnameRef.current)) return;
       const current = userRef.current;
       if (!current || current.uid !== uid) return;
       decided.current = uid;

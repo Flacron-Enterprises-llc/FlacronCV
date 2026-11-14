@@ -41,7 +41,9 @@ interface TicketsResponse {
   limit: number;
 }
 
-const statusFilters = ['all', 'open', 'in_progress', 'resolved', 'closed'];
+// Every status a ticket can be in: after a staff reply it moves to
+// waiting_on_customer, which previously had no filter and was only under "All".
+const statusFilters = ['all', 'open', 'in_progress', 'waiting_on_customer', 'resolved', 'closed'];
 
 const priorityVariant: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
   low: 'success',
@@ -53,6 +55,7 @@ const priorityVariant: Record<string, 'success' | 'warning' | 'danger' | 'defaul
 const statusVariant: Record<string, 'info' | 'warning' | 'success' | 'default'> = {
   open: 'info',
   in_progress: 'warning',
+  waiting_on_customer: 'info',
   resolved: 'success',
   closed: 'default',
 };
@@ -106,7 +109,7 @@ export default function AdminTicketsPage(): React.JSX.Element | null {
       {/* Status filter */}
       <div className="flex items-center gap-2">
         <Filter className="h-4 w-4 text-stone-400" />
-        <div className="flex rounded-lg border border-stone-200 bg-stone-50 p-1 dark:border-stone-700 dark:bg-stone-800/50">
+        <div className="flex max-w-full overflow-x-auto rounded-lg border border-stone-200 bg-stone-50 p-1 dark:border-stone-700 dark:bg-stone-800/50">
           {statusFilters.map((status) => (
             <button
               key={status}
@@ -116,7 +119,7 @@ export default function AdminTicketsPage(): React.JSX.Element | null {
               }}
               aria-pressed={statusFilter === status}
               className={cn(
-                'rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors',
+                'whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors',
                 statusFilter === status
                   ? 'bg-white text-stone-900 shadow-sm dark:bg-stone-700 dark:text-white'
                   : 'text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-white',

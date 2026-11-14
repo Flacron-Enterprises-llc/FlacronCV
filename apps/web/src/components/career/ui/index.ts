@@ -20,3 +20,7 @@ export {
 export { cn } from './cn';
 export { color, fontFamily, fontSize, radius, shadow, space, touchTargetMin } from './tokens';
 export type { RecordState } from './tokens';
+export { ConfirmDialog } from './components/ConfirmDialog';
+export { FilePicker } from './components/FilePicker';
+export { InlineNote } from './components/InlineNote';
+export { PageHeader, ScreenStack } from './components/PageHeader';
