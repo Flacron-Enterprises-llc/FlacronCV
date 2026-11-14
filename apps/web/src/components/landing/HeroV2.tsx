@@ -142,7 +142,12 @@ function HeroVisual() {
       <div
         aria-hidden="true"
         className="fc-hero-blob-peach pointer-events-none absolute bottom-[-22%] left-1/2 aspect-square w-[92%] -translate-x-1/2 rounded-full sm:bottom-[-14%] sm:w-[min(100%,34rem)]"
-      />
+      >
+        {/* Decorative orbit around the disc (styles/home-theme.css, .fc-hero-orbit). */}
+        <span className="fc-hero-orbit absolute -inset-[6%] rounded-full">
+          <span className="fc-hero-orbit-dot" />
+        </span>
+      </div>
       <div className="fc-hero-portrait relative mx-auto aspect-[3/4] w-[min(72%,17.5rem)] sm:w-[min(80%,26rem)] lg:w-[min(86%,30rem,calc((100vh-8rem)*0.75))]">
         <picture>
           <source
@@ -228,7 +233,7 @@ function HeroVisual() {
 function FloatCard({ className, children }: { className: string; children: ReactNode }) {
   return (
     <div
-      className={`fc-hero-float absolute rounded-xl border border-career-line bg-career-surface p-3 shadow-lg backdrop-blur-sm sm:p-3.5 ${className}`}
+      className={`fc-hero-float fc-hero-card absolute rounded-xl border border-career-line bg-career-surface p-3 shadow-lg backdrop-blur-sm sm:p-3.5 ${className}`}
     >
       {children}
     </div>

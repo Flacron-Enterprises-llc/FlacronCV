@@ -429,8 +429,12 @@ main.fc-home :is(a, button, input, select, textarea, summary):focus-visible {
 }
 
 /* ── Hero backdrop shapes and portrait ─────────────────────────────────────── */
+/* The disc: warm peach in light mode; in dark mode a lit navy disc with an
+   orange rim (orange at low alpha over navy turned muddy brown). */
 main.fc-home .fc-hero-blob-peach {
-  background: radial-gradient(circle at 40% 40%, #fbc1b2, #fee0d8 62%, rgba(254, 224, 216, 0) 72%);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0) 62%, rgba(255, 255, 255, 0.55) 67.5%, rgba(255, 255, 255, 0) 71%),
+    radial-gradient(circle at 36% 30%, #fff1eb 0%, #fed3c3 34%, #fbb29a 56%, #f99a7c 66%, rgba(249, 154, 124, 0) 71.5%);
 }
 
 main.fc-home .fc-hero-blob-blue {
@@ -438,18 +442,265 @@ main.fc-home .fc-hero-blob-blue {
 }
 
 .dark main.fc-home .fc-hero-blob-peach {
-  background: radial-gradient(circle at 40% 40%, rgba(251, 68, 2, 0.24), rgba(251, 68, 2, 0.09) 62%, rgba(251, 68, 2, 0) 72%);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(251, 68, 2, 0) 60%, rgba(251, 68, 2, 0.5) 68%, rgba(251, 68, 2, 0) 72%),
+    radial-gradient(circle at 40% 30%, #1f4a84 0%, #163b6c 28%, #102f58 50%, #0b2449 64%, rgba(11, 36, 73, 0) 71.5%);
 }
 
 .dark main.fc-home .fc-hero-blob-blue {
   background: radial-gradient(circle at 50% 50%, rgba(111, 153, 220, 0.2), rgba(111, 153, 220, 0) 70%);
 }
 
+/* Slow dashed orbit around the disc with one accent dot. */
+main.fc-home .fc-hero-orbit {
+  border: 1.5px dashed color-mix(in oklab, var(--fc-accent) 40%, transparent);
+  animation: fc-hero-orbit 60s linear infinite;
+}
+
+.dark main.fc-home .fc-hero-orbit {
+  border-color: color-mix(in oklab, var(--fc-accent) 50%, transparent);
+}
+
+main.fc-home .fc-hero-orbit-dot {
+  position: absolute;
+  left: 14.6%;
+  top: 14.6%;
+  height: 0.75rem;
+  width: 0.75rem;
+  border-radius: 9999px;
+  background: var(--fc-accent);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--fc-accent) 22%, transparent),
+    0 0 18px color-mix(in oklab, var(--fc-accent) 70%, transparent);
+}
+
+main.fc-home .fc-hero-orbit::after {
+  content: '';
+  position: absolute;
+  right: 14.6%;
+  bottom: 14.6%;
+  height: 0.5rem;
+  width: 0.5rem;
+  border-radius: 9999px;
+  background: var(--fc-blue);
+  transform: translate(50%, 50%);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--fc-blue) 25%, transparent);
+}
+
+@keyframes fc-hero-orbit {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
 main.fc-home .fc-hero-portrait img {
   filter: drop-shadow(0 18px 28px var(--fc-portrait-shadow));
+}
+
+/* Floating cards: softer shadow in light, frosted glass in dark. */
+main.fc-home .fc-hero-card {
+  box-shadow:
+    0 1px 2px rgba(0, 26, 73, 0.06),
+    0 18px 38px -16px rgba(0, 26, 73, 0.3);
+}
+
+.dark main.fc-home .fc-hero-card {
+  background-color: rgba(13, 37, 70, 0.72);
+  border-color: rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 22px 44px -18px rgba(0, 0, 0, 0.75);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main.fc-home .fc-hero-orbit {
+    animation: none;
+  }
 }
 
 /* ── Paper: document thumbnails ignore the page theme ──────────────────────── */
 main.fc-home .fc-paper {
   background-color: #ffffff;
+}
+
+/* ── Audience marquee (components/landing/HomeMarquee.tsx) ─────────────────── */
+/* Two identical copies side by side; the track slides by exactly one copy
+   (-50%) and loops. Each copy ends with its own gap so the seam is invisible. */
+main.fc-home .fc-marquee-section {
+  background-color: var(--fc-soft);
+}
+
+main.fc-home .fc-marquee {
+  overflow: hidden;
+  padding-block: 0.25rem;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+main.fc-home .fc-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: fc-marquee 44s linear infinite;
+}
+
+main.fc-home .fc-marquee-copy {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.75rem;
+  padding-inline-end: 0.75rem;
+}
+
+main.fc-home .fc-marquee-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  border: 1px solid var(--fc-border);
+  border-radius: 9999px;
+  background-color: var(--fc-surface);
+  padding: 0.5rem 1.125rem 0.5rem 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--fc-ink);
+  box-shadow: var(--fc-shadow);
+}
+
+[dir='rtl'] main.fc-home .fc-marquee-pill {
+  padding: 0.5rem 0.5rem 0.5rem 1.125rem;
+}
+
+main.fc-home .fc-marquee-icon {
+  display: inline-flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  border: 1px solid var(--fc-accent-tint-strong);
+  background-color: var(--fc-accent-tint);
+  color: var(--fc-accent-text);
+}
+
+main.fc-home .fc-marquee-link {
+  text-decoration: underline;
+  text-decoration-color: var(--fc-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
+main.fc-home .fc-marquee-link:hover {
+  color: var(--fc-accent-text);
+}
+
+main.fc-home .fc-marquee:hover .fc-marquee-track,
+main.fc-home .fc-marquee:focus-within .fc-marquee-track,
+main.fc-home .fc-marquee.is-paused .fc-marquee-track {
+  animation-play-state: paused;
+}
+
+/* In RTL the second copy sits to the left of the first, so slide the other way. */
+[dir='rtl'] main.fc-home .fc-marquee-track {
+  animation-name: fc-marquee-rtl;
+}
+
+@keyframes fc-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes fc-marquee-rtl {
+  to {
+    transform: translateX(50%);
+  }
+}
+
+/* ── Travelling highlight: each feature card lights up in turn ─────────────── */
+/* Drawn on ::after (opacity only), so the card's own hover border and shadow
+   keep working. Set --i (position) and --n (count) inline on each card. */
+main.fc-home .fc-travel::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid var(--fc-accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--fc-accent) 18%, transparent),
+    0 12px 28px -18px color-mix(in oklab, var(--fc-accent) 60%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  animation: fc-travel calc(var(--n, 8) * 0.9s) ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.9s);
+}
+
+main.fc-home .fc-travel .fc-travel-icon {
+  animation: fc-travel-icon calc(var(--n, 8) * 0.9s) ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.9s);
+}
+
+/* Once the visitor points at a card, the tour steps aside. */
+main.fc-home .fc-travel-group:hover .fc-travel::after,
+main.fc-home .fc-travel-group:focus-within .fc-travel::after {
+  animation: none;
+  opacity: 0;
+}
+
+main.fc-home .fc-travel-group:hover .fc-travel .fc-travel-icon,
+main.fc-home .fc-travel-group:focus-within .fc-travel .fc-travel-icon {
+  animation: none;
+}
+
+@keyframes fc-travel {
+  0%,
+  15%,
+  100% {
+    opacity: 0;
+  }
+  5%,
+  10% {
+    opacity: 1;
+  }
+}
+
+@keyframes fc-travel-icon {
+  0%,
+  15%,
+  100% {
+    transform: none;
+  }
+  5%,
+  10% {
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main.fc-home .fc-marquee {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  main.fc-home .fc-marquee-track {
+    width: auto;
+    animation: none;
+    justify-content: center;
+    padding-inline: 1rem;
+  }
+
+  main.fc-home .fc-marquee-copy {
+    flex-shrink: 1;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding-inline-end: 0;
+  }
+
+  main.fc-home .fc-marquee-dup,
+  main.fc-home .fc-marquee-toggle {
+    display: none;
+  }
+
+  main.fc-home .fc-travel::after,
+  main.fc-home .fc-travel .fc-travel-icon {
+    animation: none;
+  }
 }

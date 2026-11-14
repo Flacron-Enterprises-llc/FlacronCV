@@ -3539,6 +3539,26 @@
     "export_pdf": "PDF en todos los planes",
     "export_docx": "DOCX en los planes de pago"
   },
+  "home_marquee": {
+    "eyebrow": "Pensado para cada etapa de tu carrera",
+    "link": "Ver plantillas de CV",
+    "pause": "Pausar la lista en movimiento",
+    "play": "Reanudar la lista en movimiento",
+    "items": {
+      "students": "Estudiantes y recién titulados",
+      "changers": "Cambio de profesión",
+      "tech": "Software y TI",
+      "healthcare": "Salud",
+      "engineering": "Ingeniería y oficios",
+      "sales": "Ventas y marketing",
+      "finance": "Finanzas y contabilidad",
+      "education": "Docencia y educación",
+      "hospitality": "Hostelería",
+      "creative": "Diseño y creatividad",
+      "business": "Gestión y administración",
+      "executives": "Mandos y directivos"
+    }
+  },
   "home_showcase": {
     "product_eyebrow": "Un solo espacio",
     "product_title": "Del primer borrador a la oferta de empleo",

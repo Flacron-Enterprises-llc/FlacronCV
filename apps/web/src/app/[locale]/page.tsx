@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import Navbar from '@/components/landing/Navbar';
 import HeroV2 from '@/components/landing/HeroV2';
+import HomeMarquee from '@/components/landing/HomeMarquee';
 import ProductShowcase from '@/components/landing/ProductShowcase';
 import TemplateShowcase from '@/components/landing/TemplateShowcase';
 import Features from '@/components/landing/Features';
@@ -78,6 +79,7 @@ export default function LandingPage({
       <JsonLd data={faqPage()} />
       <Navbar logoVariant="auto" />
       <HeroV2 />
+      <HomeMarquee />
       <ProductShowcase />
       <HowItWorks />
       <Features />

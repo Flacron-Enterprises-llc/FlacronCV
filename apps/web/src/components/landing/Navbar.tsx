@@ -68,8 +68,8 @@ export default function Navbar({ logoVariant = 'on-dark' }: NavbarProps) {
 
   const navLinkClass = (href?: string) =>
     href && isCurrentPage(href)
-      ? 'text-sm font-medium text-brand-400 transition-colors dark:text-brand-400'
-      : 'text-sm font-medium text-stone-300 hover:text-brand-400 transition-colors dark:text-stone-400 dark:hover:text-brand-400';
+      ? 'whitespace-nowrap text-sm font-medium text-brand-400 transition-colors dark:text-brand-400'
+      : 'whitespace-nowrap text-sm font-medium text-stone-300 hover:text-brand-400 transition-colors dark:text-stone-400 dark:hover:text-brand-400';
 
   const mobileNavLinkClass = (href?: string) =>
     href && isCurrentPage(href)
@@ -80,7 +80,7 @@ export default function Navbar({ logoVariant = 'on-dark' }: NavbarProps) {
     <nav className="fixed top-0 z-50 w-full border-b border-white/10 bg-chrome dark:border-white/15 dark:bg-chrome/70 dark:backdrop-blur-lg">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
-        <Link href="/" className="flex items-center md:me-6">
+        <Link href="/" className="flex items-center xl:me-6">
           {/* h-12 in an h-16 bar: the brand assets have generous internal padding,
               so a smaller height renders the wordmark almost illegibly.
               on-dark: this bar is navy in light and dark (translucent + blur in dark).
@@ -90,7 +90,7 @@ export default function Navbar({ logoVariant = 'on-dark' }: NavbarProps) {
         </Link>
 
         {/* Desktop nav */}
-        <div className="hidden items-center gap-8 md:flex">
+        <div className="hidden items-center gap-5 xl:flex 2xl:gap-8">
           <Link
             href="/#features"
             onClick={(e) => handleSectionLink(e, 'features')}
@@ -120,7 +120,7 @@ export default function Navbar({ logoVariant = 'on-dark' }: NavbarProps) {
         </div>
 
         {/* Desktop CTA */}
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center shrink-0 gap-2 xl:flex">
           <LanguageSwitcher />
           <button
             className="rounded-lg p-2 text-stone-300 hover:bg-white/10 dark:text-stone-400 dark:hover:bg-stone-800"
@@ -131,20 +131,20 @@ export default function Navbar({ logoVariant = 'on-dark' }: NavbarProps) {
           </button>
           {user ? (
             <Link href="/dashboard">
-              <Button variant="primary">{t('nav.dashboard')}</Button>
+              <Button variant="primary" className="whitespace-nowrap">{t('nav.dashboard')}</Button>
             </Link>
           ) : (
             <>
               <Link href="/login">
                 <Button
                   variant="ghost"
-                  className="text-stone-300 hover:bg-white/10 hover:text-white dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-100"
+                  className="whitespace-nowrap text-stone-300 hover:bg-white/10 hover:text-white dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-100"
                 >
                   {t('nav.login')}
                 </Button>
               </Link>
               <Link href="/register">
-                <Button variant="primary">{t('nav.signup')}</Button>
+                <Button variant="primary" className="whitespace-nowrap">{t('nav.signup')}</Button>
               </Link>
             </>
           )}
@@ -153,7 +153,7 @@ export default function Navbar({ logoVariant = 'on-dark' }: NavbarProps) {
         {/* Mobile toggle */}
         <button
           ref={mobileToggleRef}
-          className="rounded-lg p-2 text-stone-300 hover:bg-white/10 md:hidden dark:text-stone-400"
+          className="rounded-lg p-2 text-stone-300 hover:bg-white/10 xl:hidden dark:text-stone-400"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label={mobileOpen ? t('common.close_menu') : t('common.open_menu')}
           aria-expanded={mobileOpen}
@@ -164,7 +164,7 @@ export default function Navbar({ logoVariant = 'on-dark' }: NavbarProps) {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="border-t border-white/10 bg-chrome px-4 py-4 md:hidden dark:border-white/10 dark:bg-chrome">
+        <div className="border-t border-white/10 bg-chrome px-4 py-4 xl:hidden dark:border-white/10 dark:bg-chrome">
           <div className="flex flex-col gap-1">
             <Link
               href="/#features"

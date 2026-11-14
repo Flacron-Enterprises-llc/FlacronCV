@@ -3539,6 +3539,26 @@
     "export_pdf": "PDF in jedem Tarif",
     "export_docx": "DOCX in bezahlten Tarifen"
   },
+  "home_marquee": {
+    "eyebrow": "Für jede Phase Ihrer Karriere",
+    "link": "Lebenslaufvorlagen ansehen",
+    "pause": "Laufende Liste anhalten",
+    "play": "Laufende Liste fortsetzen",
+    "items": {
+      "students": "Studierende & Absolventen",
+      "changers": "Quereinsteiger",
+      "tech": "Software & IT",
+      "healthcare": "Gesundheitswesen",
+      "engineering": "Technik & Handwerk",
+      "sales": "Vertrieb & Marketing",
+      "finance": "Finanzen & Buchhaltung",
+      "education": "Lehre & Bildung",
+      "hospitality": "Gastgewerbe",
+      "creative": "Design & Kreatives",
+      "business": "Büro & Verwaltung",
+      "executives": "Führungskräfte"
+    }
+  },
   "home_showcase": {
     "product_eyebrow": "Alles an einem Ort",
     "product_title": "Vom ersten Entwurf bis zum Jobangebot",

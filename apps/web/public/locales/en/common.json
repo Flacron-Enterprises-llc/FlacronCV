@@ -3539,6 +3539,26 @@
     "export_pdf": "PDF on every plan",
     "export_docx": "DOCX on paid plans"
   },
+  "home_marquee": {
+    "eyebrow": "Built for every stage of your career",
+    "link": "Browse CV templates",
+    "pause": "Pause the scrolling list",
+    "play": "Play the scrolling list",
+    "items": {
+      "students": "Students & graduates",
+      "changers": "Career changers",
+      "tech": "Software & IT",
+      "healthcare": "Healthcare",
+      "engineering": "Engineering & trades",
+      "sales": "Sales & marketing",
+      "finance": "Finance & accounting",
+      "education": "Teaching & education",
+      "hospitality": "Hospitality",
+      "creative": "Design & creative",
+      "business": "Business & admin",
+      "executives": "Managers & executives"
+    }
+  },
   "home_showcase": {
     "product_eyebrow": "One workspace",
     "product_title": "From first draft to job offer",

@@ -1,5 +1,6 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import { useTranslations } from 'next-intl';
 import { Sparkles, Layout, Globe, Download, GripVertical, Target, BarChart2, Lightbulb } from 'lucide-react';
 import { useInView } from '@/hooks/useInView';
@@ -35,14 +36,22 @@ export default function Features() {
           </p>
         </div>
 
-        <div ref={gridRef} className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div ref={gridRef} className="fc-travel-group mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {features.map(({ icon: Icon, key }, index) => (
             <div
               key={key}
-              className={`group relative rounded-xl border border-stone-200 bg-white p-6 transition-all hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md dark:border-stone-800 dark:bg-stone-900 dark:hover:border-brand-900 ${gridInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
-              style={{ transitionDuration: '500ms', transitionDelay: gridInView ? `${index * 100}ms` : '0ms' }}
+              className={`fc-travel group relative rounded-xl border border-stone-200 bg-white p-6 transition-all hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md dark:border-stone-800 dark:bg-stone-900 dark:hover:border-brand-900 ${gridInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+              style={
+                {
+                  transitionDuration: '500ms',
+                  transitionDelay: gridInView ? `${index * 100}ms` : '0ms',
+                  // Travelling highlight: see `.fc-travel` in styles/home-theme.css.
+                  '--i': index,
+                  '--n': features.length,
+                } as CSSProperties
+              }
             >
-              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/50 dark:text-brand-400">
+              <div className="fc-travel-icon mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/50 dark:text-brand-400">
                 <Icon className="h-6 w-6" />
               </div>
               <h3 className="mb-2 text-lg font-semibold text-stone-900 dark:text-white">

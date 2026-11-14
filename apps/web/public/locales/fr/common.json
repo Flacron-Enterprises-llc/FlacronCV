@@ -3539,6 +3539,26 @@
     "export_pdf": "PDF sur chaque offre",
     "export_docx": "DOCX sur les offres payantes"
   },
+  "home_marquee": {
+    "eyebrow": "Conçu pour chaque étape de votre carrière",
+    "link": "Voir les modèles de CV",
+    "pause": "Mettre en pause la liste défilante",
+    "play": "Relancer la liste défilante",
+    "items": {
+      "students": "Étudiants et jeunes diplômés",
+      "changers": "Reconversion professionnelle",
+      "tech": "Informatique et logiciel",
+      "healthcare": "Santé",
+      "engineering": "Ingénierie et métiers techniques",
+      "sales": "Vente et marketing",
+      "finance": "Finance et comptabilité",
+      "education": "Enseignement",
+      "hospitality": "Hôtellerie et restauration",
+      "creative": "Design et création",
+      "business": "Gestion et administration",
+      "executives": "Managers et dirigeants"
+    }
+  },
   "home_showcase": {
     "product_eyebrow": "Un seul espace",
     "product_title": "Du premier brouillon à l’offre d’emploi",
