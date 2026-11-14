@@ -1,7 +1,9 @@
-import { Injectable, ServiceUnavailableException, Logger } from '@nestjs/common';
+import { Inject, Injectable, Optional, ServiceUnavailableException, Logger } from '@nestjs/common';
+import { MeterReservation, USAGE_METER, UsageMeter } from '../career-metering/usage-meter';
+import { V1CounterMeter } from '../career-metering/v1-counter-meter';
 import { OpenAIProvider } from './providers/openai.provider';
 import { IAIProvider, AIProviderOptions, AIProviderResponse } from './providers/ai-provider.interface';
-import { UsersService } from '../users/users.service';
+import { UsersService, UsageCounter } from '../users/users.service';
 import { AbuseService } from '../abuse/abuse.service';
 
 interface CircuitBreakerState {
@@ -61,11 +63,17 @@ export class AIService {
   private readonly RESET_TIMEOUT = 60000; // 60 seconds
   private readonly MAX_OUTPUT_TOKENS = 2048; // server ceiling for caller-supplied maxTokens
 
+  /** Where a unit is reserved (see career-metering/usage-meter.ts). V1 counters unless the career ledger is configured. */
+  private readonly meter: UsageMeter;
+
   constructor(
     private openaiProvider: OpenAIProvider,
     private usersService: UsersService,
     private abuse: AbuseService,
+    @Optional() @Inject(USAGE_METER) meter?: UsageMeter,
   ) {
+    // Refunds retry inside the meter (three attempts), with the same log line as before.
+    this.meter = meter ?? new V1CounterMeter(usersService);
     this.providers = [this.openaiProvider];
     this.providers.forEach((p) => {
       this.circuitBreakers.set(p.name, { failures: 0, lastFailure: 0, isOpen: false });
@@ -136,44 +144,49 @@ export class AIService {
   }
 
   /**
-   * Give back a credit reserved by {@link generate} when no provider produced a
-   * result. Two retries after the first failure (three attempts total) so a
-   * brief Firestore blip does not strand the charge. The error log line is
-   * emitted once, after every attempt has failed — same text as before, so
-   * production greps stay valid.
+   * @param meter what one successful call costs: an AI document credit (every
+   *   writing feature) or a résumé job analysis (the ATS check). On a legacy
+   *   plan an analysis is charged as an Engine credit, as it always was.
    */
-  private async refundReservedCredit(userId: string): Promise<boolean> {
-    let lastError: unknown;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        await this.usersService.refundAiCredit(userId);
-        return true;
-      } catch (err) {
-        lastError = err;
-      }
-    }
-    this.logger.error(`Failed to refund AI credit for ${userId}: ${(lastError as Error).message}`);
-    return false;
-  }
-
   async generate(
     prompt: string,
     options: Partial<AIProviderOptions> = {},
     userId?: string,
+    meter: UsageCounter = 'aiCredits',
   ): Promise<AIProviderResponse> {
     // Atomically RESERVE a credit up front (transaction: check + increment in one
     // commit) so concurrent requests can't all pass a stale check and overshoot
     // the plan cap (TOCTOU). Refunded in `finally` if no provider succeeds, so a
     // failed generation still costs nothing. The 503 is thrown AFTER that refund
     // so the exception can carry whether the credit was actually returned.
-    let creditReserved = false;
+    //
+    // The unit is reserved through the UsageMeter: V1's own counters, or — when
+    // the career service is configured (CAREER_API_URL) — the career ledger, so
+    // CV-builder and career-tool usage are ONE pool (PLAN_CONTRACT "Metering").
+    let reservation: MeterReservation | null = null;
     if (userId) {
       await this.abuse.assertNewConsumption(userId, 'ai');
-      const ok = await this.usersService.reserveAiCredit(userId);
-      if (!ok) {
-        throw new ServiceUnavailableException('Flacron Engine credits exhausted. Please upgrade your plan.');
+      const outcome = await this.meter.reserve({
+        uid: userId,
+        unit: meter === 'analyses' ? 'resume_analysis' : 'document_credit',
+        operation: meter === 'analyses' ? 'ai.ats-check' : 'ai.generate',
+      });
+      if (!outcome.ok) {
+        if (outcome.reason === 'unavailable') {
+          // Fail closed: nothing runs unmetered when the shared ledger cannot be reached.
+          throw new ServiceUnavailableException({
+            message: 'Usage could not be checked right now. Please try again shortly.',
+            code: 'USAGE_METER_UNAVAILABLE',
+          });
+        }
+        // Legacy plans charge an Engine credit: keep their original message.
+        throw new ServiceUnavailableException(
+          outcome.counter === 'analyses'
+            ? { message: 'Résumé analyses for this month are used up. Please upgrade your plan.', code: 'ANALYSES_EXHAUSTED' }
+            : 'Flacron Engine credits exhausted. Please upgrade your plan.',
+        );
       }
-      creditReserved = true;
+      reservation = outcome.reservation;
     }
 
     const fullOptions: AIProviderOptions = this.clampOptions(options);
@@ -202,8 +215,12 @@ export class AIService {
           }
 
           this.recordSuccess(provider.name);
-          // Success → the reserved credit is genuinely consumed; don't refund it.
-          creditReserved = false;
+          // Success → the reserved unit is genuinely consumed; commit it, never refund it.
+          if (reservation) {
+            const used = reservation;
+            reservation = null;
+            await used.commit();
+          }
 
           this.logger.log(`Generated via ${provider.name} in ${result.latencyMs}ms (${result.content.length} chars)`);
           return result;
@@ -218,9 +235,9 @@ export class AIService {
         }
       }
     } finally {
-      // Reserved but never produced a result → give the credit back.
-      if (creditReserved && userId) {
-        refundFailed = !(await this.refundReservedCredit(userId));
+      // Reserved but never produced a result → give the unit back.
+      if (reservation) {
+        refundFailed = !(await reservation.release('provider_failed'));
       }
     }
 
@@ -475,7 +492,8 @@ Provide a JSON response with:
   "overallFeedback": "brief feedback"
 }`;
 
-    return this.generate(prompt, { maxTokens: 1000, temperature: 0.3 }, userId);
+    // A résumé job analysis, not a document credit (five-plan catalog).
+    return this.generate(prompt, { maxTokens: 1000, temperature: 0.3 }, userId, 'analyses');
   }
 
   async parseResume(resumeText: string, userId?: string): Promise<AIProviderResponse> {

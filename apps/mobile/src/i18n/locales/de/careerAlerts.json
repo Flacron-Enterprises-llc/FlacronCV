@@ -68,7 +68,10 @@
     "yourAlerts": "Deine Alarme",
     "emptyTitle": "Noch keine Benachrichtigungen",
     "emptyBody": "Eine gespeicherte Suche zeigt später passende Anzeigen an. Eine Suche jetzt verbraucht keine Benachrichtigung.",
-    "openA11y": "{name}. Stellenanzeige öffnen"
+    "openA11y": "{name}. Stellenanzeige öffnen",
+    "unread": "Neu",
+    "markAllRead": "Alle als gelesen markieren",
+    "unreadCount": "{count, plural, one {# neue Benachrichtigung} other {# neue Benachrichtigungen}}"
   },
   "balance": {
     "none": "Keine Alarmelemente mehr übrig. Neue Alarme warten, bis sich das Guthaben erneuert. Die Suche funktioniert weiterhin.",

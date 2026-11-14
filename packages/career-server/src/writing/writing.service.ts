@@ -2,19 +2,18 @@ import { randomUUID } from 'crypto';
 import type { Pool } from 'pg';
 import {
   DEFAULT_COVER_LETTER_TEMPLATE,
-  coverLetterPromptFacts,
   coverLetterReady,
-  factLineText,
   isCoverLetterTemplateId,
   isFactType,
+  isProseWritingType,
   isWritingType,
-  keptGenerateFactIds,
-  writingBody,
+  normalizeWritingContext,
+  proseReady,
   writingTitle,
   type CoverLetterTemplateId,
 } from '@flacroncv/career-shared';
 import type { ResumeFactInput, WritingType } from '@flacroncv/career-shared';
-import { completeWithin } from '../ai/text-model';
+import { UnconfiguredTextModel } from '../ai/text-model';
 import type { TextModel } from '../ai/text-model';
 import { readAccount, v2PlanOf } from '../billing/accounts';
 import type { AccountRow } from '../billing/accounts';
@@ -26,12 +25,8 @@ import type { JsonValue, MeteredResult } from '../metering/metering.service';
 import { MeteringService } from '../metering/metering.service';
 import type { ProfileOwner } from '../profile/career-profile.service';
 import type { DocumentCreditView, ResumeFile } from '../resumes/resume.service';
-import {
-  COVER_LETTER_TEMPLATE,
-  WRITING_SYSTEM,
-  WRITING_TEMPLATE,
-  parseWritingReply,
-} from './writing-compose';
+import { COVER_LETTER_TEMPLATE, WRITING_PROSE_TEMPLATE } from './writing-compose';
+import { generateProse } from './prose-generation';
 import { exportFileName, renderCoverLetterDocx, renderCoverLetterPdf } from './writing-document';
 import { confirmedFullName, generateCoverLetter, targetOrganizationName } from './cover-letter-generation';
 
@@ -90,11 +85,15 @@ export interface WritingDocumentView {
 export interface WritingList {
   items: WritingDocumentView[];
   documentCredit: DocumentCreditView;
+  /** False until a text-model provider is configured; generation is refused (and never charged) until then. */
+  textModelConfigured: boolean;
 }
 
 /**
- * Cover letters, bios, LinkedIn text, and outreach drafts.
- * The model picks fact ids. The body is those confirmed facts' own fields.
+ * Cover letters, bios, LinkedIn text, outreach, referral requests, and
+ * thank-you notes. The text model writes the prose; the shared evaluators
+ * reject any claim the confirmed facts or the person's own context do not
+ * support, and a rejected draft releases its credit.
  * A completed generation spends one document credit. A later edit does not.
  * Nothing here sends the draft.
  */
@@ -115,7 +114,11 @@ export class WritingService {
         ORDER BY created_at DESC, id`,
       [owner.workspaceId, owner.authUserId],
     );
-    return { items: rows.rows.map((row) => this.view(row)), documentCredit: await this.documentCredit(owner) };
+    return {
+      items: rows.rows.map((row) => this.view(row)),
+      documentCredit: await this.documentCredit(owner),
+      textModelConfigured: this.textModelConfigured(),
+    };
   }
 
   async get(owner: ProfileOwner, documentId: string): Promise<WritingDocumentView> {
@@ -162,68 +165,55 @@ export class WritingService {
   }
 
   async create(
-    owner: ProfileOwner,
-    input: { type?: string; opportunityId?: string | null; templateId?: string },
+    owner: ProfileOwner & { locale?: string },
+    input: { type?: string; opportunityId?: string | null; templateId?: string; context?: unknown },
     idempotencyKey: string | undefined,
   ): Promise<MeteredResult<JsonValue>> {
     if (!input.type || !isWritingType(input.type)) {
       throw new BillingError('validation_error', { field: 'type', reason: 'invalid' });
     }
     const type = input.type;
-    const opportunityId = typeof input.opportunityId === 'string' ? input.opportunityId : null;
+    const opportunityId = typeof input.opportunityId === 'string' && input.opportunityId !== '' ? input.opportunityId : null;
     if (input.opportunityId != null && input.opportunityId !== '' && !opportunityId) {
       throw new BillingError('validation_error', { field: 'opportunityId', reason: 'invalid' });
     }
     if (opportunityId !== null && !UUID.test(opportunityId)) {
       throw new BillingError('validation_error', { field: 'opportunityId', reason: 'invalid' });
     }
+    const normalized = normalizeWritingContext(input.context);
+    if (!normalized.ok) throw new BillingError('validation_error', { field: normalized.field, reason: normalized.reason });
+    const context = normalized.context;
     const templateId = isCoverLetterTemplateId(input.templateId ?? '')
       ? input.templateId!
       : DEFAULT_COVER_LETTER_TEMPLATE;
-    const listing = opportunityId ? await this.listing(opportunityId) : null;
+    const listing = opportunityId ? await this.listing(owner, opportunityId) : null;
     const facts = await this.facts(owner);
     const coverLetter = type === 'cover_letter';
     if (coverLetter) {
       const ready = coverLetterReady(facts);
       if (!ready.ok) throw new BillingError('validation_error', { field: ready.field, reason: ready.reason });
-    } else {
-      const available = writingBody(facts);
-      if (available.body.length === 0) {
-        throw new BillingError('validation_error', { field: 'facts', reason: 'no_confirmed_facts' });
-      }
+    } else if (isProseWritingType(type)) {
+      const ready = proseReady(type, facts, { listing: listing !== null, context });
+      if (!ready.ok) throw new BillingError('validation_error', { field: ready.field, reason: ready.reason });
     }
-    const requiredIds = keptGenerateFactIds(facts);
-    const targetOrganization = listing ? targetOrganizationName(listing) : null;
-    const prompt = JSON.stringify({
-      type,
-      requiredFactIds: coverLetter ? requiredIds : undefined,
-      facts: coverLetter
-        ? coverLetterPromptFacts(facts)
-        : facts
-            .filter((fact) => fact.confirmation === 'confirmed')
-            .map((fact) => ({ id: fact.id, text: factLineText(fact.factType, fact.value) }))
-            .filter((fact) => fact.text.length > 0),
-      listing: listing
-        ? {
-            title: listing.title,
-            organization: targetOrganization,
-            description: listing.description,
-            role: 'target_employer',
-          }
-        : null,
-    });
-    const template = coverLetter ? COVER_LETTER_TEMPLATE : WRITING_TEMPLATE;
+    // Every type is written by the text model. Without one there is nothing
+    // to sell: refuse before a credit is even reserved (spec §21).
+    if (!this.textModelConfigured()) {
+      throw new BillingError('provider_unavailable', { reason: 'ai_not_configured', released: true });
+    }
+    const targetOrganization = listing ? targetOrganizationName(listing) : (context.organization ?? null);
+    const language = owner.locale === 'fr' ? 'fr' : 'en';
     return this.metering.run<WritingOutput, JsonValue>({
       spender: owner,
       kind: `writing.${type}`,
       unit: 'document_credit',
       feature: 'documentCredits',
       idempotencyKey,
-      body: { type, opportunityId },
+      body: { type, opportunityId, context: { ...context } },
       requestId: randomUUID(),
       provenance: {
-        promptTemplateVersion: template,
-        outputSchemaVersion: coverLetter ? 'cover-letter@2' : 'writing-document@1',
+        promptTemplateVersion: coverLetter ? COVER_LETTER_TEMPLATE : WRITING_PROSE_TEMPLATE,
+        outputSchemaVersion: coverLetter ? 'cover-letter@2' : 'writing-prose@1',
         inputVersions: { opportunityRevisionId: listing?.revisionId ?? null },
       },
       execute: async () => {
@@ -238,29 +228,23 @@ export class WritingService {
             model: letter.model,
           };
         }
-        const response = await completeWithin(this.model, {
-          template,
-          system: WRITING_SYSTEM,
-          prompt,
-          maxTokens: 800,
-          temperature: 0,
-        });
-        const reply = parseWritingReply(response.text);
-        if (!reply) throw new BillingError('provider_unavailable', { reason: 'unusable_output' });
-        const composed = writingBody(facts, reply.factIds);
-        if (composed.body.length === 0 || composed.body.length > MAX_BODY) {
-          throw new BillingError('provider_unavailable', { reason: 'unusable_output' });
-        }
+        if (!isProseWritingType(type)) throw new BillingError('validation_error', { field: 'type', reason: 'invalid' });
+        const prose = await generateProse(
+          this.model,
+          type,
+          facts,
+          listing ? { title: listing.title, organization: targetOrganization, description: listing.description } : null,
+          context,
+          language,
+        );
+        if (prose.body.length > MAX_BODY) throw new BillingError('provider_unavailable', { reason: 'unusable_output' });
         return {
-          title: writingTitle(
-            type,
-            targetOrganization,
-          ),
-          body: composed.body,
-          factIds: composed.factIds,
+          title: writingTitle(type, targetOrganization),
+          body: prose.body,
+          factIds: prose.factIds,
           opportunityRevisionId: listing?.revisionId ?? null,
-          provider: response.provider,
-          model: response.model,
+          provider: prose.provider,
+          model: prose.model,
         };
       },
       save: async (db, output) => {
@@ -274,6 +258,11 @@ export class WritingService {
         return this.documentJson(inserted.rows[0], output.provider, output.model);
       },
     });
+  }
+
+  /** False when no provider key is set; the UI then says "not connected" instead of offering a paid button. */
+  textModelConfigured(): boolean {
+    return !(this.model instanceof UnconfiguredTextModel);
   }
 
   async exportDocument(owner: ProfileOwner, documentId: string, format: string): Promise<ResumeFile> {
@@ -321,13 +310,16 @@ export class WritingService {
     };
   }
 
-  private async listing(opportunityId: string): Promise<Listing> {
+  private async listing(owner: ProfileOwner, opportunityId: string): Promise<Listing> {
     const rows = await this.pool.query<{ id: string; title: string; organization: string; description: string }>(
       `SELECT r.id, r.title, r.organization, r.description
          FROM opportunities o
          JOIN opportunity_revisions r ON r.id = o.current_revision_id
-        WHERE o.id = $1`,
-      [opportunityId],
+        WHERE o.id = $1
+          -- A pasted listing is private to the candidate who pasted it; another
+          -- user's id must look exactly like a missing listing (no existence leak).
+          AND (o.candidate_auth_user_id IS NULL OR o.candidate_auth_user_id = $2)`,
+      [opportunityId, owner.authUserId],
     );
     const row = rows.rows[0];
     if (!row) throw new BillingError('not_found', { opportunityId });

@@ -5,12 +5,13 @@ import { useTranslations } from 'next-intl';
 import {
   isApiError,
   type ApiClient,
-  type BusinessOverview,
+  type BusinessMemberships,
   type DeveloperStatus,
   type HumanServiceList,
   type LearningLoopView,
   type MaintenanceView,
   type MapList,
+  type ScenarioList,
 } from '@flacroncv/career-api-client';
 import {
   Button,
@@ -24,12 +25,12 @@ import {
 } from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { profileLoadFailure } from '@/lib/career/profile-load';
-import { BusinessPanel } from './BusinessPanel';
+import { BusinessJoinPanel, BusinessPanel } from './BusinessPanel';
 import { MaintenancePanel } from './MaintenancePanel';
 import { ScenariosPanel } from './ScenariosPanel';
 import { DeveloperPanel, FormsPanel, LoopPanel, MapPanel, RecruitingPanel, ServicesPanel } from './ScopePanels';
 
-export type ScopeMode = 'scenarios' | 'loop' | 'forms' | 'maintenance' | 'map' | 'business' | 'services' | 'recruiting' | 'developer';
+export type ScopeMode = 'scenarios' | 'loop' | 'forms' | 'maintenance' | 'map' | 'business' | 'join' | 'services' | 'recruiting' | 'developer';
 
 /** What each page loads before it can show anything. */
 interface Loaded {
@@ -39,7 +40,8 @@ interface Loaded {
   services?: HumanServiceList;
   discoverable?: boolean;
   developer?: DeveloperStatus;
-  business?: BusinessOverview;
+  business?: BusinessMemberships;
+  scenarios?: ScenarioList;
 }
 
 async function loadFor(mode: ScopeMode, api: ApiClient): Promise<Loaded> {
@@ -58,7 +60,10 @@ async function loadFor(mode: ScopeMode, api: ApiClient): Promise<Loaded> {
     case 'developer':
       return { developer: await api.developerStatus() };
     case 'business':
-      return { business: await api.businessOverview() };
+      // Staff of another workspace and invited candidates use this page too, whatever their own plan.
+      return { business: await api.businessMemberships() };
+    case 'scenarios':
+      return { scenarios: await api.scenarios() };
     default:
       return {};
   }
@@ -73,8 +78,8 @@ export function ScopeScreen({
   user,
   ready,
   signInHref,
-  careerPlan,
-  plansHref = '/career/plans',
+  plansHref = '/settings/billing',
+  joinToken = null,
 }: {
   mode: ScopeMode;
   api: ApiClient;
@@ -84,11 +89,12 @@ export function ScopeScreen({
   /** The caller's career plan from /access; the Business page needs the Business plan. */
   careerPlan?: string;
   plansHref?: string;
+  /** The invitation token on the join page. */
+  joinToken?: string | null;
 }) {
   const t = useTranslations('career.scope');
   const [load, setLoad] = useState<'loading' | 'permission' | 'unavailable' | 'switched-off' | 'signed-out' | 'ready'>('loading');
   const [data, setData] = useState<Loaded>({});
-  const needsBusinessPlan = mode === 'business' && careerPlan !== undefined && careerPlan !== 'business';
 
   const loadData = useCallback(async () => {
     setLoad('loading');
@@ -112,12 +118,8 @@ export function ScopeScreen({
       setLoad('signed-out');
       return;
     }
-    if (needsBusinessPlan) {
-      setLoad('ready');
-      return;
-    }
     void loadData();
-  }, [ready, user, loadData, needsBusinessPlan]);
+  }, [ready, user, loadData]);
 
   if (!ready || load === 'loading') return <LoadingState label={t('loading')} />;
   if (load === 'signed-out' || !user) {
@@ -134,8 +136,11 @@ export function ScopeScreen({
     );
   }
 
+  const business = data.business;
+  const noBusinessRole =
+    mode === 'business' && load === 'ready' && business !== undefined && !business.ownsWorkspace && business.staffOf.length === 0 && business.candidateOf.length === 0;
   let body: ReactNode;
-  if (needsBusinessPlan) {
+  if (noBusinessRole) {
     body = (
       <PlanUpgradeState
         title={t('business_plan_title')}
@@ -162,12 +167,13 @@ export function ScopeScreen({
   } else {
     body = (
       <>
-        {mode === 'scenarios' ? <ScenariosPanel api={api} /> : null}
+        {mode === 'scenarios' ? <ScenariosPanel api={api} initial={data.scenarios} /> : null}
+        {mode === 'join' ? <BusinessJoinPanel api={api} token={joinToken} /> : null}
         {mode === 'loop' && data.report ? <LoopPanel report={data.report} /> : null}
         {mode === 'forms' ? <FormsPanel api={api} /> : null}
         {mode === 'maintenance' && data.maintenance ? <MaintenancePanel api={api} initial={data.maintenance} /> : null}
         {mode === 'map' && data.map ? <MapPanel api={api} list={data.map} /> : null}
-        {mode === 'business' && data.business ? <BusinessPanel api={api} initial={data.business} /> : null}
+        {mode === 'business' && business ? <BusinessPanel api={api} memberships={business} /> : null}
         {mode === 'services' && data.services ? <ServicesPanel api={api} services={data.services} /> : null}
         {mode === 'recruiting' && data.discoverable !== undefined ? <RecruitingPanel api={api} initialDiscoverable={data.discoverable} /> : null}
         {mode === 'developer' && data.developer ? <DeveloperPanel api={api} initial={data.developer} /> : null}

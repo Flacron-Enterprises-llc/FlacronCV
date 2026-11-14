@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, Provider } from '@nestjs/common';
-import { IsArray, IsBoolean, IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsBoolean, IsIn, IsObject, IsOptional, IsString, IsUUID, MaxLength, ValidateNested } from 'class-validator';
 import { PortfolioService, type Principal } from '@flacroncv/career-server';
 import type { CreatePortfolioInput, PublishPortfolioInput, UpdatePortfolioInput } from '@flacroncv/career-shared';
 import { Public } from '../auth/auth.guard';
@@ -24,6 +25,24 @@ class CreatePortfolioDto implements CreatePortfolioInput {
   @IsOptional()
   @IsIn(['en', 'fr'])
   locale?: 'en' | 'fr';
+}
+
+class SectionsDto {
+  @IsOptional()
+  @IsBoolean()
+  summary?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  evidence?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  skills?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  contact?: boolean;
 }
 
 class UpdatePortfolioDto implements UpdatePortfolioInput {
@@ -68,6 +87,17 @@ class UpdatePortfolioDto implements UpdatePortfolioInput {
   @IsString()
   @MaxLength(40)
   contactPhone?: string | null;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => SectionsDto)
+  sections?: SectionsDto;
+
+  /** Evidence id -> case-study text; checked in the service. */
+  @IsOptional()
+  @IsObject()
+  caseStudies?: Record<string, string>;
 }
 
 class PublishPortfolioDto implements PublishPortfolioInput {

@@ -131,8 +131,23 @@ describe('AccountPrivacyService', () => {
       [ada.billingAccountId, ada.workspaceId, ada.authUserId],
     );
 
+    // A stored practice recording: erasure must delete the audio object, not only its row.
+    const voice = await db.pool.query<{ id: string }>(
+      `INSERT INTO voice_interview_sessions (workspace_id, candidate_auth_user_id, kind, title, prompt)
+       VALUES ($1, $2, 'practice', 'Voice', 'p') RETURNING id`,
+      [ada.workspaceId, ada.authUserId],
+    );
+    await storage.put('voice/ada-take-1.m4a', Buffer.from('audio'), 'audio/mp4');
+    await db.pool.query(
+      `INSERT INTO voice_audio_records
+         (session_id, billing_account_id, idempotency_key, request_fingerprint, duration_seconds, requested_seconds, transcript, feedback, audio_object_key)
+       VALUES ($1, $2, 'privacy-voice', 'f', 30, 30, 'Hello', '{}'::jsonb, 'voice/ada-take-1.m4a')`,
+      [voice.rows[0].id, ada.billingAccountId],
+    );
+
     const result = await privacy.deleteAccount(ada, { idToken: `fake:${ada.authUserId}`, confirm: 'DELETE' });
     expect(result).toEqual({ deleted: true });
+    expect(storage.objects.has('voice/ada-take-1.m4a')).toBe(false);
     expect(await count(db, 'career_facts', ada.authUserId)).toBe(0);
     expect(await count(db, 'writing_documents', ada.authUserId)).toBe(0);
     expect(await count(db, 'star_stories', ada.authUserId)).toBe(0);

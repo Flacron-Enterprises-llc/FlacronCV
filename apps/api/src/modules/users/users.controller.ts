@@ -90,10 +90,18 @@ export class UsersController {
     await this.usersService.removePushToken(user.uid, body.token);
   }
 
+  /**
+   * The plan as the server enforces it: effective plan, limits, entitlements
+   * (DOCX, export branding, template tier) and this window's usage.
+   */
+  @Get('me/plan')
+  async getPlan(@CurrentUser() user: FirebaseUser) {
+    return this.usersService.getPlanInfo(user.uid);
+  }
+
   @Get('me/usage')
   async getUsage(@CurrentUser() user: FirebaseUser) {
-    const userData = await this.usersService.findByIdOrThrow(user.uid);
-    return userData.usage;
+    return this.usersService.getUsageSummary(user.uid);
   }
 
   /**

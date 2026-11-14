@@ -14,6 +14,7 @@ import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { useFormatDate } from '@/lib/use-format-date';
 import { useAuth } from '@/providers/AuthProvider';
+import { crmPlanLabel } from '@/lib/plan-labels';
 import { toast } from 'sonner';
 import {
   Search,
@@ -59,11 +60,7 @@ export default function AdminUsersPage(): React.JSX.Element | null {
   // Plan and role labels are shared with the CRM (crm.plan_*, crm.role_*).
   const tc = useTranslations('crm');
   const { user: me } = useAuth();
-  const planLabel = (plan?: string) => {
-    const known = ['free', 'pro', 'career_accelerator', 'enterprise'];
-    const p = plan || 'free';
-    return known.includes(p) ? tc(`plan_${p}`) : p;
-  };
+  const planLabel = (plan?: string) => crmPlanLabel(tc, plan);
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

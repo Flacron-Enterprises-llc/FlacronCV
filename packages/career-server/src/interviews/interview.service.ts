@@ -1,16 +1,27 @@
 import { randomUUID } from 'crypto';
 import type { Pool } from 'pg';
 import {
+  checkStarResult,
   factLineText,
   interviewFeedback,
   interviewQuestions,
+  interviewReport,
   interviewSummary,
   isFactType,
+  isInterviewQuestionCount,
   isInterviewStage,
   numbersMissingFrom,
   MAX_INTERVIEW_QUESTIONS,
+  MAX_INTERVIEW_ROLE,
 } from '@flacroncv/career-shared';
-import type { InterviewFeedback, InterviewQuestion, InterviewStage, ResumeFactInput } from '@flacroncv/career-shared';
+import type {
+  FactType,
+  InterviewFeedback,
+  InterviewQuestion,
+  InterviewReport,
+  InterviewStage,
+  ResumeFactInput,
+} from '@flacroncv/career-shared';
 import { completeWithin } from '../ai/text-model';
 import type { TextModel } from '../ai/text-model';
 import { readAccount } from '../billing/accounts';
@@ -26,6 +37,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const MAX_ANSWER = 10_000;
 const MAX_NOTE = 2_000;
 const MAX_STORIES = 200;
+const STORY_COLUMNS =
+  'id, fact_ids, situation, task, action, result, created_at, updated_at, workspace_id, candidate_auth_user_id';
 
 interface Listing {
   opportunityId: string;
@@ -33,12 +46,28 @@ interface Listing {
   title: string;
 }
 
+interface FactLine {
+  id: string;
+  factType: FactType;
+  text: string;
+}
+
+type StoryFields = { situation: string; task: string; action: string; result: string };
+
+export interface StoryInput {
+  situation?: string;
+  task?: string;
+  action?: string;
+  result?: string;
+  factIds?: string[];
+}
+
 interface SessionRow {
   id: string;
   workspace_id: string;
   candidate_auth_user_id: string;
-  opportunity_id: string;
-  opportunity_revision_id: string;
+  opportunity_id: string | null;
+  opportunity_revision_id: string | null;
   stage: string;
   title: string;
   questions: unknown;
@@ -63,6 +92,7 @@ interface StoryRow {
   action: string;
   result: string;
   created_at: Date;
+  updated_at: Date;
   workspace_id: string;
   candidate_auth_user_id: string;
 }
@@ -83,13 +113,16 @@ export interface InterviewAnswerView {
 
 export interface InterviewSessionView {
   id: string;
-  opportunityId: string;
-  opportunityRevisionId: string;
+  /** Null for practice by role and stage without a saved listing. */
+  opportunityId: string | null;
+  opportunityRevisionId: string | null;
   stage: InterviewStage;
   title: string;
   questions: InterviewQuestion[];
   answers: InterviewAnswerView[];
   summary: string;
+  /** Per-dimension strengths and gaps, rebuilt from the stored answer labels. */
+  report: InterviewReport;
   createdAt: string;
 }
 
@@ -101,6 +134,7 @@ export interface StarStoryView {
   action: string;
   result: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface TextInterviewBalance {
@@ -116,9 +150,10 @@ export interface InterviewList {
 
 /**
  * A text practice session. Starting it spends one text_interview.
- * Later answers, a challenge, and a saved STAR story spend nothing.
- * Questions are openings plus a confirmed fact line. A story cannot
- * introduce a number that is not already in a confirmed fact.
+ * Later answers, a challenge, resuming an older session, and STAR stories
+ * spend nothing. Questions are openings plus a confirmed fact line. A story
+ * cannot introduce a number that is not in a confirmed fact, and its result
+ * must come from a confirmed achievement.
  */
 export class InterviewService {
   private readonly catalogs = new CatalogStore();
@@ -149,32 +184,44 @@ export class InterviewService {
 
   async start(
     owner: ProfileOwner,
-    input: { opportunityId?: string; stage?: string },
+    input: { opportunityId?: string | null; role?: string; stage?: string; questionCount?: number },
     idempotencyKey: string | undefined,
   ): Promise<MeteredResult<JsonValue>> {
-    if (!input.opportunityId || !UUID.test(input.opportunityId)) {
+    // Either a saved listing or a typed target role (practice by role and stage).
+    const role = typeof input.role === 'string' ? input.role.trim() : '';
+    const opportunityId = input.opportunityId ?? '';
+    const hasListing = opportunityId !== '';
+    if (hasListing && (typeof opportunityId !== 'string' || !UUID.test(opportunityId))) {
       throw new BillingError('validation_error', { field: 'opportunityId', reason: 'invalid' });
+    }
+    if (!hasListing && (role.length < 2 || role.length > MAX_INTERVIEW_ROLE)) {
+      throw new BillingError('validation_error', { field: 'role', reason: 'invalid' });
     }
     if (!input.stage || !isInterviewStage(input.stage)) {
       throw new BillingError('validation_error', { field: 'stage', reason: 'invalid' });
     }
+    const questionCount = input.questionCount ?? MAX_INTERVIEW_QUESTIONS;
+    if (!isInterviewQuestionCount(questionCount)) {
+      throw new BillingError('validation_error', { field: 'questionCount', reason: 'invalid' });
+    }
     const stage = input.stage;
-    const listing = await this.listing(owner, input.opportunityId);
-    const facts = await this.confirmedLines(owner);
+    const listing = hasListing ? await this.listing(owner, opportunityId) : null;
+    const title = listing ? listing.title : role;
+    const facts = (await this.confirmedLines(owner)).map(({ id, text }) => ({ id, text }));
     if (facts.length === 0) throw new BillingError('validation_error', { field: 'facts', reason: 'no_confirmed_facts' });
-    const prompt = JSON.stringify({ stage, title: listing.title, facts });
+    const prompt = JSON.stringify({ stage, title, facts });
     return this.metering.run<StartOutput, JsonValue>({
       spender: owner,
       kind: 'interview.text',
       unit: 'text_interview',
       feature: 'textInterviewSessions',
       idempotencyKey,
-      body: { opportunityId: listing.opportunityId, stage },
+      body: { opportunityId: listing?.opportunityId ?? null, role: listing ? null : role, stage, questionCount },
       requestId: randomUUID(),
       provenance: {
         promptTemplateVersion: INTERVIEW_TEMPLATE,
-        outputSchemaVersion: 'interview-session@1',
-        inputVersions: { opportunityRevisionId: listing.revisionId },
+        outputSchemaVersion: 'interview-session@2',
+        inputVersions: listing ? { opportunityRevisionId: listing.revisionId } : {},
       },
       execute: async () => {
         const response = await completeWithin(this.model, {
@@ -186,8 +233,8 @@ export class InterviewService {
         });
         const reply = parseInterviewReply(response.text);
         if (!reply) throw new BillingError('provider_unavailable', { reason: 'unusable_output' });
-        const questions = interviewQuestions({ title: listing.title, stage, facts, factIds: reply.factIds });
-        if (!questions || questions.length !== MAX_INTERVIEW_QUESTIONS) {
+        const questions = interviewQuestions({ title, stage, facts, factIds: reply.factIds, count: questionCount });
+        if (!questions || questions.length !== questionCount) {
           throw new BillingError('provider_unavailable', { reason: 'unusable_output' });
         }
         return { questions, provider: response.provider, model: response.model };
@@ -202,10 +249,10 @@ export class InterviewService {
           [
             owner.workspaceId,
             owner.authUserId,
-            listing.opportunityId,
-            listing.revisionId,
+            listing?.opportunityId ?? null,
+            listing?.revisionId ?? null,
             stage,
-            listing.title,
+            title,
             JSON.stringify(output.questions),
           ],
         );
@@ -222,14 +269,15 @@ export class InterviewService {
     }
     const questions = questionsOf(session.questions);
     const existing = await this.answers(session.id);
-    if (existing.length >= MAX_INTERVIEW_QUESTIONS) {
-      throw new BillingError('validation_error', { field: 'answer', reason: 'session_complete' });
-    }
-    const question = questions[existing.length];
+    // The session's own question count is the limit: a candidate may choose fewer than ten.
+    const question = existing.length < questions.length ? questions[existing.length] : undefined;
     if (!question) throw new BillingError('validation_error', { field: 'answer', reason: 'session_complete' });
     const factText = (await this.confirmedLines(owner)).find((fact) => fact.id === question.factId)?.text ?? '';
     const feedback = interviewFeedback(text, factText);
-    const summary = interviewSummary(existing.length + 1, feedback);
+    const summary = interviewSummary(
+      [...existing.map((row) => ({ index: row.question_index, feedback: feedbackOf(row.feedback) })), { index: question.index, feedback }],
+      questions.length,
+    );
     await this.pool.query(
       `INSERT INTO interview_answers (session_id, question_index, answer, feedback)
        VALUES ($1, $2, $3, $4::jsonb)`,
@@ -258,7 +306,7 @@ export class InterviewService {
 
   async stories(owner: ProfileOwner): Promise<{ items: StarStoryView[] }> {
     const rows = await this.pool.query<StoryRow>(
-      `SELECT id, fact_ids, situation, task, action, result, created_at, workspace_id, candidate_auth_user_id
+      `SELECT ${STORY_COLUMNS}
          FROM star_stories
         WHERE workspace_id = $1 AND candidate_auth_user_id = $2
         ORDER BY created_at DESC, id`,
@@ -267,30 +315,8 @@ export class InterviewService {
     return { items: rows.rows.map((row) => this.storyView(row)) };
   }
 
-  async createStory(
-    owner: ProfileOwner,
-    input: { situation?: string; task?: string; action?: string; result?: string; factIds?: string[] },
-  ): Promise<StarStoryView> {
-    const lines = await this.confirmedLines(owner);
-    if (lines.length === 0) throw new BillingError('validation_error', { field: 'facts', reason: 'no_confirmed_facts' });
-    const allowed = lines.map((line) => line.text).join('\n');
-    const fields = ['situation', 'task', 'action', 'result'] as const;
-    const stored: Record<(typeof fields)[number], string> = { situation: '', task: '', action: '', result: '' };
-    for (const field of fields) {
-      const text = input[field]?.trim() ?? '';
-      if (text.length === 0 || text.length > MAX_NOTE) {
-        throw new BillingError('validation_error', { field, reason: 'invalid' });
-      }
-      if (numbersMissingFrom(text, allowed).length > 0) {
-        throw new BillingError('validation_error', { field, reason: 'number_not_in_facts' });
-      }
-      stored[field] = text;
-    }
-    const known = new Set(lines.map((line) => line.id));
-    const requested = input.factIds ?? lines.map((line) => line.id);
-    if (requested.length === 0 || requested.some((id) => !known.has(id))) {
-      throw new BillingError('validation_error', { field: 'factIds', reason: 'invalid' });
-    }
+  async createStory(owner: ProfileOwner, input: StoryInput): Promise<StarStoryView> {
+    const checked = await this.checkStory(owner, input);
     const count = await this.pool.query<{ n: number }>(
       `SELECT count(*)::int AS n FROM star_stories WHERE workspace_id = $1 AND candidate_auth_user_id = $2`,
       [owner.workspaceId, owner.authUserId],
@@ -302,10 +328,87 @@ export class InterviewService {
       `INSERT INTO star_stories
          (workspace_id, candidate_auth_user_id, fact_ids, situation, task, action, result)
        VALUES ($1, $2, $3::uuid[], $4, $5, $6, $7)
-       RETURNING id, fact_ids, situation, task, action, result, created_at, workspace_id, candidate_auth_user_id`,
-      [owner.workspaceId, owner.authUserId, requested, stored.situation, stored.task, stored.action, stored.result],
+       RETURNING ${STORY_COLUMNS}`,
+      [
+        owner.workspaceId,
+        owner.authUserId,
+        checked.factIds,
+        checked.fields.situation,
+        checked.fields.task,
+        checked.fields.action,
+        checked.fields.result,
+      ],
     );
     return this.storyView(inserted.rows[0]);
+  }
+
+  /** Replaces all four parts; the same checks as a new story apply. */
+  async updateStory(owner: ProfileOwner, storyId: string, input: StoryInput): Promise<StarStoryView> {
+    await this.ownedStory(owner, storyId);
+    const checked = await this.checkStory(owner, input);
+    const updated = await this.pool.query<StoryRow>(
+      `UPDATE star_stories
+          SET fact_ids = $2::uuid[], situation = $3, task = $4, action = $5, result = $6, updated_at = now()
+        WHERE id = $1
+        RETURNING ${STORY_COLUMNS}`,
+      [storyId, checked.factIds, checked.fields.situation, checked.fields.task, checked.fields.action, checked.fields.result],
+    );
+    return this.storyView(updated.rows[0]);
+  }
+
+  async deleteStory(owner: ProfileOwner, storyId: string): Promise<{ deleted: true }> {
+    await this.ownedStory(owner, storyId);
+    await this.pool.query(`DELETE FROM star_stories WHERE id = $1`, [storyId]);
+    return { deleted: true };
+  }
+
+  /**
+   * Every part is required and bounded; no part may carry a number that is not
+   * in a confirmed fact; the result must come from a confirmed achievement
+   * (checkStarResult), whose id is linked to the story.
+   */
+  private async checkStory(owner: ProfileOwner, input: StoryInput): Promise<{ fields: StoryFields; factIds: string[] }> {
+    const lines = await this.confirmedLines(owner);
+    if (lines.length === 0) throw new BillingError('validation_error', { field: 'facts', reason: 'no_confirmed_facts' });
+    const allowed = lines.map((line) => line.text).join('\n');
+    const fields = ['situation', 'task', 'action', 'result'] as const;
+    const stored: StoryFields = { situation: '', task: '', action: '', result: '' };
+    for (const field of fields) {
+      const value = input[field];
+      const text = typeof value === 'string' ? value.trim() : '';
+      if (text.length === 0 || text.length > MAX_NOTE) {
+        throw new BillingError('validation_error', { field, reason: 'invalid' });
+      }
+      if (numbersMissingFrom(text, allowed).length > 0) {
+        throw new BillingError('validation_error', { field, reason: 'number_not_in_facts' });
+      }
+      stored[field] = text;
+    }
+    const achievements = lines.filter((line) => line.factType === 'achievement');
+    const result = checkStarResult(stored.result, achievements);
+    if (!result.ok) throw new BillingError('validation_error', { field: 'result', reason: result.reason });
+    const known = new Set(lines.map((line) => line.id));
+    const requested: unknown = input.factIds ?? lines.map((line) => line.id);
+    if (
+      !Array.isArray(requested) ||
+      requested.length === 0 ||
+      requested.some((id) => typeof id !== 'string' || !known.has(id))
+    ) {
+      throw new BillingError('validation_error', { field: 'factIds', reason: 'invalid' });
+    }
+    const factIds = [...new Set([...(requested as string[]), result.achievementId])];
+    return { fields: stored, factIds };
+  }
+
+  private async ownedStory(owner: ProfileOwner, storyId: string): Promise<StoryRow> {
+    if (!UUID.test(storyId)) throw new BillingError('not_found');
+    const rows = await this.pool.query<StoryRow>(`SELECT ${STORY_COLUMNS} FROM star_stories WHERE id = $1`, [storyId]);
+    const row = rows.rows[0];
+    if (!row) throw new BillingError('not_found');
+    if (row.workspace_id !== owner.workspaceId || row.candidate_auth_user_id !== owner.authUserId) {
+      throw new BillingError('permission_denied');
+    }
+    return row;
   }
 
   private async listing(owner: ProfileOwner, opportunityId: string): Promise<Listing> {
@@ -321,14 +424,14 @@ export class InterviewService {
       [opportunityId],
     );
     const row = rows.rows[0];
-    if (!row) throw new BillingError('not_found');
-    if (row.candidate_auth_user_id !== null && row.candidate_auth_user_id !== owner.authUserId) {
-      throw new BillingError('permission_denied');
+    // Another candidate's pasted listing looks exactly like a missing one (no existence leak).
+    if (!row || (row.candidate_auth_user_id !== null && row.candidate_auth_user_id !== owner.authUserId)) {
+      throw new BillingError('not_found');
     }
     return { opportunityId, revisionId: row.revision_id, title: row.title };
   }
 
-  private async confirmedLines(owner: ProfileOwner): Promise<Array<{ id: string; text: string }>> {
+  private async confirmedLines(owner: ProfileOwner): Promise<FactLine[]> {
     const rows = await this.pool.query<{ id: string; fact_type: string; value: unknown; confirmation: string }>(
       `SELECT id, fact_type, value, confirmation
          FROM career_facts
@@ -336,7 +439,7 @@ export class InterviewService {
         ORDER BY created_at, id`,
       [owner.workspaceId, owner.authUserId],
     );
-    const lines: Array<{ id: string; text: string }> = [];
+    const lines: FactLine[] = [];
     for (const row of rows.rows) {
       if (row.confirmation !== 'confirmed' || !isFactType(row.fact_type) || !isRecord(row.value)) continue;
       const fact: ResumeFactInput = {
@@ -347,7 +450,7 @@ export class InterviewService {
         uncertain: {},
       };
       const text = factLineText(fact.factType, fact.value);
-      if (text.length > 0) lines.push({ id: row.id, text });
+      if (text.length > 0) lines.push({ id: row.id, factType: row.fact_type, text });
     }
     return lines;
   }
@@ -383,21 +486,24 @@ export class InterviewService {
 
   private view(row: SessionRow, answers: AnswerRow[]): InterviewSessionView {
     if (!isInterviewStage(row.stage)) throw new BillingError('not_found');
+    const questions = questionsOf(row.questions);
+    const answerViews = answers.map((answer) => ({
+      id: answer.id,
+      index: answer.question_index,
+      answer: answer.answer,
+      feedback: feedbackOf(answer.feedback),
+      challenge: answer.challenge,
+    }));
     return {
       id: row.id,
       opportunityId: row.opportunity_id,
       opportunityRevisionId: row.opportunity_revision_id,
       stage: row.stage,
       title: row.title,
-      questions: questionsOf(row.questions),
-      answers: answers.map((answer) => ({
-        id: answer.id,
-        index: answer.question_index,
-        answer: answer.answer,
-        feedback: feedbackOf(answer.feedback),
-        challenge: answer.challenge,
-      })),
+      questions,
+      answers: answerViews,
       summary: row.summary,
+      report: interviewReport(answerViews, questions.length),
       createdAt: row.created_at.toISOString(),
     };
   }
@@ -424,6 +530,18 @@ export class InterviewService {
         challenge: item.challenge,
       })),
       summary: view.summary,
+      report: {
+        answered: view.report.answered,
+        total: view.report.total,
+        complete: view.report.complete,
+        dimensions: view.report.dimensions.map((item) => ({
+          dimension: item.dimension,
+          met: item.met,
+          answered: item.answered,
+          verdict: item.verdict,
+        })),
+        lackingEvidence: view.report.lackingEvidence,
+      },
       createdAt: view.createdAt,
       provider,
       model,
@@ -439,6 +557,7 @@ export class InterviewService {
       action: row.action,
       result: row.result,
       createdAt: row.created_at.toISOString(),
+      updatedAt: row.updated_at.toISOString(),
     };
   }
 

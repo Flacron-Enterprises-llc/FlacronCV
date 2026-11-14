@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import type { AdminAuditEntry, AdminCatalogVersion, AdminFlagView, AdminProviderHealth, ApiClient, ModerationQueueItem } from '@flacroncv/career-api-client';
 import V1Button from '@/components/ui/Button';
 import V1Card from '@/components/ui/Card';
+import { BusinessOverviewTool, EvidenceVerificationTool } from './AdminCareerTools';
 import { ConfirmDialog, EmptyState, InlineNote, LoadingState, PermissionDeniedState, ProviderUnavailableState } from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { profileLoadFailure } from '@/lib/career/profile-load';
@@ -147,6 +148,10 @@ export function AdminScreen({
       </div>
 
       <ModerationQueue api={api} items={queue} onChange={setQueue} />
+
+      <EvidenceVerificationTool api={api} />
+
+      <BusinessOverviewTool api={api} />
 
       <V1Card>
         <h2 className="text-lg font-semibold text-stone-900 dark:text-white">{t('flags_title')}</h2>

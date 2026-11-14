@@ -180,9 +180,16 @@ export function CareerRelocationRoute() {
 export function CareerScopeRoute({ mode }: { mode: ScopeMode }) {
   const { uiLocale, ...props } = useScreenProps();
   const access = useCareerAccess();
+  const search = useSearchParams();
   return (
     <CareerGate>
-      <ScopeScreen {...props} mode={mode} careerPlan={access.data?.careerPlan} plansHref={`/${uiLocale}/career/plans`} />
+      <ScopeScreen
+        {...props}
+        mode={mode}
+        careerPlan={access.data?.careerPlan}
+        plansHref={`/${uiLocale}/settings/billing`}
+        joinToken={mode === 'join' ? search?.get('token') ?? null : null}
+      />
     </CareerGate>
   );
 }

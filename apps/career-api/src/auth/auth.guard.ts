@@ -1,7 +1,7 @@
 import { CanActivate, createParamDecorator, ExecutionContext, Inject, Injectable, SetMetadata } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
-import { BillingError, IdentityService } from '@flacroncv/career-server';
+import { BillingError, IdentityService, sponsoredSpender } from '@flacroncv/career-server';
 import type { CareerAccess, IdTokenVerifier, Principal, VerifiedIdentity } from '@flacroncv/career-server';
 import { CareerAccessService } from '../integration/career-access.service';
 import { ID_TOKEN_VERIFIER } from './auth.providers';
@@ -10,6 +10,8 @@ const PUBLIC_ROUTE = 'flacroncv:public';
 const DURING_DELETION = 'flacroncv:during-deletion';
 const WITHOUT_CAREER_ACCESS = 'flacroncv:without-career-access';
 const ACCESS_ONLY = 'flacroncv:access-only';
+const OWN_BILLING_ACCOUNT = 'flacroncv:own-billing-account';
+const BUSINESS_INVITE = 'flacroncv:business-invite';
 
 /** A route that does not take the user's token (health, public portfolios). */
 export const Public = () => SetMetadata(PUBLIC_ROUTE, true);
@@ -23,6 +25,19 @@ export const AllowDuringDeletion = () => SetMetadata(DURING_DELETION, true);
  * exists: personal-data export and erase must never depend on a plan.
  */
 export const AllowWithoutCareerAccess = () => SetMetadata(WITHOUT_CAREER_ACCESS, true);
+
+/**
+ * Billing routes (plan, purchases, checkout, portal) always act on the caller's
+ * OWN billing account, never on a Business pool that sponsors them.
+ */
+export const OwnBillingAccount = () => SetMetadata(OWN_BILLING_ACCOUNT, true);
+
+/**
+ * Accepting a Business invitation: allowed even when the caller's own V1 plan
+ * has no career access (an operator map sets it to none), because the
+ * Business account is what grants them access.
+ */
+export const BusinessInviteRoute = () => SetMetadata(BUSINESS_INVITE, true);
 
 /** Needs only the verified token and the access decision; creates no career rows. */
 export const AccessOnly = () => SetMetadata(ACCESS_ONLY, true);
@@ -110,14 +125,46 @@ export class AuthGuard implements CanActivate {
       request.principal = existing;
       return true;
     }
+    if (!access.enabled && access.reason === 'plan_not_mapped') {
+      // A person without own career access may accept a Business invitation,
+      // and an accepted Business candidate uses the career features on the
+      // Business pool. Inactive or missing V1 accounts are never let through.
+      const inviteRoute = Boolean(this.reflector.getAllAndOverride<boolean>(BUSINESS_INVITE, targets));
+      const sponsored = inviteRoute ? null : await this.access.businessSponsor(identity.uid);
+      if (inviteRoute || sponsored) {
+        const principal = await this.identities.principal(identity, undefined, { allowPendingDeletion: duringDeletion });
+        request.principal = this.ownAccountOnly(targets) ? principal : sponsoredSpender(principal, sponsored);
+        return true;
+      }
+    }
     if (!access.enabled) {
+      // Spec section 11: after a cancellation or downgrade, existing items stay
+      // readable. With the default map every V1 plan (Free included) has
+      // access; this covers an operator map that sets a plan to `none`: an
+      // existing career account may still read, never write or provision.
+      const read = ['GET', 'HEAD', 'OPTIONS'].includes((request.method ?? 'GET').toUpperCase());
+      if (read && access.reason === 'plan_not_mapped') {
+        const existing = await this.identities.existingPrincipal(identity, { allowPendingDeletion: duringDeletion });
+        if (existing) {
+          request.principal = existing;
+          return true;
+        }
+      }
       throw new BillingError('feature_unavailable', { feature: 'career', reason: access.reason });
     }
 
     const principal = await this.identities.principal(identity, undefined, { allowPendingDeletion: duringDeletion });
+    // The candidate's own account always follows their own V1 plan first;
+    // only then may an active Business candidacy redirect spending to the pool.
     await this.access.syncPlan(principal.billingAccountId, access);
-    request.principal = principal;
+    request.principal = this.ownAccountOnly(targets)
+      ? principal
+      : sponsoredSpender(principal, await this.access.businessSponsor(identity.uid));
     return true;
+  }
+
+  private ownAccountOnly(targets: Parameters<Reflector['getAllAndOverride']>[1]): boolean {
+    return Boolean(this.reflector.getAllAndOverride<boolean>(OWN_BILLING_ACCOUNT, targets));
   }
 }
 

@@ -37,7 +37,8 @@
     "capacity": "Dieser Tarif bietet keinen Platz für eine weitere Seite.",
     "off": "Portfolioseiten sind gerade ausgeschaltet.",
     "validation": "Bitte prüfe die Felder auf Fehler.",
-    "failed": "Diese Änderung wurde nicht gespeichert."
+    "failed": "Diese Änderung wurde nicht gespeichert.",
+    "caseStudy": "Jede Fallstudie darf höchstens {max} Zeichen lang sein."
   },
   "editor": {
     "newTitle": "Neue Portfolioseite",
@@ -95,6 +96,15 @@
     "privateOnly": "Nur privat: wird nicht auf der Seite angezeigt",
     "createPage": "Seite erstellen",
     "savePage": "Seite speichern",
-    "savedButton": "Gespeichert"
+    "savedButton": "Gespeichert",
+    "caseStudyLabel": "Fallstudie zu „{title}“ (optional)",
+    "sectionsTitle": "Abschnitte der Seite",
+    "sectionsHint": "Nur eingeschaltete Abschnitte werden gezeigt. Kontaktdaten brauchen zusätzlich ihre eigene Freigabe unten.",
+    "section": {
+      "summary": "Zusammenfassung (Überschrift)",
+      "evidence": "Ausgewählte Nachweise",
+      "skills": "Fähigkeiten",
+      "contact": "Kontakt (nur unten freigegebene Angaben)"
+    }
   }
 }

@@ -25,6 +25,9 @@ import { requestFailureMessage } from '../../../src/lib/api-errors';
 import {
   effectivePlanForCopy,
   hasLiveStorePurchase,
+  isCatalogPaidPlan,
+  planForDisplay,
+  sharedPlanLimits,
   hasLiveStripeSubscription,
 } from '../../../src/lib/entitlements';
 import { skuForPlan } from '../../../src/config/iap-products';
@@ -40,10 +43,9 @@ function formatStoredDate(value: unknown): string {
   return formatDate(toDate(value));
 }
 
-function planName(plan: SubscriptionPlan, t: TFunction): string {
-  if (plan === SubscriptionPlan.PRO) return t('plans.pro');
-  if (plan === SubscriptionPlan.ENTERPRISE) return t('plans.enterprise');
-  return t('plans.free');
+/** The real plan name: five-plan catalog names for current plans, the old names for legacy ones. */
+function planName(plan: string, t: TFunction): string {
+  return hasKey(`settings.plans.${plan}`) ? t(`plans.${plan}`) : t('plans.free');
 }
 
 function formatLimit(limit: number | 'unlimited'): string {
@@ -112,7 +114,10 @@ export default function BillingScreen() {
   const status = user?.subscription?.status;
   const periodEnd = user?.subscription?.currentPeriodEnd;
   const cancelAtPeriodEnd = !!user?.subscription?.cancelAtPeriodEnd;
-  const limits = PLAN_CONFIGS[plan].limits;
+  // Name and limits come from the real plan; `plan` (legacy copy enum) only drives the legacy paywall.
+  const displayPlan = planForDisplay(user?.subscription);
+  const onCatalogPlan = isCatalogPaidPlan(displayPlan);
+  const limits = sharedPlanLimits(user?.subscription);
   const storeLive = hasLiveStorePurchase(user?.subscription);
   const stripeLive = hasLiveStripeSubscription(user?.subscription);
   const canManageStore = nativeStoreBilling && storeLive;
@@ -185,7 +190,7 @@ export default function BillingScreen() {
             <Text className="font-bold text-stone-800 mb-3">{t('billing.currentPlan')}</Text>
             <View className="flex-row items-center justify-between mb-2">
               <Text className="text-stone-600">{t('billing.plan')}</Text>
-              <Text className="font-semibold text-stone-900">{planName(plan, t)}</Text>
+              <Text className="font-semibold text-stone-900">{planName(displayPlan, t)}</Text>
             </View>
             {status ? (
               <View className="flex-row items-center justify-between mb-2">
@@ -233,7 +238,14 @@ export default function BillingScreen() {
 
         <BillingHistory storeBilled={storeLive} />
 
-        {PAID_UPGRADES_ENABLED && (
+        {PAID_UPGRADES_ENABLED && onCatalogPlan ? (
+          // The app sells only the legacy Pro plan in this phase; offering it to a
+          // Starter/Professional/Career Pro/Business subscriber could double-bill them.
+          <View className="mx-4 mb-4 bg-white rounded-2xl border border-stone-100 p-4">
+            <Text className="text-stone-600 text-sm leading-5">{t('billing.catalogPlanNote')}</Text>
+          </View>
+        ) : null}
+        {PAID_UPGRADES_ENABLED && !onCatalogPlan && (
           <>
             <View className="mx-4 mb-4">
               <View className="bg-white rounded-2xl border border-stone-100 p-1 flex-row">

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
 import { useRef } from 'react';
-import type { WritingDocument, WritingType } from '../../../../../packages/career-api-client/src/types';
+import type { WritingContextInput, WritingDocument, WritingType } from '../../../../../packages/career-api-client/src/types';
 import { careerApi } from '../../lib/career-api';
 import { createPaidKeys } from '../../lib/career/documents';
 import { useEntitled, useUid } from '../useCareer';
@@ -100,14 +100,22 @@ export function usePaidResume(resumeId: string | undefined) {
   });
 }
 
-/** Write a cover letter, bio, LinkedIn text or outreach draft from confirmed facts. Uses one document credit. */
+/**
+ * Write a cover letter, bio, LinkedIn text, outreach, referral request or
+ * thank-you draft from confirmed facts. Uses one document credit. The context
+ * is part of the key, so changed notes are a new request, never a replay.
+ */
 export function useCreateWriting() {
   const queryClient = useQueryClient();
   const uid = useUid();
   const keys = usePaidKeys();
   return useMutation({
-    mutationFn: (input: { type: WritingType; opportunityId: string | null; templateId?: string }) =>
-      settlePaid(keys, `write:${input.type}:${input.opportunityId ?? ''}:${input.templateId ?? ''}`, (key) => careerApi.createWriting(input, key)),
+    mutationFn: (input: { type: WritingType; opportunityId: string | null; templateId?: string; context?: WritingContextInput }) =>
+      settlePaid(
+        keys,
+        `write:${input.type}:${input.opportunityId ?? ''}:${input.templateId ?? ''}:${input.context ? JSON.stringify(input.context) : ''}`,
+        (key) => careerApi.createWriting(input, key),
+      ),
     onSuccess: (paid) => {
       queryClient.setQueryData(['career', uid, 'writing', paid.document.id], paid.document);
       void queryClient.invalidateQueries({ queryKey: ['career', uid, 'writing'], exact: true });

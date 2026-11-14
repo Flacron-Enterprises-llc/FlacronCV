@@ -6,7 +6,11 @@
     "interviewing": "Im Gespräch",
     "offer": "Angebot",
     "rejected": "Abgelehnt",
-    "accepted": "Angenommen"
+    "accepted": "Angenommen",
+    "saved": "Gemerkt",
+    "preparing": "In Vorbereitung",
+    "offered": "Angebot erhalten",
+    "withdrawn": "Zurückgezogen"
   },
   "sort": {
     "updated": "Zuletzt aktualisiert",
@@ -43,7 +47,9 @@
     "followUp": "Nachfassen {date}",
     "addToCalendar": "Interview für {position} bei {company} zum Kalender hinzufügen",
     "restore": "{position} bei {company} wiederherstellen",
-    "archive": "{position} bei {company} archivieren"
+    "archive": "{position} bei {company} archivieren",
+    "deadline": "Frist {date}",
+    "checklist": "Checkliste {done}/{total}"
   },
   "archive": {
     "archived": "Bewerbung archiviert",
@@ -95,7 +101,26 @@
     "deleteTitle": "Bewerbung löschen",
     "deleteBody": "„{position}“ bei {company} löschen? Das kann nicht rückgängig gemacht werden.",
     "deleteErrorTitle": "Löschen fehlgeschlagen",
-    "deleteError": "Löschen fehlgeschlagen. Bitte versuche es erneut."
+    "deleteError": "Löschen fehlgeschlagen. Bitte versuche es erneut.",
+    "deadline": "Bewerbungsfrist",
+    "addDeadlineToCalendar": "Frist zum Kalender hinzufügen",
+    "contacts": "Kontakte",
+    "contactN": "Kontakt {n}",
+    "contactRole": "Rolle",
+    "contactRolePh": "z. B. Recruiter",
+    "contactPhone": "Telefon",
+    "contactNotes": "Notizen zu diesem Kontakt",
+    "addContact": "Kontakt hinzufügen",
+    "removeContact": "Kontakt {n} entfernen",
+    "checklist": "Checkliste",
+    "checklistItemPh": "z. B. Portfolio-Link",
+    "addChecklistItem": "Eintrag hinzufügen",
+    "removeChecklistItem": "Eintrag {n} entfernen",
+    "checklistToggle": "Eintrag {n} erledigt",
+    "outcome": "Ergebnis: {outcome}",
+    "frozenOnLink": "Der verknüpfte Lebenslauf bzw. das Anschreiben wird im Zustand beim Verknüpfen bei dieser Bewerbung gespeichert.",
+    "frozenCv": "Gespeicherte Lebenslauf-Version: {title} (Version {version})",
+    "frozenLetter": "Gespeicherte Kopie des Anschreibens: {title}"
   },
   "picker": {
     "chooseCv": "Lebenslauf auswählen",
@@ -112,6 +137,15 @@
     "error": "Der Kalendereintrag konnte nicht erstellt werden. Bitte erneut versuchen.",
     "unavailableTitle": "Teilen nicht verfügbar",
     "unavailable": "Teilen ist auf diesem Gerät nicht verfügbar.",
-    "dialogTitle": "Interview zum Kalender hinzufügen"
+    "dialogTitle": "Interview zum Kalender hinzufügen",
+    "deadlineSummary": "Frist: {position} bei {company}",
+    "deadlineDescription": "Letzter Tag, um sich als {position} bei {company} zu bewerben."
+  },
+  "outcome": {
+    "accepted": "Angebot angenommen",
+    "declined": "Angebot abgelehnt",
+    "rejected": "Nicht ausgewählt",
+    "withdrawn": "Bewerbung zurückgezogen",
+    "no_response": "Keine Antwort"
   }
 }

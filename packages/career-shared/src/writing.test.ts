@@ -4,6 +4,10 @@ import {
   employerMentions,
   employmentTenure,
   evaluateCoverLetter,
+  evaluateProse,
+  normalizeWritingContext,
+  proseReady,
+  salutationNames,
   isCoverLetterTemplateId,
   writingBody,
   writingTitle,
@@ -329,5 +333,85 @@ describe('writingBody', () => {
     expect(isCoverLetterTemplateId('editorial')).toBe(true);
     expect(isCoverLetterTemplateId('structured')).toBe(true);
     expect(isCoverLetterTemplateId('standard')).toBe(false);
+  });
+});
+
+describe('prose drafts (bio, LinkedIn, outreach, referral, thank-you)', () => {
+  const role = fact({
+    id: 'e1',
+    factType: 'experience',
+    value: { position: 'Cataloguer', company: 'Northwind Cataloguing', startDate: '2019-03', endDate: '2024-06' },
+  });
+  const skill = fact({ id: 's1', factType: 'skill', value: { name: 'SQL' } });
+  const draftOnly = fact({ id: 'd1', factType: 'skill', value: { name: 'COBOL' }, confirmation: 'draft' });
+  const facts = [role, skill, draftOnly];
+  const referral =
+    'Dear Grace, I hope you are well. I am applying for the Records Analyst role at Babbage and would be grateful for a referral. ' +
+    'At Northwind Cataloguing I worked as a cataloguer and used SQL every week to keep inventory records accurate. ' +
+    'If you are comfortable, could you pass my application to the hiring team? Thank you for considering it.';
+  const context = { organization: 'Babbage', role: 'Records Analyst', contactName: 'Grace Hopper' };
+
+  it('accepts grounded prose and records the facts it names', () => {
+    const result = evaluateProse('referral_request', { body: referral, factIds: ['e1', 'd1', 'nope'] }, facts, context);
+    expect(result).toMatchObject({ ok: true });
+    if (result.ok) expect(result.factIds).toEqual(['e1', 's1']);
+  });
+
+  it('refuses joined fact lines, short text, and missing targets', () => {
+    expect(evaluateProse('bio', { body: writingBody(facts).body }, facts)).toMatchObject({ ok: false });
+    expect(evaluateProse('thank_you', { body: 'Thanks.' }, facts)).toMatchObject({ ok: false, reason: 'incomplete_body' });
+    const noTarget = referral.replace(/Babbage/g, 'your company').replace('Records Analyst', 'open');
+    expect(evaluateProse('referral_request', { body: noTarget }, facts, context)).toMatchObject({ ok: false, reason: 'missing_target' });
+  });
+
+  it('refuses invented numbers, years, employers, contacts, and current-role claims', () => {
+    expect(
+      evaluateProse('referral_request', { body: referral.replace('every week', 'for 12 teams') }, facts, context),
+    ).toMatchObject({ ok: false, reason: 'unsupported_number', claim: '12' });
+    expect(
+      evaluateProse('referral_request', { body: referral.replace('and used', 'in 2015 and used') }, facts, context),
+    ).toMatchObject({ ok: false, reason: 'unsupported_date' });
+    expect(
+      evaluateProse('referral_request', { body: referral.replace('every week', 'every week, and later worked at Initech') }, facts, context),
+    ).toMatchObject({ ok: false, reason: 'unsupported_employer' });
+    expect(evaluateProse('referral_request', { body: referral.replace('Dear Grace', 'Dear Margaret') }, facts, context)).toMatchObject({
+      ok: false,
+      reason: 'unsupported_contact',
+    });
+    expect(evaluateProse('referral_request', { body: referral.replace('Dear Grace', 'Dear Hiring Manager') }, facts, context)).toMatchObject({
+      ok: true,
+    });
+    expect(
+      evaluateProse('referral_request', { body: referral.replace('I worked as', 'I currently work as') }, facts, context),
+    ).toMatchObject({ ok: false });
+    expect(
+      evaluateProse(
+        'referral_request',
+        { body: referral.replace('At Northwind Cataloguing I worked', 'I worked at Babbage before, and at Northwind Cataloguing I worked') },
+        facts,
+        context,
+      ),
+    ).toMatchObject({ ok: false, reason: 'target_as_past_employer' });
+  });
+
+  it('lets a thank-you note use the interview date the person gave', () => {
+    const note =
+      'Dear Grace Hopper, thank you for speaking with me on 12 November 2026 about the Records Analyst role at Babbage. ' +
+      'I enjoyed hearing how the team keeps its records accurate. I remain very interested and look forward to hearing from you.';
+    expect(evaluateProse('thank_you', { body: note }, facts, { ...context, interviewDate: '2026-11-12' })).toMatchObject({ ok: true });
+    expect(evaluateProse('thank_you', { body: note }, facts, context)).toMatchObject({ ok: false });
+  });
+
+  it('validates context and readiness before anything is charged', () => {
+    expect(normalizeWritingContext({ organization: '  Babbage  ', role: '' })).toEqual({ ok: true, context: { organization: 'Babbage' } });
+    expect(normalizeWritingContext({ salary: '1' })).toMatchObject({ ok: false, reason: 'unknown_field' });
+    expect(normalizeWritingContext({ interviewDate: '12/11/2026' })).toMatchObject({ ok: false, field: 'context.interviewDate' });
+    expect(normalizeWritingContext({ contactName: 'x'.repeat(81) })).toMatchObject({ ok: false, reason: 'too_long' });
+    expect(proseReady('thank_you', facts, { listing: false, context: {} })).toMatchObject({ ok: false, reason: 'missing_target' });
+    expect(proseReady('thank_you', facts, { listing: false, context: { role: 'Analyst' } })).toEqual({ ok: true });
+    expect(proseReady('bio', [draftOnly], { listing: false, context: {} })).toMatchObject({ reason: 'no_confirmed_facts' });
+    expect(writingTitle('thank_you', 'Babbage')).toBe('Thank-you note to Babbage');
+    expect(writingTitle('referral_request', null)).toBe('Referral request');
+    expect(salutationNames('Hello Ada Lovelace,\nBody')).toEqual(['Ada Lovelace']);
   });
 });

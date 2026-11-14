@@ -6,7 +6,11 @@
     "interviewing": "انٹرویو",
     "offer": "آفر",
     "rejected": "مسترد",
-    "accepted": "منظور"
+    "accepted": "منظور",
+    "saved": "محفوظ",
+    "preparing": "تیاری میں",
+    "offered": "پیشکش موصول",
+    "withdrawn": "واپس لی گئی"
   },
   "sort": {
     "updated": "حال ہی میں اپ ڈیٹ شدہ",
@@ -43,7 +47,9 @@
     "followUp": "فالو اپ {date}",
     "addToCalendar": "{company} میں {position} کا انٹرویو کیلنڈر میں شامل کریں",
     "restore": "{company} میں {position} بحال کریں",
-    "archive": "{company} میں {position} آرکائیو کریں"
+    "archive": "{company} میں {position} آرکائیو کریں",
+    "deadline": "آخری تاریخ {date}",
+    "checklist": "چیک لسٹ {done}/{total}"
   },
   "archive": {
     "archived": "درخواست آرکائیو ہو گئی",
@@ -95,7 +101,26 @@
     "deleteTitle": "درخواست حذف کریں",
     "deleteBody": "کیا {company} میں “{position}” حذف کریں؟ اسے واپس نہیں کیا جا سکتا۔",
     "deleteErrorTitle": "حذف نہیں ہو سکا",
-    "deleteError": "حذف کرنے میں ناکامی۔ براہ کرم دوبارہ کوشش کریں۔"
+    "deleteError": "حذف کرنے میں ناکامی۔ براہ کرم دوبارہ کوشش کریں۔",
+    "deadline": "درخواست کی آخری تاریخ",
+    "addDeadlineToCalendar": "آخری تاریخ کیلنڈر میں شامل کریں",
+    "contacts": "رابطے",
+    "contactN": "رابطہ {n}",
+    "contactRole": "کردار",
+    "contactRolePh": "مثلاً ریکروٹر",
+    "contactPhone": "فون",
+    "contactNotes": "اس رابطے کے بارے میں نوٹس",
+    "addContact": "رابطہ شامل کریں",
+    "removeContact": "رابطہ {n} ہٹائیں",
+    "checklist": "چیک لسٹ",
+    "checklistItemPh": "مثلاً پورٹ فولیو لنک",
+    "addChecklistItem": "آئٹم شامل کریں",
+    "removeChecklistItem": "آئٹم {n} ہٹائیں",
+    "checklistToggle": "آئٹم {n} مکمل",
+    "outcome": "نتیجہ: {outcome}",
+    "frozenOnLink": "منسلک کی گئی سی وی یا کور لیٹر اس درخواست کے ساتھ اسی حالت میں محفوظ رہتا ہے جیسا منسلک کرتے وقت تھا۔",
+    "frozenCv": "محفوظ سی وی ورژن: {title} (ورژن {version})",
+    "frozenLetter": "کور لیٹر کی محفوظ نقل: {title}"
   },
   "picker": {
     "chooseCv": "CV منتخب کریں",
@@ -112,6 +137,15 @@
     "error": "کیلنڈر ایونٹ نہیں بن سکا۔ براہِ کرم دوبارہ کوشش کریں۔",
     "unavailableTitle": "شیئرنگ دستیاب نہیں",
     "unavailable": "اس ڈیوائس پر شیئرنگ دستیاب نہیں ہے۔",
-    "dialogTitle": "انٹرویو کیلنڈر میں شامل کریں"
+    "dialogTitle": "انٹرویو کیلنڈر میں شامل کریں",
+    "deadlineSummary": "آخری تاریخ: {company} میں {position}",
+    "deadlineDescription": "{company} میں {position} کے لیے درخواست دینے کا آخری دن۔"
+  },
+  "outcome": {
+    "accepted": "پیشکش قبول کی",
+    "declined": "پیشکش مسترد کی",
+    "rejected": "منتخب نہیں ہوئے",
+    "withdrawn": "دستبردار ہو گئے",
+    "no_response": "کوئی جواب نہیں"
   }
 }

@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { PaymentController } from './payment.controller';
+import { PlansController } from './plans.controller';
 import { StripeWebhookController } from './stripe-webhook.controller';
 import { MobileBillingController } from './mobile-billing.controller';
 import { StoreWebhookController } from './store-webhook.controller';
@@ -20,6 +21,7 @@ import { UsersModule } from '../users/users.module';
   imports: [forwardRef(() => UsersModule)],
   controllers: [
     PaymentController,
+    PlansController,
     StripeWebhookController,
     MobileBillingController,
     StoreWebhookController,

@@ -198,13 +198,33 @@ describe('CVService template + layout tier enforcement', () => {
       expect(cv.personalInfo.firstName).toBe('Bob');
     });
 
-    it('blocks import when the CV limit is reached', async () => {
+    it('blocks import when a Free account is at its CV capacity (1 stored CV)', async () => {
       const { firestore } = makeService(SubscriptionPlan.FREE, '{}');
-      // FREE cvs limit is small; simulate at-limit by mocking usage high via a fresh service.
+      await seedCV(firestore);
+      await firestore.collection('cvs').doc('cv1').update({ deletedAt: null });
       const usersService = {
         findByIdOrThrow: jest.fn().mockResolvedValue({
           uid: 'u1', email: 'u1@x.com', photoURL: null, profile: {},
           subscription: { plan: SubscriptionPlan.FREE, status: 'active' },
+          usage: { cvsCreated: 0 },
+        }),
+        incrementUsage: jest.fn(),
+      } as any;
+      const aiService = { parseResume: jest.fn() } as any;
+      const audit = { logUserAction: jest.fn() };
+      const limited = new CVService({ firestore } as any, usersService, aiService, {
+        assertNewConsumption: jest.fn().mockResolvedValue(undefined),
+      } as any, audit as any);
+      await expect(limited.importFromResume('u1', { resumeText: 'x' })).rejects.toThrow(ForbiddenException);
+      expect(aiService.parseResume).not.toHaveBeenCalled();
+    });
+
+    it('blocks import when a LEGACY plan reached its creation limit (unchanged rule)', async () => {
+      const { firestore } = makeService(SubscriptionPlan.PRO, '{}');
+      const usersService = {
+        findByIdOrThrow: jest.fn().mockResolvedValue({
+          uid: 'u1', email: 'u1@x.com', photoURL: null, profile: {},
+          subscription: { plan: SubscriptionPlan.PRO, status: 'active' },
           usage: { cvsCreated: 9999 },
         }),
         incrementUsage: jest.fn(),
@@ -265,8 +285,8 @@ describe('CVService template + layout tier enforcement', () => {
       expect(usersService.incrementUsage).not.toHaveBeenCalledWith('u1', 'cvsCreated', -1);
     });
 
-    it('blocks a Free user at 5 creations from creating again after deleting every stored CV', async () => {
-      let cvsCreated = 5;
+    it('LEGACY Pro: blocks a user at 10 creations from creating again after deleting every stored CV', async () => {
+      let cvsCreated = 10;
       const firestore = new InMemoryFirestore();
       const usersService = {
         findByIdOrThrow: jest.fn().mockImplementation(async () => ({
@@ -274,7 +294,7 @@ describe('CVService template + layout tier enforcement', () => {
           email: 'u1@example.com',
           photoURL: null,
           profile: { website: '', linkedin: '', github: '' },
-          subscription: { plan: SubscriptionPlan.FREE, status: 'active' },
+          subscription: { plan: SubscriptionPlan.PRO, status: 'active' },
           usage: { cvsCreated },
         })),
         incrementUsage: jest.fn(async (_uid: string, field: string, amount = 1) => {
@@ -303,10 +323,38 @@ describe('CVService template + layout tier enforcement', () => {
       }
 
       expect(usersService.incrementUsage).not.toHaveBeenCalledWith('u1', 'cvsCreated', -1);
-      expect(cvsCreated).toBe(5);
+      expect(cvsCreated).toBe(10);
       await expect(service.create('u1', { title: 'Sixth', templateId: 'modern' })).rejects.toThrow(
         ForbiddenException,
       );
+    });
+
+    it('current plans count STORED CVs: Free (capacity 1) is refused a second CV, then may create after deleting', async () => {
+      const { service } = makeService(SubscriptionPlan.FREE);
+      const first = await service.create('u1', { title: 'One', templateId: 'modern' });
+      await expect(service.create('u1', { title: 'Two', templateId: 'modern' })).rejects.toThrow(ForbiddenException);
+      await service.delete(first.id, 'u1');
+      await expect(service.create('u1', { title: 'Two', templateId: 'modern' })).resolves.toMatchObject({ title: 'Two' });
+    });
+
+    it('a downgraded account keeps every stored CV readable but cannot add one over capacity', async () => {
+      const { service, firestore } = makeService(SubscriptionPlan.FREE);
+      for (let i = 0; i < 3; i++) {
+        await firestore.collection('cvs').doc('old' + i).set({
+          id: 'old' + i, userId: 'u1', templateId: 'modern', deletedAt: null,
+          styling: { layout: 'classic', primaryColor: '#000000' }, sectionOrder: [],
+        });
+      }
+      for (let i = 0; i < 3; i++) {
+        await expect(service.findByIdOrThrow('old' + i, 'u1')).resolves.toMatchObject({ id: 'old' + i });
+      }
+      await expect(service.create('u1', { title: 'New', templateId: 'modern' })).rejects.toThrow(ForbiddenException);
+    });
+
+    it('Starter (capacity 5) may create while under capacity', async () => {
+      const { service } = makeService(SubscriptionPlan.STARTER);
+      for (let i = 0; i < 5; i++) await service.create('u1', { title: 'CV ' + i, templateId: 'modern' });
+      await expect(service.create('u1', { title: 'Sixth', templateId: 'modern' })).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -330,13 +378,27 @@ describe('CVService template + layout tier enforcement', () => {
   });
 
   describe('CV limit refusals carry a stable code', () => {
-    it('create / duplicate answer 403 with code CV_LIMIT_REACHED', async () => {
+    it('create / duplicate answer 403 with code CV_LIMIT_REACHED (Free at capacity)', async () => {
       const { service, firestore } = makeService(SubscriptionPlan.FREE);
+      await seedCV(firestore);
+      await firestore.collection('cvs').doc('cv1').update({ deletedAt: null });
+      for (const attempt of [
+        () => service.create('u1', { title: 'Second', templateId: 'modern' }),
+        () => service.duplicate('cv1', 'u1'),
+      ]) {
+        const err: any = await attempt().catch((e) => e);
+        expect(err).toBeInstanceOf(ForbiddenException);
+        expect(err.getResponse()).toMatchObject({ code: 'CV_LIMIT_REACHED' });
+      }
+    });
+
+    it('create / duplicate answer 403 with code CV_LIMIT_REACHED (legacy Pro at its creation cap)', async () => {
+      const { service, firestore } = makeService(SubscriptionPlan.PRO);
       (service as any).usersService.findByIdOrThrow.mockResolvedValue({
         uid: 'u1', email: 'u1@example.com', photoURL: null,
         profile: { website: '', linkedin: '', github: '' },
-        subscription: { plan: SubscriptionPlan.FREE, status: 'active' },
-        usage: { cvsCreated: 5 },
+        subscription: { plan: SubscriptionPlan.PRO, status: 'active' },
+        usage: { cvsCreated: 10 },
       });
       await seedCV(firestore);
       for (const attempt of [

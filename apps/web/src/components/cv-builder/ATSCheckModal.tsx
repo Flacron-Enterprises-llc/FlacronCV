@@ -16,7 +16,7 @@ import InAppWarning from '@/components/shared/InAppWarning';
 import { X, Target, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAiFailureToast } from './useAiFailureToast';
-import { PLAN_CONFIGS, resolveEffectivePlan } from '@flacroncv/shared-types';
+import { effectiveUsage, type UsageSubject } from '@flacroncv/shared-types';
 
 interface ATSCheckModalProps {
   open: boolean;
@@ -82,11 +82,12 @@ export default function ATSCheckModal({ open, onClose }: ATSCheckModalProps) {
 
   if (!open) return null;
 
-  const creditsUsed = user?.usage?.aiCreditsUsed ?? 0;
-  const creditsLimit = Math.min(
-    user?.usage?.aiCreditsLimit ?? 5,
-    PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)].limits.aiCredits,
-  );
+  // Current plans spend a résumé analysis on an ATS check; legacy plans keep
+  // spending an Engine credit (same rule as UsersService.reserveAnalysis).
+  // effectiveUsage reads counters from an earlier monthly window as zero.
+  const usageNow = effectiveUsage(user as UsageSubject | null);
+  const creditsUsed = usageNow.analysesLimit === null ? usageNow.aiCreditsUsed : usageNow.analysesUsed;
+  const creditsLimit = usageNow.analysesLimit ?? usageNow.aiCreditsLimit;
   const outOfCredits = creditsUsed >= creditsLimit;
 
   const handleAnalyze = async () => {

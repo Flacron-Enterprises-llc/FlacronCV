@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Inject, Param, Patch, Post, Query, Provider } from '@nestjs/common';
-import { IsBoolean, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString, Matches, MaxLength, ValidateIf } from 'class-validator';
+import { VERIFICATION_METHODS, VERIFIED_LABELS } from '@flacroncv/career-shared';
+import type { VerificationMethod, VerifiedLabel } from '@flacroncv/career-shared';
 import { AdminService, adminUidSet, OpportunityTrustService } from '@flacroncv/career-server';
 import type { Principal } from '@flacroncv/career-server';
 import type { ModerationAction, ModerationStatus } from '@flacroncv/career-shared';
@@ -33,6 +35,40 @@ class ModerateOpportunityDto {
   @IsString()
   @MaxLength(2000)
   notes?: string;
+}
+
+class VerificationDto {
+  @IsIn([...VERIFIED_LABELS])
+  label!: VerifiedLabel;
+
+  @IsIn([...VERIFICATION_METHODS])
+  method!: VerificationMethod;
+
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  checkedOn!: string;
+
+  @IsString()
+  @MaxLength(500)
+  scope!: string;
+
+  @IsString()
+  @MaxLength(200)
+  issuerName!: string;
+
+  @IsString()
+  @MaxLength(500)
+  permissionEvidence!: string;
+
+  @IsOptional()
+  @ValidateIf((_o, value) => value !== null)
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  expiresOn?: string | null;
+}
+
+class RevokeVerificationDto {
+  @IsString()
+  @MaxLength(500)
+  reason!: string;
 }
 
 export const ADMIN_UIDS = Symbol('ADMIN_UIDS');
@@ -106,5 +142,33 @@ export class AdminController {
     @Body() body: ModerateOpportunityDto,
   ) {
     return this.trustService.moderateListing(principal, opportunityId, body);
+  }
+
+  /** Look up an item by the id the person gave support: title, type, label and check history only. Audited. */
+  @Get('admin/evidence/:evidenceId')
+  evidence(@CurrentPrincipal() principal: Principal, @Param('evidenceId') evidenceId: string) {
+    return this.admin.evidence(principal, evidenceId);
+  }
+
+  @Post('admin/evidence/:evidenceId/verifications')
+  recordVerification(@CurrentPrincipal() principal: Principal, @Param('evidenceId') evidenceId: string, @Body() body: VerificationDto) {
+    return this.admin.recordEvidenceVerification(principal, evidenceId, body);
+  }
+
+  @Post('admin/evidence/verifications/:verificationId/revoke')
+  revokeVerification(@CurrentPrincipal() principal: Principal, @Param('verificationId') verificationId: string, @Body() body: RevokeVerificationDto) {
+    return this.admin.revokeEvidenceVerification(principal, verificationId, body.reason);
+  }
+
+  /** Invitation and role counts per Business workspace. */
+  @Get('admin/business')
+  businessWorkspaces(@CurrentPrincipal() principal: Principal) {
+    return this.admin.businessWorkspaces(principal);
+  }
+
+  /** Recruiting opt-ins: operators only; the candidate screen gets a count. */
+  @Get('admin/recruiting/opt-ins')
+  recruitingOptIns(@CurrentPrincipal() principal: Principal) {
+    return this.admin.recruitingOptIns(principal);
   }
 }

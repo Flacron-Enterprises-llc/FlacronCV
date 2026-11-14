@@ -18,6 +18,7 @@ import {
   creditsLeft,
   fitLabel,
   fitTone,
+  statusBadge,
   keyForAction,
   organizationName,
   type KeyedAction,
@@ -113,6 +114,7 @@ export default function ActionPacksScreen() {
             <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">{t('actionPack.yourPacks')}</Text>
             {packs.map((pack) => {
               const progress = checklistProgress(pack);
+              const badge = statusBadge(pack);
               return (
                 <TouchableOpacity
                   key={pack.id}
@@ -137,6 +139,7 @@ export default function ActionPacksScreen() {
                     </Text>
                     <View className="flex-row items-center mt-2 gap-2">
                       <Pill label={fitLabel(pack.fit.fit)} tone={fitTone(pack.fit.fit)} />
+                      {badge ? <Pill label={badge.label} tone={badge.tone} /> : null}
                       <Text className="text-stone-400 text-xs">{`${t('actionPack.itemChecklist', { done: progress.done, total: progress.total })} · ${formatDay(pack.createdAt) ?? ''}`}</Text>
                     </View>
                   </View>

@@ -1,10 +1,16 @@
-import { INTERVIEW_STAGES, MAX_INTERVIEW_QUESTIONS } from '../../../../../packages/career-shared/src/interview';
+import {
+  INTERVIEW_STAGES,
+  MAX_INTERVIEW_QUESTIONS,
+  MAX_INTERVIEW_ROLE,
+  MIN_INTERVIEW_QUESTIONS,
+} from '../../../../../packages/career-shared/src/interview';
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type {
   InterviewFeedback,
   InterviewList,
   InterviewSession,
   InterviewStage,
+  StartInterviewInput,
 } from '../../../../../packages/career-api-client/src/types';
 import { t } from '../../i18n';
 import { careerErrorMessage } from '../career-view';
@@ -17,7 +23,42 @@ import { careerErrorMessage } from '../career-view';
  * here grants or charges.
  */
 
-export { INTERVIEW_STAGES, MAX_INTERVIEW_QUESTIONS };
+export { INTERVIEW_STAGES, MAX_INTERVIEW_QUESTIONS, MAX_INTERVIEW_ROLE, MIN_INTERVIEW_QUESTIONS };
+
+/** The choosable question counts (3 to 10), smallest first. */
+export const QUESTION_COUNT_OPTIONS: readonly number[] = Array.from(
+  { length: MAX_INTERVIEW_QUESTIONS - MIN_INTERVIEW_QUESTIONS + 1 },
+  (_, i) => MIN_INTERVIEW_QUESTIONS + i,
+);
+
+/** A whole question count inside 3..10; anything unusable becomes the server default (10). */
+export function clampQuestionCount(value: number): number {
+  if (!Number.isFinite(value)) return MAX_INTERVIEW_QUESTIONS;
+  return Math.min(MAX_INTERVIEW_QUESTIONS, Math.max(MIN_INTERVIEW_QUESTIONS, Math.round(value)));
+}
+
+export type InterviewTarget = { kind: 'listing'; opportunityId: string | null } | { kind: 'role'; role: string };
+
+/**
+ * The request body for starting a session, or a message saying what is
+ * missing. Practice needs a saved listing or a typed role (2..120 characters);
+ * the server repeats every check.
+ */
+export function startInterviewInput(
+  target: InterviewTarget,
+  stage: InterviewStage,
+  questionCount: number,
+): { ok: true; input: StartInterviewInput } | { ok: false; message: string } {
+  const count = clampQuestionCount(questionCount);
+  if (target.kind === 'listing') {
+    if (!target.opportunityId) return { ok: false, message: t('careerInterviews.list.needsTarget') };
+    return { ok: true, input: { opportunityId: target.opportunityId, stage, questionCount: count } };
+  }
+  const role = target.role.replace(/\s+/g, ' ').trim();
+  if (role.length < 2) return { ok: false, message: t('careerInterviews.list.needsTarget') };
+  if (role.length > MAX_INTERVIEW_ROLE) return { ok: false, message: t('careerInterviews.tooLong', { max: MAX_INTERVIEW_ROLE }) };
+  return { ok: true, input: { role, stage, questionCount: count } };
+}
 
 /** Stage names in the current language (getters, so they are read at render time). */
 export const STAGE_LABEL: Record<InterviewStage, string> = {
@@ -179,6 +220,16 @@ export function storyInput(draft: StoryDraft, factIds: string[]): {
   return factIds.length > 0 ? { ...body, factIds: [...factIds] } : body;
 }
 
+/** A saved story as an editable draft. */
+export function storyToDraft(story: StoryDraft): StoryDraft {
+  return { situation: story.situation, task: story.task, action: story.action, result: story.result };
+}
+
+/** True when the edit differs from the saved story (trimmed, as it would be sent). */
+export function storyChanged(draft: StoryDraft, saved: StoryDraft): boolean {
+  return STORY_FIELDS.some((field) => draft[field].trim() !== saved[field].trim());
+}
+
 /** The story field the server refused, when it named one. */
 export function storyErrorField(error: unknown): StoryField | null {
   if (!(error instanceof ApiError) || error.code !== 'validation_error') return null;
@@ -186,7 +237,7 @@ export function storyErrorField(error: unknown): StoryField | null {
   return typeof field === 'string' && (STORY_FIELDS as readonly string[]).includes(field) ? (field as StoryField) : null;
 }
 
-export type InterviewAction = 'load' | 'start' | 'answer' | 'challenge' | 'story';
+export type InterviewAction = 'load' | 'start' | 'answer' | 'challenge' | 'story' | 'deleteStory';
 
 const FALLBACK: Record<InterviewAction, () => string> = {
   load: () => t('careerInterviews.fallback.load'),
@@ -194,6 +245,7 @@ const FALLBACK: Record<InterviewAction, () => string> = {
   answer: () => t('careerInterviews.fallback.answer'),
   challenge: () => t('careerInterviews.fallback.challenge'),
   story: () => t('careerInterviews.fallback.story'),
+  deleteStory: () => t('careerInterviews.fallback.deleteStory'),
 };
 
 /** Message for a refused or failed interview request. Never claims that anything was saved. */
@@ -202,7 +254,7 @@ export function interviewErrorMessage(error: unknown, action: InterviewAction): 
     const reason = typeof error.body.reason === 'string' ? error.body.reason : null;
     if (error.code === 'provider_unavailable') return t('careerInterviews.aiProviderMissing');
     if (error.code === 'plan_upgrade_required') {
-      return action === 'story'
+      return action === 'story' || action === 'deleteStory'
         ? t('careerInterviews.errors.planStory')
         : t('careerInterviews.errors.planText');
     }
@@ -212,9 +264,14 @@ export function interviewErrorMessage(error: unknown, action: InterviewAction): 
       if (reason === 'no_confirmed_facts') return t('careerInterviews.errors.noFacts');
       if (reason === 'session_complete') return t('careerInterviews.errors.sessionComplete');
       if (reason === 'number_not_in_facts') return t('careerInterviews.errors.numberNotInFacts');
+      // STAR results must come from a confirmed achievement (server: field "result").
+      if (reason === 'no_confirmed_result') return t('careerInterviews.errors.noConfirmedResult');
+      if (reason === 'result_not_in_facts') return t('careerInterviews.errors.resultNotInFacts');
       if (reason === 'too_many') return t('careerInterviews.errors.tooManyStories');
       if (error.body.field === 'factIds') return t('careerInterviews.errors.factIds');
       if (error.body.field === 'opportunityId') return t('careerInterviews.errors.opportunityId');
+      if (error.body.field === 'role') return t('careerInterviews.list.needsTarget');
+      if (error.body.field === 'questionCount') return t('careerInterviews.errors.questionCount', { min: MIN_INTERVIEW_QUESTIONS, max: MAX_INTERVIEW_QUESTIONS });
       if (error.body.field === 'answer' || error.body.field === 'note') return t('careerInterviews.errors.emptyText');
     }
   }

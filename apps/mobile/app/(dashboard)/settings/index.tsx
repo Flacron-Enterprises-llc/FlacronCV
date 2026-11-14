@@ -16,10 +16,10 @@ import {
   signOutEverywhere,
 } from '../../../src/lib/account-settings';
 import { requestFailureMessage } from '../../../src/lib/api-errors';
-import { effectivePlanForCopy } from '../../../src/lib/entitlements';
+import { effectivePlanForCopy, planForDisplay } from '../../../src/lib/entitlements';
 import { PLAN_CONFIGS } from '../../../src/types/subscription.types';
 import { JobApplication } from '../../../src/types/job.types';
-import { Locale, SubscriptionPlan } from '../../../src/types/enums';
+import { Locale } from '../../../src/types/enums';
 import { openLegalDocument } from '../../../src/lib/legal-acceptance';
 import { PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
 import { CAREER_ENABLED } from '../../../src/config/career';
@@ -40,6 +40,7 @@ import {
   useT,
   type AppLocale,
   type TFunction,
+  hasKey,
 } from '../../../src/i18n';
 import {
   RTL_FLIP,
@@ -64,10 +65,9 @@ function loadFailureMessage(err: unknown, t: TFunction, tc: TFunction): string {
   return t('usage.loadError');
 }
 
-function planName(plan: SubscriptionPlan, t: TFunction): string {
-  if (plan === SubscriptionPlan.PRO) return t('plans.pro');
-  if (plan === SubscriptionPlan.ENTERPRISE) return t('plans.enterprise');
-  return t('plans.free');
+/** The real plan name: five-plan catalog names for current plans, the old names for legacy ones. */
+function planName(plan: string, t: TFunction): string {
+  return hasKey(`settings.plans.${plan}`) ? t(`plans.${plan}`) : t('plans.free');
 }
 
 export default function SettingsScreen() {
@@ -95,6 +95,7 @@ export default function SettingsScreen() {
   // user === null is not Free — only resolve a plan when the account document loaded.
   const plan = currentUser ? effectivePlanForCopy(currentUser.subscription) : null;
   const planConfig = plan ? PLAN_CONFIGS[plan] : null;
+  const displayPlan = currentUser ? planForDisplay(currentUser.subscription) : null;
   const pushOn = currentUser?.preferences?.pushNotifications === true;
 
   const emailCopy: Record<EmailPreferenceKey, { label: string; description: string }> = {
@@ -303,7 +304,7 @@ export default function SettingsScreen() {
           icon: 'card-outline',
           label: PAID_UPGRADES_ENABLED ? t('menu.billingPlans') : t('menu.planUsage'),
           onPress: () => router.push('/(dashboard)/settings/billing'),
-          badge: planConfig ? planName(planConfig.plan, t).toLocaleUpperCase() : undefined,
+          badge: displayPlan ? planName(displayPlan, t).toLocaleUpperCase() : undefined,
         },
       ],
     },
@@ -344,9 +345,9 @@ export default function SettingsScreen() {
                   <View className="bg-warning-bg px-2.5 py-0.5 rounded-full">
                     <Text className="text-warning text-xs font-bold">{t('header.unavailable')}</Text>
                   </View>
-                ) : plan ? (
+                ) : displayPlan ? (
                   <View className="bg-brand-100 px-2.5 py-0.5 rounded-full">
-                    <Text className="text-brand-700 text-xs font-bold">{planName(plan, t)}</Text>
+                    <Text className="text-brand-700 text-xs font-bold">{planName(displayPlan, t)}</Text>
                   </View>
                 ) : (
                   <View className="bg-stone-100 px-2.5 py-0.5 rounded-full">

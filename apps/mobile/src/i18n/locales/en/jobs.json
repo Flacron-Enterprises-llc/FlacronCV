@@ -6,7 +6,11 @@
     "interviewing": "Interviewing",
     "offer": "Offer",
     "rejected": "Rejected",
-    "accepted": "Accepted"
+    "accepted": "Accepted",
+    "saved": "Saved",
+    "preparing": "Preparing",
+    "offered": "Offered",
+    "withdrawn": "Withdrawn"
   },
   "sort": {
     "updated": "Recently updated",
@@ -43,7 +47,9 @@
     "followUp": "Follow up {date}",
     "addToCalendar": "Add interview for {position} at {company} to calendar",
     "restore": "Restore {position} at {company}",
-    "archive": "Archive {position} at {company}"
+    "archive": "Archive {position} at {company}",
+    "deadline": "Deadline {date}",
+    "checklist": "Checklist {done}/{total}"
   },
   "archive": {
     "archived": "Application archived",
@@ -95,7 +101,26 @@
     "deleteTitle": "Delete application",
     "deleteBody": "Delete “{position}” at {company}? This cannot be undone.",
     "deleteErrorTitle": "Could not delete",
-    "deleteError": "Failed to delete. Please try again."
+    "deleteError": "Failed to delete. Please try again.",
+    "deadline": "Application deadline",
+    "addDeadlineToCalendar": "Add deadline to calendar",
+    "contacts": "Contacts",
+    "contactN": "Contact {n}",
+    "contactRole": "Role",
+    "contactRolePh": "e.g. Recruiter",
+    "contactPhone": "Phone",
+    "contactNotes": "Notes about this contact",
+    "addContact": "Add contact",
+    "removeContact": "Remove contact {n}",
+    "checklist": "Checklist",
+    "checklistItemPh": "e.g. Portfolio link",
+    "addChecklistItem": "Add item",
+    "removeChecklistItem": "Remove item {n}",
+    "checklistToggle": "Item {n} done",
+    "outcome": "Outcome: {outcome}",
+    "frozenOnLink": "The CV or cover letter you link is kept with this application as it is when linked.",
+    "frozenCv": "Saved CV version: {title} (version {version})",
+    "frozenLetter": "Saved cover letter copy: {title}"
   },
   "picker": {
     "chooseCv": "Choose a CV",
@@ -112,6 +137,15 @@
     "error": "Couldn't create the calendar event. Please try again.",
     "unavailableTitle": "Sharing unavailable",
     "unavailable": "Sharing is not available on this device.",
-    "dialogTitle": "Add interview to calendar"
+    "dialogTitle": "Add interview to calendar",
+    "deadlineSummary": "Deadline: {position} at {company}",
+    "deadlineDescription": "Last day to apply for {position} at {company}."
+  },
+  "outcome": {
+    "accepted": "Offer accepted",
+    "declined": "Offer declined",
+    "rejected": "Not selected",
+    "withdrawn": "Withdrew",
+    "no_response": "No response"
   }
 }

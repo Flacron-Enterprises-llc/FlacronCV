@@ -8,9 +8,17 @@ import { ApiError } from '@/lib/api';
 import { coverLetterAllowance, isCoverLetterLimitError } from './letter-allowance';
 
 describe('coverLetterAllowance', () => {
-  it('a Free user who has used the allowance is at the limit', () => {
-    expect(coverLetterAllowance(SubscriptionPlan.FREE, 1, true).atLimit).toBe(true);
-    expect(coverLetterAllowance(SubscriptionPlan.FREE, 0, true).atLimit).toBe(false);
+  it('a LEGACY Pro user who has used the creation allowance is at the limit', () => {
+    expect(coverLetterAllowance(SubscriptionPlan.PRO, 20, true).atLimit).toBe(true);
+    expect(coverLetterAllowance(SubscriptionPlan.PRO, 19, true).atLimit).toBe(false);
+  });
+
+  it('current plans (capacity of stored letters) are not pre-checked from the creation counter — the API decides', () => {
+    for (const plan of [SubscriptionPlan.FREE, SubscriptionPlan.STARTER, SubscriptionPlan.BUSINESS]) {
+      const a = coverLetterAllowance(plan, 999, true);
+      expect(a.limited).toBe(false);
+      expect(a.atLimit).toBe(false);
+    }
   });
 
   it('never blocks on a degraded/placeholder profile (it may be a paying user)', () => {

@@ -6,17 +6,33 @@ import type { WritingType } from '../../../../../../packages/career-api-client/s
 import { CareerHeader } from '../../../../src/components/career/CareerHeader';
 import { Button } from '../../../../src/components/ui/Button';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
+import { Input } from '../../../../src/components/ui/Input';
 import { useCreateWriting } from '../../../../src/hooks/career/documents';
 import { useCareerAccess, useCareerOpportunities, useCareerWritingList } from '../../../../src/hooks/useCareer';
 import { useT } from '../../../../src/i18n';
-import { creditLine, LETTER_TEMPLATE_OPTIONS, paidFailure, WRITING_TYPE_OPTIONS } from '../../../../src/lib/career/documents';
+import {
+  creditLine,
+  EMPTY_WRITING_CONTEXT,
+  isTargetedWritingType,
+  LETTER_TEMPLATE_OPTIONS,
+  paidFailure,
+  takesWritingContext,
+  WRITING_CONTEXT_LIMITS,
+  WRITING_TYPE_OPTIONS,
+  writingContextInput,
+  type WritingContextDraft,
+} from '../../../../src/lib/career/documents';
 
 /**
- * Write a cover letter, bio, LinkedIn text or outreach draft from confirmed
- * facts (website: resume studio "What to write"). Uses one document credit;
- * the request carries an idempotency key that a retry of the same request
- * reuses, so a lost response never charges twice. It stays a draft:
- * FlacronCV does not send it.
+ * Write a cover letter, bio, LinkedIn text, outreach, referral request or
+ * thank-you draft from confirmed facts (website: resume studio "What to
+ * write"). Uses one document credit; the request carries an idempotency key
+ * that a retry of the same request reuses, so a lost response never charges
+ * twice. Optional notes about the recipient are repeated, never added to; a
+ * referral request or thank-you note needs a listing or an organization/role.
+ * While no writing model is connected the server refuses before reserving a
+ * credit, so the screen says "not connected" and offers no paid button.
+ * It stays a draft: FlacronCV does not send it.
  */
 export default function NewCareerWritingScreen() {
   const router = useRouter();
@@ -29,23 +45,39 @@ export default function NewCareerWritingScreen() {
   const [type, setType] = useState<WritingType>('cover_letter');
   const [templateId, setTemplateId] = useState('classic');
   const [opportunityId, setOpportunityId] = useState<string | null>(null);
+  const [notes, setNotes] = useState<WritingContextDraft>(EMPTY_WRITING_CONTEXT);
+  const [notesError, setNotesError] = useState<string | null>(null);
   const credits = creditLine(writing.data?.documentCredit);
+  // Unknown (list not loaded) is not "not connected": only an explicit false from the server hides the paid button.
+  const notConnected = writing.data?.textModelConfigured === false;
 
-  const run = () => {
+  const setNote = (key: keyof WritingContextDraft, value: string) => {
+    setNotes((prev) => ({ ...prev, [key]: value }));
+    setNotesError(null);
+  };
+
+  const run = (context: ReturnType<typeof writingContextInput>) => {
+    if (!context.ok) return;
     create.mutate(
-      { type, opportunityId, templateId: type === 'cover_letter' ? templateId : undefined },
+      { type, opportunityId, templateId: type === 'cover_letter' ? templateId : undefined, context: context.context },
       { onSuccess: (paid) => router.replace(`/(dashboard)/career/documents/letter/${paid.document.id}` as Href) },
     );
   };
 
   const onWrite = () => {
-    if (create.isPending) return;
+    if (create.isPending || notConnected) return;
+    const context = writingContextInput(type, notes, opportunityId !== null);
+    if (!context.ok) {
+      setNotesError(context.message);
+      return;
+    }
+    setNotesError(null);
     Alert.alert(
       tk('shared.usesOneCredit'),
       [credits, t('newWriting.confirmBody')].filter(Boolean).join(' '),
       [
         { text: tk('shared.leave'), style: 'cancel' },
-        { text: t('newWriting.writeWithCredit'), onPress: run },
+        { text: t('newWriting.writeWithCredit'), onPress: () => run(context) },
       ],
     );
   };
@@ -102,7 +134,42 @@ export default function NewCareerWritingScreen() {
           {opportunities.isLoading ? <Text className="text-stone-500 text-xs mt-2">{t('newWriting.loadingOpps')}</Text> : null}
           {opportunities.error ? <Text className="text-stone-500 text-xs mt-2">{t('newWriting.oppsFailed')}</Text> : null}
         </View>
+        {takesWritingContext(type) ? (
+          <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-4">
+            <Text className="text-sm font-semibold text-stone-700 mb-1">{t('newWriting.notesTitle')}</Text>
+            <Text className="text-stone-500 text-xs mb-3 leading-4">
+              {isTargetedWritingType(type) && opportunityId === null ? t('newWriting.notesNeeded') : t('newWriting.notesHelp')}
+            </Text>
+            <Input label={t('newWriting.organization')} value={notes.organization} onChangeText={(v) => setNote('organization', v)} maxLength={WRITING_CONTEXT_LIMITS.organization} />
+            <Input label={t('newWriting.role')} value={notes.role} onChangeText={(v) => setNote('role', v)} maxLength={WRITING_CONTEXT_LIMITS.role} />
+            <Input label={t('newWriting.contactName')} value={notes.contactName} onChangeText={(v) => setNote('contactName', v)} maxLength={WRITING_CONTEXT_LIMITS.contactName} />
+            <Input label={t('newWriting.contactRole')} value={notes.contactRole} onChangeText={(v) => setNote('contactRole', v)} maxLength={WRITING_CONTEXT_LIMITS.contactRole} />
+            {type === 'thank_you' ? (
+              <Input
+                label={t('newWriting.interviewDate')}
+                value={notes.interviewDate}
+                onChangeText={(v) => setNote('interviewDate', v)}
+                placeholder="YYYY-MM-DD"
+                hint={t('newWriting.dateHint')}
+                maxLength={10}
+                keyboardType="numbers-and-punctuation"
+                autoCorrect={false}
+              />
+            ) : null}
+            {notesError ? (
+              <Text className="text-warning text-sm leading-5" accessibilityLiveRegion="polite">
+                {notesError}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
         {credits ? <Text className="text-stone-500 text-xs mt-4 leading-4">{credits}</Text> : null}
+        {notConnected ? (
+          <View className="bg-stone-100 rounded-xl p-3 mt-4" accessibilityLiveRegion="polite">
+            <Text className="text-stone-800 text-sm font-semibold">{t('newWriting.notConnectedTitle')}</Text>
+            <Text className="text-stone-700 text-sm mt-1 leading-5">{t('newWriting.notConnected')}</Text>
+          </View>
+        ) : null}
         {failure ? (
           <View className="bg-warning-bg rounded-xl p-3 mt-4" accessibilityLiveRegion="polite">
             <Text className="text-warning text-sm font-semibold">{failure.title}</Text>
@@ -111,7 +178,7 @@ export default function NewCareerWritingScreen() {
         ) : null}
       </ScrollView>
       <View className="absolute bottom-0 start-0 end-0 bg-white border-t border-stone-100 px-5 py-3">
-        <Button fullWidth onPress={onWrite} loading={create.isPending}>
+        <Button fullWidth onPress={onWrite} loading={create.isPending} disabled={notConnected}>
           {t('newWriting.writeFromFacts')}
         </Button>
       </View>

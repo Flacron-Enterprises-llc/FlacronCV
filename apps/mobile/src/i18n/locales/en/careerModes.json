@@ -33,79 +33,117 @@
       "body": "Add your primary location or target relocation cities to power radius-aware opportunity matching."
     },
     "editA11y": "Edit {place}",
-    "deleteA11y": "Delete {place}"
+    "deleteA11y": "Delete {place}",
+    "groupCurrent": "Current places",
+    "groupFuture": "Future places",
+    "authNeverAssumed": "Work authorization and licence validity are never assumed: they stay \"not stated\" until you choose otherwise, for each place."
   },
   "specialist": {
     "upgrade": {
       "title": "Specialist modes are not included in your current plan",
-      "body": "Specialist career modes adapt drafts for Engineering, Executive Leadership, Design, Research, and Career Pivots."
+      "body": "Specialist modes (students, career changers, veterans, military spouses, international candidates, licensed trades and more) are included from the Starter plan."
     },
     "loadFailed": "Could not load your specialist mode.",
     "guidelinesTooLong": "Keep the custom guidelines under {max} characters.",
     "saved": "Specialist career mode updated.",
-    "intro": "Select a career lens to adapt resume emphasis, prompt weighting, and fit analysis to your specific discipline.",
+    "intro": "Choose the situations that fit you. Suggestions, wording and checklists adapt; your facts stay the same.",
     "activeMode": "ACTIVE MODE",
-    "recommendedFocus": "RECOMMENDED FOCUS",
     "guidelinesTitle": "Discipline guidelines & custom focus",
     "guidelinesLabel": "Custom guidelines (optional)",
     "guidelinesPlaceholder": "Add any specific industry context, methodologies, or personal focus areas to guide drafts.",
     "save": "Save specialist mode",
     "upgradeRequired": "Specialist career modes are not included in your current plan.",
     "saveFailed": "Failed to save specialist mode. Please try again.",
+    "pick": "Choose up to {max} situations that fit you.",
+    "noQuota": "Modes change wording, suggestions and checklists. They never add facts to your profile and never add or remove credits.",
+    "checklistHeading": "Checklist for your situation",
+    "suggestedFilters": "Suggested search filters:",
+    "noneSelected": "No situation selected. Suggestions stay general.",
     "modes": {
-      "general": {
-        "name": "Standard Professional",
-        "description": "Balanced presentation across functional skills, career trajectory, and practical outcomes.",
-        "focus1": "Core Competencies",
-        "focus2": "Key Achievements",
-        "focus3": "Team Collaboration",
-        "promptModifier": "Emphasize verified outcomes, clarity of impact, and strong functional mastery."
+      "students_graduates": {
+        "name": "Students and graduates",
+        "description": "First resumes, projects, internships and early-career programs."
       },
-      "technical_engineering": {
-        "name": "Technical & Engineering",
-        "description": "Prioritizes architecture decisions, scale, technical stack depth, and quantitative performance.",
-        "focus1": "System Architecture",
-        "focus2": "Language & Framework Depth",
-        "focus3": "Scale & Latency Metrics",
-        "focus4": "Open Source",
-        "promptModifier": "Focus on technical rigor, system complexity, reliability metrics, and concrete engineering decisions."
+      "career_changers": {
+        "name": "Career changers",
+        "description": "Transferable skills, bridge roles and practical learning steps."
       },
-      "executive_leadership": {
-        "name": "Executive & Leadership",
-        "description": "Highlights P&L ownership, organizational transformation, board interactions, and executive vision.",
-        "focus1": "P&L Management",
-        "focus2": "Organizational Scaling",
-        "focus3": "Strategic Roadmaps",
-        "focus4": "Stakeholder Alignment",
-        "promptModifier": "Frame experiences through strategic leadership, revenue growth, talent development, and governance."
+      "experienced_professionals": {
+        "name": "Experienced professionals",
+        "description": "Leadership achievements and promotion preparation."
       },
-      "creative_design": {
-        "name": "Creative & Design",
-        "description": "Centers on product empathy, portfolio case studies, user research methodologies, and brand craft.",
-        "focus1": "Design Systems",
-        "focus2": "User Research & Discovery",
-        "focus3": "Case Studies",
-        "focus4": "Cross-functional Critique",
-        "promptModifier": "Highlight design process, user problem framing, prototyping craft, and business metric impact."
+      "freelancers": {
+        "name": "Freelancers",
+        "description": "Service profiles, proposals, contract tracking and portfolios."
       },
-      "academic_research": {
-        "name": "Academic & Research",
-        "description": "Emphasizes peer-reviewed publications, grant awards, teaching, and experimental methodology.",
-        "focus1": "Peer-reviewed Publications",
-        "focus2": "Grant Funding",
-        "focus3": "Lab Direction",
-        "focus4": "Conference Proceedings",
-        "promptModifier": "Highlight research methodology, citation impact, grant management, and theoretical contributions."
+      "returning_workers": {
+        "name": "Returning to work",
+        "description": "Career-break explanations, skills refresh and flexible work."
       },
-      "career_transition": {
-        "name": "Career Pivot / Entry",
-        "description": "Bridges transferable capabilities from prior domains into target industries with focused narratives.",
-        "focus1": "Transferable Skills",
-        "focus2": "Rapid Upskilling Evidence",
-        "focus3": "Domain Analogies",
-        "focus4": "Self-directed Projects",
-        "promptModifier": "Translate previous domain expertise into target industry language with clear evidence of rapid mastery."
+      "veterans": {
+        "name": "Veterans",
+        "description": "Military-to-civilian skills translation and published hiring pathways."
+      },
+      "military_spouses": {
+        "name": "Military spouses",
+        "description": "Portable careers, moving dates, location profiles and flexible work."
+      },
+      "international_candidates": {
+        "name": "International candidates",
+        "description": "Country-specific resume guidance and the sponsorship status you state."
+      },
+      "trades_licensed": {
+        "name": "Trades and licensed professionals",
+        "description": "Credential tracking and expiry reminders."
       }
+    },
+    "checklist": {
+      "add_projects": "Add projects you led or contributed to",
+      "add_internships": "Record internships, volunteering and part-time work as they were",
+      "education_first": "Put education near the top while work history is short",
+      "early_career_programs": "Look at graduate schemes and early-career programs",
+      "map_transferable_skills": "Map your confirmed skills to the target role",
+      "bridge_roles": "Consider bridge roles that use what you already do",
+      "learning_sequence": "Plan learning in the order that unlocks applications soonest",
+      "leadership_achievements": "Record leadership achievements with their scope",
+      "promotion_goal": "Set a promotion goal",
+      "quantified_results": "Add results with the numbers you can stand behind",
+      "service_profile": "Write a short service profile",
+      "client_case_studies": "Prepare client case studies you are allowed to share",
+      "contract_tracking": "Track contracts and proposals in your applications",
+      "portfolio_page": "Publish a portfolio page",
+      "career_break_explanation": "Write a one-line career-break explanation in your own words",
+      "skills_refresh": "Refresh skills that changed during the break",
+      "flexible_work": "Look for flexible, part-time or remote roles",
+      "translate_military_skills": "Translate each military role into civilian duties you approve",
+      "civilian_titles": "Choose civilian job titles, keeping the original alongside",
+      "published_veteran_pathways": "Check published veteran hiring pathways (no preference is assumed)",
+      "clearance_stated": "State a security clearance only if you hold one",
+      "portable_career": "Favour skills and roles that travel with you",
+      "moving_dates": "Enter your move and availability dates",
+      "future_location_profile": "Add the next duty location as a future place",
+      "published_spouse_pathways": "Check published military-spouse hiring pathways",
+      "country_resume_format": "Follow the target country’s resume format (general guidance, not legal advice)",
+      "state_sponsorship": "State your work authorization or sponsorship need for each place",
+      "credential_recognition": "Check whether your qualifications are recognised there",
+      "language_levels": "Record your language levels",
+      "credential_tracking": "Record each licence with issuer and region",
+      "expiry_reminders": "Add expiry and review dates for reminders",
+      "license_regions": "Note where each licence is valid",
+      "license_transfer_check": "Confirm licence validity before moving; it is never assumed"
+    },
+    "filters": {
+      "experienceLevel_entry": "Entry level",
+      "experienceLevel_any": "Any experience level",
+      "experienceLevel_senior": "Senior",
+      "employmentType_internship": "Internships",
+      "employmentType_contract": "Contracts",
+      "schedule_flexible": "Flexible hours",
+      "workMode_remote": "Remote",
+      "pathway_veteran": "Published veteran pathways",
+      "pathway_military_spouse": "Published military-spouse pathways",
+      "sponsorship_stated": "Listings that state sponsorship",
+      "license_required": "Roles that require a licence"
     }
   },
   "location": {
@@ -121,7 +159,8 @@
       "permanent_resident": "Permanent Resident / Green Card",
       "visa_holder": "Current Work Visa",
       "needs_sponsorship": "Requires Visa Sponsorship",
-      "authorized": "Authorized to Work"
+      "authorized": "Authorized to Work",
+      "not_stated": "Not stated"
     },
     "remote": {
       "hybrid": "Hybrid Preferred",
@@ -134,14 +173,20 @@
       "placeTooLong": "Keep the location under {max} characters.",
       "radiusTooLarge": "Your plan allows a radius of up to {radius} miles.",
       "notesTooLong": "Keep the notes under {max} characters.",
-      "placeInvalid": "Enter a location under {max} characters."
+      "placeInvalid": "Enter a location under {max} characters.",
+      "dateInvalid": "Enter a real date (for example, 31 February does not exist).",
+      "remoteRegionTooLong": "Keep the remote region under {max} characters."
     },
     "quotaHint": "Using {used} of {capacity} location profiles. Plan local search radius: up to {radius} miles.",
     "line": {
       "radius": "Radius: ~{radius} miles",
       "timeline": "Timeline: {value}",
       "workAuth": "Work auth: {value}",
-      "commute": "Max commute: ≤ {minutes} min · {remote}"
+      "commute": "Max commute: ≤ {minutes} min · {remote}",
+      "remoteRegion": "Remote region: {value}",
+      "moveDate": "Moving: {value}",
+      "availableFrom": "Available from: {value}",
+      "license": "Licences valid here: {value}"
     },
     "badge": {
       "relocation": "RELOCATION TARGET",
@@ -152,7 +197,13 @@
       "radius": "Radius exceeds your plan allowance.",
       "saveFailed": "Failed to save location profile. Please check inputs and try again.",
       "deleteFailed": "Failed to delete location profile."
-    }
+    },
+    "license": {
+      "not_stated": "Not stated",
+      "confirmed": "Yes, I have confirmed it",
+      "not_confirmed": "No, or still to check"
+    },
+    "notStated": "Not stated"
   },
   "editor": {
     "titleAdd": "Add location profile",
@@ -169,8 +220,6 @@
     "radiusHint": "Plan maximum radius: {radius} miles",
     "commuteLabel": "Maximum daily commute",
     "commuteValue": "{value} min",
-    "relocationLabel": "This is a target relocation destination (not my current home)",
-    "relocationA11y": "This is a target relocation destination",
     "timelineLabel": "Target move timeline",
     "workAuthLabel": "Work authorization in area",
     "remoteLabel": "Work arrangement flexibility",
@@ -179,7 +228,19 @@
     "save": "Save location profile",
     "delete": "Delete location profile",
     "decrease": "Decrease {label}",
-    "increase": "Increase {label}"
+    "increase": "Increase {label}",
+    "kindLabel": "This place is",
+    "kindCurrent": "Where I search now",
+    "kindFuture": "Where I am moving",
+    "remoteRegionLabel": "Remote work region",
+    "remoteRegionPlaceholder": "e.g. European Union, United States",
+    "remoteRegionHint": "Where remote employers must allow you to work from. This is separate from the city radius.",
+    "moveDateLabel": "Move date",
+    "availableFromLabel": "Available to start from",
+    "licenseLabel": "My licences are valid here",
+    "licenseNeverAssumed": "A licence or credential is never assumed to transfer to another country, state or region.",
+    "authNeverAssumed": "Work authorization and licence validity are never assumed: they stay \"not stated\" until you choose otherwise, for each place.",
+    "dateHint": "Format YYYY-MM-DD. Leave empty if you do not know yet."
   },
   "recruiting": {
     "title": "Recruiting opt-in",
@@ -197,7 +258,12 @@
     "discoverableTitle": "Discoverable to employers",
     "optedIn": "OPTED IN",
     "notOptedIn": "NOT OPTED IN",
-    "footer": "You can change this at any time. Turning it off removes you from employer search."
+    "footer": "You can change this at any time. Turning it off removes you from employer search.",
+    "searchCount": "{count, plural, =0 {No one has opted in yet.} one {# person has opted in.} other {# people have opted in.}}",
+    "countTitle": "How many people opted in?",
+    "countHelp": "Only a total is shown. Nobody can see who opted in.",
+    "countButton": "Show the total",
+    "countFailed": "The total could not be read. Try again."
   },
   "data": {
     "title": "Career data",

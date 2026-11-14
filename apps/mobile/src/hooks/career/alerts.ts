@@ -47,6 +47,15 @@ export function useAlertActions() {
   const uid = useUid();
   const refresh = (what: string) => queryClient.invalidateQueries({ queryKey: ['career', uid, what] });
   return {
+    // Marking read only changes the badge; a failure is harmless and the next load shows the server's state.
+    markRead: useMutation({
+      mutationFn: (alertId: string) => careerApi.markAlertRead(alertId),
+      onSuccess: () => void refresh('alerts'),
+    }),
+    markAllRead: useMutation({
+      mutationFn: () => careerApi.markAllAlertsRead(),
+      onSuccess: () => void refresh('alerts'),
+    }),
     saveSettings: useMutation({
       mutationFn: (patch: AlertSettings) => careerApi.updateAlertSettings(patch),
       onSuccess: (settings) => {

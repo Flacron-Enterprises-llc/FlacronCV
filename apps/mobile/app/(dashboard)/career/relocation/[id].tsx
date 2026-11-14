@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CareerHeader } from '../../../../src/components/career/CareerHeader';
 import { Button } from '../../../../src/components/ui/Button';
@@ -26,6 +26,8 @@ import {
   draftToCreateInput,
   draftToPatch,
   emptyLocationDraft,
+  KIND_OPTIONS,
+  LICENSE_OPTIONS,
   locationDeleteError,
   locationSaveError,
   locationToDraft,
@@ -33,6 +35,7 @@ import {
   PLACE_MAX,
   RADIUS_MIN,
   RADIUS_STEP,
+  REGION_MAX,
   REMOTE_OPTIONS,
   stepValue,
   TIMELINE_OPTIONS,
@@ -185,19 +188,43 @@ export default function CareerLocationEditorScreen() {
               canDecrease={current.commuteMinutesMax > COMMUTE_MIN}
               canIncrease={current.commuteMinutesMax < COMMUTE_MAX}
             />
-            <View className="flex-row items-center justify-between min-h-[44px] mb-4">
-              <Text className="text-sm font-medium text-stone-700 flex-1 me-3">{t('editor.relocationLabel')}</Text>
-              <Switch
-                value={current.isRelocation}
-                onValueChange={(v) => set('isRelocation', v)}
-                accessibilityLabel={t('editor.relocationA11y')}
-                accessibilityState={{ checked: current.isRelocation }}
-                trackColor={{ true: colors.brand[600], false: colors.stone[300] }}
-              />
-            </View>
+            <Choices label={t('editor.kindLabel')} options={KIND_OPTIONS} value={current.kind} onChange={(v) => set('kind', v)} />
             <Choices label={t('editor.timelineLabel')} options={TIMELINE_OPTIONS} value={current.targetTimeline} onChange={(v) => set('targetTimeline', v)} />
-            <Choices label={t('editor.workAuthLabel')} options={WORK_AUTH_OPTIONS} value={current.workAuthorization} onChange={(v) => set('workAuthorization', v)} />
+            <Input
+              label={t('editor.moveDateLabel')}
+              value={current.moveDate}
+              onChangeText={(v) => set('moveDate', v)}
+              placeholder="YYYY-MM-DD"
+              hint={t('editor.dateHint')}
+              maxLength={10}
+              autoCorrect={false}
+              autoCapitalize="none"
+              keyboardType="numbers-and-punctuation"
+            />
+            <Input
+              label={t('editor.availableFromLabel')}
+              value={current.availableFrom}
+              onChangeText={(v) => set('availableFrom', v)}
+              placeholder="YYYY-MM-DD"
+              hint={t('editor.dateHint')}
+              maxLength={10}
+              autoCorrect={false}
+              autoCapitalize="none"
+              keyboardType="numbers-and-punctuation"
+            />
+            <Input
+              label={t('editor.remoteRegionLabel')}
+              value={current.remoteRegion}
+              onChangeText={(v) => set('remoteRegion', v)}
+              placeholder={t('editor.remoteRegionPlaceholder')}
+              hint={t('editor.remoteRegionHint')}
+              maxLength={REGION_MAX}
+            />
             <Choices label={t('editor.remoteLabel')} options={REMOTE_OPTIONS} value={current.remoteFlexibility} onChange={(v) => set('remoteFlexibility', v)} />
+            <Choices label={t('editor.workAuthLabel')} options={WORK_AUTH_OPTIONS} value={current.workAuthorization} onChange={(v) => set('workAuthorization', v)} />
+            <Text className="-mt-2 mb-4 text-xs text-stone-500 leading-4">{t('editor.authNeverAssumed')}</Text>
+            <Choices label={t('editor.licenseLabel')} options={LICENSE_OPTIONS} value={current.licenseTransfer} onChange={(v) => set('licenseTransfer', v)} />
+            <Text className="-mt-2 mb-4 text-xs text-stone-500 leading-4">{t('editor.licenseNeverAssumed')}</Text>
             <Input
               label={t('editor.notesLabel')}
               value={current.notes}

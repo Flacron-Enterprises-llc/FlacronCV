@@ -33,79 +33,117 @@
       "body": "Füge deinen Hauptstandort oder Ziel-Städte für einen Umzug hinzu, um Stellenangebote im passenden Umkreis zu finden."
     },
     "editA11y": "{place} bearbeiten",
-    "deleteA11y": "{place} löschen"
+    "deleteA11y": "{place} löschen",
+    "groupCurrent": "Aktuelle Orte",
+    "groupFuture": "Künftige Orte",
+    "authNeverAssumed": "Arbeitserlaubnis und Gültigkeit von Lizenzen werden nie angenommen: Sie bleiben je Ort „nicht angegeben“, bis Sie etwas anderes wählen."
   },
   "specialist": {
     "upgrade": {
       "title": "Spezialisierte Modi sind in deinem aktuellen Tarif nicht enthalten",
-      "body": "Spezialisierte Karrieremodi passen Entwürfe für Engineering, Führungspositionen, Design, Forschung und berufliche Neuorientierung an."
+      "body": "Spezialmodi (Studierende, Berufswechsel, Veteranen, Militärpartner, internationale Bewerber, zulassungspflichtige Berufe u. a.) sind ab dem Starter-Tarif enthalten."
     },
     "loadFailed": "Dein spezialisierter Modus konnte nicht geladen werden.",
     "guidelinesTooLong": "Die eigenen Richtlinien dürfen höchstens {max} Zeichen lang sein.",
     "saved": "Spezialisierter Karrieremodus aktualisiert.",
-    "intro": "Wähle eine Karriereperspektive, um Schwerpunkte im Lebenslauf, die Gewichtung der Prompts und die Passungsanalyse an dein Fachgebiet anzupassen.",
+    "intro": "Wählen Sie passende Situationen. Vorschläge, Formulierungen und Checklisten passen sich an; Ihre Fakten bleiben gleich.",
     "activeMode": "AKTIVER MODUS",
-    "recommendedFocus": "EMPFOHLENER SCHWERPUNKT",
     "guidelinesTitle": "Fachliche Richtlinien & eigener Schwerpunkt",
     "guidelinesLabel": "Eigene Richtlinien (optional)",
     "guidelinesPlaceholder": "Füge Branchenkontext, Methoden oder persönliche Schwerpunkte hinzu, um die Entwürfe zu steuern.",
     "save": "Spezialisierten Modus speichern",
     "upgradeRequired": "Spezialisierte Karrieremodi sind in deinem aktuellen Tarif nicht enthalten.",
     "saveFailed": "Spezialisierter Modus konnte nicht gespeichert werden. Bitte versuche es erneut.",
+    "pick": "Wählen Sie bis zu {max} passende Situationen.",
+    "noQuota": "Modi ändern Formulierungen, Vorschläge und Checklisten. Sie fügen Ihrem Profil nie Fakten hinzu und ändern kein Guthaben.",
+    "checklistHeading": "Checkliste für Ihre Situation",
+    "suggestedFilters": "Vorgeschlagene Suchfilter:",
+    "noneSelected": "Keine Situation ausgewählt. Die Vorschläge bleiben allgemein.",
     "modes": {
-      "general": {
-        "name": "Standard-Profil",
-        "description": "Ausgewogene Darstellung von Fachkompetenzen, Karriereverlauf und praktischen Ergebnissen.",
-        "focus1": "Kernkompetenzen",
-        "focus2": "Wichtigste Erfolge",
-        "focus3": "Teamarbeit",
-        "promptModifier": "Betont belegte Ergebnisse, klare Wirkung und fundierte Fachkompetenz."
+      "students_graduates": {
+        "name": "Studierende und Absolventen",
+        "description": "Erste Lebensläufe, Projekte, Praktika und Einstiegsprogramme."
       },
-      "technical_engineering": {
-        "name": "Technik & Engineering",
-        "description": "Priorisiert Architekturentscheidungen, Skalierung, technische Tiefe und messbare Leistung.",
-        "focus1": "Systemarchitektur",
-        "focus2": "Tiefe in Sprachen & Frameworks",
-        "focus3": "Skalierungs- & Latenzmetriken",
-        "focus4": "Quelloffene Software",
-        "promptModifier": "Fokus auf technische Sorgfalt, Systemkomplexität, Zuverlässigkeitsmetriken und konkrete Engineering-Entscheidungen."
+      "career_changers": {
+        "name": "Berufswechsel",
+        "description": "Übertragbare Fähigkeiten, Brückenrollen und praktische Lernschritte."
       },
-      "executive_leadership": {
-        "name": "Führung & Management",
-        "description": "Hebt GuV-Verantwortung, organisatorischen Wandel, Zusammenarbeit mit dem Vorstand und strategische Vision hervor.",
-        "focus1": "GuV-Verantwortung",
-        "focus2": "Organisationswachstum",
-        "focus3": "Strategische Roadmaps",
-        "focus4": "Abstimmung mit Stakeholdern",
-        "promptModifier": "Stellt Erfahrungen über strategische Führung, Umsatzwachstum, Talententwicklung und Governance dar."
+      "experienced_professionals": {
+        "name": "Erfahrene Fachkräfte",
+        "description": "Führungserfolge und Vorbereitung auf eine Beförderung."
       },
-      "creative_design": {
-        "name": "Kreativ & Design",
-        "description": "Stellt Produktempathie, Portfolio-Fallstudien, Methoden der Nutzerforschung und Markenhandwerk in den Mittelpunkt.",
-        "focus1": "Designsysteme",
-        "focus2": "Nutzerforschung & Discovery",
-        "focus3": "Fallstudien",
-        "focus4": "Bereichsübergreifende Kritik",
-        "promptModifier": "Hebt Designprozess, Formulierung von Nutzerproblemen, Prototyping und Wirkung auf Geschäftskennzahlen hervor."
+      "freelancers": {
+        "name": "Freiberufler",
+        "description": "Leistungsprofile, Angebote, Vertragsübersicht und Portfolios."
       },
-      "academic_research": {
-        "name": "Wissenschaft & Forschung",
-        "description": "Betont begutachtete Publikationen, eingeworbene Fördermittel, Lehre und experimentelle Methodik.",
-        "focus1": "Begutachtete Publikationen",
-        "focus2": "Fördermittel",
-        "focus3": "Laborleitung",
-        "focus4": "Tagungsbeiträge",
-        "promptModifier": "Hebt Forschungsmethodik, Zitationswirkung, Fördermittelmanagement und theoretische Beiträge hervor."
+      "returning_workers": {
+        "name": "Wiedereinstieg",
+        "description": "Auszeit erklären, Kenntnisse auffrischen und flexibel arbeiten."
       },
-      "career_transition": {
-        "name": "Neuorientierung / Einstieg",
-        "description": "Überträgt übertragbare Fähigkeiten aus früheren Bereichen mit gezielten Darstellungen in die Zielbranchen.",
-        "focus1": "Übertragbare Fähigkeiten",
-        "focus2": "Belege für schnelles Weiterlernen",
-        "focus3": "Analogien zwischen Fachgebieten",
-        "focus4": "Eigeninitiierte Projekte",
-        "promptModifier": "Überträgt bisherige Fachkenntnisse in die Sprache der Zielbranche, mit klaren Belegen für schnelles Lernen."
+      "veterans": {
+        "name": "Veteranen",
+        "description": "Übersetzung militärischer Fähigkeiten in zivile Sprache und veröffentlichte Einstellungswege."
+      },
+      "military_spouses": {
+        "name": "Partner von Militärangehörigen",
+        "description": "Ortsunabhängige Berufe, Umzugstermine, Standortprofile und flexible Arbeit."
+      },
+      "international_candidates": {
+        "name": "Internationale Bewerber",
+        "description": "Länderspezifische Lebenslauf-Hinweise und Ihr angegebener Sponsoring-Status."
+      },
+      "trades_licensed": {
+        "name": "Handwerk und zulassungspflichtige Berufe",
+        "description": "Nachweise verfolgen und an Abläufe erinnern."
       }
+    },
+    "checklist": {
+      "add_projects": "Projekte hinzufügen, die Sie geleitet oder unterstützt haben",
+      "add_internships": "Praktika, Ehrenamt und Teilzeitjobs so erfassen, wie sie waren",
+      "education_first": "Ausbildung oben platzieren, solange die Berufserfahrung kurz ist",
+      "early_career_programs": "Traineeprogramme und Einstiegsprogramme prüfen",
+      "map_transferable_skills": "Bestätigte Fähigkeiten der Zielrolle zuordnen",
+      "bridge_roles": "Brückenrollen erwägen, die vorhandene Erfahrung nutzen",
+      "learning_sequence": "Lernschritte so ordnen, dass Bewerbungen am schnellsten möglich werden",
+      "leadership_achievements": "Führungserfolge mit Umfang erfassen",
+      "promotion_goal": "Ein Beförderungsziel festlegen",
+      "quantified_results": "Ergebnisse mit belastbaren Zahlen ergänzen",
+      "service_profile": "Ein kurzes Leistungsprofil schreiben",
+      "client_case_studies": "Fallstudien vorbereiten, die Sie teilen dürfen",
+      "contract_tracking": "Verträge und Angebote in den Bewerbungen verfolgen",
+      "portfolio_page": "Eine Portfolioseite veröffentlichen",
+      "career_break_explanation": "Die Auszeit in einem Satz in eigenen Worten erklären",
+      "skills_refresh": "Kenntnisse auffrischen, die sich in der Auszeit geändert haben",
+      "flexible_work": "Nach flexiblen, Teilzeit- oder Remote-Stellen suchen",
+      "translate_military_skills": "Jede militärische Funktion in zivile Aufgaben übersetzen, die Sie bestätigen",
+      "civilian_titles": "Zivile Berufsbezeichnungen wählen, das Original daneben",
+      "published_veteran_pathways": "Veröffentlichte Einstellungswege für Veteranen prüfen (kein Vorrang wird angenommen)",
+      "clearance_stated": "Eine Sicherheitsfreigabe nur angeben, wenn vorhanden",
+      "portable_career": "Fähigkeiten und Rollen bevorzugen, die mitziehen",
+      "moving_dates": "Umzugs- und Verfügbarkeitstermine eintragen",
+      "future_location_profile": "Den nächsten Standort als künftigen Ort hinzufügen",
+      "published_spouse_pathways": "Veröffentlichte Einstellungswege für Militärpartner prüfen",
+      "country_resume_format": "Lebenslaufformat des Ziellandes beachten (allgemeiner Hinweis, keine Rechtsberatung)",
+      "state_sponsorship": "Arbeitserlaubnis oder Sponsoring-Bedarf je Ort angeben",
+      "credential_recognition": "Prüfen, ob Ihre Abschlüsse dort anerkannt sind",
+      "language_levels": "Sprachniveaus angeben",
+      "credential_tracking": "Jede Lizenz mit Aussteller und Region erfassen",
+      "expiry_reminders": "Ablauf- und Prüfdaten für Erinnerungen eintragen",
+      "license_regions": "Angeben, wo jede Lizenz gilt",
+      "license_transfer_check": "Lizenzgültigkeit vor dem Umzug bestätigen; sie wird nie angenommen"
+    },
+    "filters": {
+      "experienceLevel_entry": "Einstieg",
+      "experienceLevel_any": "Jedes Erfahrungsniveau",
+      "experienceLevel_senior": "Senior-Positionen",
+      "employmentType_internship": "Praktika",
+      "employmentType_contract": "Aufträge",
+      "schedule_flexible": "Flexible Zeiten",
+      "workMode_remote": "Remote-Arbeit",
+      "pathway_veteran": "Veröffentlichte Veteranenwege",
+      "pathway_military_spouse": "Veröffentlichte Wege für Militärpartner",
+      "sponsorship_stated": "Angebote mit Angaben zum Sponsoring",
+      "license_required": "Stellen mit Lizenzpflicht"
     }
   },
   "location": {
@@ -121,7 +159,8 @@
       "permanent_resident": "Daueraufenthalt / Green Card",
       "visa_holder": "Aktuelles Arbeitsvisum",
       "needs_sponsorship": "Visa-Sponsoring erforderlich",
-      "authorized": "Arbeitsberechtigt"
+      "authorized": "Arbeitsberechtigt",
+      "not_stated": "Nicht angegeben"
     },
     "remote": {
       "hybrid": "Hybrid bevorzugt",
@@ -134,14 +173,20 @@
       "placeTooLong": "Der Standort darf höchstens {max} Zeichen lang sein.",
       "radiusTooLarge": "Dein Tarif erlaubt einen Radius von bis zu {radius} Meilen.",
       "notesTooLong": "Die Notizen dürfen höchstens {max} Zeichen lang sein.",
-      "placeInvalid": "Gib einen Standort mit höchstens {max} Zeichen ein."
+      "placeInvalid": "Gib einen Standort mit höchstens {max} Zeichen ein.",
+      "dateInvalid": "Geben Sie ein echtes Datum ein (den 31. Februar gibt es nicht).",
+      "remoteRegionTooLong": "Die Remote-Region darf höchstens {max} Zeichen lang sein."
     },
     "quotaHint": "{used} von {capacity} Standortprofilen belegt. Lokaler Suchradius laut Tarif: bis zu {radius} Meilen.",
     "line": {
       "radius": "Radius: ~{radius} Meilen",
       "timeline": "Zeitraum: {value}",
       "workAuth": "Arbeitserlaubnis: {value}",
-      "commute": "Max. Arbeitsweg: ≤ {minutes} Min. · {remote}"
+      "commute": "Max. Arbeitsweg: ≤ {minutes} Min. · {remote}",
+      "remoteRegion": "Remote-Region: {value}",
+      "moveDate": "Umzug: {value}",
+      "availableFrom": "Verfügbar ab: {value}",
+      "license": "Hier gültige Lizenzen: {value}"
     },
     "badge": {
       "relocation": "UMZUGSZIEL",
@@ -152,7 +197,13 @@
       "radius": "Der Radius überschreitet das Limit deines Tarifs.",
       "saveFailed": "Standortprofil konnte nicht gespeichert werden. Bitte prüfe deine Eingaben und versuche es erneut.",
       "deleteFailed": "Standortprofil konnte nicht gelöscht werden."
-    }
+    },
+    "license": {
+      "not_stated": "Nicht angegeben",
+      "confirmed": "Ja, von mir bestätigt",
+      "not_confirmed": "Nein oder noch zu prüfen"
+    },
+    "notStated": "Nicht angegeben"
   },
   "editor": {
     "titleAdd": "Standortprofil hinzufügen",
@@ -169,8 +220,6 @@
     "radiusHint": "Maximaler Radius laut Tarif: {radius} Meilen",
     "commuteLabel": "Maximaler täglicher Arbeitsweg",
     "commuteValue": "{value} Min.",
-    "relocationLabel": "Dies ist ein Umzugsziel (nicht mein aktueller Wohnort)",
-    "relocationA11y": "Dies ist ein Umzugsziel",
     "timelineLabel": "Geplanter Umzugszeitraum",
     "workAuthLabel": "Arbeitserlaubnis in der Region",
     "remoteLabel": "Flexibilität beim Arbeitsmodell",
@@ -179,7 +228,19 @@
     "save": "Standortprofil speichern",
     "delete": "Standortprofil löschen",
     "decrease": "{label} verringern",
-    "increase": "{label} erhöhen"
+    "increase": "{label} erhöhen",
+    "kindLabel": "Dieser Ort ist",
+    "kindCurrent": "Wo ich jetzt suche",
+    "kindFuture": "Wohin ich ziehe",
+    "remoteRegionLabel": "Region für Remote-Arbeit",
+    "remoteRegionPlaceholder": "z. B. Europäische Union, USA",
+    "remoteRegionHint": "Von wo aus Remote-Arbeitgeber Sie arbeiten lassen müssen. Unabhängig vom Umkreis der Stadt.",
+    "moveDateLabel": "Umzugsdatum",
+    "availableFromLabel": "Verfügbar ab",
+    "licenseLabel": "Meine Lizenzen gelten hier",
+    "licenseNeverAssumed": "Lizenzen und Nachweise gelten nie automatisch in einem anderen Land, Bundesstaat oder einer anderen Region.",
+    "authNeverAssumed": "Arbeitserlaubnis und Gültigkeit von Lizenzen werden nie angenommen: Sie bleiben je Ort „nicht angegeben“, bis Sie etwas anderes wählen.",
+    "dateHint": "Format JJJJ-MM-TT. Leer lassen, wenn Sie es noch nicht wissen."
   },
   "recruiting": {
     "title": "Recruiting-Freigabe",
@@ -197,7 +258,12 @@
     "discoverableTitle": "Für Arbeitgeber auffindbar",
     "optedIn": "ZUGESTIMMT",
     "notOptedIn": "NICHT ZUGESTIMMT",
-    "footer": "Du kannst das jederzeit ändern. Wenn du es ausschaltest, wirst du aus der Arbeitgebersuche entfernt."
+    "footer": "Du kannst das jederzeit ändern. Wenn du es ausschaltest, wirst du aus der Arbeitgebersuche entfernt.",
+    "searchCount": "{count, plural, =0 {Noch niemand hat zugestimmt.} one {# Person hat zugestimmt.} other {# Personen haben zugestimmt.}}",
+    "countTitle": "Wie viele haben zugestimmt?",
+    "countHelp": "Es wird nur eine Gesamtzahl angezeigt. Niemand kann sehen, wer zugestimmt hat.",
+    "countButton": "Gesamtzahl anzeigen",
+    "countFailed": "Die Gesamtzahl konnte nicht gelesen werden. Versuchen Sie es erneut."
   },
   "data": {
     "title": "Karrieredaten",

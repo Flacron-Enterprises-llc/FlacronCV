@@ -1,16 +1,18 @@
-import { Injectable, Logger, BadRequestException, ConflictException, Optional } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, ConflictException, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { UsersService } from '../users/users.service';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/audit-actions';
 import Stripe from 'stripe';
-import { SubscriptionPlan, SubscriptionStatus, BillingInterval, PLAN_CONFIGS, BillingInvoice, TRIAL_PERIOD_DAYS, YEARLY_BILLING_ENABLED, hasLiveStorePurchase, resolveEffectivePlan } from '@flacroncv/shared-types';
+import { SubscriptionPlan, SubscriptionStatus, BillingInterval, PLAN_CONFIGS, BillingInvoice, TRIAL_PERIOD_DAYS, YEARLY_BILLING_ENABLED, PLAN_TRIAL_DAYS, asSubscriptionPlan, hasLiveStorePurchase, hasLiveStripeSubscription, isLegacyPlan, isPlanUpgrade, resolveEffectivePlan } from '@flacroncv/shared-types';
+import { CurrentPlanPrices, currentPlanForPriceId, currentPlanPriceId, isCurrentPaidPlan, publicPlanCatalog, PublicPlanCatalog } from './plan-prices';
 import { isLiveStripeSecretKey } from '../../config/stripe-live-prices';
 import { APP_ID_METADATA_KEY, DEFAULT_APP_ID, stripeKeyMode } from '../../config/stripe-app';
 import { BillingLedgerService, EventOutcome } from './billing-ledger.service';
 import { LedgerPayment, LedgerSubscription, ledgerPaymentStatus } from './billing-ledger';
 import { CareerBillingService } from './career-billing.service';
+import { CheckoutClient, isLegacyMobileCheckoutPlan } from './legacy-mobile-checkout';
 
 /** The Stripe events this API acts on. Anything else is acknowledged and ignored. */
 const HANDLED_STRIPE_EVENTS: ReadonlySet<string> = new Set([
@@ -125,6 +127,11 @@ export class PaymentService {
     const envPrices = this.configService.get<Record<string, string>>('stripe.prices');
     if (envPrices?.proMonthly) ids.add(envPrices.proMonthly);
     if (envPrices?.enterpriseMonthly) ids.add(envPrices.enterpriseMonthly);
+    // Five-plan catalog: env-configured prices only.
+    const planPrices = this.planPrices();
+    for (const entry of Object.values(planPrices)) {
+      if (entry?.month) ids.add(entry.month);
+    }
 
     // Annual prices are admitted by the SAME switch that shows the yearly
     // option in the UI, so the two can never disagree. Previously this list was
@@ -142,6 +149,9 @@ export class PaymentService {
       }
       if (envPrices?.proYearly) ids.add(envPrices.proYearly);
       if (envPrices?.enterpriseYearly) ids.add(envPrices.enterpriseYearly);
+      for (const entry of Object.values(planPrices)) {
+        if (entry?.year) ids.add(entry.year);
+      }
     }
 
     return [...ids];
@@ -222,6 +232,9 @@ export class PaymentService {
    * fallback for environments that set no price env vars at all.
    */
   private resolvePriceId(plan: SubscriptionPlan, interval: BillingInterval): string | null {
+    // Five-plan catalog: env only, in every mode. Never a compiled fallback.
+    if (isCurrentPaidPlan(plan)) return currentPlanPriceId(this.planPrices(), plan, interval);
+
     const envPrices = this.configService.get<Record<string, string>>('stripe.prices');
     const yearly = interval === BillingInterval.YEAR;
 
@@ -240,6 +253,20 @@ export class PaymentService {
     }
 
     return (fromEnv || fromConfig || '').trim() || null;
+  }
+
+  /** STRIPE_PRICE_<PLAN>_MONTHLY / _ANNUAL as read by configuration.ts. */
+  private planPrices(): CurrentPlanPrices {
+    return this.configService.get<CurrentPlanPrices>('stripe.planPrices') ?? {};
+  }
+
+  /**
+   * GET /plans — the public catalog: the five current plans with prices,
+   * limits and whether each interval can be bought right now. No Stripe call:
+   * `configured` means a price id is set in env (checkout still verifies it).
+   */
+  getPublicCatalog(): PublicPlanCatalog {
+    return publicPlanCatalog(this.planPrices(), YEARLY_BILLING_ENABLED);
   }
 
   /**
@@ -335,6 +362,7 @@ export class PaymentService {
     successUrl?: string,
     cancelUrl?: string,
     expectTrial?: boolean,
+    client: CheckoutClient = {},
   ) {
     const interval = this.normalizeInterval(selection?.interval);
 
@@ -342,7 +370,30 @@ export class PaymentService {
       throw new BadRequestException('Annual billing is not available yet.');
     }
 
+    // Legacy plans (Pro, Career Accelerator, Enterprise) keep renewing for the
+    // customers who have them, but are never sold again — except to the
+    // mobile app build already in users' hands, which only knows Pro and
+    // Enterprise (legacy-mobile-checkout.ts). It buys them at their existing
+    // legacy Stripe prices until the updated app ships; the web never can.
+    const requested = asSubscriptionPlan(selection?.plan);
+    const legacyMobileCheckout =
+      !!requested && client.nativeMobile === true && isLegacyMobileCheckoutPlan(requested);
+    if (requested && isLegacyPlan(requested) && !legacyMobileCheckout) {
+      throw new BadRequestException({
+        code: 'PLAN_NOT_AVAILABLE',
+        message: 'This plan is no longer offered. Please choose one of the current plans.',
+      });
+    }
+
     const priceId = this.resolvePriceId(selection?.plan, interval);
+    if (!priceId && requested && isCurrentPaidPlan(requested)) {
+      // A real plan whose Stripe price has not been created/configured yet.
+      // Never guess an id: say so, and the UI shows "Coming soon".
+      throw new ServiceUnavailableException({
+        code: 'PLAN_NOT_CONFIGURED',
+        message: 'This plan is not available for purchase yet. Please contact us.',
+      });
+    }
     if (!priceId) {
       throw new BadRequestException('Unsupported plan selection.');
     }
@@ -365,6 +416,16 @@ export class PaymentService {
 
     if (hasLiveStorePurchase(user.subscription)) {
       throw new ConflictException('This account is billed by the App Store or Google Play');
+    }
+
+    // A second Checkout would start a second subscription and bill twice.
+    // Plan changes for an existing subscriber go through the billing portal,
+    // where the webhook resolves the new plan from the new price id.
+    if (hasLiveStripeSubscription(user.subscription)) {
+      throw new ConflictException({
+        code: 'ALREADY_SUBSCRIBED',
+        message: 'You already have an active subscription. Change your plan from the billing portal.',
+      });
     }
 
     // Resolve BEFORE the trial check below, so a replacement customer is the
@@ -406,7 +467,15 @@ export class PaymentService {
     // Same helper as GET /payments/trial-eligibility. `expectTrial` is the
     // client's declaration: trial CTA sends true; paid Upgrade omits it.
     // Mismatch → 400, no session (never a silent paid conversion).
-    const trialOfferedOnPlan = selection.plan === SubscriptionPlan.PRO && TRIAL_PERIOD_DAYS > 0;
+    //
+    // Which plan has a trial is the catalog's decision (PLAN_TRIAL_DAYS:
+    // Professional, 7 days). Legacy Pro had one; the only legacy checkout left
+    // (the live mobile app's Pro) keeps it so that app behaves exactly as before.
+    const trialDays =
+      legacyMobileCheckout && requested === SubscriptionPlan.PRO
+        ? TRIAL_PERIOD_DAYS
+        : (PLAN_TRIAL_DAYS[selection.plan] ?? 0);
+    const trialOfferedOnPlan = trialDays > 0 && TRIAL_PERIOD_DAYS > 0;
     let isFirstTimeSubscriber =
       trialOfferedOnPlan && this.firestoreAllowsProTrial(user.subscription);
     if (isFirstTimeSubscriber) {
@@ -438,7 +507,7 @@ export class PaymentService {
       metadata,
       subscription_data: {
         metadata,
-        ...(isFirstTimeSubscriber ? { trial_period_days: TRIAL_PERIOD_DAYS } : {}),
+        ...(isFirstTimeSubscriber ? { trial_period_days: trialDays } : {}),
       },
     });
 
@@ -540,6 +609,7 @@ export class PaymentService {
       'subscription.stripeSubscriptionId': subscription.id,
       'subscription.stripeCustomerId': session.customer as string,
       'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
+      ...this.periodStartField(plan, subscription),
       'subscription.trialStart': trial.trialStart,
       'subscription.trialEnd': trial.trialEnd,
       'subscription.cancelAtPeriodEnd': false,
@@ -571,6 +641,7 @@ export class PaymentService {
     }, { merge: true });
 
     await batch.commit();
+    await this.refreshUsageWindow(userId, plan);
     await this.ledger.upsertSubscription(this.toLedgerSubscription(subscription, userId));
     this.logger.log(`Session verified and plan applied for user ${userId}: ${plan} (${status})`);
 
@@ -619,6 +690,204 @@ export class PaymentService {
       hostedInvoiceUrl: inv.hosted_invoice_url ?? null,
       invoicePdf: inv.invoice_pdf ?? null,
     }));
+  }
+
+  // ─── In-app plan change (existing Stripe subscribers) ──────────────────────
+
+  /**
+   * Everything a plan change needs, validated once for preview and switch:
+   * a live Stripe subscription of ours, a CURRENT paid target plan (a legacy
+   * plan is never a target — that also refuses legacy→legacy) with a
+   * configured price, different from the price billed today.
+   */
+  private async planChangeContext(userId: string, selection: { plan: SubscriptionPlan; interval?: string }) {
+    if (!this.stripe) {
+      throw new ServiceUnavailableException({ code: 'BILLING_UNAVAILABLE', message: 'Billing is not available right now.' });
+    }
+    const target = asSubscriptionPlan(selection?.plan);
+    if (!target || target === SubscriptionPlan.FREE) {
+      throw new BadRequestException({ code: 'PLAN_NOT_AVAILABLE', message: 'Choose a paid plan, or cancel from the billing portal.' });
+    }
+    if (isLegacyPlan(target)) {
+      throw new BadRequestException({
+        code: 'PLAN_NOT_AVAILABLE',
+        message: 'This plan is no longer offered. Please choose one of the current plans.',
+      });
+    }
+    const interval = this.normalizeInterval(selection?.interval);
+    if (interval === BillingInterval.YEAR && !YEARLY_BILLING_ENABLED) {
+      throw new BadRequestException('Annual billing is not available yet.');
+    }
+    const priceId = this.resolvePriceId(target, interval);
+    if (!priceId) {
+      throw new ServiceUnavailableException({
+        code: 'PLAN_NOT_CONFIGURED',
+        message: 'This plan is not available for purchase yet. Please contact us.',
+      });
+    }
+
+    const user = await this.usersService.findByIdOrThrow(userId);
+    if (hasLiveStorePurchase(user.subscription)) {
+      throw new ConflictException('This account is billed by the App Store or Google Play');
+    }
+    const subscriptionId = user.subscription?.stripeSubscriptionId;
+    if (!subscriptionId || !hasLiveStripeSubscription(user.subscription)) {
+      throw new BadRequestException({
+        code: 'NO_SUBSCRIPTION',
+        message: 'No active subscription found. Please subscribe to a plan first.',
+      });
+    }
+    const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
+    const owner = PaymentService.appIdOf(subscription);
+    if (owner && owner !== this.appId) {
+      throw new BadRequestException({ code: 'NO_SUBSCRIPTION', message: 'No active subscription found.' });
+    }
+    if (!PaymentService.LIVE_STRIPE_STATUSES.has(subscription.status)) {
+      throw new BadRequestException({ code: 'NO_SUBSCRIPTION', message: 'This subscription is no longer active.' });
+    }
+    const item = subscription.items?.data?.[0];
+    if (!item) throw new BadRequestException({ code: 'NO_SUBSCRIPTION', message: 'No active subscription found.' });
+    if (item.price?.id === priceId) {
+      throw new BadRequestException({ code: 'SAME_PLAN', message: 'You are already on this plan.' });
+    }
+    if (!this.allowedCheckoutPriceIds().includes(priceId)) {
+      throw new BadRequestException('Unsupported plan selection.');
+    }
+    await this.assertPriceIsOurs(priceId);
+    return { user, target, interval, priceId, subscription, item };
+  }
+
+  /**
+   * What switching to `plan` would charge or credit right now (Stripe's
+   * upcoming-invoice preview with the same proration settings as the switch).
+   * Pass `prorationDate` back to {@link changePlan} so the switch bills
+   * exactly what was shown.
+   */
+  async previewPlanChange(userId: string, selection: { plan: SubscriptionPlan; interval?: string }) {
+    const ctx = await this.planChangeContext(userId, selection);
+    const fromPlan = this.determinePlan(ctx.item.price.id);
+    const currentPeriodEnd = new Date(ctx.subscription.current_period_end * 1000).toISOString();
+    if (PaymentService.isDowngrade(fromPlan, ctx.target)) {
+      // Downgrades switch at renewal: nothing is charged or credited now.
+      return {
+        fromPlan,
+        toPlan: ctx.target,
+        interval: ctx.interval,
+        timing: 'at_period_end' as const,
+        effectiveAt: currentPeriodEnd,
+        currency: ctx.item.price.currency ?? 'usd',
+        prorationAmount: 0,
+        amountDue: 0,
+        prorationDate: null,
+        currentPeriodEnd,
+      };
+    }
+    const prorationDate = Math.floor(Date.now() / 1000);
+    const upcoming = await this.stripe.invoices.retrieveUpcoming({
+      customer: stripeId(ctx.subscription.customer) ?? undefined,
+      subscription: ctx.subscription.id,
+      subscription_items: [{ id: ctx.item.id, price: ctx.priceId }],
+      subscription_proration_behavior: 'always_invoice',
+      subscription_proration_date: prorationDate,
+    });
+    const prorationLines = (upcoming.lines?.data ?? []).filter((l) => l.proration);
+    return {
+      fromPlan,
+      toPlan: ctx.target,
+      interval: ctx.interval,
+      timing: 'now' as const,
+      effectiveAt: new Date(prorationDate * 1000).toISOString(),
+      currency: upcoming.currency,
+      /** Smallest currency unit. Negative = credit to the customer balance. */
+      prorationAmount: prorationLines.reduce((sum, l) => sum + (l.amount ?? 0), 0),
+      /** What the invoice created at switch time would ask for now. */
+      amountDue: upcoming.amount_due ?? 0,
+      prorationDate,
+      currentPeriodEnd,
+    };
+  }
+
+  /** A move to a lower-ranked plan (same rank, e.g. another interval, is not a downgrade). */
+  private static isDowngrade(from: SubscriptionPlan, to: SubscriptionPlan): boolean {
+    return from !== to && isPlanUpgrade(to, from);
+  }
+
+  /**
+   * Switch an existing subscriber to another current plan, with one rule that
+   * keeps Stripe, V1 counters and the career ledger aligned:
+   *
+   * - Upgrade (or an interval change): now. Stripe prorates and invoices the
+   *   difference (`always_invoice`); the webhook path raises V1's limits and
+   *   the career sync adds the allowance difference without resetting usage.
+   * - Downgrade: at the end of the paid period, never mid-period. A Stripe
+   *   subscription schedule keeps the current price until `current_period_end`
+   *   and then moves to the lower price (no proration, no credit). Until then
+   *   V1 keeps reporting the paid plan, so V1 counters and the career
+   *   allowance stay as paid for; at renewal the price change arrives through
+   *   `customer.subscription.updated`, together with the new billing period.
+   *
+   * The plan granted always comes from the PRICE id via the webhook path,
+   * never from the request.
+   */
+  async changePlan(
+    userId: string,
+    selection: { plan: SubscriptionPlan; interval?: string; prorationDate?: number },
+  ) {
+    const ctx = await this.planChangeContext(userId, selection);
+    const fromPlan = this.determinePlan(ctx.item.price.id);
+    const scheduleId = stripeId(ctx.subscription.schedule as string | { id: string } | null | undefined);
+    const metadata = { ...(ctx.subscription.metadata ?? {}), ...this.appMetadata(userId, { plan: ctx.target, interval: ctx.interval }) };
+
+    if (PaymentService.isDowngrade(fromPlan, ctx.target)) {
+      const schedule = scheduleId
+        ? { id: scheduleId }
+        : await this.stripe.subscriptionSchedules.create({ from_subscription: ctx.subscription.id });
+      await this.stripe.subscriptionSchedules.update(schedule.id, {
+        end_behavior: 'release',
+        proration_behavior: 'none',
+        phases: [
+          {
+            items: [{ price: ctx.item.price.id, quantity: ctx.item.quantity ?? 1 }],
+            start_date: ctx.subscription.current_period_start,
+            end_date: ctx.subscription.current_period_end,
+            metadata: ctx.subscription.metadata ?? {},
+          },
+          { items: [{ price: ctx.priceId, quantity: 1 }], iterations: 1, metadata },
+        ],
+      });
+      const effectiveAt = new Date(ctx.subscription.current_period_end * 1000).toISOString();
+      this.logger.log(`Plan downgrade scheduled for user ${userId}: ${fromPlan} → ${ctx.target} at ${effectiveAt}`);
+      return {
+        plan: fromPlan,
+        status: this.mapStripeStatus(ctx.subscription.status),
+        scheduledPlan: ctx.target,
+        effectiveAt,
+      };
+    }
+
+    // An upgrade supersedes a pending scheduled downgrade: release the schedule
+    // first so it cannot move the subscription back at renewal.
+    if (scheduleId) await this.stripe.subscriptionSchedules.release(scheduleId);
+    const now = Math.floor(Date.now() / 1000);
+    // A preview older than an hour (or from the future) is not honoured.
+    const prorationDate =
+      typeof selection.prorationDate === 'number' &&
+      Number.isFinite(selection.prorationDate) &&
+      selection.prorationDate <= now &&
+      now - selection.prorationDate < 3600
+        ? Math.floor(selection.prorationDate)
+        : now;
+    const updated = await this.stripe.subscriptions.update(ctx.subscription.id, {
+      items: [{ id: ctx.item.id, price: ctx.priceId }],
+      proration_behavior: 'always_invoice',
+      proration_date: prorationDate,
+      // Informational only — webhooks resolve the plan from the price id.
+      metadata,
+    });
+    await this.handleSubscriptionUpdated(updated);
+    const plan = this.determinePlan(updated.items.data[0].price.id);
+    this.logger.log(`Plan changed for user ${userId}: → ${plan} (${ctx.interval})`);
+    return { plan, status: this.mapStripeStatus(updated.status), scheduledPlan: null, effectiveAt: new Date(now * 1000).toISOString() };
   }
 
   async createPortalSession(userId: string, returnUrl: string) {
@@ -1066,6 +1335,7 @@ export class PaymentService {
       'subscription.status': status,
       'subscription.stripeSubscriptionId': subscription.id,
       'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
+      ...this.periodStartField(plan, subscription),
       'subscription.trialStart': trial.trialStart,
       'subscription.trialEnd': trial.trialEnd,
       'subscription.cancelAtPeriodEnd': false,
@@ -1096,6 +1366,7 @@ export class PaymentService {
     });
 
     await batch.commit();
+    await this.refreshUsageWindow(userId, plan);
     this.logger.log(`Subscription created for user ${userId}: ${plan} (${status})`);
     await this.audit.logSystemAction(AuditAction.SUBSCRIPTION_ACTIVATED, 'subscription', userId, {
       metadata: {
@@ -1122,18 +1393,34 @@ export class PaymentService {
     const plan = this.determinePlan(sub.items.data[0].price.id);
     const limits = PLAN_CONFIGS[plan].limits;
 
-    await this.usersService.updateSubscription(userId, {
-      status: SubscriptionStatus.ACTIVE,
-      currentPeriodEnd: new Date(sub.current_period_end * 1000),
-    });
+    if (!isCurrentPaidPlan(plan)) {
+      // LEGACY plans (and an unrecognised price): unchanged — every paid
+      // invoice resets the counters.
+      await this.usersService.updateSubscription(userId, {
+        status: SubscriptionStatus.ACTIVE,
+        currentPeriodEnd: new Date(sub.current_period_end * 1000),
+        ...this.periodStartPatch(plan, sub),
+      });
 
-    // Reset monthly usage
-    await this.usersService.updateUsage(userId, {
-      aiCreditsUsed: 0,
-      exportsThisMonth: 0,
-      aiCreditsLimit: limits.aiCredits,
-      lastExportReset: new Date(),
-    });
+      // Reset monthly usage
+      await this.usersService.updateUsage(userId, {
+        aiCreditsUsed: 0,
+        exportsThisMonth: 0,
+        aiCreditsLimit: limits.aiCredits,
+        lastExportReset: new Date(),
+      });
+    } else {
+      // Current plans renew on the monthly anniversary of the billing period
+      // (also for annual plans), not on every invoice: a proration invoice for
+      // a mid-period plan change must not hand out a fresh allowance.
+      await this.usersService.updateSubscription(userId, {
+        status: SubscriptionStatus.ACTIVE,
+        currentPeriodEnd: new Date(sub.current_period_end * 1000),
+        currentPeriodStart: new Date(sub.current_period_start * 1000),
+      });
+      await this.usersService.updateUsage(userId, { aiCreditsLimit: limits.aiCredits });
+      await this.refreshUsageWindow(userId, plan);
+    }
 
     await this.syncSubscriptionRecord(sub.id, {
       status: SubscriptionStatus.ACTIVE,
@@ -1176,12 +1463,19 @@ export class PaymentService {
     // 23h left the user on permanent PRO, for free, with no revocation path.
     // The sibling handlers (handleCheckoutCompleted, handleInvoicePaid) already
     // map; this one was the outlier.
+    // The plan comes from the PRICE id (env map + legacy ids), never from
+    // metadata, so a portal upgrade/downgrade lands on the plan actually billed.
     await this.usersService.updateSubscription(userId, {
       plan,
       status: this.mapStripeStatus(subscription.status),
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
       currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      ...this.periodStartPatch(plan, subscription),
     });
+    if (isCurrentPaidPlan(plan)) {
+      await this.usersService.updateUsage(userId, { aiCreditsLimit: PLAN_CONFIGS[plan].limits.aiCredits });
+      await this.refreshUsageWindow(userId, plan);
+    }
 
     await this.syncSubscriptionRecord(subscription.id, {
       plan,
@@ -1416,7 +1710,11 @@ export class PaymentService {
   }
 
   private determinePlan(priceId: string): SubscriptionPlan {
-    // Primary: match against PLAN_CONFIGS (same IDs used by the frontend checkout)
+    // Five-plan catalog: the env price map (STRIPE_PRICE_<PLAN>_MONTHLY/_ANNUAL).
+    const current = currentPlanForPriceId(this.planPrices(), priceId);
+    if (current) return current;
+
+    // Legacy: match against PLAN_CONFIGS (same IDs used by the frontend checkout)
     for (const [plan, config] of Object.entries(PLAN_CONFIGS) as [SubscriptionPlan, typeof PLAN_CONFIGS[SubscriptionPlan]][]) {
       if (
         config.stripePriceIdMonthly && priceId === config.stripePriceIdMonthly ||
@@ -1439,6 +1737,38 @@ export class PaymentService {
 
     this.logger.warn(`Unknown price ID: ${priceId} — defaulting to FREE`);
     return SubscriptionPlan.FREE;
+  }
+
+  /**
+   * `subscription.currentPeriodStart` (Stripe `current_period_start`) for any
+   * recognised paid plan. Current plans anchor their monthly allowance on it;
+   * on legacy plans V1 ignores it (calendar reset) but the career service reads
+   * it as the paid anniversary of the mapped career plan. Nothing for an
+   * unrecognised price (resolved as Free).
+   */
+  private periodStartPatch(plan: SubscriptionPlan, subscription: Stripe.Subscription): { currentPeriodStart?: Date } {
+    if (plan === SubscriptionPlan.FREE || typeof subscription.current_period_start !== 'number') return {};
+    return { currentPeriodStart: new Date(subscription.current_period_start * 1000) };
+  }
+
+  /** {@link periodStartPatch} as a dotted Firestore field for batch writes. */
+  private periodStartField(plan: SubscriptionPlan, subscription: Stripe.Subscription): Record<string, Date> {
+    const patch = this.periodStartPatch(plan, subscription);
+    return patch.currentPeriodStart ? { 'subscription.currentPeriodStart': patch.currentPeriodStart } : {};
+  }
+
+  /**
+   * Open the new monthly window after a current-plan purchase or renewal so
+   * the profile shows the fresh allowance at once. Best-effort: every reserve
+   * path rolls the window over inside its own transaction anyway.
+   */
+  private async refreshUsageWindow(userId: string, plan: SubscriptionPlan): Promise<void> {
+    if (!isCurrentPaidPlan(plan)) return;
+    try {
+      await this.usersService.rolloverUsageIfDue(userId);
+    } catch (err) {
+      this.logger.warn(`Usage window refresh failed for ${userId}: ${(err as Error).message}`);
+    }
   }
 
   /**

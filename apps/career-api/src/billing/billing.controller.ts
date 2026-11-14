@@ -4,7 +4,7 @@ import { IsArray, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min, ValidateN
 import { BillingError, BillingPageService, PaymentsService } from '@flacroncv/career-server';
 import type { Principal } from '@flacroncv/career-server';
 import type { EstimateInput, PlanId, UsageUnit } from '@flacroncv/career-shared';
-import { CurrentPrincipal, Public } from '../auth/auth.guard';
+import { CurrentPrincipal, OwnBillingAccount, Public } from '../auth/auth.guard';
 import { DatabaseService } from '../database/database.service';
 import { IdempotencyKey } from '../metering/metering.providers';
 
@@ -96,6 +96,7 @@ export const billingPageProviders: Provider[] = [
   },
 ];
 
+@OwnBillingAccount()
 @Controller()
 export class BillingController {
   constructor(

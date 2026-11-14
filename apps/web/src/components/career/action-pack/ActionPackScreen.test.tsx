@@ -226,4 +226,124 @@ describe('ActionPackScreen (CV12)', () => {
       expect.any(String),
     );
   });
+
+  it('shows the operation, the credits required and the balance before generating', async () => {
+    const api = testApi({
+      actionPacks: vi.fn().mockResolvedValue({ items: [], actionPack: { ...sampleBalance, includedRemaining: 3, packRemaining: 1 } }),
+      opportunities: vi.fn().mockResolvedValue({ items: [sampleOpportunity], total: 1 }),
+    });
+    renderScreen(api);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Generate Action Pack' }))[0]);
+    expect(screen.getByText(/Action pack: fit, gaps, tailored résumé/)).toBeTruthy();
+    expect(screen.getByText('1 action pack credit')).toBeTruthy();
+    expect(screen.getByText('4 credits left')).toBeTruthy();
+    expect(screen.getByText(/retrying it is free/)).toBeTruthy();
+  });
+
+  it('blocks a paid run when no credits are left', async () => {
+    const api = testApi({
+      actionPacks: vi.fn().mockResolvedValue({ items: [], actionPack: { ...sampleBalance, includedRemaining: 0, packRemaining: 0 } }),
+      opportunities: vi.fn().mockResolvedValue({ items: [sampleOpportunity], total: 1 }),
+    });
+    renderScreen(api);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Generate Action Pack' }))[0]);
+    fireEvent.change(screen.getByLabelText(/Select Opportunity/i), { target: { value: sampleOpportunity.id } });
+    expect(screen.getByText(/no action pack credits left/)).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Run Action Engine (1 Credit)' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('offers a free retry for an unfinished pack and shows the finished letter', async () => {
+    const partial: ActionPack = { ...samplePack, status: 'partial', coverLetter: null, letterAttempts: 1, componentErrors: { coverLetter: 'unusable_output' } };
+    const retry = vi.fn().mockResolvedValue({
+      actionPack: { ...samplePack, status: 'complete', letterAttempts: 2 },
+      usage: { unit: 'action_pack', includedRemaining: 9, packRemaining: 0, renewalDate: '2026-11-17T00:00:00.000Z', ledgerState: 'committed' },
+      jobId: 'job-1',
+      replayed: false,
+    });
+    const api = testApi({
+      actionPacks: vi.fn().mockResolvedValue({ items: [partial], actionPack: sampleBalance }),
+      opportunities: vi.fn().mockResolvedValue({ items: [sampleOpportunity], total: 1 }),
+      retryActionPackComponent: retry,
+    });
+    renderScreen(api);
+    expect(await screen.findByText('This pack is not finished yet')).toBeTruthy();
+    expect(screen.getByText('No cover letter yet.')).toBeTruthy();
+    expect(screen.getByText('2 retries left')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry the cover letter (no new credit)' }));
+    expect(retry).toHaveBeenCalledWith(partial.id, 'coverLetter');
+    expect(await screen.findByText(/One credit was used for the whole pack/)).toBeTruthy();
+    expect(screen.getByText(/I am thrilled to apply/)).toBeTruthy();
+  });
+
+  it('removes an unfinished pack when the person cancels it', async () => {
+    const partial: ActionPack = { ...samplePack, status: 'partial', coverLetter: null, letterAttempts: 1 };
+    const cancel = vi.fn().mockResolvedValue({ released: true });
+    const actionPacks = vi
+      .fn()
+      .mockResolvedValueOnce({ items: [partial], actionPack: { ...sampleBalance, includedRemaining: 9 } })
+      .mockResolvedValue({ items: [], actionPack: sampleBalance });
+    const api = testApi({
+      actionPacks,
+      opportunities: vi.fn().mockResolvedValue({ items: [sampleOpportunity], total: 1 }),
+      cancelActionPack: cancel,
+    });
+    renderScreen(api);
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel this pack and return the credit' }));
+    expect(cancel).toHaveBeenCalledWith(partial.id);
+    expect(await screen.findByText('No action packs yet')).toBeTruthy();
+  });
+
+  it('edits the cover letter and saves it without a charge', async () => {
+    const update = vi.fn().mockResolvedValue({
+      ...samplePack,
+      coverLetter: { ...samplePack.coverLetter!, body: 'My own words.' },
+      editedComponents: ['coverLetter'],
+    });
+    const api = testApi({
+      actionPacks: vi.fn().mockResolvedValue({ items: [samplePack], actionPack: sampleBalance }),
+      opportunities: vi.fn().mockResolvedValue({ items: [sampleOpportunity], total: 1 }),
+      updateActionPack: update,
+    });
+    renderScreen(api);
+    await screen.findByText('Tailored Cover Letter');
+    const editButtons = screen.getAllByRole('button', { name: 'Edit' });
+    // Order on screen: fit, checklist, letter, résumé, next steps.
+    fireEvent.click(editButtons[2]!);
+    fireEvent.change(screen.getByLabelText('Letter text'), { target: { value: 'My own words.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(update).toHaveBeenCalledWith(samplePack.id, { coverLetter: { title: 'Cover Letter - Acme Robotics', body: 'My own words.' } });
+    expect(await screen.findByText('My own words.')).toBeTruthy();
+    expect(screen.getByText('Edited by you')).toBeTruthy();
+  });
+
+  it('copies the bundle into Documents and links there', async () => {
+    const save = vi.fn().mockResolvedValue({
+      actionPack: { ...samplePack, savedDocuments: { resumeId: 'r1', resumeVersionId: 'v1', letterDocumentId: 'w1' } },
+      savedDocuments: { resumeId: 'r1', resumeVersionId: 'v1', letterDocumentId: 'w1' },
+    });
+    const api = testApi({
+      actionPacks: vi.fn().mockResolvedValue({ items: [samplePack], actionPack: sampleBalance }),
+      opportunities: vi.fn().mockResolvedValue({ items: [sampleOpportunity], total: 1 }),
+      saveActionPackDocuments: save,
+    });
+    renderScreen(api);
+    fireEvent.click(await screen.findByRole('button', { name: 'Save résumé and letter to Documents' }));
+    expect(save).toHaveBeenCalledWith(samplePack.id);
+    expect(await screen.findByText(/saved in Documents/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Open Documents' }).getAttribute('href')).toBe('/en/career/documents');
+    expect(screen.getByRole('button', { name: 'Update the copies in Documents' })).toBeTruthy();
+  });
+
+  it('says DOCX needs a paid plan when the export is refused', async () => {
+    const exportPack = vi.fn().mockRejectedValue(new ApiError(403, 'plan_upgrade_required', { code: 'plan_upgrade_required' }));
+    const api = testApi({
+      actionPacks: vi.fn().mockResolvedValue({ items: [samplePack], actionPack: sampleBalance }),
+      opportunities: vi.fn().mockResolvedValue({ items: [sampleOpportunity], total: 1 }),
+      exportActionPack: exportPack,
+    });
+    renderScreen(api);
+    fireEvent.click(await screen.findByRole('button', { name: 'Letter DOCX' }));
+    expect(exportPack).toHaveBeenCalledWith(samplePack.id, 'coverLetter', 'docx');
+    expect(await screen.findByText(/DOCX downloads need a paid plan/)).toBeTruthy();
+  });
 });

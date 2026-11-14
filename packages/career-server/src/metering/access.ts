@@ -1,5 +1,6 @@
 import type { FeatureId, PlanAllowances, PlanId } from '@flacroncv/career-shared';
 import { v2PlanOf } from '../billing/accounts';
+import { capacityExtra } from '../billing/capacity';
 import type { AccountRow } from '../billing/accounts';
 import type { CatalogSnapshot } from '../billing/catalog';
 import type { Db } from '../billing/db';
@@ -44,14 +45,40 @@ export function checkCapacity(
   used: number,
   adding = 1,
 ): void {
-  const planId = v2PlanOf(snapshot, account);
-  const limit = snapshot.allowances[planId][field];
+  const limit = capacityLimit(snapshot, account, field);
   if (limit === null) {
     throw new BillingError('plan_upgrade_required', { feature: field, minimumPlan: minimumPlanForField(snapshot, field) });
   }
   if (used + adding > limit) {
     throw new BillingError('capacity_exceeded', { field, limit, used });
   }
+}
+
+/**
+ * The count cap for `field`: the plan's limit plus recurring capacity
+ * add-ons (`capacity_extras`). `null` when the plan does not include the
+ * field at all; an add-on never unlocks a field the plan lacks.
+ */
+export function capacityLimit(snapshot: CatalogSnapshot, account: AccountRow, field: CapacityField): number | null {
+  const planId = v2PlanOf(snapshot, account);
+  const limit = snapshot.allowances[planId][field];
+  if (limit === null) return null;
+  return limit + capacityExtra(account, field);
+}
+
+/**
+ * Business: reactivating an archived candidate (or adding a seat) must fit
+ * the current cap, add-ons included (spec section 11, "Reactivation checks
+ * capacity"). `activeNow` is the count of active rows excluding the one
+ * being reactivated. Archiving needs no check: it only frees a slot.
+ */
+export function checkReactivation(
+  snapshot: CatalogSnapshot,
+  account: AccountRow,
+  field: 'activeCandidates' | 'staffSeats',
+  activeNow: number,
+): void {
+  checkCapacity(snapshot, account, field, activeNow, 1);
 }
 
 /** A plan-gated feature that is not a monthly unit (DOCX export, alert channels). */

@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { Pool } from 'pg';
-import { explainMatch } from '@flacroncv/career-shared';
-import type { MatchExplanation, MatchFit, MatchLine } from '@flacroncv/career-shared';
+import { explainMatch, matchLabel, validatePreferences, PREFERENCE_DIMENSIONS } from '@flacroncv/career-shared';
+import type { MatchCredential, MatchExplanation, MatchFit, MatchLabel, MatchLabelReason, MatchLine, PreferenceCheck } from '@flacroncv/career-shared';
 import { readAccount } from '../billing/accounts';
 import type { Clock } from '../billing/billing.service';
 import { CatalogStore } from '../billing/catalog';
@@ -9,6 +9,7 @@ import { unitBalance } from '../billing/entitlements';
 import { BillingError, isBillingError } from '../billing/errors';
 import type { JsonValue, MeteredResult } from '../metering/metering.service';
 import { MeteringService } from '../metering/metering.service';
+import { matchListingOf, readOpportunityForCandidate } from '../opportunities/opportunity.service';
 import type { ProfileOwner } from '../profile/career-profile.service';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -24,10 +25,14 @@ interface MatchRow {
   reasons: unknown;
   gaps: unknown;
   unknowns: unknown;
+  preference_fit?: unknown;
   created_at: Date;
   candidate_auth_user_id: string;
   workspace_id: string;
 }
+
+const MATCH_COLUMNS = `id, profile_version, opportunity_id, opportunity_revision_id, resume_version_id,
+              fit, overlap, reasons, gaps, unknowns, preference_fit, created_at, candidate_auth_user_id, workspace_id`;
 
 export interface MatchView {
   id: string;
@@ -36,6 +41,11 @@ export interface MatchView {
   reasons: MatchExplanation['reasons'];
   gaps: MatchExplanation['gaps'];
   unknowns: MatchExplanation['unknowns'];
+  /** Personal preferences against the listing, separate from qualification fit. */
+  preferenceFit: PreferenceCheck[];
+  /** strong fit / possible fit / stretch, with the reasons behind it. Not a hiring probability. */
+  label: MatchLabel;
+  labelReasons: MatchLabelReason[];
   profileVersion: number;
   opportunityId: string;
   opportunityRevisionId: string;
@@ -73,9 +83,7 @@ export class MatchService {
   async get(owner: ProfileOwner, analysisId: string): Promise<MatchView> {
     if (!UUID.test(analysisId)) throw new BillingError('not_found');
     const rows = await this.pool.query<MatchRow>(
-      `SELECT id, profile_version, opportunity_id, opportunity_revision_id, resume_version_id,
-              fit, overlap, reasons, gaps, unknowns, created_at, candidate_auth_user_id, workspace_id
-         FROM match_results WHERE id = $1`,
+      `SELECT ${MATCH_COLUMNS} FROM match_results WHERE id = $1`,
       [analysisId],
     );
     const row = rows.rows[0];
@@ -121,7 +129,7 @@ export class MatchService {
         replayed: true,
       };
     }
-    const explained = explainMatch(loaded.listing, loaded.lines, this.today());
+    const explained = explainMatch(loaded.listing, loaded.lines, this.today(), loaded.context);
     let saved: MatchView | null = null;
     const metered: MeteredResult<JsonValue> = await this.metering.run<MatchExplanation, JsonValue>({
       spender: owner,
@@ -132,7 +140,7 @@ export class MatchService {
       body: { resumeVersionId: input.resumeVersionId, opportunityId: input.opportunityId, mode: 'explicit' },
       requestId: randomUUID(),
       provenance: {
-        outputSchemaVersion: 'match@1',
+        outputSchemaVersion: 'match@2',
         inputVersions: {
           profileVersion: loaded.profileVersion,
           opportunityRevisionId: loaded.revisionId,
@@ -144,10 +152,9 @@ export class MatchService {
         const inserted = await db.query<MatchRow>(
           `INSERT INTO match_results
              (workspace_id, candidate_auth_user_id, profile_version, opportunity_id, opportunity_revision_id,
-              resume_version_id, fit, overlap, reasons, gaps, unknowns, preferences)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11::jsonb, $12::jsonb)
-           RETURNING id, profile_version, opportunity_id, opportunity_revision_id, resume_version_id,
-                     fit, overlap, reasons, gaps, unknowns, created_at, candidate_auth_user_id, workspace_id`,
+              resume_version_id, fit, overlap, reasons, gaps, unknowns, preferences, preference_fit)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11::jsonb, $12::jsonb, $13::jsonb)
+           RETURNING ${MATCH_COLUMNS}`,
           [
             owner.workspaceId,
             owner.authUserId,
@@ -161,6 +168,7 @@ export class MatchService {
             JSON.stringify(output.gaps),
             JSON.stringify(output.unknowns),
             JSON.stringify(loaded.preferences),
+            JSON.stringify(output.preferenceFit),
           ],
         );
         saved = this.view(inserted.rows[0]);
@@ -190,6 +198,7 @@ export class MatchService {
     lines: MatchLine[];
     listing: Parameters<typeof explainMatch>[0];
     preferences: unknown;
+    context: Parameters<typeof explainMatch>[3];
   }> {
     const resume = await this.pool.query<{ body: unknown; workspace_id: string; candidate_auth_user_id: string }>(
       `SELECT v.body, r.workspace_id, r.candidate_auth_user_id
@@ -203,55 +212,29 @@ export class MatchService {
     if (version.workspace_id !== owner.workspaceId || version.candidate_auth_user_id !== owner.authUserId) {
       throw new BillingError('permission_denied');
     }
-    const opportunity = await this.pool.query<{
-      revision_id: string;
-      title: string;
-      description: string;
-      status: string;
-      deadline: string | null;
-      locations: unknown;
-      compensation: unknown;
-      eligibility: unknown;
-      candidate_auth_user_id: string | null;
-    }>(
-      `SELECT r.id AS revision_id, r.title, r.description, o.status, r.deadline, r.locations, r.compensation, r.eligibility,
-              o.candidate_auth_user_id
-         FROM opportunities o
-         JOIN opportunity_revisions r ON r.id = o.current_revision_id
-        WHERE o.id = $1`,
-      [opportunityId],
-    );
-    const listing = opportunity.rows[0];
-    if (!listing) throw new BillingError('not_found');
-    if (listing.candidate_auth_user_id !== null && listing.candidate_auth_user_id !== owner.authUserId) {
-      throw new BillingError('permission_denied');
-    }
-    const facts = await this.pool.query<{ id: string; confirmation: string }>(
-      `SELECT id, confirmation FROM career_facts WHERE workspace_id = $1 AND candidate_auth_user_id = $2`,
+    // Owner-checked: another person's pasted listing reads as not found.
+    const listing = await readOpportunityForCandidate(this.pool, owner.authUserId, opportunityId);
+    const facts = await this.pool.query<{ id: string; confirmation: string; fact_type: string; value: unknown }>(
+      `SELECT id, confirmation, fact_type, value FROM career_facts WHERE workspace_id = $1 AND candidate_auth_user_id = $2`,
       [owner.workspaceId, owner.authUserId],
     );
     const confirmed = new Set(facts.rows.filter((fact) => fact.confirmation === 'confirmed').map((fact) => fact.id));
+    const credentials: MatchCredential[] = facts.rows
+      .filter((fact) => fact.fact_type === 'certification' && isRecord(fact.value) && typeof fact.value.name === 'string')
+      .map((fact) => ({ factId: fact.id, name: String((fact.value as Record<string, unknown>).name), confirmed: fact.confirmation === 'confirmed' }));
     const profile = await this.pool.query<{ version: number; preferences: unknown }>(
       `SELECT version, preferences FROM career_profiles WHERE workspace_id = $1 AND candidate_auth_user_id = $2`,
       [owner.workspaceId, owner.authUserId],
     );
-    const compensation = isRecord(listing.compensation) ? listing.compensation : {};
-    const eligibility = isRecord(listing.eligibility) ? listing.eligibility : {};
-    const sponsorship = eligibility.sponsorship === 'stated_yes' || eligibility.sponsorship === 'stated_no' ? eligibility.sponsorship : 'unknown';
+    const preferences = profile.rows[0]?.preferences ?? {};
+    const parsed = validatePreferences(isRecord(preferences) ? preferences : {});
     return {
       profileVersion: profile.rows[0]?.version ?? 0,
-      revisionId: listing.revision_id,
-      preferences: profile.rows[0]?.preferences ?? {},
+      revisionId: listing.revisionId,
+      preferences,
       lines: linesOf(version.body).map((line) => ({ ...line, confirmed: confirmed.has(line.factId) })),
-      listing: {
-        status: listing.status === 'closed' ? 'closed' : 'open',
-        deadline: listing.deadline,
-        title: listing.title,
-        description: listing.description,
-        locations: strings(listing.locations),
-        payKnown: typeof compensation.minimum === 'number' || typeof compensation.maximum === 'number',
-        sponsorship,
-      },
+      listing: matchListingOf(listing),
+      context: { preferences: parsed.ok ? parsed.value : null, credentials },
     };
   }
 
@@ -262,8 +245,7 @@ export class MatchService {
     resumeVersionId: string,
   ): Promise<MatchRow | null> {
     const rows = await this.pool.query<MatchRow>(
-      `SELECT id, profile_version, opportunity_id, opportunity_revision_id, resume_version_id,
-              fit, overlap, reasons, gaps, unknowns, created_at, candidate_auth_user_id, workspace_id
+      `SELECT ${MATCH_COLUMNS}
          FROM match_results
         WHERE candidate_auth_user_id = $1 AND profile_version = $2
           AND opportunity_revision_id = $3 AND resume_version_id = $4`,
@@ -285,13 +267,17 @@ export class MatchService {
 
   private view(row: MatchRow): MatchView {
     const fit = row.fit === 'blocked' || row.fit === 'none' || row.fit === 'partial' || row.fit === 'strong' ? row.fit : 'none';
+    const gaps = gapsOf(row.gaps);
+    const preferenceFit = preferenceFitOf(row.preference_fit);
     return {
       id: row.id,
       fit,
       overlap: typeof row.overlap === 'number' ? row.overlap : 0,
       reasons: reasonsOf(row.reasons),
-      gaps: gapsOf(row.gaps),
+      gaps,
       unknowns: unknownsOf(row.unknowns),
+      preferenceFit,
+      ...matchLabel(fit, gaps, preferenceFit),
       profileVersion: row.profile_version,
       opportunityId: row.opportunity_id,
       opportunityRevisionId: row.opportunity_revision_id,
@@ -312,6 +298,7 @@ export class MatchService {
         factId: item.factId ?? null,
         token: item.token ?? null,
       })),
+      preferenceFit: match.preferenceFit.map((check) => ({ dimension: check.dimension, status: check.status, detail: check.detail ?? null })),
       profileVersion: match.profileVersion,
       opportunityId: match.opportunityId,
       opportunityRevisionId: match.opportunityRevisionId,
@@ -330,13 +317,17 @@ function parseMatch(value: JsonValue): MatchView {
     throw new BillingError('not_found');
   }
   const fit = value.fit === 'blocked' || value.fit === 'none' || value.fit === 'partial' || value.fit === 'strong' ? value.fit : 'none';
+  const gaps = gapsOf(value.gaps);
+  const preferenceFit = preferenceFitOf(value.preferenceFit);
   return {
     id: value.id,
     fit,
     overlap: typeof value.overlap === 'number' ? value.overlap : 0,
     reasons: reasonsOf(value.reasons),
-    gaps: gapsOf(value.gaps),
+    gaps,
     unknowns: unknownsOf(value.unknowns),
+    preferenceFit,
+    ...matchLabel(fit, gaps, preferenceFit),
     profileVersion: typeof value.profileVersion === 'number' ? value.profileVersion : 0,
     opportunityId: typeof value.opportunityId === 'string' ? value.opportunityId : '',
     opportunityRevisionId: typeof value.opportunityRevisionId === 'string' ? value.opportunityRevisionId : '',
@@ -362,8 +353,9 @@ function reasonsOf(value: unknown): MatchExplanation['reasons'] {
   if (!Array.isArray(value)) return [];
   const reasons: MatchExplanation['reasons'] = [];
   for (const item of value) {
-    if (!isRecord(item) || item.code !== 'confirmed_overlap' || typeof item.factId !== 'string' || typeof item.token !== 'string') continue;
-    reasons.push({ code: 'confirmed_overlap', factId: item.factId, token: item.token });
+    if (!isRecord(item) || (item.code !== 'confirmed_overlap' && item.code !== 'credential_held')) continue;
+    if (typeof item.factId !== 'string' || typeof item.token !== 'string') continue;
+    reasons.push({ code: item.code, factId: item.factId, token: item.token });
   }
   return reasons;
 }
@@ -372,8 +364,8 @@ function gapsOf(value: unknown): MatchExplanation['gaps'] {
   if (!Array.isArray(value)) return [];
   const gaps: MatchExplanation['gaps'] = [];
   for (const item of value) {
-    if (!isRecord(item) || item.code !== 'not_in_facts' || typeof item.token !== 'string') continue;
-    gaps.push({ code: 'not_in_facts', token: item.token });
+    if (!isRecord(item) || (item.code !== 'not_in_facts' && item.code !== 'credential_missing') || typeof item.token !== 'string') continue;
+    gaps.push({ code: item.code, token: item.token });
   }
   return gaps;
 }
@@ -391,6 +383,23 @@ function unknownsOf(value: unknown): MatchExplanation['unknowns'] {
     });
   }
   return unknowns;
+}
+
+function preferenceFitOf(value: unknown): PreferenceCheck[] {
+  if (!Array.isArray(value)) return [];
+  const checks: PreferenceCheck[] = [];
+  const statuses = ['meets', 'conflict', 'unknown', 'not_set', 'check'];
+  for (const item of value) {
+    if (!isRecord(item) || typeof item.dimension !== 'string' || typeof item.status !== 'string') continue;
+    const dimension = PREFERENCE_DIMENSIONS.find((known) => known === item.dimension);
+    if (!dimension || !statuses.includes(item.status)) continue;
+    checks.push({
+      dimension,
+      status: item.status as PreferenceCheck['status'],
+      ...(typeof item.detail === 'string' ? { detail: item.detail } : {}),
+    });
+  }
+  return checks;
 }
 
 function strings(value: unknown): string[] {

@@ -32,7 +32,9 @@
     "cover_letter": "Cover letter",
     "bio": "Bio",
     "linkedin": "LinkedIn text",
-    "outreach": "Outreach draft"
+    "outreach": "Outreach draft",
+    "referral_request": "Referral request",
+    "thank_you": "Thank-you note"
   },
   "defaultTitle": "Resume",
   "titleEmpty": "Give the CV a name.",
@@ -66,7 +68,9 @@
     "capacity": "This plan has room for {limit} resume versions.",
     "noRoomMore": "Your career plan has no room for more.",
     "notCreatedTitle": "Not created",
-    "notCreatedBody": "Nothing was created and no credit was used. Please try again."
+    "notCreatedBody": "Nothing was created and no credit was used. Please try again.",
+    "targetNeededTitle": "Say who you are writing to",
+    "targetNeeded": "A referral request or thank-you note needs a saved opportunity, or at least the organization or role you are writing about. Nothing was charged."
   },
   "create": {
     "capacity": "This plan has room for {limit} career CVs.",
@@ -117,7 +121,20 @@
     "none": "None (general draft)",
     "loadingOpps": "Loading your opportunities…",
     "oppsFailed": "Your opportunities could not be loaded; you can still write a general draft.",
-    "writeFromFacts": "Write from confirmed facts"
+    "writeFromFacts": "Write from confirmed facts",
+    "notesTitle": "About who you are writing to",
+    "notesHelp": "Optional. The draft repeats only what you type here; it never adds names, dates, or details.",
+    "notesNeeded": "Choose a saved opportunity above or enter at least the organization or the role. The draft repeats only what you type here; it never adds names, dates, or details.",
+    "organization": "Organization",
+    "role": "Role",
+    "contactName": "Contact’s name",
+    "contactRole": "Contact’s role",
+    "interviewDate": "Interview date",
+    "dateHint": "Optional. Year-month-day, for example 2026-11-20.",
+    "dateInvalid": "Enter a real date as YYYY-MM-DD (for example, 31 February does not exist).",
+    "tooLong": "Keep each note under {max} characters.",
+    "notConnectedTitle": "Writing assistant not connected",
+    "notConnected": "The writing assistant is not connected yet, so drafts can’t be written. No credit is used. You can still open, edit, and download saved drafts."
   },
   "resume": {
     "writeFailedBody": "Nothing was changed. Your typed lines are still here; try again.",

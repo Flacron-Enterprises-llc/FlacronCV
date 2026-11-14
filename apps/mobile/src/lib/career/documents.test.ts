@@ -6,7 +6,13 @@ import {
   createPaidKeys,
   createResumeFailure,
   creditLine,
+  EMPTY_WRITING_CONTEXT,
   isRevisionConflict,
+  isTargetedWritingType,
+  takesWritingContext,
+  WRITING_TYPE_OPTIONS,
+  writingContextInput,
+  writingTypeLabel,
   keyIsSpent,
   LETTER_TEMPLATE_OPTIONS,
   letterTemplateName,
@@ -146,6 +152,11 @@ describe('paidFailure', () => {
     expect(paidFailure(err(409, 'capacity_exceeded', { limit: 10 })).body).toMatch(/10 resume versions/);
     expect(paidFailure(err(0, 'network_error')).body).toMatch(/No connection/);
   });
+  it('says a referral or thank-you note needs a target, and that nothing was charged', () => {
+    const f = paidFailure(err(400, 'validation_error', { field: 'context', reason: 'missing_target' }));
+    expect(f.body).toMatch(/needs a saved opportunity/);
+    expect(f.body).toMatch(/Nothing was charged/);
+  });
   it('words a failed CV creation', () => {
     expect(createResumeFailure(err(409, 'capacity_exceeded', { limit: 3 }))).toMatch(/3 career CVs/);
     expect(createResumeFailure(err(400, 'validation_error'))).toMatch(/Check the name/);
@@ -155,5 +166,38 @@ describe('paidFailure', () => {
 describe('versionMeta', () => {
   it('shows day, layout and state', () => {
     expect(versionMeta(version())).toBe('2026-11-02 · Editorial · Draft');
+  });
+});
+
+describe('writing types and notes', () => {
+  it('labels every writing type the API accepts, new ones included', () => {
+    expect(WRITING_TYPE_OPTIONS.map((o) => o.id)).toEqual(['cover_letter', 'bio', 'linkedin', 'outreach', 'referral_request', 'thank_you']);
+    expect(writingTypeLabel('referral_request')).toBe('Referral request');
+    expect(writingTypeLabel('thank_you')).toBe('Thank-you note');
+    expect(writingTypeLabel('future_type')).toBe('future_type');
+    expect(isTargetedWritingType('thank_you')).toBe(true);
+    expect(isTargetedWritingType('bio')).toBe(false);
+    expect(takesWritingContext('cover_letter')).toBe(false);
+  });
+
+  it('sends only trimmed notes, and the interview date only for thank-you notes', () => {
+    const notes = { ...EMPTY_WRITING_CONTEXT, organization: '  Acme   Ltd ', contactName: 'Sam', interviewDate: '2026-11-20' };
+    expect(writingContextInput('bio', EMPTY_WRITING_CONTEXT, false)).toEqual({ ok: true, context: undefined });
+    expect(writingContextInput('cover_letter', notes, false)).toEqual({ ok: true, context: undefined });
+    expect(writingContextInput('outreach', notes, false)).toEqual({ ok: true, context: { organization: 'Acme Ltd', contactName: 'Sam' } });
+    expect(writingContextInput('thank_you', notes, false)).toEqual({
+      ok: true,
+      context: { organization: 'Acme Ltd', contactName: 'Sam', interviewDate: '2026-11-20' },
+    });
+  });
+
+  it('refuses a missing target, an impossible date and over-long notes before anything is charged', () => {
+    const missing = writingContextInput('referral_request', EMPTY_WRITING_CONTEXT, false);
+    expect(missing.ok ? null : missing.message).toMatch(/Nothing was charged/);
+    expect(writingContextInput('referral_request', EMPTY_WRITING_CONTEXT, true)).toEqual({ ok: true, context: undefined });
+    const date = writingContextInput('thank_you', { ...EMPTY_WRITING_CONTEXT, role: 'Analyst', interviewDate: '2026-02-31' }, false);
+    expect(date.ok ? null : date.message).toMatch(/real date/);
+    const long = writingContextInput('bio', { ...EMPTY_WRITING_CONTEXT, organization: 'x'.repeat(121) }, false);
+    expect(long.ok ? null : long.message).toMatch(/120/);
   });
 });

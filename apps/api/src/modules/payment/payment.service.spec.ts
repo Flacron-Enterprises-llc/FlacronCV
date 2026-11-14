@@ -14,6 +14,13 @@ function makeConfig(prices: Record<string, string> = {}) {
         'stripe.secretKey': '', // empty — Stripe not initialized in tests
         'stripe.webhookSecret': 'whsec_test',
         'stripe.prices': prices,
+        // Five-plan catalog prices (env-only in production). Career Pro is
+        // deliberately unset to exercise PLAN_NOT_CONFIGURED.
+        'stripe.planPrices': {
+          starter: { month: 'price_test_starter_m', year: 'price_test_starter_y' },
+          professional: { month: 'price_test_prof_m', year: 'price_test_prof_y' },
+          business: { month: 'price_test_business_m' },
+        },
       };
       return map[key];
     }),
@@ -104,7 +111,7 @@ describe('PaymentService', () => {
       if (!YEARLY_BILLING_ENABLED) return;
       await seedUser(firestore, 'uid-1');
       await expect(
-        service.createCheckoutSession('uid-1', { plan: SubscriptionPlan.PRO, interval: 'year' }),
+        service.createCheckoutSession('uid-1', { plan: SubscriptionPlan.PROFESSIONAL, interval: 'year' }),
       ).rejects.not.toThrow('Unsupported plan selection.');
     });
 
@@ -118,7 +125,7 @@ describe('PaymentService', () => {
         },
       });
       await expect(
-        service.createCheckoutSession('uid-iap', { plan: SubscriptionPlan.PRO, interval: 'month' }),
+        service.createCheckoutSession('uid-iap', { plan: SubscriptionPlan.PROFESSIONAL, interval: 'month' }),
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
@@ -142,7 +149,7 @@ describe('PaymentService', () => {
       await seedUser(firestore, 'uid-1');
       // Passes the plan guard, so the error is NOT the "Unsupported plan" one.
       await expect(
-        service.createCheckoutSession('uid-1', { plan: SubscriptionPlan.PRO, interval: 'month' }),
+        service.createCheckoutSession('uid-1', { plan: SubscriptionPlan.PROFESSIONAL, interval: 'month' }),
       ).rejects.not.toThrow('Unsupported plan selection.');
     });
 
@@ -265,7 +272,7 @@ describe('PaymentService', () => {
       if (YEARLY_BILLING_ENABLED) return;
       await seedUser(firestore, 'uid-1');
       await expect(
-        service.createCheckoutSession('uid-1', { plan: SubscriptionPlan.PRO, interval: 'year' }),
+        service.createCheckoutSession('uid-1', { plan: SubscriptionPlan.PROFESSIONAL, interval: 'year' }),
       ).rejects.toThrow('Annual billing is not available yet.');
     });
 
@@ -354,7 +361,7 @@ describe('PaymentService', () => {
 
       const result = await service.createCheckoutSession(
         'uid-stale',
-        { plan: SubscriptionPlan.PRO },
+        { plan: SubscriptionPlan.PROFESSIONAL },
         'http://ok',
         'http://cancel',
       );
@@ -382,7 +389,7 @@ describe('PaymentService', () => {
 
       await service.createCheckoutSession(
         'uid-deleted',
-        { plan: SubscriptionPlan.PRO },
+        { plan: SubscriptionPlan.PROFESSIONAL },
         'http://ok',
         'http://cancel',
       );
@@ -409,7 +416,7 @@ describe('PaymentService', () => {
       await expect(
         service.createCheckoutSession(
           'uid-blip',
-          { plan: SubscriptionPlan.PRO },
+          { plan: SubscriptionPlan.PROFESSIONAL },
           'http://ok',
           'http://cancel',
         ),
@@ -943,7 +950,7 @@ describe('PaymentService', () => {
         subscriptions: { list: jest.fn().mockResolvedValue({ data: [{ id: 'sub_old', status: 'canceled' }] }) },
       };
 
-      await service.createCheckoutSession('u-repeat', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
+      await service.createCheckoutSession('u-repeat', { plan: SubscriptionPlan.PROFESSIONAL }, 'http://ok', 'http://cancel');
 
       expect(create).toHaveBeenCalledWith(
         expect.objectContaining({ subscription_data: expect.not.objectContaining({ trial_period_days: expect.anything() }) }),
@@ -962,7 +969,7 @@ describe('PaymentService', () => {
         subscriptions: { list: jest.fn().mockRejectedValue(new Error('stripe down')) },
       };
 
-      await service.createCheckoutSession('u-err', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
+      await service.createCheckoutSession('u-err', { plan: SubscriptionPlan.PROFESSIONAL }, 'http://ok', 'http://cancel');
 
       // Fail closed — an outage must not become a free-trial dispenser.
       expect(create).toHaveBeenCalledWith(
@@ -985,7 +992,7 @@ describe('PaymentService', () => {
       try {
         await service.createCheckoutSession(
           'u-mismatch',
-          { plan: SubscriptionPlan.PRO },
+          { plan: SubscriptionPlan.PROFESSIONAL },
           'http://ok',
           'http://cancel',
           true,
@@ -1018,7 +1025,7 @@ describe('PaymentService', () => {
 
       await service.createCheckoutSession(
         'u-paid-ok',
-        { plan: SubscriptionPlan.PRO },
+        { plan: SubscriptionPlan.PROFESSIONAL },
         'http://ok',
         'http://cancel',
       );
@@ -1178,7 +1185,7 @@ describe('PaymentService', () => {
         subscriptions: { list: jest.fn().mockResolvedValue({ data: [] }) },
       };
 
-      await service.createCheckoutSession('u-trial', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
+      await service.createCheckoutSession('u-trial', { plan: SubscriptionPlan.PROFESSIONAL }, 'http://ok', 'http://cancel');
 
       expect(create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1208,7 +1215,7 @@ describe('PaymentService', () => {
         subscriptions: { list },
       };
 
-      await service.createCheckoutSession('u-flag', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
+      await service.createCheckoutSession('u-flag', { plan: SubscriptionPlan.PROFESSIONAL }, 'http://ok', 'http://cancel');
 
       expect(create.mock.calls[0][0].subscription_data.trial_period_days).toBeUndefined();
       expect(list).not.toHaveBeenCalled();
@@ -1229,7 +1236,7 @@ describe('PaymentService', () => {
 
       await service.createCheckoutSession(
         'u-ent-trial',
-        { plan: SubscriptionPlan.ENTERPRISE },
+        { plan: SubscriptionPlan.BUSINESS },
         'http://ok',
         'http://cancel',
       );
@@ -1245,7 +1252,7 @@ describe('PaymentService', () => {
       const create = jest.fn().mockResolvedValue({ id: 'cs_2', url: 'x' });
       (service as any).stripe = { customers: liveCustomers(), prices: ourPrices(), checkout: { sessions: { create } } };
 
-      await service.createCheckoutSession('u-ret', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
+      await service.createCheckoutSession('u-ret', { plan: SubscriptionPlan.PROFESSIONAL }, 'http://ok', 'http://cancel');
 
       expect(create.mock.calls[0][0].subscription_data.trial_period_days).toBeUndefined();
     });

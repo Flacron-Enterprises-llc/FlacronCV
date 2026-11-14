@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   newIdempotencyKey,
   type ApiClient,
+  type ApiKeyEnvironment,
+  type ApiKeyView,
   type DeveloperStatus,
   type HumanServiceList,
   type LearningLoopView,
@@ -47,12 +49,17 @@ export function LoopPanel({ report }: { report: LearningLoopView }) {
   );
 }
 
+/**
+ * Map discovery. Until a tile provider is configured there is no visual map,
+ * so no session is offered or charged: the list below is the whole feature.
+ */
 export function MapPanel({ api, list }: { api: ApiClient; list: MapList }) {
   const t = useTranslations('career.scope');
   const { busy, run } = useScopeBusy();
   const [minutes, setMinutes] = useState<number | null>(null);
   const [note, setNote] = useState<ActionNote | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const available = list.available === true;
 
   async function start() {
     await run(async () => {
@@ -70,7 +77,13 @@ export function MapPanel({ api, list }: { api: ApiClient; list: MapList }) {
 
   return (
     <Card>
-      <p className="text-sm text-career-muted">{t('no_tiles')}</p>
+      {available ? null : (
+        <div className="mb-4 flex flex-wrap items-start gap-2">
+          <Badge tone="later">{t('coming_soon')}</Badge>
+          <p className="min-w-0 flex-1 text-sm text-career-muted">{t('map_soon_body')}</p>
+        </div>
+      )}
+      <h2 className="text-base font-semibold text-career-ink">{t('map_list_heading')}</h2>
       {list.items.length === 0 ? (
         <p className="mt-3 text-sm text-career-muted">{t('map_empty')}</p>
       ) : (
@@ -82,26 +95,33 @@ export function MapPanel({ api, list }: { api: ApiClient; list: MapList }) {
           ))}
         </ul>
       )}
-      <Button type="button" className="mt-4" disabled={busy} onClick={() => setConfirming(true)}>
-        {t('start_map')}
-      </Button>
-      <ScopeNote note={note} className="mt-3" />
-      {minutes !== null ? <ScopeNote note={{ tone: 'success', key: 'minutes', values: { minutes } }} className="mt-3" /> : null}
-      <ConfirmDialog
-        open={confirming}
-        title={t('map_confirm_title')}
-        body={t('map_confirm_body')}
-        confirmLabel={t('start_map')}
-        cancelLabel={t('cancel')}
-        busy={busy}
-        onConfirm={() => void start()}
-        onCancel={() => setConfirming(false)}
-      />
+      {available ? (
+        <>
+          <Button type="button" className="mt-4" disabled={busy} onClick={() => setConfirming(true)}>
+            {t('start_map')}
+          </Button>
+          <ScopeNote note={note} className="mt-3" />
+          {minutes !== null ? <ScopeNote note={{ tone: 'success', key: 'minutes', values: { minutes } }} className="mt-3" /> : null}
+          <ConfirmDialog
+            open={confirming}
+            title={t('map_confirm_title')}
+            body={t('map_confirm_body')}
+            confirmLabel={t('start_map')}
+            cancelLabel={t('cancel')}
+            busy={busy}
+            onConfirm={() => void start()}
+            onCancel={() => setConfirming(false)}
+          />
+        </>
+      ) : null}
     </Card>
   );
 }
 
-/** Human review. Booking opens only when a provider's booking is open; today none is. */
+/**
+ * Human review. Booking opens only when a provider's booking is open; today
+ * none is, so the page says what the service will be and that it is coming.
+ */
 export function ServicesPanel({ api, services }: { api: ApiClient; services: HumanServiceList }) {
   const t = useTranslations('career.scope');
   const { busy, run } = useScopeBusy();
@@ -119,30 +139,50 @@ export function ServicesPanel({ api, services }: { api: ApiClient; services: Hum
     });
   }
 
-  if (services.items.length === 0) return <EmptyState title={t('services_empty')} />;
   return (
-    <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      {services.items.map((item) => {
-        // The one provider the service ships is described here in every language.
-        const known = item.id === 'review-not-open';
-        return (
-          <li key={item.id}>
-            <Card className="h-full">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <h2 className="text-lg font-semibold text-career-ink" dir="auto">{known ? t('services_review_name') : item.name}</h2>
-                {item.bookingOpen ? null : <Badge tone="later">{t('booking_closed')}</Badge>}
-              </div>
-              <p className="mt-1 text-sm text-career-muted" dir="auto">{known ? t('services_review_scope') : item.scope}</p>
-              <p className="mt-3 text-sm text-career-ink" dir="auto">{known ? t('services_note') : item.note}</p>
-              <Button type="button" className="mt-4" disabled={busy || !item.bookingOpen} onClick={() => void book(item.id)}>
-                {t('book')}
-              </Button>
-              <ScopeNote note={notes[item.id] ?? null} className="mt-3" />
-            </Card>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="space-y-4">
+      <ComingSoonCard title={t('services_soon_title')} body={t('services_soon_body')} />
+      {services.items.length === 0 ? (
+        <EmptyState title={t('services_empty')} />
+      ) : (
+        <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {services.items.map((item) => {
+            // The one provider the service ships is described here in every language.
+            const known = item.id === 'review-not-open';
+            return (
+              <li key={item.id}>
+                <Card className="h-full">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <h2 className="text-lg font-semibold text-career-ink" dir="auto">{known ? t('services_review_name') : item.name}</h2>
+                    {item.bookingOpen ? null : <Badge tone="later">{t('coming_soon')}</Badge>}
+                  </div>
+                  <p className="mt-1 text-sm text-career-muted" dir="auto">{known ? t('services_review_scope') : item.scope}</p>
+                  <p className="mt-3 text-sm text-career-ink" dir="auto">{known ? t('services_note') : item.note}</p>
+                  <Button type="button" className="mt-4" disabled={busy || !item.bookingOpen} onClick={() => void book(item.id)}>
+                    {t('book')}
+                  </Button>
+                  <ScopeNote note={notes[item.id] ?? null} className="mt-3" />
+                </Card>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** A plain "coming soon" explanation: what the area will do, and that nothing is sold yet. */
+export function ComingSoonCard({ title, body }: { title: string; body: string }) {
+  const t = useTranslations('career.scope');
+  return (
+    <Card>
+      <div className="flex flex-wrap items-start gap-2">
+        <Badge tone="later">{t('coming_soon')}</Badge>
+        <h2 className="min-w-0 flex-1 text-base font-semibold text-career-ink">{title}</h2>
+      </div>
+      <p className="mt-2 text-sm text-career-muted">{body}</p>
+    </Card>
   );
 }
 
@@ -167,11 +207,12 @@ export function RecruitingPanel({ api, initialDiscoverable }: { api: ApiClient; 
     });
   }
 
-  async function search() {
+  // Only a count comes back: nobody can see who else opted in.
+  async function countOptIns() {
     await run(async () => {
       setSearchNote(null);
       try {
-        setCount((await api.recruitingSearch()).items.length);
+        setCount((await api.recruitingSearch()).count);
       } catch (error) {
         setSearchNote(errorNote(error, 'checkout_closed_body'));
       }
@@ -193,14 +234,16 @@ export function RecruitingPanel({ api, initialDiscoverable }: { api: ApiClient; 
         <ScopeNote note={saveNote} className="mt-3" />
       </Card>
       <Card>
-        <h2 className="text-lg font-semibold text-career-ink">{t('employer_heading')}</h2>
-        <p className="mt-1 text-sm text-career-muted">{t('employer_help')}</p>
-        <Button type="button" variant="secondary" className="mt-4" disabled={busy} onClick={() => void search()}>
-          {t('search')}
+        <div className="flex flex-wrap items-start gap-2">
+          <Badge tone="later">{t('coming_soon')}</Badge>
+          <h2 className="min-w-0 flex-1 text-lg font-semibold text-career-ink">{t('employer_heading')}</h2>
+        </div>
+        <p className="mt-2 text-sm text-career-muted">{t('employer_soon_body')}</p>
+        <Button type="button" variant="secondary" className="mt-4" disabled={busy} onClick={() => void countOptIns()}>
+          {t('count_opt_ins')}
         </Button>
         <ScopeNote note={searchNote} className="mt-3" />
         {count !== null ? <ScopeNote note={{ tone: 'info', key: 'search_count', values: { count } }} className="mt-3" /> : null}
-        <p className="mt-4 text-sm text-career-muted">{t('checkout_closed_body')}</p>
       </Card>
     </div>
   );
@@ -208,25 +251,49 @@ export function RecruitingPanel({ api, initialDiscoverable }: { api: ApiClient; 
 
 /**
  * Organization tools. Each action is enabled only when its add-on is on the
- * account; otherwise the reason is shown where the button would be.
+ * account; otherwise the reason is shown where the button would be. Keys
+ * belong to one environment: test keys never spend paid reads.
  */
 export function DeveloperPanel({ api, initial }: { api: ApiClient; initial: DeveloperStatus }) {
   const t = useTranslations('career.scope');
+  const locale = useLocale();
   const { busy, run } = useScopeBusy();
   const [token, setToken] = useState<string | null>(null);
+  const [keys, setKeys] = useState<ApiKeyView[]>(initial.keys ?? []);
+  const [environment, setEnvironment] = useState<ApiKeyEnvironment>('test');
   const [keyNote, setKeyNote] = useState<ActionNote | null>(null);
   const [brand, setBrand] = useState(initial.brand?.brandName ?? '');
   const [attribution, setAttribution] = useState(initial.brand?.attribution ?? '');
   const [brandNote, setBrandNote] = useState<ActionNote | null>(null);
+  const limits = initial.rateLimits ?? { test: 30, live: 120 };
+  const date = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
 
   async function createKey() {
     await run(async () => {
       setKeyNote(null);
       setToken(null);
       try {
-        setToken((await api.createDeveloperKey()).token);
+        const created = await api.createDeveloperKey(environment);
+        setToken(created.token);
+        setKeys((current) => [
+          { id: created.id, prefix: created.prefix, environment: created.environment, createdAt: new Date().toISOString(), lastUsedAt: null, revokedAt: null },
+          ...current,
+        ]);
       } catch (error) {
         setKeyNote(errorNote(error, 'api_package_missing'));
+      }
+    });
+  }
+
+  async function revoke(keyId: string) {
+    await run(async () => {
+      setKeyNote(null);
+      try {
+        await api.revokeDeveloperKey(keyId);
+        setKeys((current) => current.map((key) => (key.id === keyId ? { ...key, revokedAt: new Date().toISOString() } : key)));
+        setKeyNote({ tone: 'success', key: 'key_revoked' });
+      } catch (error) {
+        setKeyNote(errorNote(error));
       }
     });
   }
@@ -249,9 +316,25 @@ export function DeveloperPanel({ api, initial }: { api: ApiClient; initial: Deve
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <Card>
-        <h2 className="text-lg font-semibold text-career-ink">{t('api_heading')}</h2>
+        <div className="flex flex-wrap items-start gap-2">
+          <h2 className="min-w-0 flex-1 text-lg font-semibold text-career-ink">{t('api_heading')}</h2>
+          {initial.apiPackage ? null : <Badge tone="later">{t('coming_soon')}</Badge>}
+        </div>
         <p className="mt-1 text-sm text-career-muted">{t('developer_help')}</p>
-        <Button type="button" className="mt-4" disabled={busy || !initial.apiPackage} onClick={() => void createKey()}>
+        <p className="mt-2 text-sm text-career-muted">{t('rate_limits', { test: limits.test, live: limits.live })}</p>
+        <label className="mt-4 block space-y-1.5 text-sm font-semibold text-career-ink">
+          <span>{t('key_environment')}</span>
+          <select
+            className="block h-11 w-full rounded-md border border-career-line bg-career-surface px-3 text-base text-career-ink"
+            value={environment}
+            disabled={!initial.apiPackage}
+            onChange={(event) => setEnvironment(event.target.value === 'live' ? 'live' : 'test')}
+          >
+            <option value="test">{t('env_test')}</option>
+            <option value="live">{t('env_live')}</option>
+          </select>
+        </label>
+        <Button type="button" className="mt-3" disabled={busy || !initial.apiPackage} onClick={() => void createKey()}>
           {t('create_key')}
         </Button>
         {initial.apiPackage ? null : <p className="mt-3 text-sm text-career-muted">{t('api_package_missing')}</p>}
@@ -262,9 +345,32 @@ export function DeveloperPanel({ api, initial }: { api: ApiClient; initial: Deve
             <code className="mt-2 block break-all font-mono text-xs" dir="ltr">{token}</code>
           </div>
         ) : null}
+        {keys.length > 0 ? (
+          <ul className="mt-4 space-y-2">
+            {keys.map((key) => (
+              <li key={key.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-career-line px-3 py-2 text-sm">
+                <span className="min-w-0">
+                  <code className="font-mono text-xs" dir="ltr">{key.prefix}…</code>{' '}
+                  <Badge tone="neutral">{t(key.environment === 'test' ? 'env_test' : 'env_live')}</Badge>
+                  <span className="ms-2 text-career-muted">{t('key_created', { date: date.format(new Date(key.createdAt)) })}</span>
+                </span>
+                {key.revokedAt ? (
+                  <Badge tone="later">{t('key_revoked_badge')}</Badge>
+                ) : (
+                  <Button type="button" variant="secondary" disabled={busy} onClick={() => void revoke(key.id)}>
+                    {t('revoke_key')}
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </Card>
       <Card>
-        <h2 className="text-lg font-semibold text-career-ink">{t('brand_heading')}</h2>
+        <div className="flex flex-wrap items-start gap-2">
+          <h2 className="min-w-0 flex-1 text-lg font-semibold text-career-ink">{t('brand_heading')}</h2>
+          {initial.whiteLabel ? null : <Badge tone="later">{t('coming_soon')}</Badge>}
+        </div>
         <form className="mt-3 grid grid-cols-1 gap-3" onSubmit={(event) => void saveBrand(event)}>
           <Input label={t('brand')} value={brand} maxLength={80} disabled={!initial.whiteLabel} onChange={(event) => setBrand(event.target.value)} />
           <Input

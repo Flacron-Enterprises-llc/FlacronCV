@@ -1,3 +1,5 @@
+import { STALE_LISTING_DAYS, isStaleListing } from './opportunities';
+
 export type ModerationStatus = 'unflagged' | 'flagged' | 'under_review' | 'verified' | 'suppressed';
 
 export type ReportReason =
@@ -72,7 +74,6 @@ export interface ModerationQueueItem {
 
 const SUSPICIOUS_FEE_REGEX = /(wire transfer|pay upfront|payment required|application fee|training fee|registration fee|western union|crypto payment|buy equipment upfront)/i;
 
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function detectSuspiciousPatterns(text: string): boolean {
   return SUSPICIOUS_FEE_REGEX.test(text);
@@ -135,13 +136,12 @@ export function computeTrustSignals(params: {
     });
   }
 
-  // Check staleness (> 30 days)
-  const checkedTime = new Date(checkedAtIso).getTime();
-  if (Number.isFinite(checkedTime) && nowMs - checkedTime > THIRTY_DAYS_MS) {
+  // One staleness rule for search, detail and trust signals (STALE_LISTING_DAYS).
+  if (isStaleListing(checkedAtIso, nowMs)) {
     signals.push({
       key: 'stale_listing',
       severity: 'warning',
-      message: 'Listing checked over 30 days ago. Availability may have changed on employer site.',
+      message: `Listing checked over ${STALE_LISTING_DAYS} days ago. Availability may have changed on the employer site.`,
     });
   }
 

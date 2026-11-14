@@ -157,36 +157,80 @@ describe('CV14: CareerModesService', () => {
 
   it('rejects specialist mode configuration on Free plan with plan_upgrade_required', async () => {
     await setPlan(ada, 'free');
-    try {
-      await service.setSpecialistMode(ada, {
-        mode: 'technical_engineering',
-      });
-      throw new Error('should require plan upgrade');
-    } catch (err) {
-      expect(isBillingError(err, 'plan_upgrade_required')).toBe(true);
-    }
+    const refused = await service.setSpecialistMode(ada, { modes: ['veterans'] }).catch((err: unknown) => err);
+    expect(isBillingError(refused, 'plan_upgrade_required')).toBe(true);
+    expect((await service.getSpecialistMode(ada)).available).toBe(false);
   });
 
-  it('enables specialist mode on paid plans (Starter and up)', async () => {
+  it('saves up to three of the nine modes on paid plans and exposes them as a mode context', async () => {
     await setPlan(ada, 'starter');
+    const initial = await service.getSpecialistMode(ada);
+    expect(initial.mode).toBeNull();
+    expect(initial.modes).toEqual([]);
 
-    // Default mode is general
-    const defaultMode = await service.getSpecialistMode(ada);
-    expect(defaultMode.mode).toBe('general');
-
-    // Set to technical engineering
     const updated = await service.setSpecialistMode(ada, {
-      mode: 'technical_engineering',
-      focusAreas: ['Distributed Systems', 'Rust Async', 'Linux Internals'],
-      customGuidelines: 'Focus heavily on consensus and low-latency benchmarks.',
+      modes: ['military_spouses', 'trades_licensed', 'military_spouses'],
+      customGuidelines: 'Remote first please.',
     });
+    expect(updated.modes).toEqual(['military_spouses', 'trades_licensed']);
+    expect(updated.mode).toBe('military_spouses');
+    expect(updated.focusAreas.length).toBeGreaterThan(0);
 
-    expect(updated.mode).toBe('technical_engineering');
-    expect(updated.focusAreas).toEqual(['Distributed Systems', 'Rust Async', 'Linux Internals']);
-    expect(updated.customGuidelines).toBe('Focus heavily on consensus and low-latency benchmarks.');
+    const tooMany = await service
+      .setSpecialistMode(ada, { modes: ['veterans', 'freelancers', 'career_changers', 'returning_workers'] })
+      .catch((err: unknown) => err);
+    expect(isBillingError(tooMany, 'validation_error')).toBe(true);
+    const unknown = await service.setSpecialistMode(ada, { modes: ['general' as never] }).catch((err: unknown) => err);
+    expect(isBillingError(unknown, 'validation_error')).toBe(true);
 
-    const reloaded = await service.getSpecialistMode(ada);
-    expect(reloaded.mode).toBe('technical_engineering');
+    // Older clients send one mode.
+    expect((await service.setSpecialistMode(ada, { mode: 'veterans' })).modes).toEqual(['veterans']);
+
+    const context = await service.modeContext(ada);
+    expect(context.modes).toEqual(['veterans']);
+    expect(context.checklist.map((item) => item.id)).toContain('translate_military_skills');
+    expect(context.constraints.join(' ')).toMatch(/work authorization/);
+
+    // A downgrade keeps the saved choice but the context stops applying it.
+    await setPlan(ada, 'free');
+    expect((await service.modeContext(ada)).modes).toEqual([]);
+  });
+
+  it('never assumes work authorization and separates current and future places', async () => {
+    await setPlan(other, 'professional');
+    const current = await service.createLocation(other, { place: 'Norfolk, VA', radiusMiles: 25 });
+    expect(current).toMatchObject({ kind: 'current', workAuthorization: 'not_stated', licenseTransfer: 'not_stated', isRelocation: false });
+    const future = await service.createLocation(other, {
+      place: 'San Diego, CA',
+      radiusMiles: 50,
+      kind: 'future',
+      moveDate: '2027-03-01',
+      availableFrom: '2027-03-15',
+      remoteRegion: 'United States',
+    });
+    expect(future).toMatchObject({ kind: 'future', isRelocation: true, moveDate: '2027-03-01', availableFrom: '2027-03-15', remoteRegion: 'United States' });
+    const impossible = await service.createLocation(other, { place: 'X', radiusMiles: 5, moveDate: '2026-02-31' }).catch((err: unknown) => err);
+    expect(isBillingError(impossible, 'validation_error')).toBe(true);
+    const moved = await service.updateLocation(other, future.id, { place: 'Honolulu, HI' });
+    expect(moved.id).toBe(future.id);
+    const context = await service.modeContext(other);
+    expect(context.locations.current.map((l) => l.id)).toEqual([current.id]);
+    expect(context.locations.future.map((l) => l.place)).toEqual(['Honolulu, HI']);
+    await service.deleteLocation(other, current.id);
+    await service.deleteLocation(other, future.id);
+  });
+
+  it('deletes a place that a saved search uses, keeping the search', async () => {
+    await setPlan(other, 'professional');
+    const place = await service.createLocation(other, { place: 'Leeds', radiusMiles: 10 });
+    const search = await db.pool.query<{ id: string }>(
+      `INSERT INTO saved_searches (workspace_id, candidate_auth_user_id, filters, location_profile_id, schedule)
+       VALUES ($1, $2, '{}'::jsonb, $3, 'weekly') RETURNING id`,
+      [other.workspaceId, other.authUserId, place.id],
+    );
+    await service.deleteLocation(other, place.id);
+    const kept = await db.pool.query(`SELECT location_profile_id FROM saved_searches WHERE id = $1`, [search.rows[0].id]);
+    expect(kept.rows[0].location_profile_id).toBeNull();
   });
 
   it('enforces tenant and candidate isolation on location profiles and specialist modes', async () => {

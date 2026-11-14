@@ -6,7 +6,12 @@
   "plans": {
     "free": "Gratuit",
     "pro": "Pro",
-    "enterprise": "Enterprise"
+    "enterprise": "Enterprise",
+    "starter": "Starter",
+    "professional": "Professionnel",
+    "career_pro": "Career Pro",
+    "business": "Entreprise",
+    "career_accelerator": "Career Accelerator"
   },
   "usage": {
     "title": "Utilisation mensuelle",
@@ -168,7 +173,8 @@
         "uncollectible": "Irrécouvrable",
         "draft": "Brouillon"
       }
-    }
+    },
+    "catalogPlanNote": "Votre forfait est géré sur le site FlacronCV. Les changements de ce forfait ne sont pas encore disponibles dans l’application."
   },
   "data": {
     "title": "Vos données",

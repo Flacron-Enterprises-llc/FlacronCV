@@ -51,7 +51,7 @@ describe('ActionEngineService (CV12)', () => {
     model = new FakeTextModel();
     profiles = new CareerProfileService(db.pool, model, clock);
     metering = new MeteringService(db.pool, clock);
-    service = new ActionEngineService(db.pool, metering, model);
+    service = new ActionEngineService(db.pool, metering, model, clock);
     // A grounded letter: it names only the confirmed employer and the listing's
     // own organization, which the prompt carries.
     model.always(COVER_LETTER_TEMPLATE, (request) => {
@@ -107,6 +107,32 @@ describe('ActionEngineService (CV12)', () => {
     const err = await service.create(ada, { opportunityId: 'not-a-uuid' }, 'key-invalid-uuid').catch((e) => e);
     expect(isBillingError(err, 'validation_error')).toBe(true);
     if (isBillingError(err)) expect(err.details).toMatchObject({ field: 'opportunityId' });
+  });
+
+  it("treats another candidate's private pasted listing as missing", async () => {
+    const owner = charles;
+    const pasted = await db.pool.query<{ id: string }>(
+      `INSERT INTO opportunities (category, provider, source_id, title, organization, status, candidate_auth_user_id)
+       VALUES ('job', 'paste', 'action-private-1', 'Archivist', 'Private Co', 'open', $1) RETURNING id`,
+      [owner.authUserId],
+    );
+    const pastedRevision = await db.pool.query<{ id: string }>(
+      `INSERT INTO opportunity_revisions (opportunity_id, revision, title, organization, description, status)
+       VALUES ($1, 1, 'Archivist', 'Private Co', 'Keep the archive catalogue accurate with SQL and careful records work.', 'open') RETURNING id`,
+      [pasted.rows[0].id],
+    );
+    await db.pool.query(`UPDATE opportunities SET current_revision_id = $2 WHERE id = $1`, [
+      pasted.rows[0].id,
+      pastedRevision.rows[0].id,
+    ]);
+    const privateId = pasted.rows[0].id;
+    const err = await service.create(ada, { opportunityId: privateId }, 'key-private-listing').catch((e) => e);
+    expect(isBillingError(err, 'not_found')).toBe(true);
+    const ledger = await db.pool.query(`SELECT 1 FROM usage_ledger WHERE billing_account_id = $1`, [ada.billingAccountId]);
+    expect(ledger.rowCount).toBe(0);
+    // The owner gets past the listing check (and stops later on missing facts).
+    const own = await service.create(charles, { opportunityId: privateId }, 'key-private-own').catch((e) => e);
+    expect(isBillingError(own, 'not_found')).toBe(false);
   });
 
   it('rejects when candidate has no confirmed career facts', async () => {
@@ -252,12 +278,218 @@ describe('ActionEngineService (CV12)', () => {
   it('releases the credit and saves nothing when no model is available', async () => {
     const oppId = await seedOpportunity('Platform Engineer', 'Initech');
     const before = await service.list(ada);
-    const offline = new ActionEngineService(db.pool, metering, new UnconfiguredTextModel());
+    const offline = new ActionEngineService(db.pool, metering, new UnconfiguredTextModel(), clock);
     const err = await offline.create(ada, { opportunityId: oppId }, 'key-no-model').catch((e) => e);
     expect(isBillingError(err, 'provider_unavailable')).toBe(true);
     if (isBillingError(err)) expect(err.details).toMatchObject({ released: true });
     const after = await service.list(ada);
     expect(after.items).toHaveLength(before.items.length);
     expect(after.actionPack.includedRemaining).toBe(before.actionPack.includedRemaining);
+  });
+
+  describe('one reservation across retries, edits and Documents', () => {
+    let seq = 0;
+    async function professional(): Promise<Principal> {
+      seq += 1;
+      const p = await identities.principal(identity(`grace-action-${seq}`));
+      await setPlan(p, 'professional');
+      await profiles.createFact(p, { factType: 'contact', value: { fullName: 'Grace Hopper', email: `g${seq}@example.test` }, confirmation: 'confirmed' });
+      await profiles.createFact(p, {
+        factType: 'experience',
+        value: { position: 'Barista', company: 'Corner Cafe', startDate: '2014-01', endDate: '2015-01' },
+        confirmation: 'confirmed',
+      });
+      await profiles.createFact(p, {
+        factType: 'experience',
+        value: { position: 'Cataloguer', company: 'Northwind Cataloguing', startDate: '2019-03', endDate: '2024-06' },
+        confirmation: 'confirmed',
+      });
+      await profiles.createFact(p, { factType: 'skill', value: { name: 'Latte art' }, confirmation: 'confirmed' });
+      await profiles.createFact(p, { factType: 'skill', value: { name: 'PostgreSQL' }, confirmation: 'confirmed' });
+      await profiles.createFact(p, { factType: 'skill', value: { name: 'Kubernetes' }, confirmation: 'draft' });
+      return p;
+    }
+
+    async function ledger(p: Principal) {
+      const res = await db.pool.query<{ unit: string; state: string }>(
+        `SELECT unit, state FROM usage_ledger WHERE billing_account_id = $1 ORDER BY created_at`,
+        [p.billingAccountId],
+      );
+      return res.rows;
+    }
+
+    const listingText = 'Catalogue records with PostgreSQL and Kubernetes; keep the cataloguing inventory accurate for the team.';
+
+    it('tailors the résumé to the listing from confirmed facts only', async () => {
+      const p = await professional();
+      const oppId = await seedOpportunity('Cataloguer', 'Acme Labs', listingText);
+      const pack = (await service.create(p, { opportunityId: oppId }, 'tailor-1')).result as any;
+      const texts: string[] = pack.tailoredResume.lines.map((line: any) => line.text);
+      expect(texts[0]).toContain('Grace Hopper');
+      // The matching role comes before the unrelated one; both stay.
+      expect(texts.findIndex((t) => t.includes('Northwind'))).toBeLessThan(texts.findIndex((t) => t.includes('Corner Cafe')));
+      expect(texts).toContain('PostgreSQL');
+      expect(texts).not.toContain('Latte art');
+      expect(pack.tailoredResume.omittedFactIds).toHaveLength(1);
+      // A draft fact never appears, even though the listing asks for it.
+      expect(JSON.stringify(pack.tailoredResume)).not.toContain('Kubernetes');
+      expect(pack.status).toBe('complete');
+    });
+
+    it('keeps a partial pack on a letter failure and retries it under the same reservation', async () => {
+      const p = await professional();
+      const oppId = await seedOpportunity('Cataloguer', 'Acme Labs', listingText);
+      model.once(COVER_LETTER_TEMPLATE, 'not json');
+      const first = await service.create(p, { opportunityId: oppId }, 'retry-1');
+      const partial = first.result as any;
+      expect(partial.status).toBe('partial');
+      expect(partial.coverLetter).toBeNull();
+      expect(partial.componentErrors.coverLetter).toBe('unusable_output');
+      expect(partial.tailoredResume.lines.length).toBeGreaterThan(0);
+      expect(first.usage.ledgerState).toBe('reserved');
+      expect(await ledger(p)).toEqual([{ unit: 'action_pack', state: 'reserved' }]);
+
+      // Replaying the create key returns the same partial pack, no second hold.
+      const replay = await service.create(p, { opportunityId: oppId }, 'retry-1');
+      expect(replay.replayed).toBe(true);
+      expect((replay.result as any).id).toBe(partial.id);
+
+      const done = await service.retry(p, partial.id, 'coverLetter');
+      const pack = done.result as any;
+      expect(pack.status).toBe('complete');
+      expect(pack.coverLetter.body).toContain('Northwind Cataloguing');
+      expect(pack.letterAttempts).toBe(2);
+      expect(done.usage).toMatchObject({ ledgerState: 'committed', includedRemaining: 9 });
+      // Exactly one pack credit and nothing else, across both attempts.
+      expect(await ledger(p)).toEqual([{ unit: 'action_pack', state: 'committed' }]);
+
+      const again = await service.retry(p, partial.id, 'coverLetter').catch((e) => e);
+      expect(isBillingError(again, 'validation_error')).toBe(true);
+      const other = await service.retry(p, partial.id, 'tailoredResume').catch((e) => e);
+      expect(isBillingError(other, 'validation_error')).toBe(true);
+    });
+
+    it('releases the reservation and removes the pack when the attempts run out', async () => {
+      const p = await professional();
+      const oppId = await seedOpportunity('Cataloguer', 'Acme Labs', listingText);
+      model.always(COVER_LETTER_TEMPLATE, 'not json');
+      const partial = (await service.create(p, { opportunityId: oppId }, 'exhaust-1')).result as any;
+      expect(partial.status).toBe('partial');
+      expect((await service.retry(p, partial.id, 'coverLetter')).result).toMatchObject({ status: 'partial', letterAttempts: 2 });
+      const final = await service.retry(p, partial.id, 'coverLetter').catch((e) => e);
+      expect(isBillingError(final, 'provider_unavailable')).toBe(true);
+      if (isBillingError(final)) expect(final.details).toMatchObject({ released: true });
+      expect(await ledger(p)).toEqual([{ unit: 'action_pack', state: 'released' }]);
+      expect((await service.list(p)).items).toHaveLength(0);
+      expect((await service.list(p)).actionPack.includedRemaining).toBe(10);
+    });
+
+    it('gives the held credit back when the person cancels a partial pack', async () => {
+      const p = await professional();
+      const oppId = await seedOpportunity('Cataloguer', 'Acme Labs', listingText);
+      model.once(COVER_LETTER_TEMPLATE, 'not json');
+      const partial = (await service.create(p, { opportunityId: oppId }, 'cancel-1')).result as any;
+      expect((await service.list(p)).actionPack.includedRemaining).toBe(9);
+      expect(await service.cancel(p, partial.id)).toEqual({ released: true });
+      expect((await service.list(p)).actionPack.includedRemaining).toBe(10);
+      expect(isBillingError(await service.get(p, partial.id).catch((e) => e), 'not_found')).toBe(true);
+    });
+
+    it('lets the person edit every component without a charge or an unconfirmed fact', async () => {
+      const p = await professional();
+      const oppId = await seedOpportunity('Cataloguer', 'Acme Labs', listingText);
+      const pack = (await service.create(p, { opportunityId: oppId }, 'edit-1')).result as any;
+      const lines = pack.tailoredResume.lines.map((line: any) => ({ factId: line.factId, text: line.text }));
+      const omitted = pack.tailoredResume.omittedFactIds[0];
+      const edited = await service.update(p, pack.id, {
+        tailoredResume: { title: 'My résumé for Acme', lines: [...lines.reverse(), { factId: omitted, text: 'Latte art (award)' }] },
+        coverLetter: { body: 'My own words.' },
+        fit: { reasons: ['Five years of cataloguing'], gaps: ['Kubernetes'] },
+        nextSteps: ['Email the hiring manager'],
+        checklist: [{ label: 'Ask Sam for a reference', done: false }],
+      });
+      expect(edited.tailoredResume.title).toBe('My résumé for Acme');
+      expect(edited.tailoredResume.lines.at(-1)?.text).toBe('Latte art (award)');
+      expect(edited.tailoredResume.omittedFactIds).toEqual([]);
+      expect(edited.coverLetter?.body).toBe('My own words.');
+      expect(edited.fit.reasons).toEqual(['Five years of cataloguing']);
+      expect(edited.nextSteps).toEqual(['Email the hiring manager']);
+      expect(edited.checklist).toHaveLength(1);
+      expect(edited.editedComponents?.sort()).toEqual(['checklist', 'coverLetter', 'fit', 'nextSteps', 'tailoredResume']);
+
+      const invented = await service
+        .update(p, pack.id, { tailoredResume: { lines: [{ factId: '00000000-0000-4000-8000-000000000009', text: 'COBOL expert' }] } })
+        .catch((e) => e);
+      expect(isBillingError(invented, 'validation_error')).toBe(true);
+      const intruder = await service.update(charles, pack.id, { nextSteps: ['x'] }).catch((e) => e);
+      expect(isBillingError(intruder, 'permission_denied')).toBe(true);
+      expect(await ledger(p)).toEqual([{ unit: 'action_pack', state: 'committed' }]);
+    });
+
+    it('copies the bundle into Documents once and exports PDF and DOCX for free', async () => {
+      const p = await professional();
+      const oppId = await seedOpportunity('Cataloguer', 'Acme Labs', listingText);
+      const pack = (await service.create(p, { opportunityId: oppId }, 'docs-1')).result as any;
+
+      const saved = await service.saveToDocuments(p, pack.id, {});
+      expect(saved.savedDocuments.resumeId).toBeTruthy();
+      expect(saved.savedDocuments.letterDocumentId).toBeTruthy();
+      const version = await db.pool.query<{ body: any; opportunity_revision_id: string }>(
+        `SELECT body, opportunity_revision_id FROM resume_versions WHERE id = $1`,
+        [saved.savedDocuments.resumeVersionId],
+      );
+      expect(version.rows[0].opportunity_revision_id).toBe(pack.opportunityRevisionId);
+      expect(JSON.stringify(version.rows[0].body)).toContain('Northwind Cataloguing');
+      const letter = await db.pool.query<{ body: string; document_type: string }>(
+        `SELECT body, document_type FROM writing_documents WHERE id = $1`,
+        [saved.savedDocuments.letterDocumentId],
+      );
+      expect(letter.rows[0]).toMatchObject({ document_type: 'cover_letter', body: pack.coverLetter.body });
+
+      // Saving unchanged content again adds nothing.
+      const same = await service.saveToDocuments(p, pack.id, {});
+      expect(same.savedDocuments).toEqual(saved.savedDocuments);
+      // After an edit, the résumé gets a new version and the letter is updated in place.
+      await service.update(p, pack.id, { coverLetter: { body: 'Edited letter.' } });
+      await service.update(p, pack.id, {
+        tailoredResume: { lines: pack.tailoredResume.lines.slice(0, 2).map((l: any) => ({ factId: l.factId, text: l.text })) },
+      });
+      const resaved = await service.saveToDocuments(p, pack.id, {});
+      expect(resaved.savedDocuments.resumeId).toBe(saved.savedDocuments.resumeId);
+      expect(resaved.savedDocuments.resumeVersionId).not.toBe(saved.savedDocuments.resumeVersionId);
+      expect(resaved.savedDocuments.letterDocumentId).toBe(saved.savedDocuments.letterDocumentId);
+      const updatedLetter = await db.pool.query<{ body: string }>(`SELECT body FROM writing_documents WHERE id = $1`, [
+        saved.savedDocuments.letterDocumentId,
+      ]);
+      expect(updatedLetter.rows[0].body).toBe('Edited letter.');
+
+      const pdf = await service.exportComponent(p, pack.id, 'tailoredResume', 'pdf');
+      expect(pdf.contentType).toBe('application/pdf');
+      expect(pdf.bytes.subarray(0, 4).toString()).toBe('%PDF');
+      const docx = await service.exportComponent(p, pack.id, 'coverLetter', 'docx');
+      expect(docx.bytes.subarray(0, 2).toString()).toBe('PK');
+      const bad = await service.exportComponent(p, pack.id, 'fit', 'pdf').catch((e) => e);
+      expect(isBillingError(bad, 'validation_error')).toBe(true);
+
+      // No document or analysis credits: still the one pack credit only.
+      expect(await ledger(p)).toEqual([{ unit: 'action_pack', state: 'committed' }]);
+    });
+
+    // Last: it moves the shared clock forward.
+    it('expires a partial pack whose hold ran out: the sweep released the credit', async () => {
+      const p = await professional();
+      const oppId = await seedOpportunity('Cataloguer', 'Acme Labs', listingText);
+      model.once(COVER_LETTER_TEMPLATE, 'not json');
+      const partial = (await service.create(p, { opportunityId: oppId }, 'expire-1')).result as any;
+      clock.set(new Date(clock.now().getTime() + 25 * 60 * 60 * 1000).toISOString());
+      expect(await metering.releaseAbandoned(60_000)).toBeGreaterThanOrEqual(1);
+      const expired = await service.get(p, partial.id);
+      expect(expired.status).toBe('expired');
+      const retry = await service.retry(p, partial.id, 'coverLetter').catch((e) => e);
+      expect(isBillingError(retry, 'provider_unavailable')).toBe(true);
+      if (isBillingError(retry)) expect(retry.details).toMatchObject({ released: true, reason: 'pack_expired' });
+      expect(await service.cancel(p, partial.id)).toEqual({ released: true });
+      expect(await ledger(p)).toEqual([{ unit: 'action_pack', state: 'released' }]);
+    });
   });
 });

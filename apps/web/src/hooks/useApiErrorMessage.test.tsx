@@ -91,4 +91,21 @@ describe('useApiErrorMessage', () => {
       (es.auth as { errors: { too_many_attempts: string } }).errors.too_many_attempts,
     );
   });
+
+  it('translates every five-plan billing and metering code, in the customer language', () => {
+    const codes = ['PLAN_NOT_CONFIGURED', 'PLAN_NOT_AVAILABLE', 'ALREADY_SUBSCRIBED', 'ADDON_NOT_ON_SALE', 'UPGRADE_REQUIRED', 'ADDON_PRICE_CHANGED', 'ADDON_ALREADY_ACTIVE', 'CAREER_ADDON_RETIRED', 'USAGE_METER_UNAVAILABLE', 'JOB_CAPACITY_REACHED', 'CV_LIMIT_REACHED'];
+    for (const code of codes) {
+      const err = new ApiError('English server sentence', { kind: 'http', status: 503, code });
+      const text = readMsg('es', es, err, 'fallback');
+      expect(text, code).not.toBe('English server sentence');
+      expect(text, code).not.toBe('fallback');
+    }
+  });
+
+  it('names the minimum plan when the API sends one', () => {
+    const err = new ApiError('Upgrade', { kind: 'http', status: 403, code: 'UPGRADE_REQUIRED', details: { minimumPlan: 'professional' } });
+    expect(readMsg('en', en, err)).toBe('This needs the Professional plan or above. Upgrade your plan first. Nothing was charged.');
+    const unknownPlan = new ApiError('Upgrade', { kind: 'http', status: 403, code: 'UPGRADE_REQUIRED', details: { minimumPlan: 'gold' } });
+    expect(readMsg('en', en, unknownPlan)).toBe('Your plan does not include this. Upgrade your plan first. Nothing was charged.');
+  });
 });

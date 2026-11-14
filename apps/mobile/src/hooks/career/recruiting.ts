@@ -1,19 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { careerApi } from '../../lib/career-api';
-import { isDiscoverable } from '../../lib/career/recruiting';
+import { optInCount } from '../../lib/career/recruiting';
 import { useEntitled, useUid } from '../useCareer';
 
-/**
- * The signed-in user's recruiting opt-in. The career API has no read for it,
- * so the current value is whether this user is on the opted-in list (only the
- * boolean leaves this hook; the list itself is not kept or shown).
- */
+/** The signed-in user's own recruiting opt-in (`GET /recruiting/opt-in`). */
 export function useRecruitingOptIn() {
   const { uid, entitled } = useEntitled();
   return useQuery({
     queryKey: ['career', uid, 'recruiting-opt-in'],
-    queryFn: async () => isDiscoverable(await careerApi.recruitingSearch(), uid),
+    queryFn: async () => (await careerApi.recruitingOptIn()).discoverable === true,
     enabled: entitled && Boolean(uid),
+    retry: false,
+  });
+}
+
+/**
+ * How many people opted in, read only when the person asks (`refetch()`).
+ * The career API returns a count, never identities.
+ */
+export function useRecruitingCount() {
+  const uid = useUid();
+  return useQuery({
+    queryKey: ['career', uid, 'recruiting-count'],
+    queryFn: async () => optInCount(await careerApi.recruitingSearch()),
+    enabled: false,
     retry: false,
   });
 }
@@ -25,6 +35,8 @@ export function useSetRecruitingOptIn() {
     mutationFn: (discoverable: boolean) => careerApi.setRecruitingOptIn(discoverable),
     onSuccess: (saved) => {
       queryClient.setQueryData(['career', uid, 'recruiting-opt-in'], saved.discoverable);
+      // A shown total is stale once this person's choice changed.
+      queryClient.removeQueries({ queryKey: ['career', uid, 'recruiting-count'] });
     },
   });
 }

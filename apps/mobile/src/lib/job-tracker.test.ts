@@ -2,15 +2,85 @@ import { describe, expect, it } from 'vitest';
 import { JobStatus } from '../types/enums';
 import type { JobApplication } from '../types/job.types';
 import {
+  checklistProgress,
+  deadlineCalendarFile,
   duplicateCheckParams,
   duplicateConfirmMessage,
   filterAndSortJobs,
   interviewCalendarFile,
   isValidContactEmail,
+  jobContacts,
+  jobOutcomeLabel,
+  jobStatusLabel,
+  normalizeStatus,
   optionalJobField,
+  STATUS_ORDER,
   statusCounts,
   visibleJobs,
 } from './job-tracker';
+
+describe('application stages', () => {
+  it('has the seven spec stages in pipeline order', () => {
+    expect(STATUS_ORDER).toEqual(['saved', 'preparing', 'applied', 'interviewing', 'offered', 'rejected', 'withdrawn']);
+  });
+
+  it('maps legacy values and labels them by their current stage', () => {
+    expect(normalizeStatus('wishlist')).toBe(JobStatus.SAVED);
+    expect(normalizeStatus('offer')).toBe(JobStatus.OFFERED);
+    expect(normalizeStatus('accepted')).toBe(JobStatus.OFFERED);
+    expect(normalizeStatus('garbage')).toBe(JobStatus.SAVED);
+    expect(jobStatusLabel('preparing')).toBe('Preparing');
+    expect(jobStatusLabel('wishlist')).toBe('Saved');
+  });
+
+  it('shows the outcome, reading a legacy "accepted" as an accepted offer', () => {
+    expect(jobOutcomeLabel({ status: JobStatus.OFFERED, outcome: 'declined' })).toBe('Offer declined');
+    expect(jobOutcomeLabel({ status: 'accepted' as JobStatus })).toBe('Offer accepted');
+    expect(jobOutcomeLabel({ status: JobStatus.APPLIED, outcome: null })).toBeNull();
+  });
+});
+
+describe('contacts and checklist', () => {
+  it('falls back to the old single contact when a response has no list', () => {
+    expect(jobContacts({ contactName: 'Jane', contactEmail: 'j@a.com' })).toEqual([
+      { id: 'legacy-contact', name: 'Jane', role: null, email: 'j@a.com', phone: null, notes: null },
+    ]);
+    expect(jobContacts({ contactName: null, contactEmail: null })).toEqual([]);
+    const list = [{ id: 'c1', name: 'Sam', role: 'Recruiter', email: null, phone: null, notes: null }];
+    expect(jobContacts({ contacts: list, contactName: 'Sam', contactEmail: null })).toBe(list);
+  });
+
+  it('counts checklist progress', () => {
+    expect(
+      checklistProgress({
+        checklist: [
+          { id: '1', label: 'CV', kind: 'document', done: true },
+          { id: '2', label: 'Ask referral', kind: 'task', done: false },
+        ],
+      }),
+    ).toEqual({ done: 1, total: 2 });
+    expect(checklistProgress({})).toEqual({ done: 0, total: 0 });
+  });
+});
+
+describe('deadlineCalendarFile', () => {
+  it('builds an all-day event with the website UID and filename', () => {
+    const file = deadlineCalendarFile(
+      { id: 'j1', company: 'Acme, Inc.', position: 'Engineer', jobUrl: null, deadline: '2026-12-31' },
+      new Date('2026-11-14T10:00:00Z'),
+    )!;
+    expect(file.filename).toBe('deadline-acme-inc-engineer.ics');
+    expect(file.content).toContain('DTSTART;VALUE=DATE:20261231\r\n');
+    expect(file.content).toContain('DTEND;VALUE=DATE:20270101\r\n');
+    expect(file.content).toContain('UID:j1-deadline@flacroncv.com');
+    expect(file.content).toContain('SUMMARY:Deadline: Engineer at Acme\\, Inc.');
+  });
+
+  it('returns null without a valid date', () => {
+    expect(deadlineCalendarFile({ id: 'j', company: 'A', position: 'B', jobUrl: null, deadline: '2026-02-30' })).toBeNull();
+    expect(deadlineCalendarFile({ id: 'j', company: 'A', position: 'B', jobUrl: null, deadline: null })).toBeNull();
+  });
+});
 
 function job(over: Partial<JobApplication>): JobApplication {
   return {
@@ -54,7 +124,12 @@ describe('visibleJobs / statusCounts', () => {
   });
 
   it('counts per status over the visible set', () => {
-    expect(statusCounts(visibleJobs(JOBS, false))).toEqual({ offer: 1, wishlist: 1, applied: 1 });
+    expect(statusCounts(visibleJobs(JOBS, false))).toEqual({ offered: 1, saved: 1, applied: 1 });
+  });
+
+  it('counts a legacy status from an older response under its current stage', () => {
+    const legacy = [job({ id: 'x', status: 'wishlist' as JobStatus }), job({ id: 'y', status: 'accepted' as JobStatus })];
+    expect(statusCounts(legacy)).toEqual({ saved: 1, offered: 1 });
   });
 });
 
@@ -70,6 +145,19 @@ describe('filterAndSortJobs', () => {
     expect(run({ sort: 'company' })).toEqual(['b', 'c', 'a']);
     expect(run({ sort: 'position' })).toEqual(['c', 'a', 'b']);
     expect(run({ sort: 'status' })).toEqual(['b', 'c', 'a']);
+  });
+
+  it('searches every contact (name, role, email), not just the first', () => {
+    const withContacts = job({
+      id: 'z',
+      contacts: [
+        { id: '1', name: 'First', role: null, email: null, phone: null, notes: null },
+        { id: '2', name: 'Priya', role: 'Hiring manager', email: 'priya@x.test', phone: null, notes: null },
+      ],
+    });
+    const search = (q: string) => ids(filterAndSortJobs([withContacts], { status: 'all', search: q, sort: 'updated' }));
+    expect(search('hiring')).toEqual(['z']);
+    expect(search('priya@')).toEqual(['z']);
   });
 
   it('searches company, position, location, notes and contact name', () => {

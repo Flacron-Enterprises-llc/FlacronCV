@@ -32,7 +32,9 @@
     "cover_letter": "Lettre de motivation",
     "bio": "Biographie",
     "linkedin": "Texte LinkedIn",
-    "outreach": "Brouillon de prise de contact"
+    "outreach": "Brouillon de prise de contact",
+    "referral_request": "Demande de recommandation",
+    "thank_you": "Message de remerciement"
   },
   "defaultTitle": "CV",
   "titleEmpty": "Donnez un nom au CV.",
@@ -66,7 +68,9 @@
     "capacity": "Cette offre a de la place pour {limit} versions de CV.",
     "noRoomMore": "Votre forfait carrière n’a plus de place.",
     "notCreatedTitle": "Non créé",
-    "notCreatedBody": "Rien n’a été créé et aucun crédit n’a été utilisé. Veuillez réessayer."
+    "notCreatedBody": "Rien n’a été créé et aucun crédit n’a été utilisé. Veuillez réessayer.",
+    "targetNeededTitle": "Indiquez à qui vous écrivez",
+    "targetNeeded": "Une demande de recommandation ou un message de remerciement nécessite une opportunité enregistrée, ou au moins l’organisation ou le poste concerné. Rien n’a été facturé."
   },
   "create": {
     "capacity": "Ce forfait a de la place pour {limit} CV carrière.",
@@ -117,7 +121,20 @@
     "none": "Aucune (brouillon général)",
     "loadingOpps": "Chargement de vos opportunités…",
     "oppsFailed": "Vos opportunités n’ont pas pu être chargées ; vous pouvez quand même rédiger un brouillon général.",
-    "writeFromFacts": "Écrire à partir des faits confirmés"
+    "writeFromFacts": "Écrire à partir des faits confirmés",
+    "notesTitle": "À propos de votre destinataire",
+    "notesHelp": "Facultatif. Le brouillon reprend seulement ce que vous saisissez ici ; il n’ajoute jamais de noms, de dates ni de détails.",
+    "notesNeeded": "Choisissez une opportunité enregistrée ci-dessus ou saisissez au moins l’organisation ou le poste. Le brouillon reprend seulement ce que vous saisissez ici ; il n’ajoute jamais de noms, de dates ni de détails.",
+    "organization": "Organisation",
+    "role": "Poste",
+    "contactName": "Nom du contact",
+    "contactRole": "Fonction du contact",
+    "interviewDate": "Date de l’entretien",
+    "dateHint": "Facultatif. Année-mois-jour, par exemple 2026-11-20.",
+    "dateInvalid": "Saisissez une date réelle au format AAAA-MM-JJ (le 31 février n’existe pas, par exemple).",
+    "tooLong": "Gardez chaque note sous {max} caractères.",
+    "notConnectedTitle": "Assistant de rédaction non connecté",
+    "notConnected": "L’assistant de rédaction n’est pas encore connecté : aucun brouillon ne peut être rédigé. Aucun crédit n’est utilisé. Vous pouvez toujours ouvrir, modifier et télécharger vos brouillons enregistrés."
   },
   "resume": {
     "writeFailedBody": "Rien n’a été modifié. Les lignes saisies sont toujours là ; réessayez.",

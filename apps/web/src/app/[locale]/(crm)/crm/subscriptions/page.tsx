@@ -34,6 +34,7 @@ import { toast } from 'sonner';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { downloadCsv } from '@/lib/download-csv';
 import { cn } from '@/lib/utils';
+import { ADMIN_PLAN_OPTIONS, crmPlanLabel, planBadgeClass } from '@/lib/plan-labels';
 
 interface ListResponse {
   items: CRMSubscriptionRecord[];
@@ -42,13 +43,6 @@ interface ListResponse {
   limit: number;
   pages: number;
 }
-
-const PLAN_COLORS: Record<string, string> = {
-  free: 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300',
-  pro: 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300',
-  career_accelerator: 'bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-950 dark:text-fuchsia-300',
-  enterprise: 'bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
-};
 
 const STATUS_COLORS: Record<string, string> = {
   active: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
@@ -64,7 +58,7 @@ const ALL_STATUSES: SubscriptionStatus[] = Object.values(SubscriptionStatus);
 const KNOWN_STATUSES = new Set<string>(ALL_STATUSES);
 
 const STATUS_OPTIONS: string[] = ['', ...ALL_STATUSES];
-const PLAN_OPTIONS = ['', 'free', 'pro', 'career_accelerator', 'enterprise'];
+const PLAN_OPTIONS: string[] = ['', ...ADMIN_PLAN_OPTIONS];
 
 /**
  * Per-column visibility for the responsive table. Nine columns at a fixed
@@ -529,7 +523,7 @@ export default function CRMSubscriptionsPage(): React.JSX.Element {
               className="rounded-lg border border-stone-200 bg-stone-50 py-2 px-3 text-sm focus:border-brand-500 focus:outline-none dark:border-stone-700 dark:bg-stone-900 dark:text-white"
             >
               {PLAN_OPTIONS.map((p) => (
-                <option key={p} value={p}>{p ? t('subs_filter_plan_option', { plan: ['free', 'pro', 'career_accelerator', 'enterprise'].includes(p) ? t(`plan_${p}`) : p }) : t('subs_filter_all_plans')}</option>
+                <option key={p} value={p}>{p ? t('subs_filter_plan_option', { plan: crmPlanLabel(t, p) }) : t('subs_filter_all_plans')}</option>
               ))}
             </select>
             <select
@@ -577,9 +571,7 @@ export default function CRMSubscriptionsPage(): React.JSX.Element {
                     </tr>
                   ))
                 : filtered.map((sub) => {
-                    const planLabel = ['free', 'pro', 'career_accelerator', 'enterprise'].includes(sub.plan)
-                      ? t(`plan_${sub.plan}`)
-                      : sub.plan;
+                    const planLabel = crmPlanLabel(t, sub.plan);
                     const intervalLabel =
                       sub.interval === BillingInterval.YEAR
                         ? t('subs_interval_yearly')
@@ -625,7 +617,7 @@ export default function CRMSubscriptionsPage(): React.JSX.Element {
                           <span
                             className={cn(
                               'rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize',
-                              PLAN_COLORS[sub.plan] ?? PLAN_COLORS.free,
+                              planBadgeClass(sub.plan),
                             )}
                           >
                             {planLabel}

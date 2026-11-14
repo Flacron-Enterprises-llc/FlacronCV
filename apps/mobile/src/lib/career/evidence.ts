@@ -4,9 +4,10 @@ import type {
   CreateEvidenceInput,
   EvidenceLabel,
   EvidenceType,
+  EvidenceVerification,
   UpdateEvidenceInput,
 } from '../../../../../packages/career-api-client/src/types';
-import { EVIDENCE_TYPES } from '../../../../../packages/career-shared/src/evidence';
+import { EVIDENCE_TYPES, safeEvidenceUrl } from '../../../../../packages/career-shared/src/evidence';
 import { formatNumber, t } from '../../i18n';
 import { careerErrorMessage } from '../career-view';
 
@@ -53,6 +54,59 @@ export function evidenceLabelView(label: EvidenceLabel | string): { text: string
   }
 }
 
+/**
+ * What a label does and does not establish (the website's `label_*_limit`).
+ * The API computes the label from the active checks; the app only explains it.
+ */
+export function evidenceLabelLimit(label: EvidenceLabel | string): string {
+  switch (label) {
+    case 'evidence_attached':
+    case 'assessment_completed':
+    case 'issuer_verified':
+    case 'reference_confirmed':
+      return t(`careerEvidence.labelLimits.${label}`);
+    default:
+      return t('careerEvidence.labelLimits.self_reported');
+  }
+}
+
+/** One recorded check, ready to show. Read-only: checks are recorded by an operator, never by the person. */
+export interface VerificationRow {
+  id: string;
+  label: string;
+  status: 'active' | 'expired' | 'revoked';
+  /** Null while the check is active. */
+  statusText: string | null;
+  lines: string[];
+}
+
+/** Every check, newest first as the API sends them, including expired and revoked ones. */
+export function verificationRows(checks: readonly EvidenceVerification[] | null | undefined): VerificationRow[] {
+  return (checks ?? []).map((check) => {
+    const status: VerificationRow['status'] = check.revokedAt ? 'revoked' : check.active ? 'active' : 'expired';
+    const lines = [
+      t('careerEvidence.history.checkedOn', { date: check.checkedOn, method: verificationMethodLabel(check.method) }),
+      t('careerEvidence.history.issuer', { issuer: check.issuerName }),
+      t('careerEvidence.history.scope', { scope: check.scope }),
+    ];
+    if (check.expiresOn) lines.push(t('careerEvidence.history.expires', { date: check.expiresOn }));
+    if (check.revokedAt && check.revokedReason) lines.push(t('careerEvidence.history.revokedReason', { reason: check.revokedReason }));
+    return {
+      id: check.id,
+      label: evidenceLabelView(check.label).text,
+      status,
+      statusText: status === 'active' ? null : t(`careerEvidence.history.${status}`),
+      lines,
+    };
+  });
+}
+
+const METHODS = ['issuer_registry', 'issuer_contact', 'assessment', 'reference_contact', 'other'];
+
+export function verificationMethodLabel(method: string): string {
+  return t(`careerEvidence.methods.${METHODS.includes(method) ? method : 'other'}`);
+}
+
 /** Decimal units, as the website and the plan storage allowance count them. */
 export function formatBytes(bytes: number | null | undefined): string {
   if (bytes === null || bytes === undefined) return '';
@@ -74,6 +128,8 @@ export const EVIDENCE_LIMITS = {
   ownershipStatement: 2000,
   attachmentUrl: 2048,
   attachmentName: 255,
+  redactionNote: 1000,
+  linkedFacts: 50,
 } as const;
 
 export interface EvidenceForm {
@@ -85,6 +141,13 @@ export interface EvidenceForm {
   attachmentUrl: string;
   attachmentName: string;
   isPortfolioShared: boolean;
+  /** Contains employer or client material that must be redacted before it is shared. */
+  confidential: boolean;
+  redactionNote: string;
+  /** The person confirmed the redaction (the API stores when). */
+  redactionConfirmed: boolean;
+  /** Profile facts this item is proof of. */
+  linkedFactIds: string[];
 }
 
 export const EMPTY_EVIDENCE_FORM: EvidenceForm = {
@@ -96,6 +159,10 @@ export const EMPTY_EVIDENCE_FORM: EvidenceForm = {
   attachmentUrl: '',
   attachmentName: '',
   isPortfolioShared: false,
+  confidential: false,
+  redactionNote: '',
+  redactionConfirmed: false,
+  linkedFactIds: [],
 };
 
 export function formFromEvidence(item: CareerEvidence): EvidenceForm {
@@ -109,26 +176,52 @@ export function formFromEvidence(item: CareerEvidence): EvidenceForm {
     attachmentUrl: item.attachmentStored ? '' : (item.attachmentUrl ?? ''),
     attachmentName: item.attachmentStored ? '' : (item.attachmentName ?? ''),
     isPortfolioShared: item.isPortfolioShared,
+    confidential: item.confidential === true,
+    redactionNote: item.redactionNote ?? '',
+    redactionConfirmed: item.confidential === true && Boolean(item.redactionConfirmedAt),
+    linkedFactIds: [...(item.linkedFactIds ?? [])],
   };
+}
+
+export function toggleFactId(ids: readonly string[], id: string): string[] {
+  return ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
+}
+
+/** A confidential item that is (or is about to be) shared needs a confirmed redaction; the API refuses it otherwise. */
+export function needsRedactionConfirm(form: Pick<EvidenceForm, 'confidential' | 'isPortfolioShared' | 'redactionConfirmed'>): boolean {
+  return form.confidential && form.isPortfolioShared && !form.redactionConfirmed;
 }
 
 export function evidenceFormDirty(form: EvidenceForm, base: EvidenceForm): boolean {
   return (Object.keys(base) as (keyof EvidenceForm)[]).some((key) => {
     const a = form[key];
     const b = base[key];
+    if (Array.isArray(a) && Array.isArray(b)) {
+      const x = [...a].sort();
+      const y = [...b].sort();
+      return x.length !== y.length || x.some((v, i) => v !== y[i]);
+    }
     return typeof a === 'string' && typeof b === 'string' ? a.trim() !== b.trim() : a !== b;
   });
 }
 
-export type EvidenceFormErrors = Partial<Record<'title' | 'description' | 'ownershipStatement' | 'attachmentUrl' | 'attachmentName', string>>;
+export type EvidenceFormErrors = Partial<
+  Record<
+    | 'title'
+    | 'description'
+    | 'ownershipStatement'
+    | 'attachmentUrl'
+    | 'attachmentName'
+    | 'redactionNote'
+    | 'redactionConfirmed'
+    | 'linkedFactIds',
+    string
+  >
+>;
 
+/** http(s) only, no embedded credentials: the API's own rule (shared `safeEvidenceUrl`). */
 function isWebLink(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' || url.protocol === 'http:';
-  } catch {
-    return false;
-  }
+  return safeEvidenceUrl(value) !== null;
 }
 
 /** Empty object when the form can be sent. */
@@ -148,6 +241,13 @@ export function validateEvidenceForm(form: EvidenceForm): EvidenceFormErrors {
   if (form.attachmentName.trim().length > EVIDENCE_LIMITS.attachmentName) {
     errors.attachmentName = tooLong(EVIDENCE_LIMITS.attachmentName);
   }
+  if (form.confidential && form.redactionNote.trim().length > EVIDENCE_LIMITS.redactionNote) {
+    errors.redactionNote = tooLong(EVIDENCE_LIMITS.redactionNote);
+  }
+  if (needsRedactionConfirm(form)) errors.redactionConfirmed = t('careerEvidence.redaction.required');
+  if (form.linkedFactIds.length > EVIDENCE_LIMITS.linkedFacts) {
+    errors.linkedFactIds = t('careerEvidence.facts.tooMany', { max: EVIDENCE_LIMITS.linkedFacts });
+  }
   return errors;
 }
 
@@ -163,6 +263,10 @@ export function toCreateEvidenceInput(form: EvidenceForm): CreateEvidenceInput {
     attachmentUrl: form.attachmentUrl.trim() || undefined,
     attachmentName: form.attachmentName.trim() || undefined,
     isPortfolioShared: form.isPortfolioShared,
+    linkedFactIds: form.linkedFactIds.length > 0 ? form.linkedFactIds : undefined,
+    confidential: form.confidential || undefined,
+    redactionNote: form.confidential ? form.redactionNote.trim() || null : undefined,
+    redactionConfirmed: form.confidential && form.redactionConfirmed ? true : undefined,
   };
 }
 
@@ -171,14 +275,22 @@ export function toCreateEvidenceInput(form: EvidenceForm): CreateEvidenceInput {
  * Cleared text is sent as empty so it really clears. Link fields are left out
  * while a private file is stored, so an edit never touches the stored file.
  */
-export function toUpdateEvidenceInput(form: EvidenceForm, attachmentStored: boolean): UpdateEvidenceInput {
+export function toUpdateEvidenceInput(form: EvidenceForm, attachmentStored: boolean, base?: EvidenceForm): UpdateEvidenceInput {
   const input: UpdateEvidenceInput = {
     title: form.title.trim(),
     description: form.description.trim(),
     ownershipStatement: form.ownershipStatement.trim(),
     linkedSkills: parseSkills(form.skillsText),
     isPortfolioShared: form.isPortfolioShared,
+    linkedFactIds: form.linkedFactIds,
+    confidential: form.confidential,
+    redactionNote: form.confidential ? form.redactionNote.trim() || null : null,
   };
+  // Only a change is sent: re-sending true would re-stamp the confirmation
+  // time, and leaving it out keeps an earlier confirmation as it was.
+  if (form.confidential && form.redactionConfirmed !== (base?.redactionConfirmed ?? false)) {
+    input.redactionConfirmed = form.redactionConfirmed;
+  }
   if (!attachmentStored) {
     input.attachmentUrl = form.attachmentUrl.trim() || null;
     input.attachmentName = form.attachmentName.trim() || null;
@@ -322,7 +434,13 @@ export function evidenceSaveErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.code === 'capacity_exceeded') return t('careerEvidence.errors.capacity');
     if (error.code === 'feature_unavailable') return t('careerEvidence.errors.switchedOff');
-    if (error.code === 'validation_error') return t('careerEvidence.errors.validation');
+    if (error.code === 'validation_error') {
+      const field = (error.body as { field?: unknown }).field;
+      if (field === 'attachmentUrl') return t('careerEvidence.validation.webLink');
+      if (field === 'redactionConfirmed') return t('careerEvidence.redaction.required');
+      if (field === 'linkedFactIds') return t('careerEvidence.facts.invalid');
+      return t('careerEvidence.errors.validation');
+    }
   }
   return careerErrorMessage(error, t('careerEvidence.errors.saveFailed'));
 }

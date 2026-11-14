@@ -8,17 +8,23 @@ import type { InterviewStage, OpportunityItem } from '../../../../../../packages
 import { CareerHeader, Pill } from '../../../../src/components/career/CareerHeader';
 import { Button } from '../../../../src/components/ui/Button';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
+import { Input } from '../../../../src/components/ui/Input';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../../src/components/ui/Skeleton';
 import { useCreateInterview, useInterviews } from '../../../../src/hooks/career/interviews';
 import { useCareerAccess, useCareerOpportunities } from '../../../../src/hooks/useCareer';
 import {
   INTERVIEW_STAGES,
+  MAX_INTERVIEW_QUESTIONS,
+  MAX_INTERVIEW_ROLE,
+  QUESTION_COUNT_OPTIONS,
   STAGE_LABEL,
   interviewErrorMessage,
   interviewsLeft,
   notAScore,
   sessionStatus,
+  startInterviewInput,
+  type InterviewTarget,
 } from '../../../../src/lib/career/interviews';
 import { formatDay } from '../../../../src/lib/career-view';
 import { colors } from '../../../../src/theme/colors';
@@ -28,7 +34,7 @@ import { RTL_FLIP } from '../../../../src/i18n/native';
 /**
  * Text interview practice, as on the website (career/interviews): the
  * allowance, the sessions on this account, and starting a session for a saved
- * opportunity and a stage. Starting uses one text interview after a
+ * opportunity or a typed role, a stage and 3 to 10 questions. Starting uses one text interview after a
  * confirmation; a retry of the same start reuses its idempotency key so it is
  * never charged twice. Questions come from the AI provider, which is not
  * configured locally: that refusal is shown as such and nothing is charged.
@@ -41,7 +47,10 @@ export default function InterviewsScreen() {
   const opportunities = useCareerOpportunities();
   const create = useCreateInterview();
   const [opportunityId, setOpportunityId] = useState<string | null>(null);
+  const [targetKind, setTargetKind] = useState<InterviewTarget['kind']>('listing');
+  const [role, setRole] = useState('');
   const [stage, setStage] = useState<InterviewStage>('behavioral');
+  const [questionCount, setQuestionCount] = useState(MAX_INTERVIEW_QUESTIONS);
   const [startError, setStartError] = useState<string | null>(null);
   // One key per start action; reused only when the same start is retried.
   const pending = useRef<{ selection: string; key: string } | null>(null);
@@ -52,14 +61,18 @@ export default function InterviewsScreen() {
   const openings = opportunities.data?.items ?? [];
   const selected = openings.find((o) => o.id === opportunityId) ?? null;
 
+  const target: InterviewTarget = targetKind === 'listing' ? { kind: 'listing', opportunityId: selected?.id ?? null } : { kind: 'role', role };
+  const prepared = startInterviewInput(target, stage, questionCount);
+
   const start = () => {
-    if (!selected) return;
-    const selection = `${selected.id}:${stage}`;
+    if (!prepared.ok) return;
+    // The same choices reuse the same key, so a retry after a lost response is never charged twice.
+    const selection = JSON.stringify(prepared.input);
     if (!pending.current || pending.current.selection !== selection) pending.current = { selection, key: Crypto.randomUUID() };
     const key = pending.current.key;
     setStartError(null);
     create.mutate(
-      { opportunityId: selected.id, stage, idempotencyKey: key },
+      { body: prepared.input, idempotencyKey: key },
       {
         onSuccess: (paid) => {
           pending.current = null;
@@ -71,10 +84,13 @@ export default function InterviewsScreen() {
   };
 
   const confirmStart = () => {
-    if (!selected) return;
+    if (!prepared.ok) {
+      setStartError(prepared.message);
+      return;
+    }
     Alert.alert(
       t('list.confirmTitle'),
-      t('list.confirmBody', { count: remaining }),
+      t('list.confirmBodyCount', { count: remaining, questions: prepared.input.questionCount ?? MAX_INTERVIEW_QUESTIONS }),
       [
         { text: t('list.notNow'), style: 'cancel' },
         { text: t('list.confirmGo'), onPress: start },
@@ -146,8 +162,45 @@ export default function InterviewsScreen() {
             {t('list.startHelp')}
           </Text>
 
-          <Text className="text-sm font-medium text-stone-700 mt-4 mb-2">{t('list.opportunity')}</Text>
-          {opportunities.isLoading ? (
+          <Text className="text-sm font-medium text-stone-700 mt-4 mb-2">{t('list.targetLabel')}</Text>
+          <View className="flex-row flex-wrap gap-2 mb-3" accessibilityRole="radiogroup" accessibilityLabel={t('list.targetLabel')}>
+            {(
+              [
+                ['listing', t('list.modeListing')],
+                ['role', t('list.modeRole')],
+              ] as const
+            ).map(([kind, label]) => {
+              const on = targetKind === kind;
+              return (
+                <Pressable
+                  key={kind}
+                  onPress={() => {
+                    setTargetKind(kind);
+                    setStartError(null);
+                  }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on, checked: on }}
+                  accessibilityLabel={label}
+                  className={`min-h-[44px] px-4 justify-center rounded-full border ${on ? 'bg-brand-600 border-brand-600' : 'bg-white border-stone-200'}`}
+                >
+                  <Text className={`text-sm font-semibold ${on ? 'text-white' : 'text-stone-700'}`}>{label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {targetKind === 'role' ? (
+            <Input
+              label={t('list.roleLabel')}
+              value={role}
+              onChangeText={(text) => {
+                setRole(text);
+                setStartError(null);
+              }}
+              maxLength={MAX_INTERVIEW_ROLE}
+              hint={t('list.roleHint')}
+              autoCapitalize="sentences"
+            />
+          ) : opportunities.isLoading ? (
             <SkeletonCard />
           ) : openings.length === 0 ? (
             <View>
@@ -179,6 +232,25 @@ export default function InterviewsScreen() {
             })}
           </View>
 
+          <Text className="text-sm font-medium text-stone-700 mt-4 mb-2">{t('list.questionCount')}</Text>
+          <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup" accessibilityLabel={t('list.questionCount')}>
+            {QUESTION_COUNT_OPTIONS.map((count) => {
+              const on = count === questionCount;
+              return (
+                <Pressable
+                  key={count}
+                  onPress={() => setQuestionCount(count)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on, checked: on }}
+                  accessibilityLabel={t('list.questionCountOption', { count })}
+                  className={`min-h-[44px] min-w-[44px] px-3 items-center justify-center rounded-full border ${on ? 'bg-brand-600 border-brand-600' : 'bg-white border-stone-200'}`}
+                >
+                  <Text className={`text-sm font-semibold ${on ? 'text-white' : 'text-stone-700'}`}>{count}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
           {startError ? (
             <View className="bg-warning-bg rounded-xl p-3 mt-4" accessibilityLiveRegion="polite">
               <Text className="text-warning text-sm leading-5">{startError}</Text>
@@ -188,7 +260,7 @@ export default function InterviewsScreen() {
             <Text className="text-stone-500 text-sm mt-4">{t('list.noneLeft')}</Text>
           ) : null}
 
-          <Button className="mt-4" fullWidth onPress={confirmStart} loading={create.isPending} disabled={!selected || remaining < 1}>
+          <Button className="mt-4" fullWidth onPress={confirmStart} loading={create.isPending} disabled={!prepared.ok || remaining < 1}>
             {sessions.length > 0 ? t('list.startAnother') : t('list.start')}
           </Button>
         </View>

@@ -3,6 +3,32 @@ import type { InterviewFeedback } from './interview';
 
 export const VOICE_CONSENT_VERSION = 'voice-recording-1';
 export const MAX_VOICE_RECORD_SECONDS = 7200;
+/** The recorder stops itself after this long, so one take stays well under the upload limit. */
+export const MAX_VOICE_TAKE_SECONDS = 1200;
+/** Containers browsers' MediaRecorder writes: WebM/Ogg Opus (Chrome, Edge, Firefox) and MP4 (Safari). */
+export const VOICE_AUDIO_CONTENT_TYPES = ['audio/webm', 'audio/ogg', 'audio/mp4'] as const;
+export type VoiceAudioContentType = (typeof VOICE_AUDIO_CONTENT_TYPES)[number];
+/** 25 MiB: twenty minutes of MediaRecorder Opus is a few MiB, so this only stops abuse. */
+export const VOICE_UPLOAD_MAX_BYTES = 25 * 1024 * 1024;
+/** Summary text before any transcript exists (no feedback yet, nothing inferred). */
+export const VOICE_NO_RECORDING_SUMMARY = 'No recording yet.';
+
+/** `audio/webm;codecs=opus` → `audio/webm`; null for anything not in {@link VOICE_AUDIO_CONTENT_TYPES}. */
+export function voiceAudioContentType(header: string | null | undefined): VoiceAudioContentType | null {
+  const base = (header ?? '').split(';')[0]?.trim().toLowerCase() ?? '';
+  return (VOICE_AUDIO_CONTENT_TYPES as readonly string[]).includes(base) ? (base as VoiceAudioContentType) : null;
+}
+
+/** Whole seconds billed for a measured length: rounded to the nearest second, never below one. */
+export function voiceRecordingSeconds(milliseconds: number): number {
+  if (!Number.isFinite(milliseconds) || milliseconds <= 0) return 0;
+  return Math.max(1, Math.round(milliseconds / 1000));
+}
+
+/** The summary of a take whose transcript has not been typed or transcribed yet. */
+export function voicePendingSummary(seconds: number): string {
+  return `Recorded ${seconds} seconds. Add the transcript to get feedback.`;
+}
 
 const FORBIDDEN = /\b(emotion|honesty|honest|personality|nervous|confident|guaranteed|fraud)\b/i;
 

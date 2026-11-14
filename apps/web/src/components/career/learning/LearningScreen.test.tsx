@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { describe, expect, it, vi } from 'vitest';
-import type { SkillGapReport, SkillReportBalanceView } from '@flacroncv/career-api-client';
+import { ApiError, type SkillGapReport, type SkillReportBalanceView } from '@flacroncv/career-api-client';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { testApi } from '@/components/career/test-api';
 import messages from '../../../../public/locales/en/common.json';
@@ -180,6 +180,7 @@ describe('LearningScreen (CV13)', () => {
   it('converts a completed milestone to career evidence in the vault', async () => {
     const convertMilestoneToEvidence = vi.fn().mockResolvedValue({
       evidenceId: 'evidence-999',
+      created: true,
       message: 'Milestone converted to career evidence',
     });
     const api = testApi({
@@ -188,11 +189,28 @@ describe('LearningScreen (CV13)', () => {
     });
     renderScreen(api);
 
-    const convertBtn = await screen.findByRole('button', { name: 'Add to Evidence Vault' });
-    fireEvent.click(convertBtn);
+    fireEvent.click(await screen.findByRole('button', { name: 'Add to Evidence Vault' }));
+    // The ownership box starts empty: nothing is written for the person.
+    const box = screen.getByLabelText(/In your own words/) as HTMLTextAreaElement;
+    expect(box.value).toBe('');
+    fireEvent.change(box, { target: { value: 'I implemented the log.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add to vault' }));
 
-    expect(convertMilestoneToEvidence).toHaveBeenCalledWith('report-111', 'mile-1');
+    expect(convertMilestoneToEvidence).toHaveBeenCalledWith('report-111', 'mile-1', 'I implemented the log.');
     expect(await screen.findByText(/Milestone successfully recorded in your Career Evidence Vault!/i)).toBeDefined();
+    expect(screen.getByText('In Evidence Vault')).toBeDefined();
+  });
+
+  it('explains a full vault instead of a generic failure', async () => {
+    const convertMilestoneToEvidence = vi.fn().mockRejectedValue(new ApiError(409, 'capacity_exceeded', { code: 'capacity_exceeded' }));
+    const api = testApi({
+      skillReports: vi.fn().mockResolvedValue({ items: [sampleReport], skillReport: sampleBalance }),
+      convertMilestoneToEvidence,
+    });
+    renderScreen(api);
+    fireEvent.click(await screen.findByRole('button', { name: 'Add to Evidence Vault' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to vault' }));
+    expect(await screen.findByText(/Your Evidence Vault is full for your plan/)).toBeDefined();
   });
 
   it('generates a new skill report when form is submitted', async () => {
@@ -218,6 +236,11 @@ describe('LearningScreen (CV13)', () => {
     fireEvent.click(openBtn);
 
     expect(screen.getByText('Target a New Role')).toBeDefined();
+    // Charge notice: operation, credits required and remaining balance before paying.
+    const notice = screen.getByTestId('learning-charge-notice');
+    expect(notice.textContent).toContain('Skill gap report');
+    expect(notice.textContent).toContain('1 skill report credit');
+    expect(notice.textContent).toContain('5 reports');
 
     const roleInput = screen.getByLabelText(/Target Role/i);
     fireEvent.change(roleInput, { target: { value: 'Staff Distributed Systems Engineer' } });
@@ -231,5 +254,94 @@ describe('LearningScreen (CV13)', () => {
       }),
       expect.any(String),
     );
+  });
+  it('shows unknown costs as unknown, essential credentials, bridge roles and transferable skills', async () => {
+    const report: SkillGapReport = {
+      ...sampleReport,
+      skillGaps: [
+        ...sampleReport.skillGaps,
+        { skill: 'Safety Licence', currentLevel: 'none', requiredLevel: 'intermediate', importance: 'critical', kind: 'credential' },
+      ],
+      learningPlan: [
+        { ...sampleReport.learningPlan[0], estimatedCostCents: null, costAsOf: null, prerequisites: ['Basic Rust'] },
+        { ...sampleReport.learningPlan[1], estimatedCostCents: 2900, costAsOf: '2026-09' },
+      ],
+      bridgeRoles: [{ title: 'Site Reliability Engineer', reason: 'Builds on operations work.' }],
+      transferableSkills: [{ skill: 'Rust', factIds: ['fact-1'] }],
+    };
+    renderScreen(
+      testApi({ skillReports: vi.fn().mockResolvedValue({ items: [report], skillReport: sampleBalance }) }),
+    );
+
+    expect(await screen.findByText(/Cost unknown/)).toBeDefined();
+    expect(screen.getByText(/stated 2026-09/)).toBeDefined();
+    expect(screen.getByText(/Basic Rust/)).toBeDefined();
+    expect(screen.getByText('Essential credential')).toBeDefined();
+    expect(screen.getByText('Site Reliability Engineer')).toBeDefined();
+    expect(screen.getByText('Rust')).toBeDefined();
+    // The unknown cost is not counted, so the screen cannot claim the plan fits.
+    const cost = screen.getByTestId('learning-plan-cost').textContent ?? '';
+    expect(cost).toContain('1 step with unknown cost');
+    expect(cost).toContain('Cannot tell if it fits the budget');
+  });
+
+  it('saves the ownership statement, adds the project once, and saves a rubric self-check', async () => {
+    const withOwnership: SkillGapReport = {
+      ...sampleReport,
+      projectBrief: { ...sampleReport.projectBrief!, ownershipStatement: 'All mine.', evidenceId: null, rubricCheck: null },
+    };
+    const setProjectOwnership = vi.fn().mockResolvedValue(withOwnership);
+    const addProjectToEvidence = vi.fn().mockResolvedValue({ evidenceId: 'ev-1', created: true });
+    const saveRubricCheck = vi.fn().mockResolvedValue(withOwnership);
+    const evidence = vi.fn().mockResolvedValue({
+      items: [{ id: 'ev-1', title: 'Fleet engine repository' }],
+    });
+    renderScreen(
+      testApi({
+        skillReports: vi.fn().mockResolvedValue({ items: [sampleReport], skillReport: sampleBalance }),
+        setProjectOwnership,
+        addProjectToEvidence,
+        saveRubricCheck,
+        evidence,
+      }),
+    );
+
+    const box = (await screen.findByLabelText('Ownership statement')) as HTMLTextAreaElement;
+    expect(box.value).toBe('');
+    expect(screen.getByText('AI-assisted brief')).toBeDefined();
+    expect((screen.getByRole('button', { name: 'Add finished project to vault' }) as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.change(box, { target: { value: 'All mine.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save statement' }));
+    expect(setProjectOwnership).toHaveBeenCalledWith('report-111', 'All mine.');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Add finished project to vault' }));
+    expect(addProjectToEvidence).toHaveBeenCalledWith('report-111');
+    expect(await screen.findByText(/Project added to your Evidence Vault/)).toBeDefined();
+
+    fireEvent.click(screen.getByLabelText('My work meets: Partition Fault Tolerance'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save self-check' }));
+    expect(saveRubricCheck).toHaveBeenCalledWith('report-111', {
+      evidenceIds: ['ev-1'],
+      criteria: [
+        { criterionId: 'rubric-1', met: true, note: '' },
+        { criterionId: 'rubric-2', met: false, note: '' },
+      ],
+    });
+  });
+
+  it('blocks generation with no credits left and says so before paying', async () => {
+    const createSkillReport = vi.fn();
+    renderScreen(
+      testApi({
+        skillReports: vi.fn().mockResolvedValue({ items: [], skillReport: { ...sampleBalance, includedRemaining: 0 } }),
+        createSkillReport,
+      }),
+    );
+    fireEvent.click((await screen.findAllByRole('button', { name: 'New Skill Plan' }))[0]);
+    fireEvent.change(screen.getByLabelText(/Target Role/i), { target: { value: 'Nurse' } });
+    expect(screen.getByTestId('learning-charge-notice').textContent).toContain('None left');
+    expect((screen.getByRole('button', { name: 'Generate Learning Plan (1 Credit)' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(createSkillReport).not.toHaveBeenCalled();
   });
 });

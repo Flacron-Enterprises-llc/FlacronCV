@@ -13,7 +13,8 @@ import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { Input } from '../../../../src/components/ui/Input';
 import { SkeletonCard } from '../../../../src/components/ui/Skeleton';
 import { UploadRefused, useEvidenceActions, useEvidenceGate, useEvidenceItem } from '../../../../src/hooks/career/evidence';
-import { useCareerAccess } from '../../../../src/hooks/useCareer';
+import { useCareerAccess, useCareerFacts } from '../../../../src/hooks/useCareer';
+import { factTitle } from '../../../../src/lib/career/profile';
 import { useLeaveGuard } from '../../../../src/hooks/useLeaveGuard';
 import {
   EMPTY_EVIDENCE_FORM,
@@ -22,8 +23,11 @@ import {
   EVIDENCE_TYPE_OPTIONS,
   evidenceFileErrorMessage,
   evidenceFormDirty,
+  evidenceLabelLimit,
   evidenceLabelView,
   evidenceSaveErrorMessage,
+  toggleFactId,
+  verificationRows,
   evidenceTypeLabel,
   formatBytes,
   formFromEvidence,
@@ -56,6 +60,7 @@ export default function EvidenceItemScreen() {
   const gate = useEvidenceGate();
   const item = useEvidenceItem(isNew ? undefined : id);
   const actions = useEvidenceActions();
+  const facts = useCareerFacts();
   const t = useT('careerEvidence');
   const tc = useT('common');
 
@@ -88,6 +93,24 @@ export default function EvidenceItemScreen() {
     const found = validateEvidenceForm(current);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
+    // Sharing confidential material is confirmed once more, as on the website.
+    const newlyShared =
+      current.confidential && current.isPortfolioShared && !(base.confidential && base.isPortfolioShared && base.redactionConfirmed);
+    if (newlyShared) {
+      Alert.alert(
+        t('redaction.confirmTitle'),
+        t('redaction.confirmBody', { title: current.title.trim(), note: current.redactionNote.trim() || t('redaction.noNote') }),
+        [
+          { text: tc('cancel'), style: 'cancel' },
+          { text: t('redaction.confirmGo'), onPress: send },
+        ],
+      );
+      return;
+    }
+    send();
+  };
+
+  const send = () => {
     if (isNew) {
       actions.create.mutate(toCreateEvidenceInput(current), {
         onSuccess: (created) => {
@@ -100,7 +123,7 @@ export default function EvidenceItemScreen() {
     }
     if (!item.data || !dirty) return;
     actions.update.mutate(
-      { id: item.data.id, body: toUpdateEvidenceInput(current, item.data.attachmentStored) },
+      { id: item.data.id, body: toUpdateEvidenceInput(current, item.data.attachmentStored, base) },
       {
         onSuccess: () => setForm(null),
         onError: (error) => Alert.alert(t('alerts.notSaved'), [evidenceSaveErrorMessage(error), t('alerts.changesKept')].join(' ')),
@@ -239,6 +262,9 @@ export default function EvidenceItemScreen() {
               </Text>
             </View>
           ) : null}
+          {evidence ? (
+            <Text className="text-stone-500 text-xs leading-4 mb-4 -mt-2">{evidenceLabelLimit(evidence.evidenceLabel)}</Text>
+          ) : null}
 
           <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
             <Input
@@ -336,6 +362,81 @@ export default function EvidenceItemScreen() {
                 accessibilityState={{ checked: current.isPortfolioShared }}
               />
             </View>
+
+            <View className="flex-row items-center justify-between min-h-[44px]">
+              <Text className="text-sm font-medium text-stone-700 flex-1 me-3">{t('redaction.confidential')}</Text>
+              <Switch
+                value={current.confidential}
+                onValueChange={(v) => setForm({ ...current, confidential: v, redactionConfirmed: v ? current.redactionConfirmed : false })}
+                trackColor={{ true: colors.brand[600], false: colors.stone[300] }}
+                accessibilityLabel={t('redaction.confidential')}
+                accessibilityState={{ checked: current.confidential }}
+              />
+            </View>
+            {current.confidential ? (
+              <View className="mt-2">
+                <Text className="text-stone-500 text-xs leading-4 mb-2">{t('redaction.help')}</Text>
+                <Input
+                  label={t('redaction.note')}
+                  value={current.redactionNote}
+                  onChangeText={(v) => set('redactionNote', v)}
+                  maxLength={EVIDENCE_LIMITS.redactionNote}
+                  multiline
+                  textAlignVertical="top"
+                  style={{ minHeight: 64 }}
+                  error={errors.redactionNote}
+                />
+                <TouchableOpacity
+                  onPress={() => set('redactionConfirmed', !current.redactionConfirmed)}
+                  className="flex-row items-center min-h-[44px]"
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: current.redactionConfirmed }}
+                  accessibilityLabel={t('redaction.confirm')}
+                >
+                  <Ionicons
+                    name={current.redactionConfirmed ? 'checkbox' : 'square-outline'}
+                    size={22}
+                    color={current.redactionConfirmed ? colors.brand[600] : colors.stone[400]}
+                  />
+                  <Text className="text-sm text-stone-700 ms-3 flex-1">{t('redaction.confirm')}</Text>
+                </TouchableOpacity>
+                {errors.redactionConfirmed ? <Text className="text-red-600 text-xs mt-1">{errors.redactionConfirmed}</Text> : null}
+              </View>
+            ) : null}
+          </View>
+
+          <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+            <Text className="font-bold text-stone-900 mb-1">{t('facts.title')}</Text>
+            <Text className="text-stone-500 text-xs mb-2 leading-4">{t('facts.hint')}</Text>
+            {facts.isLoading ? <Text className="text-stone-400 text-sm">{t('facts.loading')}</Text> : null}
+            {facts.error ? <Text className="text-stone-500 text-sm">{t('facts.loadFailed')}</Text> : null}
+            {(() => {
+              // Confirmed facts, plus any already linked (so an unconfirmed link can still be removed).
+              const options = (facts.data?.items ?? []).filter(
+                (fact) => fact.confirmation === 'confirmed' || current.linkedFactIds.includes(fact.id),
+              );
+              if (!facts.isLoading && !facts.error && options.length === 0) {
+                return <Text className="text-stone-500 text-sm">{t('facts.empty')}</Text>;
+              }
+              return options.map((fact) => {
+                const checked = current.linkedFactIds.includes(fact.id);
+                const label = factTitle(fact.factType, fact.value);
+                return (
+                  <TouchableOpacity
+                    key={fact.id}
+                    onPress={() => set('linkedFactIds', toggleFactId(current.linkedFactIds, fact.id))}
+                    className="flex-row items-center min-h-[44px] py-1"
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked }}
+                    accessibilityLabel={label}
+                  >
+                    <Ionicons name={checked ? 'checkbox' : 'square-outline'} size={22} color={checked ? colors.brand[600] : colors.stone[400]} />
+                    <Text className="text-stone-900 ms-3 flex-1">{label}</Text>
+                  </TouchableOpacity>
+                );
+              });
+            })()}
+            {errors.linkedFactIds ? <Text className="text-red-600 text-xs mt-1">{errors.linkedFactIds}</Text> : null}
           </View>
 
           <Button onPress={onSave} loading={saving} disabled={!isNew && !dirty} fullWidth accessibilityRole="button">
@@ -402,6 +503,26 @@ export default function EvidenceItemScreen() {
                   </View>
                 </>
               )}
+            </View>
+          ) : null}
+
+          {evidence && evidence.verifications?.length ? (
+            <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-6">
+              <Text className="font-bold text-stone-900 mb-1">{t('history.title', { count: evidence.verifications.length })}</Text>
+              <Text className="text-stone-500 text-xs mb-2 leading-4">{t('history.readOnly')}</Text>
+              {verificationRows(evidence.verifications).map((row) => (
+                <View key={row.id} className="border-t border-stone-100 pt-2 mt-2">
+                  <View className="flex-row items-center flex-wrap gap-2">
+                    <Pill label={row.label} tone={row.status === 'active' ? 'success' : 'default'} />
+                    {row.statusText ? <Pill label={row.statusText} tone="warning" /> : null}
+                  </View>
+                  {row.lines.map((line, i) => (
+                    <Text key={i} className="text-stone-600 text-xs mt-1">
+                      {line}
+                    </Text>
+                  ))}
+                </View>
+              ))}
             </View>
           ) : null}
 

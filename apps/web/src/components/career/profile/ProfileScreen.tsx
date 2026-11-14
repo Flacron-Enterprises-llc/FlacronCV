@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   EMPTY_PREFERENCES,
   FACT_TYPES,
@@ -14,7 +14,7 @@ import {
 } from '@flacroncv/career-shared';
 import type { CareerPreferences, FactType, Locale } from '@flacroncv/career-shared';
 import { fieldErrors, isApiError, type ApiClient, type Fact, type FactRevision, type ImportAllowance, type Me } from '@flacroncv/career-api-client';
-import { Badge, Button, Card, EmptyState, FailedJobState, Input, LoadingState, PermissionDeniedState, ProviderUnavailableState } from '@/components/career/ui';
+import { Button, Card, EmptyState, FailedJobState, Input, LoadingState, PermissionDeniedState, ProviderUnavailableState } from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { extractResumeText, RESUME_UPLOAD_ACCEPT, ResumeExtractError, type ExtractedResume } from '@/lib/career/extract-resume';
 import { factTitle } from '@/lib/career/fact-draft';
@@ -51,6 +51,7 @@ export function ProfileScreen({
   onResendVerification: () => Promise<void>;
 }) {
   const t = useTranslations('career.profile');
+  const uiLocale = useLocale();
   const [load, setLoad] = useState<'loading' | 'permission' | 'signed-out' | 'unavailable' | 'ready'>('loading');
   const [data, setData] = useState<Ready | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -415,18 +416,18 @@ export function ProfileScreen({
         </div>
       </Card>
       <Card>
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-career-ink">{t('later_sharing')}</h2>
-          <Badge tone="later">{t('later')}</Badge>
-        </div>
-        <p className="mt-2 text-sm text-career-muted">{t('later_sharing_body')}</p>
+        <h2 className="text-lg font-semibold text-career-ink">{t('sharing_title')}</h2>
+        <p className="mt-2 text-sm text-career-muted">{t('sharing_body')}</p>
+        <a className="mt-2 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text" href={`/${uiLocale}/career/portfolios`}>
+          {t('sharing_link')}
+        </a>
       </Card>
       <Card>
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-career-ink">{t('later_mode')}</h2>
-          <Badge tone="later">{t('later')}</Badge>
-        </div>
-        <p className="mt-2 text-sm text-career-muted">{t('later_mode_body')}</p>
+        <h2 className="text-lg font-semibold text-career-ink">{t('mode_title')}</h2>
+        <p className="mt-2 text-sm text-career-muted">{t('mode_body')}</p>
+        <a className="mt-2 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text" href={`/${uiLocale}/career/relocation`}>
+          {t('mode_link')}
+        </a>
       </Card>
     </div>
   );

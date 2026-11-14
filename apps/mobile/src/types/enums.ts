@@ -78,13 +78,25 @@ export enum TemplateCategory {
   COVER_LETTER = 'cover_letter',
 }
 
+/**
+ * Application stages — mirrors packages/shared-types JobStatus. The API maps
+ * the old values (wishlist → saved, offer → offered, accepted → offered with
+ * an "accepted" outcome) and always answers in this set.
+ */
 export enum JobStatus {
-  WISHLIST = 'wishlist',
+  SAVED = 'saved',
+  PREPARING = 'preparing',
   APPLIED = 'applied',
   INTERVIEWING = 'interviewing',
-  OFFER = 'offer',
+  OFFERED = 'offered',
   REJECTED = 'rejected',
-  ACCEPTED = 'accepted',
+  WITHDRAWN = 'withdrawn',
+  /** @deprecated Old name of SAVED (same value). */
+  WISHLIST = 'saved',
+  /** @deprecated Old name of OFFERED (same value). */
+  OFFER = 'offered',
+  /** @deprecated An accepted offer is now OFFERED with outcome "accepted". */
+  ACCEPTED = 'offered',
 }
 
 export enum AIProvider {

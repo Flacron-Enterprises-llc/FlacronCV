@@ -17,7 +17,7 @@ import { PLAN_CONFIGS, SubscriptionPlan } from '@flacroncv/shared-types';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { useModalA11y } from '@/hooks/useModalA11y';
-import { localizedPlanFeatures } from '@/lib/plan-features';
+import { cheapestPlanForTier, localizedPlanFeatures } from '@/lib/plan-features';
 import { LetterThumb } from './DocumentThumb';
 
 export interface LetterPreviewModalProps {
@@ -56,8 +56,10 @@ export default function LetterPreviewModal({
   // Signed-out visitors see the plan's contents too; the CTA sends them to
   // sign in (handled by onSelect on the page), never to a dead end.
   const showUpgradeWall = isPaidTier && !userCanAccess;
+  // A template tier is advertised through the cheapest current plan that
+  // reaches it (Pro tier → Starter, Enterprise tier → Career Pro).
   const perks = localizedPlanFeatures(
-    tier,
+    cheapestPlanForTier(tier),
     tPricing,
     tAll(`upgrade_modal.template_reach.${PLAN_CONFIGS[tier].limits.templates}`),
   );

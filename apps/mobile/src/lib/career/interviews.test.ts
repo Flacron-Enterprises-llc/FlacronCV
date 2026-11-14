@@ -4,6 +4,11 @@ import type { InterviewSession } from '../../../../../packages/career-api-client
 import {
   AI_PROVIDER_MISSING,
   EMPTY_STORY,
+  QUESTION_COUNT_OPTIONS,
+  clampQuestionCount,
+  startInterviewInput,
+  storyChanged,
+  storyToDraft,
   INTERVIEW_STAGES,
   STAGE_LABEL,
   feedbackLines,
@@ -130,13 +135,73 @@ describe('interviewErrorMessage', () => {
     expect(interviewErrorMessage(err('validation_error', { field: 'result', reason: 'number_not_in_facts' }), 'story')).toBe(
       'That number is not in your confirmed facts.',
     );
-    expect(interviewErrorMessage(err('validation_error', { field: 'answer', reason: 'session_complete' }), 'answer')).toMatch(/ten answers/);
+    expect(interviewErrorMessage(err('validation_error', { field: 'answer', reason: 'session_complete' }), 'answer')).toBe(
+      'All questions in this session are answered.',
+    );
     expect(interviewErrorMessage(err('validation_error', { field: 'facts', reason: 'no_confirmed_facts' }), 'start')).toMatch(/Confirm/);
+  });
+
+  it('explains a STAR result that is not a confirmed achievement', () => {
+    expect(interviewErrorMessage(err('validation_error', { field: 'result', reason: 'no_confirmed_result' }), 'story')).toMatch(
+      /confirmed achievement/,
+    );
+    expect(interviewErrorMessage(err('validation_error', { field: 'result', reason: 'result_not_in_facts' }), 'story')).toMatch(
+      /not in your confirmed achievements/,
+    );
+    expect(storyErrorField(err('validation_error', { field: 'result', reason: 'result_not_in_facts' }))).toBe('result');
+  });
+
+  it('maps role and question-count refusals and delete failures', () => {
+    expect(interviewErrorMessage(err('validation_error', { field: 'role', reason: 'invalid' }), 'start')).toMatch(/target role/);
+    expect(interviewErrorMessage(err('validation_error', { field: 'questionCount', reason: 'invalid' }), 'start')).toBe(
+      'Choose between 3 and 10 questions.',
+    );
+    expect(interviewErrorMessage(new Error('x'), 'deleteStory')).toMatch(/not deleted/);
+    expect(interviewErrorMessage(err('plan_upgrade_required', {}, 402), 'deleteStory')).toBe(interviewErrorMessage(err('plan_upgrade_required', {}, 402), 'story'));
   });
 
   it('falls back to the action message or the shared career messages', () => {
     expect(interviewErrorMessage(new Error('boom'), 'answer')).toMatch(/still here/);
     expect(interviewErrorMessage(err('network_error', {}, 0), 'load')).toMatch(/No connection/);
     expect(interviewErrorMessage(err('not_found', {}, 404), 'load')).toBe('This item no longer exists.');
+  });
+});
+
+describe('starting a session', () => {
+  it('offers 3 to 10 questions and clamps anything else', () => {
+    expect(QUESTION_COUNT_OPTIONS).toEqual([3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(clampQuestionCount(1)).toBe(3);
+    expect(clampQuestionCount(12)).toBe(10);
+    expect(clampQuestionCount(6.4)).toBe(6);
+    expect(clampQuestionCount(Number.NaN)).toBe(10);
+  });
+
+  it('needs a saved opportunity or a typed role', () => {
+    expect(startInterviewInput({ kind: 'listing', opportunityId: null }, 'behavioral', 5)).toEqual({
+      ok: false,
+      message: 'Pick a saved opportunity, or type a target role (at least 2 characters).',
+    });
+    expect(startInterviewInput({ kind: 'listing', opportunityId: 'o1' }, 'technical', 5)).toEqual({
+      ok: true,
+      input: { opportunityId: 'o1', stage: 'technical', questionCount: 5 },
+    });
+    expect(startInterviewInput({ kind: 'role', role: '  Data   analyst ' }, 'behavioral', 20)).toEqual({
+      ok: true,
+      input: { role: 'Data analyst', stage: 'behavioral', questionCount: 10 },
+    });
+    expect(startInterviewInput({ kind: 'role', role: 'x' }, 'behavioral', 5).ok).toBe(false);
+    const long = startInterviewInput({ kind: 'role', role: 'x'.repeat(121) }, 'behavioral', 5);
+    expect(long.ok ? null : long.message).toMatch(/120/);
+  });
+});
+
+describe('editing a saved story', () => {
+  it('copies the four parts and detects real changes only', () => {
+    const saved = { situation: 's', task: 't', action: 'a', result: 'r' };
+    const draft = storyToDraft({ ...saved, id: 'x', factIds: [], createdAt: '' } as never);
+    expect(draft).toEqual(saved);
+    expect(storyChanged(draft, saved)).toBe(false);
+    expect(storyChanged({ ...draft, task: ' t ' }, saved)).toBe(false);
+    expect(storyChanged({ ...draft, task: 'other' }, saved)).toBe(true);
   });
 });

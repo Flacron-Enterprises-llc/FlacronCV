@@ -1,15 +1,27 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
-import React from 'react';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import React, { useState } from 'react';
 import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CareerHeader, Pill } from '../../../../src/components/career/CareerHeader';
+import { Button } from '../../../../src/components/ui/Button';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../../src/components/ui/Skeleton';
-import { useActionPack, useToggleChecklist } from '../../../../src/hooks/career/action-packs';
+import { useActionPack, useCancelActionPack, useRetryActionPackLetter, useToggleChecklist } from '../../../../src/hooks/career/action-packs';
 import { useCareerAccess } from '../../../../src/hooks/useCareer';
-import { checklistErrorMessage, checklistProgress, fitLabel, fitTone, organizationName } from '../../../../src/lib/career/action-packs';
+import {
+  cancelErrorMessage,
+  checklistErrorMessage,
+  checklistProgress,
+  fitLabel,
+  fitTone,
+  isFinalRetryFailure,
+  letterAttemptsLeft,
+  organizationName,
+  packStatus,
+  retryErrorMessage,
+} from '../../../../src/lib/career/action-packs';
 import { careerErrorMessage, FACT_TYPE_LABEL, formatDay } from '../../../../src/lib/career-view';
 import { colors } from '../../../../src/theme/colors';
 import { useT } from '../../../../src/i18n';
@@ -17,14 +29,67 @@ import { useT } from '../../../../src/i18n';
 /**
  * One action pack, as the website's detail column shows it: vacancy, fit
  * reasons and gaps, the preparation checklist (ticking is free), the tailored
- * cover letter, the tailored CV lines and the next steps.
+ * cover letter, the tailored CV lines and the next steps. An unfinished pack
+ * (the letter failed) holds its one credit: retrying the letter is free and
+ * cancelling returns the credit. Editing, saving to Documents and downloads
+ * are on the website for now.
  */
 export default function ActionPackScreen() {
   const t = useT('careerPlans');
+  const tc = useT('common');
   const { id } = useLocalSearchParams<{ id: string }>();
   const access = useCareerAccess();
   const pack = useActionPack(id);
   const toggle = useToggleChecklist(id);
+  const retry = useRetryActionPackLetter(id);
+  const cancel = useCancelActionPack();
+  const router = useRouter();
+  const [note, setNote] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+
+  const leave = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(dashboard)/career/action-pack' as Href);
+  };
+
+  const onRetry = () => {
+    setNote(null);
+    retry.mutate(undefined, {
+      onSuccess: (paid) =>
+        setNote(
+          packStatus(paid.actionPack) === 'complete'
+            ? { tone: 'success', text: t('actionPack.retrySucceeded') }
+            : { tone: 'error', text: t('actionPack.retryFailed') },
+        ),
+      onError: (error) => {
+        if (isFinalRetryFailure(error)) {
+          // The server removed the pack and returned the credit.
+          Alert.alert(t('notUpdated'), retryErrorMessage(error), [{ text: 'OK', onPress: leave }]);
+          return;
+        }
+        setNote({ tone: 'error', text: retryErrorMessage(error) });
+      },
+    });
+  };
+
+  const onCancel = (expired: boolean) => {
+    if (!id) return;
+    Alert.alert(
+      expired ? t('actionPack.deletePack') : t('actionPack.cancelPack'),
+      expired ? t('actionPack.statusExpired') : t('actionPack.cancelConfirm'),
+      [
+        { text: tc('cancel'), style: 'cancel' },
+        {
+          text: expired ? tc('delete') : t('actionPack.cancelPackShort'),
+          style: 'destructive',
+          onPress: () =>
+            cancel.mutate(id, {
+              onSuccess: () => Alert.alert(t('actionPack.cancelDoneTitle'), t('actionPack.cancelDone'), [{ text: 'OK', onPress: leave }]),
+              onError: (error) => setNote({ tone: 'error', text: cancelErrorMessage(error) }),
+            }),
+        },
+      ],
+    );
+  };
 
   const onToggle = (checklistId: string, done: boolean) => {
     toggle.mutate(
@@ -48,11 +113,46 @@ export default function ActionPackScreen() {
   } else {
     const p = pack.data;
     const progress = checklistProgress(p);
+    const status = packStatus(p);
+    const attemptsLeft = letterAttemptsLeft(p);
+    const busy = retry.isPending || cancel.isPending;
     content = (
       <ScrollView
         contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={pack.isRefetching && !pack.isPlaceholderData} onRefresh={() => void pack.refetch()} tintColor={colors.brand[600]} />}
       >
+        {note ? (
+          <View className={`rounded-xl p-3 mb-4 ${note.tone === 'success' ? 'bg-success-bg' : 'bg-red-50'}`} accessibilityLiveRegion="polite">
+            <Text className={`text-sm ${note.tone === 'success' ? 'text-success' : 'text-red-700'}`}>{note.text}</Text>
+          </View>
+        ) : null}
+        {status === 'partial' || (status === 'generating' && p.coverLetter === null) ? (
+          <View className="bg-warning-bg rounded-2xl p-4 mb-4" accessibilityLiveRegion="polite">
+            <Text className="text-warning font-bold mb-1">{t('actionPack.statusPartialTitle')}</Text>
+            <Text className="text-warning text-sm leading-5">{status === 'partial' ? t('actionPack.statusPartial') : t('actionPack.statusGenerating')}</Text>
+            {status === 'partial' ? <Text className="text-warning text-xs mt-1">{t('actionPack.attemptsLeft', { count: attemptsLeft })}</Text> : null}
+            <View className="mt-3 gap-2">
+              {status === 'partial' && attemptsLeft > 0 ? (
+                <Button onPress={onRetry} loading={retry.isPending} disabled={busy} fullWidth>
+                  {t('actionPack.retryLetter')}
+                </Button>
+              ) : null}
+              <Button variant="outline" onPress={() => onCancel(false)} loading={cancel.isPending} disabled={busy} fullWidth>
+                {t('actionPack.cancelPack')}
+              </Button>
+            </View>
+          </View>
+        ) : null}
+        {status === 'expired' ? (
+          <View className="bg-stone-100 rounded-2xl p-4 mb-4">
+            <Text className="text-stone-700 text-sm leading-5">{t('actionPack.statusExpired')}</Text>
+            <View className="mt-3">
+              <Button variant="outline" onPress={() => onCancel(true)} loading={cancel.isPending} disabled={busy} fullWidth>
+                {t('actionPack.deletePack')}
+              </Button>
+            </View>
+          </View>
+        ) : null}
         <Card>
           <View className="flex-row items-start justify-between">
             <View className="flex-1 me-2">
@@ -112,9 +212,13 @@ export default function ActionPackScreen() {
 
         <Card>
           <Text className="text-base font-bold text-stone-900 mb-2">{t('actionPack.coverLetter')}</Text>
-          <Text selectable className="text-stone-800 text-sm leading-6">
-            {p.coverLetter.body}
-          </Text>
+          {p.coverLetter ? (
+            <Text selectable className="text-stone-800 text-sm leading-6">
+              {p.coverLetter.body}
+            </Text>
+          ) : (
+            <Text className="text-stone-500 text-sm">{t('actionPack.letterPending')}</Text>
+          )}
         </Card>
 
         <Card>

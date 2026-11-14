@@ -1,3 +1,4 @@
+import { pooledCandidate } from '../remaining/business-sponsor';
 import { randomUUID } from 'crypto';
 import type { Pool } from 'pg';
 import type { FeatureId, UsageUnit } from '@flacroncv/career-shared';
@@ -178,7 +179,7 @@ export class MeteringService {
           idempotencyKey: key,
           requestFingerprint: fingerprint,
           requestId: op.requestId,
-          candidateAuthUserId: null,
+          candidateAuthUserId: pooledCandidate(account, op.spender),
         },
         (version) => this.catalogs.get(db, version),
         this.clock.now(),

@@ -12,13 +12,18 @@ export interface SpeechTranscribeResult {
   model: string;
 }
 
+/** What an adapter receives: the validated request shape plus the audio bytes themselves. */
+export interface SpeechTranscriptionInput extends TranscriptionRequest {
+  audio: Buffer;
+}
+
 export interface SpeechTranscriber {
-  transcribe(request: TranscriptionRequest): Promise<SpeechTranscribeResult>;
+  transcribe(request: SpeechTranscriptionInput): Promise<SpeechTranscribeResult>;
 }
 
 /** No vendor key yet. Every call is `provider_unavailable`. */
 export class UnconfiguredSpeechTranscriber implements SpeechTranscriber {
-  async transcribe(_request: TranscriptionRequest): Promise<SpeechTranscribeResult> {
+  async transcribe(_request: SpeechTranscriptionInput): Promise<SpeechTranscribeResult> {
     throw new BillingError('provider_unavailable', { reason: 'transcription_not_configured' });
   }
 }

@@ -6,7 +6,11 @@
     "interviewing": "Entrevistando",
     "offer": "Oferta",
     "rejected": "Rechazada",
-    "accepted": "Aceptada"
+    "accepted": "Aceptada",
+    "saved": "Guardada",
+    "preparing": "En preparación",
+    "offered": "Oferta recibida",
+    "withdrawn": "Retirada"
   },
   "sort": {
     "updated": "Actualizado recientemente",
@@ -43,7 +47,9 @@
     "followUp": "Seguimiento {date}",
     "addToCalendar": "Añadir al calendario la entrevista para {position} en {company}",
     "restore": "Restaurar {position} en {company}",
-    "archive": "Archivar {position} en {company}"
+    "archive": "Archivar {position} en {company}",
+    "deadline": "Fecha límite {date}",
+    "checklist": "Lista {done}/{total}"
   },
   "archive": {
     "archived": "Candidatura archivada",
@@ -95,7 +101,26 @@
     "deleteTitle": "Eliminar candidatura",
     "deleteBody": "¿Eliminar «{position}» en {company}? Esta acción no se puede deshacer.",
     "deleteErrorTitle": "No se pudo eliminar",
-    "deleteError": "No se pudo eliminar. Inténtalo de nuevo."
+    "deleteError": "No se pudo eliminar. Inténtalo de nuevo.",
+    "deadline": "Fecha límite de solicitud",
+    "addDeadlineToCalendar": "Añadir la fecha límite al calendario",
+    "contacts": "Contactos",
+    "contactN": "Contacto {n}",
+    "contactRole": "Cargo",
+    "contactRolePh": "p. ej. reclutador",
+    "contactPhone": "Teléfono",
+    "contactNotes": "Notas sobre este contacto",
+    "addContact": "Añadir contacto",
+    "removeContact": "Quitar el contacto {n}",
+    "checklist": "Lista de verificación",
+    "checklistItemPh": "p. ej. enlace al portafolio",
+    "addChecklistItem": "Añadir elemento",
+    "removeChecklistItem": "Quitar el elemento {n}",
+    "checklistToggle": "Elemento {n} hecho",
+    "outcome": "Resultado: {outcome}",
+    "frozenOnLink": "El CV o la carta que vincules se guarda con esta candidatura tal como está al vincularlo.",
+    "frozenCv": "Versión del CV guardada: {title} (versión {version})",
+    "frozenLetter": "Copia de la carta guardada: {title}"
   },
   "picker": {
     "chooseCv": "Elige un CV",
@@ -112,6 +137,15 @@
     "error": "No se pudo crear el evento de calendario. Inténtalo de nuevo.",
     "unavailableTitle": "No se puede compartir",
     "unavailable": "Compartir no está disponible en este dispositivo.",
-    "dialogTitle": "Añadir la entrevista al calendario"
+    "dialogTitle": "Añadir la entrevista al calendario",
+    "deadlineSummary": "Fecha límite: {position} en {company}",
+    "deadlineDescription": "Último día para postularte a {position} en {company}."
+  },
+  "outcome": {
+    "accepted": "Oferta aceptada",
+    "declined": "Oferta rechazada por mí",
+    "rejected": "No seleccionado",
+    "withdrawn": "Me retiré",
+    "no_response": "Sin respuesta"
   }
 }

@@ -478,7 +478,8 @@ describe('UsersService', () => {
       expect(data.profile.firstName).toBe('Owner');
       expect(data.preferences.language).toBe('en');
       expect(data.subscription.plan).toBe(SubscriptionPlan.FREE);
-      expect(data.usage.aiCreditsLimit).toBe(5);
+      // New accounts start on the five-plan Free allowance (3 credits / month).
+      expect(data.usage.aiCreditsLimit).toBe(3);
     });
 
     it("includes the user's own CVs with their sections", async () => {
@@ -764,11 +765,19 @@ describe('UsersService', () => {
       expect(await service.reserveAiCredit('ghost')).toBe(false);
     });
 
-    it('enforces the cap under concurrency — only `remaining` reservations succeed', async () => {
-      await seed('r4', { aiCreditsUsed: 3, aiCreditsLimit: 5 }, activeFree); // 2 remaining
+    it('enforces the cap under concurrency — only `remaining` reservations succeed (Free, 3/month)', async () => {
+      await seed('r4', { aiCreditsUsed: 1, aiCreditsLimit: 5 }, activeFree); // 2 remaining of 3
       const results = await Promise.all(Array.from({ length: 10 }, () => service.reserveAiCredit('r4')));
       expect(results.filter(Boolean)).toHaveLength(2);
-      expect((await service.findByIdOrThrow('r4')).usage.aiCreditsUsed).toBe(5);
+      expect((await service.findByIdOrThrow('r4')).usage.aiCreditsUsed).toBe(3);
+    });
+
+    it('LEGACY Pro keeps min(stored limit, plan limit) under concurrency', async () => {
+      const activePro = { plan: SubscriptionPlan.PRO, status: SubscriptionStatus.ACTIVE, currentPeriodEnd: null };
+      await seed('r4p', { aiCreditsUsed: 48, aiCreditsLimit: 50 }, activePro); // stored 50 < plan 100
+      const results = await Promise.all(Array.from({ length: 10 }, () => service.reserveAiCredit('r4p')));
+      expect(results.filter(Boolean)).toHaveLength(2);
+      expect((await service.findByIdOrThrow('r4p')).usage.aiCreditsUsed).toBe(50);
     });
 
     it('refundAiCredit decrements the counter', async () => {

@@ -1,6 +1,6 @@
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CareerHeader, Pill } from '../../../src/components/career/CareerHeader';
 import { Button } from '../../../src/components/ui/Button';
@@ -11,78 +11,146 @@ import { SkeletonCard } from '../../../src/components/ui/Skeleton';
 import { useMaintenance, useMaintenanceActions } from '../../../src/hooks/career/maintenance';
 import { useCareerAccess } from '../../../src/hooks/useCareer';
 import { useLeaveGuard } from '../../../src/hooks/useLeaveGuard';
-import { checkCredential, checkTitle, dueCredentials, formatExpiry, maintenanceErrorMessage } from '../../../src/lib/career/maintenance';
+import {
+  achievementDraft,
+  checkAchievement,
+  checkCredentialDraft,
+  checkGoal,
+  credentialDraft,
+  credentialLines,
+  deleteErrorMessage,
+  EMPTY_ACHIEVEMENT,
+  EMPTY_CREDENTIAL,
+  EMPTY_GOAL,
+  errorField,
+  formatExpiry,
+  goalDraft,
+  goalStatusLabel,
+  isBlankDraft,
+  linkLabels,
+  maintenanceErrorMessage,
+  MAX_DETAILS,
+  MAX_SHORT,
+  MAX_TITLE,
+  reminderText,
+  type AchievementDraft,
+  type CredentialDraft,
+  type GoalDraft,
+} from '../../../src/lib/career/maintenance';
 import { careerErrorMessage } from '../../../src/lib/career-view';
 import { colors } from '../../../src/theme/colors';
 import { useT } from '../../../src/i18n';
 
 type Section = 'achievement' | 'goal' | 'credential';
+type Errors = Record<string, string | undefined>;
+type Notice = { section: Section; tone: 'success' | 'error'; text: string } | null;
+
+/** `id` null = adding a new entry; a string = editing that entry. */
+interface Editing<D> {
+  id: string | null;
+  draft: D;
+}
+
+const dateInputProps = {
+  keyboardType: Platform.OS === 'ios' ? ('numbers-and-punctuation' as const) : ('default' as const),
+  autoCapitalize: 'none' as const,
+  autoCorrect: false,
+  maxLength: 10,
+};
+const dateOnly = (text: string) => text.replace(/[^0-9-]/g, '');
 
 /**
- * Career maintenance, as on the website (career/maintenance): log
- * achievements and promotion goals, and keep credential expiry dates so the
- * ones due within 90 days stand out. All free. A promotion goal is not a
- * confirmed fact. The API has no edit or delete for these entries.
+ * Career maintenance, as on the website (career/maintenance): achievements,
+ * promotion goals and credentials, each editable and removable, plus the
+ * reminder list the server derives from credential expiry and review dates
+ * (90 days ahead). All free. A promotion goal is not a confirmed fact;
+ * confirming a promotion (which changes the profile) and linking entries to
+ * facts or evidence stay on the website for now. Impossible dates are refused.
  */
 export default function CareerMaintenanceScreen() {
   const t = useT('careerPlans');
+  const tc = useT('common');
   const access = useCareerAccess();
   const view = useMaintenance();
   const actions = useMaintenanceActions();
-  const [achievement, setAchievement] = useState('');
-  const [goal, setGoal] = useState('');
-  const [credentialName, setCredentialName] = useState('');
-  const [expiresOn, setExpiresOn] = useState('');
-  const [errors, setErrors] = useState<Partial<Record<Section | 'expiresOn', string>>>({});
-  const [saved, setSaved] = useState<Section | null>(null);
-  const busy = actions.addAchievement.isPending || actions.addPromotionGoal.isPending || actions.addCredential.isPending;
+  const [achievement, setAchievement] = useState<Editing<AchievementDraft>>({ id: null, draft: EMPTY_ACHIEVEMENT });
+  const [goal, setGoal] = useState<Editing<GoalDraft>>({ id: null, draft: EMPTY_GOAL });
+  const [credential, setCredential] = useState<Editing<CredentialDraft>>({ id: null, draft: EMPTY_CREDENTIAL });
+  const [errors, setErrors] = useState<Record<Section, Errors>>({ achievement: {}, goal: {}, credential: {} });
+  const [notice, setNotice] = useState<Notice>(null);
 
-  useLeaveGuard(achievement.trim() !== '' || goal.trim() !== '' || credentialName.trim() !== '' || expiresOn.trim() !== '');
+  const busy = Object.values(actions).some((m) => m.isPending);
+  useLeaveGuard(
+    achievement.id !== null || goal.id !== null || credential.id !== null ||
+      !isBlankDraft(achievement.draft) || !isBlankDraft(goal.draft) || !isBlankDraft(credential.draft),
+  );
 
+  const setSectionErrors = (section: Section, next: Errors) => setErrors((e) => ({ ...e, [section]: next }));
+  const clearField = (section: Section, field: string) => setErrors((e) => ({ ...e, [section]: { ...e[section], [field]: undefined, form: undefined } }));
+
+  /** A server refusal goes next to its field when it names one, otherwise under the form. */
   const fail = (section: Section) => (error: unknown) => {
-    const field = error instanceof ApiError && error.body.field === 'expiresOn' ? 'expiresOn' : section;
-    setErrors((e) => ({ ...e, [field]: maintenanceErrorMessage(error) }));
+    const field = errorField(error) ?? 'form';
+    setSectionErrors(section, { [field]: maintenanceErrorMessage(error) });
+  };
+  const succeed = (section: Section, text: string, reset: () => void) => () => {
+    reset();
+    setSectionErrors(section, {});
+    setNotice({ section, tone: 'success', text });
   };
 
-  const onAchievement = () => {
-    const check = checkTitle(achievement, 'achievement');
-    setSaved(null);
-    if (!check.ok) return setErrors((e) => ({ ...e, achievement: check.message }));
-    actions.addAchievement.mutate(check.value, {
-      onSuccess: () => {
-        setAchievement('');
-        setSaved('achievement');
-      },
-      onError: fail('achievement'),
-    });
-  };
-
-  const onGoal = () => {
-    const check = checkTitle(goal, 'promotion goal');
-    setSaved(null);
-    if (!check.ok) return setErrors((e) => ({ ...e, goal: check.message }));
-    actions.addPromotionGoal.mutate(check.value, {
-      onSuccess: () => {
-        setGoal('');
-        setSaved('goal');
-      },
-      onError: fail('goal'),
-    });
-  };
-
-  const onCredential = () => {
-    const check = checkCredential(credentialName, expiresOn);
-    setSaved(null);
-    if (!check.ok) return setErrors((e) => ({ ...e, [check.field === 'name' ? 'credential' : 'expiresOn']: check.message }));
-    actions.addCredential.mutate(
-      { name: check.name, expiresOn: check.expiresOn },
+  const confirmDelete = (section: Section, title: string, body: string, run: (opts: { onSuccess: () => void; onError: (e: unknown) => void }) => void) => {
+    Alert.alert(title, body, [
+      { text: tc('cancel'), style: 'cancel' },
       {
-        onSuccess: () => {
-          setCredentialName('');
-          setExpiresOn('');
-          setSaved('credential');
-        },
-        onError: fail('credential'),
+        text: tc('delete'),
+        style: 'destructive',
+        onPress: () =>
+          run({
+            onSuccess: () => setNotice({ section, tone: 'success', text: t('maintenance.deleted') }),
+            onError: (error) => setNotice({ section, tone: 'error', text: deleteErrorMessage(error) }),
+          }),
+      },
+    ]);
+  };
+
+  const onSaveAchievement = () => {
+    setNotice(null);
+    const check = checkAchievement(achievement.draft);
+    if (!check.ok) return setSectionErrors('achievement', check.errors);
+    const reset = () => setAchievement({ id: null, draft: EMPTY_ACHIEVEMENT });
+    const done = succeed('achievement', achievement.id ? t('maintenance.changesSaved') : t('maintenance.achievementSaved'), reset);
+    if (achievement.id) actions.updateAchievement.mutate({ id: achievement.id, patch: check.input }, { onSuccess: done, onError: fail('achievement') });
+    else actions.addAchievement.mutate(check.input, { onSuccess: done, onError: fail('achievement') });
+  };
+
+  const onSaveGoal = () => {
+    setNotice(null);
+    const check = checkGoal(goal.draft);
+    if (!check.ok) return setSectionErrors('goal', check.errors);
+    const reset = () => setGoal({ id: null, draft: EMPTY_GOAL });
+    const done = succeed('goal', goal.id ? t('maintenance.changesSaved') : t('maintenance.goalSaved'), reset);
+    if (goal.id) actions.updatePromotionGoal.mutate({ id: goal.id, patch: check.input }, { onSuccess: done, onError: fail('goal') });
+    else actions.addPromotionGoal.mutate(check.input, { onSuccess: done, onError: fail('goal') });
+  };
+
+  const onSaveCredential = () => {
+    setNotice(null);
+    const check = checkCredentialDraft(credential.draft);
+    if (!check.ok) return setSectionErrors('credential', check.errors);
+    const reset = () => setCredential({ id: null, draft: EMPTY_CREDENTIAL });
+    const done = succeed('credential', credential.id ? t('maintenance.changesSaved') : t('maintenance.credentialSaved'), reset);
+    if (credential.id) actions.updateCredential.mutate({ id: credential.id, patch: check.input }, { onSuccess: done, onError: fail('credential') });
+    else actions.addCredential.mutate(check.input, { onSuccess: done, onError: fail('credential') });
+  };
+
+  const onDropGoal = (id: string) => {
+    setNotice(null);
+    actions.updatePromotionGoal.mutate(
+      { id, patch: { status: 'dropped' } },
+      {
+        onSuccess: () => setNotice({ section: 'goal', tone: 'success', text: t('maintenance.goalDropped') }),
+        onError: (error) => setNotice({ section: 'goal', tone: 'error', text: maintenanceErrorMessage(error) }),
       },
     );
   };
@@ -103,113 +171,277 @@ export default function CareerMaintenanceScreen() {
     content = <ErrorState message={careerErrorMessage(view.error ?? access.error, t('maintenance.loadError'))} onRetry={() => void view.refetch()} />;
   } else {
     const data = view.data;
-    const due = dueCredentials(data);
+    const reminders = data.reminders ?? [];
+    const sectionNotice = (section: Section) => (notice?.section === section ? <NoticeText tone={notice.tone} text={notice.text} /> : null);
     content = (
       <ScrollView
         contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={view.isRefetching} onRefresh={() => void view.refetch()} tintColor={colors.brand[600]} />}
       >
-        <Text className="text-stone-500 text-sm mb-4 leading-5">
-          {t('maintenance.intro')}
-        </Text>
+        <Text className="text-stone-500 text-sm mb-4 leading-5">{t('maintenance.intro')}</Text>
 
-        {due.length > 0 ? (
-          <View className="bg-warning-bg rounded-2xl p-4 mb-4" accessibilityLiveRegion="polite">
-            <Text className="text-warning font-bold mb-1">{t('maintenance.dueTitle')}</Text>
-            {due.map((c) => (
-              <Text key={c.id} className="text-warning text-sm">{`${c.name} — ${formatExpiry(c.expiresOn)}`}</Text>
-            ))}
-          </View>
-        ) : null}
+        <View className={`rounded-2xl p-4 mb-4 ${reminders.length > 0 ? 'bg-warning-bg' : 'bg-white border border-stone-100'}`} accessibilityLiveRegion="polite">
+          <Text className={`font-bold mb-1 ${reminders.length > 0 ? 'text-warning' : 'text-stone-900'}`} accessibilityRole="header">
+            {t('maintenance.remindersTitle')}
+          </Text>
+          {reminders.length === 0 ? (
+            <Text className="text-stone-500 text-sm">{t('maintenance.remindersEmpty')}</Text>
+          ) : (
+            reminders.map((r) => (
+              <Text key={`${r.credentialId}-${r.kind}`} className="text-warning text-sm mt-0.5">{`${r.name} — ${reminderText(r)}`}</Text>
+            ))
+          )}
+        </View>
 
         <Card title={t('maintenance.achievements')}>
-          {data.achievements.length === 0 ? <Muted>{t('maintenance.noAchievements')}</Muted> : data.achievements.map((a) => <Row key={a.id} text={a.title} />)}
+          {data.achievements.length === 0 ? <Muted>{t('maintenance.noAchievements')}</Muted> : null}
+          {data.achievements.map((a) => (
+            <ItemRow
+              key={a.id}
+              title={a.title}
+              lines={[a.details, a.achievedOn ? formatExpiry(a.achievedOn) : '', ...linkLabels(a)].filter(Boolean)}
+              editing={achievement.id === a.id}
+              disabled={busy}
+              onEdit={() => {
+                setNotice(null);
+                setSectionErrors('achievement', {});
+                setAchievement({ id: a.id, draft: achievementDraft(a) });
+              }}
+              onDelete={() =>
+                confirmDelete('achievement', t('maintenance.deleteAchievementTitle'), t('maintenance.deleteBody', { name: a.title }), (opts) =>
+                  actions.deleteAchievement.mutate(a.id, {
+                    ...opts,
+                    onSuccess: () => {
+                      if (achievement.id === a.id) setAchievement({ id: null, draft: EMPTY_ACHIEVEMENT });
+                      opts.onSuccess();
+                    },
+                  }),
+                )
+              }
+            />
+          ))}
+          <FormHeading text={achievement.id ? t('maintenance.editAchievement') : t('maintenance.newAchievement')} />
           <Input
-            label={t('maintenance.newAchievement')}
-            value={achievement}
-            onChangeText={(text) => {
-              setAchievement(text);
-              setErrors((e) => ({ ...e, achievement: undefined }));
+            label={t('maintenance.achievementTitle')}
+            value={achievement.draft.title}
+            onChangeText={(title) => {
+              setAchievement((s) => ({ ...s, draft: { ...s.draft, title } }));
+              clearField('achievement', 'title');
             }}
             placeholder={t('maintenance.achievementPlaceholder')}
-            maxLength={200}
-            error={errors.achievement}
+            maxLength={MAX_TITLE}
+            error={errors.achievement.title}
             editable={!busy}
           />
-          <Button variant="outline" onPress={onAchievement} loading={actions.addAchievement.isPending} disabled={busy || achievement.trim() === ''}>
-            {t('maintenance.addAchievement')}
-          </Button>
-          {saved === 'achievement' ? <Saved text={t('maintenance.achievementSaved')} /> : null}
+          <Input
+            label={t('maintenance.achievementDetails')}
+            value={achievement.draft.details}
+            onChangeText={(details) => {
+              setAchievement((s) => ({ ...s, draft: { ...s.draft, details } }));
+              clearField('achievement', 'details');
+            }}
+            multiline
+            maxLength={MAX_DETAILS}
+            style={{ minHeight: 70, textAlignVertical: 'top' }}
+            error={errors.achievement.details}
+            editable={!busy}
+          />
+          <Input
+            label={t('maintenance.achievementDate')}
+            value={achievement.draft.achievedOn}
+            onChangeText={(text) => {
+              setAchievement((s) => ({ ...s, draft: { ...s.draft, achievedOn: dateOnly(text) } }));
+              clearField('achievement', 'achievedOn');
+            }}
+            placeholder={t('maintenance.datePlaceholder')}
+            {...dateInputProps}
+            error={errors.achievement.achievedOn}
+            editable={!busy}
+          />
+          <FormButtons
+            saveLabel={achievement.id ? t('maintenance.saveChanges') : t('maintenance.addAchievement')}
+            onSave={onSaveAchievement}
+            loading={actions.addAchievement.isPending || actions.updateAchievement.isPending}
+            disabled={busy || achievement.draft.title.trim() === ''}
+            onCancel={achievement.id ? () => { setAchievement({ id: null, draft: EMPTY_ACHIEVEMENT }); setSectionErrors('achievement', {}); } : undefined}
+          />
+          {errors.achievement.form ? <NoticeText tone="error" text={errors.achievement.form} /> : null}
+          {sectionNotice('achievement')}
         </Card>
 
         <Card title={t('maintenance.goals')}>
-          {data.promotionGoals.length === 0 ? <Muted>{t('maintenance.noGoals')}</Muted> : data.promotionGoals.map((g) => <Row key={g.id} text={g.desiredTitle} />)}
+          {data.promotionGoals.length === 0 ? <Muted>{t('maintenance.noGoals')}</Muted> : null}
+          {data.promotionGoals.map((g) => (
+            <ItemRow
+              key={g.id}
+              title={g.desiredTitle}
+              lines={g.targetDate ? [t('maintenance.goalTarget', { date: formatExpiry(g.targetDate) })] : []}
+              pill={{ label: goalStatusLabel(g.status), tone: g.status === 'confirmed' ? 'success' : g.status === 'dropped' ? 'default' : 'brand' }}
+              editing={goal.id === g.id}
+              disabled={busy}
+              // An achieved goal changed the profile; the server refuses edits to it.
+              onEdit={g.status === 'confirmed' ? undefined : () => {
+                setNotice(null);
+                setSectionErrors('goal', {});
+                setGoal({ id: g.id, draft: goalDraft(g) });
+              }}
+              extra={
+                g.status === 'open'
+                  ? { label: t('maintenance.goalDrop'), onPress: () => onDropGoal(g.id) }
+                  : undefined
+              }
+              onDelete={() =>
+                confirmDelete('goal', t('maintenance.deleteGoalTitle'), t('maintenance.deleteBody', { name: g.desiredTitle }), (opts) =>
+                  actions.deletePromotionGoal.mutate(g.id, {
+                    ...opts,
+                    onSuccess: () => {
+                      if (goal.id === g.id) setGoal({ id: null, draft: EMPTY_GOAL });
+                      opts.onSuccess();
+                    },
+                  }),
+                )
+              }
+            />
+          ))}
+          {data.promotionGoals.some((g) => g.status === 'open') ? (
+            <Text className="text-stone-400 text-xs mt-2">{t('maintenance.confirmOnWebsite')}</Text>
+          ) : null}
+          <FormHeading text={goal.id ? t('maintenance.editGoal') : t('maintenance.goal')} />
           <Input
             label={t('maintenance.goal')}
-            value={goal}
-            onChangeText={(text) => {
-              setGoal(text);
-              setErrors((e) => ({ ...e, goal: undefined }));
+            value={goal.draft.desiredTitle}
+            onChangeText={(desiredTitle) => {
+              setGoal((s) => ({ ...s, draft: { ...s.draft, desiredTitle } }));
+              clearField('goal', 'desiredTitle');
             }}
             placeholder={t('maintenance.goalPlaceholder')}
-            maxLength={200}
-            error={errors.goal}
+            maxLength={MAX_TITLE}
+            error={errors.goal.desiredTitle}
             editable={!busy}
           />
-          <Button variant="outline" onPress={onGoal} loading={actions.addPromotionGoal.isPending} disabled={busy || goal.trim() === ''}>
-            {t('maintenance.saveGoal')}
-          </Button>
-          {saved === 'goal' ? <Saved text={t('maintenance.goalSaved')} /> : null}
+          <Input
+            label={t('maintenance.goalTargetDate')}
+            value={goal.draft.targetDate}
+            onChangeText={(text) => {
+              setGoal((s) => ({ ...s, draft: { ...s.draft, targetDate: dateOnly(text) } }));
+              clearField('goal', 'targetDate');
+            }}
+            placeholder={t('maintenance.datePlaceholder')}
+            {...dateInputProps}
+            error={errors.goal.targetDate}
+            editable={!busy}
+          />
+          <FormButtons
+            saveLabel={goal.id ? t('maintenance.saveChanges') : t('maintenance.saveGoal')}
+            onSave={onSaveGoal}
+            loading={actions.addPromotionGoal.isPending || (actions.updatePromotionGoal.isPending && goal.id !== null)}
+            disabled={busy || goal.draft.desiredTitle.trim() === ''}
+            onCancel={goal.id ? () => { setGoal({ id: null, draft: EMPTY_GOAL }); setSectionErrors('goal', {}); } : undefined}
+          />
+          {errors.goal.form ? <NoticeText tone="error" text={errors.goal.form} /> : null}
+          {sectionNotice('goal')}
         </Card>
 
         <Card title={t('maintenance.credentials')}>
-          {data.credentials.length === 0 ? (
-            <Muted>{t('maintenance.noCredentials')}</Muted>
-          ) : (
-            data.credentials.map((c) => (
-              <View key={c.id} className="flex-row items-center py-2 border-b border-stone-100">
-                <View className="flex-1 me-2">
-                  <Text className="text-sm text-stone-900 font-medium">{c.name}</Text>
-                  <Text className="text-xs text-stone-500 mt-0.5">{t('maintenance.expires', { date: formatExpiry(c.expiresOn) })}</Text>
-                </View>
-                {c.due ? <Pill label={t('maintenance.dueSoon')} tone="warning" /> : null}
-              </View>
-            ))
-          )}
-          <View className="h-3" />
+          <Text className="text-stone-500 text-xs mb-2">{t('maintenance.credentialsHelp')}</Text>
+          {data.credentials.length === 0 ? <Muted>{t('maintenance.noCredentials')}</Muted> : null}
+          {data.credentials.map((c) => (
+            <ItemRow
+              key={c.id}
+              title={c.name}
+              lines={[...credentialLines(c), ...linkLabels(c)]}
+              pill={c.due ? { label: t('maintenance.dueSoon'), tone: 'warning' } : undefined}
+              editing={credential.id === c.id}
+              disabled={busy}
+              onEdit={() => {
+                setNotice(null);
+                setSectionErrors('credential', {});
+                setCredential({ id: c.id, draft: credentialDraft(c) });
+              }}
+              onDelete={() =>
+                confirmDelete('credential', t('maintenance.deleteCredentialTitle'), t('maintenance.deleteCredentialBody', { name: c.name }), (opts) =>
+                  actions.deleteCredential.mutate(c.id, {
+                    ...opts,
+                    onSuccess: () => {
+                      if (credential.id === c.id) setCredential({ id: null, draft: EMPTY_CREDENTIAL });
+                      opts.onSuccess();
+                    },
+                  }),
+                )
+              }
+            />
+          ))}
+          <FormHeading text={credential.id ? t('maintenance.editCredential') : t('maintenance.credential')} />
           <Input
             label={t('maintenance.credential')}
-            value={credentialName}
-            onChangeText={(text) => {
-              setCredentialName(text);
-              setErrors((e) => ({ ...e, credential: undefined }));
+            value={credential.draft.name}
+            onChangeText={(name) => {
+              setCredential((s) => ({ ...s, draft: { ...s.draft, name } }));
+              clearField('credential', 'name');
             }}
             placeholder={t('maintenance.credentialPlaceholder')}
-            maxLength={200}
-            error={errors.credential}
+            maxLength={MAX_TITLE}
+            error={errors.credential.name}
             editable={!busy}
           />
           <Input
             label={t('maintenance.expiresOn')}
-            value={expiresOn}
+            value={credential.draft.expiresOn}
             onChangeText={(text) => {
-              setExpiresOn(text.replace(/[^0-9-]/g, ''));
-              setErrors((e) => ({ ...e, expiresOn: undefined }));
+              setCredential((s) => ({ ...s, draft: { ...s.draft, expiresOn: dateOnly(text) } }));
+              clearField('credential', 'expiresOn');
             }}
             placeholder={t('maintenance.datePlaceholder')}
-            keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
-            autoCapitalize="none"
-            autoCorrect={false}
-            maxLength={10}
+            {...dateInputProps}
             hint={t('maintenance.dateHint')}
-            error={errors.expiresOn}
+            error={errors.credential.expiresOn}
             editable={!busy}
           />
-          <Button variant="outline" onPress={onCredential} loading={actions.addCredential.isPending} disabled={busy || credentialName.trim() === '' || expiresOn.trim() === ''}>
-            {t('maintenance.saveCredential')}
-          </Button>
-          {saved === 'credential' ? <Saved text={t('maintenance.credentialSaved')} /> : null}
+          <Input
+            label={t('maintenance.reviewOn')}
+            value={credential.draft.reviewOn}
+            onChangeText={(text) => {
+              setCredential((s) => ({ ...s, draft: { ...s.draft, reviewOn: dateOnly(text) } }));
+              clearField('credential', 'reviewOn');
+            }}
+            placeholder={t('maintenance.datePlaceholder')}
+            {...dateInputProps}
+            error={errors.credential.reviewOn}
+            editable={!busy}
+          />
+          <Input
+            label={t('maintenance.issuer')}
+            value={credential.draft.issuer}
+            onChangeText={(issuer) => {
+              setCredential((s) => ({ ...s, draft: { ...s.draft, issuer } }));
+              clearField('credential', 'issuer');
+            }}
+            maxLength={MAX_SHORT}
+            error={errors.credential.issuer}
+            editable={!busy}
+          />
+          <Input
+            label={t('maintenance.region')}
+            value={credential.draft.region}
+            onChangeText={(region) => {
+              setCredential((s) => ({ ...s, draft: { ...s.draft, region } }));
+              clearField('credential', 'region');
+            }}
+            maxLength={MAX_SHORT}
+            hint={t('maintenance.regionHint')}
+            error={errors.credential.region}
+            editable={!busy}
+          />
+          <FormButtons
+            saveLabel={credential.id ? t('maintenance.saveChanges') : t('maintenance.saveCredential')}
+            onSave={onSaveCredential}
+            loading={actions.addCredential.isPending || actions.updateCredential.isPending}
+            disabled={busy || credential.draft.name.trim() === '' || credential.draft.expiresOn.trim() === ''}
+            onCancel={credential.id ? () => { setCredential({ id: null, draft: EMPTY_CREDENTIAL }); setSectionErrors('credential', {}); } : undefined}
+          />
+          {errors.credential.form ? <NoticeText tone="error" text={errors.credential.form} /> : null}
+          {sectionNotice('credential')}
         </Card>
       </ScrollView>
     );
@@ -236,21 +468,98 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-function Row({ text }: { text: string }) {
+function ItemRow({
+  title,
+  lines,
+  pill,
+  editing,
+  disabled,
+  onEdit,
+  onDelete,
+  extra,
+}: {
+  title: string;
+  lines: string[];
+  pill?: { label: string; tone: 'default' | 'brand' | 'warning' | 'success' };
+  editing: boolean;
+  disabled: boolean;
+  onEdit?: () => void;
+  onDelete: () => void;
+  extra?: { label: string; onPress: () => void };
+}) {
+  const t = useT('careerPlans');
+  const tc = useT('common');
   return (
-    <View className="py-2 border-b border-stone-100">
-      <Text className="text-sm text-stone-900">{text}</Text>
+    <View className={`py-2 border-b border-stone-100 ${editing ? 'bg-brand-50 -mx-2 px-2 rounded-lg' : ''}`}>
+      <View className="flex-row items-start">
+        <Text className="flex-1 me-2 text-sm text-stone-900 font-medium">{title}</Text>
+        {pill ? <Pill label={pill.label} tone={pill.tone} /> : null}
+      </View>
+      {lines.map((line, i) => (
+        <Text key={i} className="text-xs text-stone-500 mt-0.5">
+          {line}
+        </Text>
+      ))}
+      <View className="flex-row flex-wrap justify-end gap-2 mt-1">
+        {extra ? (
+          <Button size="sm" variant="ghost" className="min-h-[44px]" onPress={extra.onPress} disabled={disabled} accessibilityLabel={`${extra.label}: ${title}`}>
+            {extra.label}
+          </Button>
+        ) : null}
+        {onEdit ? (
+          <Button size="sm" variant="outline" className="min-h-[44px]" onPress={onEdit} disabled={disabled || editing} accessibilityLabel={t('maintenance.editA11y', { name: title })}>
+            {t('maintenance.edit')}
+          </Button>
+        ) : null}
+        <Button size="sm" variant="ghost" className="min-h-[44px]" onPress={onDelete} disabled={disabled} accessibilityLabel={t('maintenance.deleteA11y', { name: title })}>
+          {tc('delete')}
+        </Button>
+      </View>
+    </View>
+  );
+}
+
+function FormHeading({ text }: { text: string }) {
+  return <Text className="text-sm font-semibold text-stone-700 mt-4 mb-2">{text}</Text>;
+}
+
+function FormButtons({
+  saveLabel,
+  onSave,
+  loading,
+  disabled,
+  onCancel,
+}: {
+  saveLabel: string;
+  onSave: () => void;
+  loading: boolean;
+  disabled: boolean;
+  onCancel?: () => void;
+}) {
+  const tc = useT('common');
+  return (
+    <View className="flex-row gap-2">
+      <View className="flex-1">
+        <Button variant="outline" onPress={onSave} loading={loading} disabled={disabled} fullWidth>
+          {saveLabel}
+        </Button>
+      </View>
+      {onCancel ? (
+        <Button variant="ghost" onPress={onCancel} disabled={loading}>
+          {tc('cancel')}
+        </Button>
+      ) : null}
     </View>
   );
 }
 
 function Muted({ children }: { children: React.ReactNode }) {
-  return <Text className="text-stone-400 text-sm mb-3">{children}</Text>;
+  return <Text className="text-stone-400 text-sm mb-1">{children}</Text>;
 }
 
-function Saved({ text }: { text: string }) {
+function NoticeText({ tone, text }: { tone: 'success' | 'error'; text: string }) {
   return (
-    <Text className="text-success text-sm mt-2" accessibilityLiveRegion="polite">
+    <Text className={`${tone === 'success' ? 'text-success' : 'text-red-700'} text-sm mt-2`} accessibilityLiveRegion="polite" accessibilityRole={tone === 'error' ? 'alert' : undefined}>
       {text}
     </Text>
   );

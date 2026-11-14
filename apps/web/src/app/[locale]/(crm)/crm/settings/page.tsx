@@ -27,6 +27,7 @@ import {
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { ADMIN_PLAN_OPTIONS, crmPlanLabel, planBadgeClass } from '@/lib/plan-labels';
 
 function Toggle({
   checked,
@@ -175,16 +176,24 @@ export default function CRMSettingsPage(): React.JSX.Element {
     );
   }
 
-  const planLimitFields: { key: 'cvs' | 'coverLetters' | 'aiCredits' | 'exports'; label: string; icon: React.ElementType }[] = [
+  const planLimitFields: {
+    key: 'cvs' | 'coverLetters' | 'aiCredits' | 'analyses' | 'exports' | 'trackedApplications';
+    label: string;
+    icon: React.ElementType;
+  }[] = [
     { key: 'cvs', label: t('settings_cvs_limit_label'), icon: FileText },
     { key: 'coverLetters', label: t('settings_cover_letters_limit_label'), icon: Briefcase },
     { key: 'aiCredits', label: t('settings_ai_credits_limit_label'), icon: Bot },
+    { key: 'analyses', label: t('settings_analyses_limit_label'), icon: Bot },
     { key: 'exports', label: t('settings_exports_per_month_label'), icon: Download },
+    { key: 'trackedApplications', label: t('settings_tracked_applications_limit_label'), icon: Briefcase },
   ];
 
+  // Read straight from PLAN_CONFIGS (what is enforced). -1 = unlimited / not
+  // applicable (legacy plans have no analysis allowance).
   const liveLimit = (plan: SubscriptionPlan, key: (typeof planLimitFields)[number]['key']): number => {
     const v = PLAN_CONFIGS[plan].limits[key];
-    return v === 'unlimited' ? -1 : v;
+    return typeof v === 'number' ? v : -1;
   };
 
   return (
@@ -226,21 +235,12 @@ export default function CRMSettingsPage(): React.JSX.Element {
         </div>
 
         <div className="space-y-6">
-          {([SubscriptionPlan.FREE, SubscriptionPlan.PRO, SubscriptionPlan.ENTERPRISE] as const).map((plan) => (
+          {ADMIN_PLAN_OPTIONS.map((plan) => (
             <div key={plan}>
               <div className="mb-3 flex items-center gap-2">
-                <div className={cn(
-                  'h-2 w-2 rounded-full',
-                  plan === SubscriptionPlan.FREE ? 'bg-stone-400' : plan === SubscriptionPlan.PRO ? 'bg-brand-500' : 'bg-violet-500',
-                )} />
-                <h3 className={cn(
-                  'text-sm font-semibold capitalize',
-                  plan === SubscriptionPlan.FREE ? 'text-stone-600 dark:text-stone-400' :
-                  plan === SubscriptionPlan.PRO ? 'text-brand-600 dark:text-brand-400' :
-                  'text-violet-600 dark:text-violet-400',
-                )}>
-                  {t('settings_plan_heading', { plan: t(`plan_${plan}`) })}
-                </h3>
+                <span className={cn('rounded-full px-2 py-0.5 text-xs font-semibold', planBadgeClass(plan))}>
+                  {t('settings_plan_heading', { plan: crmPlanLabel(t, plan) })}
+                </span>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {planLimitFields.map(({ key, label }) => (

@@ -1,6 +1,7 @@
-import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, Headers, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
+import { isNativeMobileRequest } from './legacy-mobile-checkout';
 import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
 import { CurrentUser, FirebaseUser } from '../../common/decorators/current-user.decorator';
 import { SubscriptionPlan } from '@flacroncv/shared-types';
@@ -33,6 +34,7 @@ export class PaymentController {
       cancelUrl?: string;
       expectTrial?: boolean;
     },
+    @Headers() headers: Record<string, string | string[] | undefined>,
   ) {
     return this.paymentService.createCheckoutSession(
       user.uid,
@@ -40,6 +42,8 @@ export class PaymentController {
       body.successUrl,
       body.cancelUrl,
       body.expectTrial === true,
+      // The live mobile app may still buy legacy Pro / Enterprise; see legacy-mobile-checkout.ts.
+      { nativeMobile: isNativeMobileRequest(headers) },
     );
   }
 
@@ -58,6 +62,35 @@ export class PaymentController {
     @Body() body: { sessionId: string },
   ) {
     return this.paymentService.verifySession(user.uid, body.sessionId);
+  }
+
+  /**
+   * Proration preview for an existing subscriber switching to another
+   * current plan. Body `{ plan, interval? }`. Returns `prorationAmount` /
+   * `amountDue` (smallest currency unit) and a `prorationDate` to send back.
+   */
+  @Post('change-plan/preview')
+  async previewPlanChange(
+    @CurrentUser() user: FirebaseUser,
+    @Body() body: { plan: SubscriptionPlan; interval?: string },
+  ) {
+    return this.paymentService.previewPlanChange(user.uid, { plan: body.plan, interval: body.interval });
+  }
+
+  /**
+   * Switch an existing subscriber's plan (prorated, invoiced now). Body
+   * `{ plan, interval?, prorationDate? }`. Legacy plans are never a target.
+   */
+  @Post('change-plan')
+  async changePlan(
+    @CurrentUser() user: FirebaseUser,
+    @Body() body: { plan: SubscriptionPlan; interval?: string; prorationDate?: number },
+  ) {
+    return this.paymentService.changePlan(user.uid, {
+      plan: body.plan,
+      interval: body.interval,
+      prorationDate: typeof body.prorationDate === 'number' ? body.prorationDate : undefined,
+    });
   }
 
   @Post('create-portal-session')

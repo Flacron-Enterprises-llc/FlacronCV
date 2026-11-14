@@ -6,7 +6,12 @@
   "plans": {
     "free": "مجاني",
     "pro": "احترافي",
-    "enterprise": "مؤسسي"
+    "enterprise": "مؤسسي",
+    "starter": "ستارتر",
+    "professional": "احترافي",
+    "career_pro": "Career Pro",
+    "business": "الأعمال",
+    "career_accelerator": "مسرّع المسار المهني"
   },
   "usage": {
     "title": "الاستخدام الشهري",
@@ -168,7 +173,8 @@
         "uncollectible": "غير قابلة للتحصيل",
         "draft": "مسودة"
       }
-    }
+    },
+    "catalogPlanNote": "تتم إدارة خطتك على موقع FlacronCV. تغيير هذه الخطة غير متاح في التطبيق بعد."
   },
   "data": {
     "title": "بياناتك",

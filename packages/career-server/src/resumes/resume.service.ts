@@ -245,7 +245,7 @@ export class ResumeStudioService {
       throw new BillingError('validation_error', { field: 'opportunityId', reason: 'invalid' });
     }
     const resume = await this.resume(owner, resumeId);
-    const listing = await this.listing(input.opportunityId);
+    const listing = await this.listing(owner, input.opportunityId);
     const facts = await this.facts(this.pool, owner);
     return this.compose(
       owner,
@@ -448,13 +448,16 @@ export class ResumeStudioService {
     return facts;
   }
 
-  private async listing(opportunityId: string): Promise<Listing> {
+  private async listing(owner: ProfileOwner, opportunityId: string): Promise<Listing> {
     const rows = await this.pool.query<{ id: string; title: string; organization: string; description: string }>(
       `SELECT r.id, r.title, r.organization, r.description
          FROM opportunities o
          JOIN opportunity_revisions r ON r.id = o.current_revision_id
-        WHERE o.id = $1`,
-      [opportunityId],
+        WHERE o.id = $1
+          -- A pasted listing is private to the candidate who pasted it; another
+          -- user's id must look exactly like a missing listing (no existence leak).
+          AND (o.candidate_auth_user_id IS NULL OR o.candidate_auth_user_id = $2)`,
+      [opportunityId, owner.authUserId],
     );
     const row = rows.rows[0];
     if (!row) throw new BillingError('not_found', { opportunityId });

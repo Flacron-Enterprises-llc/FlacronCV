@@ -32,7 +32,9 @@ import { PortfoliosController, portfolioProviders } from './portfolios/portfolio
 import { VoiceController, voiceProviders } from './voice/voice.controller';
 import { RemainingController, remainingProviders } from './remaining/remaining.controller';
 import { GEOCODER, mapsProviders } from './maps/maps.providers';
-import { AccessController, UsageController } from './integration/access.controller';
+import { AccessController } from './integration/access.controller';
+import { ReservationsController, reservationProviders } from './metering/reservations.controller';
+import { UsageController, usageProviders } from './usage/usage.controller';
 import { integrationProviders } from './integration/integration.providers';
 import { CareerAccessService } from './integration/career-access.service';
 
@@ -43,14 +45,17 @@ import { CareerAccessService } from './integration/career-access.service';
  *
  * `AuthGuard` is global: a route without `@Public()` needs a valid token.
  *
- * V1 integration: V2's checkout, estimates, spending caps, portal and store
- * webhooks (`BillingController`, `WebhooksController`) are deliberately not
- * mounted. V1 billing is unchanged; career access comes from the V1 plan
- * through `CAREER_PLAN_MAP` (`integration/`).
+ * V1 integration: V2's checkout, estimates, portal and store webhooks
+ * (`BillingController`, `WebhooksController`) are deliberately not mounted:
+ * V1's Stripe is the only place a customer pays. Career access comes from
+ * the V1 plan (`integration/`, default map 1:1 for the five plans). Mounted
+ * here instead: the usage page with the spending cap and top-up opt-in
+ * (`usage/`), and server-to-server reservations V1's AI endpoints spend
+ * through (`metering/reservations.controller.ts`).
  */
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true })],
-  controllers: [HealthController, AccessController, UsageController, SessionController, AiJobsController, ProfileController, ResumesController, WritingController, OpportunitiesController, MatchingController, AlertsController, InterviewsController, EvidenceController, ActionEngineController, LearningController, CareerModesController, PortfoliosController, VoiceController, RemainingController, PrivacyController, AdminController],
+  controllers: [HealthController, AccessController, UsageController, ReservationsController, SessionController, AiJobsController, ProfileController, ResumesController, WritingController, OpportunitiesController, MatchingController, AlertsController, InterviewsController, EvidenceController, ActionEngineController, LearningController, CareerModesController, PortfoliosController, VoiceController, RemainingController, PrivacyController, AdminController],
   providers: [
     DatabaseService,
     ...integrationProviders,
@@ -58,6 +63,8 @@ import { CareerAccessService } from './integration/career-access.service';
     ...billingPageProviders,
     ...authProviders,
     ...meteringProviders,
+    ...reservationProviders,
+    ...usageProviders,
     ...aiProviders,
     ...mapsProviders,
     ...profileProviders,

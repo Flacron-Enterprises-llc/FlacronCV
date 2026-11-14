@@ -1,15 +1,44 @@
 import { Body, Controller, Get, Inject, Param, Patch, Post, Query, Res, StreamableFile, Provider } from '@nestjs/common';
-import { IsIn, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsDateString, IsIn, IsInt, IsOptional, IsString, IsUUID, Matches, MaxLength, Min, ValidateNested } from 'class-validator';
 import type { Response } from 'express';
 import { MeteringService, WritingService } from '@flacroncv/career-server';
 import type { Principal, TextModel } from '@flacroncv/career-server';
-import { COVER_LETTER_TEMPLATE_IDS, WRITING_TYPES } from '@flacroncv/career-shared';
+import { COVER_LETTER_TEMPLATE_IDS, WRITING_CONTEXT_LIMITS, WRITING_TYPES } from '@flacroncv/career-shared';
 import { TEXT_MODEL } from '../ai/ai.providers';
 import { CurrentPrincipal } from '../auth/auth.guard';
 import { DatabaseService } from '../database/database.service';
 import { IdempotencyKey } from '../metering/metering.providers';
 
 const LETTER_TEMPLATE_IDS = [...COVER_LETTER_TEMPLATE_IDS];
+
+/** The person's own words about the target, for drafts with no saved listing (job tracker). */
+class WritingContextDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(WRITING_CONTEXT_LIMITS.organization)
+  organization?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(WRITING_CONTEXT_LIMITS.role)
+  role?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(WRITING_CONTEXT_LIMITS.contactName)
+  contactName?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(WRITING_CONTEXT_LIMITS.contactRole)
+  contactRole?: string | null;
+
+  @IsOptional()
+  @IsDateString({ strict: true })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  interviewDate?: string | null;
+}
 
 class CreateWritingDto {
   @IsIn(WRITING_TYPES)
@@ -22,6 +51,11 @@ class CreateWritingDto {
   @IsOptional()
   @IsIn(LETTER_TEMPLATE_IDS)
   templateId?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => WritingContextDto)
+  context?: WritingContextDto;
 }
 
 class UpdateWritingDto {

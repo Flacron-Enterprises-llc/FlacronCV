@@ -25,6 +25,47 @@ function makeUsers({ reserve = true } = {}) {
   };
 }
 
+describe('AIService ATS check metering', () => {
+  const abuse = { assertNewConsumption: jest.fn().mockResolvedValue(undefined) } as any;
+
+  it('spends a résumé analysis, not a document credit', async () => {
+    const users = { ...makeUsers(), reserveAnalysis: jest.fn().mockResolvedValue({ ok: true, counter: 'analyses' }), refundUsage: jest.fn() };
+    const service = new AIService(makeProvider() as any, users as any, abuse);
+    await service.atsCheck('cv', 'jd', 'u1');
+    expect(users.reserveAnalysis).toHaveBeenCalledWith('u1');
+    expect(users.reserveAiCredit).not.toHaveBeenCalled();
+  });
+
+  it('refunds the analysis when generation fails', async () => {
+    const users = { ...makeUsers(), reserveAnalysis: jest.fn().mockResolvedValue({ ok: true, counter: 'analyses' }), refundUsage: jest.fn() };
+    const provider = makeProvider({ generateText: jest.fn().mockRejectedValue(new Error('down')) });
+    const service = new AIService(provider as any, users as any, abuse);
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    await expect(service.atsCheck('cv', 'jd', 'u1')).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(users.refundUsage).toHaveBeenCalledWith('u1', 'analyses');
+    expect(users.refundAiCredit).not.toHaveBeenCalled();
+  });
+
+  it('answers ANALYSES_EXHAUSTED when none are left; a legacy plan keeps the credit message', async () => {
+    const exhausted = { ...makeUsers(), reserveAnalysis: jest.fn().mockResolvedValue({ ok: false, counter: 'analyses' }) };
+    const err: any = await new AIService(makeProvider() as any, exhausted as any, abuse).atsCheck('cv', 'jd', 'u1').catch((e) => e);
+    expect(err.getResponse()).toMatchObject({ code: 'ANALYSES_EXHAUSTED' });
+
+    const legacy = { ...makeUsers(), reserveAnalysis: jest.fn().mockResolvedValue({ ok: false, counter: 'aiCredits' }) };
+    const err2: any = await new AIService(makeProvider() as any, legacy as any, abuse).atsCheck('cv', 'jd', 'u1').catch((e) => e);
+    expect(err2.message).toBe('Flacron Engine credits exhausted. Please upgrade your plan.');
+  });
+
+  it('writing features still spend a document credit', async () => {
+    const users = { ...makeUsers(), reserveAnalysis: jest.fn() };
+    const service = new AIService(makeProvider() as any, users as any, abuse);
+    await service.linkedinOptimize('cv', 'role', 'u1');
+    await service.interviewPrep('jd', 'cv', 'u1');
+    expect(users.reserveAiCredit).toHaveBeenCalledTimes(2);
+    expect(users.reserveAnalysis).not.toHaveBeenCalled();
+  });
+});
+
 const httpError = (status: number) => Object.assign(new Error(`status ${status}`), { status });
 
 describe('AIService', () => {

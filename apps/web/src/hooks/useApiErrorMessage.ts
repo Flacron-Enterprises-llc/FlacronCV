@@ -32,7 +32,7 @@ export function useApiErrorMessage() {
       if (error.kind === 'network') return t('auth.errors.network');
 
       if (error.kind === 'http') {
-        const known = knownCodeMessage(error.code, t);
+        const known = knownCodeMessage(error.code, t, error.details);
         if (known) return known;
 
         const status = typeof error.status === 'number' ? error.status : undefined;
@@ -52,14 +52,57 @@ export function useApiErrorMessage() {
   };
 }
 
-/** API error codes with their own user-facing copy. */
-function knownCodeMessage(
+/** Plan ids a server may name as the minimum for something (five-plan catalog). */
+const PLAN_IDS = new Set(['free', 'starter', 'professional', 'career_pro', 'business']);
+
+/**
+ * API error codes with their own user-facing copy. The server's sentences are
+ * English and, for billing, sometimes name things the UI words differently, so
+ * every code a customer can meet in the five-plan model is translated here once
+ * and every caller of this hook gets it.
+ */
+export function knownCodeMessage(
   code: string | undefined,
   t: ReturnType<typeof useTranslations>,
+  details?: Record<string, unknown>,
 ): string | undefined {
   switch (code) {
     case 'NO_SUBSCRIPTION':
       return t('billing.errors.noSubscription');
+    case 'PLAN_NOT_CONFIGURED':
+      return t('plan_catalog.not_configured_error');
+    case 'PLAN_NOT_AVAILABLE':
+      return t('billing.errors.planNotAvailable');
+    case 'ALREADY_SUBSCRIBED':
+      return t('billing.errors.alreadySubscribed');
+    case 'SAME_PLAN':
+      return t('billing.errors.samePlan');
+    case 'BILLING_UNAVAILABLE':
+      return t('billing.errors.billingUnavailable');
+    case 'TRIAL_NOT_ELIGIBLE':
+      return t('billing.trial_not_eligible');
+    case 'ADDON_NOT_ON_SALE':
+      return t('billing.errors.addonNotOnSale');
+    case 'UPGRADE_REQUIRED': {
+      const plan = details?.minimumPlan;
+      return typeof plan === 'string' && PLAN_IDS.has(plan)
+        ? t('billing.errors.upgradeRequiredPlan', { plan: t(`career.plans.plan.${plan}`) })
+        : t('billing.errors.upgradeRequired');
+    }
+    case 'ADDON_PRICE_CHANGED':
+      return t('billing.errors.addonPriceChanged');
+    case 'ADDON_ALREADY_ACTIVE':
+      return t('billing.errors.addonAlreadyActive');
+    case 'CAREER_ADDON_RETIRED':
+      return t('billing.errors.careerAddonRetired');
+    case 'USAGE_METER_UNAVAILABLE':
+      return t('billing.errors.usageMeterUnavailable');
+    case 'ANALYSES_EXHAUSTED':
+      return t('billing.errors.analysesExhausted');
+    case 'JOB_CAPACITY_REACHED':
+      return t('jobs.capacity_reached');
+    case 'CV_LIMIT_REACHED':
+      return t('billing.errors.cvLimitReached');
     default:
       return undefined;
   }

@@ -26,7 +26,7 @@ describe('routes', () => {
 });
 
 describe('buildScenarioOptions', () => {
-  it('sends what the website sends: trimmed, cost 0, 12 months, source user, blank pay unknown', () => {
+  it('sends trimmed routes, source user, blank pay unknown, and cost and months unknown (never 0 or 12)', () => {
     const out = buildScenarioOptions([
       { name: ' Stay ', destination: ' London ', wage: '' },
       { ...BLANK_ROUTE },
@@ -35,8 +35,8 @@ describe('buildScenarioOptions', () => {
     expect(out).toEqual({
       ok: true,
       options: [
-        { name: 'Stay', destination: 'London', costCents: 0, months: 12, wageCents: null, source: 'user' },
-        { name: 'Move', destination: 'Leeds', costCents: 0, months: 12, wageCents: 4500000, source: 'user' },
+        { name: 'Stay', destination: 'London', costCents: null, months: null, wageCents: null, source: 'user' },
+        { name: 'Move', destination: 'Leeds', costCents: null, months: null, wageCents: 4500000, source: 'user' },
       ],
     });
   });

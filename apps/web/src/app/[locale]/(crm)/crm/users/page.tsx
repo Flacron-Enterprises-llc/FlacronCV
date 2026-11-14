@@ -27,6 +27,7 @@ import {
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { ADMIN_PLAN_OPTIONS, crmPlanLabel, planBadgeClass } from '@/lib/plan-labels';
 import { useFormatDate } from '@/lib/use-format-date';
 import { downloadCsv } from '@/lib/download-csv';
 
@@ -37,13 +38,6 @@ interface ListResponse {
   limit: number;
   pages: number;
 }
-
-const PLAN_COLORS: Record<string, string> = {
-  free: 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300',
-  pro: 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300',
-  career_accelerator: 'bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-950 dark:text-fuchsia-300',
-  enterprise: 'bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
-};
 
 const ROLE_COLORS: Record<string, string> = {
   user: 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400',
@@ -210,10 +204,9 @@ export default function CRMUsersPage(): React.JSX.Element {
               className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 focus:border-brand-500 focus:outline-none dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
             >
               <option value="">{t('users_filter_all_plans')}</option>
-              <option value="free">{t('plan_free')}</option>
-              <option value="pro">{t('plan_pro')}</option>
-              <option value="career_accelerator">{t('plan_career_accelerator')}</option>
-              <option value="enterprise">{t('plan_enterprise')}</option>
+              {ADMIN_PLAN_OPTIONS.map((p) => (
+                <option key={p} value={p}>{crmPlanLabel(t, p)}</option>
+              ))}
             </select>
 
             <select
@@ -317,9 +310,7 @@ export default function CRMUsersPage(): React.JSX.Element {
                               </p>
                               {/* Values of the columns hidden at this width. */}
                               <p className="truncate text-xs text-stone-400 md:hidden">
-                                {['free', 'pro', 'career_accelerator', 'enterprise'].includes(user.subscriptionPlan)
-                                  ? t(`plan_${user.subscriptionPlan}`)
-                                  : user.subscriptionPlan}
+                                {crmPlanLabel(t, user.subscriptionPlan)}
                               </p>
                               <p className="truncate text-xs text-stone-400 xl:hidden">
                                 {['user', 'admin', 'super_admin'].includes(user.role)
@@ -333,8 +324,8 @@ export default function CRMUsersPage(): React.JSX.Element {
                         </td>
 
                         <td className="hidden px-4 py-3 md:table-cell">
-                          <span className={cn('rounded-full px-2 py-0.5 text-xs font-semibold capitalize', PLAN_COLORS[user.subscriptionPlan] ?? PLAN_COLORS.free)}>
-                            {['free', 'pro', 'career_accelerator', 'enterprise'].includes(user.subscriptionPlan) ? t(`plan_${user.subscriptionPlan}`) : user.subscriptionPlan}
+                          <span className={cn('rounded-full px-2 py-0.5 text-xs font-semibold capitalize', planBadgeClass(user.subscriptionPlan))}>
+                            {crmPlanLabel(t, user.subscriptionPlan)}
                           </span>
                         </td>
 
@@ -436,12 +427,12 @@ export default function CRMUsersPage(): React.JSX.Element {
                                     )}
                                   >
                                     <p className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-stone-400">{t('users_change_plan')}</p>
-                                    {['free', 'pro', 'career_accelerator', 'enterprise'].map((p) => (
+                                    {ADMIN_PLAN_OPTIONS.map((p) => (
                                       <button
                                         key={p}
                                         onClick={() => {
                                           // Granting a paid plan here skips payment; confirm it.
-                                          if (p !== 'free' && !confirm(t('confirm_plan_change', { name: user.displayName || user.email, plan: t(`plan_${p}`) }))) return;
+                                          if (p !== 'free' && !confirm(t('confirm_plan_change', { name: user.displayName || user.email, plan: crmPlanLabel(t, p) }))) return;
                                           changePlanMutation.mutate({ uid: user.uid, plan: p });
                                         }}
                                         disabled={changePlanMutation.isPending}
@@ -452,7 +443,7 @@ export default function CRMUsersPage(): React.JSX.Element {
                                             : 'text-stone-700 dark:text-stone-300',
                                         )}
                                       >
-                                        {t(`plan_${p}`)}
+                                        {crmPlanLabel(t, p)}
                                         {user.subscriptionPlan === p && ' ✓'}
                                       </button>
                                     ))}

@@ -30,14 +30,8 @@ import {
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { ADMIN_PLAN_OPTIONS, crmPlanLabel, planBadgeClass } from '@/lib/plan-labels';
 import { useFormatDate, useFormatDateTime } from '@/lib/use-format-date';
-
-const PLAN_COLORS: Record<string, string> = {
-  free: 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300',
-  pro: 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300',
-  career_accelerator: 'bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-950 dark:text-fuchsia-300',
-  enterprise: 'bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
-};
 
 const ROLE_COLORS: Record<string, string> = {
   user: 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400',
@@ -281,8 +275,8 @@ export default function CRMUserDetailPage(): React.JSX.Element {
                   <RoleIcon className="h-3 w-3" />
                   {['user', 'admin', 'super_admin'].includes(user.role) ? t(`role_${user.role}`) : user.role.replace('_', ' ')}
                 </span>
-                <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize', PLAN_COLORS[user.subscription?.plan ?? 'free'] ?? PLAN_COLORS.free)}>
-                  {t('user_detail_plan_badge', { plan: ['free', 'pro', 'career_accelerator', 'enterprise'].includes(user.subscription?.plan ?? 'free') ? t(`plan_${user.subscription?.plan ?? 'free'}`) : (user.subscription?.plan ?? 'free') })}
+                <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize', planBadgeClass(user.subscription?.plan))}>
+                  {t('user_detail_plan_badge', { plan: crmPlanLabel(t, user.subscription?.plan) })}
                 </span>
                 <span className={cn(
                   'rounded-full px-2.5 py-0.5 text-xs font-semibold',
@@ -365,12 +359,12 @@ export default function CRMUserDetailPage(): React.JSX.Element {
                 <div className="flex items-center gap-2">
                   {planEdit ? (
                     <div className="flex gap-1">
-                      {['free', 'pro', 'career_accelerator', 'enterprise'].map((p) => (
+                      {ADMIN_PLAN_OPTIONS.map((p) => (
                         <button
                           key={p}
                           onClick={() => {
                             // Granting a paid plan here skips payment; confirm it.
-                            if (p !== 'free' && !confirm(t('confirm_plan_change', { name: user.displayName || user.email, plan: t(`plan_${p}`) }))) return;
+                            if (p !== 'free' && !confirm(t('confirm_plan_change', { name: user.displayName || user.email, plan: crmPlanLabel(t, p) }))) return;
                             changePlanMutation.mutate(p);
                           }}
                           disabled={changePlanMutation.isPending}
@@ -381,7 +375,7 @@ export default function CRMUserDetailPage(): React.JSX.Element {
                               : 'bg-stone-100 text-stone-700 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300',
                           )}
                         >
-                          {t(`plan_${p}`)}
+                          {crmPlanLabel(t, p)}
                         </button>
                       ))}
                       <button onClick={() => setPlanEdit(false)} className="ms-1 text-xs text-stone-400 hover:text-stone-600">✕</button>
@@ -389,9 +383,9 @@ export default function CRMUserDetailPage(): React.JSX.Element {
                   ) : (
                     <button
                       onClick={() => setPlanEdit(true)}
-                      className={cn('flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize transition-opacity hover:opacity-70', PLAN_COLORS[user.subscription?.plan ?? 'free'])}
+                      className={cn('flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize transition-opacity hover:opacity-70', planBadgeClass(user.subscription?.plan))}
                     >
-                      {['free', 'pro', 'career_accelerator', 'enterprise'].includes(user.subscription?.plan ?? 'free') ? t(`plan_${user.subscription?.plan ?? 'free'}`) : (user.subscription?.plan ?? 'free')}
+                      {crmPlanLabel(t, user.subscription?.plan)}
                     </button>
                   )}
                 </div>

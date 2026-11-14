@@ -17,7 +17,9 @@
     "privateFile": "Fichier privé",
     "link": "Lien",
     "shared": "Partagé dans le portfolio",
-    "privateOnly": "Privé uniquement"
+    "privateOnly": "Privé uniquement",
+    "confidential": "Confidentiel",
+    "linkedFacts": "{count, plural, one {Appuie # fait du profil} other {Appuie # faits du profil}}"
   },
   "types": {
     "project": "Projet",
@@ -66,7 +68,7 @@
   "validation": {
     "titleRequired": "Saisissez un titre.",
     "maxChars": "Utilisez au maximum {max} caractères.",
-    "webLink": "Saisissez un lien web complet commençant par https://"
+    "webLink": "Utilisez un lien commençant par https:// ou http://."
   },
   "file": {
     "title": "Fichier privé",
@@ -110,6 +112,52 @@
     "capacity": "Votre offre carrière n’a plus de place pour un autre élément de preuve.",
     "switchedOff": "Le dossier de preuves est désactivé pour le moment.",
     "validation": "Veuillez vérifier les champs renseignés.",
-    "saveFailed": "L’élément de preuve n’a pas été enregistré. Réessayez."
+    "saveFailed": "L’élément de preuve n’a pas été enregistré. Réessayez.",
+    "notFound": "Cet élément de preuve n’existe plus."
+  },
+  "labelLimits": {
+    "self_reported": "Votre propre déclaration. Rien n’a été vérifié.",
+    "evidence_attached": "Un fichier ou un lien est joint. Il n’a pas été vérifié auprès de l’émetteur.",
+    "assessment_completed": "Une évaluation nommée a été réussie. Elle ne couvre que ce qu’elle a mesuré.",
+    "issuer_verified": "Vérifié auprès de l’émetteur à la date et pour le périmètre indiqués. Cela cesse à l’expiration ou en cas de révocation.",
+    "reference_confirmed": "Une référence a confirmé cette affirmation précise uniquement, pas tout votre profil."
+  },
+  "methods": {
+    "issuer_registry": "Registre de l’émetteur",
+    "issuer_contact": "Contact avec l’émetteur",
+    "assessment": "Évaluation",
+    "reference_contact": "Contact avec la référence",
+    "other": "Autre méthode"
+  },
+  "history": {
+    "title": "{count, plural, one {Historique de vérification (# contrôle)} other {Historique de vérification (# contrôles)}}",
+    "issuer": "Émetteur ou évaluation : {issuer}",
+    "scope": "Porte sur : {scope}",
+    "expires": "Valable jusqu’au {date}",
+    "revokedReason": "Révoqué : {reason}",
+    "expired": "Expiré",
+    "revoked": "Révoqué",
+    "checkedOn": "Vérifié le {date} · {method}",
+    "readOnly": "Les vérifications sont enregistrées par FlacronCV avec votre autorisation. Elles ne peuvent pas être modifiées dans l’application."
+  },
+  "redaction": {
+    "confidential": "Contient des éléments confidentiels d’un employeur ou client",
+    "help": "Avant de partager, retirez ou floutez noms, chiffres et tout ce que votre employeur ou client ne vous autorise pas à montrer.",
+    "note": "Ce que vous avez retiré (facultatif)",
+    "confirm": "J’ai retiré les éléments confidentiels et peux partager le reste",
+    "required": "Confirmez la suppression des éléments confidentiels avant de partager.",
+    "confirmTitle": "Partager un élément confidentiel ?",
+    "confirmBody": "« {title} » est marqué confidentiel. Votre note : {note}. Confirmez avoir retiré ce que votre employeur ou client ne vous autorise pas à montrer.",
+    "confirmGo": "C’est retiré ; partager",
+    "noNote": "aucune"
+  },
+  "facts": {
+    "title": "Faits du profil appuyés",
+    "hint": "Reliez les faits confirmés dont cet élément est la preuve.",
+    "loading": "Chargement des informations de votre profil…",
+    "loadFailed": "Les informations de votre profil n’ont pas pu être chargées. L’élément peut quand même être enregistré.",
+    "empty": "Aucune information de profil confirmée pour l’instant. Confirmez-les dans votre profil de carrière pour les lier ici.",
+    "tooMany": "Liez au maximum {max} informations de profil.",
+    "invalid": "L’une des informations de profil liées n’existe plus. Actualisez et réessayez."
   }
 }

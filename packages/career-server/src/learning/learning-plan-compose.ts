@@ -1,36 +1,51 @@
 import { factLineText } from '@flacroncv/career-shared';
 import type {
+  BridgeRole,
   GapImportance,
   LearningPlanMilestone,
   LearningResource,
   ProjectBrief,
   ProjectRubricCriterion,
   RequiredSkillLevel,
+  RequirementKind,
   ResumeFactInput,
   SkillGapItem,
   SkillLevel,
+  TransferableSkill,
 } from '@flacroncv/career-shared';
 import { extractJsonObject } from '../ai/text-model';
 
-export const LEARNING_PLAN_TEMPLATE = 'learning-plan@2';
+export const LEARNING_PLAN_TEMPLATE = 'learning-plan@3';
+export const SKILL_REPORT_SCHEMA = 'skill-report@3';
 
 export const LEARNING_PLAN_SYSTEM = [
   'You plan how one person can grow into a target role.',
   'Reply with one JSON object only, no prose, shaped as:',
-  '{"requirements":[{"skill":string,"importance":"critical"|"preferred"|"optional","requiredLevel":"intermediate"|"advanced"|"expert"}],',
-  '"milestones":[{"title":string,"description":string,"targetSkill":string,"estimatedHours":integer,"estimatedCostCents":integer,',
+  '{"requirements":[{"skill":string,"kind":"skill"|"credential","importance":"critical"|"preferred"|"optional","requiredLevel":"intermediate"|"advanced"|"expert"}],',
+  '"milestones":[{"title":string,"description":string,"targetSkill":string,"estimatedHours":integer,"estimatedCostCents":integer|null,"costAsOf":"YYYY-MM"|null,',
+  '"prerequisites":[string],',
   '"resources":[{"title":string,"provider":string,"type":"course"|"credential"|"book"|"documentation","isFree":boolean}]}],',
-  '"projectBrief":{"title":string,"summary":string,"requirements":[string],"deliverables":[string],',
+  '"bridgeRoles":[{"title":string,"reason":string}],',
+  '"transferableSkills":[string],',
+  '"projectBrief":{"title":string,"summary":string,"requirements":[string],"steps":[string],"tools":[string],"deliverables":[string],',
   '"rubrics":[{"name":string,"description":string,"weight":integer,"evidenceType":"project"|"work_sample"}],"estimatedHours":integer}|null}',
-  'requirements: 3 to 8 skills that the target role itself needs, specific to that role and industry.',
-  'milestones: 2 to 5, each for one requirement the person does not already show, sized to the weekly time budget and the money budget.',
+  'requirements: 3 to 8 needs of the target role itself, specific to that role and industry.',
+  'Use kind "credential" only for a licence or certification; mark it "critical" only when the role cannot be done without it.',
+  'milestones: 2 to 5, each for one requirement the person does not already show, sized to the weekly time budget.',
+  'estimatedCostCents and costAsOf: give a cost only when you know the provider\'s published price and when it was stated; otherwise null for both. Never guess a price.',
+  'bridgeRoles: 0 to 3 roles that are a realistic step toward the target, each with a short reason.',
+  'transferableSkills: only skills that appear in the confirmed facts and carry over to the target role.',
+  'projectBrief steps: the order of work; tools: what the work uses. Do not write an ownership statement: the person writes it.',
   'Name only resources you are sure exist. Do not give links.',
   'Never describe the person or claim experience they did not list.',
 ].join(' ');
 
 const IMPORTANCE: readonly GapImportance[] = ['critical', 'preferred', 'optional'];
 const REQUIRED_LEVELS: readonly RequiredSkillLevel[] = ['intermediate', 'advanced', 'expert'];
+const KINDS: readonly RequirementKind[] = ['skill', 'credential'];
 const RESOURCE_TYPES: readonly LearningResource['type'][] = ['course', 'credential', 'book', 'documentation'];
+/** A stated price month (or day). Anything else is not a source date. */
+const COST_DATE = /^(\d{4})-(0[1-9]|1[0-2])(-(0[1-9]|[12]\d|3[01]))?$/;
 
 export interface LearningPlanInput {
   targetRole: string;
@@ -45,6 +60,8 @@ export interface LearningPlanOutput {
   skillGaps: SkillGapItem[];
   learningPlan: LearningPlanMilestone[];
   projectBrief: ProjectBrief | null;
+  bridgeRoles: BridgeRole[];
+  transferableSkills: TransferableSkill[];
 }
 
 /** The prompt holds the role, the budgets and the confirmed facts' text; never a draft fact. */
@@ -69,16 +86,43 @@ export function learningPlanPrompt(input: LearningPlanInput): string {
  * never sets this, so a plan cannot flatter or invent experience.
  */
 export function currentSkillLevel(skill: string, facts: ResumeFactInput[]): SkillLevel {
+  return skillSupport(skill, facts).level;
+}
+
+/** The level plus the confirmed facts that show the skill. */
+function skillSupport(skill: string, facts: ResumeFactInput[]): { level: SkillLevel; factIds: string[] } {
   const wanted = fold(skill);
-  if (wanted.length === 0) return 'none';
+  if (wanted.length === 0) return { level: 'none', factIds: [] };
   let level: SkillLevel = 'none';
+  const factIds: string[] = [];
   for (const fact of facts) {
     if (fact.confirmation !== 'confirmed') continue;
-    if (fact.factType === 'skill' && typeof fact.value.name === 'string' && fold(fact.value.name) === wanted) return 'intermediate';
+    if (fact.factType === 'skill' && typeof fact.value.name === 'string' && fold(fact.value.name) === wanted) {
+      level = 'intermediate';
+      factIds.push(fact.id);
+      continue;
+    }
     const text = fold(factLineText(fact.factType, fact.value));
-    if (text.length > 0 && ` ${text} `.includes(` ${wanted} `)) level = 'beginner';
+    if (text.length > 0 && ` ${text} `.includes(` ${wanted} `)) {
+      if (level === 'none') level = 'beginner';
+      factIds.push(fact.id);
+    }
   }
-  return level;
+  return { level, factIds };
+}
+
+/**
+ * A stated cost needs both a number and the date it was stated; otherwise the
+ * cost is unknown (null). It is never capped to the budget, so an expensive
+ * step is shown as expensive instead of looking affordable.
+ */
+function statedCost(raw: Record<string, unknown>): { cents: number | null; asOf: string | null } {
+  const cents = raw.estimatedCostCents;
+  const asOf = typeof raw.costAsOf === 'string' ? raw.costAsOf.trim() : '';
+  const date = COST_DATE.exec(asOf);
+  if (typeof cents !== 'number' || !Number.isFinite(cents) || cents < 0 || cents > 10_000_000) return { cents: null, asOf: null };
+  if (!date || Number(date[1]) < 2000) return { cents: null, asOf: null };
+  return { cents: Math.round(cents), asOf };
 }
 
 /**
@@ -98,6 +142,7 @@ export function parseLearningPlan(text: string, input: LearningPlanInput): Learn
       currentLevel: currentSkillLevel(skill, input.facts),
       requiredLevel: pick(raw.requiredLevel, REQUIRED_LEVELS, 'intermediate'),
       importance: pick(raw.importance, IMPORTANCE, 'preferred'),
+      kind: pick(raw.kind, KINDS, 'skill'),
     });
   }
   if (skillGaps.length < 2) return null;
@@ -116,17 +161,36 @@ export function parseLearningPlan(text: string, input: LearningPlanInput): Learn
       // Links are not taken from the model: an invented URL would look authoritative.
       resources.push({ title: resourceTitle, provider, url: '', type: pick(item.type, RESOURCE_TYPES, 'course'), isFree: item.isFree === true });
     }
+    const cost = statedCost(raw);
     learningPlan.push({
       id: `milestone-${learningPlan.length + 1}`,
       title,
       description,
       targetSkill,
       estimatedHours: bounded(raw.estimatedHours, 1, 400, Math.max(4, input.timeBudgetHoursPerWeek * 2)),
-      estimatedCostCents: Math.min(bounded(raw.estimatedCostCents, 0, 10_000_000, 0), Math.max(0, input.financialBudgetCents)),
+      estimatedCostCents: cost.cents,
+      costAsOf: cost.asOf,
+      prerequisites: arrayOfText(raw.prerequisites, 5, 160),
       resources,
     });
   }
   if (learningPlan.length === 0) return null;
+
+  const bridgeRoles: BridgeRole[] = [];
+  for (const raw of arrayOf(reply.bridgeRoles).slice(0, 3)) {
+    const title = textOf(raw.title, 120);
+    const reason = textOf(raw.reason, 300);
+    if (title && reason && !bridgeRoles.some((role) => fold(role.title) === fold(title))) bridgeRoles.push({ title, reason });
+  }
+
+  // A transferable skill is kept only when a confirmed fact shows it, and the
+  // facts that do are recorded, so the model cannot hand the person a skill.
+  const transferableSkills: TransferableSkill[] = [];
+  for (const skill of arrayOfText(reply.transferableSkills, 8, 80)) {
+    if (transferableSkills.some((item) => fold(item.skill) === fold(skill))) continue;
+    const support = skillSupport(skill, input.facts);
+    if (support.factIds.length > 0) transferableSkills.push({ skill, factIds: support.factIds });
+  }
 
   let projectBrief: ProjectBrief | null = null;
   const brief = isRecord(reply.projectBrief) ? reply.projectBrief : null;
@@ -153,14 +217,22 @@ export function parseLearningPlan(text: string, input: LearningPlanInput): Learn
         title,
         summary,
         requirements,
+        steps: arrayOfText(brief.steps, 10, 300),
+        tools: arrayOfText(brief.tools, 10, 80),
         deliverables,
         rubrics: normalizeWeights(rubrics),
         estimatedHours: bounded(brief.estimatedHours, 1, 400, Math.max(10, input.timeBudgetHoursPerWeek * 4)),
+        // Whatever the model sent as an ownership statement is dropped: only
+        // the person can say who did the work.
+        ownershipStatement: null,
+        origin: 'ai_assisted',
+        rubricCheck: null,
+        evidenceId: null,
       };
     }
   }
 
-  return { skillGaps, learningPlan, projectBrief };
+  return { skillGaps, learningPlan, projectBrief, bridgeRoles, transferableSkills };
 }
 
 /** Rubric weights are shown as percentages, so they always add up to 100. */

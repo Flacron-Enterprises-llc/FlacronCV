@@ -150,7 +150,7 @@ export default function InterviewSessionScreen() {
           </View>
         ) : (
           <View className="bg-success-bg rounded-2xl p-4 mt-5">
-            <Text className="text-success text-sm font-semibold">{t('session.complete')}</Text>
+            <Text className="text-success text-sm font-semibold">{t('session.completeCount', { total: data.questions.length })}</Text>
           </View>
         )}
 

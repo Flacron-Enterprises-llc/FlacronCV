@@ -131,6 +131,8 @@ interface SourceJob {
   contactName: string | null;
   contactEmail: string | null;
   followUpDate: string | null;
+  /** V1 outcome on the job (`accepted` replaced the legacy `accepted` status). */
+  outcome: string | null;
 }
 
 interface SourceLegal {
@@ -384,6 +386,7 @@ function parseJob(value: unknown): SourceJob | null {
     contactName: typeof value.contactName === 'string' ? value.contactName : null,
     contactEmail: typeof value.contactEmail === 'string' ? value.contactEmail : null,
     followUpDate: typeof value.followUpDate === 'string' ? value.followUpDate : null,
+    outcome: typeof value.outcome === 'string' ? value.outcome : null,
   };
 }
 
@@ -744,16 +747,35 @@ function localeOf(language: string | undefined): 'en' | 'fr' {
   return language === 'fr' ? 'fr' : 'en';
 }
 
-function mapJob(job: SourceJob): { status: string; notes: string } {
-  if (job.status === 'applied') return { status: 'applied', notes: job.notes };
-  if (job.status === 'interviewing') return { status: 'interviewing', notes: job.notes };
-  if (job.status === 'offer') return { status: 'offered', notes: job.notes };
-  if (job.status === 'rejected') return { status: 'rejected', notes: job.notes };
-  if (job.status === 'accepted') {
+/**
+ * V1 job status → career application status. Current V1 statuses share the
+ * career ids; legacy ones follow shared-types `normalizeJobStatus`
+ * (wishlist → saved, offer → offered, accepted → offered with the acceptance
+ * kept as a note). An offered job whose outcome is `accepted` is recorded
+ * exactly like the legacy `accepted` status. Unknown values fall to saved.
+ */
+export function mapJob(job: Pick<SourceJob, 'status' | 'notes'> & { outcome?: string | null }): { status: string; notes: string } {
+  const accepted = job.status === 'accepted' || ((job.status === 'offered' || job.status === 'offer') && job.outcome === 'accepted');
+  if (accepted) {
     const note = 'V1 status: accepted';
     return { status: 'offered', notes: job.notes.length > 0 ? `${job.notes}\n${note}` : note };
   }
-  return { status: 'saved', notes: job.notes };
+  switch (job.status) {
+    case 'saved':
+    case 'wishlist':
+      return { status: 'saved', notes: job.notes };
+    case 'preparing':
+    case 'applied':
+    case 'interviewing':
+    case 'rejected':
+    case 'withdrawn':
+      return { status: job.status, notes: job.notes };
+    case 'offered':
+    case 'offer':
+      return { status: 'offered', notes: job.notes };
+    default:
+      return { status: 'saved', notes: job.notes };
+  }
 }
 
 async function keyId(client: PoolClient, collection: string, originId: string): Promise<string | null> {

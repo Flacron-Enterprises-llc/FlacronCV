@@ -33,7 +33,7 @@ describe('V1 plan bridge', () => {
     t = await createTestApp('api_v1_bridge', {
       v1: {
         accounts,
-        // Fixture only. The real mapping is a client decision; the default is all `none`.
+        // Fixture: Free switched off by an operator override (the default map gives Free access).
         map: parseCareerPlanMap('free:none,pro:professional,career_accelerator:none,enterprise:career_pro'),
         clock: { now: () => now },
         jobs,
@@ -110,10 +110,15 @@ describe('V1 plan bridge', () => {
     later(31_000);
     expect(await documentCredits('flip-di')).toMatchObject({ includedGranted: 150, includedRemaining: 145 });
 
+    // Spec section 11: a downgrade between paid plans takes effect at the
+    // renewal, so the current month keeps its ceiling (scheduled, not applied).
     v1('flip-di', 'pro');
     later(31_000);
-    expect(await documentCredits('flip-di')).toMatchObject({ includedGranted: 60, includedRemaining: 55 });
+    expect(await documentCredits('flip-di')).toMatchObject({ includedGranted: 150, includedRemaining: 145 });
+    const scheduled = await t.db.pool.query(`SELECT plan_id, scheduled_plan_id FROM billing_accounts WHERE auth_user_id = 'flip-di'`);
+    expect(scheduled.rows[0]).toEqual({ plan_id: 'career_pro', scheduled_plan_id: 'professional' });
 
+    // Flipping back never hands out a second month either.
     v1('flip-di', 'enterprise');
     later(31_000);
     expect(await documentCredits('flip-di')).toMatchObject({ includedGranted: 150, includedRemaining: 145 });
@@ -123,9 +128,10 @@ describe('V1 plan bridge', () => {
     v1('cache-ed', 'pro');
     expect((await http().get('/api/career/v1/me').set('Authorization', bearer('cache-ed'))).status).toBe(200);
     v1('cache-ed', 'free');
-    expect((await http().get('/api/career/v1/me').set('Authorization', bearer('cache-ed'))).status).toBe(200);
+    const accessOf = async () => (await http().get('/api/career/v1/access').set('Authorization', bearer('cache-ed'))).body;
+    expect(await accessOf()).toMatchObject({ enabled: true });
     later(31_000);
-    expect((await http().get('/api/career/v1/me').set('Authorization', bearer('cache-ed'))).status).toBe(403);
+    expect(await accessOf()).toMatchObject({ enabled: false, reason: 'plan_not_mapped' });
   });
 
   it('after losing access, the person can still export and erase the career data they created', async () => {
@@ -139,7 +145,13 @@ describe('V1 plan bridge', () => {
 
     v1('leaver-fa', 'free');
     later(31_000);
-    expect((await http().get('/api/career/v1/facts').set('Authorization', auth)).status).toBe(403);
+    // Spec section 11: existing items stay readable; nothing new can be created.
+    expect((await http().get('/api/career/v1/facts').set('Authorization', auth)).status).toBe(200);
+    const write = await http()
+      .post('/api/career/v1/facts')
+      .set('Authorization', auth)
+      .send({ factType: 'experience', value: { company: 'Fictional Two', startDate: '2021-02' } });
+    expect(write.status).toBe(403);
     const exported = await http().post('/api/career/v1/exports').set('Authorization', auth).send({ scope: 'personal' });
     expect(exported.status).toBe(201);
     // Someone who never had career data has nothing to export, and no account is created for them.
@@ -252,14 +264,18 @@ describe('purchased career entitlement (default map: no V1 plan grants career ac
   const access = async (uid: string) => (await http().get('/api/career/v1/access').set('Authorization', bearer(uid))).body;
 
   beforeAll(async () => {
-    t = await createTestApp('api_v1_purchase', { v1: { accounts, map: parseCareerPlanMap(''), clock: { now: () => now } } });
+    // An operator map that switches every plan off: since the five-plan
+    // catalog the DEFAULT map grants access to every plan, so the add-on
+    // purchase rules are exercised against an explicit all-`none` map.
+    const noneMap = 'free:none,starter:none,professional:none,career_pro:none,business:none,pro:none,career_accelerator:none,enterprise:none';
+    t = await createTestApp('api_v1_purchase', { v1: { accounts, map: parseCareerPlanMap(noneMap), clock: { now: () => now } } });
   });
 
   afterAll(async () => {
     if (t) await t.close();
   });
 
-  it('existing V1 plans keep their V1 benefits but get no career access without a purchase', async () => {
+  it('with every plan mapped to none, V1 plans get no career access without a purchase', async () => {
     for (const plan of ['free', 'pro', 'career_accelerator', 'enterprise'] as const) {
       accounts.set(`plain-${plan}`, { uid: `plain-${plan}`, plan, active: true });
       expect(await access(`plain-${plan}`)).toMatchObject({ enabled: false, reason: 'plan_not_mapped' });

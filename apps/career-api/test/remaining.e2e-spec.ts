@@ -101,12 +101,17 @@ describe('remaining scope over HTTP', () => {
     const credential = await http().post('/api/career/v1/maintenance/credentials').set('Authorization', auth).send({ name: 'First aid', expiresOn: '2026-11-01' });
     expect(credential.body.due).toBe(true);
 
+    // No tile provider: nothing is charged and the list stays available.
     const map = await http().post('/api/career/v1/maps').set('Authorization', auth).set('Idempotency-Key', 'map-1');
-    expect(map.status).toBe(201);
-    expect(map.body.result).toMatchObject({ minutes: 15, approximate: true, tiles: null, coordinates: null, attribution: null, provider: null });
-    expect(map.body.usage.includedRemaining).toBe(49);
+    expect(map.body.code).toBe('provider_unavailable');
+    const mapLedger = await t.db.pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM usage_ledger
+        WHERE billing_account_id = (SELECT id FROM billing_accounts WHERE auth_user_id = 'http-scope') AND unit = 'map_session'`,
+    );
+    expect(mapLedger.rows[0].n).toBe(0);
     const listed = await http().get('/api/career/v1/maps').set('Authorization', auth);
     expect(listed.status).toBe(200);
+    expect(listed.body.available).toBe(false);
     expect(listed.body.tiles).toBeNull();
     expect(listed.body.attribution).toBeNull();
     expect(listed.body.provider).toBeNull();
@@ -148,11 +153,15 @@ describe('remaining scope over HTTP', () => {
     await http().get('/api/career/v1/maintenance').set('Authorization', outsider);
     await t.db.pool.query(`UPDATE billing_accounts SET plan_id = 'business' WHERE auth_user_id IN ('http-biz', 'http-biz-out')`);
 
-    for (const authUserId of ['staff-1', 'staff-2', 'staff-3']) {
-      const added = await http().post('/api/career/v1/business/staff').set('Authorization', owner).send({ authUserId, role: 'counselor' });
+    for (const email of ['staff-1@example.test', 'staff-2@example.test', 'staff-3@example.test']) {
+      const added = await http().post('/api/career/v1/business/staff').set('Authorization', owner).send({ email, role: 'counselor' });
       expect(added.status).toBe(201);
+      expect(added.body.invitePath).toMatch(/^\/career\/business\/join\?token=bst_/);
+      expect(added.body.delivered).toBe(false);
     }
-    const fourth = await http().post('/api/career/v1/business/staff').set('Authorization', owner).send({ authUserId: 'staff-4', role: 'counselor' });
+    const oldShape = await http().post('/api/career/v1/business/staff').set('Authorization', owner).send({ authUserId: 'staff-4', role: 'counselor' });
+    expect(oldShape.status).toBe(400);
+    const fourth = await http().post('/api/career/v1/business/staff').set('Authorization', owner).send({ email: 'staff-4@example.test', role: 'counselor' });
     expect(fourth.status).toBe(409);
     expect(fourth.body.code).toBe('capacity_exceeded');
 
@@ -172,11 +181,16 @@ describe('remaining scope over HTTP', () => {
     expect(checkout.body).toEqual({ code: 'not_purchasable' });
 
     await http().post('/api/career/v1/recruiting/opt-in').set('Authorization', owner).send({ discoverable: true });
+    // Another signed-in person learns a count, never who opted in.
     const found = await http().get('/api/career/v1/recruiting/search').set('Authorization', outsider);
-    expect(found.body.items).toEqual([{ candidateAuthUserId: 'http-biz', label: 'Opted-in candidate' }]);
-    expect(JSON.stringify(found.body)).not.toContain('@');
+    expect(found.status).toBe(200);
+    expect(Object.keys(found.body)).toEqual(['count']);
+    expect(JSON.stringify(found.body)).not.toContain('http-biz');
+    const before = found.body.count;
     await http().post('/api/career/v1/recruiting/opt-in').set('Authorization', owner).send({ discoverable: false });
-    expect((await http().get('/api/career/v1/recruiting/search').set('Authorization', outsider)).body.items).toEqual([]);
+    expect((await http().get('/api/career/v1/recruiting/search').set('Authorization', outsider)).body.count).toBe(before - 1);
+    // The operator list is an operator route.
+    expect((await http().get('/api/career/v1/admin/recruiting/opt-ins').set('Authorization', outsider)).status).toBe(403);
 
     const blockedKey = await http().post('/api/career/v1/developer/keys').set('Authorization', owner);
     expect(blockedKey.status).toBe(409);
@@ -190,7 +204,7 @@ describe('remaining scope over HTTP', () => {
     );
     const key = await http().post('/api/career/v1/developer/keys').set('Authorization', owner);
     expect(key.status).toBe(201);
-    expect(key.body.token.startsWith('flc_')).toBe(true);
+    expect(key.body.token.startsWith('flc_live_')).toBe(true);
     const denied = await http().post('/api/career/v1/developer/reads').set('Authorization', owner).send({ token: key.body.token, workspaceId: other.rows[0].workspace_id });
     expect(denied.status).toBe(403);
     const spent = await http().post('/api/career/v1/developer/reads').set('Authorization', owner).send({ token: key.body.token, workspaceId: account.rows[0].workspace_id });

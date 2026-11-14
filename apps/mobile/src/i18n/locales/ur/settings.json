@@ -6,7 +6,12 @@
   "plans": {
     "free": "مفت",
     "pro": "پرو",
-    "enterprise": "انٹرپرائز"
+    "enterprise": "انٹرپرائز",
+    "starter": "اسٹارٹر",
+    "professional": "پروفیشنل",
+    "career_pro": "Career Pro",
+    "business": "بزنس",
+    "career_accelerator": "کیریئر ایکسلریٹر"
   },
   "usage": {
     "title": "ماہانہ استعمال",
@@ -168,7 +173,8 @@
         "uncollectible": "ناقابلِ وصولی",
         "draft": "مسودہ"
       }
-    }
+    },
+    "catalogPlanNote": "آپ کا پلان FlacronCV ویب سائٹ پر منظم ہوتا ہے۔ اس پلان میں تبدیلیاں ابھی ایپ میں دستیاب نہیں ہیں۔"
   },
   "data": {
     "title": "آپ کا ڈیٹا",

@@ -13,12 +13,14 @@ import { useConvertMilestone, useSkillReport, useToggleMilestone } from '../../.
 import { useCareerAccess } from '../../../../src/hooks/useCareer';
 import {
   evidenceErrorMessage,
-  importanceLabel,
-  IMPORTANCE_TONE,
+  gapBadge,
+  hasEssentialCredential,
   isOpenableUrl,
   levelLabel,
   milestoneDone,
   milestoneEffort,
+  milestoneEvidenceId,
+  planCostLine,
   progressErrorMessage,
   reportMeta,
 } from '../../../../src/lib/career/learning';
@@ -30,7 +32,8 @@ import { useT } from '../../../../src/i18n';
  * One learning plan, as on the website: progress, skill gaps, milestones
  * (ticking is free), resources, and the optional project brief with rubrics.
  * A ticked milestone can be added to the evidence vault as a self-reported
- * project item.
+ * project item, once (the server remembers it). An unknown course cost is
+ * shown as unknown and never counted as free.
  */
 export default function LearningPlanScreen() {
   const t = useT('careerPlans');
@@ -42,7 +45,7 @@ export default function LearningPlanScreen() {
   const toggle = useToggleMilestone(id);
   const convert = useConvertMilestone(id);
   const [converting, setConverting] = useState<string | null>(null);
-  const [added, setAdded] = useState<string[]>([]);
+  const [justAdded, setJustAdded] = useState(false);
 
   const onToggle = (milestoneId: string, completed: boolean) => {
     toggle.mutate({ milestoneId, completed }, { onError: (error) => Alert.alert(t('notUpdated'), progressErrorMessage(error)) });
@@ -57,7 +60,7 @@ export default function LearningPlanScreen() {
         onPress: () => {
           setConverting(milestoneId);
           convert.mutate(milestoneId, {
-            onSuccess: () => setAdded((prev) => [...prev, milestoneId]),
+            onSuccess: () => setJustAdded(true),
             onError: (error) => Alert.alert(t('learning.notAdded'), evidenceErrorMessage(error)),
             onSettled: () => setConverting(null),
           });
@@ -90,7 +93,7 @@ export default function LearningPlanScreen() {
         contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={report.isRefetching && !report.isPlaceholderData} onRefresh={() => void report.refetch()} tintColor={colors.brand[600]} />}
       >
-        {added.length > 0 ? (
+        {justAdded ? (
           <View className="bg-success-bg rounded-xl p-3 mb-4 flex-row items-center" accessibilityLiveRegion="polite">
             <Text className="flex-1 text-success text-sm me-2">{t('learning.addedBanner')}</Text>
             <TouchableOpacity
@@ -108,6 +111,7 @@ export default function LearningPlanScreen() {
             <View className="flex-1 me-2">
               <Text className="text-lg font-bold text-stone-900">{r.targetRole}</Text>
               <Text className="text-brand-700 text-sm font-medium mt-0.5">{reportMeta(r)}</Text>
+              <Text className="text-stone-500 text-xs mt-1 leading-4">{planCostLine(r)}</Text>
             </View>
             <View className="items-end">
               <Text className="text-stone-500 text-xs font-semibold">{t('learning.progress')}</Text>
@@ -125,13 +129,39 @@ export default function LearningPlanScreen() {
           {r.skillGaps.length > 0 ? (
             <>
               <SectionLabel>{t('learning.skillGaps')}</SectionLabel>
-              {r.skillGaps.map((gap) => (
-                <View key={gap.skill} className="border border-stone-100 rounded-xl p-3 mb-2 flex-row items-center">
-                  <View className="flex-1 me-2">
-                    <Text className="text-sm font-semibold text-stone-900">{gap.skill}</Text>
-                    <Text className="text-xs text-stone-500 mt-0.5">{t('learning.levels', { current: levelLabel(gap.currentLevel), required: levelLabel(gap.requiredLevel) })}</Text>
+              {r.skillGaps.map((gap) => {
+                const badge = gapBadge(gap);
+                return (
+                  <View key={gap.skill} className="border border-stone-100 rounded-xl p-3 mb-2 flex-row items-center">
+                    <View className="flex-1 me-2">
+                      <Text className="text-sm font-semibold text-stone-900">{gap.skill}</Text>
+                      <Text className="text-xs text-stone-500 mt-0.5">{t('learning.levels', { current: levelLabel(gap.currentLevel), required: levelLabel(gap.requiredLevel) })}</Text>
+                    </View>
+                    <Pill label={badge.label} tone={badge.tone} />
                   </View>
-                  <Pill label={importanceLabel(gap.importance)} tone={IMPORTANCE_TONE[gap.importance] ?? 'default'} />
+                );
+              })}
+              {hasEssentialCredential(r) ? <Text className="text-xs text-stone-500 leading-4">{t('learning.essentialCredentialHint')}</Text> : null}
+            </>
+          ) : null}
+          {(r.transferableSkills?.length ?? 0) > 0 ? (
+            <>
+              <SectionLabel>{t('learning.transferableSkills')}</SectionLabel>
+              <Text className="text-xs text-stone-500 mb-1.5">{t('learning.transferableSkillsHint')}</Text>
+              <View className="flex-row flex-wrap gap-1.5">
+                {r.transferableSkills!.map((item) => (
+                  <Pill key={item.skill} label={item.skill} tone="success" />
+                ))}
+              </View>
+            </>
+          ) : null}
+          {(r.bridgeRoles?.length ?? 0) > 0 ? (
+            <>
+              <SectionLabel>{t('learning.bridgeRoles')}</SectionLabel>
+              {r.bridgeRoles!.map((role) => (
+                <View key={role.title} className="mb-1.5">
+                  <Text className="text-sm font-semibold text-stone-900">{role.title}</Text>
+                  {role.reason ? <Text className="text-xs text-stone-500 leading-4">{role.reason}</Text> : null}
                 </View>
               ))}
             </>
@@ -140,10 +170,11 @@ export default function LearningPlanScreen() {
 
         <Card>
           <Text className="text-base font-bold text-stone-900">{t('learning.milestones')}</Text>
-          <Text className="text-stone-500 text-xs mt-0.5 mb-3">{t('learning.milestonesHint')}</Text>
+          <Text className="text-stone-500 text-xs mt-0.5">{t('learning.milestonesHint')}</Text>
+          <Text className="text-stone-500 text-xs mt-0.5 mb-3">{t('learning.completionNotCredential')}</Text>
           {r.learningPlan.map((m, idx) => {
             const done = milestoneDone(r, m.id);
-            const isAdded = added.includes(m.id);
+            const isAdded = milestoneEvidenceId(r, m.id) !== null;
             return (
               <View key={m.id} className={`border border-stone-100 rounded-xl p-3 mb-3 ${done ? 'bg-stone-50' : 'bg-white'}`}>
                 <TouchableOpacity
@@ -159,6 +190,9 @@ export default function LearningPlanScreen() {
                     <Text className={`text-sm font-semibold ${done ? 'text-stone-400 line-through' : 'text-stone-900'}`}>{`${idx + 1}. ${m.title}`}</Text>
                     {m.description ? <Text className="text-xs text-stone-600 mt-0.5 leading-4">{m.description}</Text> : null}
                     <Text className="text-xs text-stone-400 mt-1">{`${m.targetSkill} · ${milestoneEffort(m)}`}</Text>
+                    {m.prerequisites && m.prerequisites.length > 0 ? (
+                      <Text className="text-xs text-stone-500 mt-1">{`${t('learning.prerequisites')}: ${m.prerequisites.join(', ')}`}</Text>
+                    ) : null}
                   </View>
                 </TouchableOpacity>
                 {m.resources.length > 0 ? (
@@ -204,6 +238,9 @@ export default function LearningPlanScreen() {
             <Text className="text-base font-bold text-stone-900">{r.projectBrief.title}</Text>
             <Text className="text-sm text-stone-700 mt-1 leading-5">{r.projectBrief.summary}</Text>
             <Text className="text-xs text-stone-400 mt-1">{t('learning.estimatedEffort', { hours: r.projectBrief.estimatedHours })}</Text>
+            {r.projectBrief.tools && r.projectBrief.tools.length > 0 ? (
+              <Text className="text-xs text-stone-500 mt-1">{`${t('learning.tools')}: ${r.projectBrief.tools.join(', ')}`}</Text>
+            ) : null}
             <SectionLabel>{t('learning.requirements')}</SectionLabel>
             {r.projectBrief.requirements.map((req, i) => (
               <BulletText key={i} text={req} />

@@ -1,4 +1,5 @@
 import { SubscriptionPlan } from './enums';
+import { templateTierOf } from './subscription.types';
 import { CVLayout } from './cv.types';
 
 /**
@@ -59,19 +60,52 @@ export const COVER_LETTER_TEMPLATE_TIER: Record<string, SubscriptionPlan> = {
   executive: SubscriptionPlan.ENTERPRISE,
 };
 
-/** Ordinal rank of each plan, for "is plan >= required tier" comparisons. */
+/**
+ * Commercial order of every plan, for upgrade/downgrade decisions ("is this a
+ * step up?"). Legacy plans sit where their price and allowances place them:
+ * Pro ($29.99) between Starter and Professional, Career Accelerator ($49.99)
+ * between Professional and Career Pro, Enterprise ($99.99) between Career Pro
+ * and Business. Template access does NOT use this — see `planMeetsTier`.
+ */
 export const PLAN_RANK: Record<SubscriptionPlan, number> = {
   [SubscriptionPlan.FREE]: 0,
+  [SubscriptionPlan.STARTER]: 10,
+  [SubscriptionPlan.PRO]: 15,
+  [SubscriptionPlan.PROFESSIONAL]: 20,
+  [SubscriptionPlan.CAREER_ACCELERATOR]: 25,
+  [SubscriptionPlan.CAREER_PRO]: 30,
+  [SubscriptionPlan.ENTERPRISE]: 35,
+  [SubscriptionPlan.BUSINESS]: 40,
+};
+
+/** True when `to` ranks above `from` in {@link PLAN_RANK}. */
+export function isPlanUpgrade(from: SubscriptionPlan, to: SubscriptionPlan): boolean {
+  return (PLAN_RANK[to] ?? 0) > (PLAN_RANK[from] ?? 0);
+}
+
+/**
+ * Rank of each template TIER value (free < pro < career_accelerator <
+ * enterprise). Career Accelerator can use PRO-tier templates/layouts but not
+ * ENTERPRISE-tier ones (unchanged legacy rule).
+ */
+const TEMPLATE_TIER_RANK: Partial<Record<SubscriptionPlan, number>> = {
+  [SubscriptionPlan.FREE]: 0,
   [SubscriptionPlan.PRO]: 1,
-  // Career Accelerator sits between Pro and Enterprise → it can use PRO-tier
-  // templates/layouts but NOT ENTERPRISE-tier ones (ASSUMPTION).
   [SubscriptionPlan.CAREER_ACCELERATOR]: 2,
   [SubscriptionPlan.ENTERPRISE]: 3,
 };
 
-/** True when `plan` is at or above `requiredTier` (free < pro < career < enterprise). */
+/**
+ * True when `plan` may use templates of `requiredTier`. A plan is compared by
+ * the tier it grants (`PLAN_CONFIGS[plan].limits.templates`): Starter and
+ * Professional reach PRO-tier, Career Pro and Business reach ENTERPRISE-tier.
+ * Legacy plans grant their own tier, exactly as before.
+ */
 export function planMeetsTier(plan: SubscriptionPlan, requiredTier: SubscriptionPlan): boolean {
-  return (PLAN_RANK[plan] ?? 0) >= (PLAN_RANK[requiredTier] ?? 0);
+  return (
+    (TEMPLATE_TIER_RANK[templateTierOf(plan)] ?? 0) >=
+    (TEMPLATE_TIER_RANK[templateTierOf(requiredTier)] ?? 0)
+  );
 }
 
 const DEFAULT_CV_LAYOUT: CVLayout = 'classic';

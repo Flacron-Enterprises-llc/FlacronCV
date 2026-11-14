@@ -6,7 +6,11 @@
     "interviewing": "Entretien",
     "offer": "Offre",
     "rejected": "Refusée",
-    "accepted": "Acceptée"
+    "accepted": "Acceptée",
+    "saved": "Enregistrée",
+    "preparing": "En préparation",
+    "offered": "Offre reçue",
+    "withdrawn": "Retirée"
   },
   "sort": {
     "updated": "Récemment mis à jour",
@@ -43,7 +47,9 @@
     "followUp": "Relance {date}",
     "addToCalendar": "Ajouter au calendrier l’entretien pour {position} chez {company}",
     "restore": "Restaurer {position} chez {company}",
-    "archive": "Archiver {position} chez {company}"
+    "archive": "Archiver {position} chez {company}",
+    "deadline": "Date limite {date}",
+    "checklist": "Liste {done}/{total}"
   },
   "archive": {
     "archived": "Candidature archivée",
@@ -95,7 +101,26 @@
     "deleteTitle": "Supprimer la candidature",
     "deleteBody": "Supprimer « {position} » chez {company} ? Cette action est irréversible.",
     "deleteErrorTitle": "Impossible de supprimer",
-    "deleteError": "Échec de la suppression. Veuillez réessayer."
+    "deleteError": "Échec de la suppression. Veuillez réessayer.",
+    "deadline": "Date limite de candidature",
+    "addDeadlineToCalendar": "Ajouter la date limite au calendrier",
+    "contacts": "Interlocuteurs",
+    "contactN": "Interlocuteur {n}",
+    "contactRole": "Rôle",
+    "contactRolePh": "ex. recruteur",
+    "contactPhone": "Téléphone",
+    "contactNotes": "Remarques sur cet interlocuteur",
+    "addContact": "Ajouter un interlocuteur",
+    "removeContact": "Supprimer l’interlocuteur {n}",
+    "checklist": "Liste de contrôle",
+    "checklistItemPh": "ex. lien vers le portfolio",
+    "addChecklistItem": "Ajouter un élément",
+    "removeChecklistItem": "Supprimer l’élément {n}",
+    "checklistToggle": "Élément {n} terminé",
+    "outcome": "Résultat : {outcome}",
+    "frozenOnLink": "Le CV ou la lettre liés sont conservés avec cette candidature tels qu’ils sont au moment du lien.",
+    "frozenCv": "Version du CV enregistrée : {title} (version {version})",
+    "frozenLetter": "Copie de la lettre enregistrée : {title}"
   },
   "picker": {
     "chooseCv": "Choisir un CV",
@@ -112,6 +137,15 @@
     "error": "Impossible de créer l’événement de calendrier. Veuillez réessayer.",
     "unavailableTitle": "Partage indisponible",
     "unavailable": "Le partage n’est pas disponible sur cet appareil.",
-    "dialogTitle": "Ajouter l’entretien au calendrier"
+    "dialogTitle": "Ajouter l’entretien au calendrier",
+    "deadlineSummary": "Date limite : {position} chez {company}",
+    "deadlineDescription": "Dernier jour pour postuler au poste de {position} chez {company}."
+  },
+  "outcome": {
+    "accepted": "Offre acceptée",
+    "declined": "Offre déclinée",
+    "rejected": "Non retenu",
+    "withdrawn": "Candidature retirée",
+    "no_response": "Pas de réponse"
   }
 }

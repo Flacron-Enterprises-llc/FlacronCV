@@ -40,7 +40,10 @@ const BILLING_STATUS: Partial<Record<BillingErrorCode, number>> = {
 
 /** The extra fields API_CONTRACT names for a code. Nothing else from `details` leaves the server. */
 const CONTRACT_FIELDS: Partial<Record<BillingErrorCode, readonly string[]>> = {
-  quota_exhausted: ['unit', 'remaining', 'renewalDate'],
+  // `topUp`: whether an opted-in automatic top-up could cover it (V1 charges it; never without consent).
+  quota_exhausted: ['unit', 'remaining', 'renewalDate', 'topUp'],
+  // V1's meter needs to know whether a closed reservation was committed or released.
+  reservation_closed: ['state'],
   plan_upgrade_required: ['feature', 'minimumPlan'],
   channel_unavailable: ['planId', 'interval', 'provider'],
   capacity_exceeded: ['field', 'limit'],

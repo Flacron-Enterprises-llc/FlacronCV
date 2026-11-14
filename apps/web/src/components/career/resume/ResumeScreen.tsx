@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { newIdempotencyKey, isApiError, type ApiClient, type OpportunityItem, type Resume, type ResumeVersion } from '@flacroncv/career-api-client';
-import type { DocumentCredit, ResumeDetail, WritingDocument, WritingType } from '@flacroncv/career-api-client';
+import type { DocumentCredit, ResumeDetail, WritingContextInput, WritingDocument, WritingType } from '@flacroncv/career-api-client';
 import {
   COVER_LETTER_TEMPLATES,
+  FORMAT_ISSUE_CODES,
   isCoverLetterTemplateId,
   isResumeTemplateId,
   RESUME_TEMPLATES,
@@ -32,9 +33,58 @@ import {
 } from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { profileLoadFailure } from '@/lib/career/profile-load';
+import { opportunityIdFromUrl } from '@/lib/career/opportunity-param';
 import { useUnsavedChangesGuard } from '@/components/career/ui/UnsavedChangesGuard';
 
-type Problem = 'failed' | 'ai_unavailable' | 'quota' | 'capacity' | 'upgrade' | 'missing' | 'clarify' | 'unusable' | 'conflict' | 'download' | null;
+
+/** Format checks the page has copy for (career.readability.format_*); a newer server code is skipped, not shown raw. */
+const KNOWN_FORMAT_ISSUES = new Set<string>(FORMAT_ISSUE_CODES);
+
+type Problem =
+  | 'failed'
+  | 'ai_unavailable'
+  | 'quota'
+  | 'capacity'
+  | 'upgrade'
+  | 'missing'
+  | 'clarify'
+  | 'unusable'
+  | 'conflict'
+  | 'download'
+  | 'target'
+  | null;
+
+/** Types written for one organization or role; they need a listing or the person's own notes about the target. */
+const TARGETED_TYPES: readonly WritingType[] = ['referral_request', 'thank_you'];
+/** Types that can use the person's notes about the target (organization, role, contact). */
+const CONTEXT_TYPES: readonly WritingType[] = ['outreach', 'referral_request', 'thank_you'];
+const WRITING_TYPE_OPTIONS: readonly WritingType[] = ['cover_letter', 'bio', 'linkedin', 'outreach', 'referral_request', 'thank_you'];
+
+interface WritingNotes {
+  organization: string;
+  role: string;
+  contactName: string;
+  contactRole: string;
+  interviewDate: string;
+}
+
+const EMPTY_NOTES: WritingNotes = { organization: '', role: '', contactName: '', contactRole: '', interviewDate: '' };
+
+/** Only the filled-in notes that apply to this type; undefined when there are none. */
+export function writingContextOf(type: WritingType, notes: WritingNotes): WritingContextInput | undefined {
+  if (!CONTEXT_TYPES.includes(type)) return undefined;
+  const context: WritingContextInput = {};
+  const organization = notes.organization.trim();
+  const role = notes.role.trim();
+  const contactName = notes.contactName.trim();
+  const contactRole = notes.contactRole.trim();
+  if (organization) context.organization = organization;
+  if (role) context.role = role;
+  if (contactName) context.contactName = contactName;
+  if (contactRole) context.contactRole = contactRole;
+  if (type === 'thank_you' && notes.interviewDate) context.interviewDate = notes.interviewDate;
+  return Object.keys(context).length > 0 ? context : undefined;
+}
 
 /** "Marie Curie — CV.pdf"-style names from the document title; unsafe characters removed, fallback when empty. */
 export function downloadName(title: string, fallback: string, format: string): string {
@@ -59,6 +109,12 @@ const UNUSABLE_LETTER_REASONS = new Set([
   'incomplete_closing',
   'incomplete_letter',
   'missing_evidence',
+  // Prose drafts (bio, LinkedIn, outreach, referral, thank-you) are also checked for these.
+  'unsupported_number',
+  'unsupported_contact',
+  'missing_target',
+  'not_prose',
+  'too_long',
 ]);
 
 export function ResumeScreen({
@@ -78,6 +134,7 @@ export function ResumeScreen({
   const t = useTranslations('career.resume');
   const tHome = useTranslations('career.home');
   const tProfile = useTranslations('career.profile');
+  const tReadability = useTranslations('career.readability');
   const locale = useLocale();
   const [load, setLoad] = useState<'loading' | 'permission' | 'signed-out' | 'unavailable' | 'ready'>(
     ready && !user ? 'signed-out' : 'loading',
@@ -93,7 +150,8 @@ export function ResumeScreen({
   const [title, setTitle] = useState(() => t('default_name'));
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [confirming, setConfirming] = useState(false);
-  const [opportunityId, setOpportunityId] = useState('');
+  // Preselected when opened from a listing (?opportunityId=).
+  const [opportunityId, setOpportunityId] = useState(opportunityIdFromUrl);
   // The person's saved listings, so a document is targeted by choosing one rather than typing its id.
   const [listings, setListings] = useState<OpportunityItem[]>([]);
   const [generateNote, setGenerateNote] = useState<'unavailable' | 'failed' | null>(null);
@@ -102,9 +160,13 @@ export function ResumeScreen({
   const [limit, setLimit] = useState<number | null>(null);
   const [pending, setPending] = useState(false);
   const [issues, setIssues] = useState<Array<{ code: string; section?: string; factId?: string }> | null>(null);
+  const [formatIssues, setFormatIssues] = useState<Array<{ code: string; section?: string; factId?: string }>>([]);
   const [writingType, setWritingType] = useState<WritingType>('cover_letter');
   const [writingOpportunity, setWritingOpportunity] = useState('');
   const [writingConfirm, setWritingConfirm] = useState(false);
+  const [writingNotes, setWritingNotes] = useState<WritingNotes>(EMPTY_NOTES);
+  // null until the writing list says whether a writing model is connected.
+  const [writingAvailable, setWritingAvailable] = useState<boolean | null>(null);
   const [writingDoc, setWritingDoc] = useState<WritingDocument | null>(null);
   const [documentDraft, setDocumentDraft] = useState('');
   const [previewScale, setPreviewScale] = useState<'fit' | 'full'>('fit');
@@ -143,6 +205,7 @@ export function ResumeScreen({
       setDrafts(draftsFrom(full.version));
       try {
         const writings = await api.writingDocuments();
+        setWritingAvailable(writings.textModelConfigured !== false);
         const opened = writings.items[0];
         if (opened) {
           setWritingDoc(opened);
@@ -410,12 +473,14 @@ export function ResumeScreen({
     setProblem(null);
     try {
       const target = writingOpportunity.trim() || null;
-      const paid = await settlePaid(`write:${writingType}:${target ?? ''}`, (key) =>
+      const context = writingContextOf(writingType, writingNotes);
+      const paid = await settlePaid(`write:${writingType}:${target ?? ''}:${JSON.stringify(context ?? {})}`, (key) =>
         api.createWriting(
           {
             type: writingType,
             opportunityId: target,
             templateId: writingType === 'cover_letter' ? letterTemplate : undefined,
+            ...(context ? { context } : {}),
           },
           key,
         ),
@@ -481,6 +546,7 @@ export function ResumeScreen({
     try {
       const list = await api.writingDocuments();
       setCredit(list.documentCredit);
+      setWritingAvailable(list.textModelConfigured !== false);
       const first = list.items[0];
       if (!first) return;
       setWritingDoc(first);
@@ -496,7 +562,9 @@ export function ResumeScreen({
     if (!version) return;
     setProblem(null);
     try {
-      setIssues((await api.readability(version.id)).issues);
+      const report = await api.readability(version.id);
+      setIssues(report.issues);
+      setFormatIssues((report.formatIssues ?? []).filter((issue) => KNOWN_FORMAT_ISSUES.has(issue.code)));
     } catch (error) {
       note(error);
     }
@@ -635,7 +703,8 @@ export function ResumeScreen({
       );
     } else if (isApiError(error, 'validation_error')) {
       const reason = error.body.reason;
-      if (
+      if (reason === 'missing_target') setProblem('target');
+      else if (
         reason === 'need_experience_or_education' ||
         reason === 'no_facts' ||
         reason === 'no_confirmed_facts'
@@ -833,6 +902,19 @@ export function ResumeScreen({
                     </li>
                   ))}
                 </ul>
+                {formatIssues.length > 0 ? (
+                  <div className="mt-4" data-testid="format-issues">
+                    <h3 className="text-base font-semibold text-career-ink">{tReadability('format_title')}</h3>
+                    <p className="mt-1 text-sm text-career-muted">{tReadability('format_note')}</p>
+                    <ul className="mt-2 flex flex-col gap-1">
+                      {formatIssues.map((issue, index) => (
+                        <li key={`${issue.code}-${issue.factId ?? index}`} className="text-sm text-career-ink">
+                          {tReadability(`format_${issue.code}` as 'format_long_line')}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </div>
             ) : null}
             <form className="mt-6 flex flex-col gap-2 border-t border-career-line pt-4" onSubmit={(event) => { event.preventDefault(); setWritingConfirm(true); }}>
@@ -843,10 +925,9 @@ export function ResumeScreen({
                 value={writingType}
                 onChange={(event) => setWritingType(event.target.value as WritingType)}
               >
-                <option value="cover_letter">{t('type_cover_letter')}</option>
-                <option value="bio">{t('type_bio')}</option>
-                <option value="linkedin">{t('type_linkedin')}</option>
-                <option value="outreach">{t('type_outreach')}</option>
+                {WRITING_TYPE_OPTIONS.map((type) => (
+                  <option key={type} value={type}>{t(`type_${type}`)}</option>
+                ))}
               </select>
               {writingType === 'cover_letter' ? (
                 <label className="text-sm font-semibold text-career-ink" htmlFor="letter-template">
@@ -894,15 +975,59 @@ export function ResumeScreen({
                 value={writingOpportunity}
                 onChange={setWritingOpportunity}
               />
+              {CONTEXT_TYPES.includes(writingType) ? (
+                <fieldset className="flex min-w-0 flex-col gap-2 rounded-md border border-career-line p-3">
+                  <legend className="px-1 text-sm font-semibold text-career-ink">{t('writing_notes_title')}</legend>
+                  <p className="text-sm text-career-muted">
+                    {TARGETED_TYPES.includes(writingType) ? t('writing_notes_needed') : t('writing_notes_help')}
+                  </p>
+                  <Input
+                    label={t('writing_notes_organization')}
+                    value={writingNotes.organization}
+                    maxLength={120}
+                    onChange={(event) => setWritingNotes((notes) => ({ ...notes, organization: event.target.value }))}
+                  />
+                  <Input
+                    label={t('writing_notes_role')}
+                    value={writingNotes.role}
+                    maxLength={120}
+                    onChange={(event) => setWritingNotes((notes) => ({ ...notes, role: event.target.value }))}
+                  />
+                  <Input
+                    label={t('writing_notes_contact')}
+                    value={writingNotes.contactName}
+                    maxLength={80}
+                    onChange={(event) => setWritingNotes((notes) => ({ ...notes, contactName: event.target.value }))}
+                  />
+                  <Input
+                    label={t('writing_notes_contact_role')}
+                    value={writingNotes.contactRole}
+                    maxLength={80}
+                    onChange={(event) => setWritingNotes((notes) => ({ ...notes, contactRole: event.target.value }))}
+                  />
+                  {writingType === 'thank_you' ? (
+                    <Input
+                      label={t('writing_notes_interview_date')}
+                      type="date"
+                      value={writingNotes.interviewDate}
+                      onChange={(event) => setWritingNotes((notes) => ({ ...notes, interviewDate: event.target.value }))}
+                    />
+                  ) : null}
+                </fieldset>
+              ) : null}
               <p className="text-sm text-career-muted">{t('writing_draft_only')}</p>
+              {writingAvailable === false ? (
+                <p role="status" className="text-sm text-career-ink">{t('writing_not_connected')}</p>
+              ) : null}
               <div className="flex flex-col gap-2 sm:flex-row">
-                <Button type="submit" disabled={pending}>{t('writing_open')}</Button>
+                <Button type="submit" disabled={pending || writingAvailable === false}>{t('writing_open')}</Button>
                 <Button type="button" variant="secondary" onClick={() => void loadDrafts()}>{t('writing_load')}</Button>
               </div>
             </form>
             {writingConfirm ? (
               <div className="mt-4 rounded-md border border-career-line p-4">
                 <h2 className="text-lg font-semibold text-career-ink">{t('writing_title')}</h2>
+                <p className="mt-2 text-sm text-career-ink">{t('writing_operation', { type: t(`type_${writingType}`) })}</p>
                 <p className="mt-2 text-sm text-career-muted">
                   {t('writing_body', { count: (credit?.includedRemaining ?? 0) + (credit?.packRemaining ?? 0) })}
                 </p>
@@ -995,7 +1120,10 @@ export function ResumeScreen({
       ) : null}
       {problem === 'capacity' && limit !== null ? <p role="status">{t('capacity', { limit })}</p> : null}
       {problem === 'clarify' ? <p role="status">{t('clarify_role')}</p> : null}
-      {problem === 'unusable' ? <p role="status">{t('letter_unusable')}</p> : null}
+      {problem === 'unusable' ? (
+        <p role="status">{writingType === 'cover_letter' ? t('letter_unusable') : t('draft_unusable')}</p>
+      ) : null}
+      {problem === 'target' ? <p role="status">{t('writing_target_needed')}</p> : null}
       {problem === 'conflict' && detail ? (
         <div role="alert" className="flex flex-col gap-2">
           <p>{t('conflict')}</p>

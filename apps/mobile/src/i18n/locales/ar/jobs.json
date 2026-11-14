@@ -6,7 +6,11 @@
     "interviewing": "مقابلة",
     "offer": "عرض",
     "rejected": "مرفوض",
-    "accepted": "مقبول"
+    "accepted": "مقبول",
+    "saved": "محفوظ",
+    "preparing": "قيد التحضير",
+    "offered": "تم تقديم عرض",
+    "withdrawn": "مسحوب"
   },
   "sort": {
     "updated": "أحدث تحديث",
@@ -43,7 +47,9 @@
     "followUp": "المتابعة {date}",
     "addToCalendar": "إضافة مقابلة {position} في {company} إلى التقويم",
     "restore": "استعادة {position} في {company}",
-    "archive": "أرشفة {position} في {company}"
+    "archive": "أرشفة {position} في {company}",
+    "deadline": "الموعد النهائي {date}",
+    "checklist": "قائمة التحقق {done}/{total}"
   },
   "archive": {
     "archived": "تمت أرشفة الطلب",
@@ -95,7 +101,26 @@
     "deleteTitle": "حذف الطلب",
     "deleteBody": "هل تريد حذف «{position}» في {company}؟ لا يمكن التراجع عن ذلك.",
     "deleteErrorTitle": "تعذّر الحذف",
-    "deleteError": "فشل الحذف. يرجى المحاولة مرة أخرى."
+    "deleteError": "فشل الحذف. يرجى المحاولة مرة أخرى.",
+    "deadline": "الموعد النهائي للتقديم",
+    "addDeadlineToCalendar": "أضف الموعد النهائي إلى التقويم",
+    "contacts": "جهات الاتصال",
+    "contactN": "جهة الاتصال {n}",
+    "contactRole": "الدور",
+    "contactRolePh": "مثال: مسؤول التوظيف",
+    "contactPhone": "الهاتف",
+    "contactNotes": "ملاحظات عن جهة الاتصال هذه",
+    "addContact": "إضافة جهة اتصال",
+    "removeContact": "إزالة جهة الاتصال {n}",
+    "checklist": "قائمة التحقق",
+    "checklistItemPh": "مثال: رابط معرض الأعمال",
+    "addChecklistItem": "إضافة عنصر",
+    "removeChecklistItem": "إزالة العنصر {n}",
+    "checklistToggle": "اكتمل العنصر {n}",
+    "outcome": "النتيجة: {outcome}",
+    "frozenOnLink": "تُحفظ السيرة الذاتية أو خطاب التقديم المرتبط مع هذا الطلب كما هو عند الربط.",
+    "frozenCv": "إصدار السيرة المحفوظ: {title} (الإصدار {version})",
+    "frozenLetter": "نسخة خطاب التقديم المحفوظة: {title}"
   },
   "picker": {
     "chooseCv": "اختر سيرة ذاتية",
@@ -112,6 +137,15 @@
     "error": "تعذّر إنشاء حدث التقويم. يُرجى المحاولة مرة أخرى.",
     "unavailableTitle": "المشاركة غير متاحة",
     "unavailable": "المشاركة غير متاحة على هذا الجهاز.",
-    "dialogTitle": "إضافة المقابلة إلى التقويم"
+    "dialogTitle": "إضافة المقابلة إلى التقويم",
+    "deadlineSummary": "الموعد النهائي: {position} لدى {company}",
+    "deadlineDescription": "آخر يوم للتقديم على وظيفة {position} لدى {company}."
+  },
+  "outcome": {
+    "accepted": "تم قبول العرض",
+    "declined": "تم رفض العرض",
+    "rejected": "لم يتم الاختيار",
+    "withdrawn": "انسحبت",
+    "no_response": "لا رد"
   }
 }

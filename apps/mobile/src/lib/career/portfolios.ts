@@ -5,9 +5,21 @@ import type {
   PortfolioVisibility,
   UpdatePortfolioInput,
 } from '../../../../../packages/career-api-client/src/types';
-import { portfolioPath } from '../../../../../packages/career-shared/src/portfolio';
+import {
+  CASE_STUDY_MAX,
+  DEFAULT_PORTFOLIO_SECTIONS,
+  portfolioPath,
+  portfolioSections,
+  type PortfolioSections,
+} from '../../../../../packages/career-shared/src/portfolio';
 import { careerErrorMessage } from '../career-view';
 import { t } from '../../i18n';
+
+export { CASE_STUDY_MAX };
+export type { PortfolioSections };
+
+/** The four switchable parts of a page, in the website's order. */
+export const PORTFOLIO_SECTION_KEYS: readonly (keyof PortfolioSections)[] = ['summary', 'evidence', 'skills', 'contact'];
 
 /**
  * Pure view logic for the mobile Portfolio pages (tested in portfolios.test.ts).
@@ -52,6 +64,9 @@ export interface PortfolioForm {
   showEmail: boolean;
   showPhone: boolean;
   evidenceIds: string[];
+  sections: PortfolioSections;
+  /** Case-study text per evidence id; only ids on the page are sent. */
+  caseStudies: Record<string, string>;
 }
 
 export const EMPTY_PORTFOLIO_FORM: PortfolioForm = {
@@ -63,6 +78,8 @@ export const EMPTY_PORTFOLIO_FORM: PortfolioForm = {
   showEmail: false,
   showPhone: false,
   evidenceIds: [],
+  sections: { ...DEFAULT_PORTFOLIO_SECTIONS },
+  caseStudies: {},
 };
 
 export function formFromPortfolio(page: PortfolioPage): PortfolioForm {
@@ -75,23 +92,58 @@ export function formFromPortfolio(page: PortfolioPage): PortfolioForm {
     showEmail: page.showEmail,
     showPhone: page.showPhone,
     evidenceIds: [...page.evidenceIds],
+    // Older pages (or an older API) may send no map: the shared reader fills the defaults.
+    sections: portfolioSections(page.sections),
+    caseStudies: { ...(page.caseStudies ?? {}) },
   };
+}
+
+/** Case studies of the selected items, trimmed, without empty ones. */
+function selectedCaseStudies(form: Pick<PortfolioForm, 'evidenceIds' | 'caseStudies'>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const id of form.evidenceIds) {
+    const text = (form.caseStudies[id] ?? '').trim();
+    if (text) out[id] = text;
+  }
+  return out;
+}
+
+/**
+ * Every selected item's text, empty included: the API updates only the ids it
+ * is sent, so an emptied case study must be sent as "" to clear it. Ids not on
+ * the page are refused by the API and never sent.
+ */
+export function caseStudiesForSave(form: Pick<PortfolioForm, 'evidenceIds' | 'caseStudies'>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const id of form.evidenceIds) out[id] = (form.caseStudies[id] ?? '').trim();
+  return out;
 }
 
 export function portfolioFormDirty(form: PortfolioForm, base: PortfolioForm): boolean {
   if (form.showEmail !== base.showEmail || form.showPhone !== base.showPhone) return true;
-  const texts: (keyof PortfolioForm)[] = ['title', 'headline', 'displayName', 'contactEmail', 'contactPhone'];
-  if (texts.some((key) => String(form[key]).trim() !== String(base[key]).trim())) return true;
+  const texts = ['title', 'headline', 'displayName', 'contactEmail', 'contactPhone'] as const;
+  if (texts.some((key) => form[key].trim() !== base[key].trim())) return true;
+  if (PORTFOLIO_SECTION_KEYS.some((key) => form.sections[key] !== base.sections[key])) return true;
   const a = [...form.evidenceIds].sort();
   const b = [...base.evidenceIds].sort();
-  return a.length !== b.length || a.some((id, i) => id !== b[i]);
+  if (a.length !== b.length || a.some((id, i) => id !== b[i])) return true;
+  const ca = selectedCaseStudies(form);
+  const cb = selectedCaseStudies(base);
+  const keys = new Set([...Object.keys(ca), ...Object.keys(cb)]);
+  return [...keys].some((key) => ca[key] !== cb[key]);
+}
+
+export function setSection(sections: PortfolioSections, key: keyof PortfolioSections, value: boolean): PortfolioSections {
+  return { ...sections, [key]: value };
 }
 
 export function toggleEvidenceId(ids: string[], id: string): string[] {
   return ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
 }
 
-export type PortfolioFormErrors = Partial<Record<'title' | 'headline' | 'displayName' | 'contactEmail' | 'contactPhone', string>>;
+export type PortfolioFormErrors = Partial<
+  Record<'title' | 'headline' | 'displayName' | 'contactEmail' | 'contactPhone' | 'caseStudies', string>
+>;
 
 export function validatePortfolioForm(form: PortfolioForm): PortfolioFormErrors {
   const errors: PortfolioFormErrors = {};
@@ -101,6 +153,8 @@ export function validatePortfolioForm(form: PortfolioForm): PortfolioFormErrors 
       errors[key] = t('careerPortfolios.errors.tooLong', { max: PORTFOLIO_LIMITS[key] });
     }
   }
+  const longCase = form.evidenceIds.find((id) => (form.caseStudies[id] ?? '').trim().length > CASE_STUDY_MAX);
+  if (longCase) errors.caseStudies = t('careerPortfolios.errors.tooLong', { max: CASE_STUDY_MAX });
   return errors;
 }
 
@@ -120,6 +174,8 @@ export function toUpdatePortfolioInput(form: PortfolioForm): UpdatePortfolioInpu
     contactEmail: form.contactEmail.trim() || null,
     contactPhone: form.contactPhone.trim() || null,
     evidenceIds: form.evidenceIds,
+    sections: { ...form.sections },
+    caseStudies: caseStudiesForSave(form),
   };
 }
 
@@ -158,7 +214,12 @@ export function portfolioErrorMessage(error: unknown): string {
     if (error.code === 'plan_upgrade_required') return t('careerPortfolios.errors.planUpgrade');
     if (error.code === 'capacity_exceeded') return t('careerPortfolios.errors.capacity');
     if (error.code === 'feature_unavailable') return t('careerPortfolios.errors.off');
-    if (error.code === 'validation_error') return t('careerPortfolios.errors.validation');
+    if (error.code === 'validation_error') {
+      if ((error.body as { field?: unknown }).field === 'caseStudies') {
+        return t('careerPortfolios.errors.caseStudy', { max: CASE_STUDY_MAX });
+      }
+      return t('careerPortfolios.errors.validation');
+    }
   }
   return careerErrorMessage(error, t('careerPortfolios.errors.failed'));
 }

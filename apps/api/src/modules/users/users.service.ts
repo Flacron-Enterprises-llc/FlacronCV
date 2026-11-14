@@ -17,7 +17,11 @@ import {
   AppTourPreference,
   AppTourStatus,
   PLAN_CONFIGS,
+  PlanLimits,
   resolveEffectivePlan,
+  effectiveUsage,
+  isUsageWindowStale,
+  UsageSubject,
   ProfileLinkField,
   isProfileLinkField,
   checkProfileLink,
@@ -26,6 +30,42 @@ import {
   LEGAL_ACCEPTANCES_COLLECTION,
 } from '@flacroncv/shared-types';
 import { EXPO_PUSH_TOKEN_PATTERN } from './dto/push-token.dto';
+import { DocumentKind, canCreateDocument, countStoredDocuments } from './document-capacity';
+
+/** A monthly usage counter: AI document credits or résumé job analyses. */
+export type UsageCounter = 'aiCredits' | 'analyses';
+
+export type { DocumentKind };
+
+/** GET /users/me/plan — the plan as the server enforces it. */
+export interface UserPlanInfo {
+  /** Effective plan (`resolveEffectivePlan`): what every gate uses. */
+  plan: SubscriptionPlan;
+  /** The plan label stored on the account (may differ while a lapse is pending). */
+  storedPlan: SubscriptionPlan;
+  name: string;
+  /** True for Pro / Career Accelerator / Enterprise (existing customers only). */
+  legacy: boolean;
+  limits: PlanLimits;
+  entitlements: {
+    docxExport: boolean;
+    /** False → exports carry the small "Made with FlacronCV" mark (Free). */
+    removeBranding: boolean;
+    templates: SubscriptionPlan;
+  };
+  usage: {
+    /** `counts`: 'stored' = capacity (current plans), 'created' = per cycle (legacy). */
+    cvs: { used: number; limit: number | 'unlimited'; counts: 'stored' | 'created' };
+    coverLetters: { used: number; limit: number | 'unlimited'; counts: 'stored' | 'created' };
+    aiCredits: { used: number; limit: number };
+    /** Null on legacy plans: their ATS check spends an Engine credit. */
+    analyses: { used: number; limit: number } | null;
+    exports: { used: number; limit: number | 'unlimited' };
+  };
+  /** When the monthly allowance renews (current plans); null on legacy plans. */
+  renewsAt: string | null;
+  windowStart: string | null;
+}
 
 /**
  * The document handed back by `GET /users/me/export`.
@@ -127,8 +167,11 @@ export class UsersService {
         coverLettersCreated: 0,
         aiCreditsUsed: 0,
         aiCreditsLimit: PLAN_CONFIGS[SubscriptionPlan.FREE].limits.aiCredits,
+        analysesUsed: 0,
         exportsThisMonth: 0,
         lastExportReset: now,
+        // Free renews on the account anniversary: the first window starts now.
+        usagePeriodStart: now,
       },
       role: UserRole.USER,
       createdAt: now,
@@ -346,6 +389,14 @@ export class UsersService {
       lastLoginAt: new Date(),
       updatedAt: new Date(),
     });
+    // Sign-in is the one call every client makes before reading the profile, so
+    // a renewed monthly allowance is visible immediately. Best-effort: the
+    // reserve paths roll over again inside their own transaction anyway.
+    try {
+      await this.rolloverUsageIfDue(uid);
+    } catch (err) {
+      this.logger.warn(`Usage rollover on sign-in failed for ${uid}: ${(err as Error).message}`);
+    }
   }
 
   async updateRole(uid: string, role: UserRole): Promise<void> {
@@ -381,30 +432,57 @@ export class UsersService {
   }
 
   /**
-   * Atomically reserve one AI credit inside a transaction: the limit check and
-   * the increment are one committed operation, so N concurrent AI requests can't
-   * all pass a stale check and overshoot the plan cap (TOCTOU). The ceiling is
-   * the *effective* plan's allowance (a delinquent-past-grace account is held to
-   * FREE), capped by the stored per-user limit. Returns false when the doc is
-   * missing or no credit remains — the caller then rejects without calling the
-   * paid model. Refund with {@link refundAiCredit} if the generation fails.
+   * Atomically reserve one AI document credit inside a transaction: the limit
+   * check and the increment are one committed operation, so N concurrent AI
+   * requests can't all pass a stale check and overshoot the plan cap (TOCTOU).
+   * The ceiling is the *effective* plan's allowance (a delinquent-past-grace
+   * account is held to FREE); on legacy plans it is also capped by the stored
+   * per-user limit (unchanged rule). On current plans a counter left over from
+   * an earlier monthly window is rolled over in the same commit. Returns false
+   * when the doc is missing or no credit remains — the caller then rejects
+   * without calling the paid model. Refund with {@link refundAiCredit}.
    */
   async reserveAiCredit(uid: string): Promise<boolean> {
+    return (await this.reserveUsage(uid, 'aiCredits')).ok;
+  }
+
+  /**
+   * Reserve what one ATS check (résumé job analysis) costs. Current plans spend
+   * an analysis (`usage.analysesUsed`, monthly); legacy plans have no analysis
+   * allowance and keep spending an Engine credit, exactly as before.
+   * `counter` is the counter that was (or would have been) charged — hand it to
+   * {@link refundUsage} on failure.
+   */
+  async reserveAnalysis(uid: string): Promise<{ ok: boolean; counter: UsageCounter }> {
+    return this.reserveUsage(uid, 'analyses');
+  }
+
+  private async reserveUsage(uid: string, wanted: UsageCounter): Promise<{ ok: boolean; counter: UsageCounter }> {
     const ref: DocumentReference = this.firebaseAdmin.firestore.collection(this.collection).doc(uid);
     return this.firebaseAdmin.firestore.runTransaction(async (tx: Transaction) => {
       const snap = await tx.get(ref);
-      if (!snap.exists) return false;
+      if (!snap.exists) return { ok: false, counter: wanted };
       const user = snap.data() as User;
-      const effectiveLimit = Math.min(
-        user.usage.aiCreditsLimit,
-        PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits.aiCredits,
-      );
-      if ((user.usage.aiCreditsUsed ?? 0) >= effectiveLimit) return false;
-      tx.update(ref, {
-        'usage.aiCreditsUsed': FieldValue.increment(1),
-        updatedAt: new Date(),
-      });
-      return true;
+      const now = new Date();
+      const usage = effectiveUsage(user as unknown as UsageSubject, now);
+      const stale = isUsageWindowStale(user as unknown as UsageSubject, now);
+      // Legacy plans have no analysis allowance: their ATS check spends a credit.
+      const counter: UsageCounter =
+        wanted === 'analyses' && usage.analysesLimit === null ? 'aiCredits' : wanted;
+      const used = counter === 'analyses' ? usage.analysesUsed : usage.aiCreditsUsed;
+      const limit = counter === 'analyses' ? usage.analysesLimit ?? 0 : usage.aiCreditsLimit;
+      if (used >= limit) {
+        // Still persist a due rollover so the stored counters match what is shown.
+        if (stale) tx.update(ref, this.rolloverFields(user, now));
+        return { ok: false, counter };
+      }
+      const field = counter === 'analyses' ? 'usage.analysesUsed' : 'usage.aiCreditsUsed';
+      if (stale) {
+        tx.update(ref, { ...this.rolloverFields(user, now), [field]: 1 });
+      } else {
+        tx.update(ref, { [field]: FieldValue.increment(1), updatedAt: now });
+      }
+      return { ok: true, counter };
     });
   }
 
@@ -414,6 +492,149 @@ export class UsersService {
       'usage.aiCreditsUsed': FieldValue.increment(-1),
       updatedAt: new Date(),
     });
+  }
+
+  /**
+   * Give back a unit reserved by {@link reserveAnalysis}. An analysis refund
+   * never takes the counter below zero (the window may have rolled over
+   * between reserve and refund).
+   */
+  async refundUsage(uid: string, counter: UsageCounter): Promise<void> {
+    if (counter === 'aiCredits') return this.refundAiCredit(uid);
+    const ref: DocumentReference = this.firebaseAdmin.firestore.collection(this.collection).doc(uid);
+    await this.firebaseAdmin.firestore.runTransaction(async (tx: Transaction) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return;
+      const used = (snap.data() as User).usage?.analysesUsed ?? 0;
+      if (used > 0) {
+        tx.update(ref, { 'usage.analysesUsed': FieldValue.increment(-1), updatedAt: new Date() });
+      }
+    });
+  }
+
+  /**
+   * Current plans: when the monthly window has rolled over since the counters
+   * were last reset, zero them now (one transaction). Called on sign-in so the
+   * profile every client loads already shows the renewed allowance. Legacy
+   * plans are never touched here (calendar cron + paid-invoice reset).
+   */
+  async rolloverUsageIfDue(uid: string): Promise<boolean> {
+    const ref: DocumentReference = this.firebaseAdmin.firestore.collection(this.collection).doc(uid);
+    return this.firebaseAdmin.firestore.runTransaction(async (tx: Transaction) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return false;
+      const user = snap.data() as User;
+      const now = new Date();
+      if (!isUsageWindowStale(user as unknown as UsageSubject, now)) return false;
+      tx.update(ref, this.rolloverFields(user, now));
+      return true;
+    });
+  }
+
+  /** The write that opens a new monthly window for a current-plan user. */
+  private rolloverFields(user: User, now: Date): Record<string, unknown> {
+    const usage = effectiveUsage(user as unknown as UsageSubject, now);
+    return {
+      'usage.aiCreditsUsed': 0,
+      'usage.analysesUsed': 0,
+      'usage.exportsThisMonth': 0,
+      'usage.aiCreditsLimit': usage.limits.aiCredits,
+      'usage.usagePeriodStart': usage.window?.start ?? now,
+      'usage.lastExportReset': now,
+      updatedAt: now,
+    };
+  }
+
+  /** See {@link canCreateDocument} in document-capacity.ts. */
+  async canCreateDocument(user: User, kind: DocumentKind): Promise<boolean> {
+    return canCreateDocument(this.firebaseAdmin.firestore, user, kind);
+  }
+
+  /** Live (not deleted) documents of one kind owned by `uid`. */
+  async countStoredDocuments(uid: string, kind: DocumentKind): Promise<number> {
+    return countStoredDocuments(this.firebaseAdmin.firestore, uid, kind);
+  }
+
+  /**
+   * Tracked-application capacity for the jobs module (`JOB_CAPACITY_LIMIT`):
+   * the effective plan's `trackedApplications`, or null when unlimited (legacy
+   * plans, as before) or the account is missing.
+   */
+  async trackedApplicationLimit(uid: string): Promise<number | null> {
+    const user = await this.findById(uid);
+    if (!user) return null;
+    const limit = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)]?.limits.trackedApplications;
+    return typeof limit === 'number' ? limit : null;
+  }
+
+  /**
+   * GET /users/me/usage: the stored usage fields exactly as before (clients
+   * read them), plus what the five-plan catalog enforces — stored CV / letter
+   * counts (active, not deleted) for the capacity rows, and the analyses
+   * counter with its limit. Counters from an earlier window read as zero.
+   */
+  async getUsageSummary(uid: string): Promise<User['usage'] & {
+    storedCvs: number;
+    storedCoverLetters: number;
+    analysesUsed: number;
+    /** Null on legacy plans (their ATS check spends an Engine credit). */
+    analysesLimit: number | null;
+  }> {
+    const user = await this.findByIdOrThrow(uid);
+    const usage = effectiveUsage(user as unknown as UsageSubject, new Date());
+    const [storedCvs, storedCoverLetters] = await Promise.all([
+      this.countStoredDocuments(uid, 'cvs'),
+      this.countStoredDocuments(uid, 'coverLetters'),
+    ]);
+    return {
+      ...user.usage,
+      aiCreditsUsed: usage.aiCreditsUsed,
+      exportsThisMonth: usage.exportsThisMonth,
+      storedCvs,
+      storedCoverLetters,
+      analysesUsed: usage.analysesUsed,
+      analysesLimit: usage.analysesLimit,
+    };
+  }
+
+  /**
+   * The signed-in user's plan, entitlements and usage as the server enforces
+   * them (GET /users/me/plan). Counters from an earlier window read as zero.
+   */
+  async getPlanInfo(uid: string): Promise<UserPlanInfo> {
+    const user = await this.findByIdOrThrow(uid);
+    const usage = effectiveUsage(user as unknown as UsageSubject, new Date());
+    const config = PLAN_CONFIGS[usage.plan];
+    const documents = async (kind: DocumentKind): Promise<UserPlanInfo['usage']['cvs']> => {
+      const limit = kind === 'cvs' ? config.limits.cvs : config.limits.coverLetters;
+      if (config.legacy) {
+        const created = kind === 'cvs' ? user.usage?.cvsCreated : user.usage?.coverLettersCreated;
+        return { used: created ?? 0, limit, counts: 'created' };
+      }
+      return { used: await this.countStoredDocuments(uid, kind), limit, counts: 'stored' };
+    };
+    const [cvs, coverLetters] = await Promise.all([documents('cvs'), documents('coverLetters')]);
+    return {
+      plan: usage.plan,
+      storedPlan: user.subscription?.plan ?? SubscriptionPlan.FREE,
+      name: config.name,
+      legacy: config.legacy,
+      limits: config.limits,
+      entitlements: {
+        docxExport: config.limits.docxExport,
+        removeBranding: config.limits.removeBranding,
+        templates: config.limits.templates,
+      },
+      usage: {
+        cvs,
+        coverLetters,
+        aiCredits: { used: usage.aiCreditsUsed, limit: usage.aiCreditsLimit },
+        analyses: usage.analysesLimit === null ? null : { used: usage.analysesUsed, limit: usage.analysesLimit },
+        exports: { used: usage.exportsThisMonth, limit: config.limits.exports },
+      },
+      renewsAt: usage.window ? usage.window.end.toISOString() : null,
+      windowStart: usage.window ? usage.window.start.toISOString() : null,
+    };
   }
 
   static readonly MAX_PUSH_TOKENS = 10;
@@ -576,6 +797,8 @@ export class UsersService {
     'aiCreditsLimit',
     'exportsThisMonth',
     'lastExportReset',
+    'analysesUsed',
+    'usagePeriodStart',
   ] as const;
 
   /**

@@ -47,9 +47,11 @@ describe('/cover-letters/new allowance gate', () => {
     localStorage.clear();
   });
 
-  it('blocks a Free user at the limit up front: notice + upgrade modal, with fresh usage', async () => {
-    usage = { coverLettersCreated: 1, aiCreditsUsed: 0 };
-    plan = SubscriptionPlan.FREE;
+  // Legacy plans count creations and are gated up front; current plans count
+  // STORED letters, which the API decides (COVER_LETTER_LIMIT_REACHED).
+  it('blocks a legacy Pro user at the creation limit up front: notice + upgrade modal, with fresh usage', async () => {
+    usage = { coverLettersCreated: 20, aiCreditsUsed: 0 };
+    plan = SubscriptionPlan.PRO;
     renderPage();
     expect(screen.getByTestId('cover-letter-limit-notice').textContent).toContain(en.coverLetters.new_limit_reached);
     await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy());

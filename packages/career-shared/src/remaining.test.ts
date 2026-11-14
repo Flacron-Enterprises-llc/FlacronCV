@@ -9,6 +9,11 @@ import {
   learningLoopReport,
   mapSessionView,
   REQUIRED_ATTRIBUTION,
+  BUSINESS_SCOPES,
+  apiKeyEnvironmentOf,
+  apiKeyPrefix,
+  credentialReminders,
+  isCalendarDate,
   salesInquiryInput,
   transcriptionRequest,
   TRANSCRIPTION_MAX_BYTES,
@@ -84,7 +89,9 @@ describe('remaining product rules', () => {
       byteLength: 1024,
     });
     expect(transcriptionRequest({ language: 'de' })).toBeNull();
-    expect(transcriptionRequest({ language: 'en', mimeType: 'audio/ogg' })).toBeNull();
+    // Ogg/Opus (Firefox, Android) is accepted; a non-audio type is not.
+    expect(transcriptionRequest({ language: 'en', mimeType: 'audio/ogg' })).toMatchObject({ mimeType: 'audio/ogg' });
+    expect(transcriptionRequest({ language: 'en', mimeType: 'video/mp4' })).toBeNull();
     expect(transcriptionRequest({ language: 'en', byteLength: TRANSCRIPTION_MAX_BYTES + 1 })).toBeNull();
   });
 
@@ -114,5 +121,54 @@ describe('remaining product rules', () => {
     expect(salesInquiryInput({ name: 'Ada Lovelace', email: 'ada@example.test', organization: 'School', message: 'We need SSO for a workforce program.' })).toMatchObject({
       email: 'ada@example.test',
     });
+  });
+
+  it('labels each wage by its source and refuses market data without a named, dated source', () => {
+    const base = { costCents: 0, months: 6, destination: 'Berlin' };
+    const compared = compareScenarios([
+      { ...base, name: 'Typed', wageCents: 5000000, source: 'user' },
+      { ...base, name: 'Market', wageCents: 6000000, source: 'market', sourceName: 'Federal statistics office', sourceDate: '2026-06-30', uncertainty: 'medium' },
+      { ...base, name: 'Guess', wageCents: 7000000, source: 'estimate', uncertainty: 'high' },
+    ]);
+    expect(compared?.options.map((o) => o.wageLabel)).toEqual(['user_supplied', 'market_data', 'estimate']);
+    expect(compared?.options[1]).toMatchObject({ sourceName: 'Federal statistics office', sourceDate: '2026-06-30', uncertainty: 'medium' });
+    expect(compared?.options[0].uncertainty).toBe('unknown');
+    expect(compareScenarios([{ ...base, name: 'Market', wageCents: 1, source: 'market' }])).toBeNull();
+    expect(compareScenarios([{ ...base, name: 'Market', wageCents: 1, source: 'market', sourceName: 'X', sourceDate: '2026-02-31' }])).toBeNull();
+    expect(compareScenarios([{ ...base, name: 'Bad', wageCents: 1, source: 'magic' as never }])).toBeNull();
+  });
+
+  it('accepts only real calendar dates', () => {
+    expect(isCalendarDate('2026-02-28')).toBe(true);
+    expect(isCalendarDate('2028-02-29')).toBe(true);
+    expect(isCalendarDate('2026-02-31')).toBe(false);
+    expect(isCalendarDate('2026-02-29')).toBe(false);
+    expect(isCalendarDate('2026-2-1')).toBe(false);
+    expect(isCalendarDate(20260101)).toBe(false);
+  });
+
+  it('lists credential reminders within 90 days, soonest first, including expired ones', () => {
+    const reminders = credentialReminders(
+      [
+        { id: 'a', name: 'Gas Safe', issuer: 'Gas Safe Register', region: 'UK', expiresOn: '2027-01-10', reviewOn: '2026-12-01' },
+        { id: 'b', name: 'First aid', issuer: '', region: '', expiresOn: '2026-11-01', reviewOn: null },
+        { id: 'c', name: 'Far away', issuer: '', region: '', expiresOn: '2028-01-01', reviewOn: null },
+      ],
+      '2026-11-14',
+    );
+    expect(reminders.map((r) => [r.credentialId, r.kind, r.daysLeft, r.expired])).toEqual([
+      ['b', 'expiry', -13, true],
+      ['a', 'review', 17, false],
+      ['a', 'expiry', 57, false],
+    ]);
+  });
+
+  it('separates billing from candidate documents and labels key environments', () => {
+    expect(BUSINESS_SCOPES.billing_admin).toMatchObject({ candidates: 'none', billing: true, manageWorkspace: false });
+    expect(BUSINESS_SCOPES.counselor).toMatchObject({ candidates: 'assigned', billing: false });
+    expect(BUSINESS_SCOPES.manager.billing).toBe(false);
+    expect(apiKeyPrefix('test')).toBe('flc_test_');
+    expect(apiKeyEnvironmentOf('flc_live_abc')).toBe('live');
+    expect(apiKeyEnvironmentOf('flc_abc')).toBeNull();
   });
 });

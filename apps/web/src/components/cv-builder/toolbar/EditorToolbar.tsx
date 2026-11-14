@@ -78,6 +78,7 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
         allowed: boolean;
         reason?: string;
         reservationId?: string;
+        removeBranding?: boolean;
       }>('/exports/record', { format, type: 'cv', documentId: cv.id });
       if (!decision.allowed) {
         // The server says WHY. "DOCX needs a paid plan" (plan state changed
@@ -88,7 +89,8 @@ export default function EditorToolbar({ cvId }: EditorToolbarProps) {
       }
       reservationId = decision.reservationId;
       if (format === 'pdf') {
-        await exportToPDF(cv, sections, locale);
+        // Free exports carry the small "Made with FlacronCV" mark; the server decides.
+        await exportToPDF(cv, sections, locale, { brandingMark: decision.removeBranding === false });
       } else {
         // Headings, dates and "Present" follow the CV's own language — the
         // same resolution the preview uses — so the DOCX matches the PDF.

@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { pageMetadata } from '@/lib/seo';
-import { careerBuildEnabled } from '@/lib/career-switch';
 import { PublicPricingPage } from '@/components/pricing/PublicPricingPage';
 
 export async function generateMetadata({
@@ -9,12 +8,12 @@ export async function generateMetadata({
 }: {
   params: { locale: string };
 }): Promise<Metadata> {
-  const t = await getTranslations('career_pricing');
-  const description = careerBuildEnabled() ? t('page_lede_with_career') : t('page_lede');
-  return pageMetadata({ locale, path: '/pricing', title: t('page_title'), description });
+  const tPage = await getTranslations('career_pricing');
+  const t = await getTranslations('plan_catalog');
+  return pageMetadata({ locale, path: '/pricing', title: tPage('page_title'), description: t('page_lede') });
 }
 
-/** FlacronCV plans plus, when the career build switch is on, the career tools add-on. */
+/** The five FlacronCV plans, comparison, add-ons, calculator and Contact Sales. */
 export default function PricingPage() {
   return <PublicPricingPage />;
 }

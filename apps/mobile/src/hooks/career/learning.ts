@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SkillGapReport, SkillReportList } from '../../../../../packages/career-api-client/src/types';
 import { careerApi } from '../../lib/career-api';
 import { replacePack } from '../../lib/career/action-packs';
-import { withMilestone, type SkillReportInput } from '../../lib/career/learning';
+import { withMilestone, withMilestoneEvidence, type SkillReportInput } from '../../lib/career/learning';
 import { useEntitled, useUid } from '../useCareer';
 
 /**
@@ -78,13 +78,21 @@ export function useToggleMilestone(reportId: string | undefined) {
   });
 }
 
-/** Records a completed milestone as a self-reported evidence item. */
+/**
+ * Records a ticked milestone as a self-reported evidence item (free). The
+ * server returns the existing item on a repeat, so the report remembers it.
+ */
 export function useConvertMilestone(reportId: string | undefined) {
   const queryClient = useQueryClient();
   const uid = useUid();
   return useMutation({
     mutationFn: (milestoneId: string) => careerApi.convertMilestoneToEvidence(reportId as string, milestoneId),
-    onSuccess: () => {
+    onSuccess: (result, milestoneId) => {
+      const record = (report: SkillGapReport) => withMilestoneEvidence(report, milestoneId, result.evidenceId);
+      queryClient.setQueryData<SkillGapReport>(reportKey(uid, reportId), (current) => (current ? record(current) : current));
+      queryClient.setQueryData<SkillReportList>(listKey(uid), (current) =>
+        current ? { ...current, items: current.items.map((r) => (r.id === reportId ? record(r) : r)) } : current,
+      );
       void queryClient.invalidateQueries({ queryKey: ['career', uid, 'evidence'] });
     },
   });

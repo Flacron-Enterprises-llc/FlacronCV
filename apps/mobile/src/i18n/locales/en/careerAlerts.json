@@ -68,7 +68,10 @@
     "yourAlerts": "Your alerts",
     "emptyTitle": "No alerts yet",
     "emptyBody": "A saved search surfaces a listing later. Searching now does not use an alert.",
-    "openA11y": "{name}. Open listing"
+    "openA11y": "{name}. Open listing",
+    "unread": "New",
+    "markAllRead": "Mark all as read",
+    "unreadCount": "{count, plural, one {# new alert} other {# new alerts}}"
   },
   "balance": {
     "none": "No alert items left. New alerts wait until the balance renews. Search still works.",

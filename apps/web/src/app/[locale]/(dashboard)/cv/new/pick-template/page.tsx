@@ -24,6 +24,8 @@ import {
   TemplateCategory,
   SubscriptionPlan,
   resolveEffectivePlan,
+  planMeetsTier,
+  templateTierOf,
   type CVLayout,
 } from '@flacroncv/shared-types';
 import { CV_NEW_DRAFT_KEY as DRAFT_KEY } from '../constants';
@@ -115,8 +117,11 @@ export default function PickTemplatePage(): React.JSX.Element | null {
 
   const userPlan: SubscriptionPlan = resolveEffectivePlan(user?.subscription);
 
-  const canUseTemplate = (tmpl: Template): boolean =>
-    PLAN_ORDER.indexOf(userPlan) >= PLAN_ORDER.indexOf(tmpl.tier as SubscriptionPlan);
+  // Compare by the template tier the plan grants. The five current plans are not
+  // template tiers themselves (Starter reaches PRO-tier, Career Pro ENTERPRISE-tier),
+  // so indexing them into PLAN_ORDER locked every template, free ones included.
+  const canUseTemplate = (tmpl: Template): boolean => planMeetsTier(userPlan, tmpl.tier as SubscriptionPlan);
+  const userTier = templateTierOf(userPlan);
 
   // Tabs in plan order (Free, Pro, Enterprise), not catalogue order.
   const availableTiers = Array.from(
@@ -226,7 +231,7 @@ export default function PickTemplatePage(): React.JSX.Element | null {
             variant="outline"
             className="shrink-0 border-amber-400 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300"
             onClick={() => {
-              fcgeUpgradeClicked(SubscriptionPlan.PRO);
+              fcgeUpgradeClicked(SubscriptionPlan.STARTER);
               router.push('/settings/billing');
             }}
           >
@@ -235,7 +240,7 @@ export default function PickTemplatePage(): React.JSX.Element | null {
         </div>
       )}
 
-      {userPlan === SubscriptionPlan.PRO && (
+      {userTier === SubscriptionPlan.PRO && (
         <div className="flex items-center justify-between gap-4 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 dark:border-brand-800/60 dark:bg-brand-900/20">
           <div className="flex items-center gap-3">
             <Zap className="h-5 w-5 shrink-0 text-brand-500" />
@@ -248,7 +253,7 @@ export default function PickTemplatePage(): React.JSX.Element | null {
             variant="outline"
             className="shrink-0"
             onClick={() => {
-              fcgeUpgradeClicked(SubscriptionPlan.ENTERPRISE);
+              fcgeUpgradeClicked(SubscriptionPlan.CAREER_PRO);
               router.push('/settings/billing');
             }}
           >

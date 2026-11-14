@@ -46,5 +46,16 @@ describe('alerts over HTTP', () => {
     expect(center.body.items).toEqual([]);
     expect(center.body.alertItem.includedRemaining).toBe(10);
     expect(center.body.score).toBeUndefined();
+    // No provider is configured in tests: every channel says so instead of pretending to send.
+    expect(center.body.channels).toEqual({ email: 'not_connected', push: 'not_connected', telegram: 'not_connected' });
+    expect(center.body.tier).toBe('basic');
+
+    const reminders = await http().get('/api/career/v1/reminders').set('Authorization', auth);
+    expect(reminders.status).toBe(200);
+    expect(reminders.body).toEqual({ upcoming: [], history: [], unread: 0 });
+    const badSync = await http().post('/api/career/v1/reminders/tracker-sync').set('Authorization', auth).send({ items: [{ kind: 'billing' }] });
+    expect(badSync.status).toBe(400);
+    const tiered = await http().post('/api/career/v1/saved-searches').set('Authorization', auth).send({ q: 'Data', minPay: 1 });
+    expect(tiered.body.code).toBe('plan_upgrade_required');
   });
 });

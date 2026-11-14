@@ -6,7 +6,12 @@
   "plans": {
     "free": "Kostenlos",
     "pro": "Pro",
-    "enterprise": "Enterprise"
+    "enterprise": "Enterprise",
+    "starter": "Starter",
+    "professional": "Professional",
+    "career_pro": "Career Pro",
+    "business": "Business",
+    "career_accelerator": "Career Accelerator"
   },
   "usage": {
     "title": "Monatliche Nutzung",
@@ -168,7 +173,8 @@
         "uncollectible": "Uneinbringlich",
         "draft": "Entwurf"
       }
-    }
+    },
+    "catalogPlanNote": "Ihr Tarif wird auf der FlacronCV-Website verwaltet. Änderungen an diesem Tarif sind in der App noch nicht möglich."
   },
   "data": {
     "title": "Deine Daten",

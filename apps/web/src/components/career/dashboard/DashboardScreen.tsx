@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import type { ApiClient, ApplicationItem, Fact, Me, Resume, UsageSummary } from '@flacroncv/career-api-client';
+import type { AlertItem, ApiClient, ApplicationItem, Fact, Me, OpportunityItem, Resume, UsageSummary } from '@flacroncv/career-api-client';
 import {
   APPLICATION_STATUSES,
   countFacts,
@@ -33,7 +33,7 @@ export function DashboardScreen({
   signInHref: string;
   locale: string;
   /** V1 integration: the overview reads V1's Jobs tracker. Defaults to the career API's own list (V2 tests). */
-  loadApplications?: () => Promise<ApplicationItem[]>;
+  loadApplications?: () => Promise<Array<ApplicationItem & { followUpDate?: string | null }>>;
 }) {
   const t = useTranslations('career.dashboard');
   const units = useTranslations('career.billing');
@@ -41,7 +41,9 @@ export function DashboardScreen({
     ready && !user ? 'signed-out' : 'loading',
   );
   const [facts, setFacts] = useState<Fact[]>([]);
-  const [applications, setApplications] = useState<ApplicationItem[]>([]);
+  const [applications, setApplications] = useState<Array<ApplicationItem & { followUpDate?: string | null }>>([]);
+  const [savedListings, setSavedListings] = useState<OpportunityItem[]>([]);
+  const [alertItems, setAlertItems] = useState<AlertItem[]>([]);
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [recentLines, setRecentLines] = useState<Array<{ id: string; text: string }>>([]);
   const [alertCount, setAlertCount] = useState(0);
@@ -64,6 +66,9 @@ export function DashboardScreen({
       setApplications(applicationList);
       setResumes(resumeList.items);
       setAlertCount(alertList.items.length);
+      setAlertItems(alertList.items);
+      // Saved listings are optional on the overview: a failure leaves the rest of the page usable.
+      setSavedListings(await api.savedOpportunities().then((list) => list.items).catch(() => []));
       const recent = resumeList.items[0];
       if (recent) {
         try {
@@ -136,6 +141,9 @@ export function DashboardScreen({
   const today = utcDateOnly(new Date());
   const action = suggestNextAction({ counts, applications: cards, alertCount, today });
   const deadline = nextDeadline(cards, today);
+  const followUp = nextFollowUp(applications, today);
+  const relevant = relevantListings(savedListings, alertItems);
+  const deadlines = upcomingDeadlines(savedListings, cards, today);
   const stages = stageCounts(cards);
   const interview = usage?.units.find((unit) => unit.unit === 'text_interview');
   const interviewRemaining = interview ? interview.includedRemaining + interview.packRemaining : 0;
@@ -194,6 +202,33 @@ export function DashboardScreen({
           <h2 className="text-lg font-semibold text-career-ink">{t('saved_title')}</h2>
           <p className="mt-2 text-sm text-career-ink">{t('saved_count', { count: savedApplicationCount(cards) })}</p>
           <p className="mt-1 text-sm text-career-ink">{deadline?.deadline ? t('next_deadline', { title: deadline.title, date: deadline.deadline }) : t('no_deadline')}</p>
+          {followUp ? <p className="mt-1 text-sm text-career-ink">{t('next_follow_up', { title: followUp.title, date: followUp.date })}</p> : null}
+        </Card>
+        <Card>
+          <h2 className="text-lg font-semibold text-career-ink">{t('relevant_title')}</h2>
+          {relevant.length === 0 ? (
+            <p className="mt-2 text-sm text-career-muted">{t('relevant_empty')}</p>
+          ) : (
+            <ul className="mt-2 flex flex-col gap-2">
+              {relevant.map((entry) => (
+                <li key={entry.id} className="text-sm text-career-ink">
+                  <a className="font-semibold text-career-orange-text" dir="auto" href={`/${locale}/career/opportunities/${entry.id}`}>{entry.title}</a>
+                  <span className="block text-xs text-career-muted">{entry.source === 'saved' ? t('relevant_saved') : t('relevant_alert')}{entry.deadline ? ` · ${t('relevant_deadline', { date: entry.deadline })}` : ''}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <h3 className="mt-4 text-sm font-semibold text-career-ink">{t('deadlines_title')}</h3>
+          {deadlines.length === 0 ? (
+            <p className="mt-1 text-sm text-career-muted">{t('no_deadline')}</p>
+          ) : (
+            <ul className="mt-1 flex flex-col gap-1">
+              {deadlines.map((entry) => (
+                <li key={entry.key} className="text-sm text-career-ink" dir="auto">{t('next_deadline', { title: entry.title, date: entry.date })}</li>
+              ))}
+            </ul>
+          )}
+          <a className="mt-3 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text" href={`/${locale}/career/alerts`}>{t('open_alerts')}</a>
         </Card>
       </div>
       <div className="flex flex-col gap-6">
@@ -223,7 +258,7 @@ export function DashboardScreen({
                   {remaining === 0 ? (
                     <>
                       {' '}
-                      <a className="font-semibold text-career-orange-text" href={`/${locale}/career/plans`}>{t('open_billing')}</a>
+                      <a className="font-semibold text-career-orange-text" href={`/${locale}/settings/billing`}>{t('open_billing')}</a>
                     </>
                   ) : null}
                 </li>
@@ -235,6 +270,35 @@ export function DashboardScreen({
     </div>
     </div>
   );
+}
+
+/** The nearest follow-up date from the tracker. A follow-up is not a deadline and is never shown as one. */
+function nextFollowUp(items: Array<ApplicationItem & { followUpDate?: string | null }>, today: string): { title: string; date: string } | null {
+  const next = items
+    .filter((item) => item.followUpDate && item.followUpDate >= today && item.status !== 'rejected' && item.status !== 'withdrawn')
+    .sort((a, b) => (a.followUpDate as string).localeCompare(b.followUpDate as string))[0];
+  return next?.followUpDate ? { title: next.snapshot.title, date: next.followUpDate } : null;
+}
+
+/** Saved listings first, then recent alerts not already saved; at most five. */
+function relevantListings(saved: OpportunityItem[], alerts: AlertItem[]): Array<{ id: string; title: string; deadline: string | null; source: 'saved' | 'alert' }> {
+  const out: Array<{ id: string; title: string; deadline: string | null; source: 'saved' | 'alert' }> = saved
+    .filter((item) => item.label !== 'expired')
+    .map((item) => ({ id: item.id, title: item.title, deadline: item.deadline, source: 'saved' as const }));
+  for (const alert of alerts) {
+    if (out.some((entry) => entry.id === alert.opportunityId)) continue;
+    out.push({ id: alert.opportunityId, title: alert.title, deadline: alert.basic?.deadline ?? null, source: 'alert' });
+  }
+  return out.slice(0, 5);
+}
+
+/** Real deadlines only: stated listing deadlines and recorded application deadlines, today or later, nearest first. */
+function upcomingDeadlines(saved: OpportunityItem[], cards: DashboardApplication[], today: string): Array<{ key: string; title: string; date: string }> {
+  const entries = [
+    ...saved.filter((item) => item.deadline).map((item) => ({ key: `o-${item.id}`, title: item.title, date: item.deadline as string })),
+    ...cards.filter((card) => card.deadline).map((card) => ({ key: `a-${card.id}`, title: card.title, date: card.deadline as string })),
+  ];
+  return entries.filter((entry) => entry.date >= today).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
 }
 
 function usableAccount(account: Me): boolean {

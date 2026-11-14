@@ -19,12 +19,18 @@ import type { JobApplication } from '../../types/job.types';
 
 /** V1 `JobStatus` → career application status (website: lib/career/v1-jobs.ts). */
 const V1_STATUS: Record<string, string> = {
-  wishlist: 'saved',
+  // Current V1 statuses are the career statuses.
+  saved: 'saved',
+  preparing: 'preparing',
   applied: 'applied',
   interviewing: 'interviewing',
+  offered: 'offered',
+  rejected: 'rejected',
+  withdrawn: 'withdrawn',
+  // Legacy values (older cached responses).
+  wishlist: 'saved',
   offer: 'offered',
   accepted: 'offered',
-  rejected: 'rejected',
 };
 
 /**
@@ -40,7 +46,8 @@ export function applicationsFromV1Jobs(jobs: readonly JobApplication[]): Dashboa
       opportunityId: '',
       status: V1_STATUS[job.status],
       title: job.company ? `${job.position} · ${job.company}` : job.position,
-      deadline: job.followUpDate ?? null,
+      // The application deadline when recorded; older entries only have a follow-up date.
+      deadline: job.deadline ?? job.followUpDate ?? null,
     }));
 }
 

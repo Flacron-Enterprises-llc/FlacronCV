@@ -4,6 +4,7 @@ import {
   CRMTransactionStatus,
   CRMCustomerSource,
   CRMActivityType,
+  SubscriptionPlan,
 } from './enums';
 
 // ─── Core Entities ───────────────────────────────────────────────────────────
@@ -240,7 +241,8 @@ export interface PlatformAnalyticsOverview {
   totalUsers: number;
   activeUsers: number;
   newUsersThisMonth: number;
-  usersByPlan: { free: number; pro: number; career_accelerator: number; enterprise: number };
+  /** Users per stored plan id — every plan, current and legacy (missing → 0). */
+  usersByPlan: Record<SubscriptionPlan, number>;
   totalCVs: number;
   totalCoverLetters: number;
   cvsThisMonth: number;
@@ -328,19 +330,24 @@ export interface CRMSubscriptionListParams {
 
 // ─── App Settings ─────────────────────────────────────────────────────────────
 
+/** One plan's enforced limits as the CRM shows them. -1 = unlimited / not applicable. */
 export interface AppSettingsPlanLimits {
   cvsLimit: number;
   coverLettersLimit: number;
   aiCreditsLimit: number;
   exportsLimit: number;
+  /** Résumé analyses per month; -1 on legacy plans (their ATS check spends a credit). */
+  analysesLimit?: number;
+  /** Tracked applications stored at once; -1 = unlimited. */
+  trackedApplicationsLimit?: number;
 }
 
 export interface AppSettings {
-  planLimits: {
-    free: AppSettingsPlanLimits;
-    pro: AppSettingsPlanLimits;
-    enterprise: AppSettingsPlanLimits;
-  };
+  /**
+   * Read-only mirror of PLAN_CONFIGS for every plan (current and legacy),
+   * recomputed on every read. Never stored, never editable.
+   */
+  planLimits: Record<SubscriptionPlan, AppSettingsPlanLimits>;
   featureFlags: {
     aiEnabled: boolean;
     templatesEnabled: boolean;

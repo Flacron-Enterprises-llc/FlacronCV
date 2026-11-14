@@ -19,16 +19,23 @@ import { useCareerAccess } from '../../../../src/hooks/useCareer';
 import { useLeaveGuard } from '../../../../src/hooks/useLeaveGuard';
 import {
   canAddLocation,
+  groupLocations,
   GUIDELINES_MAX,
   guidelinesForSave,
   isPlanUpgradeRequired,
   locationBadge,
   locationDeleteError,
+  locationKind,
   locationLines,
+  MAX_MODES,
+  modeChecklist,
+  modeFilterLabels,
+  modesEqual,
   quotaHint,
-  specialistModeMeta,
+  savedModes,
   specialistModeOptions,
   specialistSaveError,
+  toggleMode,
 } from '../../../../src/lib/career/modes';
 import { careerErrorMessage } from '../../../../src/lib/career-view';
 import { useT } from '../../../../src/i18n';
@@ -175,6 +182,7 @@ function LocationsTab() {
 
   const { items, capacity, allowedRadiusMiles } = list.data;
   const canAdd = canAddLocation(items.length, capacity);
+  const groups = groupLocations(items);
   const openEditor = (id: string) => router.push(`/(dashboard)/career/relocation/${id}` as Href);
 
   const onDelete = (location: LocationProfile) => {
@@ -215,6 +223,8 @@ function LocationsTab() {
         <Text className="text-stone-500 text-xs mb-4">{t('relocation.allInUse')}</Text>
       ) : null}
 
+      <Text className="text-stone-500 text-xs leading-4 mb-4">{t('relocation.authNeverAssumed')}</Text>
+
       {items.length === 0 ? (
         <EmptyState
           icon="location-outline"
@@ -222,57 +232,77 @@ function LocationsTab() {
           description={t('relocation.empty.body')}
         />
       ) : (
-        items.map((location) => (
-          <View key={location.id} className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
-            <View className="flex-row items-start justify-between">
-              <Text className="font-bold text-stone-900 flex-1 me-2">{location.place}</Text>
-              <Pill label={locationBadge(location)} tone={location.isRelocation ? 'brand' : 'default'} />
+        (
+          [
+            ['current', t('relocation.groupCurrent'), groups.current],
+            ['future', t('relocation.groupFuture'), groups.future],
+          ] as const
+        ).map(([key, heading, group]) =>
+          group.length === 0 ? null : (
+            <View key={key}>
+              <Text className="text-stone-900 font-semibold text-sm mb-2 mt-1" accessibilityRole="header">
+                {heading}
+              </Text>
+              {group.map(renderLocation)}
             </View>
-            <View className="mt-2">
-              {locationLines(location).map((line) => (
-                <Text key={line} className="text-stone-500 text-xs mt-0.5">
-                  {line}
-                </Text>
-              ))}
-            </View>
-            {location.notes ? (
-              <Text className="text-stone-600 text-xs italic mt-2 bg-stone-50 rounded-lg p-2">“{location.notes}”</Text>
-            ) : null}
-            <View className="flex-row justify-end gap-2 mt-3 pt-3 border-t border-stone-100">
-              <Button size="sm" variant="outline" className="min-h-[44px]" onPress={() => openEditor(location.id)} accessibilityLabel={t('relocation.editA11y', { place: location.place })}>
-                {t('common.edit')}
-              </Button>
-              <Button
-                size="sm"
-                className="min-h-[44px]"
-                variant="ghost"
-                onPress={() => onDelete(location)}
-                disabled={remove.isPending}
-                accessibilityLabel={t('relocation.deleteA11y', { place: location.place })}
-              >
-                {tc('delete')}
-              </Button>
-            </View>
-          </View>
-        ))
+          ),
+        )
       )}
     </ScrollView>
   );
+
+  function renderLocation(location: LocationProfile) {
+    return (
+      <View key={location.id} className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
+        <View className="flex-row items-start justify-between">
+          <Text className="font-bold text-stone-900 flex-1 me-2">{location.place}</Text>
+          <Pill label={locationBadge(location)} tone={locationKind(location) === 'future' ? 'brand' : 'default'} />
+        </View>
+        <View className="mt-2">
+          {locationLines(location).map((line) => (
+            <Text key={line} className="text-stone-500 text-xs mt-0.5">
+              {line}
+            </Text>
+          ))}
+        </View>
+        {location.notes ? (
+          <Text className="text-stone-600 text-xs italic mt-2 bg-stone-50 rounded-lg p-2">“{location.notes}”</Text>
+        ) : null}
+        <View className="flex-row justify-end gap-2 mt-3 pt-3 border-t border-stone-100">
+          <Button size="sm" variant="outline" className="min-h-[44px]" onPress={() => openEditor(location.id)} accessibilityLabel={t('relocation.editA11y', { place: location.place })}>
+            {t('common.edit')}
+          </Button>
+          <Button
+            size="sm"
+            className="min-h-[44px]"
+            variant="ghost"
+            onPress={() => onDelete(location)}
+            disabled={remove.isPending}
+            accessibilityLabel={t('relocation.deleteA11y', { place: location.place })}
+          >
+            {tc('delete')}
+          </Button>
+        </View>
+      </View>
+    );
+  }
 }
 
 function SpecialistTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }) {
   const t = useT('careerModes');
   const query = useSpecialistMode();
   const save = useSaveSpecialistMode();
-  const [selected, setSelected] = useState<SpecialistMode | null>(null);
+  const [selected, setSelected] = useState<SpecialistMode[] | null>(null);
   const [guidelines, setGuidelines] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
 
-  const savedMode = query.data?.mode ?? 'general';
+  // No fallback mode: an empty selection is a valid choice.
+  const saved = savedModes(query.data);
   const savedGuidelines = query.data?.customGuidelines ?? '';
-  const mode = selected ?? savedMode;
+  const modes = selected ?? saved;
   const text = guidelines ?? savedGuidelines;
-  const dirty = query.data !== undefined && (mode !== savedMode || text.trim() !== savedGuidelines.trim());
+  const dirty = query.data !== undefined && (!modesEqual(modes, saved) || text.trim() !== savedGuidelines.trim());
+  const full = modes.length >= MAX_MODES;
 
   useEffect(() => {
     onDirtyChange(dirty);
@@ -307,7 +337,7 @@ function SpecialistTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => v
     }
     setNotice(null);
     save.mutate(
-      { mode, customGuidelines: guidelinesForSave(text) },
+      { modes, customGuidelines: guidelinesForSave(text) },
       {
         onSuccess: () => {
           setSelected(null);
@@ -319,53 +349,81 @@ function SpecialistTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => v
     );
   };
 
+  const checklist = modeChecklist(modes);
+  const filters = modeFilterLabels(modes);
+
   return (
     <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
         <NoticeBanner notice={notice} />
-        <Text className="text-stone-500 text-sm leading-5 mb-4">{t('specialist.intro')}</Text>
-        <View accessibilityRole="radiogroup">
+        <Text className="text-stone-500 text-sm leading-5">{t('specialist.intro')}</Text>
+        <Text className="text-stone-500 text-xs leading-4 mt-2">{t('specialist.noQuota')}</Text>
+        <Text className="text-stone-900 text-sm font-semibold mt-3 mb-3" accessibilityLiveRegion="polite">
+          {t('specialist.pick', { max: MAX_MODES })}
+        </Text>
+        <View>
           {specialistModeOptions().map((option) => {
-            const isSelected = option.id === mode;
+            const isSelected = modes.includes(option.id);
+            const disabled = !isSelected && full;
             return (
               <TouchableOpacity
                 key={option.id}
-                onPress={() => setSelected(option.id)}
-                className={`bg-white rounded-2xl p-4 mb-3 border ${isSelected ? 'border-brand-600' : 'border-stone-100'}`}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: isSelected, checked: isSelected }}
+                onPress={() => setSelected(toggleMode(modes, option.id))}
+                disabled={disabled}
+                className={`bg-white rounded-2xl p-4 mb-3 border ${isSelected ? 'border-brand-600' : 'border-stone-100'} ${disabled ? 'opacity-50' : ''}`}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: isSelected, disabled }}
                 accessibilityLabel={`${option.name}. ${option.description}`}
               >
                 <View className="flex-row items-center justify-between">
                   <Text className="font-bold text-stone-900 flex-1 me-2">{option.name}</Text>
                   {isSelected ? (
-                    <Ionicons name="checkmark-circle" size={20} color={colors.brand[600]} />
+                    <Ionicons name="checkbox" size={22} color={colors.brand[600]} />
                   ) : (
-                    <Ionicons name="ellipse-outline" size={20} color={colors.stone[300]} />
+                    <Ionicons name="square-outline" size={22} color={colors.stone[300]} />
                   )}
                 </View>
                 <Text className="text-stone-500 text-xs mt-1 leading-4">{option.description}</Text>
-                {option.id === savedMode ? (
-                  <View className="mt-2">
+                {saved.includes(option.id) ? (
+                  <View className="mt-2 self-start">
                     <Pill label={t('specialist.activeMode')} tone="success" />
                   </View>
                 ) : null}
-                <Text className="text-stone-400 text-[10px] font-semibold mt-3 tracking-wide">{t('specialist.recommendedFocus')}</Text>
-                <View className="flex-row flex-wrap gap-1 mt-1">
-                  {option.recommendedFocus.map((focus) => (
-                    <View key={focus} className="bg-stone-100 rounded px-1.5 py-0.5">
-                      <Text className="text-stone-700 text-[10px] font-medium">{focus}</Text>
-                    </View>
-                  ))}
-                </View>
               </TouchableOpacity>
             );
           })}
         </View>
 
         <View className="bg-white rounded-2xl border border-stone-100 p-4 mt-1">
+          <Text className="font-bold text-stone-900">{t('specialist.checklistHeading')}</Text>
+          {checklist.length === 0 ? (
+            <Text className="text-stone-500 text-xs mt-1 leading-4">{t('specialist.noneSelected')}</Text>
+          ) : (
+            <View className="mt-2">
+              {checklist.map((item) => (
+                <View key={`${item.mode}-${item.id}`} className="flex-row items-start mt-1.5">
+                  <Ionicons name="checkmark-circle-outline" size={16} color={colors.brand[600]} style={{ marginTop: 1 }} />
+                  <Text className="text-stone-700 text-sm leading-5 ms-2 flex-1">{item.label}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+          {filters.length > 0 ? (
+            <>
+              <Text className="text-stone-500 text-xs mt-3">{t('specialist.suggestedFilters')}</Text>
+              <View className="flex-row flex-wrap gap-1 mt-1">
+                {filters.map((label) => (
+                  <View key={label} className="bg-stone-100 rounded px-1.5 py-0.5">
+                    <Text className="text-stone-700 text-[11px] font-medium">{label}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          ) : null}
+        </View>
+
+        <View className="bg-white rounded-2xl border border-stone-100 p-4 mt-3">
           <Text className="font-bold text-stone-900">{t('specialist.guidelinesTitle')}</Text>
-          <Text className="text-stone-500 text-xs mt-1 leading-4">{specialistModeMeta(mode).promptModifier}</Text>
           <View className="mt-3">
             <Input
               label={t('specialist.guidelinesLabel')}
@@ -387,3 +445,4 @@ function SpecialistTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => v
     </KeyboardAvoidingView>
   );
 }
+

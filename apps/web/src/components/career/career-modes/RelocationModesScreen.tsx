@@ -1,31 +1,124 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import {
   isApiError,
   type ApiClient,
   type CandidateSpecialistMode,
+  type CreateLocationProfileInput,
+  type LicenseTransfer,
+  type LocationKind,
   type LocationProfile,
+  type RemoteFlexibility,
   type SpecialistMode,
   type TargetTimeline,
   type WorkAuthorization,
-  type RemoteFlexibility,
 } from '@flacroncv/career-api-client';
-import { SPECIALIST_MODES } from '@flacroncv/career-shared';
+import {
+  LICENSE_TRANSFERS,
+  MAX_ACTIVE_MODES,
+  REMOTE_FLEXIBILITIES,
+  SPECIALIST_MODES,
+  SPECIALIST_MODE_IDS,
+  TARGET_TIMELINES,
+  WORK_AUTHORIZATIONS,
+  isCalendarDate,
+} from '@flacroncv/career-shared';
 import {
   Badge,
   Button,
   Card,
+  ConfirmDialog,
   EmptyState,
+  Input,
   LoadingState,
+  PageHeader,
   PermissionDeniedState,
   ProviderUnavailableState,
-  PageHeader,
   ScreenStack,
 } from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { profileLoadFailure } from '@/lib/career/profile-load';
+
+/** One editable location. Work authorization starts as "not stated": it is never assumed. */
+export interface LocationDraft {
+  place: string;
+  radiusMiles: number;
+  kind: LocationKind;
+  targetTimeline: TargetTimeline;
+  moveDate: string;
+  availableFrom: string;
+  remoteRegion: string;
+  workAuthorization: WorkAuthorization;
+  licenseTransfer: LicenseTransfer;
+  commuteMinutesMax: number;
+  remoteFlexibility: RemoteFlexibility;
+  notes: string;
+}
+
+export function emptyDraft(allowedRadiusMiles: number, kind: LocationKind = 'current'): LocationDraft {
+  return {
+    place: '',
+    radiusMiles: Math.min(25, allowedRadiusMiles),
+    kind,
+    targetTimeline: kind === 'future' ? 'exploring' : 'not_relocating',
+    moveDate: '',
+    availableFrom: '',
+    remoteRegion: '',
+    workAuthorization: 'not_stated',
+    licenseTransfer: 'not_stated',
+    commuteMinutesMax: 45,
+    remoteFlexibility: 'hybrid',
+    notes: '',
+  };
+}
+
+export function draftFrom(location: LocationProfile): LocationDraft {
+  return {
+    place: location.place,
+    radiusMiles: location.radiusMiles,
+    kind: location.kind,
+    targetTimeline: location.targetTimeline,
+    moveDate: location.moveDate ?? '',
+    availableFrom: location.availableFrom ?? '',
+    remoteRegion: location.remoteRegion ?? '',
+    workAuthorization: location.workAuthorization,
+    licenseTransfer: location.licenseTransfer,
+    commuteMinutesMax: location.commuteMinutesMax,
+    remoteFlexibility: location.remoteFlexibility,
+    notes: location.notes ?? '',
+  };
+}
+
+/** The first problem as a `career.career_modes` key, or null. */
+export function draftProblem(draft: LocationDraft, allowedRadiusMiles: number): string | null {
+  if (!draft.place.trim()) return 'place_required';
+  if (draft.radiusMiles > allowedRadiusMiles) return 'radius_limit_exceeded';
+  if ((draft.moveDate && !isCalendarDate(draft.moveDate)) || (draft.availableFrom && !isCalendarDate(draft.availableFrom))) return 'date_invalid';
+  return null;
+}
+
+export function draftToInput(draft: LocationDraft): CreateLocationProfileInput {
+  return {
+    place: draft.place.trim(),
+    radiusMiles: draft.radiusMiles,
+    kind: draft.kind,
+    targetTimeline: draft.targetTimeline,
+    moveDate: draft.moveDate || null,
+    availableFrom: draft.availableFrom || null,
+    remoteRegion: draft.remoteRegion.trim() || null,
+    workAuthorization: draft.workAuthorization,
+    licenseTransfer: draft.licenseTransfer,
+    commuteMinutesMax: draft.commuteMinutesMax,
+    remoteFlexibility: draft.remoteFlexibility,
+    notes: draft.notes.trim() || null,
+  };
+}
+
+const fieldClass =
+  'mt-1 w-full rounded-md border border-career-line bg-career-surface px-3 py-2 text-sm text-career-ink focus:border-career-navy focus:outline-none dark:focus:border-career-orange';
+const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-career-ink';
 
 export function RelocationModesScreen({
   api,
@@ -42,35 +135,23 @@ export function RelocationModesScreen({
   const locale = useLocale();
   const [load, setLoad] = useState<'loading' | 'permission' | 'unavailable' | 'signed-out' | 'ready'>('loading');
   const [activeTab, setActiveTab] = useState<'locations' | 'specialist'>('locations');
-  
-  // Locations State
+
   const [locations, setLocations] = useState<LocationProfile[]>([]);
   const [capacity, setCapacity] = useState<number>(1);
   const [allowedRadiusMiles, setAllowedRadiusMiles] = useState<number>(25);
-  const [isAddingLocation, setIsAddingLocation] = useState(false);
-  const [place, setPlace] = useState('');
-  const [radiusMiles, setRadiusMiles] = useState(25);
-  // Radii are stored in miles; most interface languages read kilometres, so
-  // the display unit follows the language and can be switched.
+  const [editing, setEditing] = useState<string | 'new' | null>(null);
+  const [draft, setDraft] = useState<LocationDraft>(emptyDraft(25));
+  const [deleting, setDeleting] = useState<LocationProfile | null>(null);
+  // Radii are stored in miles; most interface languages read kilometres.
   const [unit, setUnit] = useState<'km' | 'mi'>(() => (locale === 'en' ? 'mi' : 'km'));
   const shown = (miles: number) => (unit === 'km' ? Math.round(miles * 1.609344) : miles);
   const unitLabel = unit === 'km' ? t('unit_km') : t('miles');
-  const [targetTimeline, setTargetTimeline] = useState<TargetTimeline>('exploring');
-  const [isRelocation, setIsRelocation] = useState(false);
-  const [workAuth, setWorkAuth] = useState<WorkAuthorization>('authorized');
-  const [commuteMinutes, setCommuteMinutes] = useState(45);
-  const [remoteFlex, setRemoteFlex] = useState<RemoteFlexibility>('hybrid');
-  const [notes, setNotes] = useState('');
-  const [submittingLocation, setSubmittingLocation] = useState(false);
 
-  // Specialist Mode State
-  const [specialistMode, setSpecialistMode] = useState<CandidateSpecialistMode | null>(null);
-  const [selectedMode, setSelectedMode] = useState<SpecialistMode>('general');
+  const [modeState, setModeState] = useState<(CandidateSpecialistMode & { available?: boolean }) | null>(null);
+  const [selectedModes, setSelectedModes] = useState<SpecialistMode[]>([]);
   const [customGuidelines, setCustomGuidelines] = useState('');
-  const [submittingMode, setSubmittingMode] = useState(false);
-  const [specialistModeUpgradeRequired, setSpecialistModeUpgradeRequired] = useState(false);
 
-  // Global Error & Feedback
+  const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -78,24 +159,18 @@ export function RelocationModesScreen({
     setLoad('loading');
     setErrorMessage(null);
     try {
-      const locRes = await api.locations();
-      setLocations(locRes.items);
-      setCapacity(locRes.capacity);
-      setAllowedRadiusMiles(locRes.allowedRadiusMiles);
-      setRadiusMiles(locRes.allowedRadiusMiles);
-
+      const list = await api.locations();
+      setLocations(list.items);
+      setCapacity(list.capacity);
+      setAllowedRadiusMiles(list.allowedRadiusMiles);
       try {
-        const modeRes = await api.specialistMode();
-        setSpecialistMode(modeRes);
-        setSelectedMode(modeRes.mode);
-        setCustomGuidelines(modeRes.customGuidelines ?? '');
-        setSpecialistModeUpgradeRequired(false);
-      } catch (err) {
-        if (isApiError(err, 'plan_upgrade_required')) {
-          setSpecialistModeUpgradeRequired(true);
-        }
+        const modes = await api.specialistMode();
+        setModeState(modes);
+        setSelectedModes(modes.modes ?? (modes.mode ? [modes.mode] : []));
+        setCustomGuidelines(modes.customGuidelines ?? '');
+      } catch {
+        setModeState(null);
       }
-
       setLoad('ready');
     } catch (error) {
       const failure = profileLoadFailure(error);
@@ -112,76 +187,81 @@ export function RelocationModesScreen({
     void loadData();
   }, [ready, user, loadData]);
 
-  const handleCreateLocation = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!place.trim()) return;
-    setSubmittingLocation(true);
+  function startNew(kind: LocationKind) {
+    setEditing('new');
+    setDraft(emptyDraft(allowedRadiusMiles, kind));
     setErrorMessage(null);
     setSuccessMessage(null);
+  }
 
-    try {
-      const created = await api.createLocation({
-        place: place.trim(),
-        radiusMiles,
-        targetTimeline,
-        isRelocation,
-        workAuthorization: workAuth,
-        commuteMinutesMax: commuteMinutes,
-        remoteFlexibility: remoteFlex,
-        notes: notes.trim() || null,
-      });
-
-      setLocations((prev) => [created, ...prev]);
-      setIsAddingLocation(false);
-      setPlace('');
-      setNotes('');
-      setSuccessMessage(t('location_created_success'));
-    } catch (error) {
-      if (isApiError(error, 'capacity_exceeded')) {
-        setErrorMessage(t('capacity_exceeded'));
-      } else if (isApiError(error, 'validation_error')) {
-        setErrorMessage(t('radius_limit_exceeded'));
-      } else {
-        setErrorMessage(t('location_save_failed'));
-      }
-    } finally {
-      setSubmittingLocation(false);
+  async function saveLocation(event: FormEvent) {
+    event.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    const problem = draftProblem(draft, allowedRadiusMiles);
+    if (problem) {
+      setErrorMessage(t(problem));
+      return;
     }
-  };
-
-  const handleDeleteLocation = async (id: string) => {
+    setSubmitting(true);
     try {
-      await api.deleteLocation(id);
-      setLocations((prev) => prev.filter((l) => l.id !== id));
+      if (editing && editing !== 'new') {
+        const saved = await api.updateLocation(editing, draftToInput(draft));
+        setLocations((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+        setSuccessMessage(t('location_updated_success'));
+      } else {
+        const saved = await api.createLocation(draftToInput(draft));
+        setLocations((current) => [...current, saved]);
+        setSuccessMessage(t('location_created_success'));
+      }
+      setEditing(null);
+    } catch (error) {
+      if (isApiError(error, 'capacity_exceeded')) setErrorMessage(t('capacity_exceeded'));
+      else if (isApiError(error, 'validation_error') && error.body.field === 'radiusMiles') setErrorMessage(t('radius_limit_exceeded'));
+      else if (isApiError(error, 'validation_error') && (error.body.field === 'moveDate' || error.body.field === 'availableFrom')) setErrorMessage(t('date_invalid'));
+      else if (isApiError(error, 'plan_upgrade_required')) setErrorMessage(t('locations_upgrade_required'));
+      else setErrorMessage(t('location_save_failed'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function removeLocation() {
+    if (!deleting) return;
+    const target = deleting;
+    setDeleting(null);
+    try {
+      await api.deleteLocation(target.id);
+      setLocations((current) => current.filter((item) => item.id !== target.id));
       setSuccessMessage(t('location_deleted_success'));
     } catch {
       setErrorMessage(t('delete_failed'));
     }
-  };
+  }
 
-  const handleSaveSpecialistMode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmittingMode(true);
+  function toggleMode(mode: SpecialistMode) {
+    setSelectedModes((current) => {
+      if (current.includes(mode)) return current.filter((item) => item !== mode);
+      if (current.length >= MAX_ACTIVE_MODES) return current;
+      return [...current, mode];
+    });
+  }
+
+  async function saveModes(event: FormEvent) {
+    event.preventDefault();
+    setSubmitting(true);
     setErrorMessage(null);
     setSuccessMessage(null);
-
     try {
-      const updated = await api.setSpecialistMode({
-        mode: selectedMode,
-        customGuidelines: customGuidelines.trim() || null,
-      });
-      setSpecialistMode(updated);
+      const updated = await api.setSpecialistMode({ modes: selectedModes, customGuidelines: customGuidelines.trim() || null });
+      setModeState(updated);
       setSuccessMessage(t('specialist_mode_saved_success'));
     } catch (error) {
-      if (isApiError(error, 'plan_upgrade_required')) {
-        setErrorMessage(t('specialist_mode_upgrade_required'));
-      } else {
-        setErrorMessage(t('specialist_mode_save_failed'));
-      }
+      setErrorMessage(isApiError(error, 'plan_upgrade_required') ? t('specialist_mode_upgrade_required') : t('specialist_mode_save_failed'));
     } finally {
-      setSubmittingMode(false);
+      setSubmitting(false);
     }
-  };
+  }
 
   if (!ready || load === 'loading') return <LoadingState label={t('loading')} />;
   if (load === 'permission') return <PermissionDeniedState title={t('permission_title')} body={t('permission_body')} />;
@@ -190,11 +270,7 @@ export function RelocationModesScreen({
       <ProviderUnavailableState
         title={t('unavailable_title')}
         body={t('unavailable_body')}
-        action={
-          <Button type="button" onClick={() => void loadData()}>
-            {t('retry')}
-          </Button>
-        }
+        action={<Button type="button" onClick={() => void loadData()}>{t('retry')}</Button>}
       />
     );
   }
@@ -212,6 +288,14 @@ export function RelocationModesScreen({
     );
   }
 
+  const date = (value: string) => new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`));
+  const modesAvailable = modeState?.available !== false && modeState !== null;
+  const groups: Array<[LocationKind, LocationProfile[]]> = [
+    ['current', locations.filter((item) => item.kind === 'current')],
+    ['future', locations.filter((item) => item.kind === 'future')],
+  ];
+  const full = locations.length >= capacity;
+
   return (
     <ScreenStack>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -227,378 +311,293 @@ export function RelocationModesScreen({
             <option value="mi">{t('miles')}</option>
           </select>
         </label>
-
-        {/* Tab Toggle */}
-        <div className="flex items-center rounded-lg border border-career-line bg-career-surface p-1">
-          <button
-            type="button"
-            onClick={() => setActiveTab('locations')}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-              activeTab === 'locations'
-                ? 'bg-career-navy text-white dark:bg-career-orange'
-                : 'text-career-muted hover:text-career-ink'
-            }`}
-          >
-            {t('tab_locations')} ({locations.length}/{capacity})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('specialist')}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-              activeTab === 'specialist'
-                ? 'bg-career-navy text-white dark:bg-career-orange'
-                : 'text-career-muted hover:text-career-ink'
-            }`}
-          >
-            {t('tab_specialist')}
-          </button>
-        </div>
       </div>
 
-      {/* Global Alerts */}
-      {errorMessage && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+      <div className="flex w-fit items-center rounded-lg border border-career-line bg-career-surface p-1" role="tablist">
+        {(['locations', 'specialist'] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab}
+            onClick={() => setActiveTab(tab)}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+              activeTab === tab ? 'bg-career-navy text-white dark:bg-career-orange' : 'text-career-muted hover:text-career-ink'
+            }`}
+          >
+            {tab === 'locations' ? `${t('tab_locations')} (${locations.length}/${capacity})` : t('tab_specialist')}
+          </button>
+        ))}
+      </div>
+
+      {errorMessage ? (
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
           {errorMessage}
         </div>
-      )}
-      {successMessage && (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-900/50 dark:bg-green-950/30 dark:text-green-300">
+      ) : null}
+      {successMessage ? (
+        <div role="status" className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-900/50 dark:bg-green-950/30 dark:text-green-300">
           {successMessage}
         </div>
-      )}
+      ) : null}
 
-      {/* TAB 1: LOCATION PROFILES & RELOCATION */}
-      {activeTab === 'locations' && (
+      {activeTab === 'locations' ? (
         <div className="space-y-6">
-          <div className="flex items-center justify-between border-b border-career-line pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-career-line pb-4">
             <div>
               <h2 className="text-lg font-bold text-career-ink">{t('locations_heading')}</h2>
               <p className="text-xs text-career-muted">
-                {t('locations_quota_hint', {
-                  used: locations.length,
-                  capacity,
-                  radius: shown(allowedRadiusMiles),
-                  unit: unitLabel,
-                })}
+                {t('locations_quota_hint', { used: locations.length, capacity, radius: shown(allowedRadiusMiles), unit: unitLabel })}
               </p>
+              <p className="mt-1 text-xs text-career-muted">{t('authorization_never_assumed')}</p>
             </div>
-            {!isAddingLocation && (
-              <Button
-                type="button"
-                onClick={() => setIsAddingLocation(true)}
-                disabled={locations.length >= capacity}
-              >
-                {t('add_location')}
-              </Button>
+            {editing ? null : (
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" disabled={full} onClick={() => startNew('current')}>{t('add_current')}</Button>
+                <Button type="button" variant="secondary" disabled={full} onClick={() => startNew('future')}>{t('add_future')}</Button>
+              </div>
             )}
           </div>
 
-          {/* Location Creation Form */}
-          {isAddingLocation && (
+          {editing ? (
             <Card className="border-career-navy/30 bg-career-navy/5 p-6 dark:bg-career-navy/10">
-              <form onSubmit={handleCreateLocation} className="space-y-4">
-                <div className="flex items-center justify-between border-b border-career-line pb-3">
-                  <h3 className="text-base font-bold text-career-ink">{t('form_add_location_title')}</h3>
-                  <span className="text-xs font-medium text-career-muted">
-                    {t('max_radius_allowed', { radius: shown(allowedRadiusMiles), unit: unitLabel })}
-                  </span>
+              <form onSubmit={(event) => void saveLocation(event)} className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-career-line pb-3">
+                  <h3 className="text-base font-bold text-career-ink">{editing === 'new' ? t('form_add_location_title') : t('form_edit_location_title')}</h3>
+                  <span className="text-xs font-medium text-career-muted">{t('max_radius_allowed', { radius: shown(allowedRadiusMiles), unit: unitLabel })}</span>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
-                    <label htmlFor="locPlace" className="block text-xs font-semibold uppercase tracking-wider text-career-ink">
-                      {t('field_place')} *
-                    </label>
-                    <input
-                      id="locPlace"
-                      type="text"
-                      required
-                      value={place}
-                      onChange={(e) => setPlace(e.target.value)}
-                      placeholder={t('field_place_placeholder')}
-                      className="mt-1 w-full rounded-md border border-career-line bg-career-surface px-3 py-2 text-sm text-career-ink focus:border-career-navy focus:outline-none dark:focus:border-career-orange"
-                    />
+                    <label htmlFor="locKind" className={labelClass}>{t('field_kind')}</label>
+                    <select id="locKind" className={fieldClass} value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value as LocationKind })}>
+                      <option value="current">{t('kind_current')}</option>
+                      <option value="future">{t('kind_future')}</option>
+                    </select>
                   </div>
-
                   <div>
-                    <label htmlFor="locRadius" className="block text-xs font-semibold uppercase tracking-wider text-career-ink">
-                      {t('field_radius')} ({shown(radiusMiles)} {unitLabel})
-                    </label>
+                    <label htmlFor="locPlace" className={labelClass}>{t('field_place')} *</label>
+                    <input id="locPlace" type="text" required maxLength={200} value={draft.place} onChange={(e) => setDraft({ ...draft, place: e.target.value })} placeholder={t('field_place_placeholder')} className={fieldClass} />
+                  </div>
+                  <div>
+                    <label htmlFor="locRadius" className={labelClass}>{t('field_radius')} ({shown(draft.radiusMiles)} {unitLabel})</label>
                     <input
                       id="locRadius"
                       type="range"
-                      min="5"
+                      min="0"
                       max={allowedRadiusMiles}
                       step="5"
-                      value={radiusMiles}
-                      onChange={(e) => setRadiusMiles(Number(e.target.value))}
-                      className="mt-2 w-full accent-career-navy dark:accent-career-orange cursor-pointer"
+                      value={draft.radiusMiles}
+                      onChange={(e) => setDraft({ ...draft, radiusMiles: Number(e.target.value) })}
+                      className="mt-2 w-full cursor-pointer accent-career-navy dark:accent-career-orange"
                     />
+                  </div>
+                  <div>
+                    <label htmlFor="locRemoteRegion" className={labelClass}>{t('field_remote_region')}</label>
+                    <input id="locRemoteRegion" type="text" maxLength={120} value={draft.remoteRegion} onChange={(e) => setDraft({ ...draft, remoteRegion: e.target.value })} placeholder={t('field_remote_region_placeholder')} className={fieldClass} />
+                    <p className="mt-1 text-xs text-career-muted">{t('field_remote_region_hint')}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div>
-                    <label htmlFor="locTimeline" className="block text-xs font-semibold uppercase tracking-wider text-career-ink">
-                      {t('field_timeline')}
-                    </label>
-                    <select
-                      id="locTimeline"
-                      value={targetTimeline}
-                      onChange={(e) => setTargetTimeline(e.target.value as TargetTimeline)}
-                      className="mt-1 w-full rounded-md border border-career-line bg-career-surface px-3 py-2 text-sm text-career-ink focus:border-career-navy focus:outline-none dark:focus:border-career-orange"
-                    >
-                      <option value="immediate">{t('timeline_immediate')}</option>
-                      <option value="1_to_3_months">{t('timeline_1_to_3_months')}</option>
-                      <option value="3_to_6_months">{t('timeline_3_to_6_months')}</option>
-                      <option value="exploring">{t('timeline_exploring')}</option>
-                      <option value="not_relocating">{t('timeline_not_relocating')}</option>
+                    <label htmlFor="locTimeline" className={labelClass}>{t('field_timeline')}</label>
+                    <select id="locTimeline" className={fieldClass} value={draft.targetTimeline} onChange={(e) => setDraft({ ...draft, targetTimeline: e.target.value as TargetTimeline })}>
+                      {TARGET_TIMELINES.map((value) => <option key={value} value={value}>{t(`timeline_${value}`)}</option>)}
                     </select>
                   </div>
+                  <Input label={t('field_move_date')} type="date" value={draft.moveDate} error={draft.moveDate && !isCalendarDate(draft.moveDate) ? t('date_invalid') : undefined} onChange={(e) => setDraft({ ...draft, moveDate: e.target.value })} />
+                  <Input label={t('field_available_from')} type="date" value={draft.availableFrom} error={draft.availableFrom && !isCalendarDate(draft.availableFrom) ? t('date_invalid') : undefined} onChange={(e) => setDraft({ ...draft, availableFrom: e.target.value })} />
+                </div>
 
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div>
-                    <label htmlFor="locAuth" className="block text-xs font-semibold uppercase tracking-wider text-career-ink">
-                      {t('field_work_auth')}
-                    </label>
-                    <select
-                      id="locAuth"
-                      value={workAuth}
-                      onChange={(e) => setWorkAuth(e.target.value as WorkAuthorization)}
-                      className="mt-1 w-full rounded-md border border-career-line bg-career-surface px-3 py-2 text-sm text-career-ink focus:border-career-navy focus:outline-none dark:focus:border-career-orange"
-                    >
-                      <option value="citizen">{t('auth_citizen')}</option>
-                      <option value="permanent_resident">{t('auth_permanent_resident')}</option>
-                      <option value="visa_holder">{t('auth_visa_holder')}</option>
-                      <option value="needs_sponsorship">{t('auth_needs_sponsorship')}</option>
-                      <option value="authorized">{t('auth_authorized')}</option>
+                    <label htmlFor="locAuth" className={labelClass}>{t('field_work_auth')}</label>
+                    <select id="locAuth" className={fieldClass} value={draft.workAuthorization} onChange={(e) => setDraft({ ...draft, workAuthorization: e.target.value as WorkAuthorization })}>
+                      {WORK_AUTHORIZATIONS.map((value) => <option key={value} value={value}>{t(`auth_${value}`)}</option>)}
                     </select>
                   </div>
-
                   <div>
-                    <label htmlFor="locRemote" className="block text-xs font-semibold uppercase tracking-wider text-career-ink">
-                      {t('field_remote_flex')}
-                    </label>
-                    <select
-                      id="locRemote"
-                      value={remoteFlex}
-                      onChange={(e) => setRemoteFlex(e.target.value as RemoteFlexibility)}
-                      className="mt-1 w-full rounded-md border border-career-line bg-career-surface px-3 py-2 text-sm text-career-ink focus:border-career-navy focus:outline-none dark:focus:border-career-orange"
-                    >
-                      <option value="hybrid">{t('remote_hybrid')}</option>
-                      <option value="remote_only">{t('remote_remote_only')}</option>
-                      <option value="onsite_only">{t('remote_onsite_only')}</option>
-                      <option value="any">{t('remote_any')}</option>
+                    <label htmlFor="locLicense" className={labelClass}>{t('field_license_transfer')}</label>
+                    <select id="locLicense" className={fieldClass} value={draft.licenseTransfer} onChange={(e) => setDraft({ ...draft, licenseTransfer: e.target.value as LicenseTransfer })}>
+                      {LICENSE_TRANSFERS.map((value) => <option key={value} value={value}>{t(`license_${value}`)}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="locRemote" className={labelClass}>{t('field_remote_flex')}</label>
+                    <select id="locRemote" className={fieldClass} value={draft.remoteFlexibility} onChange={(e) => setDraft({ ...draft, remoteFlexibility: e.target.value as RemoteFlexibility })}>
+                      {REMOTE_FLEXIBILITIES.map((value) => <option key={value} value={value}>{t(`remote_${value}`)}</option>)}
                     </select>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="locCommute" className="block text-xs font-semibold uppercase tracking-wider text-career-ink">
-                      {t('field_commute_max')} ({commuteMinutes} {t('minutes')})
-                    </label>
-                    <input
-                      id="locCommute"
-                      type="range"
-                      min="15"
-                      max="120"
-                      step="5"
-                      value={commuteMinutes}
-                      onChange={(e) => setCommuteMinutes(Number(e.target.value))}
-                      className="mt-2 w-full accent-career-navy dark:accent-career-orange cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-6">
-                    <input
-                      id="isRelocation"
-                      type="checkbox"
-                      checked={isRelocation}
-                      onChange={(e) => setIsRelocation(e.target.checked)}
-                      className="h-4 w-4 rounded border-career-line text-career-navy focus:ring-career-navy"
-                    />
-                    <label htmlFor="isRelocation" className="text-xs font-medium text-career-ink cursor-pointer">
-                      {t('field_is_relocation_label')}
-                    </label>
-                  </div>
-                </div>
+                <p className="text-xs text-career-muted">{t('license_never_assumed')}</p>
 
                 <div>
-                  <label htmlFor="locNotes" className="block text-xs font-semibold uppercase tracking-wider text-career-ink">
-                    {t('field_notes')}
-                  </label>
-                  <textarea
-                    id="locNotes"
-                    rows={2}
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder={t('field_notes_placeholder')}
-                    className="mt-1 w-full rounded-md border border-career-line bg-career-surface px-3 py-2 text-sm text-career-ink focus:border-career-navy focus:outline-none dark:focus:border-career-orange"
+                  <label htmlFor="locCommute" className={labelClass}>{t('field_commute_max')} ({draft.commuteMinutesMax} {t('minutes')})</label>
+                  <input
+                    id="locCommute"
+                    type="range"
+                    min="0"
+                    max="120"
+                    step="5"
+                    value={draft.commuteMinutesMax}
+                    onChange={(e) => setDraft({ ...draft, commuteMinutesMax: Number(e.target.value) })}
+                    className="mt-2 w-full cursor-pointer accent-career-navy dark:accent-career-orange"
                   />
                 </div>
 
+                <div>
+                  <label htmlFor="locNotes" className={labelClass}>{t('field_notes')}</label>
+                  <textarea id="locNotes" rows={2} maxLength={2000} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} placeholder={t('field_notes_placeholder')} className={fieldClass} />
+                </div>
+
                 <div className="flex items-center justify-end gap-3 pt-2">
-                  <Button type="button" variant="secondary" onClick={() => setIsAddingLocation(false)}>
-                    {t('cancel')}
-                  </Button>
-                  <Button type="submit" disabled={submittingLocation || !place.trim()}>
-                    {submittingLocation ? t('saving') : t('save_location')}
-                  </Button>
+                  <Button type="button" variant="secondary" onClick={() => setEditing(null)}>{t('cancel')}</Button>
+                  <Button type="submit" disabled={submitting || !draft.place.trim()}>{submitting ? t('saving') : t('save_location')}</Button>
                 </div>
               </form>
             </Card>
-          )}
+          ) : null}
 
-          {/* Locations List */}
-          {locations.length === 0 ? (
+          {locations.length === 0 && !editing ? (
             <EmptyState
               title={t('no_locations_title')}
               body={t('no_locations_body')}
-              action={
-                <Button type="button" onClick={() => setIsAddingLocation(true)}>
-                  {t('add_location')}
-                </Button>
-              }
+              action={<Button type="button" onClick={() => startNew('current')}>{t('add_current')}</Button>}
             />
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {locations.map((loc) => (
-                <Card key={loc.id} className="p-5 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-bold text-career-ink text-base">{loc.place}</h3>
-                      <Badge tone={loc.isRelocation ? 'recommended' : 'neutral'}>
-                        {loc.isRelocation ? t('relocation_target') : t('current_area')}
-                      </Badge>
-                    </div>
-
-                    <div className="space-y-1.5 text-xs text-career-muted">
-                      <p>
-                        <span className="font-semibold text-career-ink">{t('radius')}:</span> ~{shown(loc.radiusMiles)} {unitLabel}
-                      </p>
-                      <p>
-                        <span className="font-semibold text-career-ink">{t('timeline')}:</span>{' '}
-                        {t(`timeline_${loc.targetTimeline}`)}
-                      </p>
-                      <p>
-                        <span className="font-semibold text-career-ink">{t('work_auth')}:</span>{' '}
-                        {t(`auth_${loc.workAuthorization}`)}
-                      </p>
-                      <p>
-                        <span className="font-semibold text-career-ink">{t('commute')}:</span> ≤ {loc.commuteMinutesMax}{' '}
-                        {t('minutes')} • {t(`remote_${loc.remoteFlexibility}`)}
-                      </p>
-                      {loc.notes && (
-                        <p className="mt-2 rounded bg-career-wash p-2 text-career-ink/80 italic">&ldquo;{loc.notes}&rdquo;</p>
-                      )}
-                    </div>
+            groups.map(([kind, items]) =>
+              items.length === 0 ? null : (
+                <section key={kind} className="space-y-3">
+                  <h3 className="text-base font-semibold text-career-ink">{t(kind === 'current' ? 'group_current' : 'group_future')}</h3>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {items.map((loc) => (
+                      <Card key={loc.id} className="flex flex-col justify-between p-5">
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <h4 className="text-base font-bold text-career-ink" dir="auto">{loc.place}</h4>
+                            <Badge tone={loc.kind === 'future' ? 'recommended' : 'neutral'}>{loc.kind === 'future' ? t('relocation_target') : t('current_area')}</Badge>
+                          </div>
+                          <div className="space-y-1.5 text-xs text-career-muted">
+                            <p><span className="font-semibold text-career-ink">{t('radius')}:</span> ~{shown(loc.radiusMiles)} {unitLabel}</p>
+                            <p>
+                              <span className="font-semibold text-career-ink">{t('remote_region')}:</span>{' '}
+                              {loc.remoteRegion ? <span dir="auto">{loc.remoteRegion}</span> : t('not_stated')}
+                            </p>
+                            <p><span className="font-semibold text-career-ink">{t('timeline')}:</span> {t(`timeline_${loc.targetTimeline}`)}</p>
+                            {loc.moveDate ? <p><span className="font-semibold text-career-ink">{t('move_date')}:</span> {date(loc.moveDate)}</p> : null}
+                            {loc.availableFrom ? <p><span className="font-semibold text-career-ink">{t('available_from')}:</span> {date(loc.availableFrom)}</p> : null}
+                            <p><span className="font-semibold text-career-ink">{t('work_auth')}:</span> {t(`auth_${loc.workAuthorization}`)}</p>
+                            <p><span className="font-semibold text-career-ink">{t('license_transfer')}:</span> {t(`license_${loc.licenseTransfer}`)}</p>
+                            <p>
+                              <span className="font-semibold text-career-ink">{t('commute')}:</span> ≤ {loc.commuteMinutesMax} {t('minutes')} • {t(`remote_${loc.remoteFlexibility}`)}
+                            </p>
+                            {loc.notes ? <p className="mt-2 rounded bg-career-wash p-2 italic text-career-ink/80" dir="auto">{loc.notes}</p> : null}
+                          </div>
+                        </div>
+                        <div className="mt-4 flex justify-end gap-2 border-t border-career-line pt-3">
+                          <Button type="button" variant="secondary" onClick={() => { setEditing(loc.id); setDraft(draftFrom(loc)); }}>{t('edit')}</Button>
+                          <Button type="button" variant="secondary" onClick={() => setDeleting(loc)}>{t('delete')}</Button>
+                        </div>
+                      </Card>
+                    ))}
                   </div>
-
-                  <div className="mt-4 pt-3 border-t border-career-line flex justify-end">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => void handleDeleteLocation(loc.id)}
-                    >
-                      {t('delete')}
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
+                </section>
+              ),
+            )
           )}
+          <ConfirmDialog
+            open={deleting !== null}
+            title={t('delete_title')}
+            body={deleting ? t('delete_body', { place: deleting.place }) : undefined}
+            confirmLabel={t('delete')}
+            cancelLabel={t('cancel')}
+            danger
+            onConfirm={() => void removeLocation()}
+            onCancel={() => setDeleting(null)}
+          />
         </div>
-      )}
-
-      {/* TAB 2: SPECIALIST CAREER MODES */}
-      {activeTab === 'specialist' && (
+      ) : (
         <div className="space-y-6">
           <div className="border-b border-career-line pb-4">
             <h2 className="text-lg font-bold text-career-ink">{t('specialist_heading')}</h2>
             <p className="text-xs text-career-muted">{t('specialist_subtitle')}</p>
+            <p className="mt-1 text-xs text-career-muted">{t('modes_no_quota')}</p>
           </div>
 
-          {specialistModeUpgradeRequired ? (
+          {!modesAvailable ? (
             <Card className="border-career-orange/30 bg-career-orange/5 p-6 text-center dark:bg-career-orange/10">
               <h3 className="text-base font-bold text-career-ink">{t('upgrade_required_heading')}</h3>
-              <p className="mt-1 text-xs text-career-muted max-w-md mx-auto">
-                {t('upgrade_required_body')}
-              </p>
+              <p className="mx-auto mt-1 max-w-md text-xs text-career-muted">{t('upgrade_required_body')}</p>
               <div className="mt-4">
-                <a href="/career/plans" className="btn-primary min-h-career-touch inline-flex items-center px-4 py-2 font-medium">
-                  {t('view_plans')}
-                </a>
+                <a href={`/${locale}/settings/billing`} className="btn-primary min-h-career-touch inline-flex items-center px-4 py-2 font-medium">{t('view_plans')}</a>
               </div>
             </Card>
           ) : (
-            <form onSubmit={handleSaveSpecialistMode} className="space-y-6">
-              {/* Specialist Modes Grid */}
+            <form onSubmit={(event) => void saveModes(event)} className="space-y-6">
+              <p className="text-sm text-career-muted">{t('modes_pick', { max: MAX_ACTIVE_MODES })}</p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {Object.values(SPECIALIST_MODES).map((mode) => {
-                  const isSelected = selectedMode === mode.id;
+                {SPECIALIST_MODE_IDS.map((mode) => {
+                  const selected = selectedModes.includes(mode);
                   return (
                     <button
-                      key={mode.id}
+                      key={mode}
                       type="button"
-                      onClick={() => setSelectedMode(mode.id)}
-                      className={`text-left rounded-lg border p-5 transition-all flex flex-col justify-between ${
-                        isSelected
-                          ? 'border-career-navy bg-career-navy/5 shadow-sm dark:border-career-orange dark:bg-career-orange/10 ring-2 ring-career-navy dark:ring-career-orange'
+                      aria-pressed={selected}
+                      onClick={() => toggleMode(mode)}
+                      disabled={!selected && selectedModes.length >= MAX_ACTIVE_MODES}
+                      className={`flex flex-col justify-between rounded-lg border p-5 text-start transition-all disabled:opacity-60 ${
+                        selected
+                          ? 'border-career-navy bg-career-navy/5 shadow-sm ring-2 ring-career-navy dark:border-career-orange dark:bg-career-orange/10 dark:ring-career-orange'
                           : 'border-career-line bg-career-surface hover:bg-career-wash'
                       }`}
                     >
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-bold text-career-ink text-sm">{mode.name}</h4>
-                          {isSelected && <Badge tone="confirmed">{t('active')}</Badge>}
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="text-sm font-bold text-career-ink">{t(`mode_${mode}_name`)}</h4>
+                          {selected ? <Badge tone="confirmed">{t('active')}</Badge> : null}
                         </div>
-                        <p className="text-xs text-career-muted">{mode.description}</p>
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t border-career-line space-y-1">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-career-muted">
-                          {t('recommended_focus')}:
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {mode.recommendedFocus.map((f) => (
-                            <span
-                              key={f}
-                              className="rounded bg-career-line/60 px-1.5 py-0.5 text-[10px] font-medium text-career-ink"
-                            >
-                              {f}
-                            </span>
-                          ))}
-                        </div>
+                        <p className="text-xs text-career-muted">{t(`mode_${mode}_description`)}</p>
                       </div>
                     </button>
                   );
                 })}
               </div>
 
-              {/* Guidelines Customization */}
-              <Card className="p-6 space-y-4">
+              {selectedModes.length > 0 ? (
+                <Card className="space-y-4 p-6">
+                  <h3 className="text-base font-bold text-career-ink">{t('mode_checklist_heading')}</h3>
+                  {selectedModes.map((mode) => (
+                    <div key={mode}>
+                      <h4 className="text-sm font-semibold text-career-ink">{t(`mode_${mode}_name`)}</h4>
+                      <ul className="mt-1 list-disc space-y-1 ps-5 text-sm text-career-ink">
+                        {SPECIALIST_MODES[mode].checklist.map((item) => <li key={item}>{t(`check_${item}`)}</li>)}
+                      </ul>
+                      <p className="mt-2 text-xs text-career-muted">
+                        {t('suggested_filters')}{' '}
+                        {SPECIALIST_MODES[mode].suggestedFilters.map((filter) => t(`filter_${filter.filter}_${filter.value}`)).join(' · ')}
+                      </p>
+                    </div>
+                  ))}
+                </Card>
+              ) : null}
+
+              <Card className="space-y-4 p-6">
                 <h3 className="text-base font-bold text-career-ink">{t('custom_guidelines_title')}</h3>
-                <p className="text-xs text-career-muted">
-                  {SPECIALIST_MODES[selectedMode]?.promptModifier}
-                </p>
                 <div>
-                  <label htmlFor="customGuidelines" className="block text-xs font-semibold uppercase tracking-wider text-career-ink">
-                    {t('field_custom_guidelines')}
-                  </label>
+                  <label htmlFor="customGuidelines" className={labelClass}>{t('field_custom_guidelines')}</label>
                   <textarea
                     id="customGuidelines"
                     rows={3}
+                    maxLength={2000}
                     value={customGuidelines}
                     onChange={(e) => setCustomGuidelines(e.target.value)}
                     placeholder={t('field_custom_guidelines_placeholder')}
-                    className="mt-1 w-full rounded-md border border-career-line bg-career-surface px-3 py-2 text-sm text-career-ink focus:border-career-navy focus:outline-none dark:focus:border-career-orange"
+                    className={fieldClass}
                   />
                 </div>
-
                 <div className="flex justify-end pt-2">
-                  <Button type="submit" disabled={submittingMode}>
-                    {submittingMode ? t('saving') : t('save_specialist_mode')}
-                  </Button>
+                  <Button type="submit" disabled={submitting}>{submitting ? t('saving') : t('save_specialist_mode')}</Button>
                 </div>
               </Card>
             </form>

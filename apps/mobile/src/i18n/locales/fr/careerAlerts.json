@@ -68,7 +68,10 @@
     "yourAlerts": "Vos alertes",
     "emptyTitle": "Pas encore d'alerte",
     "emptyBody": "Une recherche enregistrée affichera une annonce plus tard. Chercher maintenant n'utilise pas d'alerte.",
-    "openA11y": "{name}. Ouvrir l’annonce"
+    "openA11y": "{name}. Ouvrir l’annonce",
+    "unread": "Nouveau",
+    "markAllRead": "Tout marquer comme lu",
+    "unreadCount": "{count, plural, one {# nouvelle alerte} other {# nouvelles alertes}}"
   },
   "balance": {
     "none": "Plus d’éléments d’alerte. Les nouvelles alertes attendent le renouvellement du solde. La recherche fonctionne toujours.",

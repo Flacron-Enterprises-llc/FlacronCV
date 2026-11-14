@@ -6,7 +6,12 @@
   "plans": {
     "free": "Gratis",
     "pro": "Pro",
-    "enterprise": "Enterprise"
+    "enterprise": "Enterprise",
+    "starter": "Starter",
+    "professional": "Profesional",
+    "career_pro": "Career Pro",
+    "business": "Negocios",
+    "career_accelerator": "Career Accelerator"
   },
   "usage": {
     "title": "Uso mensual",
@@ -168,7 +173,8 @@
         "uncollectible": "Incobrable",
         "draft": "Borrador"
       }
-    }
+    },
+    "catalogPlanNote": "Tu plan se gestiona en el sitio web de FlacronCV. Los cambios de este plan aún no están disponibles en la aplicación."
   },
   "data": {
     "title": "Tus datos",

@@ -7,6 +7,7 @@ import { UsersService } from '../users/users.service';
 import { AbuseService } from '../abuse/abuse.service';
 import {
   PLAN_CONFIGS,
+  PlanLimits,
   SubscriptionPlan,
   resolveEffectivePlan,
   type User,
@@ -112,6 +113,25 @@ export function referenceLines(item: Record<string, unknown> | null | undefined)
   };
 }
 
+/**
+ * The small attribution Free exports carry (`limits.removeBranding === false`).
+ * Rendered by Chromium in the bottom page margin of a server-side PDF, so it
+ * never overlaps the document. Paid plans (and every legacy plan) pass false.
+ */
+export const EXPORT_BRANDING_TEXT = 'Made with FlacronCV';
+
+export function brandedPdfOptions(removeBranding: boolean): Record<string, unknown> {
+  if (removeBranding) return {};
+  return {
+    displayHeaderFooter: true,
+    headerTemplate: '<span></span>',
+    footerTemplate:
+      '<div style="width:100%;text-align:center;font-family:Arial,sans-serif;font-size:7px;color:#9ca3af;">' +
+      EXPORT_BRANDING_TEXT +
+      '</div>',
+  };
+}
+
 /** Cadence follows the plan: Free never resets, paid numeric caps are monthly. */
 export function exportLimitReachedMessage(
   plan: SubscriptionPlan,
@@ -153,7 +173,8 @@ export class ExportService {
     this.loadTemplates();
   }
 
-  private async checkExportLimit(userId: string): Promise<void> {
+  /** Throws when the plan's export cap is reached; returns the plan's limits otherwise. */
+  private async checkExportLimit(userId: string): Promise<PlanLimits> {
     await this.abuse.assertNewConsumption(userId, 'export');
     const user = await this.usersService.findByIdOrThrow(userId);
     const plan = resolveEffectivePlan(user.subscription);
@@ -161,11 +182,14 @@ export class ExportService {
     if (limits.exports !== 'unlimited' && user.usage.exportsThisMonth >= limits.exports) {
       throw new ForbiddenException(exportLimitReachedMessage(plan, limits.exports));
     }
+    return limits;
   }
 
   private async checkDocxAccess(userId: string): Promise<void> {
     const user = await this.usersService.findByIdOrThrow(userId);
-    if (resolveEffectivePlan(user.subscription) === SubscriptionPlan.FREE) {
+    // `docxExport` is false only on Free — the same rule as before, now read
+    // from the plan so every plan id (current and legacy) is covered.
+    if (!PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits.docxExport) {
       throw new ForbiddenException(
         'DOCX export is not available on the free plan. Please upgrade to Pro or Enterprise.',
       );
@@ -191,6 +215,8 @@ export class ExportService {
     allowed: boolean;
     reason?: 'docx_requires_paid' | 'limit_reached';
     reservationId?: string;
+    /** False → the client renders the small "Made with FlacronCV" mark (Free). */
+    removeBranding?: boolean;
   }> {
     await this.abuse.assertNewConsumption(userId, 'export');
 
@@ -200,7 +226,7 @@ export class ExportService {
     const reservationRef = db.collection('export_reservations').doc(reservationId);
 
     type TxResult =
-      | { allowed: true; reservationId: string }
+      | { allowed: true; reservationId: string; removeBranding: boolean }
       | { allowed: false; reason: 'docx_requires_paid' | 'limit_reached' };
 
     const result: TxResult = await db.runTransaction(async (tx: any) => {
@@ -215,7 +241,7 @@ export class ExportService {
       const plan = resolveEffectivePlan(user.subscription as User['subscription']);
       const limits = PLAN_CONFIGS[plan].limits;
 
-      if (format === 'docx' && plan === SubscriptionPlan.FREE) {
+      if (format === 'docx' && !limits.docxExport) {
         return { allowed: false, reason: 'docx_requires_paid' };
       }
       const used = user.usage?.exportsThisMonth ?? 0;
@@ -233,13 +259,13 @@ export class ExportService {
         status: 'reserved',
         createdAt: new Date(),
       });
-      return { allowed: true, reservationId };
+      return { allowed: true, reservationId, removeBranding: limits.removeBranding };
     });
 
     if (!result.allowed) {
       return { allowed: false, reason: result.reason };
     }
-    return { allowed: true, reservationId: result.reservationId };
+    return { allowed: true, reservationId: result.reservationId, removeBranding: result.removeBranding };
   }
 
   /**
@@ -335,7 +361,7 @@ export class ExportService {
   }
 
   async exportCVToPDF(cvId: string, userId: string): Promise<{ downloadUrl: string; expiresAt: Date }> {
-    await this.checkExportLimit(userId);
+    const limits = await this.checkExportLimit(userId);
     const cv = await this.cvService.findByIdOrThrow(cvId, userId);
     const sections = await this.cvService.getSections(cvId);
 
@@ -361,6 +387,7 @@ export class ExportService {
         format: 'A4',
         printBackground: true,
         margin: { top: '0.5in', right: '0.5in', bottom: '0.5in', left: '0.5in' },
+        ...brandedPdfOptions(limits.removeBranding),
       });
 
       // Upload to Firebase Storage
@@ -721,7 +748,7 @@ export class ExportService {
   }
 
   async exportCoverLetterToPDF(coverLetterId: string, userId: string): Promise<{ downloadUrl: string; expiresAt: Date }> {
-    await this.checkExportLimit(userId);
+    const limits = await this.checkExportLimit(userId);
     const coverLetter = await this.coverLetterService.findByIdOrThrow(coverLetterId, userId);
 
     // Build HTML from cover letter
@@ -744,6 +771,7 @@ export class ExportService {
         format: 'A4',
         printBackground: true,
         margin: { top: '1in', right: '1in', bottom: '1in', left: '1in' },
+        ...brandedPdfOptions(limits.removeBranding),
       });
 
       // Upload to Firebase Storage

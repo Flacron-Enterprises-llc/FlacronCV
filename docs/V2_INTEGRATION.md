@@ -4,57 +4,45 @@ Status: **local integration branch `integration/v2-features`, not merged, not de
 Baseline: V1 `main@9239e0e7`. V2 source reference: `flacroncv-v2 main@792b9958` (unchanged).
 Everything below was verified only against local emulators and a private local Postgres. Nothing here is evidence about hosted behaviour.
 
-> **Update (third pass, 2 Nov 2026).** The client approved the billing model: **career plans are optional add-on subscriptions with separate career credits** (§0.2). This pass also added two V2-inspired homepage sections (§0.3), the career tools in the V1 **mobile** app plus in-app account deletion (§0.4), the store-policy position for mobile (§0.5), a web/mobile feature matrix (`docs/INTEGRATION_FEATURE_MATRIX.md`), the provider/credential checklist (`docs/INTEGRATION_CREDENTIALS_CHECKLIST.md`) and client drafts (`docs/CLIENT_HANDOFF_DRAFTS.md`). Earlier passes: V2 hero (§0.1), operator access, migration rehearsal tooling and an isolated production build. Sections 1–7 remain valid except where §0 supersedes them.
+> **Update (14 Nov 2026).** Billing is now the spec's **single five-plan catalog** (§0.2); the 2 Nov add-on model is retired and every add-on statement below is superseded by §0.2.
+>
+> **Update (third pass, 2 Nov 2026).** This pass also added two V2-inspired homepage sections (§0.3), the career tools in the V1 **mobile** app plus in-app account deletion (§0.4), the store-policy position for mobile (§0.5), a web/mobile feature matrix (`docs/INTEGRATION_FEATURE_MATRIX.md`), the provider/credential checklist (`docs/INTEGRATION_CREDENTIALS_CHECKLIST.md`) and client drafts (`docs/CLIENT_HANDOFF_DRAFTS.md`). Earlier passes: V2 hero (§0.1), operator access, migration rehearsal tooling and an isolated production build. Sections 1–7 remain valid except where §0 supersedes them.
 
 ## 0.1 Homepage hero
 
 Only V1's hero section was replaced by V2's latest hero (`apps/web/src/components/landing/HeroV2.tsx`, icons in `HeroV2Icons.tsx`, styles scoped to `.fc-hero-*`/`.fc-blob-*` in `globals.css`, strings in the new `home_hero` namespace in all six locales). Header, footer, every other homepage section, pricing and other pages are unchanged. Portrait: the approved public derivatives only (`apps/web/public/marketing/client-portrait-cutout-{480,720,960}.webp` + `-720.png`); provenance and usage rules are V2 `docs/DESIGN_SYSTEM.md` "Marketing imagery". The private original is not in this repository. CTAs follow V1 routes and sign-in state. See the hero verification record for before/after screenshots.
 
-## 0.2 Paid access to the career tools (V1 billing)
+## 0.2 Plans and billing — one five-plan catalog (decided 14 Nov 2026)
 
-**Payment provider — no difference.** V1 and V2 both use Stripe (Checkout in subscription mode, signed webhooks, `app_id` metadata) plus Apple/Google store purchases. The differences are the catalog (V1: Free / Pro / Career Accelerator (not sold) / Enterprise with CV, letter, AI-credit and export limits; V2: Free / Starter / Professional / Career Pro / Business with versioned monthly allowances, packs and seats), and that V2 ran its own Stripe products and webhook. Inside V1 there is **one** billing owner: V1's Stripe account, customer, webhook endpoint and event ledger.
+The add-on model of 2 Nov 2026 is **retired**. The product follows the V2 spec: **one catalog for the whole product** (CV builder, cover letters, job tracker and career tools), owned by V1's Stripe account, customer, webhook and event ledger. Source of truth for prices, allowances and packs: `packages/career-shared/src/catalog.ts` (catalog 2026-10-10).
 
-**Commercial model — optional add-on (approved by the client, 2 Nov 2026).** A career plan is a separate Stripe subscription on the customer's existing V1 Stripe customer (`metadata.product=career`), billed **in addition to** the unchanged V1 plan, with its own career credits (career Postgres ledger; V1 AI credits are never touched). Customers must choose and confirm a plan on Stripe Checkout; nothing is ever enrolled or charged automatically. Existing V1 plans do not include career access (`CAREER_PLAN_MAP` empty). No trial, discount, proration or refund term was invented: checkout has no trial, and refunds follow V1's existing rule (full refund ends career access, partial changes nothing).
-- `CAREER_BILLING_MODE=addon` turns sales on (allowed in production); `disabled` (default) keeps them off. The old `addon_fixture` value is now refused.
-- **Purchase stays unavailable until career prices exist**: `CAREER_STRIPE_PRICES` (`plan:interval=price_id`, e.g. `professional:month=price_…`) must name prices the client creates in Stripe. Without them `GET /career-billing/status` reports `blockedReason: prices_not_configured`, the plans page says checkout is not set up, and `POST /career-billing/checkout` returns 403 without calling Stripe. At checkout the server re-reads the Stripe price and refuses (409 `CAREER_PRICE_CHANGED`) unless it is active, USD, the right interval and exactly the catalog amount the customer was shown.
-- The plans page (`/career/plans`, six locales) states that the career price is in addition to the current plan (named), that career credits are separate, that cancelling the career plan ends only the career tools, and that nothing is charged before confirmation. A Stripe test key shows a "Test mode" notice.
-- Locally: mode `addon`, no prices → purchase unavailable by design (no Stripe resources were created). The local Stripe key is a 40-character placeholder in test-key format that cannot authenticate with Stripe. The demo's career entitlement is a **local fixture** (`careerSubscription.source = local_fixture`), labelled as such on web and mobile.
+| | Free | Starter | Professional (recommended) | Career Pro | Business |
+|---|---|---|---|---|---|
+| Monthly / Annual (USD) | $0 | $21.99 / $219.90 | $38.99 / $389.90 | $68.99 / $689.90 | $208.00 / $2,080.00 |
+| CVs / cover letters (capacity) | 1 / 1 | 5 / 5 | 20 / 20 | 50 / 50 | 20 / 20 per owner |
+| AI document credits / month | 3 | 20 | 60 | 150 | 500 pooled |
+| Résumé analyses / month | 3 | 15 | 60 | 150 | 500 pooled |
+| PDF export | unlimited, small "Made with FlacronCV" mark | unlimited | unlimited | unlimited | unlimited |
+| DOCX | — | yes | yes | yes | yes |
+| Tracked applications | 25 | 100 | 500 | 2,000 | 500 per candidate |
 
-**Mapping (prices and allowances from `packages/career-shared/src/catalog.ts`, catalog 2026-10-10, USD).**
+Career-tool allowances (action packs, interviews, voice, skill reports, alerts, evidence, …) are the catalog's. Annual is paid upfront; allowances renew monthly on the billing anniversary (Free: account anniversary). Professional has a card-required 7-day trial for first-time subscribers (`PLAN_TRIAL_DAYS`, a code constant). Business always offers Contact Sales.
 
-| | Starter | Professional (recommended) | Career Pro | Business (not offered here) |
-|---|---|---|---|---|
-| Monthly / Annual | $21.99 / $219.90 | $38.99 / $389.90 | $68.99 / $689.90 | $208.00 / $2,080.00 |
-| Document credits / month | 20 | 60 | 150 | 500 pooled |
-| CV analyses / month | 15 | 60 | 150 | 500 |
-| Action packs / month | — | 10 | 30 | 100 |
-| Text interview sessions / month | 2 | 5 | 15 | 50 |
-| Voice minutes / month | — | 30 | 120 | 300 |
-| Skill reports / month | 1 | 5 | 15 | 50 |
-| Scenario reports / month | — | 1 | 5 | 25 |
-| Assisted forms / month | — | 20 | 75 | 200 |
-| Map sessions / month | — | 50 | 200 | 1000 |
-| Alert items / month | 50 | 200 | 500 | 2000 |
-| Evidence items / storage | 20 / 1 GB | 100 / 5 GB | 300 / 20 GB | 100 per candidate / 100 GB |
-| Portfolio pages | 1 | 1 | 3 | 1 per candidate |
-| DOCX export of drafts | yes | yes | yes | yes |
+**Legacy plans** (Pro, Career Accelerator, Enterprise) keep their limits, prices, Stripe price ids and store products, so existing customers renew unchanged. They are never offered to new customers and `POST /payments/create-checkout-session` refuses them (`PLAN_NOT_AVAILABLE`), **except** for the mobile app build already in the stores, which only knows Pro/Enterprise: a native mobile request (`X-Device-Token` and no browser `Origin`) may still buy legacy Pro/Enterprise at the legacy price (Pro keeps its old first-time trial) until the updated app ships (`apps/api/src/modules/payment/legacy-mobile-checkout.ts`; remove it then). The web cannot take that path.
 
-Free (career) is not offered as a purchase. Annual = 10 × monthly; allowances still renew monthly on the billing anniversary and do not roll over. Editing, reopening saved results and downloads use no credits; a failed generation releases its reservation (verified). Packs, extra capacity, Business seats, human review, employer checkout, the maintenance offer, API packages and SSO stay closed.
+**Selling.** Plan prices come only from V1 API env `STRIPE_PRICE_<PLAN>_<MONTHLY|ANNUAL>`; unset means `503 PLAN_NOT_CONFIGURED` and "Coming soon". Packs and capacity add-ons: `STRIPE_PRICE_PACK_<ID>` (one-time) / `STRIPE_PRICE_PACK_<ID>_RECURRING`; unset means not on sale. Webhooks grant the plan from the **price id** (env map), never client metadata (metadata only for legacy sessions). Subscribers change plan with `POST /payments/change-plan/preview` + `/payments/change-plan`: an **upgrade applies now** (Stripe prorates and invoices the difference; V1 limits rise and the career allowance adds the difference), a **downgrade applies at the end of the paid period** (Stripe subscription schedule, no proration; V1 and career keep the paid allowance until the renewal, then switch together). Store-billed accounts use the store. The Stripe portal configuration should not allow mid-period downgrades either (client setting).
 
-| Existing V1 plan | Its V1 benefits (unchanged) | Career access without an add-on | With a purchased career add-on |
-|---|---|---|---|
-| Free | unchanged (5 CVs, 1 letter, 5 AI credits, 2 PDF exports) | none | the purchased plan |
-| Pro | unchanged (10 CVs, 20 letters, 100 AI credits, unlimited exports, DOCX) | none | the purchased plan |
-| Career Accelerator (not sold) | unchanged | none | the purchased plan |
-| Enterprise | unchanged | none | the purchased plan |
+**One metering ledger.** With `CAREER_API_URL` set on the V1 API, V1 AI document credits and résumé analyses are reserved/committed/released in the career ledger (the user's own ID token is forwarded), so a Professional user has 60 document credits in total. Without it V1 uses its Firestore counters with the same limits.
 
-`CAREER_PLAN_MAP` can still include career benefits in a V1 plan if the client decides so (default empty). The effective career plan is the higher of the mapped plan and a live purchase. Neither ever changes the V1 plan, its credits, its price or its Stripe subscription.
+**Career access.** The default `CAREER_PLAN_MAP` is 1:1 for the five plans, and legacy pro→starter, career_accelerator→professional, enterprise→career_pro; the env still overrides per plan (e.g. `free:none`).
 
-**Entitlement rules (career service).** A purchase grants access while `active`/`trialing`; `past_due` and `canceled` keep access only until the paid period ends (V1's own rule); `incomplete`, `incomplete_expired`, `unpaid`, `paused`, an unknown plan or `free` grant nothing. Plan changes re-grant "new grant − units used" (never a second month).
+**Business pooled usage.** An accepted, active Business candidate whose own plan is Free spends from the Business account (its plan and its pool; ledger rows carry the candidate id). Their records stay in their own workspace; billing routes always show their own account. A candidate without own career access (map says `none`) can still accept the invitation and then works on the Business pool. Leaving, archiving, a cancelled Business plan or deletion ends it at once.
 
-**Webhook rules (V1 payment module).** Career events are recognised (session/subscription metadata, invoice subscription details, or the configured career price ids) and routed **before** V1's handlers — otherwise V1's full-refund handler would have revoked the V1 plan through the shared customer. Stored as a state with the event time: replays (ledger) and older events change nothing. Full refund ends career access immediately and cancels the career subscription; a partial refund changes nothing (V1's rule). Ledger rows for invoices and refunds are still written. V1 account closure cancels a live career subscription too. Checkout: server-chosen price and URLs, confirmed amount must equal Stripe's price, no trial, no second live career subscription, V1's existing Stripe customer reused.
+**Provider-dependent (code ready; the UI says "not connected" / "coming soon" until configured):** Stripe prices for the five plans and packs; SES for career alert email (address = the person's verified sign-in email); a speech-transcription vendor; the AI provider key; geocoding (`GEOCODING_PROVIDER` / `GEOCODING_API_KEY`); map tiles; job feeds; push and Telegram adapters; App Store / Play products for the new plans; the assisted-forms browser extension (`NEXT_PUBLIC_CAREER_FORM_EXTENSION`).
 
-**Operators.** Career moderation/feature switches require V1's `admin`/`super_admin` claim **and** `ADMIN_AUTH_USER_IDS` (narrower than either); they no longer depend on the operator's own career plan. Linked from V1's admin sidebar when the career build switch is on.
+**Client decisions still open:** (a) deleting a document frees its slot on the new plans (spec: capacity = active items) vs the 2026-08-19 rule kept for legacy plans; (b) cover-letter capacity = CV capacity (assumption); (c) V1 résumé import still spends 1 AI document credit, while the catalog says import is free with 10 completed imports a day (the career-service import follows the catalog); (d) existing Free users move to 1 CV / 3 credits a month / unlimited marked PDF (existing items stay readable); (e) Business sponsors only candidates on Free (someone paying for their own plan uses it); the alternative is always the Business pool; (f) excess files after the storage grace period are not deleted automatically; (g) the new plans as in-app purchases on iOS/Android.
+
+**Operators.** Career moderation and feature switches require V1's `admin`/`super_admin` claim **and** `ADMIN_AUTH_USER_IDS`.
 
 ## 0.3 Homepage product and template showcases
 
@@ -74,7 +62,7 @@ Added (commits `f6488c69`, `d0cc21f9`):
 - Dev-only `EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST` for local testing with fictional accounts (ignored in release builds).
 - Not on mobile (stays on the website): evidence upload, generation/tailoring (AI), interviews, action packs, skill reports, portfolios, relocation, scenarios, map, career data export, transfer of a career draft into the V1 editor. Voice and form filling are not offered on phones.
 
-## 0.5 Mobile and the app stores (career add-on)
+## 0.5 Mobile and the app stores (career access; written for the retired add-on model)
 
 Re-checked on 3 Nov 2026 against the App Store Review Guidelines page (https://developer.apple.com/app-store/review/guidelines/, "Last Updated: October 16, 2026") and Google Play's Payments policy. What applies to FlacronCV, and how far it reaches:
 - **App category.** FlacronCV is a multiplatform productivity service that already sells digital subscriptions (Pro/Enterprise) through in-app purchase. It is **not** a "Reader" app (3.1.3(a) covers only magazines, newspapers, books, audio, music and video) and **not** a free stand-alone companion app (3.1.3(f) requires no purchasing inside the app). The applicable rules are 3.1.1 (digital features are unlocked with in-app purchase) and its exception **3.1.3(b) Multiplatform Services**: apps "may allow users to access content, subscriptions, or features they have acquired in your app on other platforms or your web site … provided those items are also available as in-app purchases within the app."
@@ -106,7 +94,7 @@ Checked 3 Nov 2026 on https://developers.openai.com/api/docs/deprecations and th
 Firebase uid = V1 `users/{uid}` = career `users.auth_user_id`. A career account is created on the first request **only if** the V1 plan maps to a career plan; otherwise `feature_unavailable` and no rows. Concurrent first requests create one account (advisory lock; tested).
 
 ### Entitlement bridge (`packages/career-server/src/integration/v1-plan-bridge.ts`)
-`V1 effective plan → CAREER_PLAN_MAP → career plan`. Default map is empty ⇒ every plan is `none` ⇒ career features off. On each request (30 s cache) the career billing account is moved to the mapped plan under its row lock: a change re-grants "new grant − units already used" (never a second month), units the new plan lacks drop to 0, the allowance renews on the anniversary while the mapping holds. `billing_accounts.plan_source/v1_plan/v1_plan_synced_at` record it. V1 balances, credits and subscriptions are never written.
+`V1 effective plan → CAREER_PLAN_MAP → career plan`. Default map is 1:1 for the five plans plus the legacy mapping in §0.2; `none` turns a plan off. On each request (30 s cache) the career billing account is moved to the mapped plan under its row lock: a change re-grants "new grant − units already used" (never a second month), units the new plan lacks drop to 0, the allowance renews on the anniversary while the mapping holds. `billing_accounts.plan_source/v1_plan/v1_plan_synced_at` record it. V1 balances, credits and subscriptions are never written.
 
 ### Old records and new fields
 V1 records are not migrated or altered. New career columns are additive with defaults (`plan_source` default `career`). V1 documents without career data simply have none; the career UI shows empty states.
@@ -173,15 +161,15 @@ Legend — State: **Op** operational locally · **Prov** provider-dependent (sta
 | X | Off-box notifications, store purchases, licensed feeds | — | — | — | Prov | — |
 
 ## 4. Client decisions
-- **Decided (2 Nov 2026): optional add-on model** (§0.2). Implemented locally; purchase activation needs only Stripe prices and `CAREER_STRIPE_PRICES` (D5).
+- **Decided (14 Nov 2026): follow the spec — one five-plan catalog** (§0.2; supersedes the 2 Nov add-on model). Open items are listed at the end of §0.2.
 - Open commercial decisions are listed in `docs/CLIENT_HANDOFF_DRAFTS.md` §3 (plan map, career credits vs V1 credits, Business/packs/services, trials, refunds beyond V1's rule, Career in-app purchase for iOS/Android, data export format). Technical/provider inputs are in `docs/INTEGRATION_CREDENTIALS_CHECKLIST.md`.
 - Resolved earlier: German form of address ("du"); operator access (V1 staff claim AND allowlist).
 
 ## 5. Future migrations / configuration (not executed)
-1. Provision Postgres. Run `pnpm --filter career-api migrate:status --snapshot before.json` (read-only), `migrate:dry-run` (prints SQL, applies nothing), then `migrate` (36 migrations), then `migrate:status --snapshot after.json` and compare. `migrate:down` refuses non-local hosts. Rehearsed locally on a copy: rollback of the two integration migrations, dry run, re-apply; 74 tables with identical row counts. Rolling back the bridge migration resets the `plan_source`/`v1_plan` values, which the bridge rewrites on the next request. Full rollback = drop the career database (V1 holds no career data).
+1. Provision Postgres. Run `pnpm --filter career-api migrate:status --snapshot before.json` (read-only), `migrate:dry-run` (prints SQL, applies nothing), then `migrate` (48 migrations; the 8 new ones 1739571000000–1739574000000 were verified on a fresh schema and on a schema at main 9dad504c: identical result, a re-run applies 0). **Migrations do not run on boot**: neither career-api nor career-worker applies them at start (Dockerfile CMD is `node dist/main.js`), so run `migrate` before starting new code, then `migrate:status --snapshot after.json` and compare. `migrate:down` refuses non-local hosts. Rehearsed locally on a copy: rollback of the two integration migrations, dry run, re-apply; 74 tables with identical row counts. Rolling back the bridge migration resets the `plan_source`/`v1_plan` values, which the bridge rewrites on the next request. Full rollback = drop the career database (V1 holds no career data).
 2. **Feature switches.** Migrations seed only three `feature_flags` rows; phase 2–4 features (evidence, portfolios, action packs, skill reports, voice, scenarios, forms, map, business) are **off** on a fresh database until an operator turns them on in `/admin/career` (the local demo seed turns them on). The web menu and the mobile overview now hide switched-off areas.
 3. No V1 data migration is required; career accounts are created lazily.
-4. Configure `.env.career` per `.env.career.example` (production: `DEPLOY_ENV=production`, `FIREBASE_PROJECT_ID=flacron-cv`, a read-only Firestore role for `users` and `job_applications`, `OBJECT_STORAGE=s3` + career bucket, `CORS_ORIGINS` = V1 hosts, `ADMIN_AUTH_USER_IDS`, no Stripe key). V1 API: `CAREER_BILLING_MODE=addon` + `CAREER_STRIPE_PRICES` when sales should start; leave `disabled` otherwise.
+4. Configure `.env.career` per `.env.career.example` (production: `DEPLOY_ENV=production`, `FIREBASE_PROJECT_ID=flacron-cv`, a read-only Firestore role for `users` and `job_applications`, `OBJECT_STORAGE=s3` + career bucket, `CORS_ORIGINS` = V1 hosts, `ADMIN_AUTH_USER_IDS`, no Stripe key). V1 API: `STRIPE_PRICE_<PLAN>_<MONTHLY|ANNUAL>`, `STRIPE_PRICE_PACK_<ID>[_RECURRING]` and `CAREER_API_URL` (see `apps/api/.env.example`).
 5. Route `/api/career/*` on the existing load balancer to the career container; run `apps/career-worker`; set `NEXT_PUBLIC_CAREER_ENABLED=true` and `NEXT_PUBLIC_CAREER_API_URL` in the web build. Mobile: `EXPO_PUBLIC_CAREER_API_URL` (+ `EXPO_PUBLIC_CAREER_ENABLED` only per §0.5).
 
 ## 6. Verification (local only, 2 Nov 2026)

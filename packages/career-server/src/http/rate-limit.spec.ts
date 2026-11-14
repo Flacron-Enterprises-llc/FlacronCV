@@ -36,6 +36,6 @@ describe('search rate limit', () => {
     const ledger = await db.pool.query(`SELECT 1 FROM usage_ledger`);
     expect(ledger.rowCount).toBe(0);
     clock.set('2026-10-17T04:01:01Z');
-    await expect(opportunities.search(ada, {})).resolves.toEqual({ items: [] });
+    await expect(opportunities.search(ada, {})).resolves.toEqual({ items: [], notApplied: [] });
   });
 });

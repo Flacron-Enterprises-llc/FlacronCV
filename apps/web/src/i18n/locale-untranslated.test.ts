@@ -34,7 +34,7 @@ const LOCALES_DIR = join(__dirname, '..', '..', 'public', 'locales');
 const ALLOWED: Record<string, string> = {
   // Brands and proper nouns.
   'app.name': 'product name',
-  'cv_builder.docx_pro_badge': 'plan name "Pro", a brand used untranslated on the pricing page',
+  'cv_builder.docx_pro_badge': 'plan name "Starter", as career.plans.plan.starter',
   'career.scope.site_placeholder': 'example domain name; hostnames are Latin script',
   'parent_company.product1_title': 'product name',
   'footer.parent_company': 'company name',
@@ -50,6 +50,21 @@ const ALLOWED: Record<string, string> = {
   'career.home.sample_name': 'fictional person name in the document preview',
   'career.home.sample_email': 'example email address in the document preview',
   'career.plans.plan.career_pro': 'product name of a career catalog plan',
+  'career.opportunities.plan_career_pro': 'plan name (brand), as career.plans.plan.career_pro',
+  'career.opportunities.provider_adzuna': 'job-board brand name',
+  // Template tiers are labelled with the lowest plan that unlocks them; the top tier is Career Pro (brand).
+  'templates.enterprise': 'plan name (brand), as career.plans.plan.career_pro',
+  'common.enterprise': 'plan name (brand), as career.plans.plan.career_pro',
+  // Five-plan catalog names: same spelling as career.plans.plan.* (brand names
+  // where the catalog keeps them in Latin script).
+  'pricing.starter': 'plan name (brand), as career.plans.plan.starter',
+  'pricing.professional': 'plan name (brand), as career.plans.plan.professional',
+  'pricing.career_pro': 'plan name (brand), as career.plans.plan.career_pro',
+  'pricing.business': 'plan name (brand), as career.plans.plan.business',
+  'crm.plan_starter': 'plan name (brand), as career.plans.plan.starter',
+  'crm.plan_professional': 'plan name (brand), as career.plans.plan.professional',
+  'crm.plan_career_pro': 'plan name (brand), as career.plans.plan.career_pro',
+  'crm.plan_business': 'plan name (brand), as career.plans.plan.business',
   // Homepage showcase samples: fictional company and person names (labelled as samples).
   'home_showcase.listing_1_org': 'fictional company name in a sample listing',
   'home_showcase.listing_2_org': 'fictional company name in a sample listing',

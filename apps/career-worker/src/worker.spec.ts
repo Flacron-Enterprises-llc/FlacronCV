@@ -108,7 +108,7 @@ describe('worker', () => {
     try {
       const names = (await worker.boss.getSchedules()).map((s) => s.name).sort();
       expect(names).toEqual(
-        [QUEUES.packExpiry, QUEUES.renewals, QUEUES.releaseAbandoned, QUEUES.alertMatch, QUEUES.alertDigest].sort(),
+        [QUEUES.packExpiry, QUEUES.renewals, QUEUES.releaseAbandoned, QUEUES.alertMatch, QUEUES.alertDigest, QUEUES.alertReminders].sort(),
       );
 
       await worker.boss.send(QUEUES.renewals, {});
@@ -123,6 +123,14 @@ describe('worker', () => {
       [due.id],
     );
     expect(after.rows[0].allowance_period_end.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('alert jobs bind no channel without a provider, so nothing is recorded as sent', async () => {
+    const handlers = alertHandlers(db.pool, { MAIL_DELIVERY: 'record' });
+    expect(Object.keys(handlers).sort()).toEqual([QUEUES.alertMatch, QUEUES.alertDigest, QUEUES.alertReminders].sort());
+    await handlers[QUEUES.alertReminders]!({});
+    const sent = await db.pool.query(`SELECT 1 FROM notification_deliveries WHERE status = 'sent'`);
+    expect(sent.rows).toHaveLength(0);
   });
 
   it('--check connects, starts pg-boss, and exits 0', async () => {

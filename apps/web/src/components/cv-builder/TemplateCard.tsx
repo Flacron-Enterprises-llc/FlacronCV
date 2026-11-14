@@ -9,7 +9,7 @@ import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import CVThumbnail from '@/components/cv-builder/CVThumbnail';
 import TemplatePreviewModal from '@/components/cv-builder/TemplatePreviewModal';
-import { SubscriptionPlan, type CVLayout } from '@flacroncv/shared-types';
+import { SubscriptionPlan, templateTierOf, type CVLayout } from '@flacroncv/shared-types';
 import { fcgeUpgradeClicked } from '@/lib/fcge';
 
 /* ─── Props ──────────────────────────────────────────────────────────────────── */
@@ -67,7 +67,8 @@ export default function TemplateCard({
   const TierIcon = tierLabel === 'Enterprise' ? Crown : Zap;
   // Display the tier via the shared common namespace; logic keeps the canonical label.
   const tierName = tc(tierLabel.toLowerCase());
-  const needsEnterprise = tierLabel === 'Enterprise' && viewerPlan === SubscriptionPlan.PRO;
+  // A viewer on a PRO-tier plan (Starter, Professional, legacy Pro) needs Career Pro or Business.
+  const needsEnterprise = tierLabel === 'Enterprise' && templateTierOf(viewerPlan) === SubscriptionPlan.PRO;
 
   const handleSelectClick = () => {
     if (isPro && !userCanAccess) {

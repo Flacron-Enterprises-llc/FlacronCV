@@ -11,22 +11,49 @@ import { toast } from 'sonner';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
 import { useFormatDate, useFormatDateTime } from '@/lib/use-format-date';
 import { documentOptionLabels } from './document-option-labels';
+import { STATUS_ORDER, boardStatus, isCapacityError } from './job-workspace';
 import {
+  AnswersEditor,
+  ChecklistEditor,
+  ContactsEditor,
+  rowKey,
+  type AnswerRow,
+  type ChecklistRow,
+  type ContactRow,
+} from './WorkspaceEditors';
+import {
+  JOB_LIMITS,
+  JOB_OUTCOMES,
   JobApplication,
+  JobOutcome,
   JobStatus,
   CreateJobData,
   CV,
   CoverLetter,
 } from '@flacroncv/shared-types';
 
-const STATUSES: JobStatus[] = [
-  JobStatus.WISHLIST,
-  JobStatus.APPLIED,
-  JobStatus.INTERVIEWING,
-  JobStatus.OFFER,
-  JobStatus.REJECTED,
-  JobStatus.ACCEPTED,
-];
+const contactRows = (job?: JobApplication | null): ContactRow[] =>
+  (job?.contacts ?? []).map((c) => ({
+    key: rowKey(),
+    id: c.id,
+    name: c.name ?? '',
+    role: c.role ?? '',
+    email: c.email ?? '',
+    phone: c.phone ?? '',
+    notes: c.notes ?? '',
+  }));
+const checklistRows = (job?: JobApplication | null): ChecklistRow[] =>
+  (job?.checklist ?? []).map((i) => ({ key: rowKey(), id: i.id, label: i.label, kind: i.kind, done: i.done }));
+const answerRows = (job?: JobApplication | null): AnswerRow[] =>
+  (job?.formAnswers ?? []).map((a) => ({ key: rowKey(), id: a.id, question: a.question, answer: a.answer }));
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h4 className="border-t border-stone-200 pt-4 text-sm font-semibold text-stone-900 dark:border-stone-700 dark:text-white">
+      {children}
+    </h4>
+  );
+}
 
 interface JobFormModalProps {
   open: boolean;
@@ -51,14 +78,18 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
 
   const [company, setCompany] = useState('');
   const [position, setPosition] = useState('');
-  const [status, setStatus] = useState<JobStatus>(JobStatus.WISHLIST);
+  const [status, setStatus] = useState<JobStatus>(JobStatus.SAVED);
   const [location, setLocation] = useState('');
   const [jobUrl, setJobUrl] = useState('');
   const [appliedDate, setAppliedDate] = useState('');
   const [notes, setNotes] = useState('');
   const [salaryRange, setSalaryRange] = useState('');
-  const [contactName, setContactName] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
+  const [contacts, setContacts] = useState<ContactRow[]>([]);
+  const [checklist, setChecklist] = useState<ChecklistRow[]>([]);
+  const [answers, setAnswers] = useState<AnswerRow[]>([]);
+  const [deadline, setDeadline] = useState('');
+  const [jobDescription, setJobDescription] = useState('');
+  const [outcome, setOutcome] = useState<JobOutcome | ''>('');
   const [interviewDate, setInterviewDate] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
   const [linkedCVId, setLinkedCVId] = useState('');
@@ -88,14 +119,18 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
     if (!open) return;
     setCompany(job?.company ?? '');
     setPosition(job?.position ?? '');
-    setStatus(job?.status ?? JobStatus.WISHLIST);
+    setStatus(job ? boardStatus(job.status) : JobStatus.SAVED);
     setLocation(job?.location ?? '');
     setJobUrl(job?.jobUrl ?? '');
     setAppliedDate(job?.appliedDate ?? '');
     setNotes(job?.notes ?? '');
     setSalaryRange(job?.salaryRange ?? '');
-    setContactName(job?.contactName ?? '');
-    setContactEmail(job?.contactEmail ?? '');
+    setContacts(contactRows(job));
+    setChecklist(checklistRows(job));
+    setAnswers(answerRows(job));
+    setDeadline(job?.deadline ?? '');
+    setJobDescription(job?.jobDescription ?? '');
+    setOutcome(job?.outcome ?? '');
     setInterviewDate(job?.interviewDate ?? '');
     setFollowUpDate(job?.followUpDate ?? '');
     setLinkedCVId(job?.linkedCVId ?? '');
@@ -125,7 +160,8 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
       toast.success(job ? t('updated') : t('created'));
       onClose();
     },
-    onError: (e: Error) => toast.error(formatApiError(e, t('save_error'))),
+    onError: (e: Error) =>
+      toast.error(isCapacityError(e) ? t('capacity_reached') : formatApiError(e, t('save_error'))),
   });
 
   if (!open) return null;
@@ -177,12 +213,25 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
       appliedDate: optional(appliedDate),
       notes: optional(notes),
       salaryRange: optional(salaryRange),
-      contactName: optional(contactName),
-      contactEmail: optional(contactEmail),
       interviewDate: optional(interviewDate),
       followUpDate: optional(followUpDate),
+      deadline: optional(deadline),
+      jobDescription: optional(jobDescription),
       linkedCVId: optional(linkedCVId),
       linkedCoverLetterId: optional(linkedCoverLetterId),
+      // Lists are sent whole: the server keeps the ids it is given (stable
+      // rows) and drops rows left empty.
+      contacts: contacts.map(({ id, name, role, email, phone, notes }) => ({
+        id,
+        name,
+        role: role.trim() || null,
+        email: email.trim() || null,
+        phone: phone.trim() || null,
+        notes: notes.trim() || null,
+      })),
+      checklist: checklist.map(({ id, label, kind, done }) => ({ id, label, kind, done })),
+      formAnswers: answers.map(({ id, question, answer }) => ({ id, question, answer })),
+      ...(job ? { outcome: outcome || null } : outcome ? { outcome } : {}),
     };
 
     // Only on create, and only as a confirmation — applying to the same role
@@ -214,7 +263,7 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-stone-200 bg-white shadow-2xl outline-none dark:border-stone-700 dark:bg-stone-900"
+        className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-stone-200 bg-white shadow-2xl outline-none dark:border-stone-700 dark:bg-stone-900"
       >
         <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4 dark:border-stone-700">
           <h3 id={titleId} className="text-lg font-semibold text-stone-900 dark:text-white">
@@ -270,7 +319,7 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
                   onChange={(e) => setStatus(e.target.value as JobStatus)}
                   className={inputClass}
                 >
-                  {STATUSES.map((s) => (
+                  {STATUS_ORDER.map((s) => (
                     <option key={s} value={s}>
                       {t(`status.${s}`)}
                     </option>
@@ -332,31 +381,17 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
                 />
               </div>
               <div>
-                <label htmlFor="job-contact-name" className={labelClass}>
-                  {t('contact_name')}
+                <label htmlFor="job-deadline" className={labelClass}>
+                  {t('deadline')}
                 </label>
                 <input
-                  id="job-contact-name"
-                  value={contactName}
-                  onChange={(e) => setContactName(e.target.value)}
-                  placeholder={t('contact_name_ph')}
+                  id="job-deadline"
+                  type="date"
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
                   className={inputClass}
                 />
               </div>
-            </div>
-
-            <div>
-              <label htmlFor="job-contact-email" className={labelClass}>
-                {t('contact_email')}
-              </label>
-              <input
-                id="job-contact-email"
-                type="email"
-                value={contactEmail}
-                onChange={(e) => setContactEmail(e.target.value)}
-                placeholder="recruiter@company.com"
-                className={inputClass}
-              />
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -386,7 +421,9 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
               </div>
             </div>
 
-            {/* Attach the documents actually sent for this application. */}
+            {/* Attach the documents actually sent for this application. The
+                server freezes them on link (CV version / letter copy). */}
+            <p className="text-xs text-stone-500 dark:text-stone-400">{t('frozen_on_link')}</p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="job-cv" className={labelClass}>
@@ -438,6 +475,55 @@ export default function JobFormModal({ open, onClose, job }: JobFormModalProps) 
                 rows={3}
                 className={`${inputClass} resize-y`}
               />
+            </div>
+
+            <SectionTitle>{t('section.description')}</SectionTitle>
+            <div>
+              <label htmlFor="job-description" className="sr-only">
+                {t('section.description')}
+              </label>
+              <textarea
+                id="job-description"
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                placeholder={t('description_ph')}
+                rows={5}
+                maxLength={JOB_LIMITS.descriptionChars}
+                className={`${inputClass} resize-y`}
+              />
+              <p className="mt-1 text-end text-xs tabular-nums text-stone-400">
+                {t('chars', { used: jobDescription.length, max: JOB_LIMITS.descriptionChars })}
+              </p>
+            </div>
+
+            <SectionTitle>{t('section.contacts')}</SectionTitle>
+            <ContactsEditor rows={contacts} onChange={setContacts} />
+
+            <SectionTitle>{t('section.checklist')}</SectionTitle>
+            <ChecklistEditor rows={checklist} onChange={setChecklist} />
+
+            <SectionTitle>{t('section.form_answers')}</SectionTitle>
+            <AnswersEditor rows={answers} onChange={setAnswers} />
+
+            <SectionTitle>{t('section.outcome')}</SectionTitle>
+            <div>
+              <label htmlFor="job-outcome" className={labelClass}>
+                {t('outcome_label')}
+              </label>
+              <select
+                id="job-outcome"
+                value={outcome}
+                onChange={(e) => setOutcome(e.target.value as JobOutcome | '')}
+                className={inputClass}
+              >
+                <option value="">{t('outcome_none')}</option>
+                {JOB_OUTCOMES.map((o) => (
+                  <option key={o} value={o}>
+                    {t(`outcome.${o}`)}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">{t('outcome_help')}</p>
             </div>
           </div>
 

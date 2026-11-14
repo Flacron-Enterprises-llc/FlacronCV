@@ -1,5 +1,11 @@
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type { SkillGapReport } from '../../../../../packages/career-api-client/src/types';
+import {
+  isEssentialCredential,
+  learningPlanCost,
+  type LearningPlanMilestone,
+  type SkillGapItem,
+} from '../../../../../packages/career-shared/src/learning';
 import { formatNumber, hasKey, t } from '../../i18n';
 import { careerErrorMessage } from '../career-view';
 import { providerUnavailableMessage, type PillTone } from './action-packs';
@@ -96,11 +102,65 @@ export function milestoneDone(report: Pick<SkillGapReport, 'progress'>, mileston
   return report.progress.completedMilestoneIds.includes(milestoneId);
 }
 
-/** "~6h · Free" or "~6h · about $40". */
-export function milestoneEffort(m: { estimatedHours: number; estimatedCostCents: number }): string {
+/**
+ * "~6h · Cost unknown", "~6h · Free (stated 2026-05; check with the provider)"
+ * or "~6h · about $40 (stated …)". The server sends a cost only together with
+ * the date it was stated; without both the cost is unknown, never free.
+ */
+export function milestoneEffort(m: Pick<LearningPlanMilestone, 'estimatedHours' | 'estimatedCostCents' | 'costAsOf'>): string {
   const hours = t('careerPlans.learning.effortHours', { hours: m.estimatedHours });
-  const cost = m.estimatedCostCents > 0 ? t('careerPlans.learning.costAbout', { amount: wholeDollars(m.estimatedCostCents) }) : t('careerPlans.learning.free');
-  return `${hours} · ${cost}`;
+  return `${hours} · ${milestoneCost(m)}`;
+}
+
+export function milestoneCost(m: Pick<LearningPlanMilestone, 'estimatedCostCents' | 'costAsOf'>): string {
+  const cents = m.estimatedCostCents;
+  if (typeof cents !== 'number' || !Number.isFinite(cents) || cents < 0 || !m.costAsOf) return t('careerPlans.learning.costUnknown');
+  const amount = cents === 0 ? t('careerPlans.learning.free') : t('careerPlans.learning.costAbout', { amount: wholeDollars(cents) });
+  return t('careerPlans.learning.costAsOf', { amount, date: m.costAsOf });
+}
+
+/**
+ * "Known costs: $40 · 1 step with unknown cost (not counted) · Cannot tell…".
+ * Unknown costs are never added as 0 (career-shared learningPlanCost).
+ */
+export function planCostLine(report: Pick<SkillGapReport, 'learningPlan' | 'financialBudgetCents'>): string {
+  const cost = learningPlanCost(report.learningPlan, report.financialBudgetCents);
+  const parts = [t('careerPlans.learning.planCostKnown', { amount: wholeDollars(cost.knownTotalCents) })];
+  if (cost.unknownCount > 0) parts.push(t('careerPlans.learning.planCostUnknownCount', { count: cost.unknownCount }));
+  parts.push(
+    cost.withinBudget === true
+      ? t('careerPlans.learning.planWithinBudget')
+      : cost.withinBudget === false
+        ? t('careerPlans.learning.planOverBudget')
+        : t('careerPlans.learning.planBudgetUnclear'),
+  );
+  return parts.join(' · ');
+}
+
+/** The badge for one requirement: an essential credential, a credential, or a skill gap by importance. */
+export function gapBadge(gap: Pick<SkillGapItem, 'kind' | 'importance'>): { label: string; tone: PillTone } {
+  if (isEssentialCredential(gap)) return { label: t('careerPlans.learning.essentialCredential'), tone: 'warning' };
+  if (gap.kind === 'credential') {
+    return { label: t('careerPlans.learning.credentialKind', { importance: importanceLabel(gap.importance) }), tone: 'default' };
+  }
+  return { label: importanceLabel(gap.importance), tone: IMPORTANCE_TONE[gap.importance] ?? 'default' };
+}
+
+export function hasEssentialCredential(report: Pick<SkillGapReport, 'skillGaps'>): boolean {
+  return report.skillGaps.some((gap) => isEssentialCredential(gap));
+}
+
+/** The evidence-vault item already made from this milestone, if any (the server never duplicates it). */
+export function milestoneEvidenceId(report: Pick<SkillGapReport, 'progress'>, milestoneId: string): string | null {
+  return report.progress.evidenceByMilestone?.[milestoneId] ?? null;
+}
+
+/** The report with a milestone's evidence item recorded, as the server now stores it. */
+export function withMilestoneEvidence(report: SkillGapReport, milestoneId: string, evidenceId: string): SkillGapReport {
+  return {
+    ...report,
+    progress: { ...report.progress, evidenceByMilestone: { ...(report.progress.evidenceByMilestone ?? {}), [milestoneId]: evidenceId } },
+  };
 }
 
 /**
@@ -114,7 +174,7 @@ export function withMilestone(report: SkillGapReport, milestoneId: string, compl
   const next = completed ? [...current, milestoneId] : current;
   const kept = Array.from(new Set(next.filter((id) => valid.has(id))));
   const percent = report.learningPlan.length === 0 ? 100 : Math.min(100, Math.round((kept.length / report.learningPlan.length) * 100));
-  return { ...report, progress: { completedMilestoneIds: kept, percent } };
+  return { ...report, progress: { ...report.progress, completedMilestoneIds: kept, percent } };
 }
 
 /** "CRITICAL GAP" etc. in the current language; an unknown importance is shown upper-cased. */
@@ -164,5 +224,9 @@ export function progressErrorMessage(error: unknown): string {
 }
 
 export function evidenceErrorMessage(error: unknown): string {
+  // The server records only a ticked milestone (a repeat returns the existing item).
+  if (error instanceof ApiError && error.code === 'validation_error' && error.body.reason === 'not_completed') {
+    return t('careerPlans.learning.errors.tickFirst');
+  }
   return careerErrorMessage(error, t('careerPlans.learning.errors.evidenceFailed'));
 }

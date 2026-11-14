@@ -1,8 +1,10 @@
-'use client';
+import { redirect } from '@/i18n/routing';
 
-import { CareerPlansScreen } from '@/components/career/CareerPlansScreen';
-
-/** Career plan prices and purchase review. Not behind the career gate: locked users need it. */
-export default function Page() {
-  return <CareerPlansScreen />;
+/**
+ * Career plans are no longer a separate add-on: the five plans include the
+ * career tools, and Settings → Billing is the single plan page. Old links,
+ * bookmarks and emails pointing here land there.
+ */
+export default function Page({ params: { locale } }: { params: { locale: string } }) {
+  redirect({ href: '/settings/billing', locale });
 }

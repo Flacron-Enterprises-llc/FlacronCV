@@ -1,19 +1,33 @@
-import { Body, Controller, Get, Inject, Param, Post, Provider } from '@nestjs/common';
-import { IsArray, IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Provider } from '@nestjs/common';
+import { IsArray, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { InterviewService, MeteringService } from '@flacroncv/career-server';
 import type { Principal, TextModel } from '@flacroncv/career-server';
-import { INTERVIEW_STAGES } from '@flacroncv/career-shared';
+import { INTERVIEW_STAGES, MAX_INTERVIEW_QUESTIONS, MAX_INTERVIEW_ROLE, MIN_INTERVIEW_QUESTIONS } from '@flacroncv/career-shared';
 import { TEXT_MODEL } from '../ai/ai.providers';
 import { CurrentPrincipal } from '../auth/auth.guard';
 import { DatabaseService } from '../database/database.service';
 import { IdempotencyKey } from '../metering/metering.providers';
 
+/** A saved listing, or a typed target role for practice without one (the service requires one of them). */
 class StartDto {
+  @IsOptional()
   @IsUUID()
-  opportunityId!: string;
+  opportunityId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(MAX_INTERVIEW_ROLE)
+  role?: string;
 
   @IsIn(INTERVIEW_STAGES)
   stage!: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(MIN_INTERVIEW_QUESTIONS)
+  @Max(MAX_INTERVIEW_QUESTIONS)
+  questionCount?: number;
 }
 
 class AnswerDto {
@@ -118,5 +132,15 @@ export class InterviewsController {
   @Post('star-stories')
   createStory(@CurrentPrincipal() principal: Principal, @Body() body: StoryDto) {
     return this.interviews.createStory(principal, body);
+  }
+
+  @Patch('star-stories/:storyId')
+  updateStory(@CurrentPrincipal() principal: Principal, @Param('storyId') storyId: string, @Body() body: StoryDto) {
+    return this.interviews.updateStory(principal, storyId, body);
+  }
+
+  @Delete('star-stories/:storyId')
+  deleteStory(@CurrentPrincipal() principal: Principal, @Param('storyId') storyId: string) {
+    return this.interviews.deleteStory(principal, storyId);
   }
 }

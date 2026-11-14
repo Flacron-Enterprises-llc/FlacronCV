@@ -4,8 +4,9 @@ import { createTestApp, TestApp } from './support';
 
 /**
  * V1 billing is unchanged and is the only place a customer pays. The career
- * service therefore serves no V2 prices, checkout, packs, spending caps,
- * portal or store webhooks. (Their logic stays unit-tested in
+ * service therefore serves no V2 prices, checkout, portal or store webhooks.
+ * (The spending cap and top-up opt-in ARE served: they only record consent;
+ * V1 charges.) (Their logic stays unit-tested in
  * `packages/career-server/src/billing`; it is simply not reachable.)
  */
 describe('V1 billing boundary', () => {
@@ -23,7 +24,6 @@ describe('V1 billing boundary', () => {
   it.each([
     ['get', '/api/career/v1/catalog'],
     ['get', '/api/career/v1/billing'],
-    ['patch', '/api/career/v1/billing/spending-cap'],
     ['post', '/api/career/v1/estimates'],
     ['post', '/api/career/v1/checkout'],
     ['post', '/api/career/v1/billing/upgrade-preview'],

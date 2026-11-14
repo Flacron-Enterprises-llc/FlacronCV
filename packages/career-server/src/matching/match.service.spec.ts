@@ -100,4 +100,44 @@ describe('MatchService', () => {
     expect(isBillingError(hidden, 'permission_denied')).toBe(true);
     expect((await matches.find(p, { opportunityId: listing.id, resumeVersionId: resume.version.id })).match?.id).toBe(created.match.id);
   });
+it('separates qualification fit from preferences, names a missing credential and a remote limit, and labels the result', async () => {
+    const p = await person('match-prefs');
+    await profiles.createFact(p, { factType: 'skill', value: { name: 'SQL dashboards reporting' }, confirmation: 'confirmed' });
+    await profiles.setPreferences(p, {
+      locations: ['Seattle'],
+      arrangements: ['remote'],
+      schedules: ['full_time'],
+      seniority: 'senior',
+      minimumPay: { amount: 90000, currency: 'USD', period: 'year' },
+    });
+    const resume = await resumes.create(p, { title: 'Prefs', language: 'en' });
+    const listing = await opportunities.paste(p, {
+      text: 'Junior Reporting Analyst at Pine Labs\nFully remote, Washington residents only.\nFull-time.\nSalary: $70,000 - $80,000 per year\nPMP certification required.\nBuild SQL dashboards and reporting.',
+    });
+    const made = await matches.compare(p, { resumeVersionId: resume.version.id, opportunityId: listing.id, mode: 'explicit' }, 'match-prefs-1', true);
+    const byDimension = Object.fromEntries(made.match.preferenceFit.map((check) => [check.dimension, check.status]));
+    expect(byDimension).toMatchObject({
+      location: 'meets',
+      arrangement: 'meets',
+      schedule: 'meets',
+      seniority: 'conflict',
+      pay: 'conflict',
+      remote_restriction: 'check',
+    });
+    expect(made.match.preferenceFit.find((check) => check.dimension === 'remote_restriction')?.detail).toContain('Washington residents only');
+    expect(made.match.gaps[0]).toEqual({ code: 'credential_missing', token: 'PMP' });
+    expect(made.match.label).toBe('stretch');
+    expect(made.match.labelReasons).toEqual(expect.arrayContaining(['credential_missing', 'preference_conflict']));
+    // Reopening reads the same label and preference fit from storage.
+    const reopened = await matches.get(p, made.match.id);
+    expect(reopened.label).toBe('stretch');
+    expect(reopened.preferenceFit).toEqual(made.match.preferenceFit);
+
+    const other = await person('match-prefs-other');
+    const otherResume = await resumes.create(other, { title: 'Other', language: 'en' });
+    const hidden = await matches
+      .compare(other, { resumeVersionId: otherResume.version.id, opportunityId: listing.id, mode: 'explicit' }, 'match-prefs-2', true)
+      .catch((error: unknown) => error);
+    expect(isBillingError(hidden, 'not_found')).toBe(true);
+  });
 });

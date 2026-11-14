@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { CATALOG_VERSION } from '@flacroncv/career-shared';
-import { applyMappedPlan, BillingError, decideCareerAccess, parseCareerPlanMap } from '@flacroncv/career-server';
-import type { CareerAccess, CareerPlanMap, V1AccountSource } from '@flacroncv/career-server';
+import { applyMappedPlan, BillingError, businessSponsorFor, decideCareerAccess, parseCareerPlanMap } from '@flacroncv/career-server';
+import type { BusinessSponsor, CareerAccess, CareerPlanMap, V1AccountSource } from '@flacroncv/career-server';
 import { DatabaseService } from '../database/database.service';
 
 export const V1_ACCOUNT_SOURCE = Symbol('V1_ACCOUNT_SOURCE');
@@ -64,11 +64,23 @@ export class CareerAccessService {
   /** Applies the mapped plan at most once per cache window per account and plan. */
   async syncPlan(billingAccountId: string, access: Extract<CareerAccess, { enabled: true }>): Promise<void> {
     const now = this.clock.now();
-    const key = `${access.v1Plan}:${access.careerPlan}`;
+    // The V1 billing facts are part of the key, so a new pack, a capacity
+    // add-on or a new paid period applies on the next request, not 30 s later.
+    const key = `${access.v1Plan}:${access.careerPlan}:${JSON.stringify(access.billing ?? null)}`;
     const cached = this.syncCache.get(billingAccountId);
     if (cached && cached.value === key && cached.expiresAt > now.getTime()) return;
     await applyMappedPlan(this.database.connectionPool, billingAccountId, access, CATALOG_VERSION, now);
     this.syncCache.set(billingAccountId, { value: key, expiresAt: now.getTime() + ACCESS_CACHE_MS });
+  }
+
+  /**
+   * The live Business account that pays for this person, when they are an
+   * active accepted Business candidate and their own account is on Free
+   * (pooled usage; see business-sponsor.ts). Read per request, uncached, so
+   * archiving, leaving or a cancelled Business plan stops it at once.
+   */
+  businessSponsor(uid: string): Promise<BusinessSponsor | null> {
+    return businessSponsorFor(this.database.connectionPool, uid);
   }
 
   /** The configured map, for the access endpoint and the operator view. */

@@ -1,9 +1,13 @@
-export interface ListingCompensation {
-  minimum: number | null;
-  maximum: number | null;
-  currency: string | null;
-  period: string | null;
-}
+import type {
+  ListingArrangement,
+  ListingCompensation,
+  ListingDetails,
+  ListingSchedule,
+  ListingSeniority,
+  OpportunityCategory,
+} from '@flacroncv/career-shared';
+
+export type { ListingCompensation };
 
 export interface NormalizedListing {
   provider: 'adzuna' | 'usajobs' | 'greenhouse' | 'lever' | 'paste';
@@ -15,10 +19,19 @@ export interface NormalizedListing {
   sourceUrl: string | null;
   deadline: string | null;
   compensation: ListingCompensation;
-  category: 'job';
+  category: OpportunityCategory;
   status: 'open' | 'closed';
   /** Only a paste states this today; feeds leave it out and it stays unknown. */
   sponsorship?: 'unknown' | 'stated_yes' | 'stated_no';
+  /** The optional fields below are null or absent when the source does not state them. */
+  publishedAt?: string | null;
+  remoteRestriction?: string | null;
+  schedule?: ListingSchedule | null;
+  arrangement?: ListingArrangement | null;
+  seniority?: ListingSeniority | null;
+  details?: ListingDetails;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 const EMPTY_PAY: ListingCompensation = { minimum: null, maximum: null, currency: null, period: null };
@@ -48,6 +61,9 @@ export function parseAdzuna(payload: unknown): NormalizedListing[] {
         : { minimum: money(item.salary_min), maximum: money(item.salary_max), currency: null, period: null },
       category: 'job',
       status: 'open',
+      publishedAt: day(item.created),
+      schedule: item.contract_time === 'full_time' || item.contract_time === 'part_time' ? item.contract_time : item.contract_type === 'contract' ? 'contract' : null,
+      ...coordinates(item.latitude, item.longitude),
     });
   }
   return listings;
@@ -80,8 +96,11 @@ export function parseUsajobs(payload: unknown): NormalizedListing[] {
       compensation: isRecord(pay)
         ? { minimum: money(pay.MinimumRange), maximum: money(pay.MaximumRange), currency: null, period: text(pay.RateIntervalCode) || null }
         : EMPTY_PAY,
-      category: 'job',
+      category: 'government',
       status: 'open',
+      publishedAt: day(job.PublicationStartDate),
+      schedule: scheduleOf(Array.isArray(job.PositionSchedule) && isRecord(job.PositionSchedule[0]) ? job.PositionSchedule[0].Name : null),
+      ...usajobsCoordinates(job.PositionLocation),
     });
   }
   return listings;
@@ -139,6 +158,9 @@ export function parseLever(payload: unknown, organization: string): NormalizedLi
       compensation: EMPTY_PAY,
       category: 'job',
       status: 'open',
+      publishedAt: typeof item.createdAt === 'number' && Number.isFinite(item.createdAt) ? new Date(item.createdAt).toISOString().slice(0, 10) : null,
+      schedule: scheduleOf(isRecord(item.categories) ? item.categories.commitment : null),
+      arrangement: item.workplaceType === 'remote' || item.workplaceType === 'hybrid' ? item.workplaceType : item.workplaceType === 'on-site' ? 'onsite' : null,
     });
   }
   return listings;
@@ -192,6 +214,31 @@ function money(value: unknown): number | null {
 function day(value: unknown): string | null {
   const raw = text(value);
   return /^\d{4}-\d{2}-\d{2}/.test(raw) ? raw.slice(0, 10) : null;
+}
+
+/** A feed's own schedule words; anything else stays unknown. */
+function scheduleOf(value: unknown): ListingSchedule | null {
+  const raw = text(value).toLowerCase();
+  if (/full[\s-]?time/.test(raw)) return 'full_time';
+  if (/part[\s-]?time/.test(raw)) return 'part_time';
+  if (/temporary|seasonal/.test(raw)) return 'temporary';
+  if (/contract|fixed[\s-]?term/.test(raw)) return 'contract';
+  return null;
+}
+
+function coordinates(lat: unknown, lon: unknown): { latitude: number | null; longitude: number | null } {
+  const latitude = typeof lat === 'number' ? lat : typeof lat === 'string' ? Number(lat) : NaN;
+  const longitude = typeof lon === 'number' ? lon : typeof lon === 'string' ? Number(lon) : NaN;
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+    return { latitude: null, longitude: null };
+  }
+  return { latitude, longitude };
+}
+
+/** Only a single-location federal posting has one point; several locations have no single coordinate. */
+function usajobsCoordinates(value: unknown): { latitude: number | null; longitude: number | null } {
+  if (!Array.isArray(value) || value.length !== 1 || !isRecord(value[0])) return { latitude: null, longitude: null };
+  return coordinates(value[0].Latitude, value[0].Longitude);
 }
 
 function plain(html: string): string {

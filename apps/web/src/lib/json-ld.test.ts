@@ -16,23 +16,19 @@ describe('faqPage', () => {
   const schema = faqPage();
   const answers = schema.mainEntity.map((q) => q.acceptedAnswer.text).join('\n');
 
-  it('interpolates current FREE and PRO limits rather than restating them', () => {
-    expect(answers).toContain(`${free.cvs} CVs`);
-    expect(answers).toContain(
-      `${free.coverLetters} ${free.coverLetters === 1 ? 'cover letter' : 'cover letters'}`,
-    );
-    expect(answers).toContain(`${free.aiCredits} Engine credits`);
-    expect(answers).not.toContain(`${free.aiCredits} Engine credits/month`);
-    expect(answers).not.toContain(`${free.aiCredits} AI credits`);
-    expect(answers).not.toContain(`${free.exports} documents/month`);
-    expect(answers).not.toContain(`${free.exports} exports/month`);
-    expect(answers).toContain('those allowances never reset');
-    expect(answers).toContain(`${pro.cvs} CVs`);
-    expect(answers).toContain(`${pro.coverLetters} cover letters`);
-    expect(answers).toContain(`${pro.aiCredits} Engine credits`);
-    expect(answers).toContain('paid allowances reset on the 1st of each calendar month (UTC)');
-    expect(answers).not.toContain('billing month');
-    expect(answers).not.toContain(`${pro.cvs} CVs/month`);
+  it('interpolates the current Free and Starter limits rather than restating them', () => {
+    const starter = PLAN_CONFIGS[SubscriptionPlan.STARTER].limits;
+    expect(answers).toContain(`${free.cvs} ${free.cvs === 1 ? 'CV' : 'CVs'}`);
+    expect(answers).toContain(`${free.aiCredits} AI document credits`);
+    expect(answers).toContain(`${free.analyses} CV analyses`);
+    expect(answers).toContain('unlimited PDF exports');
+    expect(answers).toContain(`${starter.cvs} CVs`);
+    expect(answers).toContain('Allowances renew every month.');
+    // Never a legacy plan or the old cadence.
+    expect(answers).not.toContain('never reset');
+    expect(answers).not.toContain('1st of each calendar month');
+    expect(answers).not.toMatch(/\bPro and Enterprise\b/);
+    void pro;
   });
 
   it('does not restate a limit as a numeric literal in the builder source', () => {

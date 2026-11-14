@@ -165,7 +165,20 @@ export interface CreatedResume extends Resume {
   version: ResumeVersion;
 }
 
-export type WritingType = 'cover_letter' | 'bio' | 'linkedin' | 'outreach';
+export type WritingType = 'cover_letter' | 'bio' | 'linkedin' | 'outreach' | 'referral_request' | 'thank_you';
+
+/**
+ * The person's own words about the target when there is no saved listing
+ * (e.g. a job-tracker application). Drafts may repeat these, never add to them.
+ */
+export interface WritingContextInput {
+  organization?: string;
+  role?: string;
+  contactName?: string;
+  contactRole?: string;
+  /** YYYY-MM-DD; used by thank-you notes only. */
+  interviewDate?: string;
+}
 
 export interface WritingDocument {
   id: string;
@@ -184,6 +197,8 @@ export interface WritingDocument {
 export interface WritingList {
   items: WritingDocument[];
   documentCredit: DocumentCredit;
+  /** False until a writing model is connected; generation is refused without charging. */
+  textModelConfigured: boolean;
 }
 
 export interface PaidWriting {
@@ -300,7 +315,10 @@ export interface PortfolioItemView {
   evidenceType: string;
   evidenceLabel: string;
   linkedSkills: string[];
+  caseStudy: string;
 }
+
+export type PortfolioSections = import('@flacroncv/career-shared').PortfolioSections;
 
 export interface PortfolioPage {
   id: string;
@@ -315,6 +333,8 @@ export interface PortfolioPage {
   contactEmail: string | null;
   contactPhone: string | null;
   evidenceIds: string[];
+  sections: PortfolioSections;
+  caseStudies: Record<string, string>;
   shareToken: string | null;
   publishedAt: string | null;
   visitCount: number | null;
@@ -328,6 +348,8 @@ export interface PublicPortfolioView {
   headline: string;
   displayName: string;
   items: PortfolioItemView[];
+  skills: string[];
+  sections: PortfolioSections;
   contactEmail: string | null;
   contactPhone: string | null;
 }
@@ -349,6 +371,8 @@ export interface UpdatePortfolioInput {
   showPhone?: boolean;
   contactEmail?: string | null;
   contactPhone?: string | null;
+  sections?: Partial<PortfolioSections>;
+  caseStudies?: Record<string, string>;
 }
 
 export interface PortfolioQr {
@@ -366,15 +390,26 @@ export interface OpportunityItem {
   label: 'open' | 'expired';
   sourceUrl: string | null;
   checkedAt: string;
+  /** Last check older than the stale threshold. */
+  stale?: boolean;
+  publishedAt?: string | null;
   deadline: string | null;
   locations: string[];
   compensation: OpportunityCompensation;
   sponsorship: 'unknown' | 'stated_yes' | 'stated_no';
+  /** The listing's own words limiting where a remote worker may live; null when not stated. */
+  remoteRestriction?: string | null;
+  schedule?: import('@flacroncv/career-shared').ListingSchedule | null;
+  arrangement?: import('@flacroncv/career-shared').ListingArrangement | null;
+  seniority?: import('@flacroncv/career-shared').ListingSeniority | null;
+  details?: import('@flacroncv/career-shared').ListingDetails;
   moderationStatus?: ModerationStatus;
+  saved?: boolean;
 }
 
 export interface OpportunityDetail extends OpportunityItem {
   description: string;
+  revisionId?: string;
   resumeAnalysis: {
     includedRemaining: number;
     packRemaining: number;
@@ -383,13 +418,54 @@ export interface OpportunityDetail extends OpportunityItem {
   trustSignals?: TrustSignalSummary;
 }
 
+export interface OpportunitySearchQuery {
+  q?: string;
+  role?: string;
+  category?: string;
+  status?: string;
+  includeExpired?: boolean;
+  payStated?: boolean;
+  minPay?: number;
+  payCurrency?: string;
+  payPeriod?: string;
+  schedule?: string;
+  seniority?: string;
+  place?: string;
+  radiusMiles?: number;
+  remote?: 'restricted' | 'unrestricted';
+  postedWithinDays?: number;
+  deadlineBefore?: string;
+  followedOnly?: boolean;
+  provider?: string;
+}
+
+export interface OpportunitySearchResult {
+  items: OpportunityItem[];
+  /** Filters the search could not apply and why; never dropped silently. */
+  notApplied?: Array<{ filter: 'radiusMiles' | 'followedOnly'; reason: 'no_place' | 'geocoding_unavailable' | 'no_followed_companies' | 'place_not_found' }>;
+}
+
+export interface PasteOpportunityInput {
+  text: string;
+  sourceUrl?: string;
+  category?: string;
+  deadline?: string;
+  publishedAt?: string;
+  remoteRestriction?: string;
+  details?: Partial<Record<import('@flacroncv/career-shared').ListingDetailField, string | null>>;
+}
+
 export interface MatchResult {
   id: string;
   fit: 'blocked' | 'none' | 'partial' | 'strong';
   overlap: number;
-  reasons: Array<{ code: 'confirmed_overlap'; factId: string; token: string }>;
-  gaps: Array<{ code: 'not_in_facts'; token: string }>;
+  reasons: Array<{ code: 'confirmed_overlap' | 'credential_held'; factId: string; token: string }>;
+  gaps: Array<{ code: 'not_in_facts' | 'credential_missing'; token: string }>;
   unknowns: Array<{ code: 'pay' | 'sponsorship' | 'location' | 'unconfirmed'; factId?: string; token?: string }>;
+  /** Personal preferences against the listing, separate from qualification fit. Absent on older comparisons. */
+  preferenceFit?: import('@flacroncv/career-shared').PreferenceCheck[];
+  label?: import('@flacroncv/career-shared').MatchLabel;
+  labelReasons?: import('@flacroncv/career-shared').MatchLabelReason[];
   profileVersion: number;
   opportunityId: string;
   opportunityRevisionId: string;
@@ -418,6 +494,16 @@ export interface AiJob {
   state: string;
 }
 
+export interface SavedSearchFilters {
+  minPay: number | null;
+  payCurrency: string | null;
+  payPeriod: string | null;
+  workSchedule: string | null;
+  seniority: string | null;
+  arrangement: string | null;
+  relevance: 'any' | 'possible_fit' | 'strong_fit';
+}
+
 export interface SavedSearch {
   id: string;
   q: string | null;
@@ -426,19 +512,36 @@ export interface SavedSearch {
   radiusMiles: number | null;
   schedule: 'weekly' | 'daily' | 'every_6_hours' | 'hourly';
   paused: boolean;
+  filters?: SavedSearchFilters;
+  /** Stored filters the current plan does not apply (after a downgrade). */
+  inactiveFilters?: Array<keyof SavedSearchFilters>;
+  locationMode?: 'radius_or_name' | 'name' | null;
 }
+
+export type SavedSearchInput = {
+  q?: string;
+  category?: string;
+  schedule?: SavedSearch['schedule'];
+  locationProfileId?: string;
+  radiusMiles?: number;
+} & Partial<{ [K in keyof SavedSearchFilters]: SavedSearchFilters[K] | null }>;
 
 /** A place a saved search can be limited to (alerts; distinct from career-mode relocation profiles). */
 export interface AlertLocation {
   id: string;
   place: string;
   radiusMiles: number;
+  hasCoordinates?: boolean;
+  geocodedLabel?: string | null;
 }
 
 export interface FollowedCompany {
   id: string;
   name: string;
   sourceUrl: string | null;
+  aliases?: string[];
+  roles?: string[];
+  locations?: string[];
 }
 
 export interface AlertSettings {
@@ -451,20 +554,78 @@ export interface AlertSettings {
   paused: boolean;
 }
 
+export interface AlertDelivery {
+  channel: 'email' | 'push' | 'telegram';
+  status: 'held' | 'pending' | 'sending' | 'sent' | 'uncertain' | 'failed';
+  lastError: string | null;
+}
+
 export interface AlertItem {
   id: string;
   opportunityId: string;
   title: string;
   organization: string | null;
   revisionId: string;
-  reason: { code: 'saved_search' | 'followed_company' | 'material_update'; fit: 'blocked' | 'none' | 'partial' | 'strong' | null };
+  reason: {
+    code: 'saved_search' | 'followed_company' | 'material_update';
+    fit: 'blocked' | 'none' | 'partial' | 'strong' | null;
+    tier?: import('@flacroncv/career-shared').AlertTier;
+    searchId?: string | null;
+    searchLabel?: string | null;
+    companyId?: string | null;
+    companyName?: string | null;
+    label?: import('@flacroncv/career-shared').MatchLabel | null;
+    labelReasons?: import('@flacroncv/career-shared').MatchLabelReason[];
+    gaps?: string[];
+    advanced?: { targetRole: string | null; promotionGoal: string | null; learningPlanId: string | null; actionPackId: string | null } | null;
+  };
+  basic?: {
+    provider: string;
+    category: string;
+    locations: string[];
+    sourceUrl: string | null;
+    checkedAt: string;
+    compensation: OpportunityCompensation;
+    deadline: string | null;
+  };
+  read?: boolean;
+  deliveries?: AlertDelivery[];
   createdAt: string;
 }
 
 export interface AlertList {
   items: AlertItem[];
+  unread?: number;
   alertItem: { includedRemaining: number; packRemaining: number; renewalDate: string | null };
   settings: AlertSettings;
+  /** Whether each channel has a provider; "not_connected" means nothing can leave yet. */
+  channels?: Record<'email' | 'push' | 'telegram', 'connected' | 'not_connected'>;
+  tier?: import('@flacroncv/career-shared').AlertTier;
+}
+
+export interface CareerReminder {
+  id: string;
+  kind: import('@flacroncv/career-shared').ReminderKind;
+  title: string;
+  dueDate: string;
+  link: string | null;
+  read: boolean;
+  createdAt: string;
+  deliveries: AlertDelivery[];
+}
+
+export interface ReminderList {
+  upcoming: CareerReminder[];
+  history: CareerReminder[];
+  unread: number;
+}
+
+export interface TrackerReminderInput {
+  kind: 'application_follow_up' | 'interview';
+  sourceKey: string;
+  title: string;
+  dueDate: string;
+  link?: string | null;
 }
 
 export type ApplicationStatus = 'saved' | 'preparing' | 'applied' | 'interviewing' | 'offered' | 'rejected' | 'withdrawn';
@@ -502,16 +663,49 @@ export interface InterviewFeedback {
   evidence: 'cited' | 'unstated';
 }
 
+export interface InterviewReport {
+  answered: number;
+  total: number;
+  complete: boolean;
+  dimensions: Array<{
+    dimension: keyof InterviewFeedback;
+    met: number;
+    answered: number;
+    verdict: 'strength' | 'gap';
+  }>;
+  lackingEvidence: number[];
+}
+
 export interface InterviewSession {
   id: string;
-  opportunityId: string;
-  opportunityRevisionId: string;
+  /** Null for practice by typed role and stage without a saved listing. */
+  opportunityId: string | null;
+  opportunityRevisionId: string | null;
   stage: InterviewStage;
   title: string;
   questions: Array<{ index: number; factId: string; prompt: string }>;
   answers: Array<{ id: string; index: number; answer: string; feedback: InterviewFeedback; challenge: string | null }>;
   summary: string;
+  /** Absent on a replay of a session created before reports existed. */
+  report?: InterviewReport;
   createdAt: string;
+}
+
+export interface StartInterviewInput {
+  /** A saved listing, or `role` for practice without one. */
+  opportunityId?: string;
+  role?: string;
+  stage: InterviewStage;
+  /** 3 to 10; the server uses 10 when omitted. */
+  questionCount?: number;
+}
+
+export interface StarStoryInput {
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+  factIds?: string[];
 }
 
 export interface InterviewList {
@@ -538,7 +732,12 @@ export interface VoiceRecording {
   requestedSeconds: number;
   truncated: boolean;
   transcript: string;
-  feedback: InterviewFeedback;
+  /** Where the words came from; 'pending' until typed or transcribed. */
+  transcriptSource: 'typed' | 'transcribed' | 'pending';
+  /** Null until there is a transcript to judge. */
+  feedback: InterviewFeedback | null;
+  /** The audio file is still stored and can be played back. */
+  audioStored: boolean;
   audioDeleted: boolean;
 }
 
@@ -561,6 +760,8 @@ export interface VoiceList {
   remainingSeconds: number;
   planIncludesVoice: boolean;
   renewalDate: string | null;
+  /** False while no speech provider is connected: the person types what they said. */
+  transcriptionAvailable: boolean;
 }
 
 export interface VoiceRecordResult {
@@ -569,6 +770,8 @@ export interface VoiceRecordResult {
   truncated: boolean;
   remainingSeconds: number;
   replayed: boolean;
+  /** Automatic transcription of the take; it never changes the charge. */
+  transcription: 'transcribed' | 'unavailable' | 'failed' | 'not_attempted';
 }
 
 export interface BillingAccount {
@@ -598,10 +801,60 @@ export interface UsagePack {
   requiredPlan: string | null;
 }
 
+export interface UsageUnitRow {
+  unit: string;
+  /** Included units granted this month (same as `granted`; older name). */
+  includedGranted: number;
+  includedRemaining: number;
+  /** Purchased pack units this plan can spend now. */
+  packRemaining: number;
+  /** Unexpired pack units this plan cannot spend until it includes the unit again. */
+  packHeld: number;
+  /** Five-plan usage page fields (career API from 2026-11-14). */
+  granted?: number;
+  used?: number;
+  /** Spendable now: included first, then packs. */
+  remaining?: number;
+  /** 0–100, or null when the plan includes none of this unit. */
+  percentUsed?: number | null;
+}
+
+/** An 80 / 95 / 100 percent usage notice not yet shown (spec section 11). */
+export interface UsageWarning {
+  id: string;
+  unit: string;
+  threshold: 80 | 95 | 100;
+  createdAt: string;
+  seenAt: string | null;
+}
+
+/** The automatic top-up opt-in. Off by default; on needs explicit consent and a monthly cap. */
+export interface UsageTopUp {
+  enabled: boolean;
+  spendingCapCents: number | null;
+  consentAt: string | null;
+  spentThisPeriodCents: number;
+  /** Preferred pack per unit, e.g. `{ document_credit: 'document_m' }`. */
+  addons: Partial<Record<string, string>>;
+}
+
 export interface UsageSummary {
   renewalDate: string;
-  units: Array<{ unit: string; includedGranted: number; includedRemaining: number; packRemaining: number; packHeld: number }>;
+  units: UsageUnitRow[];
   packs: UsagePack[];
+  /** The fields below come with the five-plan usage page; older servers omit them. */
+  planId?: string;
+  /** A lower plan waiting for the renewal (downgrades take effect at renewal). */
+  scheduledPlanId?: string | null;
+  period?: { start: string; end: string };
+  /** Paid plans renew on the billing anniversary, Free on the account anniversary. */
+  renewalBasis?: 'billing_anniversary' | 'account_anniversary';
+  warnings?: UsageWarning[];
+  /** Recurring capacity add-ons, by allowance field (`{ savedSearches: 5 }`). */
+  capacityExtras?: Partial<Record<string, number>>;
+  /** `graceUntil`: excess files are kept until then (30 days after a downgrade or cancellation). */
+  storage?: { usedBytes: number; limitBytes: number | null; excessBytes: number; graceUntil: string | null };
+  topUp?: UsageTopUp;
 }
 
 export interface SavedEstimate {
@@ -669,6 +922,7 @@ export interface StarStory {
   action: string;
   result: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export type {
@@ -676,7 +930,11 @@ export type {
   CreateEvidenceInput,
   EvidenceLabel,
   EvidenceType,
+  EvidenceVerification,
+  RecordVerificationInput,
   UpdateEvidenceInput,
+  VerificationMethod,
+  VerifiedLabel,
 } from '@flacroncv/career-shared';
 
 export interface EvidenceList {
@@ -691,6 +949,10 @@ export type {
   ActionPackProfileFactSnapshot,
   ActionPackResume,
   ActionPackVacancySnapshot,
+  ActionPackComponent,
+  ActionPackEdit,
+  ActionPackSavedDocuments,
+  ActionPackStatus,
   CreateActionPackInput,
 } from '@flacroncv/career-shared';
 
@@ -706,6 +968,7 @@ export interface ActionPackList {
 }
 
 export interface PaidActionPack {
+  /** `status: 'partial'` means a component failed and the credit is held (`ledgerState: 'reserved'`) for a free retry. */
   actionPack: import('@flacroncv/career-shared').ActionPack;
   usage: {
     unit: string;
@@ -747,6 +1010,16 @@ export type SkillGapItem = import('@flacroncv/career-shared').SkillGapItem;
 export type LearningPlanMilestone = import('@flacroncv/career-shared').LearningPlanMilestone;
 export type ProjectBrief = import('@flacroncv/career-shared').ProjectBrief;
 export type ProjectRubricCriterion = import('@flacroncv/career-shared').ProjectRubricCriterion;
+export type RubricCheckInput = import('@flacroncv/career-shared').RubricCheckInput;
+export type RubricSelfCheck = import('@flacroncv/career-shared').RubricSelfCheck;
+export type BridgeRole = import('@flacroncv/career-shared').BridgeRole;
+export type TransferableSkill = import('@flacroncv/career-shared').TransferableSkill;
+
+/** `created` is false when the vault item already existed and was returned instead of duplicated. */
+export interface LearningEvidenceResult {
+  evidenceId: string;
+  created: boolean;
+}
 
 export interface LocationProfileList {
   items: import('@flacroncv/career-shared').LocationProfile[];
@@ -761,7 +1034,11 @@ export type TargetTimeline = import('@flacroncv/career-shared').TargetTimeline;
 export type WorkAuthorization = import('@flacroncv/career-shared').WorkAuthorization;
 export type RemoteFlexibility = import('@flacroncv/career-shared').RemoteFlexibility;
 export type SpecialistMode = import('@flacroncv/career-shared').SpecialistMode;
-export type CandidateSpecialistMode = import('@flacroncv/career-shared').CandidateSpecialistMode;
+/** `available`: whether the plan includes specialist modes (a saved choice is kept after a downgrade). */
+export type CandidateSpecialistMode = import('@flacroncv/career-shared').CandidateSpecialistMode & { available?: boolean };
+export type LocationKind = import('@flacroncv/career-shared').LocationKind;
+export type LicenseTransfer = import('@flacroncv/career-shared').LicenseTransfer;
+export type ModeContext = import('@flacroncv/career-shared').ModeContext;
 export type UpdateSpecialistModeInput = import('@flacroncv/career-shared').UpdateSpecialistModeInput;
 
 export interface ScopeUsage {
@@ -779,20 +1056,31 @@ export interface PaidScope<T> {
   replayed: boolean;
 }
 
-export interface ScenarioOptionView {
-  name: string;
-  costCents: number | null;
-  months: number | null;
-  destination: string;
-  wageCents: number | null;
-  wageLabel: 'user_supplied' | 'unknown';
-  source: 'user' | 'estimate';
-}
+export type ScenarioOptionView = import('@flacroncv/career-shared').ScenarioOptionView;
+export type ScenarioOptionInput = import('@flacroncv/career-shared').ScenarioOptionInput;
 
+/** A saved comparison; reopened from `GET /scenarios`. */
 export interface ScenarioResult {
   id: string;
+  title: string;
   options: ScenarioOptionView[];
   tradeoff: string;
+  locationProfileIds: string[];
+  skillReportIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScenarioList {
+  items: ScenarioResult[];
+  /** Scenario reports left (plan + packs), or null when the plan has none. */
+  remaining: number | null;
+}
+
+export interface ScenarioLinks {
+  title?: string;
+  locationProfileIds?: string[];
+  skillReportIds?: string[];
 }
 
 export interface LearningLoopView {
@@ -835,10 +1123,34 @@ export interface SalesInquiryResult {
   delivered: boolean;
 }
 
+export type MaintenanceAchievement = import('@flacroncv/career-shared').MaintenanceAchievement;
+export type MaintenancePromotionGoal = import('@flacroncv/career-shared').MaintenancePromotionGoal;
+export type MaintenanceCredential = import('@flacroncv/career-shared').MaintenanceCredential;
+export type CredentialReminder = import('@flacroncv/career-shared').CredentialReminder;
+
 export interface MaintenanceView {
-  achievements: Array<{ id: string; title: string }>;
-  promotionGoals: Array<{ id: string; desiredTitle: string }>;
-  credentials: Array<{ id: string; name: string; expiresOn: string; due: boolean }>;
+  achievements: MaintenanceAchievement[];
+  promotionGoals: MaintenancePromotionGoal[];
+  credentials: MaintenanceCredential[];
+  reminders: CredentialReminder[];
+}
+
+export interface AchievementInput {
+  title?: string;
+  details?: string;
+  achievedOn?: string | null;
+  factId?: string | null;
+  evidenceId?: string | null;
+}
+
+export interface CredentialInput {
+  name?: string;
+  expiresOn?: string;
+  reviewOn?: string | null;
+  issuer?: string;
+  region?: string;
+  factId?: string | null;
+  evidenceId?: string | null;
 }
 
 export interface MapList {
@@ -846,6 +1158,8 @@ export interface MapList {
   tiles: null;
   attribution: null;
   provider: null;
+  /** False while no tile provider is configured: the list works, a map session is not offered or charged. */
+  available?: boolean;
 }
 
 export interface MapSessionResult {
@@ -862,14 +1176,28 @@ export interface HumanServiceList {
   items: Array<{ id: string; name: string; scope: string; priceCents: null; bookingOpen: false; note: string }>;
 }
 
+/** Candidates learn how many people opted in, never who. */
 export interface RecruitingSearch {
-  items: Array<{ candidateAuthUserId: string; label: string }>;
+  count: number;
 }
+
+export type ApiKeyEnvironment = import('@flacroncv/career-shared').ApiKeyEnvironment;
 
 export interface DeveloperKey {
   id: string;
+  /** Shown once. Starts with `flc_test_` or `flc_live_`. */
   token: string;
   prefix: string;
+  environment: ApiKeyEnvironment;
+}
+
+export interface ApiKeyView {
+  id: string;
+  prefix: string;
+  environment: ApiKeyEnvironment;
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
 }
 
 export interface WhiteLabelConfig {
@@ -882,11 +1210,107 @@ export interface DeveloperStatus {
   apiPackage: boolean;
   whiteLabel: boolean;
   brand: WhiteLabelConfig | null;
+  keys?: ApiKeyView[];
+  rateLimits?: Record<ApiKeyEnvironment, number>;
+}
+
+export type BusinessRole = import('@flacroncv/career-shared').BusinessRole;
+export type BusinessStaffRole = import('@flacroncv/career-shared').BusinessStaffRole;
+export type BusinessScope = import('@flacroncv/career-shared').BusinessScope;
+export type BusinessCandidateStatus = import('@flacroncv/career-shared').BusinessCandidateStatus;
+
+export interface BusinessStaffView {
+  id: string;
+  role: BusinessStaffRole;
+  status: 'invited' | 'active' | 'expired' | 'revoked';
+  email: string | null;
+  authUserId: string | null;
+  expiresAt: string | null;
+  assignedCandidateIds: string[];
+}
+
+export interface BusinessCandidateView {
+  id: string;
+  email: string;
+  status: BusinessCandidateStatus;
+  inviteState: 'pending' | 'expired' | 'revoked' | 'accepted' | 'none';
+  shareProfile: boolean;
+  expiresAt: string | null;
+  counselorIds: string[];
 }
 
 export interface BusinessOverview {
-  staff: Array<{ id: string; authUserId: string; role: string }>;
-  candidates: Array<{ id: string; email: string }>;
+  workspaceId: string;
+  role: BusinessRole;
+  scope: BusinessScope;
+  staff: BusinessStaffView[];
+  candidates: BusinessCandidateView[];
+  capacity: { staffSeats: number | null; staffUsed: number; activeCandidates: number | null; candidatesUsed: number };
+}
+
+export interface BusinessInvitation {
+  id: string;
+  /** Website path; join it to the site origin to show a copyable link. */
+  invitePath: string;
+  expiresAt: string;
+  /** False until mail delivery is configured. */
+  delivered: boolean;
+}
+
+export interface BusinessMemberships {
+  ownsWorkspace: boolean;
+  ownWorkspaceId: string;
+  staffOf: Array<{ workspaceId: string; role: BusinessStaffRole }>;
+  candidateOf: Array<{ candidateId: string; workspaceId: string; status: BusinessCandidateStatus; shareProfile: boolean }>;
+}
+
+export interface BusinessCandidateDetail {
+  id: string;
+  email: string;
+  status: BusinessCandidateStatus;
+  shareProfile: boolean;
+  shared: { evidence: Array<{ title: string; evidenceType: string; evidenceLabel: string }>; confirmedFacts: number } | null;
+}
+
+export interface BusinessQueueItem {
+  id: string;
+  title: string;
+  url: string | null;
+  note: string;
+  candidateId: string | null;
+  status: 'open' | 'recommended' | 'closed';
+  createdAt: string;
+}
+
+export interface BusinessUsage {
+  units: Array<{ unit: string; granted: number; remaining: number }>;
+  seats: BusinessOverview['capacity'];
+  invoices: Array<{ sku: string; kind: string; amountCents: number | null; currency: string | null; purchasedAt: string; refunded: boolean }> | null;
+}
+
+export interface BusinessReport {
+  candidates: Record<BusinessCandidateStatus, number>;
+  staff: Record<BusinessStaffRole, number>;
+  assignments: number;
+  sharingCandidates: number;
+  queue: Record<'open' | 'recommended' | 'closed', number>;
+}
+
+export interface AdminEvidenceView {
+  id: string;
+  title: string;
+  evidenceType: string;
+  evidenceLabel: string;
+  verifications: import('@flacroncv/career-shared').EvidenceVerification[];
+}
+
+export interface AdminBusinessRow {
+  workspaceId: string;
+  staff: { manager: number; counselor: number; billing_admin: number };
+  pendingStaffInvites: number;
+  candidates: { invited: number; active: number; archived: number };
+  pendingCandidateInvites: number;
+  expiredInvites: number;
 }
 
 

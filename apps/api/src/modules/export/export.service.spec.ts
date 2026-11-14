@@ -67,12 +67,31 @@ describe('ExportService client export reserve / refund / confirm', () => {
       expect(res.data()).toMatchObject({ uid: 'uid', status: 'reserved', format: 'pdf' });
     });
 
-    it('blocks a FREE PDF once the lifetime quota of 2 is reached', async () => {
+    it('FREE PDF exports are unlimited (five-plan catalog) and carry the branding mark', async () => {
       await seedUser(firestore, 'uid', SubscriptionPlan.FREE, 2);
       const result = await service.recordClientExport('uid', 'pdf');
-      expect(result).toEqual({ allowed: false, reason: 'limit_reached' });
-      expect(await used(firestore, 'uid')).toBe(2);
+      expect(result).toMatchObject({ allowed: true, removeBranding: false });
+      expect(await used(firestore, 'uid')).toBe(3);
     });
+
+    it.each([
+      SubscriptionPlan.STARTER,
+      SubscriptionPlan.PROFESSIONAL,
+      SubscriptionPlan.CAREER_PRO,
+      SubscriptionPlan.BUSINESS,
+    ])('%s: PDF and DOCX allowed, no branding mark', async (plan) => {
+      await seedUser(firestore, 'uid', plan, 0);
+      expect(await service.recordClientExport('uid', 'pdf')).toMatchObject({ allowed: true, removeBranding: true });
+      expect(await service.recordClientExport('uid', 'docx')).toMatchObject({ allowed: true, removeBranding: true });
+    });
+
+    it.each([SubscriptionPlan.PRO, SubscriptionPlan.CAREER_ACCELERATOR, SubscriptionPlan.ENTERPRISE])(
+      'LEGACY %s keeps its export rules: DOCX allowed, never branded',
+      async (plan) => {
+        await seedUser(firestore, 'uid', plan, 0);
+        expect(await service.recordClientExport('uid', 'docx')).toMatchObject({ allowed: true, removeBranding: true });
+      },
+    );
 
     it('allows DOCX for PRO and records usage even when the counter is high (unlimited)', async () => {
       await seedUser(firestore, 'uid', SubscriptionPlan.PRO, 999);
@@ -95,13 +114,13 @@ describe('ExportService client export reserve / refund / confirm', () => {
       expect(await used(firestore, 'uid')).toBe(0);
     });
 
-    it('enforces the Free cap under concurrency — only remaining reservations succeed', async () => {
-      await seedUser(firestore, 'uid', SubscriptionPlan.FREE, 0); // 2 remaining
+    it('counts every concurrent Free PDF reservation exactly once (no lost updates)', async () => {
+      await seedUser(firestore, 'uid', SubscriptionPlan.FREE, 0);
       const results = await Promise.all(
         Array.from({ length: 10 }, () => service.recordClientExport('uid', 'pdf')),
       );
-      expect(results.filter((r) => r.allowed)).toHaveLength(2);
-      expect(await used(firestore, 'uid')).toBe(2);
+      expect(results.filter((r) => r.allowed)).toHaveLength(10);
+      expect(await used(firestore, 'uid')).toBe(10);
     });
   });
 

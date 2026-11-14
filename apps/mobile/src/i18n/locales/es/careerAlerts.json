@@ -68,7 +68,10 @@
     "yourAlerts": "Tus alertas",
     "emptyTitle": "Aún no hay alertas",
     "emptyBody": "Una búsqueda guardada te mostrará ofertas más adelante. Buscar ahora no usa ninguna alerta.",
-    "openA11y": "{name}. Abrir oferta"
+    "openA11y": "{name}. Abrir oferta",
+    "unread": "Nueva",
+    "markAllRead": "Marcar todo como leído",
+    "unreadCount": "{count, plural, one {# alerta nueva} other {# alertas nuevas}}"
   },
   "balance": {
     "none": "No te quedan elementos de alerta. Las nuevas alertas esperan a que se renueve el saldo. La búsqueda sigue funcionando.",

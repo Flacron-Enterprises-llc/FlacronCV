@@ -91,6 +91,7 @@ describe('personal export (fictional accounts, local Postgres, memory storage)',
       'documents.resumes', 'documents.writing', 'documents.evidence', 'documents.portfolios',
       'opportunities.pasted', 'opportunities.savedSearches', 'opportunities.locationProfiles', 'opportunities.followedCompanies',
       'opportunities.alertSettings', 'opportunities.alerts', 'opportunities.digests', 'opportunities.matches', 'opportunities.reports',
+      'opportunities.saved', 'opportunities.reminders',
       'applications', 'practice.interviews', 'practice.starStories', 'practice.voiceSessions', 'practice.recordingConsents',
       'career.actionPacks', 'career.skillReports', 'career.specialistModes', 'career.scenarios', 'career.achievements',
       'career.promotionGoals', 'career.credentialReminders', 'career.assistedForms', 'career.mapSessions', 'career.recruitingOptIn',
@@ -107,8 +108,13 @@ describe('personal export (fictional accounts, local Postgres, memory storage)',
     expect(json.practice.interviews[0].answers[0].answer).toContain(marker(ada));
     expect(json.practice.voiceSessions[0].recordings[0].transcript).toContain(marker(ada));
     expect(json.opportunities.alerts[0].deliveries).toHaveLength(1);
+    expect(json.opportunities.reminders[0].deliveries).toHaveLength(1);
+    expect(json.opportunities.reminders[0].title).toContain(marker(ada));
     expect(json.opportunities.pasted[0].revisions).toHaveLength(1);
     expect(json.documents.portfolios[0].evidenceIds).toHaveLength(1);
+    // Verification history goes with each evidence item; mode choices and new maintenance fields come along.
+    expect(json.documents.evidence.some((e: any) => e.verifications.length === 1 && e.verifications[0].scope.includes(marker(ada)))).toBe(true);
+    expect(json.career.specialistModes[0].modes).toEqual(['veterans']);
 
     // The stored file is described, with how to fetch it; its bytes and storage key are not in the JSON.
     const file = json.documents.evidence.find((e: any) => e.id === item.id).file;
@@ -119,7 +125,7 @@ describe('personal export (fictional accounts, local Postgres, memory storage)',
     expect(text).not.toContain(objectKey);
     expect(text).not.toContain(`evidence/${ada.workspaceId}/`);
     // No credential material, request keys, share tokens, or signed links.
-    expect(text).not.toMatch(/secret-key-|hash-secret-|share-secret-/);
+    expect(text).not.toMatch(/secret-key-|hash-secret-|share-secret-|secret-object-/);
     expect(text).not.toContain(share);
     expect(text).not.toMatch(/X-Amz-|sig=|exports\.example\.test/);
     expect(text).not.toMatch(/provider_customer_id|provider_subscription_id|provider_payment_id|key_hash|idempotency_key|request_fingerprint/);
@@ -128,6 +134,7 @@ describe('personal export (fictional accounts, local Postgres, memory storage)',
     expect(text).not.toContain(bea.authUserId);
     expect(text).not.toContain(bea.workspaceId);
     expect(text).not.toContain('invitee-of-');
+    expect(text).not.toContain('staff-invite-of-');
   });
 
   it('adds workspace settings for the workspace scope without credentials or invitees', async () => {
@@ -137,8 +144,10 @@ describe('personal export (fictional accounts, local Postgres, memory storage)',
     expect(json.format.scope).toBe('workspace');
     expect(json.workspace.apiKeys).toEqual([expect.objectContaining({ key_prefix: 'flc_x' })]);
     expect(json.workspace.invitations).toEqual({ total: 1, consented: 1 });
+    expect(json.workspace.queue).toEqual({ total: 2, recommended: 1 });
+    expect(json.workspace.staff.map((row: any) => row.accepted).sort()).toEqual([false, true]);
     expect(json.workspace.whiteLabel.brand_name).toContain(marker(cy));
-    expect(text).not.toMatch(/hash-secret-|invitee-of-/);
+    expect(text).not.toMatch(/hash-secret-|invitee-of-|staff-invite-of-/);
     const personal = await exportOf(cy, 'personal');
     expect(personal.json.workspace.apiKeys).toBeUndefined();
   });

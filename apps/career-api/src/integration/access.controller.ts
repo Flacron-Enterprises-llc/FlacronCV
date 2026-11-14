@@ -1,9 +1,9 @@
 import { Controller, Get, Inject } from '@nestjs/common';
 import { CATALOG_VERSION, FEATURE_PHASE } from '@flacroncv/career-shared';
 import type { FeatureId } from '@flacroncv/career-shared';
-import { BillingPageService, isFeatureEnabled } from '@flacroncv/career-server';
-import type { CareerAccess, CatalogSnapshot, Principal } from '@flacroncv/career-server';
-import { AccessOnly, CurrentCareerAccess, CurrentPrincipal } from '../auth/auth.guard';
+import { isFeatureEnabled } from '@flacroncv/career-server';
+import type { CareerAccess, CatalogSnapshot } from '@flacroncv/career-server';
+import { AccessOnly, CurrentCareerAccess } from '../auth/auth.guard';
 import { DatabaseService } from '../database/database.service';
 
 /**
@@ -37,20 +37,5 @@ export class AccessController {
     );
     if (!res.rows[0]) throw new Error('Catalog version is not published; run the career migrations');
     return res.rows[0].snapshot;
-  }
-}
-
-/**
- * Career allowance balances only. V2's prices, checkout, packs, spending caps
- * and store webhooks are not served: V1's billing is unchanged and remains
- * the only place a customer pays.
- */
-@Controller()
-export class UsageController {
-  constructor(@Inject(BillingPageService) private readonly billing: BillingPageService) {}
-
-  @Get('usage')
-  usage(@CurrentPrincipal() principal: Principal) {
-    return this.billing.usage(principal);
   }
 }

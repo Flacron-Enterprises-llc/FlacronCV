@@ -6,7 +6,9 @@ import {
   PlatformUserGrowthDataPoint,
   PlatformUsageDataPoint,
   PlatformTopTemplate,
+  SubscriptionPlan,
   User,
+  allPlansForAdmin,
 } from '@flacroncv/shared-types';
 
 @Injectable()
@@ -42,12 +44,13 @@ export class CRMPlatformService {
       return d >= startOfLastMonth && d <= endOfLastMonth;
     }).length;
 
-    const usersByPlan = {
-      free: users.filter((u) => u.subscription?.plan === 'free').length,
-      pro: users.filter((u) => u.subscription?.plan === 'pro').length,
-      career_accelerator: users.filter((u) => u.subscription?.plan === 'career_accelerator').length,
-      enterprise: users.filter((u) => u.subscription?.plan === 'enterprise').length,
-    };
+    // Every plan id, current and legacy. A doc without a plan counts as Free
+    // (same default every gate uses).
+    const usersByPlan = Object.fromEntries(allPlansForAdmin().map((p) => [p, 0])) as Record<SubscriptionPlan, number>;
+    for (const u of users) {
+      const plan = (u.subscription?.plan as SubscriptionPlan | undefined) ?? SubscriptionPlan.FREE;
+      if (plan in usersByPlan) usersByPlan[plan] += 1;
+    }
 
     const totalCVs = cvs.length;
     const totalCoverLetters = coverLetters.length;

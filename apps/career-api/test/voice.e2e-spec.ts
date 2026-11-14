@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { bearer } from '@flacroncv/career-server/src/testing';
+import { webmOpus } from '@flacroncv/career-server/src/voice/audio-fixtures';
 import { createTestApp, TestApp } from './support';
 
 describe('voice interviews over HTTP', () => {
@@ -73,7 +74,8 @@ describe('voice interviews over HTTP', () => {
     const missingKey = await http()
       .post(`/api/career/v1/interviews/voice/${created.body.id}/recording`)
       .set('Authorization', auth)
-      .send({ durationSeconds: 90, transcript: 'I used SQL.' });
+      .set('Content-Type', 'audio/webm')
+      .send(webmOpus(90));
     expect(missingKey.status).toBe(400);
     expect(missingKey.body).toEqual({ code: 'validation_error', field: 'Idempotency-Key' });
 
@@ -81,8 +83,12 @@ describe('voice interviews over HTTP', () => {
       .post(`/api/career/v1/interviews/voice/${created.body.id}/recording`)
       .set('Authorization', auth)
       .set('Idempotency-Key', 'http-voice-90')
-      .send({ durationSeconds: 90, transcript: 'I used SQL.' });
+      .set('Content-Type', 'audio/webm;codecs=opus')
+      .set('X-Transcription-Language', 'en')
+      .send(webmOpus(90));
     expect(recorded.status).toBe(201);
+    expect(recorded.body.transcription).toBe('unavailable');
+    expect(recorded.body.session.recording).toMatchObject({ transcriptSource: 'pending', audioStored: true, feedback: null });
     expect(recorded.body.billedSeconds).toBe(90);
     expect(recorded.body.remainingSeconds).toBe(1710);
     expect(recorded.body.replayed).toBe(false);
@@ -93,7 +99,8 @@ describe('voice interviews over HTTP', () => {
       .post(`/api/career/v1/interviews/voice/${created.body.id}/recording`)
       .set('Authorization', auth)
       .set('Idempotency-Key', 'http-voice-90')
-      .send({ durationSeconds: 90, transcript: 'I used SQL.' });
+      .set('Content-Type', 'audio/webm')
+      .send(webmOpus(90));
     expect(replay.status).toBe(201);
     expect(replay.body.replayed).toBe(true);
     expect(replay.body.remainingSeconds).toBe(1710);
@@ -105,18 +112,34 @@ describe('voice interviews over HTTP', () => {
     );
     expect(ledger.rows[0].quantity).toBe(1);
 
+    // A client-reported duration is not accepted any more: JSON is not audio.
+    const claimed = await http()
+      .post(`/api/career/v1/interviews/voice/${created.body.id}/recording`)
+      .set('Authorization', auth)
+      .set('Idempotency-Key', 'http-voice-json')
+      .send({ durationSeconds: 1, transcript: 'I used SQL.' });
+    expect(claimed.status).toBe(400);
+    expect(claimed.body).toMatchObject({ code: 'validation_error', field: 'audio', reason: 'unsupported_type' });
+
+    const link = await http().get(`/api/career/v1/interviews/voice/${created.body.id}/audio`).set('Authorization', auth);
+    expect(link.status).toBe(200);
+    expect(link.body.contentType).toBe('audio/webm');
+
     const corrected = await http()
       .patch(`/api/career/v1/interviews/voice/${created.body.id}/transcript`)
       .set('Authorization', auth)
       .send({ transcript: 'I helped the team.' });
     expect(corrected.status).toBe(200);
-    expect(corrected.body.summary).toBe(recorded.body.session.summary);
+    expect(corrected.body.summary).toBe('Recorded 90 seconds. Relevance missing. Structure thin. Specificity general. Evidence unstated.');
     expect(corrected.body.recording.transcript).toBe('I helped the team.');
 
     const removed = await http().delete(`/api/career/v1/interviews/voice/${created.body.id}/audio`).set('Authorization', auth);
     expect(removed.status).toBe(200);
     expect(removed.body.recording.audioDeleted).toBe(true);
-    expect(removed.body.summary).toBe(recorded.body.session.summary);
+    expect(removed.body.summary).toBe(corrected.body.summary);
+    expect(removed.body.recording.audioStored).toBe(false);
+    const goneLink = await http().get(`/api/career/v1/interviews/voice/${created.body.id}/audio`).set('Authorization', auth);
+    expect(goneLink.status).toBe(404);
 
     const ledgerAfter = await t.db.pool.query<{ quantity: number }>(
       `SELECT COALESCE(SUM(quantity), 0)::int AS quantity FROM usage_ledger

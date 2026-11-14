@@ -6,7 +6,7 @@ import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { testApi } from '@/components/career/test-api';
 import messages from '../../../../public/locales/en/common.json';
 import frMessages from '../../../../public/locales/fr/common.json';
-import { ResumeScreen } from './ResumeScreen';
+import { ResumeScreen, writingContextOf } from './ResumeScreen';
 
 const user: SignedInUser = {
   uid: 'ada',
@@ -184,12 +184,17 @@ describe('ResumeScreen', () => {
           versionId: 'v1',
           label: 'flacroncv_readability',
           issues: [{ code: 'missing_section', section: 'contact' }],
+          formatIssues: [{ code: 'long_line', section: 'experience' }, { code: 'from_a_newer_server' }],
         })),
       }),
     );
     fireEvent.click(await screen.findByRole('button', { name: 'Check readability' }));
     expect(await screen.findByText('This is not an employer score and it is not a job fit.')).toBeTruthy();
     expect(screen.getByText('contact is missing.')).toBeTruthy();
+    // Format checks are listed apart from job fit; an unknown code is skipped, not printed raw.
+    expect(screen.getByText('Format checks')).toBeTruthy();
+    expect(screen.getByText('A very long line may be split badly. Break it into shorter points.')).toBeTruthy();
+    expect(screen.queryByText(/from_a_newer_server/)).toBeNull();
     expect(screen.queryByText(/\d+%|hiring probability/i)).toBeNull();
   });
 
@@ -471,5 +476,60 @@ describe('ResumeScreen', () => {
     expect(within(preview).getByText('Experience')).toBeTruthy();
     expect(within(preview).getByText('Jan 2021 – Jun 2024')).toBeTruthy();
     expect(within(preview).queryByText('Library CV')).toBeNull();
+  });
+  it('says plainly when the writing assistant is not connected and offers no paid button', async () => {
+    const createWriting = vi.fn();
+    renderScreen(
+      testApi({
+        resumes: vi.fn(async () => ({ items: [detail], documentCredit: credit })),
+        resume: vi.fn(async () => detail),
+        resumeVersions: vi.fn(async () => ({ items: [version] })),
+        writingDocuments: vi.fn(async () => ({ items: [], documentCredit: credit, textModelConfigured: false })),
+        createWriting,
+      }),
+    );
+    expect(await screen.findByText(/writing assistant is not connected yet/)).toBeTruthy();
+    const open = screen.getByRole('button', { name: 'Write from confirmed facts' });
+    expect((open as HTMLButtonElement).disabled).toBe(true);
+    expect(createWriting).not.toHaveBeenCalled();
+  });
+
+  it('sends the typed notes with a thank-you note and shows the operation and balance first', async () => {
+    const createWriting = vi.fn(async () => {
+      throw new ApiError(400, 'validation_error', { code: 'validation_error', field: 'context', reason: 'missing_target' });
+    });
+    renderScreen(
+      testApi({
+        resumes: vi.fn(async () => ({ items: [detail], documentCredit: credit })),
+        resume: vi.fn(async () => detail),
+        resumeVersions: vi.fn(async () => ({ items: [version] })),
+        writingDocuments: vi.fn(async () => ({ items: [], documentCredit: credit, textModelConfigured: true })),
+        createWriting,
+      }),
+    );
+    fireEvent.change(await screen.findByLabelText('What to write'), { target: { value: 'thank_you' } });
+    fireEvent.change(screen.getByLabelText('Organization'), { target: { value: ' Babbage ' } });
+    fireEvent.change(screen.getByLabelText('Contact’s name'), { target: { value: 'Grace Hopper' } });
+    fireEvent.change(screen.getByLabelText('Interview date'), { target: { value: '2026-11-12' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Write from confirmed facts' }));
+    expect(await screen.findByText('Operation: Thank-you note')).toBeTruthy();
+    expect(screen.getByText('This uses 1 document credit')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Write with 1 credit' }));
+    expect(await screen.findByText(/needs a listing, or at least the organization or role/)).toBeTruthy();
+    expect(createWriting.mock.calls[0]?.[0]).toEqual({
+      type: 'thank_you',
+      opportunityId: null,
+      templateId: undefined,
+      context: { organization: 'Babbage', contactName: 'Grace Hopper', interviewDate: '2026-11-12' },
+    });
+  });
+
+  it('keeps only the notes that apply to the writing type', () => {
+    const notes = { organization: 'Babbage', role: '', contactName: ' ', contactRole: 'Lead', interviewDate: '2026-11-12' };
+    expect(writingContextOf('bio', notes)).toBeUndefined();
+    expect(writingContextOf('cover_letter', notes)).toBeUndefined();
+    expect(writingContextOf('referral_request', notes)).toEqual({ organization: 'Babbage', contactRole: 'Lead' });
+    expect(writingContextOf('thank_you', notes)).toEqual({ organization: 'Babbage', contactRole: 'Lead', interviewDate: '2026-11-12' });
+    expect(writingContextOf('outreach', { ...notes, organization: '', contactRole: '' })).toBeUndefined();
   });
 });

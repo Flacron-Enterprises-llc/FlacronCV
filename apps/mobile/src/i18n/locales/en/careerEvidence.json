@@ -17,7 +17,9 @@
     "privateFile": "Private file",
     "link": "Link",
     "shared": "Shared in portfolio",
-    "privateOnly": "Private only"
+    "privateOnly": "Private only",
+    "confidential": "Confidential",
+    "linkedFacts": "{count, plural, one {Supports # profile fact} other {Supports # profile facts}}"
   },
   "types": {
     "project": "Project",
@@ -66,7 +68,7 @@
   "validation": {
     "titleRequired": "Enter a title.",
     "maxChars": "Use at most {max} characters.",
-    "webLink": "Enter a full web link starting with https://"
+    "webLink": "Use a link that starts with https:// or http://."
   },
   "file": {
     "title": "Private file",
@@ -110,6 +112,52 @@
     "capacity": "Your career plan has no room for another evidence item.",
     "switchedOff": "The Evidence vault is switched off right now.",
     "validation": "Please check the fields for errors.",
-    "saveFailed": "The evidence item was not saved. Try again."
+    "saveFailed": "The evidence item was not saved. Try again.",
+    "notFound": "This evidence item no longer exists."
+  },
+  "labelLimits": {
+    "self_reported": "Your own statement. Nothing has been checked.",
+    "evidence_attached": "A file or link is attached. It has not been checked with the issuer.",
+    "assessment_completed": "A named assessment was passed. It covers only what that assessment measured.",
+    "issuer_verified": "Checked with the issuer on the date shown, for the scope shown. It lapses when it expires or is revoked.",
+    "reference_confirmed": "A reference confirmed this specific claim only, not your whole profile."
+  },
+  "methods": {
+    "issuer_registry": "Issuer register",
+    "issuer_contact": "Contact with the issuer",
+    "assessment": "Assessment",
+    "reference_contact": "Contact with the reference",
+    "other": "Other method"
+  },
+  "history": {
+    "title": "{count, plural, one {Verification history (# check)} other {Verification history (# checks)}}",
+    "issuer": "Issuer or assessment: {issuer}",
+    "scope": "Covers: {scope}",
+    "expires": "Valid until {date}",
+    "revokedReason": "Revoked: {reason}",
+    "expired": "Expired",
+    "revoked": "Revoked",
+    "checkedOn": "Checked on {date} · {method}",
+    "readOnly": "Checks are recorded by FlacronCV with your permission. They cannot be changed in the app."
+  },
+  "redaction": {
+    "confidential": "Contains confidential employer or client material",
+    "help": "Before this is shared, remove or blur names, figures and anything your employer or client has not allowed you to show.",
+    "note": "What you removed (optional)",
+    "confirm": "I have removed confidential material and may share the rest",
+    "required": "Confirm the redaction before sharing a confidential item.",
+    "confirmTitle": "Share confidential material?",
+    "confirmBody": "\"{title}\" is marked confidential. Your note: {note}. Confirm you removed what your employer or client has not allowed you to show.",
+    "confirmGo": "I removed it; share",
+    "noNote": "none"
+  },
+  "facts": {
+    "title": "Profile facts this supports",
+    "hint": "Link the confirmed facts this item is proof of.",
+    "loading": "Loading your profile facts…",
+    "loadFailed": "Your profile facts could not be loaded. The item can still be saved.",
+    "empty": "No confirmed profile facts yet. Confirm facts in your career profile to link them here.",
+    "tooMany": "Link at most {max} profile facts.",
+    "invalid": "One of the linked profile facts no longer exists. Refresh and try again."
   }
 }

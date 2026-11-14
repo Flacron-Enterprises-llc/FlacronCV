@@ -17,6 +17,7 @@ import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
 import { CurrentUser, FirebaseUser } from '../../common/decorators/current-user.decorator';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
+import { RefreezeJobDocumentDto } from './dto/job-parts.dto';
 
 @ApiTags('jobs')
 @Controller('jobs')
@@ -52,6 +53,15 @@ export class JobsController {
     return { duplicate };
   }
 
+  /**
+   * Tracked applications against the plan capacity. `limit` is null while no
+   * plan limit is wired (see JOB_CAPACITY_LIMIT in jobs.service).
+   */
+  @Get('capacity')
+  capacity(@CurrentUser() user: FirebaseUser) {
+    return this.jobsService.capacity(user.uid);
+  }
+
   @Get(':id')
   findOne(@CurrentUser() user: FirebaseUser, @Param('id') id: string) {
     return this.jobsService.findByIdOrThrow(id, user.uid);
@@ -64,6 +74,16 @@ export class JobsController {
     @Body() data: UpdateJobDto,
   ) {
     return this.jobsService.update(id, user.uid, data);
+  }
+
+  /** Re-freeze the linked CV (new CV version) or cover letter (content copy) at its current state. */
+  @Post(':id/refreeze')
+  refreeze(
+    @CurrentUser() user: FirebaseUser,
+    @Param('id') id: string,
+    @Body() body: RefreezeJobDocumentDto,
+  ) {
+    return this.jobsService.refreeze(id, user.uid, body.kind);
   }
 
   @Delete(':id')

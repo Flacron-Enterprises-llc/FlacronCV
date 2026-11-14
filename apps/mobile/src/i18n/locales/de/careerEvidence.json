@@ -17,7 +17,9 @@
     "privateFile": "Private Datei",
     "link": "Verknüpfung",
     "shared": "Im Portfolio geteilt",
-    "privateOnly": "Nur privat"
+    "privateOnly": "Nur privat",
+    "confidential": "Vertraulich",
+    "linkedFacts": "{count, plural, one {Belegt # Profileintrag} other {Belegt # Profileinträge}}"
   },
   "types": {
     "project": "Projekt",
@@ -66,7 +68,7 @@
   "validation": {
     "titleRequired": "Gib einen Titel ein.",
     "maxChars": "Verwende höchstens {max} Zeichen.",
-    "webLink": "Gib einen vollständigen Weblink ein, der mit https:// beginnt"
+    "webLink": "Verwenden Sie einen Link mit https:// oder http://."
   },
   "file": {
     "title": "Private Datei",
@@ -110,6 +112,52 @@
     "capacity": "Dein Karriere-Tarif hat keinen Platz für einen weiteren Nachweis.",
     "switchedOff": "Das Nachweisarchiv ist gerade deaktiviert.",
     "validation": "Bitte prüfe die Felder auf Fehler.",
-    "saveFailed": "Der Nachweis wurde nicht gespeichert. Versuche es erneut."
+    "saveFailed": "Der Nachweis wurde nicht gespeichert. Versuche es erneut.",
+    "notFound": "Dieser Nachweis existiert nicht mehr."
+  },
+  "labelLimits": {
+    "self_reported": "Ihre eigene Angabe. Nichts wurde geprüft.",
+    "evidence_attached": "Eine Datei oder ein Link ist angehängt. Beim Aussteller wurde nicht geprüft.",
+    "assessment_completed": "Eine benannte Prüfung wurde bestanden. Sie deckt nur ab, was sie gemessen hat.",
+    "issuer_verified": "Beim Aussteller am angegebenen Datum für den angegebenen Umfang geprüft. Gilt nicht mehr nach Ablauf oder Widerruf.",
+    "reference_confirmed": "Eine Referenz hat nur diese konkrete Aussage bestätigt, nicht Ihr ganzes Profil."
+  },
+  "methods": {
+    "issuer_registry": "Register des Ausstellers",
+    "issuer_contact": "Kontakt mit dem Aussteller",
+    "assessment": "Prüfung",
+    "reference_contact": "Kontakt mit der Referenz",
+    "other": "Andere Methode"
+  },
+  "history": {
+    "title": "{count, plural, one {Prüfverlauf (# Prüfung)} other {Prüfverlauf (# Prüfungen)}}",
+    "issuer": "Aussteller oder Prüfung: {issuer}",
+    "scope": "Umfasst: {scope}",
+    "expires": "Gültig bis {date}",
+    "revokedReason": "Widerrufen: {reason}",
+    "expired": "Abgelaufen",
+    "revoked": "Widerrufen",
+    "checkedOn": "Geprüft am {date} · {method}",
+    "readOnly": "Prüfungen werden von FlacronCV mit Ihrer Erlaubnis erfasst. Sie lassen sich in der App nicht ändern."
+  },
+  "redaction": {
+    "confidential": "Enthält vertrauliches Material von Arbeitgeber oder Kunde",
+    "help": "Entfernen oder schwärzen Sie vor dem Teilen Namen, Zahlen und alles, was Arbeitgeber oder Kunde nicht freigegeben haben.",
+    "note": "Was Sie entfernt haben (optional)",
+    "confirm": "Ich habe Vertrauliches entfernt und darf den Rest teilen",
+    "required": "Bestätigen Sie die Schwärzung, bevor Sie Vertrauliches teilen.",
+    "confirmTitle": "Vertrauliches Material teilen?",
+    "confirmBody": "„{title}“ ist als vertraulich markiert. Ihre Notiz: {note}. Bestätigen Sie, dass Sie nicht Freigegebenes entfernt haben.",
+    "confirmGo": "Entfernt; teilen",
+    "noNote": "keine"
+  },
+  "facts": {
+    "title": "Belegte Profileinträge",
+    "hint": "Verknüpfen Sie die bestätigten Einträge, die dieser Nachweis belegt.",
+    "loading": "Ihre Profilangaben werden geladen…",
+    "loadFailed": "Ihre Profilangaben konnten nicht geladen werden. Der Eintrag kann trotzdem gespeichert werden.",
+    "empty": "Noch keine bestätigten Profilangaben. Bestätigen Sie Angaben in Ihrem Karriereprofil, um sie hier zu verknüpfen.",
+    "tooMany": "Verknüpfen Sie höchstens {max} Profilangaben.",
+    "invalid": "Eine der verknüpften Profilangaben existiert nicht mehr. Aktualisieren Sie und versuchen Sie es erneut."
   }
 }

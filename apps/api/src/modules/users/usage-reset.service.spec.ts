@@ -120,6 +120,24 @@ describe('UsageResetService', () => {
       expect((doc.data()?.usage as Record<string, unknown>).aiCreditsUsed).toBe(9);
     });
 
+    it.each(['starter', 'professional', 'career_pro', 'business'])(
+      'never calendar-resets a current %s plan (it renews on its billing anniversary)',
+      async (plan) => {
+        await seedUsers(1, plan);
+        await firestore.collection('users').doc('legacy').set({
+          uid: 'legacy', isActive: true, subscription: { plan: 'enterprise' },
+          usage: { aiCreditsUsed: 9, exportsThisMonth: 1, aiCreditsLimit: 500, cvsCreated: 2, coverLettersCreated: 0 },
+        });
+        await service.resetMonthlyUsage();
+        const usage = (await firestore.collection('users').doc('u0').get()).data()?.usage as Record<string, unknown>;
+        expect(usage.aiCreditsUsed).toBe(42);
+        expect(usage.lastExportReset).toBeUndefined();
+        const legacy = (await firestore.collection('users').doc('legacy').get()).data()?.usage as Record<string, unknown>;
+        expect(legacy.aiCreditsUsed).toBe(0);
+        expect(legacy.aiCreditsLimit).toBe(500);
+      },
+    );
+
     it('does not write a FREE document at all', async () => {
       // Values-unchanged is not enough: a write of the same numbers would
       // also pass. Spy the batch so a skip and a no-op write cannot look alike.

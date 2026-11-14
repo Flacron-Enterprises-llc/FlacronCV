@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type { PortfolioPage } from '../../../../../packages/career-api-client/src/types';
 import {
+  CASE_STUDY_MAX,
   EMPTY_PORTFOLIO_FORM,
+  caseStudiesForSave,
+  setSection,
   formFromPortfolio,
   portfolioErrorMessage,
   portfolioFormDirty,
@@ -31,6 +34,8 @@ const page: PortfolioPage = {
   contactEmail: null,
   contactPhone: null,
   evidenceIds: ['e1', 'e2'],
+  sections: { summary: true, evidence: true, skills: true, contact: true },
+  caseStudies: { e1: 'Built the parser.' },
   shareToken: null,
   publishedAt: null,
   visitCount: 3,
@@ -119,7 +124,33 @@ describe('portfolio form', () => {
       contactEmail: null,
       contactPhone: '+1 555',
       evidenceIds: ['e1', 'e2'],
+      sections: { summary: true, evidence: true, skills: true, contact: true },
+      // Every selected item is sent: an empty text clears its case study on the API.
+      caseStudies: { e1: 'Built the parser.', e2: '' },
     });
+  });
+
+  it('reads missing sections as the defaults and only sends case studies for items on the page', () => {
+    const legacy = formFromPortfolio({ ...page, sections: undefined as never, caseStudies: undefined as never });
+    expect(legacy.sections).toEqual({ summary: true, evidence: true, skills: true, contact: true });
+    expect(legacy.caseStudies).toEqual({});
+    const form = { ...formFromPortfolio(page), evidenceIds: ['e2'], caseStudies: { e1: 'Old', e2: '  Ran the launch  ' } };
+    expect(caseStudiesForSave(form)).toEqual({ e2: 'Ran the launch' });
+    expect(toUpdatePortfolioInput({ ...form, sections: setSection(form.sections, 'contact', false) }).sections).toEqual({
+      summary: true,
+      evidence: true,
+      skills: true,
+      contact: false,
+    });
+  });
+
+  it('refuses an over-long case study and names the limit for the API refusal', () => {
+    const form = { ...formFromPortfolio(page), caseStudies: { e1: 'x'.repeat(CASE_STUDY_MAX + 1) } };
+    expect(validatePortfolioForm(form).caseStudies).toContain(String(CASE_STUDY_MAX));
+    // Text for an item that is no longer selected is not checked (and not sent).
+    expect(validatePortfolioForm({ ...form, evidenceIds: ['e2'] }).caseStudies).toBeUndefined();
+    const refused = new ApiError(400, 'validation_error', { code: 'validation_error', field: 'caseStudies', reason: 'too_long' });
+    expect(portfolioErrorMessage(refused)).toContain(String(CASE_STUDY_MAX));
   });
 
   it('detects edits, ignoring evidence order', () => {
@@ -129,6 +160,9 @@ describe('portfolio form', () => {
     expect(portfolioFormDirty({ ...base, evidenceIds: ['e1'] }, base)).toBe(true);
     expect(portfolioFormDirty({ ...base, showEmail: true }, base)).toBe(true);
     expect(portfolioFormDirty({ ...base, headline: 'New' }, base)).toBe(true);
+    expect(portfolioFormDirty({ ...base, sections: setSection(base.sections, 'skills', false) }, base)).toBe(true);
+    expect(portfolioFormDirty({ ...base, caseStudies: { e1: 'Built the parser. ' } }, base)).toBe(false);
+    expect(portfolioFormDirty({ ...base, caseStudies: { e1: 'Built the parser.', e2: 'New' } }, base)).toBe(true);
   });
 
   it('toggles evidence ids', () => {

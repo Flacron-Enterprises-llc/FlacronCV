@@ -31,12 +31,19 @@ export interface AccountRow {
   scheduled_interval: BillingInterval | null;
   provider_state_at: Date | null;
   origin: 'v2' | 'migrated';
+  /**
+   * Recurring capacity add-ons on top of the plan's count caps, by allowance
+   * field (`{ locationProfiles: 1 }`). Written only from verified V1 Stripe
+   * state (`applyCapacityExtras`); `checkCapacity` adds them to the limit.
+   * Optional so rows built in memory (tests, fixtures) need not carry it.
+   */
+  capacity_extras?: Partial<Record<string, number>> | null;
 }
 
 const ACCOUNT_COLUMNS = `id, workspace_id, auth_user_id, plan_id, legacy_plan, catalog_version, interval, status,
   trial_end, has_used_trial, period_start, period_end, allowance_anchor, allowance_period_start,
   allowance_period_end, provider, provider_customer_id, provider_subscription_id, cancel_at_period_end,
-  scheduled_plan_id, scheduled_interval, provider_state_at, origin`;
+  scheduled_plan_id, scheduled_interval, provider_state_at, origin, capacity_extras`;
 
 /**
  * Statuses that may spend. `past_due` keeps access while the provider

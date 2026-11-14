@@ -22,6 +22,12 @@ function makeConfig() {
     'stripe.secretKey': 'rk_test_dummy',
     'stripe.webhookSecret': 'whsec_test',
     'stripe.prices': {},
+    // Five-plan catalog prices (env-only in production).
+    'stripe.planPrices': {
+          starter: { month: 'price_test_starter_m', year: 'price_test_starter_y' },
+          professional: { month: 'price_test_prof_m', year: 'price_test_prof_y' },
+          business: { month: 'price_test_business_m' },
+        },
     'stripe.appId': APP_ID,
   };
   return { get: jest.fn((key: string) => map[key]) } as any;
@@ -108,7 +114,7 @@ describe('Stripe app isolation (Flacron Stripe standard)', () => {
       await seedUser(firestore, 'u1');
       const stripe = installStripe();
 
-      await service.createCheckoutSession('u1', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
+      await service.createCheckoutSession('u1', { plan: SubscriptionPlan.PROFESSIONAL }, 'http://ok', 'http://cancel');
 
       expect(stripe.customers.create).toHaveBeenCalledWith(
         expect.objectContaining({ metadata: expect.objectContaining({ app_id: APP_ID, internal_user_id: 'u1' }) }),
@@ -128,7 +134,7 @@ describe('Stripe app isolation (Flacron Stripe standard)', () => {
       const stripe = installStripe(THEIRS);
 
       await expect(
-        service.createCheckoutSession('u1', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel'),
+        service.createCheckoutSession('u1', { plan: SubscriptionPlan.PROFESSIONAL }, 'http://ok', 'http://cancel'),
       ).rejects.toThrow(BadRequestException);
       expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
     });
@@ -138,7 +144,7 @@ describe('Stripe app isolation (Flacron Stripe standard)', () => {
       const stripe = installStripe({});
 
       await expect(
-        service.createCheckoutSession('u1', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel'),
+        service.createCheckoutSession('u1', { plan: SubscriptionPlan.PROFESSIONAL }, 'http://ok', 'http://cancel'),
       ).rejects.toThrow('Unsupported plan selection.');
       expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
     });
@@ -147,7 +153,7 @@ describe('Stripe app isolation (Flacron Stripe standard)', () => {
       await seedUser(firestore, 'u1', { stripeCustomerId: 'cus_foreign' });
       const stripe = installStripe(OURS, { metadata: THEIRS });
 
-      await service.createCheckoutSession('u1', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
+      await service.createCheckoutSession('u1', { plan: SubscriptionPlan.PROFESSIONAL }, 'http://ok', 'http://cancel');
 
       expect(stripe.customers.create).toHaveBeenCalledTimes(1);
       expect(stripe.checkout.sessions.create.mock.calls[0][0].customer).toBe('cus_new');
@@ -157,7 +163,7 @@ describe('Stripe app isolation (Flacron Stripe standard)', () => {
       await seedUser(firestore, 'u1', { stripeCustomerId: 'cus_legacy' });
       const stripe = installStripe(OURS, { metadata: { firebaseUid: 'u1' } });
 
-      await service.createCheckoutSession('u1', { plan: SubscriptionPlan.PRO }, 'http://ok', 'http://cancel');
+      await service.createCheckoutSession('u1', { plan: SubscriptionPlan.PROFESSIONAL }, 'http://ok', 'http://cancel');
 
       expect(stripe.customers.create).not.toHaveBeenCalled();
       expect(stripe.customers.update).toHaveBeenCalledWith('cus_legacy', {

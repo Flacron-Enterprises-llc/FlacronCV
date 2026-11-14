@@ -16,8 +16,11 @@ import { WEB_ORIGIN, usePortfolio, usePortfolioActions, usePortfolioGate, usePor
 import { useCareerAccess } from '../../../../src/hooks/useCareer';
 import { useLeaveGuard } from '../../../../src/hooks/useLeaveGuard';
 import {
+  CASE_STUDY_MAX,
   EMPTY_PORTFOLIO_FORM,
   PORTFOLIO_LIMITS,
+  PORTFOLIO_SECTION_KEYS,
+  setSection,
   formFromPortfolio,
   portfolioErrorMessage,
   portfolioFormDirty,
@@ -377,6 +380,37 @@ export default function PortfolioScreen() {
                   </TouchableOpacity>
                 );
               })}
+              {items
+                .filter((item) => current.evidenceIds.includes(item.id))
+                .map((item) => (
+                  <View key={`case-${item.id}`} className="mt-3">
+                    <Input
+                      label={t('editor.caseStudyLabel', { title: item.title })}
+                      value={current.caseStudies[item.id] ?? ''}
+                      onChangeText={(v) => set('caseStudies', { ...current.caseStudies, [item.id]: v })}
+                      maxLength={CASE_STUDY_MAX}
+                      multiline
+                      textAlignVertical="top"
+                      style={{ minHeight: 80 }}
+                    />
+                  </View>
+                ))}
+              {errors.caseStudies ? <Text className="text-red-600 text-xs mt-1">{errors.caseStudies}</Text> : null}
+            </View>
+          ) : null}
+
+          {!isNew ? (
+            <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+              <Text className="font-bold text-stone-900 mb-1">{t('editor.sectionsTitle')}</Text>
+              <Text className="text-stone-500 text-xs mb-2 leading-5">{t('editor.sectionsHint')}</Text>
+              {PORTFOLIO_SECTION_KEYS.map((key) => (
+                <ToggleRow
+                  key={key}
+                  label={t(`editor.section.${key}`)}
+                  value={current.sections[key]}
+                  onChange={(v) => set('sections', setSection(current.sections, key, v))}
+                />
+              ))}
             </View>
           ) : null}
 

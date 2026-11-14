@@ -2,8 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   InterviewList,
   InterviewSession,
-  InterviewStage,
   StarStory,
+  StarStoryInput,
+  StartInterviewInput,
 } from '../../../../../packages/career-api-client/src/types';
 import { careerApi } from '../../lib/career-api';
 import { useEntitled, useUid } from '../useCareer';
@@ -48,8 +49,7 @@ export function useCreateInterview() {
   const queryClient = useQueryClient();
   const uid = useUid();
   return useMutation({
-    mutationFn: (input: { opportunityId: string; stage: InterviewStage; idempotencyKey: string }) =>
-      careerApi.createInterview({ opportunityId: input.opportunityId, stage: input.stage }, input.idempotencyKey),
+    mutationFn: (input: { body: StartInterviewInput; idempotencyKey: string }) => careerApi.createInterview(input.body, input.idempotencyKey),
     onSuccess: (paid) => {
       queryClient.setQueryData(['career', uid, 'interview', paid.session.id], paid.session);
       queryClient.setQueryData<InterviewList>(['career', uid, 'interviews'], (list) =>
@@ -90,11 +90,37 @@ export function useCreateStarStory() {
   const queryClient = useQueryClient();
   const uid = useUid();
   return useMutation({
-    mutationFn: (input: { situation: string; task: string; action: string; result: string; factIds?: string[] }) =>
-      careerApi.createStarStory(input),
+    mutationFn: (input: StarStoryInput) => careerApi.createStarStory(input),
     onSuccess: (story: StarStory) => {
       queryClient.setQueryData<{ items: StarStory[] }>(['career', uid, 'star-stories'], (list) =>
         list ? { items: [story, ...list.items.filter((item) => item.id !== story.id)] } : list,
+      );
+    },
+  });
+}
+
+/** Edits a saved story; the career API re-checks numbers and the result against confirmed facts. */
+export function useUpdateStarStory() {
+  const queryClient = useQueryClient();
+  const uid = useUid();
+  return useMutation({
+    mutationFn: (input: { id: string; body: StarStoryInput }) => careerApi.updateStarStory(input.id, input.body),
+    onSuccess: (story: StarStory) => {
+      queryClient.setQueryData<{ items: StarStory[] }>(['career', uid, 'star-stories'], (list) =>
+        list ? { items: list.items.map((item) => (item.id === story.id ? story : item)) } : list,
+      );
+    },
+  });
+}
+
+export function useDeleteStarStory() {
+  const queryClient = useQueryClient();
+  const uid = useUid();
+  return useMutation({
+    mutationFn: (storyId: string) => careerApi.deleteStarStory(storyId),
+    onSuccess: (_result, storyId) => {
+      queryClient.setQueryData<{ items: StarStory[] }>(['career', uid, 'star-stories'], (list) =>
+        list ? { items: list.items.filter((item) => item.id !== storyId) } : list,
       );
     },
   });

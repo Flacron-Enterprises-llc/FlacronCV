@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
+import { allPlansForAdmin } from '@flacroncv/shared-types';
 
 @Injectable()
 export class AdminService {
@@ -119,7 +120,8 @@ export class AdminService {
       monthlyRevenue += sub.interval === 'year' ? amount / 12 : amount;
     });
 
-    const planBreakdown: Record<string, number> = { free: 0, pro: 0, career_accelerator: 0, enterprise: 0 };
+    // Every plan id (current and legacy) starts at 0 so the admin views list them all.
+    const planBreakdown: Record<string, number> = Object.fromEntries(allPlansForAdmin().map((p) => [p, 0]));
     usersSnap.docs.forEach((doc: any) => {
       const plan = (doc.data()?.subscription?.plan as string | undefined) ?? 'free';
       planBreakdown[plan] = (planBreakdown[plan] || 0) + 1;

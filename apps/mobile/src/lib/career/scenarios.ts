@@ -1,15 +1,17 @@
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
-import type { ScenarioOptionView } from '../../../../../packages/career-api-client/src/types';
+import type { ScenarioOptionInput as SharedScenarioOptionInput, ScenarioOptionView } from '../../../../../packages/career-api-client/src/types';
 import { formatNumber, t } from '../../i18n';
 import { careerErrorMessage } from '../career-view';
 import { providerUnavailableMessage } from './action-packs';
 
 /**
  * Pure logic for the mobile scenario planner (tested in scenarios.test.ts).
- * Same request as the website's scenario page: up to three routes, each a
- * name + destination, pay in cents or blank (unknown), cost 0 and 12 months,
- * source "user". Uses one scenario-report credit. The comparison is not a
- * promise of earnings or employment.
+ * Up to three routes, each a name + destination and pay in cents or blank
+ * (unknown), source "user" (the person's own figures). The app does not ask
+ * for cost or duration, so both are sent as unknown (null) — never as 0 or an
+ * invented 12 months. Uses one scenario-report credit. The comparison is not
+ * a promise of earnings or employment. Reopening and editing saved
+ * comparisons is on the website for now.
  */
 
 export const MAX_ROUTES = 3;
@@ -24,14 +26,7 @@ export interface RouteDraft {
 export const FIRST_ROUTE: RouteDraft = { name: 'Stay', destination: 'London', wage: '' };
 export const BLANK_ROUTE: RouteDraft = { name: '', destination: '', wage: '' };
 
-export type ScenarioOptionInput = {
-  name: string;
-  destination: string;
-  costCents: number;
-  months: number;
-  wageCents: number | null;
-  source: 'user';
-};
+export type ScenarioOptionInput = SharedScenarioOptionInput & { source: 'user' };
 
 export function addRoute(routes: RouteDraft[]): RouteDraft[] {
   return routes.length >= MAX_ROUTES ? routes : [...routes, { ...BLANK_ROUTE }];
@@ -68,7 +63,7 @@ export function buildScenarioOptions(
     if (wage !== '' && !/^\d{1,12}$/.test(wage)) {
       return { ok: false, index, message: t('careerPlans.scenarios.validation.payInvalid', { number: index + 1 }) };
     }
-    options.push({ name, destination, costCents: 0, months: 12, wageCents: wage === '' ? null : Number(wage), source: 'user' });
+    options.push({ name, destination, costCents: null, months: null, wageCents: wage === '' ? null : Number(wage), source: 'user' });
   }
   if (options.length === 0) return { ok: false, index: null, message: t('careerPlans.scenarios.validation.noRoutes') };
   return { ok: true, options: options.slice(0, MAX_ROUTES) };

@@ -60,6 +60,11 @@ const tierVariantMap: Record<SubscriptionPlan, 'success' | 'brand' | 'warning' |
   [SubscriptionPlan.PRO]: 'brand',
   [SubscriptionPlan.CAREER_ACCELERATOR]: 'info',
   [SubscriptionPlan.ENTERPRISE]: 'warning',
+  // Current plans are never a template tier; they badge as the tier they reach.
+  [SubscriptionPlan.STARTER]: 'brand',
+  [SubscriptionPlan.PROFESSIONAL]: 'brand',
+  [SubscriptionPlan.CAREER_PRO]: 'warning',
+  [SubscriptionPlan.BUSINESS]: 'warning',
 };
 
 // Translation keys (resolved with t() at render) so badges localize per locale.
@@ -70,6 +75,10 @@ const tierKeyMap: Record<SubscriptionPlan, string> = {
   [SubscriptionPlan.PRO]: 'templates.pro',
   [SubscriptionPlan.CAREER_ACCELERATOR]: 'templates.career_accelerator',
   [SubscriptionPlan.ENTERPRISE]: 'templates.enterprise',
+  [SubscriptionPlan.STARTER]: 'templates.pro',
+  [SubscriptionPlan.PROFESSIONAL]: 'templates.pro',
+  [SubscriptionPlan.CAREER_PRO]: 'templates.enterprise',
+  [SubscriptionPlan.BUSINESS]: 'templates.enterprise',
 };
 
 /**
@@ -91,6 +100,10 @@ const tierCanonicalMap: Record<SubscriptionPlan, string> = {
   // resolve, should the catalogue ever gain one.
   [SubscriptionPlan.CAREER_ACCELERATOR]: 'Pro',
   [SubscriptionPlan.ENTERPRISE]: 'Enterprise',
+  [SubscriptionPlan.STARTER]: 'Pro',
+  [SubscriptionPlan.PROFESSIONAL]: 'Pro',
+  [SubscriptionPlan.CAREER_PRO]: 'Enterprise',
+  [SubscriptionPlan.BUSINESS]: 'Enterprise',
 };
 
 const categoryKeyMap: Record<TemplateCategory, string> = {

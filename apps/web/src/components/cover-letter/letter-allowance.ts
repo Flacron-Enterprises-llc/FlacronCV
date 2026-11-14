@@ -13,7 +13,9 @@ import { useAuth } from '@/providers/AuthProvider';
  */
 export function coverLetterAllowance(plan: SubscriptionPlan, used: number, known: boolean) {
   const limit = PLAN_CONFIGS[plan].limits.coverLetters;
-  const limited = known && limit !== 'unlimited';
+  // Current plans limit STORED letters (capacity): the API decides. Only
+  // legacy plans, which count creations, are pre-checked from the profile.
+  const limited = known && limit !== 'unlimited' && PLAN_CONFIGS[plan].legacy;
   const atLimit = limited && used >= (limit as number);
   return { limit, used, limited, atLimit };
 }

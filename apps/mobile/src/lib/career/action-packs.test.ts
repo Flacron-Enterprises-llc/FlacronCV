@@ -3,6 +3,12 @@ import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type { ActionPack } from '../../../../../packages/career-api-client/src/types';
 import {
   actionPackErrorMessage,
+  cancelErrorMessage,
+  isFinalRetryFailure,
+  letterAttemptsLeft,
+  packStatus,
+  retryErrorMessage,
+  statusBadge,
   checklistProgress,
   creditsLeft,
   fitLabel,
@@ -90,5 +96,37 @@ describe('actionPackErrorMessage', () => {
     expect(actionPackErrorMessage(new ApiError(403, 'plan_upgrade_required', { code: 'plan_upgrade_required' }))).toMatch(/not included/);
     expect(actionPackErrorMessage(new ApiError(0, 'network_error', { code: 'network_error' }))).toMatch(/No connection/);
     expect(actionPackErrorMessage(new Error('x'))).toMatch(/No credit was used/);
+  });
+});
+
+describe('unfinished packs', () => {
+  it('reads a missing status as complete and counts retries left', () => {
+    const p = pack('p', '2026-01-01');
+    expect(packStatus(p)).toBe('complete');
+    expect(statusBadge(p)).toBeNull();
+    expect(packStatus({ ...p, status: 'partial' })).toBe('partial');
+    expect(statusBadge({ ...p, status: 'partial' })).toEqual({ label: 'Unfinished', tone: 'warning' });
+    expect(statusBadge({ ...p, status: 'expired' })?.label).toBe('Expired');
+    expect(letterAttemptsLeft({})).toBe(3);
+    expect(letterAttemptsLeft({ letterAttempts: 2 })).toBe(1);
+    expect(letterAttemptsLeft({ letterAttempts: 9 })).toBe(0);
+  });
+
+  it('allows a pack without a cover letter yet', () => {
+    const p: ActionPack = { ...pack('p', '2026-01-01'), status: 'partial', coverLetter: null };
+    expect(p.coverLetter).toBeNull();
+  });
+
+  it('explains retry and cancel outcomes honestly', () => {
+    const finalFailure = new ApiError(503, 'provider_unavailable', { code: 'provider_unavailable', released: true, reason: 'provider_error' });
+    expect(isFinalRetryFailure(finalFailure)).toBe(true);
+    expect(retryErrorMessage(finalFailure)).toMatch(/credit was returned/);
+    expect(retryErrorMessage(new ApiError(503, 'provider_unavailable', { code: 'provider_unavailable', released: true, reason: 'pack_expired' }))).toMatch(
+      /not finished in time/,
+    );
+    expect(isFinalRetryFailure(new ApiError(503, 'provider_unavailable', { code: 'provider_unavailable' }))).toBe(false);
+    expect(retryErrorMessage(new ApiError(400, 'validation_error', { code: 'validation_error', reason: 'attempts_used' }))).toMatch(/No retries/);
+    expect(retryErrorMessage(new Error('x'))).toMatch(/still held/);
+    expect(cancelErrorMessage(new Error('x'))).toMatch(/could not be removed/);
   });
 });

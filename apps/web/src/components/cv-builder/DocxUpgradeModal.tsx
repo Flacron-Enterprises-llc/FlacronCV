@@ -11,7 +11,7 @@ import { fcgeUpgradeClicked } from '@/lib/fcge';
 /**
  * Shown when a Free user picks DOCX export.
  *
- * DOCX is a paid feature (the API answers `docx_requires_paid`), which has
+ * DOCX is included from Starter up (the API answers `docx_requires_paid`), which has
  * nothing to do with export allowance — but the shared UpgradeModal only knew
  * "Export limit reached", so a Free user with exports to spare was told they
  * had run out. This says what is actually true, and that PDF still works.
@@ -22,7 +22,7 @@ export default function DocxUpgradeModal({ isOpen, onClose }: { isOpen: boolean;
   const router = useRouter();
 
   const upgrade = () => {
-    fcgeUpgradeClicked(SubscriptionPlan.PRO);
+    fcgeUpgradeClicked(SubscriptionPlan.STARTER);
     onClose();
     router.push('/settings/billing');
   };

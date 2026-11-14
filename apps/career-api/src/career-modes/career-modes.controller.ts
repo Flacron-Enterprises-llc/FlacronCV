@@ -9,23 +9,25 @@ import {
   Put,
   Provider,
 } from '@nestjs/common';
-import {
-  IsArray,
-  IsBoolean,
-  IsIn,
-  IsNumber,
-  IsOptional,
-  IsString,
-  MaxLength,
-  Min,
-  Max,
-} from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateIf } from 'class-validator';
 import {
   CareerModesService,
+  createGeocoder,
   type Principal,
 } from '@flacroncv/career-server';
 import {
+  LICENSE_TRANSFERS,
+  LOCATION_KINDS,
+  MAX_ACTIVE_MODES,
+  REMOTE_FLEXIBILITIES,
+  SPECIALIST_MODE_IDS,
+  TARGET_TIMELINES,
+  WORK_AUTHORIZATIONS,
+} from '@flacroncv/career-shared';
+import type {
   CreateLocationProfileInput,
+  LicenseTransfer,
+  LocationKind,
   RemoteFlexibility,
   SpecialistMode,
   TargetTimeline,
@@ -36,42 +38,18 @@ import {
 import { CurrentPrincipal } from '../auth/auth.guard';
 import { DatabaseService } from '../database/database.service';
 
-const TIMELINES: TargetTimeline[] = [
-  'immediate',
-  '1_to_3_months',
-  '3_to_6_months',
-  'exploring',
-  'not_relocating',
-];
+const TIMELINES = [...TARGET_TIMELINES];
+const WORK_AUTHS = [...WORK_AUTHORIZATIONS];
+const REMOTE_OPTS = [...REMOTE_FLEXIBILITIES];
+const KINDS = [...LOCATION_KINDS];
+const LICENSES = [...LICENSE_TRANSFERS];
+const MODES = [...SPECIALIST_MODE_IDS];
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-const WORK_AUTHS: WorkAuthorization[] = [
-  'citizen',
-  'permanent_resident',
-  'visa_holder',
-  'needs_sponsorship',
-  'authorized',
-];
-
-const REMOTE_OPTS: RemoteFlexibility[] = ['remote_only', 'hybrid', 'onsite_only', 'any'];
-
-const MODES: SpecialistMode[] = [
-  'general',
-  'technical_engineering',
-  'executive_leadership',
-  'creative_design',
-  'academic_research',
-  'career_transition',
-];
-
-class CreateLocationDto implements CreateLocationProfileInput {
-  @IsString()
-  @MaxLength(200)
-  place!: string;
-
-  @IsNumber()
-  @Min(0)
-  @Max(500)
-  radiusMiles!: number;
+class LocationFieldsDto {
+  @IsOptional()
+  @IsIn(KINDS)
+  kind?: LocationKind;
 
   @IsOptional()
   @IsIn(TIMELINES)
@@ -81,12 +59,33 @@ class CreateLocationDto implements CreateLocationProfileInput {
   @IsBoolean()
   isRelocation?: boolean;
 
+  /** Calendar validity (no 2026-02-31) is checked in the service. */
+  @IsOptional()
+  @ValidateIf((_o, value) => value !== null)
+  @Matches(DATE)
+  moveDate?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_o, value) => value !== null)
+  @Matches(DATE)
+  availableFrom?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_o, value) => value !== null)
+  @IsString()
+  @MaxLength(120)
+  remoteRegion?: string | null;
+
   @IsOptional()
   @IsIn(WORK_AUTHS)
   workAuthorization?: WorkAuthorization;
 
   @IsOptional()
-  @IsNumber()
+  @IsIn(LICENSES)
+  licenseTransfer?: LicenseTransfer;
+
+  @IsOptional()
+  @IsInt()
   @Min(0)
   @Max(240)
   commuteMinutesMax?: number;
@@ -96,63 +95,59 @@ class CreateLocationDto implements CreateLocationProfileInput {
   remoteFlexibility?: RemoteFlexibility;
 
   @IsOptional()
+  @ValidateIf((_o, value) => value !== null)
   @IsString()
   @MaxLength(2000)
-  notes?: string;
+  notes?: string | null;
 }
 
-class UpdateLocationDto implements UpdateLocationProfileInput {
+class CreateLocationDto extends LocationFieldsDto implements CreateLocationProfileInput {
+  @IsString()
+  @MaxLength(200)
+  place!: string;
+
+  @IsInt()
+  @Min(0)
+  @Max(500)
+  radiusMiles!: number;
+}
+
+class UpdateLocationDto extends LocationFieldsDto implements UpdateLocationProfileInput {
   @IsOptional()
   @IsString()
   @MaxLength(200)
   place?: string;
 
   @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(0)
   @Max(500)
   radiusMiles?: number;
-
-  @IsOptional()
-  @IsIn(TIMELINES)
-  targetTimeline?: TargetTimeline;
-
-  @IsOptional()
-  @IsBoolean()
-  isRelocation?: boolean;
-
-  @IsOptional()
-  @IsIn(WORK_AUTHS)
-  workAuthorization?: WorkAuthorization;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(240)
-  commuteMinutesMax?: number;
-
-  @IsOptional()
-  @IsIn(REMOTE_OPTS)
-  remoteFlexibility?: RemoteFlexibility;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(2000)
-  notes?: string;
 }
 
 class UpdateSpecialistModeDto implements UpdateSpecialistModeInput {
+  @IsOptional()
+  @ValidateIf((_o, value) => value !== null)
   @IsIn(MODES)
-  mode!: SpecialistMode;
+  mode?: SpecialistMode | null;
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(MAX_ACTIVE_MODES)
+  @IsIn(MODES, { each: true })
+  modes?: SpecialistMode[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(12)
+  @IsString({ each: true })
   focusAreas?: string[];
 
   @IsOptional()
+  @ValidateIf((_o, value) => value !== null)
   @IsString()
   @MaxLength(2000)
-  customGuidelines?: string;
+  customGuidelines?: string | null;
 }
 
 @Controller('career-modes')
@@ -198,6 +193,15 @@ export class CareerModesController {
     return { success: true };
   }
 
+  /**
+   * The mode context generators and searches read (wording, constraints,
+   * suggested filters, checklist, current and future places). Free; grants nothing.
+   */
+  @Get('context')
+  async modeContext(@CurrentPrincipal() principal: Principal) {
+    return this.careerModesService.modeContext(principal);
+  }
+
   @Get('specialist-mode')
   async getSpecialistMode(@CurrentPrincipal() principal: Principal) {
     return this.careerModesService.getSpecialistMode(principal);
@@ -216,7 +220,8 @@ export const careerModesProviders: Provider[] = [
   {
     provide: CareerModesService,
     useFactory: (db: DatabaseService) =>
-      new CareerModesService(db.connectionPool),
+      // Same geocoder as Alerts: places saved here get coordinates when a provider is configured.
+      new CareerModesService(db.connectionPool, undefined, createGeocoder(process.env)),
     inject: [DatabaseService],
   },
 ];

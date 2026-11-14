@@ -6,9 +6,12 @@ import {
   isApiError,
   newIdempotencyKey,
   type ApiClient,
+  type LearningPlanMilestone,
   type SkillGapReport,
   type SkillReportBalanceView,
 } from '@flacroncv/career-api-client';
+import { isEssentialCredential, learningPlanCost } from '@flacroncv/career-shared';
+import { ProjectBriefPanel, evidenceErrorText } from './ProjectBriefPanel';
 import {
   Badge,
   Button,
@@ -55,7 +58,10 @@ export function LearningScreen({
   const [includeBrief, setIncludeBrief] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [convertingMilestoneId, setConvertingMilestoneId] = useState<string | null>(null);
-  const [evidenceSuccessId, setEvidenceSuccessId] = useState<string | null>(null);
+  const [evidenceSuccess, setEvidenceSuccess] = useState<{ created: boolean } | null>(null);
+  /** Milestone whose "in your own words" box is open, and its draft. */
+  const [ownershipFor, setOwnershipFor] = useState<string | null>(null);
+  const [milestoneOwnership, setMilestoneOwnership] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -142,16 +148,35 @@ export function LearningScreen({
 
   const handleConvertToEvidence = async (reportId: string, milestoneId: string) => {
     setConvertingMilestoneId(milestoneId);
-    setEvidenceSuccessId(null);
+    setEvidenceSuccess(null);
+    setErrorMessage(null);
     try {
-      const res = await api.convertMilestoneToEvidence(reportId, milestoneId);
-      setEvidenceSuccessId(res.evidenceId);
-    } catch {
-      setErrorMessage(t('evidence_convert_failed'));
+      const statement = milestoneOwnership.trim();
+      const res = await api.convertMilestoneToEvidence(reportId, milestoneId, statement || undefined);
+      setEvidenceSuccess({ created: res.created });
+      setReports((prev) =>
+        prev.map((r) =>
+          r.id === reportId
+            ? {
+                ...r,
+                progress: {
+                  ...r.progress,
+                  evidenceByMilestone: { ...(r.progress.evidenceByMilestone ?? {}), [milestoneId]: res.evidenceId },
+                },
+              }
+            : r,
+        ),
+      );
+      setOwnershipFor(null);
+      setMilestoneOwnership('');
+    } catch (error) {
+      setErrorMessage(evidenceErrorText(error, t));
     } finally {
       setConvertingMilestoneId(null);
     }
   };
+
+  const replaceReport = (next: SkillGapReport) => setReports((prev) => prev.map((r) => (r.id === next.id ? next : r)));
 
   if (!ready || load === 'loading') return <LoadingState label={t('loading')} />;
   if (load === 'permission') return <PermissionDeniedState title={t('permission_title')} body={t('permission_body')} />;
@@ -183,6 +208,18 @@ export function LearningScreen({
   }
 
   const selectedReport = reports.find((r) => r.id === selectedReportId) || reports[0] || null;
+  const remainingCredits = balance ? balance.includedRemaining + balance.packRemaining : null;
+  const money = (cents: number) =>
+    new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(cents / 100);
+  const planCost = selectedReport ? learningPlanCost(selectedReport.learningPlan, selectedReport.financialBudgetCents) : null;
+  const milestoneCost = (milestone: LearningPlanMilestone) =>
+    // The server only sends a cost together with the date it was stated.
+    milestone.estimatedCostCents === null || !milestone.costAsOf
+      ? t('cost_unknown')
+      : t('cost_as_of', {
+          amount: milestone.estimatedCostCents === 0 ? t('free') : money(milestone.estimatedCostCents),
+          date: milestone.costAsOf,
+        });
 
   return (
     <ScreenStack>
@@ -207,9 +244,9 @@ export function LearningScreen({
 
       {errorMessage ? <InlineNote tone="error">{errorMessage}</InlineNote> : null}
 
-      {evidenceSuccessId && (
+      {evidenceSuccess && (
         <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-900/50 dark:bg-green-950/30 dark:text-green-300 flex items-center justify-between">
-          <span>{t('evidence_created_success')}</span>
+          <span>{evidenceSuccess.created ? t('evidence_created_success') : t('evidence_already_recorded')}</span>
           <a href={`/${locale}/career/evidence`} className="underline font-semibold text-xs ml-2">
             {t('view_in_vault')}
           </a>
@@ -220,9 +257,8 @@ export function LearningScreen({
       {isGenerating && (
         <Card className="border-career-orange/30 bg-career-orange/5 p-6 dark:bg-career-orange/10">
           <form onSubmit={handleGenerate} className="space-y-4">
-            <div className="flex items-center justify-between border-b border-career-line pb-3">
+            <div className="border-b border-career-line pb-3">
               <h2 className="text-lg font-bold text-career-ink">{t('generate_heading')}</h2>
-              <span className="text-xs text-career-muted font-medium">{t('credit_cost_notice')}</span>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -302,11 +338,33 @@ export function LearningScreen({
               </label>
             </div>
 
+            {/* Spec §21: before a paid generation, show the operation, the credits it needs, the balance and what it contains. */}
+            <div className="rounded-md border border-career-line bg-career-surface p-3 text-xs text-career-ink" data-testid="learning-charge-notice">
+              <dl className="grid grid-cols-1 gap-1 sm:grid-cols-3">
+                <div>
+                  <dt className="text-career-muted">{t('charge_operation')}</dt>
+                  <dd className="font-semibold">{t('charge_operation_value')}</dd>
+                </div>
+                <div>
+                  <dt className="text-career-muted">{t('charge_required')}</dt>
+                  <dd className="font-semibold">{t('charge_required_value', { count: 1 })}</dd>
+                </div>
+                <div>
+                  <dt className="text-career-muted">{t('charge_remaining')}</dt>
+                  <dd className="font-semibold">
+                    {remainingCredits === null ? t('charge_remaining_unknown') : t('charge_remaining_value', { count: remainingCredits })}
+                  </dd>
+                </div>
+              </dl>
+              <p className="mt-2 text-career-muted">{t('charge_contents')}</p>
+              {remainingCredits === 0 ? <p className="mt-2 font-semibold">{t('quota_exhausted')}</p> : null}
+            </div>
+
             <div className="flex items-center justify-end gap-3 pt-3">
               <Button type="button" variant="secondary" onClick={() => setIsGenerating(false)}>
                 {t('cancel')}
               </Button>
-              <Button type="submit" disabled={submitting || !targetRole.trim()}>
+              <Button type="submit" disabled={submitting || !targetRole.trim() || remainingCredits === 0}>
                 {submitting ? t('generating') : t('run_learning_engine')}
               </Button>
             </div>
@@ -349,10 +407,10 @@ export function LearningScreen({
                     </Badge>
                   </div>
                   <p className="mt-1 text-xs text-career-muted">
-                    {report.targetIndustry || t('general_industry')} • {report.timeBudgetHoursPerWeek}h/wk
+                    {report.targetIndustry || t('general_industry')} • {t('hours_week_short', { count: report.timeBudgetHoursPerWeek })}
                   </p>
                   <p className="mt-2 text-xs text-career-muted">
-                    {new Date(report.createdAt).toLocaleDateString()}
+                    {new Date(report.createdAt).toLocaleDateString(locale)}
                   </p>
                 </button>
               ))}
@@ -369,11 +427,21 @@ export function LearningScreen({
                     <h2 className="text-xl font-bold text-career-ink">{selectedReport.targetRole}</h2>
                     <p className="text-sm font-medium text-career-navy">
                       {selectedReport.targetIndustry ? `${selectedReport.targetIndustry} • ` : ''}
-                      {selectedReport.timeBudgetHoursPerWeek} {t('hours_per_week')}
-                      {selectedReport.financialBudgetCents > 0
-                        ? ` • $${(selectedReport.financialBudgetCents / 100).toFixed(0)} budget`
-                        : ` • $0 budget`}
+                      {selectedReport.timeBudgetHoursPerWeek} {t('hours_per_week')} •{' '}
+                      {t('budget_value', { amount: money(selectedReport.financialBudgetCents) })}
                     </p>
+                    {planCost ? (
+                      <p className="mt-1 text-xs text-career-muted" data-testid="learning-plan-cost">
+                        {t('plan_cost_known', { amount: money(planCost.knownTotalCents) })}
+                        {planCost.unknownCount > 0 ? ` • ${t('plan_cost_unknown_count', { count: planCost.unknownCount })}` : ''}
+                        {' • '}
+                        {planCost.withinBudget === true
+                          ? t('plan_within_budget')
+                          : planCost.withinBudget === false
+                            ? t('plan_over_budget')
+                            : t('plan_budget_unclear')}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="text-right">
                     <span className="text-xs text-career-muted font-semibold">{t('plan_progress')}</span>
@@ -409,13 +477,55 @@ export function LearningScreen({
                             {t('level_target')}: <span className="font-medium text-career-ink">{gap.requiredLevel}</span>
                           </p>
                         </div>
-                        <Badge tone={GAP_TONES[gap.importance] || 'neutral'}>
-                          {t(`importance_${gap.importance}`)}
-                        </Badge>
+                        {gap.kind === 'credential' ? (
+                          <Badge tone={isEssentialCredential(gap) ? 'submitted' : 'neutral'}>
+                            {isEssentialCredential(gap) ? t('essential_credential') : t('credential_kind', { importance: t(`importance_${gap.importance}`) })}
+                          </Badge>
+                        ) : (
+                          <Badge tone={GAP_TONES[gap.importance] || 'neutral'}>
+                            {t(`importance_${gap.importance}`)}
+                          </Badge>
+                        )}
                       </div>
                     ))}
                   </div>
+                  {selectedReport.skillGaps.some((gap) => isEssentialCredential(gap)) ? (
+                    <p className="text-xs text-career-muted">{t('essential_credential_hint')}</p>
+                  ) : null}
                 </div>
+
+                {(selectedReport.transferableSkills?.length ?? 0) > 0 || (selectedReport.bridgeRoles?.length ?? 0) > 0 ? (
+                  <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {(selectedReport.transferableSkills?.length ?? 0) > 0 ? (
+                      <div>
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-career-muted">{t('transferable_skills')}</h3>
+                        <p className="mt-0.5 text-xs text-career-muted">{t('transferable_skills_hint')}</p>
+                        <ul className="mt-2 flex flex-wrap gap-1">
+                          {selectedReport.transferableSkills!.map((item) => (
+                            <li key={item.skill}>
+                              <Badge tone="confirmed">
+                                <span dir="auto">{item.skill}</span>
+                              </Badge>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {(selectedReport.bridgeRoles?.length ?? 0) > 0 ? (
+                      <div>
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-career-muted">{t('bridge_roles')}</h3>
+                        <ul className="mt-2 space-y-1 text-xs">
+                          {selectedReport.bridgeRoles!.map((role) => (
+                            <li key={role.title} dir="auto">
+                              <span className="font-semibold text-career-ink">{role.title}</span>
+                              <span className="text-career-muted"> — {role.reason}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </Card>
 
               {/* Learning Plan Milestones */}
@@ -423,6 +533,7 @@ export function LearningScreen({
                 <div className="border-b border-career-line pb-3">
                   <h3 className="text-lg font-semibold text-career-ink">{t('milestone_plan')}</h3>
                   <p className="mt-0.5 text-xs text-career-muted">{t('milestone_plan_hint')}</p>
+                  <p className="mt-0.5 text-xs text-career-muted">{t('completion_not_credential')}</p>
                 </div>
 
                 <div className="mt-4 space-y-4">
@@ -452,26 +563,64 @@ export function LearningScreen({
                               <p className="mt-0.5 text-xs text-career-ink/80">{milestone.description}</p>
                               <p className="mt-1 text-xs text-career-muted">
                                 {t('target_skill')}: <span className="font-medium text-career-ink">{milestone.targetSkill}</span> •{' '}
-                                ~{milestone.estimatedHours}h
-                                {milestone.estimatedCostCents > 0
-                                  ? ` • $${(milestone.estimatedCostCents / 100).toFixed(0)}`
-                                  : ' • Free'}
+                                {t('hours_about', { count: milestone.estimatedHours })} • {milestoneCost(milestone)}
                               </p>
+                              {milestone.prerequisites && milestone.prerequisites.length > 0 ? (
+                                <p className="mt-1 text-xs text-career-muted" dir="auto">
+                                  {t('prerequisites')}: {milestone.prerequisites.join(', ')}
+                                </p>
+                              ) : null}
                             </div>
                           </label>
 
-                          {/* Vault Evidence button on completed milestone */}
+                          {/* Completed milestones can be recorded in the vault, once. */}
                           {isDone && (
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              onClick={() => void handleConvertToEvidence(selectedReport.id, milestone.id)}
-                              disabled={convertingMilestoneId === milestone.id}
-                            >
-                              {convertingMilestoneId === milestone.id ? t('saving_evidence') : t('add_to_evidence_vault')}
-                            </Button>
+                            selectedReport.progress.evidenceByMilestone?.[milestone.id] ? (
+                              <Badge tone="confirmed">{t('in_evidence_vault')}</Badge>
+                            ) : ownershipFor === milestone.id ? null : (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => {
+                                  setOwnershipFor(milestone.id);
+                                  setMilestoneOwnership('');
+                                }}
+                              >
+                                {t('add_to_evidence_vault')}
+                              </Button>
+                            )
                           )}
                         </div>
+
+                        {isDone && ownershipFor === milestone.id ? (
+                          <div className="mt-3 space-y-2 ps-7">
+                            <label htmlFor={`milestone-own-${milestone.id}`} className="block text-xs font-semibold text-career-ink">
+                              {t('milestone_ownership_label')}
+                            </label>
+                            <textarea
+                              id={`milestone-own-${milestone.id}`}
+                              rows={2}
+                              maxLength={2000}
+                              dir="auto"
+                              value={milestoneOwnership}
+                              onChange={(e) => setMilestoneOwnership(e.target.value)}
+                              className="w-full rounded-md border border-career-line bg-career-surface px-3 py-2 text-xs text-career-ink"
+                            />
+                            <p className="text-xs text-career-muted">{t('milestone_ownership_hint')}</p>
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                onClick={() => void handleConvertToEvidence(selectedReport.id, milestone.id)}
+                                disabled={convertingMilestoneId === milestone.id}
+                              >
+                                {convertingMilestoneId === milestone.id ? t('saving_evidence') : t('confirm_add_to_vault')}
+                              </Button>
+                              <Button type="button" variant="ghost" onClick={() => setOwnershipFor(null)}>
+                                {t('cancel')}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : null}
 
                         {/* Resources List */}
                         {milestone.resources.length > 0 && (
@@ -509,71 +658,8 @@ export function LearningScreen({
                 </div>
               </Card>
 
-              {/* Capstone Project Brief & Rubrics */}
               {selectedReport.projectBrief && (
-                <Card className="p-6">
-                  <div className="border-b border-career-line pb-3">
-                    <h3 className="text-lg font-semibold text-career-ink">{selectedReport.projectBrief.title}</h3>
-                    <p className="mt-1 text-xs text-career-ink/80">{selectedReport.projectBrief.summary}</p>
-                    <p className="mt-1 text-xs text-career-muted">
-                      {t('estimated_project_effort')}: ~{selectedReport.projectBrief.estimatedHours} {t('hours')}
-                    </p>
-                  </div>
-
-                  {/* Requirements & Deliverables */}
-                  <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                      <h4 className="text-xs font-semibold uppercase tracking-wider text-career-muted">
-                        {t('project_requirements')}
-                      </h4>
-                      <ul className="mt-2 list-disc pl-4 text-xs text-career-ink/90 space-y-1">
-                        {selectedReport.projectBrief.requirements.map((req, i) => (
-                          <li key={i}>{req}</li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div>
-                      <h4 className="text-xs font-semibold uppercase tracking-wider text-career-muted">
-                        {t('project_deliverables')}
-                      </h4>
-                      <ul className="mt-2 list-disc pl-4 text-xs text-career-ink/90 space-y-1">
-                        {selectedReport.projectBrief.deliverables.map((del, i) => (
-                          <li key={i}>{del}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-
-                  {/* Evaluation Rubrics Table */}
-                  <div className="mt-6">
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-career-muted mb-2">
-                      {t('evaluation_rubrics')}
-                    </h4>
-                    <div className="overflow-x-auto rounded-md border border-career-line">
-                      <table className="min-w-full divide-y divide-career-line text-left text-xs">
-                        <thead className="bg-career-wash/50 font-semibold text-career-ink">
-                          <tr>
-                            <th className="px-3 py-2">{t('rubric_name')}</th>
-                            <th className="px-3 py-2">{t('rubric_description')}</th>
-                            <th className="px-3 py-2 text-right">{t('rubric_weight')}</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-career-line bg-career-surface">
-                          {selectedReport.projectBrief.rubrics.map((rubric) => (
-                            <tr key={rubric.id}>
-                              <td className="px-3 py-2 font-medium text-career-ink">{rubric.name}</td>
-                              <td className="px-3 py-2 text-career-muted">{rubric.description}</td>
-                              <td className="px-3 py-2 text-right font-semibold text-career-navy">
-                                {rubric.weight}%
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </Card>
+                <ProjectBriefPanel key={selectedReport.id} api={api} report={selectedReport} onReport={replaceReport} />
               )}
             </div>
           )}

@@ -36,13 +36,16 @@ export const RECRUITING_COPY = {
 };
 
 /**
- * There is no "read my opt-in" endpoint. The opted-in list holds only
- * candidates who chose to be discoverable, so the current choice is whether
- * the signed-in user is on it. Nothing else from the list is shown.
+ * The opted-in total from `GET /recruiting/search`. The career API returns a
+ * count only, so nobody (this app included) can see who else opted in.
  */
-export function isDiscoverable(search: RecruitingSearch | undefined, uid: string | null): boolean | null {
-  if (!search || !uid) return null;
-  return search.items.some((item) => item.candidateAuthUserId === uid);
+export function optInCount(search: RecruitingSearch | undefined): number | null {
+  if (!search || typeof search.count !== 'number' || !Number.isFinite(search.count) || search.count < 0) return null;
+  return Math.floor(search.count);
+}
+
+export function countLine(count: number): string {
+  return t('careerModes.recruiting.searchCount', { count });
 }
 
 export function statusLine(current: boolean | null): string {

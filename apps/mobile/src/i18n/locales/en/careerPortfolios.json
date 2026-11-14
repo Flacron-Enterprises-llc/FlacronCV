@@ -37,7 +37,8 @@
     "capacity": "This plan has no room for another page.",
     "off": "Portfolio pages are switched off right now.",
     "validation": "Please check the fields for errors.",
-    "failed": "That change was not saved."
+    "failed": "That change was not saved.",
+    "caseStudy": "Keep each case study under {max} characters."
   },
   "editor": {
     "newTitle": "New portfolio page",
@@ -95,6 +96,15 @@
     "privateOnly": "Private only: not shown on the page",
     "createPage": "Create page",
     "savePage": "Save page",
-    "savedButton": "Saved"
+    "savedButton": "Saved",
+    "caseStudyLabel": "Case study for \"{title}\" (optional)",
+    "sectionsTitle": "Sections on the page",
+    "sectionsHint": "Only the sections you switch on are shown. Contact details also need their own opt-in below.",
+    "section": {
+      "summary": "Summary (headline)",
+      "evidence": "Selected evidence",
+      "skills": "Skills",
+      "contact": "Contact (only details you opt in below)"
+    }
   }
 }

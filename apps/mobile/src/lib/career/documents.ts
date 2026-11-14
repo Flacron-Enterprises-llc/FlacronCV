@@ -1,6 +1,13 @@
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
-import type { DocumentCredit, ResumeVersion, WritingType } from '../../../../../packages/career-api-client/src/types';
-import { COVER_LETTER_TEMPLATES, isCoverLetterTemplateId, type CoverLetterTemplateId } from '../../../../../packages/career-shared/src/writing';
+import type { DocumentCredit, ResumeVersion, WritingContextInput, WritingType } from '../../../../../packages/career-api-client/src/types';
+import {
+  COVER_LETTER_TEMPLATES,
+  isCoverLetterTemplateId,
+  TARGETED_WRITING_TYPES,
+  WRITING_CONTEXT_LIMITS,
+  type CoverLetterTemplateId,
+} from '../../../../../packages/career-shared/src/writing';
+import { isCalendarDate } from '../../../../../packages/career-shared/src/remaining';
 import { isResumeTemplateId, RESUME_TEMPLATES, type ResumeTemplateId } from '../../../../../packages/career-shared/src/resume';
 import { t } from '../../i18n';
 import { careerErrorMessage, FACT_TYPE_LABEL, labelMap } from '../career-view';
@@ -73,14 +80,68 @@ export function letterTemplateName(id: string | null | undefined): string {
 
 export { isCoverLetterTemplateId, isResumeTemplateId };
 
-const WRITING_TYPE_LABEL = labelMap('careerDocuments.writingTypes', ['cover_letter', 'bio', 'linkedin', 'outreach'] as const);
+const WRITING_TYPES = ['cover_letter', 'bio', 'linkedin', 'outreach', 'referral_request', 'thank_you'] as const satisfies readonly WritingType[];
 
-export const WRITING_TYPE_OPTIONS: Array<{ id: WritingType; label: string }> = (['cover_letter', 'bio', 'linkedin', 'outreach'] as const).map((id) => ({
+const WRITING_TYPE_LABEL = labelMap('careerDocuments.writingTypes', WRITING_TYPES);
+
+/** The writing type in the current language; an unknown type (newer server) shows its id. */
+export function writingTypeLabel(type: string): string {
+  return (WRITING_TYPES as readonly string[]).includes(type) ? WRITING_TYPE_LABEL[type as WritingType] : type;
+}
+
+export const WRITING_TYPE_OPTIONS: Array<{ id: WritingType; label: string }> = WRITING_TYPES.map((id) => ({
   id,
   get label() {
     return WRITING_TYPE_LABEL[id];
   },
 }));
+
+/** Types that name one organization or role: they need a listing or a typed organization/role. */
+export function isTargetedWritingType(type: WritingType): boolean {
+  return TARGETED_WRITING_TYPES.includes(type);
+}
+
+/** Cover letters are written from the listing only; every other type can take the person's own notes. */
+export function takesWritingContext(type: WritingType): boolean {
+  return type !== 'cover_letter';
+}
+
+export type WritingContextDraft = Required<Record<keyof WritingContextInput, string>>;
+
+export const EMPTY_WRITING_CONTEXT: WritingContextDraft = { organization: '', role: '', contactName: '', contactRole: '', interviewDate: '' };
+
+export { WRITING_CONTEXT_LIMITS };
+
+/**
+ * The context to send (trimmed, empty fields dropped; the interview date only
+ * for thank-you notes), or a message saying what to fix. The draft repeats
+ * only these words; the server checks them again.
+ */
+export function writingContextInput(
+  type: WritingType,
+  draft: WritingContextDraft,
+  hasListing: boolean,
+): { ok: true; context: WritingContextInput | undefined } | { ok: false; message: string } {
+  if (!takesWritingContext(type)) return { ok: true, context: undefined };
+  const context: WritingContextInput = {};
+  for (const key of Object.keys(WRITING_CONTEXT_LIMITS) as (keyof typeof WRITING_CONTEXT_LIMITS)[]) {
+    const value = draft[key].replace(/\s+/g, ' ').trim();
+    if (!value) continue;
+    if (value.length > WRITING_CONTEXT_LIMITS[key]) return { ok: false, message: t('careerDocuments.newWriting.tooLong', { max: WRITING_CONTEXT_LIMITS[key] }) };
+    context[key] = value;
+  }
+  if (type === 'thank_you') {
+    const date = draft.interviewDate.trim();
+    if (date) {
+      if (!isCalendarDate(date)) return { ok: false, message: t('careerDocuments.newWriting.dateInvalid') };
+      context.interviewDate = date;
+    }
+  }
+  if (isTargetedWritingType(type) && !hasListing && !context.organization && !context.role) {
+    return { ok: false, message: t('careerDocuments.paid.targetNeeded') };
+  }
+  return { ok: true, context: Object.keys(context).length > 0 ? context : undefined };
+}
 
 /** Default title for a new career CV (the website uses "Resume"), in the current language. */
 export function defaultResumeTitle(): string {
@@ -215,6 +276,8 @@ export function paidFailure(error: unknown, credit?: DocumentCredit | null): { t
         return { title: t('careerDocuments.paid.notAvailableTitle'), body: [t('careerDocuments.paid.needsProvider'), charged].join(' ') };
       return { title: t('careerDocuments.paid.failedTitle'), body: [t('careerDocuments.paid.providerNoAnswer'), charged].join(' ') };
     }
+    if (error.code === 'validation_error' && reason === 'missing_target')
+      return { title: t('careerDocuments.paid.targetNeededTitle'), body: t('careerDocuments.paid.targetNeeded') };
     if (error.code === 'validation_error' && ['need_experience_or_education', 'no_facts', 'no_confirmed_facts'].includes(reason))
       return { title: t('careerDocuments.paid.addFactsTitle'), body: t('careerDocuments.paid.addFactsBody') };
     if (error.code === 'not_found') return { title: t('careerDocuments.paid.listingNotFoundTitle'), body: t('careerDocuments.paid.listingNotFoundBody') };

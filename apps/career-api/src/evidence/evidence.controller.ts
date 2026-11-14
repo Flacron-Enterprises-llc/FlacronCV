@@ -74,6 +74,24 @@ class CreateEvidenceDto implements CreateEvidenceInput {
   @IsOptional()
   @IsBoolean()
   isPortfolioShared?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('all', { each: true })
+  linkedFactIds?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  confidential?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  redactionNote?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  redactionConfirmed?: boolean;
 }
 
 class UpdateEvidenceDto implements UpdateEvidenceInput {
@@ -114,6 +132,24 @@ class UpdateEvidenceDto implements UpdateEvidenceInput {
   @IsOptional()
   @IsBoolean()
   isPortfolioShared?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('all', { each: true })
+  linkedFactIds?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  confidential?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  redactionNote?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  redactionConfirmed?: boolean;
 }
 
 @Controller('evidence')

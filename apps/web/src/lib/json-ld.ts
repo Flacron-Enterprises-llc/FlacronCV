@@ -91,14 +91,15 @@ function countPhrase(value: number | 'unlimited', singular: string, plural: stri
  * "5 CVs" can.
  *
  * The FAQ is said twice: `faq.a1`/`faq.a2` in locale JSON (humans) and this
- * block (crawlers). Cadence wording must match both. Paid allowances reset
- * on the UTC calendar 1st; Free never resets. If you change one, change
- * the other.
+ * block (crawlers). Cadence wording must match both: credits and analyses
+ * renew every month (Free on the account anniversary, paid plans on the
+ * billing date); PDF exports are unlimited on every plan. If you change one,
+ * change the other. Only the five current plans are described — never a
+ * legacy plan.
  */
 export function faqPage() {
   const free = PLAN_CONFIGS[SubscriptionPlan.FREE].limits;
-  const pro = PLAN_CONFIGS[SubscriptionPlan.PRO].limits;
-  const enterprise = PLAN_CONFIGS[SubscriptionPlan.ENTERPRISE].limits;
+  const starter = PLAN_CONFIGS[SubscriptionPlan.STARTER].limits;
 
   return {
     '@context': 'https://schema.org',
@@ -109,7 +110,7 @@ export function faqPage() {
         name: 'Is FlacronCV really free?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `Yes! The Free plan lets you create up to ${countPhrase(free.cvs, 'CV', 'CVs')}, ${countPhrase(free.coverLetters, 'cover letter', 'cover letters')}, use ${countPhrase(free.aiCredits, 'Engine credit', 'Engine credits')}, and export up to ${countPhrase(free.exports, 'document', 'documents')} as PDF — those allowances never reset, and no credit card is required. Upgrade to Pro for ${countPhrase(pro.cvs, 'CV', 'CVs')}, ${countPhrase(pro.coverLetters, 'cover letter', 'cover letters')}, ${countPhrase(pro.aiCredits, 'Engine credit', 'Engine credits')}, ${countPhrase(pro.exports, 'export', 'exports')}, and DOCX format — paid allowances reset on the 1st of each calendar month (UTC).`,
+          text: `Yes. The Free plan includes ${countPhrase(free.cvs, 'CV', 'CVs')}, ${countPhrase(free.coverLetters, 'cover letter', 'cover letters')}, ${countPhrase(free.aiCredits, 'AI document credit', 'AI document credits')} and ${countPhrase(free.analyses ?? 0, 'CV analysis', 'CV analyses')} a month, plus ${countPhrase(free.exports, 'PDF export', 'PDF exports')} with a small FlacronCV mark — no credit card required. Paid plans start with Starter (${countPhrase(starter.cvs, 'CV', 'CVs')}, ${countPhrase(starter.aiCredits, 'AI document credit', 'AI document credits')} a month) and add DOCX export and exports without the mark. Allowances renew every month.`,
         },
       },
       {
@@ -117,7 +118,7 @@ export function faqPage() {
         name: 'What export formats are supported?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `All plans support PDF export. Pro and Enterprise plans also unlock DOCX (Microsoft Word) format. The Free plan includes ${countPhrase(free.exports, 'export', 'exports')}; Pro offers ${countPhrase(pro.exports, 'export', 'exports')} and Enterprise offers ${countPhrase(enterprise.exports, 'export', 'exports')}.`,
+          text: `Every plan includes ${countPhrase(free.exports, 'PDF export', 'PDF exports')}. Paid plans (Starter and up) also unlock DOCX (Microsoft Word) format and remove the small FlacronCV mark from exports.`,
         },
       },
       {

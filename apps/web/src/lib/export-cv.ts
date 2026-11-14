@@ -682,10 +682,46 @@ async function renderPaginatedPdf(clone: HTMLElement): Promise<{ pdf: any; pageC
  * layer and the page planner — the parts with real logic and real consequences
  * if they break — would otherwise be untestable.
  */
-export const __testables = { addInvisibleTextLayer, isEncodableByStandardFont, buildCVDocx, buildCoverLetterDocx, planPageSlices, htmlToParagraphs, estimateRasterOffset };
+export const __testables = { addInvisibleTextLayer, isEncodableByStandardFont, buildCVDocx, buildCoverLetterDocx, planPageSlices, htmlToParagraphs, estimateRasterOffset, addBrandingMark };
+
+/** The attribution Free exports carry (plan entitlement `removeBranding === false`). */
+export const EXPORT_BRANDING_TEXT = 'Made with FlacronCV';
+
+/** Options for the client-side PDF exporters. */
+export interface PdfExportOptions {
+  /**
+   * Draw the small "Made with FlacronCV" mark at the foot of every page. Pass
+   * `decision.removeBranding === false` from POST /exports/record: the server
+   * decides (Free plan). Omitted → no mark.
+   */
+  brandingMark?: boolean;
+}
+
+/**
+ * A small grey line of text centred in the bottom page margin (2.5 mm above
+ * the edge), on every page. Real text, not pixels, so it stays crisp and is
+ * not mistaken for document content by a parser.
+ */
+function addBrandingMark(pdf: import('jspdf').jsPDF, pageCount: number): void {
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  for (let i = 1; i <= pageCount; i++) {
+    pdf.setPage(i);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(6.5);
+    pdf.setTextColor(156, 163, 175);
+    pdf.text(EXPORT_BRANDING_TEXT, pageW / 2, pageH - 2.5, { align: 'center' });
+  }
+  pdf.setTextColor(0, 0, 0);
+}
 
 // ─── PDF Export ───────────────────────────────────────────────────────────────
-export async function exportToPDF(cv: CV, _sections: CVSection[], locale: string = 'en'): Promise<void> {
+export async function exportToPDF(
+  cv: CV,
+  _sections: CVSection[],
+  locale: string = 'en',
+  options: PdfExportOptions = {},
+): Promise<void> {
   console.debug(`[exportToPDF] locale=${locale}, layout=${(cv.styling as any)?.layout || 'classic'}`);
   const sourceEl = document.getElementById('cv-preview-content');
   if (!sourceEl) throw new Error('CV preview not found — please keep the editor open while exporting.');
@@ -702,6 +738,7 @@ export async function exportToPDF(cv: CV, _sections: CVSection[], locale: string
     // feature already feeds, so what a recruiter's parser sees matches what our
     // own ATS score was calculated from.
     addInvisibleTextLayer(pdf, serializeCVToText(cv, _sections || []), pageCount);
+    if (options.brandingMark) addBrandingMark(pdf, pageCount);
 
     pdf.save(`${cv.title || 'CV'}.pdf`);
   } finally {
@@ -1496,7 +1533,7 @@ export async function exportToDocx(cv: CV, sections: CVSection[], locale: string
 }
 
 // ─── Cover Letter PDF Export ──────────────────────────────────────────────────
-export async function exportCoverLetterToPDF(title: string): Promise<void> {
+export async function exportCoverLetterToPDF(title: string, options: PdfExportOptions = {}): Promise<void> {
   const sourceEl = document.getElementById('cl-preview-content');
   if (!sourceEl) throw new Error('Cover letter preview not found.');
 
@@ -1516,6 +1553,7 @@ export async function exportCoverLetterToPDF(title: string): Promise<void> {
     const { pdf, pageCount } = await renderPaginatedPdf(clone);
 
     addInvisibleTextLayer(pdf, previewText, pageCount);
+    if (options.brandingMark) addBrandingMark(pdf, pageCount);
 
     pdf.save(`${title || 'cover-letter'}.pdf`);
   } finally {

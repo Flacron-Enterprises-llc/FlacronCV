@@ -172,7 +172,9 @@ describe('DashboardScreen', () => {
     renderDashboard(api);
     const action = await screen.findByRole('link', { name: /SQL analyst/ });
     expect(action.getAttribute('href')).toBe('/en/jobs');
-    expect(screen.getByText(/2099-01-01/)).toBeTruthy();
+    // In the saved card and in the upcoming deadlines list; an expired one is in neither.
+    expect(screen.getAllByText(/SQL analyst is due 2099-01-01/).length).toBe(2);
+    expect(screen.queryByText(/2020-01-01/)).toBeNull();
     expect(screen.queryByText(/2020-01-01/)).toBeNull();
     expect(screen.getByText('Draft')).toBeTruthy();
     expect(screen.getAllByText('Confirmed').length).toBeGreaterThan(0);
@@ -180,7 +182,7 @@ describe('DashboardScreen', () => {
     expect(screen.getByText('Librarian CV')).toBeTruthy();
     expect(screen.getByText('Cataloguing')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Open resume studio' }).getAttribute('href')).toBe('/en/career/documents');
-    expect(screen.getByRole('link', { name: 'Open billing' }).getAttribute('href')).toBe('/en/career/plans');
+    expect(screen.getByRole('link', { name: 'Open billing' }).getAttribute('href')).toBe('/en/settings/billing');
     expect(screen.getByRole('link', { name: 'Practice' }).getAttribute('href')).toBe('/en/career/interviews');
     expect(screen.queryByText(/hiring/i)).toBeNull();
     expect(screen.queryByText(/score/i)).toBeNull();
@@ -190,3 +192,33 @@ describe('DashboardScreen', () => {
 function settings() {
   return { email: true, push: false, telegram: false, digest: 'weekly' as const, quietStart: null, quietEnd: null, paused: false };
 }
+
+describe('DashboardScreen opportunities and follow-ups', () => {
+  it('labels a tracker follow-up as a follow-up, not a deadline, and lists saved and alerted listings', async () => {
+    const followUp = { ...application('j1', 'Analyst · Fictional Co', ''), dates: { deadline: null, applied: null, interview: null }, followUpDate: '2099-02-01' };
+    const api = testApi({
+      me: vi.fn().mockResolvedValue(me),
+      facts: vi.fn().mockResolvedValue({ items: [fact('f-skill', 'skill', 'confirmed')], profileVersion: 1 }),
+      usage: vi.fn().mockResolvedValue(usage),
+      resumes: vi.fn().mockResolvedValue({ items: [], documentCredit: { includedRemaining: 0, packRemaining: 0, renewalDate: null } }),
+      alerts: vi.fn().mockResolvedValue({
+        items: [{ id: 'a1', opportunityId: 'opp-2', title: 'Alerted role', organization: null, revisionId: 'r', reason: { code: 'saved_search', fit: null }, createdAt: '2026-10-16T00:00:00.000Z' }],
+        alertItem: { includedRemaining: 1, packRemaining: 0, renewalDate: null },
+        settings: settings(),
+      }),
+      savedOpportunities: vi.fn().mockResolvedValue({
+        items: [{ id: 'opp-1', category: 'scholarship', provider: 'paste', title: 'Data award', organization: null, status: 'open', label: 'open', sourceUrl: null, checkedAt: '2026-10-16T00:00:00.000Z', deadline: '2099-03-01', locations: [], compensation: { minimum: null, maximum: null, currency: null, period: null }, sponsorship: 'unknown' }],
+      }),
+    });
+    render(
+      <NextIntlClientProvider locale="en" messages={messages} timeZone="UTC">
+        <DashboardScreen api={api} user={user} ready signInHref="/en/sign-in" locale="en" loadApplications={async () => [followUp]} />
+      </NextIntlClientProvider>,
+    );
+    expect(await screen.findByText('Follow up on Analyst · Fictional Co on 2099-02-01')).toBeTruthy();
+    expect(screen.queryByText(/Analyst · Fictional Co is due/)).toBeNull();
+    expect(screen.getByRole('link', { name: 'Data award' }).getAttribute('href')).toBe('/en/career/opportunities/opp-1');
+    expect(screen.getByRole('link', { name: 'Alerted role' })).toBeTruthy();
+    expect(screen.getByText('Data award is due 2099-03-01')).toBeTruthy();
+  });
+});

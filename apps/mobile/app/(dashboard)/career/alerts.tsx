@@ -63,6 +63,9 @@ export default function CareerAlertsScreen() {
   const searches = useSavedSearches(searchesOn);
   const locations = useAlertLocations(locationsOn);
   const companies = useFollowedCompanies();
+  const { markAllRead } = useAlertActions();
+  // Older servers omit read flags: then nothing is shown as unread.
+  const unread = list.data?.unread ?? (list.data?.items ?? []).filter((item) => item.read === false).length;
 
   // Settings draft: synced from the server until the user edits it.
   const [draft, setDraft] = useState<SettingsDraft | null>(null);
@@ -130,6 +133,21 @@ export default function CareerAlertsScreen() {
         </View>
 
         <SectionTitle title={t('screen.yourAlerts')} />
+        {unread > 0 ? (
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-stone-600 text-sm flex-1 me-2">{t('screen.unreadCount', { count: unread })}</Text>
+            <Button
+              size="sm"
+              variant="outline"
+              className="min-h-[44px]"
+              onPress={() => markAllRead.mutate()}
+              loading={markAllRead.isPending}
+              disabled={markAllRead.isPending}
+            >
+              {t('screen.markAllRead')}
+            </Button>
+          </View>
+        ) : null}
         {list.data.items.length === 0 ? (
           <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
             <Text className="font-bold text-stone-900">{t('screen.emptyTitle')}</Text>
@@ -232,10 +250,15 @@ function ToggleRow({ label, value, onChange, hint }: { label: string; value: boo
 function AlertCard({ item }: { item: AlertItem }) {
   const router = useRouter();
   const t = useT('careerAlerts');
+  const { markRead } = useAlertActions();
   const fit = fitText(item.reason.fit);
+  const isUnread = item.read === false;
   return (
     <Pressable
-      onPress={() => router.push(`/(dashboard)/career/opportunities/${item.opportunityId}` as Href)}
+      onPress={() => {
+        if (isUnread) markRead.mutate(item.id);
+        router.push(`/(dashboard)/career/opportunities/${item.opportunityId}` as Href);
+      }}
       accessibilityRole="button"
       accessibilityLabel={t('screen.openA11y', { name: [item.title, item.organization].filter(Boolean).join(', ') })}
       className="bg-white border border-stone-100 rounded-2xl p-4 mb-3 active:bg-stone-50"
@@ -245,6 +268,11 @@ function AlertCard({ item }: { item: AlertItem }) {
           <Text className="font-bold text-brand-700">{item.title}</Text>
           {item.organization ? <Text className="text-stone-500 text-sm mt-0.5">{item.organization}</Text> : null}
         </View>
+        {isUnread ? (
+          <View className="me-2">
+            <Pill label={t('screen.unread')} tone="brand" />
+          </View>
+        ) : null}
         <Ionicons name="chevron-forward" size={18} color={colors.stone[400]} style={RTL_FLIP} />
       </View>
       <Text className="text-stone-700 text-sm mt-2">{reasonText(item.reason.code)}</Text>

@@ -162,5 +162,49 @@ describe('action engine over HTTP (CV12)', () => {
     expect(replayRes.status).toBe(201);
     expect(replayRes.body.replayed).toBe(true);
     expect(replayRes.body.actionPack.id).toBe(pack.id);
+
+    // 10. Edits, the copy into Documents and downloads are free.
+    const editRes = await http()
+      .patch(`/api/career/v1/action-packs/${pack.id}`)
+      .set('Authorization', auth)
+      .send({ coverLetter: { body: 'My own words for CloudScale.' }, nextSteps: ['Email the recruiter'] });
+    expect(editRes.status).toBe(200);
+    expect(editRes.body.coverLetter.body).toBe('My own words for CloudScale.');
+    expect(editRes.body.editedComponents).toEqual(expect.arrayContaining(['coverLetter', 'nextSteps']));
+    const badEdit = await http()
+      .patch(`/api/career/v1/action-packs/${pack.id}`)
+      .set('Authorization', auth)
+      .send({ tailoredResume: { lines: [{ factId: randomUUID(), text: 'Invented' }] } });
+    expect(badEdit.status).toBe(400);
+
+    const docsRes = await http().post(`/api/career/v1/action-packs/${pack.id}/documents`).set('Authorization', auth).send({});
+    expect(docsRes.status).toBe(200);
+    expect(docsRes.body.savedDocuments.letterDocumentId).toBeTruthy();
+    expect(docsRes.body.savedDocuments.resumeVersionId).toBeTruthy();
+
+    const pdf = await http()
+      .get(`/api/career/v1/action-packs/${pack.id}/export?component=coverLetter&format=pdf`)
+      .set('Authorization', auth)
+      .buffer(true)
+      .parse((res, done) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        res.on('end', () => done(null, Buffer.concat(chunks)));
+      });
+    expect(pdf.status).toBe(200);
+    expect(pdf.headers['content-type']).toContain('application/pdf');
+    expect((pdf.body as Buffer).subarray(0, 4).toString()).toBe('%PDF');
+
+    // A complete pack has nothing to retry; an unknown component is refused.
+    const retryRes = await http().post(`/api/career/v1/action-packs/${pack.id}/retry`).set('Authorization', auth).send({ component: 'coverLetter' });
+    expect(retryRes.status).toBe(400);
+    const badComponent = await http().post(`/api/career/v1/action-packs/${pack.id}/retry`).set('Authorization', auth).send({ component: 'fit' });
+    expect(badComponent.status).toBe(400);
+
+    const ledger = await t.db.pool.query<{ unit: string; state: string }>(
+      `SELECT unit, state FROM usage_ledger WHERE billing_account_id = $1`,
+      [billingAccountId],
+    );
+    expect(ledger.rows).toEqual([{ unit: 'action_pack', state: 'committed' }]);
   });
 });

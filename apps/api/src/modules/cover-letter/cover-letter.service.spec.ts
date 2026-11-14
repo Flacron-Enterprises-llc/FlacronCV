@@ -237,13 +237,13 @@ describe('CoverLetterService delete does not restore a creation', () => {
     expect(usersService.incrementUsage).not.toHaveBeenCalledWith('u1', 'coverLettersCreated', -1);
   });
 
-  it('blocks a Free user at 1 creation from creating again after deleting the stored letter', async () => {
-    let coverLettersCreated = 1;
+  it('LEGACY Pro: blocks a user at 20 creations from creating again after deleting a stored letter', async () => {
+    let coverLettersCreated = 20;
     const firestore = new InMemoryFirestore();
     const usersService = {
       findByIdOrThrow: jest.fn().mockImplementation(async () => ({
         uid: 'u1',
-        subscription: { plan: SubscriptionPlan.FREE, status: 'active' },
+        subscription: { plan: SubscriptionPlan.PRO, status: 'active' },
         usage: { coverLettersCreated },
       })),
       incrementUsage: jest.fn(async (_uid: string, field: string, amount = 1) => {
@@ -269,10 +269,18 @@ describe('CoverLetterService delete does not restore a creation', () => {
     await service.delete('cl1', 'u1');
 
     expect(usersService.incrementUsage).not.toHaveBeenCalledWith('u1', 'coverLettersCreated', -1);
-    expect(coverLettersCreated).toBe(1);
+    expect(coverLettersCreated).toBe(20);
     await expect(
       service.create('u1', { title: 'Second', templateId: 'modern' } as any),
     ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('current plans count STORED letters: Free (capacity 1) may create again after deleting', async () => {
+    const { service } = makeService(SubscriptionPlan.FREE);
+    const first = await service.create('u1', { title: 'One' });
+    await expect(service.create('u1', { title: 'Two' })).rejects.toThrow(ForbiddenException);
+    await service.delete(first.id, 'u1');
+    await expect(service.create('u1', { title: 'Two' })).resolves.toMatchObject({ title: 'Two' });
   });
 });
 
@@ -303,7 +311,8 @@ describe('CoverLetterService letterLocale', () => {
   });
 
   it('keeps the letter language on duplicate', async () => {
-    const { service, firestore } = makeService(SubscriptionPlan.FREE);
+    // Starter: capacity 5, so the one seeded letter leaves room for its copy.
+    const { service, firestore } = makeService(SubscriptionPlan.STARTER);
     await seedCL(firestore);
     await service.update('cl1', 'u1', { letterLocale: 'de' });
     const copy = await service.duplicate('cl1', 'u1');

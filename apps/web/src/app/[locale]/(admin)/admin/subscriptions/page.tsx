@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import { useFormatDate } from '@/lib/use-format-date';
+import { ADMIN_PLAN_OPTIONS, crmPlanLabel, planBadgeClass } from '@/lib/plan-labels';
 import {
   CreditCard,
   Loader2,
@@ -35,9 +36,8 @@ interface Subscription {
 interface SubscriptionsResponse {
   subscriptions: Subscription[];
   stats: {
-    free: number;
-    pro: number;
-    enterprise: number;
+    /** Users per stored plan id, every plan (current and legacy). */
+    byPlan: Record<string, number>;
     totalActive: number;
   };
 }
@@ -52,8 +52,7 @@ export default function AdminSubscriptionsPage(): React.JSX.Element | null {
   const tBilling = useTranslations('billing');
   const tc = useTranslations('crm');
   const statusLabel = (status: string) => (STRIPE_STATUSES.includes(status) ? tBilling(`status.${status}`) : status);
-  const planLabel = (plan: string) =>
-    ['free', 'pro', 'career_accelerator', 'enterprise'].includes(plan) ? tc(`plan_${plan}`) : plan;
+  const planLabel = (plan: string) => crmPlanLabel(tc, plan);
 
   // Served by the working CRM subscriptions endpoint (list) + the admin revenue
   // analytics endpoint (plan/active stats); the CRM record stores amount in cents.
@@ -97,9 +96,7 @@ export default function AdminSubscriptionsPage(): React.JSX.Element | null {
           createdAt: s.createdAt,
         })),
         stats: {
-          free: revenue.planBreakdown?.free ?? 0,
-          pro: revenue.planBreakdown?.pro ?? 0,
-          enterprise: revenue.planBreakdown?.enterprise ?? 0,
+          byPlan: revenue.planBreakdown ?? {},
           totalActive: revenue.activeSubscriptions ?? 0,
         },
       };
@@ -123,25 +120,14 @@ export default function AdminSubscriptionsPage(): React.JSX.Element | null {
     );
   }
 
+  // One card per plan (current first, then legacy) — from the shared list.
   const planStats = [
-    {
-      label: t('free_plan'),
-      value: data?.stats?.free ?? 0,
-      icon: Users,
-      color: 'text-stone-600 bg-stone-100 dark:bg-stone-800 dark:text-stone-400',
-    },
-    {
-      label: t('pro_plan'),
-      value: data?.stats?.pro ?? 0,
-      icon: Crown,
-      color: 'text-brand-600 bg-brand-50 dark:bg-brand-950 dark:text-brand-400',
-    },
-    {
-      label: t('enterprise_plan'),
-      value: data?.stats?.enterprise ?? 0,
-      icon: Building,
-      color: 'text-stone-600 bg-stone-100 dark:bg-stone-800 dark:text-stone-300',
-    },
+    ...ADMIN_PLAN_OPTIONS.map((plan) => ({
+      label: planLabel(plan),
+      value: data?.stats?.byPlan?.[plan] ?? 0,
+      icon: plan === 'free' ? Users : plan === 'business' || plan === 'enterprise' ? Building : Crown,
+      color: planBadgeClass(plan),
+    })),
     {
       label: t('total_active'),
       value: data?.stats?.totalActive ?? 0,
@@ -261,9 +247,9 @@ export default function AdminSubscriptionsPage(): React.JSX.Element | null {
                   <td className="hidden whitespace-nowrap px-4 py-4 sm:table-cell sm:px-6">
                     <Badge
                       variant={
-                        sub.plan === 'enterprise'
+                        sub.plan === 'enterprise' || sub.plan === 'career_pro' || sub.plan === 'business'
                           ? 'info'
-                          : sub.plan === 'pro'
+                          : sub.plan === 'pro' || sub.plan === 'starter' || sub.plan === 'professional'
                             ? 'brand'
                             : 'default'
                       }

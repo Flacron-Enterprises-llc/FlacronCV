@@ -8,8 +8,21 @@ import {
   Patch,
   Post,
   Provider,
+  Put,
 } from '@nestjs/common';
-import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import {
   SkillsLearningService,
   MeteringService,
@@ -48,6 +61,39 @@ class CreateSkillReportDto {
 class UpdateProgressDto {
   @IsBoolean()
   completed!: boolean;
+}
+
+/** The person's own words; the service trims and bounds it. */
+class OwnershipDto {
+  @IsString()
+  @IsOptional()
+  @MaxLength(4000)
+  ownershipStatement?: string;
+}
+
+class RubricCriterionCheckDto {
+  @IsString()
+  criterionId!: string;
+
+  @IsBoolean()
+  met!: boolean;
+
+  @IsString()
+  @MaxLength(2000)
+  note!: string;
+}
+
+class RubricCheckDto {
+  @IsArray()
+  @ArrayMaxSize(10)
+  @IsString({ each: true })
+  evidenceIds!: string[];
+
+  @IsArray()
+  @ArrayMaxSize(10)
+  @ValidateNested({ each: true })
+  @Type(() => RubricCriterionCheckDto)
+  criteria!: RubricCriterionCheckDto[];
 }
 
 @Controller('learning/skill-reports')
@@ -100,8 +146,32 @@ export class LearningController {
     @CurrentPrincipal() principal: Principal,
     @Param('id') id: string,
     @Param('milestoneId') milestoneId: string,
+    @Body() body: OwnershipDto,
   ) {
-    return this.learningService.convertToEvidence(principal, id, milestoneId);
+    return this.learningService.convertToEvidence(principal, id, milestoneId, { ownershipStatement: body?.ownershipStatement });
+  }
+
+  @Put(':id/project-brief/ownership')
+  async setOwnership(
+    @CurrentPrincipal() principal: Principal,
+    @Param('id') id: string,
+    @Body() body: OwnershipDto,
+  ) {
+    return this.learningService.setOwnershipStatement(principal, id, body?.ownershipStatement ?? '');
+  }
+
+  @Post(':id/project-brief/evidence')
+  async addProjectToEvidence(@CurrentPrincipal() principal: Principal, @Param('id') id: string) {
+    return this.learningService.addProjectToEvidence(principal, id);
+  }
+
+  @Put(':id/project-brief/rubric-check')
+  async saveRubricCheck(
+    @CurrentPrincipal() principal: Principal,
+    @Param('id') id: string,
+    @Body() body: RubricCheckDto,
+  ) {
+    return this.learningService.saveRubricCheck(principal, id, body);
   }
 }
 

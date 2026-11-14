@@ -92,27 +92,18 @@ describe('allowance copy: delete does not restore a creation', () => {
     expect(misses).toEqual([]);
   });
 
-  it('paid AI-credit copy names the UTC calendar 1st, not a billing month', () => {
-    const forbidden = [
-      'billing month',
-      'mes de facturación',
-      'mois de facturation',
-      'Abrechnungsmonat',
-      'شهر الفوترة',
-      'بلنگ ماہ',
-    ];
-    const keys = [
-      'upgrade_modal.reasons.ai_credits.description',
-      'pricing.terms_rollover_desc',
-      'faq.a1',
-    ] as const;
+  // Five-plan contract: allowances renew on the billing anniversary (Free: the
+  // account anniversary), not on the UTC calendar 1st as the old plans did.
+  // The copy must say so, and must not keep the retired "1st of the month" claim.
+  it('renewal copy names the billing date, not the calendar 1st', () => {
+    const forbidden = ['UTC', '1st', 'le 1er', 'am 1.', 'el día 1', 'billing month', 'mes de facturación', 'mois de facturation', 'Abrechnungsmonat', 'شهر الفوترة', 'بلنگ ماہ'];
+    const keys = ['upgrade_modal.reasons.ai_credits.description', 'pricing.terms_rollover_desc'] as const;
     const hits: string[] = [];
     for (const locale of LOCALES) {
       const json = load(locale);
       for (const key of keys) {
         const value = get(json, key);
         expect(typeof value).toBe('string');
-        expect(value).toMatch(/UTC/);
         for (const phrase of forbidden) {
           if (value.includes(phrase)) hits.push(`${locale}:${key}: ${phrase}`);
         }

@@ -10,6 +10,10 @@ import {
   CV_TEMPLATE_TIER,
   COVER_LETTER_TEMPLATE_TIER,
   templateFeatureLine,
+  CURRENT_PLANS,
+  LEGACY_PLANS,
+  isLegacyPlan,
+  allPlansForAdmin,
 } from '@flacroncv/shared-types';
 
 /**
@@ -48,8 +52,16 @@ function allowanceLine(plan: SubscriptionPlan, noun: RegExp): string | undefined
 }
 
 describe('advertised template access matches planMeetsTier', () => {
-  it.each(PLANS)('%s — limits.templates is the plan’s own max reachable tier', (plan) => {
+  it.each(LEGACY_PLANS)('LEGACY %s — limits.templates is the plan’s own max reachable tier (unchanged)', (plan) => {
     expect(PLAN_CONFIGS[plan].limits.templates).toBe(plan);
+  });
+
+  it('current plans map to template tiers per the contract', () => {
+    expect(PLAN_CONFIGS[SubscriptionPlan.FREE].limits.templates).toBe(SubscriptionPlan.FREE);
+    expect(PLAN_CONFIGS[SubscriptionPlan.STARTER].limits.templates).toBe(SubscriptionPlan.PRO);
+    expect(PLAN_CONFIGS[SubscriptionPlan.PROFESSIONAL].limits.templates).toBe(SubscriptionPlan.PRO);
+    expect(PLAN_CONFIGS[SubscriptionPlan.CAREER_PRO].limits.templates).toBe(SubscriptionPlan.ENTERPRISE);
+    expect(PLAN_CONFIGS[SubscriptionPlan.BUSINESS].limits.templates).toBe(SubscriptionPlan.ENTERPRISE);
   });
 
   it.each(PLANS)('%s — every built-in CV template', (plan) => {
@@ -127,8 +139,10 @@ describe('DOCX advertising matches the export gate', () => {
   // with `docx_requires_paid`; every other plan is allowed.
   it.each(PLANS)('%s', (plan) => {
     const advertisesDocx = /DOCX/i.test(PLAN_CONFIGS[plan].features.join(' '));
-    const docxAllowed = plan !== SubscriptionPlan.FREE;
+    const docxAllowed = PLAN_CONFIGS[plan].limits.docxExport;
     expect(advertisesDocx).toBe(docxAllowed);
+    // Same rule as before the catalog change: only Free is refused DOCX.
+    expect(docxAllowed).toBe(plan !== SubscriptionPlan.FREE);
   });
 });
 
@@ -142,7 +156,18 @@ describe('cadence advertising matches usage-reset', () => {
     { noun: /exports?/i, cap: (p) => PLAN_CONFIGS[p].limits.exports },
   ];
 
-  it.each(PLANS)('%s', (plan) => {
+  it.each(CURRENT_PLANS)('current %s — credits and analyses are monthly; CVs/letters are capacity; exports unlimited', (plan) => {
+    const f = PLAN_CONFIGS[plan].features;
+    expect(allowanceLine(plan, /Engine credits?/i)).toMatch(/\/month/i);
+    expect(allowanceLine(plan, /analys/i)).toMatch(/\/month/i);
+    expect(advertised(f, /analys/i)).toBe(PLAN_CONFIGS[plan].limits.analyses);
+    expect(allowanceLine(plan, /\bCVs?\b/i)).not.toMatch(/\/month/i);
+    expect(allowanceLine(plan, /cover letters?/i)).not.toMatch(/\/month/i);
+    expect(advertised(f, /exports?/i)).toBe('unlimited');
+    expect(advertised(f, /tracked applications?/i)).toBe(PLAN_CONFIGS[plan].limits.trackedApplications);
+  });
+
+  it.each(LEGACY_PLANS)('LEGACY %s (unchanged)', (plan) => {
     for (const { noun, cap } of monthlyNouns) {
       const line = allowanceLine(plan, noun);
       expect(line).toBeDefined();
@@ -158,33 +183,61 @@ describe('cadence advertising matches usage-reset', () => {
   });
 });
 
-describe('plan visibility follows purchasability', () => {
-  it('FREE is always offered even though it has no Stripe price', () => {
-    expect(customerFacingPlans()).toContain(SubscriptionPlan.FREE);
-    expect(isPlanPurchasable(SubscriptionPlan.FREE)).toBe(false);
+describe('plan visibility (five-plan catalog)', () => {
+  it('customers are offered exactly the five current plans, in order', () => {
+    expect(customerFacingPlans()).toEqual(['free', 'starter', 'professional', 'career_pro', 'business']);
   });
 
-  it('never advertises a paid plan that has no Stripe price configured', () => {
-    for (const plan of customerFacingPlans()) {
-      if (plan === SubscriptionPlan.FREE) continue;
-      expect(isPlanPurchasable(plan)).toBe(true);
+  it('legacy plans are never offered nor purchasable, but stay configured for existing customers', () => {
+    for (const plan of LEGACY_PLANS) {
+      expect(isLegacyPlan(plan)).toBe(true);
+      expect(customerFacingPlans()).not.toContain(plan);
+      expect(isPlanPurchasable(plan)).toBe(false);
+    }
+    // Existing subscriptions keep renewing against these compiled test ids.
+    expect(PLAN_CONFIGS[SubscriptionPlan.PRO].stripePriceIdMonthly).toBe('price_1U0xNhKFLhrvSzkgWFAU2LuD');
+    expect(PLAN_CONFIGS[SubscriptionPlan.ENTERPRISE].stripePriceIdMonthly).toBe('price_1U0xNlKFLhrvSzkgl98Q71yw');
+  });
+
+  it('legacy limits and prices are unchanged', () => {
+    expect(PLAN_CONFIGS[SubscriptionPlan.PRO]).toMatchObject({
+      priceMonthly: 29.99,
+      limits: { cvs: 10, coverLetters: 20, aiCredits: 100, exports: 'unlimited', templates: SubscriptionPlan.PRO },
+    });
+    expect(PLAN_CONFIGS[SubscriptionPlan.CAREER_ACCELERATOR]).toMatchObject({
+      priceMonthly: 49.99,
+      limits: { cvs: 25, coverLetters: 50, aiCredits: 250, exports: 'unlimited' },
+    });
+    expect(PLAN_CONFIGS[SubscriptionPlan.ENTERPRISE]).toMatchObject({
+      priceMonthly: 99.99,
+      limits: { cvs: 'unlimited', coverLetters: 'unlimited', aiCredits: 500, exports: 'unlimited' },
+    });
+    for (const plan of LEGACY_PLANS) {
+      expect(PLAN_CONFIGS[plan].limits.analyses).toBeUndefined();
+      expect(PLAN_CONFIGS[plan].limits.trackedApplications).toBe('unlimited');
+      expect(PLAN_CONFIGS[plan].limits.removeBranding).toBe(true);
     }
   });
 
-  it('hides Career Accelerator while its Stripe price is unset', () => {
-    // Guards the client-reported inconsistency: the plan appeared on the
-    // billing comparison but not on public pricing. Visibility is now one
-    // rule, so the two surfaces cannot disagree. When the client configures
-    // the real Stripe price this expectation flips deliberately.
-    const ca = SubscriptionPlan.CAREER_ACCELERATOR;
-    expect(customerFacingPlans().includes(ca)).toBe(isPlanPurchasable(ca));
+  it('paid current plans are purchasable (price configured server-side); Free is not a purchase', () => {
+    expect(isPlanPurchasable(SubscriptionPlan.FREE)).toBe(false);
+    for (const plan of CURRENT_PLANS.filter((p) => p !== SubscriptionPlan.FREE)) {
+      expect(isPlanPurchasable(plan)).toBe(true);
+      // Never a compiled price id for the current catalog: env only.
+      expect(PLAN_CONFIGS[plan].stripePriceIdMonthly).toBe('');
+      expect(PLAN_CONFIGS[plan].stripePriceIdYearly).toBe('');
+    }
   });
 
-  it('Pro and Enterprise are both purchasable, so both get a self-serve CTA', () => {
-    // The public page previously said "Contact Sales" for Enterprise while the
-    // billing page sold it directly. Both are real Stripe prices.
-    expect(isPlanPurchasable(SubscriptionPlan.PRO)).toBe(true);
-    expect(isPlanPurchasable(SubscriptionPlan.ENTERPRISE)).toBe(true);
+  it('admin lists show every plan, current then legacy', () => {
+    expect(allPlansForAdmin()).toEqual([...CURRENT_PLANS, ...LEGACY_PLANS]);
+    expect(new Set(allPlansForAdmin())).toEqual(new Set(PLANS));
+  });
+
+  it('only Free carries the export branding mark', () => {
+    for (const plan of PLANS) {
+      expect(PLAN_CONFIGS[plan].limits.removeBranding).toBe(plan !== SubscriptionPlan.FREE);
+    }
   });
 });
 

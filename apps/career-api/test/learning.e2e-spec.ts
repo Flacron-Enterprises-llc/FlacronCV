@@ -38,7 +38,7 @@ describe('skills and learning over HTTP (CV13)', () => {
     });
     // Ensure the Phase 2 skillReports flags are enabled
     await t.db.pool.query(
-      `INSERT INTO feature_flags (feature, enabled) VALUES ('skillReports', true), ('projectBriefInSkillReport', true)
+      `INSERT INTO feature_flags (feature, enabled) VALUES ('skillReports', true), ('projectBriefInSkillReport', true), ('evidenceItems', true)
        ON CONFLICT (feature) DO UPDATE SET enabled = true`,
     );
   });
@@ -138,10 +138,33 @@ describe('skills and learning over HTTP (CV13)', () => {
     // 7. Convert completed milestone to Career Evidence
     const evRes = await http()
       .post(`/api/career/v1/learning/skill-reports/${report.id}/milestones/${milestoneId}/evidence`)
-      .set('Authorization', auth);
+      .set('Authorization', auth)
+      .send({ ownershipStatement: 'I built the log myself.' });
 
     expect(evRes.status).toBe(201);
     expect(evRes.body.evidenceId).toBeDefined();
+    expect(evRes.body.created).toBe(true);
+    const evAgain = await http()
+      .post(`/api/career/v1/learning/skill-reports/${report.id}/milestones/${milestoneId}/evidence`)
+      .set('Authorization', auth);
+    expect(evAgain.body).toEqual({ evidenceId: evRes.body.evidenceId, created: false });
+
+    // 7b. Project brief: the person writes the ownership statement, adds the
+    // project to the vault, then self-checks it against the rubric.
+    const base = `/api/career/v1/learning/skill-reports/${report.id}/project-brief`;
+    expect(report.projectBrief.ownershipStatement).toBeNull();
+    const own = await http().put(`${base}/ownership`).set('Authorization', auth).send({ ownershipStatement: 'All mine.' });
+    expect(own.status).toBe(200);
+    expect(own.body.projectBrief.ownershipStatement).toBe('All mine.');
+    const project = await http().post(`${base}/evidence`).set('Authorization', auth);
+    expect(project.status).toBe(201);
+    const criteria = report.projectBrief.rubrics.map((r: { id: string }) => ({ criterionId: r.id, met: true, note: '' }));
+    const check = await http()
+      .put(`${base}/rubric-check`)
+      .set('Authorization', auth)
+      .send({ evidenceIds: [project.body.evidenceId], criteria });
+    expect(check.status).toBe(200);
+    expect(check.body.projectBrief.rubricCheck.assessment).toBe('self_check');
 
     // Verify evidence exists in Evidence Vault
     const evidenceListRes = await http()

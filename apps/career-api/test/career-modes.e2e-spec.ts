@@ -86,14 +86,15 @@ describe('career modes and relocation over HTTP (CV14)', () => {
       .get('/api/career/v1/career-modes/specialist-mode')
       .set('Authorization', auth);
     expect(modeRes1.status).toBe(200);
-    expect(modeRes1.body.mode).toBe('general');
+    expect(modeRes1.body.mode).toBeNull();
+    expect(modeRes1.body.available).toBe(false);
 
     // Setting specialist mode on Free is rejected with plan_upgrade_required
     const setModeFreeRes = await http()
       .put('/api/career/v1/career-modes/specialist-mode')
       .set('Authorization', auth)
       .send({
-        mode: 'technical_engineering',
+        mode: 'veterans',
       });
     expect(setModeFreeRes.status).toBe(403);
     expect(setModeFreeRes.body.code).toBe('plan_upgrade_required');
@@ -114,12 +115,19 @@ describe('career modes and relocation over HTTP (CV14)', () => {
       .put('/api/career/v1/career-modes/specialist-mode')
       .set('Authorization', auth)
       .send({
-        mode: 'technical_engineering',
+        mode: 'veterans',
         focusAreas: ['Distributed Systems', 'Cloud Native'],
         customGuidelines: 'Prioritize scale and latency benchmarks.',
       });
     expect(setModeStarterRes.status).toBe(200);
-    expect(setModeStarterRes.body.mode).toBe('technical_engineering');
+    expect(setModeStarterRes.body.mode).toBe('veterans');
+    expect(setModeStarterRes.body.modes).toEqual(['veterans']);
+    const context = await http().get('/api/career/v1/career-modes/context').set('Authorization', auth);
+    expect(context.status).toBe(200);
+    expect(context.body.modes).toEqual(['veterans']);
+    expect(context.body.checklist).toContainEqual({ mode: 'veterans', id: 'translate_military_skills' });
+    const oldMode = await http().put('/api/career/v1/career-modes/specialist-mode').set('Authorization', auth).send({ mode: 'technical_engineering' });
+    expect(oldMode.status).toBe(400);
     expect(setModeStarterRes.body.focusAreas).toEqual(['Distributed Systems', 'Cloud Native']);
 
     // 9. Delete location profile

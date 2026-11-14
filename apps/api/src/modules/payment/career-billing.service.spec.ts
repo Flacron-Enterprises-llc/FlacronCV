@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException } from '@nestjs/common';
+import { GoneException } from '@nestjs/common';
 import { SubscriptionPlan, SubscriptionStatus } from '@flacroncv/shared-types';
 import { InMemoryFirestore } from '../firebase/in-memory-firestore';
 import { CareerBillingService, readCareerBillingMode, readCareerStripePrices } from './career-billing.service';
@@ -85,7 +85,7 @@ describe('career billing configuration', () => {
   });
 });
 
-describe('career checkout', () => {
+describe('career add-on checkout (retired by the five-plan model)', () => {
   const saved = { mode: process.env.CAREER_BILLING_MODE, prices: process.env.CAREER_STRIPE_PRICES };
   let firestore: InMemoryFirestore;
   let stripe: ReturnType<typeof stripeMock>;
@@ -107,50 +107,32 @@ describe('career checkout', () => {
     process.env.CAREER_STRIPE_PRICES = saved.prices;
   });
 
-  it('never reaches Stripe while purchase is disabled (the default)', async () => {
-    await expect(confirmBuy(make('disabled'))).rejects.toBeInstanceOf(ForbiddenException);
+  it('can no longer create a second subscription for features every plan includes, in any mode', async () => {
+    for (const mode of ['disabled', 'addon']) {
+      const error = await confirmBuy(make(mode)).catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(GoneException);
+      expect((error as GoneException).getResponse()).toMatchObject({ code: 'CAREER_ADDON_RETIRED' });
+    }
     expect(stripe.prices.retrieve).not.toHaveBeenCalled();
     expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
   });
 
-  it('[add-on] charges only the confirmed amount, on the existing customer, with no trial and career metadata', async () => {
-    await expect(confirmBuy(make('addon'), 999)).rejects.toBeInstanceOf(ConflictException);
-    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
-
-    const result = await confirmBuy(make('addon'));
-    expect(result.sessionId).toBe('cs_1');
-    expect(stripe.customers.create).not.toHaveBeenCalled();
-    const [params, options] = stripe.checkout.sessions.create.mock.calls[0] as any[];
-    expect(params).toMatchObject({ customer: 'cus_shared', mode: 'subscription', line_items: [{ price: CAREER_PRICE, quantity: 1 }] });
-    expect(params.metadata).toMatchObject({ product: 'career', careerPlan: 'professional', firebaseUid: 'u1', app_id: 'flacron-cv' });
-    expect(params.subscription_data.trial_period_days).toBeUndefined();
-    expect(options).toEqual({ idempotencyKey: 'career-checkout:u1:k1' });
-  });
-
-  it('[add-on] explains why purchase is unavailable, and never touches V1 subscription fields', async () => {
-    const noPrices = (() => {
-      process.env.CAREER_BILLING_MODE = 'addon';
-      process.env.CAREER_STRIPE_PRICES = '';
-      return new CareerBillingService(config(), { firestore } as any, users(firestore), stripe as any);
-    })();
-    expect(await noPrices.status('u1')).toMatchObject({ model: 'addon', purchasable: false, blockedReason: 'prices_not_configured' });
-    await expect(confirmBuy(noPrices)).rejects.toBeInstanceOf(ForbiddenException);
-    const svc = make('addon');
-    expect(await svc.status('u1')).toMatchObject({ purchasable: true, blockedReason: null, configuredPrices: ['professional:month'] });
-    await expect(
-      svc.createCheckout('u1', { plan: 'professional', interval: 'year', expectedAmountCents: 38990 }, { success: 's', cancel: 'c' }),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-    await confirmBuy(svc);
+  it('status says the tools are included, shows the mapped career plan, and touches nothing', async () => {
+    const status = await make('addon').status('u1');
+    expect(status).toMatchObject({ model: 'included', purchasable: false, blockedReason: 'retired', careerPlan: 'starter' });
+    expect(status.addons.find((a) => a.id === 'document_s')).toMatchObject({ onSale: false, allowed: true, priceCents: 499 });
+    expect(status.addons.find((a) => a.id === 'action_s')).toMatchObject({ allowed: false, minPlan: 'professional' });
     const v1 = (await firestore.collection('users').doc('u1').get()).data() as any;
     expect(v1.subscription).toMatchObject({ plan: SubscriptionPlan.PRO, stripeSubscriptionId: V1_SUB, stripeCustomerId: 'cus_shared' });
-    expect(v1.usage).toEqual({ aiCreditsUsed: 7, aiCreditsLimit: 100, exportsThisMonth: 2 });
     expect(v1.careerSubscription).toBeUndefined();
   });
 
-  it('[add-on] refuses a second career subscription while one is live', async () => {
-    await firestore.collection('users').doc('u1').update({ careerSubscription: { plan: 'professional', status: 'active', stripeSubscriptionId: CAREER_SUB } });
-    await expect(confirmBuy(make('addon'))).rejects.toBeInstanceOf(ConflictException);
-    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+  it('an existing add-on subscriber keeps the higher of the add-on and the mapped plan', async () => {
+    const end = new Date(Date.now() + 10 * 86400_000);
+    await firestore.collection('users').doc('u1').update({ careerSubscription: { plan: 'career_pro', status: 'active', currentPeriodEnd: end, stripeSubscriptionId: CAREER_SUB } });
+    expect((await make('addon').status('u1')).careerPlan).toBe('career_pro');
+    await firestore.collection('users').doc('u1').update({ careerSubscription: { plan: 'career_pro', status: 'canceled', currentPeriodEnd: new Date(Date.now() - 1000), stripeSubscriptionId: CAREER_SUB } });
+    expect((await make('addon').status('u1')).careerPlan).toBe('starter');
   });
 });
 

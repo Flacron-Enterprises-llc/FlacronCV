@@ -33,7 +33,34 @@ export function effectivePlanForCopy(
   if (plan === 'enterprise') return SubscriptionPlan.ENTERPRISE;
   if (plan === 'pro') return SubscriptionPlan.PRO;
   if (plan === 'free') return SubscriptionPlan.FREE;
+  // Five-plan catalog ids: this copy-only enum has no names for them yet (app
+  // phase); use the copy of the legacy plan with the same template reach.
+  if (plan === 'career_pro' || plan === 'business') return SubscriptionPlan.ENTERPRISE;
   return SubscriptionPlan.PRO;
+}
+
+/**
+ * The plan to NAME on screen (read-only display). Unlike
+ * {@link effectivePlanForCopy} it keeps the five-plan catalog ids, so a
+ * Starter or Career Pro subscriber sees their real plan name instead of the
+ * legacy "Pro" / "Enterprise" copy. Legacy subscribers keep their old name.
+ */
+export function planForDisplay(subscription: EntitlementSubscription | null | undefined): SharedPlan {
+  return sharedResolveEffectivePlan(subscription);
+}
+
+/**
+ * Whether the plan belongs to the five-plan catalog (Starter, Professional,
+ * Career Pro, Business). The app sells only the legacy Pro plan in this phase,
+ * so these subscribers are not offered an in-app purchase.
+ */
+export function isCatalogPaidPlan(plan: SharedPlan | string): boolean {
+  return plan === 'starter' || plan === 'professional' || plan === 'career_pro' || plan === 'business';
+}
+
+/** The shared plan limits (capacity / credits) for the subscriber's real plan. */
+export function sharedPlanLimits(subscription: EntitlementSubscription | null | undefined) {
+  return SHARED_PLAN_CONFIGS[sharedResolveEffectivePlan(subscription)].limits;
 }
 
 export function canAccessTemplate(
@@ -50,8 +77,13 @@ export function canCreateCV(
   subscription: EntitlementSubscription | null | undefined,
   cvsCreated: number,
 ): boolean {
-  const limit = SHARED_PLAN_CONFIGS[sharedResolveEffectivePlan(subscription)].limits.cvs;
+  const config = SHARED_PLAN_CONFIGS[sharedResolveEffectivePlan(subscription)];
+  const limit = config.limits.cvs;
   if (limit === 'unlimited') return true;
+  // Five-plan catalog: current plans limit STORED CVs (capacity), which the
+  // profile does not carry — the API decides (CV_LIMIT_REACHED). Only legacy
+  // plans count creations and are pre-checked here.
+  if (!config.legacy) return true;
   return cvsCreated < limit;
 }
 
@@ -59,8 +91,10 @@ export function canCreateCoverLetter(
   subscription: EntitlementSubscription | null | undefined,
   clCreated: number,
 ): boolean {
-  const limit = SHARED_PLAN_CONFIGS[sharedResolveEffectivePlan(subscription)].limits.coverLetters;
+  const config = SHARED_PLAN_CONFIGS[sharedResolveEffectivePlan(subscription)];
+  const limit = config.limits.coverLetters;
   if (limit === 'unlimited') return true;
+  if (!config.legacy) return true; // capacity: the API decides (see canCreateCV)
   return clCreated < limit;
 }
 

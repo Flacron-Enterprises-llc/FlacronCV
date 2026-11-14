@@ -123,4 +123,21 @@ describe('alert locations and followed companies', () => {
     expect(JSON.parse(String(calls[0].init.body))).toEqual({ place: 'Leeds', radiusMiles: 25 });
     expect(JSON.parse(String(calls[4].init.body))).toEqual({ q: 'analyst', locationProfileId: 'loc-1' });
   });
+
+  it('acts in a Business workspace through ?workspace= and sends the key environment', async () => {
+    const calls: Call[] = [];
+    const api = createApiClient({ baseUrl: 'http://x', getToken: async () => 't', fetch: fakeFetch(200, {}, calls) });
+    await api.businessOverview('00000000-0000-4000-8000-000000000001');
+    await api.businessOverview();
+    await api.createDeveloperKey('test');
+    await api.confirmPromotion('g1', { company: 'Acme' });
+    expect(calls.map((c) => c.url)).toEqual([
+      'http://x/api/career/v1/business?workspace=00000000-0000-4000-8000-000000000001',
+      'http://x/api/career/v1/business',
+      'http://x/api/career/v1/developer/keys',
+      'http://x/api/career/v1/maintenance/promotion-goals/g1/confirm',
+    ]);
+    expect(JSON.parse(String(calls[2].init.body))).toEqual({ environment: 'test' });
+    expect(JSON.parse(String(calls[3].init.body))).toEqual({ company: 'Acme', confirmed: true });
+  });
 });

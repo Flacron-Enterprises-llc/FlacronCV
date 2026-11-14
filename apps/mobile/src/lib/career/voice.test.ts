@@ -1,18 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type { VoiceSession } from '../../../../../packages/career-api-client/src/types';
+import { t } from '../../i18n';
 import {
-  MAX_VOICE_RECORD_SECONDS,
-  NO_MICROPHONE,
-  VOICE_CONSENT_TEXT,
+  KIND_LABEL,
+  TRANSCRIPT_MAX,
   VOICE_CONSENT_VERSION,
   clock,
-  negotiationErrors,
   remainingLine,
   savedSummary,
-  takeSeconds,
+  transcriptHelpKey,
   voiceErrorMessage,
-  voiceGate,
 } from './voice';
 
 const err = (code: string, body: Record<string, unknown> = {}, status = 422) => new ApiError(status, code, { code, ...body });
@@ -43,62 +41,43 @@ describe('clock', () => {
   });
 });
 
-describe('takeSeconds', () => {
-  it('counts at least one second and at most the per-take limit', () => {
-    expect(takeSeconds(1000, 1000)).toBe(1);
-    expect(takeSeconds(0, 90_400)).toBe(90);
-    expect(takeSeconds(0, (MAX_VOICE_RECORD_SECONDS + 100) * 1000)).toBe(MAX_VOICE_RECORD_SECONDS);
-  });
-});
-
 describe('savedSummary', () => {
   it('hides the server placeholder', () => {
     expect(savedSummary(null)).toBeNull();
     expect(savedSummary(voiceSession('No recording yet.'))).toBeNull();
-    expect(savedSummary(voiceSession('Took 90 seconds.'))).toBe('Took 90 seconds.');
+    expect(savedSummary(voiceSession('Recorded 90 seconds. Add the transcript to get feedback.'))).toBe(
+      'Recorded 90 seconds. Add the transcript to get feedback.',
+    );
   });
 });
 
-describe('voiceGate', () => {
-  it('checks consent, then plan, then time', () => {
-    expect(voiceGate({ consent: false, planIncludesVoice: false, remainingSeconds: 0 })).toBe('needs_consent');
-    expect(voiceGate({ consent: true, planIncludesVoice: false, remainingSeconds: 100 })).toBe('no_plan');
-    expect(voiceGate({ consent: true, planIncludesVoice: true, remainingSeconds: 0 })).toBe('no_time');
-    expect(voiceGate({ consent: true, planIncludesVoice: true, remainingSeconds: 1 })).toBe('ready');
-  });
-});
-
-describe('consent and microphone wording', () => {
-  it('uses the website wording and the server consent version', () => {
-    expect(VOICE_CONSENT_TEXT).toBe('I agree to record this practice on my account.');
+describe('recording happens on the website', () => {
+  it('says so honestly and keeps the server consent version', () => {
+    expect(t('careerInterviews.voice.webOnlyBody')).toMatch(/website/);
+    expect(t('careerInterviews.voice.webOnlyBody')).toMatch(/cannot record audio/);
     expect(VOICE_CONSENT_VERSION).toBe('voice-recording-1');
-    expect(NO_MICROPHONE).toMatch(/does not record audio/);
+    expect(TRANSCRIPT_MAX).toBe(10_000);
+    expect(KIND_LABEL.negotiation).toBe('Negotiation');
   });
-});
 
-describe('negotiationErrors', () => {
-  it('requires an offer and bounds both fields', () => {
-    expect(negotiationErrors('', '')).toEqual({ offer: 'Enter the offer you received.' });
-    expect(negotiationErrors('CAD 70,000', '')).toEqual({});
-    expect(negotiationErrors('x'.repeat(501), 'y'.repeat(501))).toEqual({
-      offer: 'Keep it under 500 characters.',
-      salarySource: 'Keep it under 500 characters.',
-    });
+  it('picks transcript help by where the words came from', () => {
+    expect(t(transcriptHelpKey('pending'))).toMatch(/no transcript yet/);
+    expect(t(transcriptHelpKey('typed'))).toMatch(/typed/);
+    expect(t(transcriptHelpKey('transcribed'))).toMatch(/automatic transcription/);
   });
 });
 
 describe('voiceErrorMessage', () => {
   it('maps the server refusals', () => {
-    expect(voiceErrorMessage(err('validation_error', { field: 'consent', reason: 'required' }), 'start')).toMatch(/Agree/);
     expect(voiceErrorMessage(err('feature_unavailable', {}, 403), 'load')).toMatch(/switched off/);
-    expect(voiceErrorMessage(err('plan_upgrade_required', {}, 402), 'start')).toMatch(/not included/);
-    expect(voiceErrorMessage(err('quota_exhausted', {}, 402), 'record')).toMatch(/No voice time left/);
-    expect(voiceErrorMessage(err('validation_error', { field: 'recording', reason: 'already_recorded' }), 'record')).toMatch(/already/);
-    expect(voiceErrorMessage(err('validation_error', { field: 'offer', reason: 'invalid' }), 'start')).toMatch(/offer/);
+    expect(voiceErrorMessage(err('plan_upgrade_required', {}, 402), 'correct')).toMatch(/not included/);
+    expect(voiceErrorMessage(err('validation_error', { field: 'transcript', reason: 'invalid' }), 'correct')).toMatch(/Type the words/);
+    expect(voiceErrorMessage(err('not_found', {}, 404), 'correct')).toMatch(/no recording/);
   });
 
   it('falls back without claiming a save', () => {
-    expect(voiceErrorMessage(new Error('x'), 'record')).toMatch(/not saved/);
-    expect(voiceErrorMessage(err('not_found', {}, 404), 'delete')).toBe('This item no longer exists.');
+    expect(voiceErrorMessage(new Error('x'), 'correct')).toMatch(/not saved/);
+    expect(voiceErrorMessage(new Error('x'), 'delete')).toMatch(/not removed/);
+    expect(voiceErrorMessage(err('not_found', {}, 404), 'load')).toBe('This item no longer exists.');
   });
 });

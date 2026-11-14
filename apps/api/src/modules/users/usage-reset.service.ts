@@ -100,7 +100,11 @@ export class UsageResetService implements OnApplicationBootstrap {
         const plan = (data?.subscription as { plan?: SubscriptionPlan } | undefined)?.plan || SubscriptionPlan.FREE;
         // Stored plan, not effective plan. Skip is the whole update — including
         // the aiCreditsLimit re-sync — so a Free doc is not written at all.
-        if (plan === SubscriptionPlan.FREE) {
+        // Current-catalog plans (Free included) renew on their own billing /
+        // account anniversary (UsersService.rolloverUsageIfDue), never on the
+        // 1st: resetting them here too would hand out a second allowance.
+        // Only LEGACY paid plans keep this calendar reset.
+        if (plan === SubscriptionPlan.FREE || PLAN_CONFIGS[plan]?.legacy === false) {
           continue;
         }
         const newCreditsLimit =

@@ -42,8 +42,12 @@ export class PassthroughCareerAccess {
     return { enabled: true, v1Plan: 'pro', careerPlan: 'free', source: 'v1_plan_map' };
   }
   async syncPlan(): Promise<void> {}
+  /** No Business sponsorship in this double; business-pool.e2e-spec uses the real service. */
+  async businessSponsor(): Promise<null> {
+    return null;
+  }
   planMap(): CareerPlanMap {
-    return { free: null, pro: 'free', career_accelerator: null, enterprise: null };
+    return { free: null, starter: null, professional: null, career_pro: null, business: null, pro: 'free', career_accelerator: null, enterprise: null };
   }
 }
 

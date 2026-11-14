@@ -27,6 +27,8 @@ const page: PortfolioPage = {
   contactEmail: null,
   contactPhone: null,
   evidenceIds: [],
+  sections: { summary: true, evidence: true, skills: true, contact: true },
+  caseStudies: {},
   shareToken: null,
   publishedAt: '2026-10-18T00:00:00.000Z',
   visitCount: 2,
@@ -91,5 +93,24 @@ describe('PortfolioScreen', () => {
     expect(unpublishPortfolio).toHaveBeenCalledTimes(1);
     release({ ...page, visibility: 'draft', publishedAt: null });
     expect(await screen.findByText('Public access is removed.')).toBeTruthy();
+  });
+
+  it('saves the chosen sections and a case study for a selected item', async () => {
+    const evidenceId = '55555555-5555-4555-8555-555555555555';
+    const withItem = { ...page, evidenceIds: [evidenceId] };
+    const updatePortfolio = vi.fn().mockResolvedValue(withItem);
+    renderScreen(testApi({
+      portfolios: vi.fn().mockResolvedValue({ items: [withItem] }),
+      evidence: vi.fn().mockResolvedValue({ items: [{ id: evidenceId, title: 'Parser', isPortfolioShared: true }] }),
+      updatePortfolio,
+    }));
+    fireEvent.click(await screen.findByLabelText(messages.career.portfolios.section_contact));
+    fireEvent.change(screen.getByLabelText('Case study for "Parser" (optional)'), { target: { value: 'Halved parse time.' } });
+    fireEvent.click(screen.getByRole('button', { name: messages.career.portfolios.save }));
+    await vi.waitFor(() => expect(updatePortfolio).toHaveBeenCalled());
+    expect(updatePortfolio).toHaveBeenCalledWith(page.id, expect.objectContaining({
+      sections: { summary: true, evidence: true, skills: true, contact: false },
+      caseStudies: { [evidenceId]: 'Halved parse time.' },
+    }));
   });
 });

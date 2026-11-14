@@ -151,6 +151,9 @@ export function FactEditor({
                 onChange={(event) => setField(field, event.target.value)}
               />
             )}
+            {fact.factType === 'achievement' && field === 'metric' && achievementNeedsNumber(draft.statement ?? '', draft.metric ?? '') ? (
+              <p className="text-sm text-career-muted" role="note">{t('achievement_prompt')}</p>
+            ) : null}
             {uncertain ? (
               <p className="text-sm text-career-orange-text">
                 {t(`uncertain_reasons.${uncertain.reason}`)}
@@ -231,3 +234,14 @@ function LongText({
 }
 
 export type { FactType };
+
+/**
+ * Achievement assistant (spec section 22): an achievement with no number in
+ * its statement and no metric gets a question, never a filled-in figure. The
+ * answer is optional and only what the person types is saved.
+ */
+export function achievementNeedsNumber(statement: string, metric: string): boolean {
+  if (metric.trim().length > 0) return false;
+  if (statement.trim().length === 0) return false;
+  return !/\d/.test(statement);
+}

@@ -33,79 +33,117 @@
       "body": "Añade tu ubicación principal o las ciudades a las que quieres mudarte para buscar oportunidades según el radio."
     },
     "editA11y": "Editar {place}",
-    "deleteA11y": "Eliminar {place}"
+    "deleteA11y": "Eliminar {place}",
+    "groupCurrent": "Lugares actuales",
+    "groupFuture": "Lugares futuros",
+    "authNeverAssumed": "Nunca se dan por hechos el permiso de trabajo ni la validez de licencias: quedan «sin indicar» en cada lugar hasta que elijas otra cosa."
   },
   "specialist": {
     "upgrade": {
       "title": "Los modos especializados no están incluidos en tu plan actual",
-      "body": "Los modos profesionales especializados adaptan los borradores a Ingeniería, Liderazgo ejecutivo, Diseño, Investigación y Cambios de carrera."
+      "body": "Los modos especializados (estudiantes, cambio de carrera, veteranos, cónyuges de militares, candidatos internacionales, oficios con licencia y más) se incluyen desde el plan Starter."
     },
     "loadFailed": "No se pudo cargar tu modo especializado.",
     "guidelinesTooLong": "Las pautas personalizadas deben tener menos de {max} caracteres.",
     "saved": "Modo profesional especializado actualizado.",
-    "intro": "Elige un enfoque profesional para adaptar el énfasis del CV, la ponderación de las instrucciones y el análisis de encaje a tu disciplina.",
+    "intro": "Elige las situaciones que encajan contigo. Se adaptan sugerencias, redacción y listas; tus datos no cambian.",
     "activeMode": "MODO ACTIVO",
-    "recommendedFocus": "ENFOQUE RECOMENDADO",
     "guidelinesTitle": "Pautas de la disciplina y enfoque personalizado",
     "guidelinesLabel": "Pautas personalizadas (opcional)",
     "guidelinesPlaceholder": "Añade contexto específico del sector, metodologías o áreas de interés personales para orientar los borradores.",
     "save": "Guardar modo especializado",
     "upgradeRequired": "Los modos profesionales especializados no están incluidos en tu plan actual.",
     "saveFailed": "No se pudo guardar el modo especializado. Inténtalo de nuevo.",
+    "pick": "Elige hasta {max} situaciones que encajen contigo.",
+    "noQuota": "Los modos cambian la redacción, las sugerencias y las listas. Nunca añaden datos a tu perfil ni cambian tus créditos.",
+    "checklistHeading": "Lista para tu situación",
+    "suggestedFilters": "Filtros de búsqueda sugeridos:",
+    "noneSelected": "No has elegido ninguna situación. Las sugerencias siguen siendo generales.",
     "modes": {
-      "general": {
-        "name": "Profesional estándar",
-        "description": "Presentación equilibrada entre habilidades funcionales, trayectoria profesional y resultados prácticos.",
-        "focus1": "Competencias clave",
-        "focus2": "Logros clave",
-        "focus3": "Colaboración en equipo",
-        "promptModifier": "Destaca resultados verificados, un impacto claro y un sólido dominio funcional."
+      "students_graduates": {
+        "name": "Estudiantes y recién graduados",
+        "description": "Primeros CV, proyectos, prácticas y programas para recién graduados."
       },
-      "technical_engineering": {
-        "name": "Técnico e ingeniería",
-        "description": "Prioriza las decisiones de arquitectura, la escala, la profundidad técnica y el rendimiento cuantitativo.",
-        "focus1": "Arquitectura de sistemas",
-        "focus2": "Dominio de lenguajes y frameworks",
-        "focus3": "Métricas de escala y latencia",
-        "focus4": "Código abierto",
-        "promptModifier": "Céntrate en el rigor técnico, la complejidad de los sistemas, las métricas de fiabilidad y las decisiones de ingeniería concretas."
+      "career_changers": {
+        "name": "Cambio de carrera",
+        "description": "Habilidades transferibles, puestos puente y pasos de aprendizaje prácticos."
       },
-      "executive_leadership": {
-        "name": "Dirección y liderazgo",
-        "description": "Destaca la responsabilidad sobre la cuenta de resultados, la transformación organizativa, la relación con el consejo y la visión directiva.",
-        "focus1": "Gestión de la cuenta de resultados",
-        "focus2": "Crecimiento organizativo",
-        "focus3": "Hojas de ruta estratégicas",
-        "focus4": "Alineación de las partes interesadas",
-        "promptModifier": "Presenta la experiencia desde el liderazgo estratégico, el crecimiento de ingresos, el desarrollo del talento y la gobernanza."
+      "experienced_professionals": {
+        "name": "Profesionales con experiencia",
+        "description": "Logros de liderazgo y preparación para un ascenso."
       },
-      "creative_design": {
-        "name": "Creatividad y diseño",
-        "description": "Se centra en la empatía con el producto, los casos prácticos del portafolio, las metodologías de investigación de usuarios y el trabajo de marca.",
-        "focus1": "Sistemas de diseño",
-        "focus2": "Investigación y descubrimiento de usuarios",
-        "focus3": "Casos prácticos",
-        "focus4": "Revisión multifuncional",
-        "promptModifier": "Destaca el proceso de diseño, el planteamiento de los problemas del usuario, el prototipado y el impacto en las métricas de negocio."
+      "freelancers": {
+        "name": "Autónomos",
+        "description": "Perfiles de servicios, propuestas, seguimiento de contratos y portafolios."
       },
-      "academic_research": {
-        "name": "Académico e investigación",
-        "description": "Destaca las publicaciones revisadas por pares, las becas obtenidas, la docencia y la metodología experimental.",
-        "focus1": "Publicaciones revisadas por pares",
-        "focus2": "Financiación de proyectos",
-        "focus3": "Dirección de laboratorio",
-        "focus4": "Actas de congresos",
-        "promptModifier": "Destaca la metodología de investigación, el impacto de las citas, la gestión de becas y las aportaciones teóricas."
+      "returning_workers": {
+        "name": "Vuelta al trabajo",
+        "description": "Explicar una pausa profesional, actualizar habilidades y trabajo flexible."
       },
-      "career_transition": {
-        "name": "Cambio de carrera / inicio",
-        "description": "Traslada las capacidades transferibles de ámbitos anteriores a los sectores objetivo con relatos bien enfocados.",
-        "focus1": "Habilidades transferibles",
-        "focus2": "Pruebas de aprendizaje rápido",
-        "focus3": "Analogías entre sectores",
-        "focus4": "Proyectos propios",
-        "promptModifier": "Traduce la experiencia de ámbitos anteriores al lenguaje del sector objetivo con pruebas claras de un aprendizaje rápido."
+      "veterans": {
+        "name": "Veteranos",
+        "description": "Traducción de habilidades militares al ámbito civil y vías de contratación publicadas."
+      },
+      "military_spouses": {
+        "name": "Cónyuges de militares",
+        "description": "Carreras trasladables, fechas de mudanza, perfiles de ubicación y trabajo flexible."
+      },
+      "international_candidates": {
+        "name": "Candidatos internacionales",
+        "description": "Guía de CV para cada país y la necesidad de patrocinio que tú indiques."
+      },
+      "trades_licensed": {
+        "name": "Oficios y profesiones con licencia",
+        "description": "Seguimiento de credenciales y avisos de vencimiento."
       }
+    },
+    "checklist": {
+      "add_projects": "Añade proyectos que dirigiste o en los que participaste",
+      "add_internships": "Registra prácticas, voluntariado y trabajos a tiempo parcial tal como fueron",
+      "education_first": "Pon la formación arriba mientras la experiencia sea corta",
+      "early_career_programs": "Revisa programas para recién graduados",
+      "map_transferable_skills": "Relaciona tus habilidades confirmadas con el puesto objetivo",
+      "bridge_roles": "Considera puestos puente que aprovechen lo que ya haces",
+      "learning_sequence": "Ordena el aprendizaje según lo que antes te permita postularte",
+      "leadership_achievements": "Registra logros de liderazgo con su alcance",
+      "promotion_goal": "Fija una meta de ascenso",
+      "quantified_results": "Añade resultados con cifras que puedas respaldar",
+      "service_profile": "Escribe un breve perfil de servicios",
+      "client_case_studies": "Prepara casos de clientes que puedas compartir",
+      "contract_tracking": "Sigue contratos y propuestas en tus candidaturas",
+      "portfolio_page": "Publica una página de portafolio",
+      "career_break_explanation": "Explica tu pausa en una frase con tus propias palabras",
+      "skills_refresh": "Actualiza habilidades que cambiaron durante la pausa",
+      "flexible_work": "Busca puestos flexibles, a tiempo parcial o remotos",
+      "translate_military_skills": "Traduce cada puesto militar a funciones civiles que apruebes",
+      "civilian_titles": "Elige cargos civiles y conserva el original al lado",
+      "published_veteran_pathways": "Revisa las vías publicadas para veteranos (no se presume preferencia)",
+      "clearance_stated": "Indica una habilitación de seguridad solo si la tienes",
+      "portable_career": "Prioriza habilidades y puestos que puedas llevar contigo",
+      "moving_dates": "Indica tus fechas de mudanza y disponibilidad",
+      "future_location_profile": "Añade el próximo destino como lugar futuro",
+      "published_spouse_pathways": "Revisa las vías publicadas para cónyuges de militares",
+      "country_resume_format": "Sigue el formato de CV del país objetivo (orientación general, no asesoría legal)",
+      "state_sponsorship": "Indica tu permiso de trabajo o necesidad de patrocinio en cada lugar",
+      "credential_recognition": "Comprueba si allí se reconocen tus títulos",
+      "language_levels": "Registra tus niveles de idioma",
+      "credential_tracking": "Registra cada licencia con emisor y región",
+      "expiry_reminders": "Añade fechas de vencimiento y revisión para los avisos",
+      "license_regions": "Indica dónde es válida cada licencia",
+      "license_transfer_check": "Confirma la validez de tus licencias antes de mudarte; nunca se presume"
+    },
+    "filters": {
+      "experienceLevel_entry": "Nivel inicial",
+      "experienceLevel_any": "Cualquier nivel de experiencia",
+      "experienceLevel_senior": "Sénior",
+      "employmentType_internship": "Prácticas",
+      "employmentType_contract": "Contratos",
+      "schedule_flexible": "Horario flexible",
+      "workMode_remote": "Remoto",
+      "pathway_veteran": "Vías publicadas para veteranos",
+      "pathway_military_spouse": "Vías publicadas para cónyuges",
+      "sponsorship_stated": "Ofertas que indican patrocinio",
+      "license_required": "Puestos que exigen licencia"
     }
   },
   "location": {
@@ -121,7 +159,8 @@
       "permanent_resident": "Residente permanente / Green Card",
       "visa_holder": "Visado de trabajo vigente",
       "needs_sponsorship": "Requiere patrocinio de visado",
-      "authorized": "Autorizado/a para trabajar"
+      "authorized": "Autorizado/a para trabajar",
+      "not_stated": "Sin indicar"
     },
     "remote": {
       "hybrid": "Preferencia por híbrido",
@@ -134,14 +173,20 @@
       "placeTooLong": "La ubicación debe tener menos de {max} caracteres.",
       "radiusTooLarge": "Tu plan permite un radio de hasta {radius} millas.",
       "notesTooLong": "Las notas deben tener menos de {max} caracteres.",
-      "placeInvalid": "Introduce una ubicación de menos de {max} caracteres."
+      "placeInvalid": "Introduce una ubicación de menos de {max} caracteres.",
+      "dateInvalid": "Introduce una fecha real (el 31 de febrero no existe).",
+      "remoteRegionTooLong": "La región de trabajo remoto debe tener menos de {max} caracteres."
     },
     "quotaHint": "Usando {used} de {capacity} perfiles de ubicación. Radio de búsqueda local del plan: hasta {radius} millas.",
     "line": {
       "radius": "Radio: ~{radius} millas",
       "timeline": "Plazo: {value}",
       "workAuth": "Autorización de trabajo: {value}",
-      "commute": "Desplazamiento máx.: ≤ {minutes} minutos · {remote}"
+      "commute": "Desplazamiento máx.: ≤ {minutes} minutos · {remote}",
+      "remoteRegion": "Región remota: {value}",
+      "moveDate": "Mudanza: {value}",
+      "availableFrom": "Disponible desde: {value}",
+      "license": "Licencias válidas aquí: {value}"
     },
     "badge": {
       "relocation": "DESTINO DE REUBICACIÓN",
@@ -152,7 +197,13 @@
       "radius": "El radio supera el límite de tu plan.",
       "saveFailed": "No se pudo guardar el perfil de ubicación. Revisa los datos e inténtalo de nuevo.",
       "deleteFailed": "No se pudo eliminar el perfil de ubicación."
-    }
+    },
+    "license": {
+      "not_stated": "Sin indicar",
+      "confirmed": "Sí, lo he confirmado",
+      "not_confirmed": "No, o pendiente de comprobar"
+    },
+    "notStated": "Sin indicar"
   },
   "editor": {
     "titleAdd": "Añadir perfil de ubicación",
@@ -169,8 +220,6 @@
     "radiusHint": "Radio máximo del plan: {radius} millas",
     "commuteLabel": "Desplazamiento diario máximo",
     "commuteValue": "{value} minutos",
-    "relocationLabel": "Es un destino de reubicación (no mi domicilio actual)",
-    "relocationA11y": "Es un destino de reubicación",
     "timelineLabel": "Plazo previsto para la mudanza",
     "workAuthLabel": "Autorización de trabajo en la zona",
     "remoteLabel": "Flexibilidad de modalidad de trabajo",
@@ -179,7 +228,19 @@
     "save": "Guardar perfil de ubicación",
     "delete": "Eliminar perfil de ubicación",
     "decrease": "Reducir {label}",
-    "increase": "Aumentar {label}"
+    "increase": "Aumentar {label}",
+    "kindLabel": "Este lugar es",
+    "kindCurrent": "Donde busco ahora",
+    "kindFuture": "Adonde me mudo",
+    "remoteRegionLabel": "Región para trabajo remoto",
+    "remoteRegionPlaceholder": "p. ej. Unión Europea, Estados Unidos",
+    "remoteRegionHint": "Desde dónde deben permitirte trabajar los empleadores remotos. Es distinto del radio de la ciudad.",
+    "moveDateLabel": "Fecha de mudanza",
+    "availableFromLabel": "Disponible desde",
+    "licenseLabel": "Mis licencias son válidas aquí",
+    "licenseNeverAssumed": "Nunca se da por hecho que una licencia o credencial valga en otro país, estado o región.",
+    "authNeverAssumed": "Nunca se dan por hechos el permiso de trabajo ni la validez de licencias: quedan «sin indicar» en cada lugar hasta que elijas otra cosa.",
+    "dateHint": "Formato AAAA-MM-DD. Déjalo vacío si aún no lo sabes."
   },
   "recruiting": {
     "title": "Participación en reclutamiento",
@@ -197,7 +258,12 @@
     "discoverableTitle": "Visible para empleadores",
     "optedIn": "PARTICIPAS",
     "notOptedIn": "NO PARTICIPAS",
-    "footer": "Puedes cambiarlo en cualquier momento. Si lo desactivas, dejarás de aparecer en las búsquedas de empleadores."
+    "footer": "Puedes cambiarlo en cualquier momento. Si lo desactivas, dejarás de aparecer en las búsquedas de empleadores.",
+    "searchCount": "{count, plural, =0 {Nadie ha aceptado todavía.} one {# persona ha aceptado.} other {# personas han aceptado.}}",
+    "countTitle": "¿Cuántas personas aceptaron?",
+    "countHelp": "Solo se muestra un total. Nadie puede ver quién aceptó.",
+    "countButton": "Mostrar el total",
+    "countFailed": "No se pudo leer el total. Inténtalo de nuevo."
   },
   "data": {
     "title": "Datos profesionales",

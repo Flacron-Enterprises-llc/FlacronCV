@@ -20,7 +20,7 @@ import React, { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { X, Lock, ArrowRight, Crown, Zap, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useRouter } from '@/i18n/routing';
-import { SubscriptionPlan, type CVLayout } from '@flacroncv/shared-types';
+import { SubscriptionPlan, templateTierOf, type CVLayout } from '@flacroncv/shared-types';
 import { fcgeUpgradeClicked } from '@/lib/fcge';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -129,7 +129,8 @@ export default function TemplatePreviewModal({
   const TierIcon = tierLabel === 'Enterprise' ? Crown : tierLabel === 'Pro' ? Zap : Sparkles;
   // Display the tier via the shared common namespace; logic keeps the canonical label.
   const tierName = tCommon(tierLabel.toLowerCase());
-  const needsEnterprise = tierLabel === 'Enterprise' && viewerPlan === SubscriptionPlan.PRO;
+  // A viewer on a PRO-tier plan (Starter, Professional, legacy Pro) needs Career Pro or Business.
+  const needsEnterprise = tierLabel === 'Enterprise' && templateTierOf(viewerPlan) === SubscriptionPlan.PRO;
 
   const PRO_PERKS = [
     t('benefit_exports'),

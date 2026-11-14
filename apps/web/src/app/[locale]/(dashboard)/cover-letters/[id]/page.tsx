@@ -554,6 +554,7 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
         allowed: boolean;
         reason?: string;
         reservationId?: string;
+        removeBranding?: boolean;
       }>('/exports/record', {
         format,
         type: 'cover_letter',
@@ -566,7 +567,8 @@ export default function CoverLetterEditorPage(): React.JSX.Element | null {
       }
       reservationId = decision.reservationId;
       if (format === 'pdf') {
-        await exportCoverLetterToPDF(coverLetter.title);
+        // Free exports carry the small "Made with FlacronCV" mark; the server decides.
+        await exportCoverLetterToPDF(coverLetter.title, { brandingMark: decision.removeBranding === false });
       } else {
         // Same labels, language and (plan-resolved) template as the preview,
         // so the Word file says what the on-screen letter says.

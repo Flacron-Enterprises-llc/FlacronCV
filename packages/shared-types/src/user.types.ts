@@ -70,6 +70,12 @@ export interface UserSubscription {
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   currentPeriodEnd: Date | null;
+  /**
+   * Start of the paid billing period (Stripe `current_period_start`). Anchors the
+   * monthly allowance renewal of the current plans. Written by the Stripe
+   * handlers since the five-plan catalog; older docs omit it (no backfill).
+   */
+  currentPeriodStart?: Date | null;
   cancelAtPeriodEnd: boolean;
   /**
    * Never cleared. Defence-in-depth alongside the Stripe subscription-history
@@ -131,6 +137,16 @@ export interface UserUsage {
   aiCreditsLimit: number;
   exportsThisMonth: number;
   lastExportReset: Date;
+  /**
+   * Résumé job analyses (ATS checks) used in the current window. Current plans
+   * only; older docs omit it (read as 0).
+   */
+  analysesUsed?: number;
+  /**
+   * Start of the monthly window the counters above belong to (current plans).
+   * Older docs omit it; `lastExportReset` is read instead. See usage-period.ts.
+   */
+  usagePeriodStart?: Date | null;
 }
 
 export interface User {

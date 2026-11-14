@@ -1,5 +1,5 @@
 import type { Pool } from 'pg';
-import { AlertService, BillingService, MeteringService, RecordingAlertNotifier } from '@flacroncv/career-server';
+import { AlertService, BillingService, MeteringService, createAlertNotifier, createGeocoder, createRecordedEmailResolver } from '@flacroncv/career-server';
 
 export type JobHandler = (data: unknown) => Promise<void>;
 
@@ -16,6 +16,8 @@ export const QUEUES = {
   alertMatch: 'alerts-match',
   /** Weekly or daily email for items that have no email row yet. */
   alertDigest: 'alerts-digest',
+  /** In-app reminders (deadlines, certification expiry); never spends alert quota. */
+  alertReminders: 'alerts-reminders',
 } as const;
 
 /** A request runs far shorter than this, so a job still running after it has no process left. */
@@ -28,6 +30,7 @@ export const SCHEDULES: Readonly<Record<string, string>> = {
   [QUEUES.releaseAbandoned]: '*/5 * * * *',
   [QUEUES.alertMatch]: '15 * * * *',
   [QUEUES.alertDigest]: '30 8 * * *',
+  [QUEUES.alertReminders]: '45 6 * * *',
 };
 
 export const DEFAULT_HANDLERS: Readonly<Record<string, JobHandler>> = {
@@ -51,9 +54,15 @@ export function maintenanceHandlers(pool: Pool): Record<string, JobHandler> {
   };
 }
 
-/** Alert jobs. They call the same service as the API. The notifier does not leave the process. */
-export function alertHandlers(pool: Pool): Record<string, JobHandler> {
-  const alerts = new AlertService(pool, new MeteringService(pool), new RecordingAlertNotifier());
+/**
+ * Alert jobs. They call the same service as the API. Only channels with a
+ * configured provider send; the rest stay queued as `provider_unavailable`
+ * and are sent once a provider is bound, never recorded as sent.
+ */
+export function alertHandlers(pool: Pool, env: NodeJS.ProcessEnv = process.env): Record<string, JobHandler> {
+  // Email is bound once SES is configured; the address is the person's verified sign-in email.
+  const notifier = createAlertNotifier(env, { resolveEmail: createRecordedEmailResolver(pool) });
+  const alerts = new AlertService(pool, new MeteringService(pool), notifier, undefined, createGeocoder(env));
   return {
     // Per-person failures are isolated and retried on the next run; the count
     // (never who) is logged so a persistent problem is visible.
@@ -64,6 +73,10 @@ export function alertHandlers(pool: Pool): Record<string, JobHandler> {
     [QUEUES.alertDigest]: async () => {
       const run = await alerts.sendDigests();
       if (run.failed > 0) console.warn(`alert digests: ${run.failed} person(s) failed; retried next run`);
+    },
+    [QUEUES.alertReminders]: async () => {
+      const run = await alerts.runReminders();
+      if (run.failed > 0) console.warn(`reminders: ${run.failed} person(s) failed; retried next run`);
     },
   };
 }

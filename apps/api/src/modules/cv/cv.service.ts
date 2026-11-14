@@ -6,6 +6,7 @@ import { AbuseService } from '../abuse/abuse.service';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/audit-actions';
 import { AIProviderResponse } from '../ai/providers/ai-provider.interface';
+import { canCreateDocument } from '../users/document-capacity';
 import {
   CV,
   CVSection,
@@ -16,7 +17,6 @@ import {
   CVStyling,
   FontSize,
   Spacing,
-  PLAN_CONFIGS,
   SubscriptionPlan,
   resolveEffectivePlan,
   planMeetsTier,
@@ -160,9 +160,8 @@ export class CVService {
   async create(userId: string, data: CreateCVData): Promise<CV> {
     await this.abuse.assertNewConsumption(userId, 'create');
     const user = await this.usersService.findByIdOrThrow(userId);
-    const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
-
-    if (limits.cvs !== 'unlimited' && user.usage.cvsCreated >= limits.cvs) {
+    // Legacy plans: creations this cycle. Current plans: stored CVs (capacity).
+    if (!(await canCreateDocument(this.firebaseAdmin.firestore, user, 'cvs'))) {
       throw this.cvLimitReached();
     }
 
@@ -342,8 +341,7 @@ export class CVService {
   ): Promise<CV> {
     await this.abuse.assertNewConsumption(userId, 'create');
     const user = await this.usersService.findByIdOrThrow(userId);
-    const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
-    if (limits.cvs !== 'unlimited' && user.usage.cvsCreated >= limits.cvs) {
+    if (!(await canCreateDocument(this.firebaseAdmin.firestore, user, 'cvs'))) {
       throw this.cvLimitReached();
     }
 
@@ -592,8 +590,7 @@ export class CVService {
 
   async duplicate(id: string, userId: string): Promise<CV> {
     const user = await this.usersService.findByIdOrThrow(userId);
-    const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
-    if (limits.cvs !== 'unlimited' && user.usage.cvsCreated >= limits.cvs) {
+    if (!(await canCreateDocument(this.firebaseAdmin.firestore, user, 'cvs'))) {
       throw this.cvLimitReached();
     }
 

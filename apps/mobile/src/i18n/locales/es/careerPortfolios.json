@@ -37,7 +37,8 @@
     "capacity": "Este plan no tiene espacio para otra página.",
     "off": "Las páginas de portafolio están desactivadas en este momento.",
     "validation": "Revisa los campos con errores.",
-    "failed": "Ese cambio no se guardó."
+    "failed": "Ese cambio no se guardó.",
+    "caseStudy": "Cada caso práctico debe tener menos de {max} caracteres."
   },
   "editor": {
     "newTitle": "Nueva página de portafolio",
@@ -95,6 +96,15 @@
     "privateOnly": "Solo privado: no se muestra en la página",
     "createPage": "Crear página",
     "savePage": "Guardar página",
-    "savedButton": "Guardada"
+    "savedButton": "Guardada",
+    "caseStudyLabel": "Caso práctico de «{title}» (opcional)",
+    "sectionsTitle": "Secciones de la página",
+    "sectionsHint": "Solo se muestran las secciones activadas. Los datos de contacto también necesitan su propia autorización abajo.",
+    "section": {
+      "summary": "Resumen (titular)",
+      "evidence": "Evidencias seleccionadas",
+      "skills": "Habilidades",
+      "contact": "Contacto (solo los datos que autorices abajo)"
+    }
   }
 }

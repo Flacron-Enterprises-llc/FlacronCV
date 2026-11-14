@@ -26,12 +26,17 @@ export const EXPORT_SECTIONS: Readonly<Record<string, string>> = {
   resume_versions: 'documents.resumes[].versions',
   writing_documents: 'documents.writing',
   career_evidence: 'documents.evidence',
+  evidence_verifications: 'documents.evidence[].verifications',
+  business_queue_items: 'workspace.queue (workspace scope, counts only)',
   portfolios: 'documents.portfolios',
   portfolio_evidence: 'documents.portfolios[].evidenceIds',
   portfolio_visit_days: 'documents.portfolios[].visitsByDay',
   opportunities: 'opportunities.pasted',
   opportunity_revisions: 'opportunities.pasted[].revisions',
   saved_searches: 'opportunities.savedSearches',
+  saved_opportunities: 'opportunities.saved',
+  career_reminders: 'opportunities.reminders',
+  reminder_deliveries: 'opportunities.reminders[].deliveries',
   location_profiles: 'opportunities.locationProfiles',
   followed_companies: 'opportunities.followedCompanies',
   alert_settings: 'opportunities.alertSettings',
@@ -77,6 +82,7 @@ export const EXPORT_OMITTED: Readonly<Record<string, string>> = {
   'api_keys.key_hash': 'credential material',
   'portfolios.share_token': 'works like a password for a private page',
   'career_evidence.attachment_object_key': 'private storage key; files are fetched through the API instead',
+  'voice_audio_records.audio_object_key': 'private storage key for a practice recording; the recording is described (length, type, size) instead',
   'usage_ledger.idempotency_key': 'request bookkeeping; may embed other request keys',
   'billing_accounts.provider_*_id': 'payment-provider identifiers; available from the provider directly',
 };
@@ -179,7 +185,13 @@ export async function personalExport(db: Db, owner: Principal, options: ExportOp
     await rows(
       `SELECT id, title, description, evidence_type, ownership_statement, linked_skills, attachment_url, attachment_name,
               attachment_size_bytes, attachment_object_key IS NOT NULL AS stored, attachment_content_type, attachment_sha256,
-              attachment_uploaded_at, evidence_label, verification_notes, verified_at, verifier_name, is_portfolio_shared, created_at, updated_at
+              attachment_uploaded_at, evidence_label, verification_notes, verified_at, verifier_name, is_portfolio_shared,
+              linked_fact_ids, confidential, redaction_note, redaction_confirmed_at, created_at, updated_at,
+              COALESCE((SELECT json_agg(json_build_object(
+                  'label', v.label, 'method', v.method, 'checkedOn', v.checked_on, 'scope', v.scope, 'issuerName', v.issuer_name,
+                  'permissionEvidence', v.permission_evidence, 'expiresOn', v.expires_on, 'revokedAt', v.revoked_at,
+                  'revokedReason', v.revoked_reason, 'recordedAt', v.created_at) ORDER BY v.created_at)
+                FROM evidence_verifications v WHERE v.evidence_id = career_evidence.id), '[]'::json) AS verifications
          FROM career_evidence WHERE candidate_auth_user_id = $1 ORDER BY created_at, id`,
     )
   ).map((row) => {
@@ -231,17 +243,35 @@ export async function personalExport(db: Db, owner: Principal, options: ExportOp
     `SELECT filters, location_profile_id, radius_miles, schedule, paused, created_at FROM saved_searches WHERE candidate_auth_user_id = $1 ORDER BY created_at, id`,
   );
   const locations = await rows(
-    `SELECT id, place, radius_miles, target_timeline, is_relocation, work_authorization, commute_minutes_max, remote_flexibility, notes, created_at, updated_at
+    `SELECT id, place, radius_miles, kind, target_timeline, is_relocation, move_date, available_from, remote_region, work_authorization,
+            license_transfer, commute_minutes_max, remote_flexibility, notes, created_at, updated_at
        FROM location_profiles WHERE candidate_auth_user_id = $1 ORDER BY created_at, id`,
   );
-  const companies = await rows(`SELECT name, source_url, created_at FROM followed_companies WHERE candidate_auth_user_id = $1 ORDER BY created_at, id`);
+  const companies = await rows(`SELECT name, source_url, aliases, roles, locations, created_at FROM followed_companies WHERE candidate_auth_user_id = $1 ORDER BY created_at, id`);
+  const savedListings = await rows(
+    `SELECT s.opportunity_id, r.title, s.created_at
+       FROM saved_opportunities s
+       JOIN opportunities o ON o.id = s.opportunity_id
+       LEFT JOIN opportunity_revisions r ON r.id = o.current_revision_id
+      WHERE s.candidate_auth_user_id = $1 ORDER BY s.created_at, s.opportunity_id`,
+  );
+  const careerReminders = await rows(
+    `SELECT id, kind, title, due_date, link, read_at, created_at FROM career_reminders WHERE candidate_auth_user_id = $1 ORDER BY due_date, id`,
+  );
+  const reminderDeliveries = groupBy(
+    await rows(
+      `SELECT d.reminder_id, d.channel, d.status, d.sent_at FROM reminder_deliveries d JOIN career_reminders c ON c.id = d.reminder_id
+        WHERE c.candidate_auth_user_id = $1 ORDER BY d.reminder_id, d.channel`,
+    ),
+    'reminder_id',
+  );
   const alertSettings = (
     await rows(
       `SELECT email, push, telegram, digest, quiet_start, quiet_end, paused, last_matched_at, last_digest_at FROM alert_settings WHERE candidate_auth_user_id = $1`,
     )
   )[0] ?? null;
   const alerts = await rows(
-    `SELECT a.id, a.opportunity_id, r.title, a.reason, a.created_at
+    `SELECT a.id, a.opportunity_id, r.title, a.reason, a.read_at, a.created_at
        FROM alert_items a LEFT JOIN opportunity_revisions r ON r.id = a.material_revision_id
       WHERE a.recipient_auth_user_id = $1 ORDER BY a.created_at`,
   );
@@ -254,7 +284,7 @@ export async function personalExport(db: Db, owner: Principal, options: ExportOp
   );
   const digests = await rows(`SELECT period_start, channel, sent_at FROM digests WHERE recipient_auth_user_id = $1 ORDER BY period_start`);
   const matches = await rows(
-    `SELECT opportunity_id, opportunity_revision_id, resume_version_id, profile_version, fit, overlap, reasons, gaps, unknowns, preferences, created_at
+    `SELECT opportunity_id, opportunity_revision_id, resume_version_id, profile_version, fit, overlap, reasons, gaps, unknowns, preferences, preference_fit, created_at
        FROM match_results WHERE candidate_auth_user_id = $1 ORDER BY created_at`,
   );
   const reports = await rows(
@@ -291,7 +321,8 @@ export async function personalExport(db: Db, owner: Principal, options: ExportOp
   );
   const recordings = groupBy(
     await rows(
-      `SELECT r.session_id, r.duration_seconds, r.requested_seconds, r.truncated, r.transcript, r.feedback, r.audio_deleted_at, r.created_at
+      `SELECT r.session_id, r.duration_seconds, r.requested_seconds, r.truncated, r.transcript, r.feedback, r.audio_deleted_at,
+              r.audio_content_type, r.audio_size_bytes, r.measured_milliseconds, r.duration_source, r.transcript_source, r.created_at
          FROM voice_audio_records r JOIN voice_interview_sessions s ON s.id = r.session_id
         WHERE s.candidate_auth_user_id = $1 ORDER BY r.session_id, r.created_at`,
     ),
@@ -305,16 +336,27 @@ export async function personalExport(db: Db, owner: Principal, options: ExportOp
          FROM action_packs WHERE candidate_auth_user_id = $1 ORDER BY created_at`,
     ),
     skillReports: await rows(
-      `SELECT target_role, target_industry, time_budget_hours_per_week, financial_budget_cents, skill_gaps, learning_plan, project_brief, progress, created_at, updated_at
+      `SELECT target_role, target_industry, time_budget_hours_per_week, financial_budget_cents, skill_gaps, learning_plan, project_brief, bridge_roles, transferable_skills, progress, created_at, updated_at
          FROM skill_gap_reports WHERE candidate_auth_user_id = $1 ORDER BY created_at`,
     ),
     specialistModes: await rows(
-      `SELECT mode, focus_areas, custom_guidelines, updated_at FROM candidate_specialist_modes WHERE candidate_auth_user_id = $1`,
+      `SELECT mode, modes, legacy_mode, focus_areas, custom_guidelines, updated_at FROM candidate_specialist_modes WHERE candidate_auth_user_id = $1`,
     ),
-    scenarios: await rows(`SELECT options, tradeoff, created_at FROM career_scenarios WHERE candidate_auth_user_id = $1 ORDER BY created_at`),
-    achievements: await rows(`SELECT title, created_at FROM career_achievements WHERE candidate_auth_user_id = $1 ORDER BY created_at`),
-    promotionGoals: await rows(`SELECT desired_title, created_at FROM career_promotion_goals WHERE candidate_auth_user_id = $1 ORDER BY created_at`),
-    credentialReminders: await rows(`SELECT name, expires_on, created_at FROM credential_reminders WHERE candidate_auth_user_id = $1 ORDER BY created_at`),
+    scenarios: await rows(
+      `SELECT title, options, tradeoff, location_profile_ids, skill_report_ids, created_at, updated_at
+         FROM career_scenarios WHERE candidate_auth_user_id = $1 ORDER BY created_at`,
+    ),
+    achievements: await rows(
+      `SELECT title, details, achieved_on, fact_id, evidence_id, created_at, updated_at FROM career_achievements WHERE candidate_auth_user_id = $1 ORDER BY created_at`,
+    ),
+    promotionGoals: await rows(
+      `SELECT desired_title, target_date, status, confirmed_at, confirmed_fact_id, created_at, updated_at
+         FROM career_promotion_goals WHERE candidate_auth_user_id = $1 ORDER BY created_at`,
+    ),
+    credentialReminders: await rows(
+      `SELECT name, issuer, region, expires_on, review_on, fact_id, evidence_id, created_at, updated_at
+         FROM credential_reminders WHERE candidate_auth_user_id = $1 ORDER BY created_at`,
+    ),
     assistedForms: await rows(
       `SELECT site, reviewed_at, external_submitted, created_at FROM assisted_form_sessions WHERE candidate_auth_user_id = $1 ORDER BY created_at`,
     ),
@@ -333,7 +375,17 @@ export async function personalExport(db: Db, owner: Principal, options: ExportOp
         [ws],
       )
     )[0];
-    workspace.staff = await rows(`SELECT role, created_at FROM business_staff WHERE workspace_id = $1 ORDER BY created_at`, [ws]);
+    // Roles and dates only: invited addresses and tokens belong to the invitees, not the owner.
+    workspace.staff = await rows(
+      `SELECT role, accepted_at IS NOT NULL AS accepted, created_at FROM business_staff WHERE workspace_id = $1 ORDER BY created_at`,
+      [ws],
+    );
+    workspace.queue = (
+      await rows(
+        `SELECT count(*)::int AS total, count(*) FILTER (WHERE candidate_id IS NOT NULL)::int AS recommended FROM business_queue_items WHERE workspace_id = $1`,
+        [ws],
+      )
+    )[0];
   }
 
   const processing = {
@@ -380,6 +432,8 @@ export async function personalExport(db: Db, owner: Principal, options: ExportOp
       digests,
       matches,
       reports,
+      saved: savedListings,
+      reminders: careerReminders.map((c) => ({ ...c, deliveries: reminderDeliveries.get(String(c.id)) ?? [] })),
     },
     applications: applications.map((a) => ({ ...a, reminders: reminders.get(String(a.id)) ?? [] })),
     practice: {

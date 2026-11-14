@@ -63,4 +63,40 @@ describe('AllExceptionsFilter', () => {
     expect(body).toMatchObject({ success: false, statusCode: 403, message: 'Upgrade required' });
     expect(body).not.toHaveProperty('code');
   });
+
+  it('passes the plain detail fields of a coded refusal (minimumPlan, limit), never nested data or envelope overrides', () => {
+    const { host, json } = mockHost('/api/v1/payments/career/checkout');
+    filter.catch(
+      new HttpException(
+        {
+          code: 'UPGRADE_REQUIRED',
+          message: 'Upgrade your plan to buy this add-on.',
+          minimumPlan: 'professional',
+          limit: 5,
+          allowed: ['starter', 'professional'],
+          internal: { stripeCustomer: 'cus_secret' },
+          statusCode: 200,
+          path: '/spoofed',
+        },
+        HttpStatus.FORBIDDEN,
+      ),
+      host,
+    );
+    const body = json.mock.calls[0][0] as Record<string, unknown>;
+    expect(body).toMatchObject({
+      statusCode: 403,
+      code: 'UPGRADE_REQUIRED',
+      minimumPlan: 'professional',
+      limit: 5,
+      allowed: ['starter', 'professional'],
+      path: '/api/v1/payments/career/checkout',
+    });
+    expect(body).not.toHaveProperty('internal');
+  });
+
+  it('adds no detail fields to a body without a code (e.g. validation errors)', () => {
+    const { host, json } = mockHost('/api/v1/cvs');
+    filter.catch(new HttpException({ message: ['title must be a string'], error: 'Bad Request', extra: 'x' }, 400), host);
+    expect(json.mock.calls[0][0]).not.toHaveProperty('extra');
+  });
 });

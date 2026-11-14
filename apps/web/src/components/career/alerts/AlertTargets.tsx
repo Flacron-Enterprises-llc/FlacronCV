@@ -37,6 +37,9 @@ export function AlertTargets({ api, onLocations }: { api: ApiClient; onLocations
   const [radius, setRadius] = useState('');
   const [company, setCompany] = useState('');
   const [companyUrl, setCompanyUrl] = useState('');
+  const [aliases, setAliases] = useState('');
+  const [roles, setRoles] = useState('');
+  const [companyPlaces, setCompanyPlaces] = useState('');
   const [locationNote, setLocationNote] = useState<Note>(null);
   const [companyNote, setCompanyNote] = useState<Note>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -108,9 +111,19 @@ export function AlertTargets({ api, onLocations }: { api: ApiClient; onLocations
     setCompanyNote(null);
     try {
       const url = companyUrl.trim();
-      await api.followCompany({ name: company.trim(), ...(url ? { sourceUrl: url } : {}) });
+      const lists = { aliases: splitList(aliases), roles: splitList(roles), locations: splitList(companyPlaces) };
+      await api.followCompany({
+        name: company.trim(),
+        ...(url ? { sourceUrl: url } : {}),
+        ...(lists.aliases.length > 0 ? { aliases: lists.aliases } : {}),
+        ...(lists.roles.length > 0 ? { roles: lists.roles } : {}),
+        ...(lists.locations.length > 0 ? { locations: lists.locations } : {}),
+      });
       setCompany('');
       setCompanyUrl('');
+      setAliases('');
+      setRoles('');
+      setCompanyPlaces('');
       await loadCompanies();
     } catch (error) {
       setCompanyNote(noteFor(error));
@@ -147,7 +160,10 @@ export function AlertTargets({ api, onLocations }: { api: ApiClient; onLocations
           retry={() => void loadLocations()}
           render={(location) => (
             <>
-              <span className="min-w-0 flex-1 break-words font-semibold">{t('location_line', { place: location.place, miles: location.radiusMiles })}</span>
+              <span className="min-w-0 flex-1 break-words font-semibold">
+                {t('location_line', { place: location.place, miles: location.radiusMiles })}
+                {location.hasCoordinates === false ? <span className="block text-xs font-normal text-slate">{t('location_by_name')}</span> : null}
+              </span>
               <Button type="button" disabled={busy === location.id} onClick={() => void removeLocation(location)} aria-label={t('location_delete_label', { place: location.place })}>
                 {t('searches_delete')}
               </Button>
@@ -173,7 +189,10 @@ export function AlertTargets({ api, onLocations }: { api: ApiClient; onLocations
           retry={() => void loadCompanies()}
           render={(item) => (
             <>
-              <span className="min-w-0 flex-1 break-words font-semibold">{item.name}</span>
+              <span className="min-w-0 flex-1 break-words font-semibold">
+                {item.name}
+                {companyDetail(item, t)}
+              </span>
               <Button type="button" disabled={busy === item.id} onClick={() => void unfollow(item)} aria-label={t('company_unfollow_label', { name: item.name })}>
                 {t('company_unfollow')}
               </Button>
@@ -183,6 +202,9 @@ export function AlertTargets({ api, onLocations }: { api: ApiClient; onLocations
         <form className="mt-3 space-y-3" onSubmit={(event) => void follow(event)}>
           <Input label={t('company_name')} value={company} onChange={(event) => setCompany(event.target.value)} maxLength={200} />
           <Input label={t('company_url')} value={companyUrl} onChange={(event) => setCompanyUrl(event.target.value)} type="url" maxLength={2000} />
+          <Input label={t('company_aliases')} value={aliases} onChange={(event) => setAliases(event.target.value)} hint={t('company_list_hint')} />
+          <Input label={t('company_roles')} value={roles} onChange={(event) => setRoles(event.target.value)} hint={t('company_list_hint')} />
+          <Input label={t('company_places')} value={companyPlaces} onChange={(event) => setCompanyPlaces(event.target.value)} hint={t('company_list_hint')} />
           <Button type="submit" disabled={busy === 'company'}>
             {t('company_follow')}
           </Button>
@@ -191,6 +213,20 @@ export function AlertTargets({ api, onLocations }: { api: ApiClient; onLocations
       </Card>
     </>
   );
+}
+
+/** Comma-separated input to a short list (the API keeps at most 10 of each). */
+export function splitList(value: string): string[] {
+  return [...new Set(value.split(',').map((part) => part.trim()).filter((part) => part.length > 0))].slice(0, 10);
+}
+
+function companyDetail(item: FollowedCompany, t: ReturnType<typeof useTranslations>) {
+  const parts = [
+    item.aliases && item.aliases.length > 0 ? t('company_aliases_line', { names: item.aliases.join(', ') }) : null,
+    item.roles && item.roles.length > 0 ? t('company_roles_line', { roles: item.roles.join(', ') }) : null,
+    item.locations && item.locations.length > 0 ? t('company_places_line', { places: item.locations.join(', ') }) : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? <span className="block text-xs font-normal text-slate">{parts.join(' · ')}</span> : null;
 }
 
 function TargetList<T extends { id: string }>({

@@ -17,7 +17,9 @@
     "privateFile": "Archivo privado",
     "link": "Enlace",
     "shared": "Compartido en el portafolio",
-    "privateOnly": "Solo privado"
+    "privateOnly": "Solo privado",
+    "confidential": "Confidencial",
+    "linkedFacts": "{count, plural, one {Respalda # dato del perfil} other {Respalda # datos del perfil}}"
   },
   "types": {
     "project": "Proyecto",
@@ -66,7 +68,7 @@
   "validation": {
     "titleRequired": "Introduce un título.",
     "maxChars": "Usa como máximo {max} caracteres.",
-    "webLink": "Introduce un enlace web completo que empiece por https://"
+    "webLink": "Usa un enlace que empiece por https:// o http://."
   },
   "file": {
     "title": "Archivo privado",
@@ -110,6 +112,52 @@
     "capacity": "Tu plan de carrera no tiene espacio para otra evidencia.",
     "switchedOff": "El archivo de evidencias está desactivado en este momento.",
     "validation": "Revisa los campos para corregir errores.",
-    "saveFailed": "No se guardó la evidencia. Inténtalo de nuevo."
+    "saveFailed": "No se guardó la evidencia. Inténtalo de nuevo.",
+    "notFound": "Este elemento de evidencia ya no existe."
+  },
+  "labelLimits": {
+    "self_reported": "Tu propia declaración. No se ha comprobado nada.",
+    "evidence_attached": "Hay un archivo o enlace adjunto. No se ha comprobado con el emisor.",
+    "assessment_completed": "Se aprobó una evaluación concreta. Solo cubre lo que esa evaluación midió.",
+    "issuer_verified": "Comprobado con el emisor en la fecha y con el alcance indicados. Deja de valer al vencer o revocarse.",
+    "reference_confirmed": "Una referencia confirmó solo esta afirmación concreta, no todo tu perfil."
+  },
+  "methods": {
+    "issuer_registry": "Registro del emisor",
+    "issuer_contact": "Contacto con el emisor",
+    "assessment": "Evaluación",
+    "reference_contact": "Contacto con la referencia",
+    "other": "Otro método"
+  },
+  "history": {
+    "title": "{count, plural, one {Historial de verificación (# comprobación)} other {Historial de verificación (# comprobaciones)}}",
+    "issuer": "Emisor o evaluación: {issuer}",
+    "scope": "Cubre: {scope}",
+    "expires": "Válido hasta el {date}",
+    "revokedReason": "Revocado: {reason}",
+    "expired": "Vencido",
+    "revoked": "Revocado",
+    "checkedOn": "Comprobado el {date} · {method}",
+    "readOnly": "FlacronCV registra las comprobaciones con tu permiso. No se pueden cambiar en la app."
+  },
+  "redaction": {
+    "confidential": "Contiene material confidencial de un empleador o cliente",
+    "help": "Antes de compartir, elimina o difumina nombres, cifras y todo lo que tu empleador o cliente no te permita mostrar.",
+    "note": "Qué eliminaste (opcional)",
+    "confirm": "He eliminado lo confidencial y puedo compartir el resto",
+    "required": "Confirma la eliminación de lo confidencial antes de compartir.",
+    "confirmTitle": "¿Compartir material confidencial?",
+    "confirmBody": "«{title}» está marcado como confidencial. Tu nota: {note}. Confirma que eliminaste lo que tu empleador o cliente no permite mostrar.",
+    "confirmGo": "Ya lo eliminé; compartir",
+    "noNote": "ninguna"
+  },
+  "facts": {
+    "title": "Datos del perfil que respalda",
+    "hint": "Vincula los datos confirmados que este elemento demuestra.",
+    "loading": "Cargando los datos de tu perfil…",
+    "loadFailed": "No se pudieron cargar los datos de tu perfil. El elemento se puede guardar igualmente.",
+    "empty": "Aún no hay datos del perfil confirmados. Confírmalos en tu perfil profesional para vincularlos aquí.",
+    "tooMany": "Vincula como máximo {max} datos del perfil.",
+    "invalid": "Uno de los datos del perfil vinculados ya no existe. Actualiza e inténtalo de nuevo."
   }
 }

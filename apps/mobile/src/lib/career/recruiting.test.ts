@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
-import { isDiscoverable, optInSaveError, RECRUITING_COPY, statusLine } from './recruiting';
+import { countLine, optInCount, optInSaveError, RECRUITING_COPY, statusLine } from './recruiting';
 
 describe('recruiting opt-in', () => {
-  it('reads the current choice from the opted-in list', () => {
-    const search = { items: [{ candidateAuthUserId: 'other', label: 'Opted-in candidate' }, { candidateAuthUserId: 'me', label: 'Opted-in candidate' }] };
-    expect(isDiscoverable(search, 'me')).toBe(true);
-    expect(isDiscoverable(search, 'someone')).toBe(false);
-    expect(isDiscoverable({ items: [] }, 'me')).toBe(false);
-    expect(isDiscoverable(undefined, 'me')).toBeNull();
-    expect(isDiscoverable(search, null)).toBeNull();
+  it('reads only a count from the search', () => {
+    expect(optInCount({ count: 3 })).toBe(3);
+    expect(optInCount({ count: 0 })).toBe(0);
+    expect(optInCount(undefined)).toBeNull();
+    expect(optInCount({ count: -1 })).toBeNull();
+    expect(optInCount({ count: Number.NaN })).toBeNull();
+  });
+
+  it('words the count with plurals', () => {
+    expect(countLine(0)).toBe('No one has opted in yet.');
+    expect(countLine(1)).toBe('1 person has opted in.');
+    expect(countLine(4)).toBe('4 people have opted in.');
   });
 
   it('describes the state honestly', () => {

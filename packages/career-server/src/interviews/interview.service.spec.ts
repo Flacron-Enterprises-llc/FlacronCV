@@ -149,17 +149,113 @@ describe('InterviewService', () => {
       .catch((error: unknown) => error);
     expect(isBillingError(invented, 'validation_error')).toBe(true);
     if (isBillingError(invented)) expect(invented.details).toMatchObject({ field: 'result', reason: 'number_not_in_facts' });
-    const story = await interviews.createStory(p, { situation: 'SQL', task: 'SQL', action: 'SQL', result: 'SQL' });
-    expect(story.result).toBe('SQL');
-    expect(story.factIds).toContain(skill.id);
+    // A result needs a confirmed achievement; a bare skill line is not a result.
+    const noResult = await interviews
+      .createStory(p, { situation: 'SQL', task: 'SQL', action: 'SQL', result: 'SQL' })
+      .catch((error: unknown) => error);
+    expect(isBillingError(noResult, 'validation_error')).toBe(true);
+    if (isBillingError(noResult)) expect(noResult.details).toMatchObject({ field: 'result', reason: 'no_confirmed_result' });
+    const achievement = await profiles.createFact(p, {
+      factType: 'achievement',
+      value: { statement: 'Reconciled the SQL ledger every week' },
+      confirmation: 'confirmed',
+    });
+    const story = await interviews.createStory(p, {
+      situation: 'SQL',
+      task: 'SQL',
+      action: 'SQL',
+      result: 'I reconciled the SQL ledger every week.',
+      factIds: [skill.id],
+    });
+    expect(story.result).toBe('I reconciled the SQL ledger every week.');
+    expect(story.factIds).toEqual(expect.arrayContaining([skill.id, achievement.id]));
     expect((await interviews.stories(p)).items).toHaveLength(1);
     expect(await states(p)).toEqual(['committed', 'committed']);
 
     const other = await person('interview-other');
+    const hiddenStory = await interviews.deleteStory(other, story.id).catch((error: unknown) => error);
+    expect(isBillingError(hiddenStory, 'permission_denied')).toBe(true);
     const hidden = await interviews.get(other, session.id).catch((error: unknown) => error);
     expect(isBillingError(hidden, 'permission_denied')).toBe(true);
     expect((await interviews.list(other)).items).toEqual([]);
     expect((await interviews.stories(other)).items).toEqual([]);
+  });
+
+  it('practises by typed role and stage with fewer questions, then reports per dimension', async () => {
+    const p = await person('interview-role');
+    await db.pool.query(`UPDATE billing_accounts SET plan_id = 'starter' WHERE id = $1`, [p.billingAccountId]);
+    const skill = await profiles.createFact(p, { factType: 'skill', value: { name: 'SQL' }, confirmation: 'confirmed' });
+    const tooShort = await interviews.start(p, { role: 'x', stage: 'recruiter' }, 'role-short').catch((error: unknown) => error);
+    expect(isBillingError(tooShort, 'validation_error')).toBe(true);
+    if (isBillingError(tooShort)) expect(tooShort.details).toMatchObject({ field: 'role' });
+    for (const questionCount of [2, 11, 4.5]) {
+      const bad = await interviews
+        .start(p, { role: 'Data analyst', stage: 'recruiter', questionCount }, `role-count-${questionCount}`)
+        .catch((error: unknown) => error);
+      expect(isBillingError(bad, 'validation_error')).toBe(true);
+      if (isBillingError(bad)) expect(bad.details).toMatchObject({ field: 'questionCount' });
+    }
+    expect(await states(p)).toEqual([]);
+
+    model.always(INTERVIEW_TEMPLATE, JSON.stringify({ factIds: [skill.id] }));
+    const created = await interviews.start(p, { role: 'Data analyst', stage: 'recruiter', questionCount: 3 }, 'role-1');
+    const session = created.result as { id: string; opportunityId: string | null; title: string; questions: unknown[] };
+    expect(session.opportunityId).toBeNull();
+    expect(session.title).toBe('Data analyst');
+    expect(session.questions).toHaveLength(3);
+    expect(model.callsFor(INTERVIEW_TEMPLATE)[0]?.prompt).toContain('Data analyst');
+
+    await interviews.answer(p, session.id, { answer: 'I used SQL.' });
+    await interviews.answer(p, session.id, { answer: 'Mostly I talked to people.' });
+    const done = await interviews.answer(p, session.id, { answer: 'I used SQL. It kept the books right.' });
+    expect(done.report).toMatchObject({ answered: 3, total: 3, complete: true, lackingEvidence: [2] });
+    expect(done.report.dimensions.find((item) => item.dimension === 'evidence')).toMatchObject({ met: 2, verdict: 'strength' });
+    expect(done.summary).toContain('3 of 3 answered.');
+    expect(done.summary).toContain('answer 2');
+    const fourth = await interviews.answer(p, session.id, { answer: 'More.' }).catch((error: unknown) => error);
+    expect(isBillingError(fourth, 'validation_error')).toBe(true);
+    if (isBillingError(fourth)) expect(fourth.details).toMatchObject({ reason: 'session_complete' });
+
+    // Reopening an older session from the list costs nothing.
+    const reopened = await interviews.get(p, session.id);
+    expect(reopened.answers).toHaveLength(3);
+    expect(await states(p)).toEqual(['committed']);
+  });
+
+  it("treats another candidate's private pasted listing as missing", async () => {
+    const owner = await person('interview-paste-owner');
+    const intruder = await person('interview-paste-intruder');
+    await db.pool.query(`UPDATE billing_accounts SET plan_id = 'starter' WHERE id = $1`, [intruder.billingAccountId]);
+    await profiles.createFact(intruder, { factType: 'skill', value: { name: 'SQL' }, confirmation: 'confirmed' });
+    const opportunityId = await listing('Private role', 'Keep the ledger.');
+    await db.pool.query(`UPDATE opportunities SET candidate_auth_user_id = $2 WHERE id = $1`, [opportunityId, owner.authUserId]);
+    const refused = await interviews.start(intruder, { opportunityId, stage: 'panel' }, 'paste-private').catch((error: unknown) => error);
+    expect(isBillingError(refused, 'not_found')).toBe(true);
+    expect(await states(intruder)).toEqual([]);
+  });
+
+  it('edits and deletes a STAR story with the same result checks, and refuses a named outcome', async () => {
+    const p = await person('interview-stories');
+    const achievement = await profiles.createFact(p, {
+      factType: 'achievement',
+      value: { statement: 'Cut catalogue errors by 30% in one quarter' },
+      confirmation: 'confirmed',
+    });
+    const base = { situation: 'Errors in the catalogue', task: 'Fix the catalogue', action: 'Rebuilt the checks' };
+    const story = await interviews.createStory(p, { ...base, result: 'Catalogue errors were cut by 30% in one quarter.' });
+    expect(story.factIds).toContain(achievement.id);
+    const named = await interviews
+      .updateStory(p, story.id, { ...base, result: 'Catalogue errors were cut and we won the Innovation Award.' })
+      .catch((error: unknown) => error);
+    expect(isBillingError(named, 'validation_error')).toBe(true);
+    if (isBillingError(named)) expect(named.details).toMatchObject({ field: 'result', reason: 'result_not_in_facts' });
+    const edited = await interviews.updateStory(p, story.id, { ...base, action: 'Rewrote the checks', result: 'Cut catalogue errors by 30% in one quarter.' });
+    expect(edited.action).toBe('Rewrote the checks');
+    expect((await interviews.stories(p)).items.map((item) => item.action)).toEqual(['Rewrote the checks']);
+    expect(await interviews.deleteStory(p, story.id)).toEqual({ deleted: true });
+    expect((await interviews.stories(p)).items).toEqual([]);
+    const gone = await interviews.deleteStory(p, story.id).catch((error: unknown) => error);
+    expect(isBillingError(gone, 'not_found')).toBe(true);
   });
 
   it('releases the session when the model does not return a usable fact id', async () => {

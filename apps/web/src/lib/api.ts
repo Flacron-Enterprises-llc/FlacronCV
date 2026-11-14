@@ -53,10 +53,12 @@ export class ApiError extends Error {
   readonly status?: number;
   readonly retryable: boolean;
   readonly code?: string;
+  /** Extra fields of the error body (e.g. `minimumPlan` for UPGRADE_REQUIRED), when the API sends any. */
+  readonly details?: Record<string, unknown>;
 
   constructor(
     message: string,
-    opts: { kind: ApiErrorKind; status?: number; retryable?: boolean; code?: string },
+    opts: { kind: ApiErrorKind; status?: number; retryable?: boolean; code?: string; details?: Record<string, unknown> },
   ) {
     super(message);
     this.name = 'ApiError';
@@ -64,6 +66,7 @@ export class ApiError extends Error {
     this.status = opts.status;
     this.retryable = opts.retryable ?? false;
     this.code = opts.code;
+    this.details = opts.details;
   }
 }
 
@@ -185,7 +188,7 @@ async function request<T>(
   }
 
   if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as { message?: string; code?: string };
+    const body = (await response.json().catch(() => ({}))) as { message?: string; code?: string } & Record<string, unknown>;
     const message = typeof body.message === 'string' ? body.message : `Request failed (HTTP ${response.status})`;
     trackAbuseCode(body.code, response.status);
     throw new ApiError(message, {
@@ -193,6 +196,7 @@ async function request<T>(
       status: response.status,
       retryable: response.status >= 500 || response.status === 429,
       code: typeof body.code === 'string' ? body.code : undefined,
+      details: errorDetails(body),
     });
   }
 
@@ -202,6 +206,12 @@ async function request<T>(
 
   const data = await response.json();
   return data.data !== undefined ? data.data : data;
+}
+
+/** The body fields beyond the envelope, so a caller can read e.g. `minimumPlan`. */
+function errorDetails(body: Record<string, unknown>): Record<string, unknown> | undefined {
+  const { success: _s, statusCode: _sc, message: _m, code: _c, timestamp: _t, path: _p, ...rest } = body;
+  return Object.keys(rest).length ? rest : undefined;
 }
 
 export const api = {

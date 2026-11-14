@@ -8,7 +8,7 @@ import { api } from '@/lib/api';
 import { Link } from '@/i18n/routing';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import { PLAN_CONFIGS, SubscriptionPlan, User } from '@flacroncv/shared-types';
+import { PLAN_CONFIGS, SubscriptionPlan, User, asSubscriptionPlan } from '@flacroncv/shared-types';
 import { fcgeUpgradeClicked } from '@/lib/fcge';
 import { TOUR_TARGETS } from '@/lib/app-tour';
 import { TEMPLATE_GALLERY_HREF, seedTemplateGalleryDraft } from '@/components/dashboard/Sidebar';
@@ -67,9 +67,7 @@ export default function DashboardPage(): React.JSX.Element | null {
   // missing from this list, so a Career Accelerator subscriber fell through to
   // the 'free' fallback and their dashboard reported the WRONG plan name.
   // PLAN_CONFIGS[plan].name is the last-resort fallback for any future plan.
-  const planNameKey = ['free', 'pro', 'career_accelerator', 'enterprise'].includes(plan)
-    ? plan
-    : null;
+  const planNameKey = asSubscriptionPlan(plan);
   const planLabel = planNameKey ? tPricing(planNameKey) : PLAN_CONFIGS[plan]?.name || plan;
 
   // Live usage straight from the API — the auth-time snapshot goes stale as
@@ -89,6 +87,12 @@ export default function DashboardPage(): React.JSX.Element | null {
 
   const firstName = user?.profile?.firstName || user?.displayName?.split(' ')[0] || '';
   const aiLimit = usage?.aiCreditsLimit || planLimits.aiCredits;
+  // Current plans limit STORED documents (capacity); legacy plans count
+  // creations. GET /users/me/usage reports both.
+  const capacity = !PLAN_CONFIGS[plan]?.legacy;
+  const counted = usage as (Usage & { storedCvs?: number; storedCoverLetters?: number }) | undefined;
+  const cvsUsed = (capacity ? counted?.storedCvs : undefined) ?? usage?.cvsCreated ?? 0;
+  const lettersUsed = (capacity ? counted?.storedCoverLetters : undefined) ?? usage?.coverLettersCreated ?? 0;
   const firstVisit = isFirstVisit(user);
   const greeting = firstVisit
     ? firstName
@@ -108,9 +112,9 @@ export default function DashboardPage(): React.JSX.Element | null {
           value:
             planLimits.cvs === 'unlimited'
               ? // Same Unlimited wording as billing.features.unlimited — count stays real.
-                `${usage.cvsCreated || 0} · ${tBilling('features.unlimited')}`
-              : `${usage.cvsCreated || 0} / ${planLimits.cvs}`,
-          bar: planLimits.cvs === 'unlimited' ? null : { used: usage.cvsCreated || 0, limit: planLimits.cvs as number },
+                `${cvsUsed} · ${tBilling('features.unlimited')}`
+              : `${cvsUsed} / ${planLimits.cvs}`,
+          bar: planLimits.cvs === 'unlimited' ? null : { used: cvsUsed, limit: planLimits.cvs as number },
           icon: FileText,
           color: 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300',
         },
@@ -120,12 +124,12 @@ export default function DashboardPage(): React.JSX.Element | null {
           label: t('cover_letters_created'),
           value:
             planLimits.coverLetters === 'unlimited'
-              ? `${usage.coverLettersCreated || 0} · ${tBilling('features.unlimited')}`
-              : `${usage.coverLettersCreated || 0} / ${planLimits.coverLetters}`,
+              ? `${lettersUsed} · ${tBilling('features.unlimited')}`
+              : `${lettersUsed} / ${planLimits.coverLetters}`,
           bar:
             planLimits.coverLetters === 'unlimited'
               ? null
-              : { used: usage.coverLettersCreated || 0, limit: planLimits.coverLetters as number },
+              : { used: lettersUsed, limit: planLimits.coverLetters as number },
           icon: Mail,
           color: 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300',
         },
@@ -312,7 +316,7 @@ export default function DashboardPage(): React.JSX.Element | null {
               <h3 className="text-lg font-bold">{t('upgrade_title')}</h3>
               <p className="mt-1 text-sm text-white/90">{t('upgrade_desc')}</p>
             </div>
-            <Link href="/settings/billing" onClick={() => fcgeUpgradeClicked(SubscriptionPlan.PRO)}>
+            <Link href="/settings/billing" onClick={() => fcgeUpgradeClicked(SubscriptionPlan.STARTER)}>
               <Button variant="secondary" className="whitespace-nowrap border-0 bg-white text-brand-700 hover:bg-brand-50">
                 {t('upgrade_cta')}
               </Button>

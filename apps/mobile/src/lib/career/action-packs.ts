@@ -1,5 +1,6 @@
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type { ActionPack, OpportunityItem } from '../../../../../packages/career-api-client/src/types';
+import { ACTION_PACK_LETTER_ATTEMPTS } from '../../../../../packages/career-shared/src/action-pack';
 import { hasKey, t } from '../../i18n';
 import { careerErrorMessage } from '../career-view';
 
@@ -112,4 +113,51 @@ export function actionPackErrorMessage(error: unknown): string {
 
 export function checklistErrorMessage(error: unknown): string {
   return careerErrorMessage(error, t('careerPlans.actionPack.errors.checklistFailed'));
+}
+
+// ---------------------------------------------------------------------------
+// Unfinished packs. A pack holds one credit while it is generating or partial
+// (only the cover letter can fail); retrying the letter is free, cancelling
+// returns the credit, and a pack whose hold ran out is "expired" (credit
+// already returned, it can only be deleted). Packs made before resumable packs
+// existed have no status and are complete.
+
+export type PackStatus = NonNullable<ActionPack['status']>;
+
+export function packStatus(pack: Pick<ActionPack, 'status'>): PackStatus {
+  return pack.status ?? 'complete';
+}
+
+export function letterAttemptsLeft(pack: Pick<ActionPack, 'letterAttempts'>): number {
+  return Math.max(0, ACTION_PACK_LETTER_ATTEMPTS - (pack.letterAttempts ?? 0));
+}
+
+/** The list badge for a pack that is not complete, or null. */
+export function statusBadge(pack: Pick<ActionPack, 'status'>): { label: string; tone: PillTone } | null {
+  const status = packStatus(pack);
+  if (status === 'complete') return null;
+  return { label: t(`careerPlans.actionPack.status.${status}`), tone: status === 'expired' ? 'default' : 'warning' };
+}
+
+/** A retry that failed for good: the server removed the pack and returned the credit. */
+export function isFinalRetryFailure(error: unknown): boolean {
+  return error instanceof ApiError && error.code === 'provider_unavailable' && error.body.released === true;
+}
+
+export function retryErrorMessage(error: unknown): string {
+  if (isFinalRetryFailure(error)) {
+    return (error as ApiError).body.reason === 'pack_expired'
+      ? t('careerPlans.actionPack.statusExpired')
+      : t('careerPlans.actionPack.finalFailure');
+  }
+  if (error instanceof ApiError && error.code === 'request_in_progress') return t('careerPlans.actionPack.statusGenerating');
+  if (error instanceof ApiError && error.code === 'validation_error' && error.body.reason === 'attempts_used') {
+    return t('careerPlans.actionPack.noRetriesLeft');
+  }
+  return careerErrorMessage(error, t('careerPlans.actionPack.retryFailed'));
+}
+
+export function cancelErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.code === 'request_in_progress') return t('careerPlans.actionPack.statusGenerating');
+  return careerErrorMessage(error, t('careerPlans.actionPack.cancelFailed'));
 }

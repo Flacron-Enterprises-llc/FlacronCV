@@ -4,13 +4,30 @@ export enum UserRole {
   SUPER_ADMIN = 'super_admin',
 }
 
+/**
+ * Every plan id a user document can carry.
+ *
+ * The five-plan catalog (decided 2026-11-14): FREE, STARTER, PROFESSIONAL,
+ * CAREER_PRO, BUSINESS. Ids are identical to the career catalog `PlanId`
+ * (`packages/career-shared/src/catalog.ts`).
+ *
+ * LEGACY: PRO, CAREER_ACCELERATOR, ENTERPRISE. Existing paying customers keep
+ * them (price, limits, Stripe/Apple/Google ids, renewals) exactly as before.
+ * They are never offered to new customers — see `isLegacyPlan` and
+ * `customerFacingPlans`. Never delete or rename a member: the string is stored
+ * on user docs, subscription records and Stripe metadata.
+ */
 export enum SubscriptionPlan {
   FREE = 'free',
+  STARTER = 'starter',
+  PROFESSIONAL = 'professional',
+  CAREER_PRO = 'career_pro',
+  BUSINESS = 'business',
+  /** LEGACY — not sold to new customers. */
   PRO = 'pro',
-  // ASSUMPTION (client to confirm): a premium individual tier positioned BETWEEN
-  // Pro and Enterprise (see PLAN_RANK + PLAN_CONFIGS). Purchase is gated "coming
-  // soon" until a real Stripe price id is configured.
+  /** LEGACY — never sold (its Stripe price was never configured). */
   CAREER_ACCELERATOR = 'career_accelerator',
+  /** LEGACY — not sold to new customers. */
   ENTERPRISE = 'enterprise',
 }
 
@@ -92,13 +109,25 @@ export enum TemplateCategory {
   COVER_LETTER = 'cover_letter',
 }
 
+/**
+ * Application stages (spec §1 "Application workspace" status board).
+ *
+ * Stored documents written before this set existed may still say `wishlist`,
+ * `offer` or `accepted`; see `normalizeJobStatus` in job.types.ts for how
+ * those are read and how old clients' writes are mapped.
+ */
 export enum JobStatus {
-  WISHLIST = 'wishlist',
+  SAVED = 'saved',
+  PREPARING = 'preparing',
   APPLIED = 'applied',
   INTERVIEWING = 'interviewing',
-  OFFER = 'offer',
+  OFFERED = 'offered',
   REJECTED = 'rejected',
-  ACCEPTED = 'accepted',
+  WITHDRAWN = 'withdrawn',
+  /** @deprecated Old name of SAVED (same value); kept so existing references keep compiling. */
+  WISHLIST = 'saved',
+  /** @deprecated Old name of OFFERED (same value); kept so existing references keep compiling. */
+  OFFER = 'offered',
 }
 
 export enum AIProvider {

@@ -60,7 +60,7 @@ export type { TextModel, TextModelRequest, TextModelResponse } from './ai/text-m
 export { OpenAITextModel } from './ai/openai-text-model';
 export { createTextModel } from './ai/create-text-model';
 export { UnconfiguredSpeechTranscriber } from './ai/speech-transcriber';
-export type { SpeechTranscribeResult, SpeechTranscriber } from './ai/speech-transcriber';
+export type { SpeechTranscribeResult, SpeechTranscriber, SpeechTranscriptionInput } from './ai/speech-transcriber';
 export { UnconfiguredMapTiles } from './maps/map-tiles';
 export type { MapTiles } from './maps/map-tiles';
 export { UnconfiguredGeocoder, createGeocoder } from './maps/geocoder';
@@ -103,13 +103,13 @@ export { UnconfiguredJobFeed } from './opportunities/feeds';
 export { parseAdzuna, parseGreenhouse, parseLever, parseUsajobs } from './opportunities/normalize';
 export { WritingService } from './writing/writing.service';
 export type { WritingDocumentView, WritingList } from './writing/writing.service';
-export { COVER_LETTER_TEMPLATE, WRITING_TEMPLATE } from './writing/writing-compose';
+export { COVER_LETTER_TEMPLATE, WRITING_PROSE_TEMPLATE } from './writing/writing-compose';
 export type { DocumentCreditView, ResumeFile, ResumeVersionView, ResumeView } from './resumes/resume.service';
 export { RESUME_COMPOSE_TEMPLATE } from './resumes/resume-compose';
 export { WindowRateLimit } from './http/rate-limit';
 export { v1Instant } from './migration/v1-time';
 export { AdminService, adminUidSet, PROVIDER_HEALTH, providerHealthFromEnv } from './admin/admin.service';
-export type { AdminFlag } from './admin/admin.service';
+export type { AdminBusinessRow, AdminEvidenceView, AdminFlag } from './admin/admin.service';
 export { AccountPrivacyService, DEFAULT_CLOSURE_SWEEP } from './privacy/account-privacy.service';
 export type { ClosureSweepOptions, ClosureSweepResult } from './privacy/account-privacy.service';
 export type { DeleteResult, ExportTicket } from './privacy/account-privacy.service';
@@ -139,12 +139,24 @@ export { EvidenceService } from './evidence/evidence.service';
 export { ActionEngineService } from './action-engine/action-engine.service';
 export type { ActionPackBalanceView, ActionPackList } from './action-engine/action-engine.service';
 export { SkillsLearningService } from './learning/skills-learning.service';
-export type { SkillReportBalanceView, SkillReportList } from './learning/skills-learning.service';
-export { CareerModesService } from './career-modes/career-modes.service';
+export type { LearningEvidenceResult, SkillReportBalanceView, SkillReportList } from './learning/skills-learning.service';
+export {
+  CareerModesService,
+  createLocationProfile,
+  deleteLocationProfile,
+  getLocationProfile,
+  listLocationProfiles,
+  readModeContext,
+  updateLocationProfile,
+} from './career-modes/career-modes.service';
 export { OpportunityTrustService } from './opportunities/opportunity-trust.service';
 export { PortfolioService } from './portfolios/portfolio.service';
 export { VoiceInterviewService } from './voice/voice-interview.service';
-export { RemainingService } from './remaining/remaining.service';
+export { RemainingService, readCredentialReminders } from './remaining/remaining.service';
+export type { FactWriter, MaintenanceView, ScenarioList } from './remaining/remaining.service';
+export { BusinessService } from './remaining/business.service';
+export type { BusinessContext, BusinessOverview, BusinessMemberships, BusinessQueueItem, BusinessReport, BusinessUsage, CandidateDetail, InvitationResult } from './remaining/business.service';
+export { verificationsFor } from './evidence/evidence.service';
 export type { ApplicationOutcomeSource } from './remaining/remaining.service';
 export {
   applyMappedPlan,
@@ -156,3 +168,36 @@ export {
   V1_PLANS,
 } from './integration/v1-plan-bridge';
 export type { CareerAccess, CareerPlanMap, CareerPurchase, V1AccountSnapshot, V1AccountSource, V1Plan } from './integration/v1-plan-bridge';
+// Five-plan billing (wp-billing): unified metering for V1, usage page, packs and capacity add-ons, top-ups.
+export { RemoteMeteringService, V1_METERED_UNITS, DEFAULT_RESERVATION_TTL_MS, MAX_RESERVATION_TTL_MS } from './metering/remote-metering';
+export type { ReservationView, ReservationState, V1MeteredUnit } from './metering/remote-metering';
+export { UsageService } from './usage/usage.service';
+export type { UnitUsage, UsageOwner, UsageSummary, UsageWarningView } from './usage/usage.service';
+export { capacityLimit, checkReactivation } from './metering/access';
+export { applyCapacityExtras, capacityExtra, capacityExtrasFor, CAPACITY_FIELD_BY_ADDON_UNIT } from './billing/capacity';
+export type { CapacityGrant, ExtendableCapacityField } from './billing/capacity';
+export { grantPaidPack, recordAdjustment, revokePaidPack } from './billing/pack-purchases';
+export type { AdjustmentKind, PaidPack } from './billing/pack-purchases';
+export { compatiblePacks, decideTopUp, readTopUpSettings, setTopUp, topUpSpentCents } from './billing/top-up';
+export type { TopUpDecision, TopUpRefusal, TopUpSettings } from './billing/top-up';
+export { STORAGE_GRACE_DAYS, startStorageGraceIfOver, storageUsedBytes, syncV1Plan } from './billing/v1-sync';
+export type { V1SyncInput, V1SyncResult } from './billing/v1-sync';
+export { DEFAULT_CAREER_PLAN_MAP, liveCapacity } from './integration/v1-plan-bridge';
+export type { V1BillingFacts, V1CapacitySubscription, V1PackPurchase } from './integration/v1-plan-bridge';
+
+// wp-opps: owner-checked listing loader, alert delivery honesty, reminders.
+export { readOpportunityForCandidate } from './opportunities/opportunity.service';
+export type { ListingRecord, NotAppliedFilter, OpportunitySearchQuery, OpportunitySearchResult, PasteInput } from './opportunities/opportunity.service';
+export { ChannelAlertNotifier, MailerEmailSender, NotificationSendError, createAlertNotifier, createRecordedEmailResolver } from './alerts/alert.service';
+export type {
+  AlertReasonView,
+  ChannelConnection,
+  ChannelSender,
+  DeliveryView,
+  ReminderListView,
+  ReminderView as AlertReminderView,
+  SavedSearchFilters,
+  V1ReminderInput,
+} from './alerts/alert.service';
+export { businessSponsorFor, sponsoredSpender, pooledCandidate } from './remaining/business-sponsor';
+export type { BusinessSponsor } from './remaining/business-sponsor';

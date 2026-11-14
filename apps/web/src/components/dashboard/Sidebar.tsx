@@ -72,10 +72,17 @@ export default function Sidebar({ open, onClose, collapsed = false, onToggleColl
   // Career tools appear only when the person's V1 plan includes them (decided by
   // the career service). Unmapped plans, and an unreachable service, see V1 as before.
   const careerAccess = useCareerAccess();
-  // With the career build on, someone without career access gets a way to the
-  // add-on plans. Only after the service has answered "not enabled": while it
-  // loads, or when it is unreachable, nothing career-related is shown.
-  const offerCareerAddon = isCareerEnabled() && careerAccess.isSuccess && !careerAccess.data?.enabled;
+  // Every current plan includes the career tools, so "not enabled" only happens
+  // for a plan the operator left out of the career map (e.g. a legacy plan via
+  // CAREER_PLAN_MAP). That person gets a plan upgrade, not a separate add-on.
+  // Only after the service has answered: while it loads, or when it is
+  // unreachable, nothing career-related is shown. A missing/inactive account
+  // is not fixed by upgrading, so it gets no upsell.
+  const offerCareerUpgrade =
+    isCareerEnabled() &&
+    careerAccess.isSuccess &&
+    careerAccess.data?.enabled === false &&
+    (careerAccess.data.reason ?? 'plan_not_mapped') === 'plan_not_mapped';
 
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: t('title') },
@@ -83,7 +90,8 @@ export default function Sidebar({ open, onClose, collapsed = false, onToggleColl
     { href: '/cover-letters', icon: Mail, label: t('my_cover_letters') },
     { href: '/jobs', icon: Briefcase, label: t('job_tracker') },
     ...(careerAccess.data?.enabled ? [{ href: '/career', icon: Compass, label: t('career_tools') }] : []),
-    ...(offerCareerAddon ? [{ href: '/career/plans', icon: PlusCircle, label: t('add_career_tools') }] : []),
+    // The #change-plan anchor lands on the plan picker and keeps Billing the only highlighted item there.
+    ...(offerCareerUpgrade ? [{ href: '/settings/billing#change-plan', icon: PlusCircle, label: t('upgrade_for_career_tools') }] : []),
     {
       href: TEMPLATE_GALLERY_HREF,
       icon: Palette,

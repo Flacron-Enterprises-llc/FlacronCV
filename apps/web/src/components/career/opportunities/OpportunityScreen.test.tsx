@@ -46,16 +46,17 @@ describe('OpportunityScreen', () => {
     const opportunities = vi.fn(async ({ q }: { q?: string }) => ({ items: q ? [listing] : [] }));
     renderSearch(testApi({ opportunities }));
     expect(await screen.findByText('Search or paste a listing')).toBeTruthy();
-    expect(opportunities).toHaveBeenCalledWith({ q: '' });
+    expect(opportunities).toHaveBeenCalledWith({ q: '', includeExpired: false });
     fireEvent.change(screen.getByLabelText('Search'), { target: { value: 'ledger' } });
     fireEvent.click(screen.getByRole('button', { name: 'Search listings' }));
     expect(await screen.findByText('Ledger analyst')).toBeTruthy();
     expect(screen.getByText('Employer')).toBeTruthy();
     expect(screen.getByText('Babbage Works')).toBeTruthy();
-    expect(screen.getByText('Not stated in the listing: Pay')).toBeTruthy();
+    expect(screen.getByText('Not stated in the listing: Pay and Deadline')).toBeTruthy();
     expect(screen.queryByText('Not stated')).toBeNull();
-    expect(opportunities).toHaveBeenCalledWith({ q: 'ledger' });
-    expect(screen.queryByText(/score|hiring/i)).toBeNull();
+    expect(opportunities).toHaveBeenCalledWith({ q: 'ledger', includeExpired: false });
+    // "Hiring event" is a listing category; what must never appear is a score or a hiring probability.
+    expect(screen.queryByText(/\bscore\b|probability/i)).toBeNull();
   });
 
   it('refuses a paste too short to be a listing and clears both fields after saving', async () => {
@@ -91,7 +92,7 @@ describe('OpportunityDetailScreen', () => {
     );
     expect(await screen.findByText('This listing has not been checked recently')).toBeTruthy();
     expect(screen.getByText('Keep the ledger.')).toBeTruthy();
-    expect(screen.getByText('Not stated in the listing: Pay')).toBeTruthy();
+    expect(screen.getByText('Not stated in the listing: Pay and Deadline')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Original listing' }).getAttribute('href')).toBe(listing.sourceUrl);
   });
 

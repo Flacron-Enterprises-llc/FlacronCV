@@ -1,4 +1,5 @@
 import { resolveAppId } from './stripe-app';
+import { currentPlanPricesFromEnv } from '../modules/payment/plan-prices';
 
 export default () => ({
   port: parseInt(process.env.PORT || '4000', 10),
@@ -41,6 +42,9 @@ export default () => ({
       enterpriseMonthly: process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID,
       enterpriseYearly: process.env.STRIPE_ENTERPRISE_YEARLY_PRICE_ID,
     },
+    // Five-plan catalog prices (STRIPE_PRICE_<PLAN>_MONTHLY / _ANNUAL). Env only:
+    // unset → that plan/interval is "not available yet" (PLAN_NOT_CONFIGURED).
+    planPrices: currentPlanPricesFromEnv(process.env),
     // FlacronCV's own Customer Portal configuration (bpc_…). The account's
     // default portal is shared by every Flacron app, so without this a
     // customer could be offered another application's plans.

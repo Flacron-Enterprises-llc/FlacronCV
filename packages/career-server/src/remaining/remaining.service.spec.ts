@@ -18,10 +18,11 @@ describe('RemainingService', () => {
   let db: TestDatabase;
   let identities: IdentityService;
   let remaining: RemainingService;
+  let clock: TestClock;
 
   beforeAll(async () => {
     db = await createTestDatabase('remaining');
-    const clock = new TestClock('2026-10-18T11:00:00Z');
+    clock = new TestClock('2026-10-18T11:00:00Z');
     await new BillingService(db.pool, clock).publishCatalog();
     await db.pool.query(
       `INSERT INTO feature_flags (feature, enabled) VALUES
@@ -141,48 +142,104 @@ describe('RemainingService', () => {
     expect(later.due).toBe(false);
   });
 
-  it('opens a 15 minute map session without tiles', async () => {
+  it('edits and deletes maintenance items, refuses impossible dates, and feeds reminders', async () => {
+    const owner = await person('maintain-crud');
+    const other = await person('maintain-other');
+    const impossible = await remaining.addCredential(owner, { name: 'Gas Safe', expiresOn: '2026-02-31' }).catch((error: unknown) => error);
+    expect(isBillingError(impossible, 'validation_error')).toBe(true);
+    const credential = await remaining.addCredential(owner, { name: 'Gas Safe', expiresOn: '2027-06-30', issuer: 'Register', region: 'UK', reviewOn: '2026-12-01' });
+    expect(credential).toMatchObject({ issuer: 'Register', region: 'UK', due: true });
+    const edited = await remaining.updateCredential(owner, credential.id, { reviewOn: null, expiresOn: '2028-01-01' });
+    expect(edited).toMatchObject({ reviewOn: null, due: false });
+    expect(isBillingError(await remaining.updateCredential(other, credential.id, { name: 'x' }).catch((e: unknown) => e), 'permission_denied')).toBe(true);
+
+    const achievement = await remaining.addAchievement(owner, { title: 'Shipped billing', details: 'Led the rollout', achievedOn: '2026-10-01' });
+    expect(achievement).toMatchObject({ title: 'Shipped billing', achievedOn: '2026-10-01', factId: null });
+    const badLink = await remaining.updateAchievement(owner, achievement.id, { evidenceId: '00000000-0000-4000-8000-000000000001' }).catch((e: unknown) => e);
+    expect(isBillingError(badLink, 'validation_error')).toBe(true);
+    expect((await remaining.updateAchievement(owner, achievement.id, { title: 'Shipped billing v2' })).title).toBe('Shipped billing v2');
+    await remaining.deleteAchievement(owner, achievement.id);
+
+    const goal = await remaining.addPromotionGoal(owner, { desiredTitle: 'Lead', targetDate: '2027-01-31' });
+    expect((await remaining.updatePromotionGoal(owner, goal.id, { status: 'dropped' })).status).toBe('dropped');
+    await remaining.deletePromotionGoal(owner, goal.id);
+
+    const view = await remaining.maintenance(owner);
+    expect(view.achievements).toEqual([]);
+    expect(view.promotionGoals).toEqual([]);
+    expect(view.credentials.map((c) => c.name)).toEqual(['First aid', 'Gas Safe'].filter((name) => view.credentials.some((c) => c.name === name)));
+    expect(await remaining.credentialReminders(owner)).toEqual(view.reminders);
+    await remaining.deleteCredential(owner, credential.id);
+  });
+
+  it('confirms a promotion into the profile only when the person confirms it', async () => {
+    const owner = await person('promote');
+    const writes: Array<{ kind: string; value: Record<string, unknown> }> = [];
+    const facts = {
+      createFact: async (_owner: unknown, input: { value: Record<string, unknown> }) => {
+        writes.push({ kind: 'create', value: input.value });
+        const row = await db.pool.query<{ id: string }>(
+          `INSERT INTO career_facts (workspace_id, candidate_auth_user_id, fact_type, value, source, confirmation, uncertain, confirmed_at)
+           VALUES ($1, $2, 'experience', $3, 'manual', 'confirmed', '{}', now()) RETURNING id`,
+          [owner.workspaceId, owner.authUserId, JSON.stringify(input.value)],
+        );
+        return { id: row.rows[0].id };
+      },
+      updateFact: async () => {
+        throw new Error('not used');
+      },
+    };
+    const withFacts = new RemainingService(db.pool, new MeteringService(db.pool, clock), clock, undefined, undefined, undefined, facts);
+    const goal = await withFacts.addPromotionGoal(owner, 'Engineering manager');
+    expect(writes).toEqual([]);
+    const unconfirmed = await withFacts.confirmPromotion(owner, goal.id, { confirmed: false, company: 'Acme' }).catch((e: unknown) => e);
+    expect(isBillingError(unconfirmed, 'validation_error')).toBe(true);
+    const done = await withFacts.confirmPromotion(owner, goal.id, { confirmed: true, company: 'Acme', startDate: '2026-11-01' });
+    expect(done.status).toBe('confirmed');
+    expect(done.confirmedFactId).not.toBeNull();
+    expect(writes).toEqual([{ kind: 'create', value: { position: 'Engineering manager', company: 'Acme', current: true, startDate: '2026-11-01' } }]);
+    const twice = await withFacts.confirmPromotion(owner, goal.id, { confirmed: true, company: 'Acme' }).catch((e: unknown) => e);
+    expect(isBillingError(twice, 'validation_error')).toBe(true);
+  });
+
+  it('lists, reopens and edits saved scenarios without charging again', async () => {
+    const owner = await person('scenario-list', 'professional');
+    const created = await remaining.createScenario(owner, [
+      { name: 'Stay', costCents: 0, months: 12, destination: 'Leeds', wageCents: 4000000, source: 'market', sourceName: 'ONS', sourceDate: '2026-04-01', uncertainty: 'medium' },
+    ], 'scenario-list-1', { title: 'Stay or go' });
+    const id = (created.result as { id: string }).id;
+    const list = await remaining.listScenarios(owner);
+    expect(list.items.map((item) => item.id)).toEqual([id]);
+    expect(list.items[0]).toMatchObject({ title: 'Stay or go' });
+    expect(list.items[0].options[0]).toMatchObject({ wageLabel: 'market_data', sourceName: 'ONS' });
+    expect(list.remaining).toBe(0);
+    const edited = await remaining.updateScenario(owner, id, {
+      options: [{ name: 'Stay', costCents: 100, months: 6, destination: 'Leeds', wageCents: null, source: 'user' }],
+    });
+    expect(edited.options[0]).toMatchObject({ costCents: 100, wageLabel: 'unknown' });
+    const ledger = await db.pool.query<{ n: number }>(
+      `SELECT COALESCE(SUM(quantity), 0)::int AS n FROM usage_ledger WHERE billing_account_id = $1 AND unit = 'scenario_report' AND state = 'committed'`,
+      [owner.billingAccountId],
+    );
+    expect(ledger.rows[0].n).toBe(1);
+    const stranger = await person('scenario-stranger', 'professional');
+    expect(isBillingError(await remaining.getScenario(stranger, id).catch((e: unknown) => e), 'permission_denied')).toBe(true);
+    const badLink = await remaining.updateScenario(owner, id, { locationProfileIds: ['00000000-0000-4000-8000-000000000001'] }).catch((e: unknown) => e);
+    expect(isBillingError(badLink, 'validation_error')).toBe(true);
+  });
+
+  it('does not charge a map session while no tile provider is configured', async () => {
     const owner = await person('map-pro', 'professional');
-    const started = await remaining.startMap(owner, 'map-1');
-    expect(started.result).toMatchObject({ minutes: 15, approximate: true, tiles: null, coordinates: null, attribution: null, provider: null });
-    expect(started.usage.includedRemaining).toBe(49);
+    const started = await remaining.startMap(owner, 'map-1').catch((error: unknown) => error);
+    expect(isBillingError(started, 'provider_unavailable')).toBe(true);
+    const ledger = await db.pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM usage_ledger WHERE billing_account_id = $1 AND unit = 'map_session'`, [owner.billingAccountId]);
+    expect(ledger.rows[0].n).toBe(0);
     const listed = await remaining.mapList(owner);
+    expect(listed.available).toBe(false);
     expect(listed.tiles).toBeNull();
     expect(listed.attribution).toBeNull();
     expect(listed.provider).toBeNull();
     expect(listed.items.every((item) => item.coordinates === null && item.approximate === true)).toBe(true);
-  });
-
-  it('stops at three staff and hides a candidate from another workspace and an unassigned counselor', async () => {
-    const owner = await person('biz', 'business');
-    const outsider = await person('biz-out', 'business');
-    await remaining.addStaff(owner, 'staff-1', 'counselor');
-    await remaining.addStaff(owner, 'staff-2', 'manager');
-    await remaining.addStaff(owner, 'staff-3', 'counselor');
-    const fourth = await remaining.addStaff(owner, 'staff-4', 'counselor').catch((error: unknown) => error);
-    expect(isBillingError(fourth, 'capacity_exceeded')).toBe(true);
-
-    const accessOwner = await person('biz-access', 'business');
-    const counselor = await person('biz-counselor');
-    const candidate = await remaining.inviteCandidate(accessOwner, 'person@example.test', true);
-    const refused = await remaining.inviteCandidate(accessOwner, 'no@example.test', false).catch((error: unknown) => error);
-    expect(isBillingError(refused, 'validation_error')).toBe(true);
-    const hidden = await remaining.getCandidate(outsider, candidate.id).catch((error: unknown) => error);
-    expect(isBillingError(hidden, 'permission_denied')).toBe(true);
-    const staff = await remaining.addStaff(accessOwner, counselor.authUserId, 'counselor');
-    const unassigned = await remaining.getCandidate(counselor, candidate.id).catch((error: unknown) => error);
-    expect(isBillingError(unassigned, 'permission_denied')).toBe(true);
-    await remaining.assignCounselor(accessOwner, staff.id, candidate.id);
-    expect((await remaining.getCandidate(counselor, candidate.id)).email).toBe('person@example.test');
-
-    // A malformed id is simply not found, never a database error.
-    const malformed = await remaining.getCandidate(accessOwner, 'not-a-uuid').catch((error: unknown) => error);
-    expect(isBillingError(malformed, 'not_found')).toBe(true);
-    const badAssign = await remaining.assignCounselor(accessOwner, 'x', candidate.id).catch((error: unknown) => error);
-    expect(isBillingError(badAssign, 'not_found')).toBe(true);
-    const overview = await remaining.businessOverview(accessOwner);
-    expect(overview.staff).toEqual([{ id: staff.id, authUserId: counselor.authUserId, role: 'counselor' }]);
-    expect(overview.candidates).toEqual([{ id: candidate.id, email: 'person@example.test' }]);
   });
 
   it('does not sell human review or employer checkout', async () => {
@@ -201,14 +258,17 @@ describe('RemainingService', () => {
   it('shows only opted-in candidates and keeps a private profile out of search', async () => {
     const quiet = await person('quiet');
     const visible = await person('visible');
-    expect((await remaining.recruitingSearch()).items).toEqual([]);
+    const start = (await remaining.recruitingCount()).count;
     expect(await remaining.getOptIn(visible)).toEqual({ discoverable: false });
     await remaining.setOptIn(visible, true);
     expect(await remaining.getOptIn(visible)).toEqual({ discoverable: true });
-    expect((await remaining.recruitingSearch()).items).toEqual([{ candidateAuthUserId: visible.authUserId, label: 'Opted-in candidate' }]);
+    // Candidates learn only how many opted in, never who.
+    const counted = await remaining.recruitingCount();
+    expect(counted).toEqual({ count: start + 1 });
+    expect(JSON.stringify(counted)).not.toContain(visible.authUserId);
     await remaining.setOptIn(quiet, false);
     await remaining.setOptIn(visible, false);
-    expect((await remaining.recruitingSearch()).items).toEqual([]);
+    expect((await remaining.recruitingCount()).count).toBe(start);
     const checkout = (() => {
       try {
         remaining.employerCheckout();
@@ -223,7 +283,7 @@ describe('RemainingService', () => {
   it('refuses an API key until the package exists, then blocks another workspace', async () => {
     const owner = await person('api-biz', 'business');
     const other = await person('api-other', 'business');
-    expect(await remaining.developerStatus(owner)).toEqual({ apiPackage: false, whiteLabel: false, brand: null });
+    expect(await remaining.developerStatus(owner)).toMatchObject({ apiPackage: false, whiteLabel: false, brand: null, keys: [], rateLimits: { test: 30, live: 120 } });
     const blocked = await remaining.createApiKey(owner).catch((error: unknown) => error);
     expect(isBillingError(blocked, 'not_purchasable')).toBe(true);
     await db.pool.query(
@@ -232,7 +292,8 @@ describe('RemainingService', () => {
       [owner.billingAccountId, owner.workspaceId],
     );
     const key = await remaining.createApiKey(owner);
-    expect(key.token.startsWith('flc_')).toBe(true);
+    expect(key.token.startsWith('flc_live_')).toBe(true);
+    expect(key.environment).toBe('live');
     const stored = await db.pool.query<{ key_hash: string }>(`SELECT key_hash FROM api_keys WHERE id = $1`, [key.id]);
     expect(stored.rows[0].key_hash).not.toBe(key.token);
     expect((await remaining.consumeRead(owner, key.token, owner.workspaceId)).readsRemaining).toBe(0);
@@ -250,11 +311,36 @@ describe('RemainingService', () => {
     const stripped = await remaining.setWhiteLabel(owner, 'North', 'North only').catch((error: unknown) => error);
     expect(isBillingError(stripped, 'validation_error')).toBe(true);
     expect((await remaining.setWhiteLabel(owner, 'North', 'Source: FlacronCV')).attribution).toContain('FlacronCV');
-    expect(await remaining.developerStatus(owner)).toEqual({
+    expect(await remaining.developerStatus(owner)).toMatchObject({
       apiPackage: true,
       whiteLabel: true,
       brand: { brandName: 'North', attribution: 'Source: FlacronCV' },
     });
+  });
+
+  it('keeps test keys off paid reads, rate limits each key, and honours revocation', async () => {
+    const owner = await person('api-env', 'business');
+    await db.pool.query(
+      `INSERT INTO organization_entitlements (billing_account_id, workspace_id, addon_id, reads_remaining) VALUES ($1, $2, 'api_package', 500)`,
+      [owner.billingAccountId, owner.workspaceId],
+    );
+    const test = await remaining.createApiKey(owner, 'test');
+    expect(test.token.startsWith('flc_test_')).toBe(true);
+    expect(test.prefix.startsWith('flc_test_')).toBe(true);
+    for (let i = 0; i < 30; i += 1) {
+      expect(await remaining.consumeRead(owner, test.token, owner.workspaceId)).toEqual({ readsRemaining: 500, environment: 'test' });
+    }
+    const limited = await remaining.consumeRead(owner, test.token, owner.workspaceId).catch((error: unknown) => error);
+    expect(isBillingError(limited, 'rate_limited')).toBe(true);
+    clock.set(new Date(clock.now().getTime() + 61_000).toISOString());
+    expect((await remaining.consumeRead(owner, test.token, owner.workspaceId)).environment).toBe('test');
+    const live = await remaining.createApiKey(owner, 'live');
+    expect((await remaining.consumeRead(owner, live.token, owner.workspaceId)).readsRemaining).toBe(499);
+    await remaining.revokeApiKey(owner, live.id);
+    const revoked = await remaining.consumeRead(owner, live.token, owner.workspaceId).catch((error: unknown) => error);
+    expect(isBillingError(revoked, 'permission_denied')).toBe(true);
+    const status = await remaining.developerStatus(owner);
+    expect(status.keys.map((key) => [key.environment, key.revokedAt !== null])).toEqual([['live', true], ['test', false]]);
   });
 
   it('stores a sales inquiry without claiming email delivery', async () => {

@@ -1,5 +1,9 @@
 import request from 'supertest';
-import { COVER_LETTER_TEMPLATE, WRITING_TEMPLATE } from '@flacroncv/career-server';
+import { COVER_LETTER_TEMPLATE, WRITING_PROSE_TEMPLATE } from '@flacroncv/career-server';
+
+const SQL_BIO =
+  'Ada is a records specialist who uses SQL every week to keep inventory data accurate. ' +
+  'She cares about careful, well documented work and clear handovers to the people who rely on it.';
 import { bearer, FakeTextModel } from '@flacroncv/career-server/src/testing';
 import { TEXT_MODEL } from '../src/ai/ai.providers';
 import { createTestApp, TestApp } from './support';
@@ -44,10 +48,7 @@ describe('writing over HTTP', () => {
       .set('Authorization', auth)
       .send({ factType: 'skill', value: { name: 'SQL' }, confirmation: 'confirmed' });
     expect(fact.status).toBe(201);
-    model.always(
-      WRITING_TEMPLATE,
-      JSON.stringify({ factIds: [fact.body.id], letter: 'raised $50 million at Initech' }),
-    );
+    model.always(WRITING_PROSE_TEMPLATE, JSON.stringify({ body: SQL_BIO, factIds: [fact.body.id] }));
     const missingKey = await http().post('/api/career/v1/writing').set('Authorization', auth).send({ type: 'bio', opportunityId: null });
     expect(missingKey.status).toBe(400);
     expect(missingKey.body).toEqual({ code: 'validation_error', field: 'Idempotency-Key' });
@@ -58,7 +59,7 @@ describe('writing over HTTP', () => {
       .set('Idempotency-Key', 'http-writing-1')
       .send({ type: 'bio', opportunityId: null });
     expect(created.status).toBe(201);
-    expect(created.body.document.body).toBe('SQL');
+    expect(created.body.document.body).toBe(SQL_BIO);
     expect(created.body.document.title).toBe('Bio');
     expect(created.body.document.templateId).toBe('classic');
     expect(JSON.stringify(created.body.document)).not.toContain('Initech');
@@ -113,6 +114,29 @@ describe('writing over HTTP', () => {
       .send({ type: 'cover_letter', opportunityId: null, templateId: 'creative' });
     expect(letter.status).toBe(201);
     expect(letter.body.document.templateId).toBe('creative');
+
+    // Job-tracker drafts: typed context instead of a saved listing; unknown context fields are refused.
+    const extraField = await http()
+      .post('/api/career/v1/writing')
+      .set('Authorization', auth)
+      .set('Idempotency-Key', 'http-writing-thanks-bad')
+      .send({ type: 'thank_you', opportunityId: null, context: { organization: 'Babbage', salary: '90000' } });
+    expect(extraField.status).toBe(400);
+    const note =
+      'Dear Grace Hopper, thank you for speaking with me on 12 November 2026 about the Records Analyst role at Babbage. ' +
+      'I enjoyed learning how the team keeps its records accurate, and I remain very interested in the role.';
+    model.once(WRITING_PROSE_TEMPLATE, JSON.stringify({ body: note, factIds: [] }));
+    const thanks = await http()
+      .post('/api/career/v1/writing')
+      .set('Authorization', auth)
+      .set('Idempotency-Key', 'http-writing-thanks')
+      .send({
+        type: 'thank_you',
+        opportunityId: null,
+        context: { organization: 'Babbage', role: 'Records Analyst', contactName: 'Grace Hopper', interviewDate: '2026-11-12' },
+      });
+    expect(thanks.status).toBe(201);
+    expect(thanks.body.document).toMatchObject({ type: 'thank_you', title: 'Thank-you note to Babbage', body: note });
     expect(letter.body.document.body).toContain('Northwind Cataloguing');
     expect(letter.body.document.body.split('\n\n')).toHaveLength(3);
     const switched = await http()

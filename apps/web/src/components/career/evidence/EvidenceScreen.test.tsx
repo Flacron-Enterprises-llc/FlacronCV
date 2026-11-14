@@ -32,6 +32,11 @@ const sampleEvidence: CareerEvidence = {
   verifiedAt: null,
   verifierName: null,
   isPortfolioShared: true,
+  linkedFactIds: [],
+  confidential: false,
+  redactionNote: null,
+  redactionConfirmedAt: null,
+  verifications: [],
   createdAt: '2026-10-17T09:00:00.000Z',
   updatedAt: '2026-10-17T09:00:00.000Z',
 };
@@ -180,5 +185,46 @@ describe('EvidenceScreen (CV11)', () => {
     fireEvent.change(input, { target: { files: [file] } });
     expect(await screen.findByText(messages.career.evidence.file_error_too_large)).toBeDefined();
     expect(screen.queryByRole('button', { name: 'Download file' })).toBeNull();
+  });
+
+  it('explains what a label does not establish and shows the verification history', async () => {
+    const verified: CareerEvidence = {
+      ...sampleEvidence,
+      evidenceType: 'credential',
+      evidenceLabel: 'issuer_verified',
+      verifications: [
+        {
+          id: 'v1', label: 'issuer_verified', method: 'issuer_registry', checkedOn: '2026-11-10', scope: 'Certificate number',
+          issuerName: 'AWS', permissionEvidence: 'Consent 2026-11-09', expiresOn: null, revokedAt: null, revokedReason: null,
+          recordedBy: 'operator', createdAt: '2026-11-10T10:00:00Z', active: true,
+        },
+      ],
+    };
+    renderScreen(testApi({ evidence: vi.fn().mockResolvedValue({ items: [verified] }), facts: vi.fn().mockResolvedValue({ items: [], profileVersion: 0 }) }));
+    expect(await screen.findByText(messages.career.evidence.label_issuer_verified_limit)).toBeDefined();
+    expect(screen.getByText('Verification history (1 check)')).toBeDefined();
+    expect(screen.getByText('Covers: Certificate number')).toBeDefined();
+  });
+
+  it('refuses a javascript: link before sending it', async () => {
+    const createEvidence = vi.fn();
+    renderScreen(testApi({ evidence: vi.fn().mockResolvedValue({ items: [] }), facts: vi.fn().mockResolvedValue({ items: [], profileVersion: 0 }), createEvidence }));
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Add Evidence Item' }))[0]);
+    fireEvent.change((document.getElementById('evidence-title') as HTMLInputElement), { target: { value: 'Thing' } });
+    fireEvent.change(screen.getByLabelText(messages.career.evidence.field_attachment_url), { target: { value: 'javascript:alert(1)' } });
+    fireEvent.submit((document.getElementById('evidence-title') as HTMLInputElement).closest('form') as HTMLFormElement);
+    expect(await screen.findByText(messages.career.evidence.url_unsafe)).toBeDefined();
+    expect(createEvidence).not.toHaveBeenCalled();
+  });
+
+  it('asks for a redaction confirmation before sharing a confidential item', async () => {
+    const confidential: CareerEvidence = { ...sampleEvidence, isPortfolioShared: false, confidential: true };
+    const updateEvidence = vi.fn().mockResolvedValue({ ...confidential, isPortfolioShared: true, redactionConfirmedAt: '2026-11-14T10:00:00Z' });
+    renderScreen(testApi({ evidence: vi.fn().mockResolvedValue({ items: [confidential] }), facts: vi.fn().mockResolvedValue({ items: [], profileVersion: 0 }), updateEvidence }));
+    fireEvent.click(await screen.findByRole('button', { name: messages.career.evidence.share_start }));
+    expect(updateEvidence).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: messages.career.evidence.redaction_confirm_go }));
+    expect(updateEvidence).toHaveBeenCalledWith(confidential.id, { isPortfolioShared: true, redactionConfirmed: true });
   });
 });

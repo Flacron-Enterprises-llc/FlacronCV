@@ -74,3 +74,40 @@ export function useToggleChecklist(packId: string | undefined) {
     onSuccess: (pack) => writeBoth(pack),
   });
 }
+
+/** Retries the cover letter of a partial pack under the credit it already holds (no new credit). */
+export function useRetryActionPackLetter(packId: string | undefined) {
+  const queryClient = useQueryClient();
+  const uid = useUid();
+  return useMutation({
+    mutationFn: () => careerApi.retryActionPackComponent(packId as string, 'coverLetter'),
+    onSuccess: (paid) => {
+      queryClient.setQueryData(packKey(uid, paid.actionPack.id), paid.actionPack);
+      queryClient.setQueryData<ActionPackList>(listKey(uid), (current) =>
+        current ? { ...current, items: replacePack(current.items, paid.actionPack) } : current,
+      );
+    },
+    onSettled: () => {
+      // A final failure removes the pack server-side and returns its credit.
+      void queryClient.invalidateQueries({ queryKey: listKey(uid) });
+      void queryClient.invalidateQueries({ queryKey: ['career', uid, 'usage'] });
+    },
+  });
+}
+
+/** Cancels an unfinished pack (or deletes an expired one): the pack is removed and its held credit returned. */
+export function useCancelActionPack() {
+  const queryClient = useQueryClient();
+  const uid = useUid();
+  return useMutation({
+    mutationFn: (packId: string) => careerApi.cancelActionPack(packId),
+    onSuccess: (_result, packId) => {
+      queryClient.setQueryData<ActionPackList>(listKey(uid), (current) =>
+        current ? { ...current, items: current.items.filter((p) => p.id !== packId) } : current,
+      );
+      queryClient.removeQueries({ queryKey: packKey(uid, packId), exact: true });
+      void queryClient.invalidateQueries({ queryKey: listKey(uid), exact: true });
+      void queryClient.invalidateQueries({ queryKey: ['career', uid, 'usage'] });
+    },
+  });
+}

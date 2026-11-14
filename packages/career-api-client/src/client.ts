@@ -1,6 +1,8 @@
-import type { ActionPack, CareerPreferences, CreateActionPackInput, CreateSkillReportInput, FactValue, Locale, SkillGapReport } from '@flacroncv/career-shared';
+import type { ActionPack, ActionPackEdit, ActionPackSavedDocuments, CareerPreferences, CreateActionPackInput, CreateSkillReportInput, FactValue, Locale, SkillGapReport } from '@flacroncv/career-shared';
 import type {
   AiJob,
+  LearningEvidenceResult,
+  RubricCheckInput,
   ErrorBody,
   Fact,
   FactList,
@@ -22,9 +24,16 @@ import type {
   WritingDocument,
   WritingList,
   PaidWriting,
+  WritingContextInput,
   WritingType,
   OpportunityDetail,
   OpportunityItem,
+  OpportunitySearchQuery,
+  OpportunitySearchResult,
+  PasteOpportunityInput,
+  ReminderList,
+  SavedSearchInput,
+  TrackerReminderInput,
   PaidMatch,
   MatchResult,
   AlertList,
@@ -39,6 +48,8 @@ import type {
   InterviewStage,
   PaidInterview,
   StarStory,
+  StarStoryInput,
+  StartInterviewInput,
   VoiceList,
   VoiceRecordResult,
   VoiceSession,
@@ -60,6 +71,7 @@ import type {
   DeveloperStatus,
   BillingAccount,
   UsageSummary,
+  UsageTopUp,
   CareerAccessView,
   SavedEstimate,
   CheckoutResult,
@@ -93,6 +105,28 @@ import type {
   CreatePortfolioInput,
   UpdatePortfolioInput,
   PortfolioQr,
+  ScenarioOptionInput,
+  ScenarioLinks,
+  ScenarioList,
+  CredentialReminder,
+  AchievementInput,
+  CredentialInput,
+  MaintenanceAchievement,
+  MaintenancePromotionGoal,
+  MaintenanceCredential,
+  BusinessMemberships,
+  BusinessStaffRole,
+  BusinessInvitation,
+  BusinessCandidateView,
+  BusinessCandidateDetail,
+  BusinessQueueItem,
+  BusinessUsage,
+  BusinessReport,
+  ApiKeyEnvironment,
+  AdminEvidenceView,
+  AdminBusinessRow,
+  RecordVerificationInput,
+  ModeContext,
 } from './types';
 
 /**
@@ -188,6 +222,8 @@ export function createApiClient(options: ApiClientOptions) {
   }
 
   const id = (value: string) => encodeURIComponent(value);
+  /** Acts in a Business workspace where the caller is staff; omitted for the caller's own. */
+  const ws = (workspaceId?: string) => (workspaceId ? `?workspace=${encodeURIComponent(workspaceId)}` : '');
 
   return {
     session: (idToken: string, locale?: Locale) =>
@@ -242,7 +278,13 @@ export function createApiClient(options: ApiClientOptions) {
       request<PaidResume>('POST', `/resumes/${id(resumeId)}/tailor`, { body: { opportunityId }, idempotencyKey }),
     exportResume: (versionId: string, format: 'pdf' | 'docx') => binary(`/resume-versions/${id(versionId)}/export?format=${format}`),
     readability: (versionId: string) =>
-      request<{ versionId: string; label: string; issues: Array<{ code: string; section?: string; factId?: string }> }>(
+      request<{
+        versionId: string;
+        label: string;
+        issues: Array<{ code: string; section?: string; factId?: string }>;
+        /** Format checks (career.readability.format_*); older servers omit them. */
+        formatIssues?: Array<{ code: string; section?: string; factId?: string }>;
+      }>(
         'GET',
         `/resume-versions/${id(versionId)}/readability`,
       ),
@@ -250,7 +292,7 @@ export function createApiClient(options: ApiClientOptions) {
     writingDocuments: () => request<WritingList>('GET', '/writing'),
     writingDocument: (documentId: string) => request<WritingDocument>('GET', `/writing/${id(documentId)}`),
     createWriting: (
-      input: { type: WritingType; opportunityId: string | null; templateId?: string },
+      input: { type: WritingType; opportunityId: string | null; templateId?: string; context?: WritingContextInput },
       idempotencyKey: string,
     ) => request<PaidWriting>('POST', '/writing', { body: input, idempotencyKey }),
     updateWriting: (
@@ -260,18 +302,23 @@ export function createApiClient(options: ApiClientOptions) {
     exportWriting: (documentId: string, format: 'pdf' | 'docx' | 'txt') =>
       binary(`/writing/${id(documentId)}/export?format=${format}`),
 
-    opportunities: (query: { q?: string; category?: string; status?: string; radiusMiles?: number } = {}) => {
+    opportunities: (query: OpportunitySearchQuery = {}) => {
       const params = new URLSearchParams();
-      if (query.q) params.set('q', query.q);
-      if (query.category) params.set('category', query.category);
-      if (query.status) params.set('status', query.status);
-      if (query.radiusMiles !== undefined) params.set('radiusMiles', String(query.radiusMiles));
+      for (const [key, value] of Object.entries(query)) {
+        // Empty strings and undefined are "no filter"; false is a real value for includeExpired.
+        if (value === undefined || value === null || value === '') continue;
+        params.set(key, String(value));
+      }
       const qs = params.toString();
-      return request<{ items: OpportunityItem[] }>('GET', `/opportunities${qs.length > 0 ? `?${qs}` : ''}`);
+      return request<OpportunitySearchResult>('GET', `/opportunities${qs.length > 0 ? `?${qs}` : ''}`);
     },
     opportunity: (opportunityId: string) => request<OpportunityDetail>('GET', `/opportunities/${id(opportunityId)}`),
-    pasteOpportunity: (input: { text: string; sourceUrl?: string }) =>
-      request<OpportunityDetail>('POST', '/opportunities', { body: input }),
+    pasteOpportunity: (input: PasteOpportunityInput) => request<OpportunityDetail>('POST', '/opportunities', { body: input }),
+    savedOpportunities: () => request<{ items: OpportunityItem[] }>('GET', '/saved-opportunities'),
+    saveOpportunity: (opportunityId: string) =>
+      request<{ opportunityId: string; saved: true }>('PUT', `/saved-opportunities/${id(opportunityId)}`),
+    unsaveOpportunity: (opportunityId: string) =>
+      request<{ opportunityId: string; saved: false }>('DELETE', `/saved-opportunities/${id(opportunityId)}`),
     reportOpportunity: (opportunityId: string, input: ReportOpportunityInput) =>
       request<{ reportId: string; status: 'reported'; reviewStatus: 'pending'; reason: ReportOpportunityInput['reason'] }>(
         'POST',
@@ -295,15 +342,23 @@ export function createApiClient(options: ApiClientOptions) {
     alerts: () => request<AlertList>('GET', '/alerts'),
     updateAlertSettings: (patch: Partial<AlertSettings>) => request<AlertSettings>('PATCH', '/alert-settings', { body: patch }),
     savedSearches: () => request<{ items: SavedSearch[] }>('GET', '/saved-searches'),
-    createSavedSearch: (input: {
-      q?: string;
-      category?: string;
-      schedule?: SavedSearch['schedule'];
-      locationProfileId?: string;
-      radiusMiles?: number;
-    }) =>
+    markAlertRead: (alertId: string) => request<{ id: string; read: true }>('POST', `/alerts/${id(alertId)}/read`),
+    markAllAlertsRead: () => request<{ updated: number }>('POST', '/alerts/read-all'),
+    reminders: () => request<ReminderList>('GET', '/reminders'),
+    markReminderRead: (reminderId: string) => request<{ id: string; read: true }>('POST', `/reminders/${id(reminderId)}/read`),
+    syncTrackerReminders: (items: TrackerReminderInput[]) =>
+      request<{ created: number }>('POST', '/reminders/tracker-sync', { body: { items } }),
+    createSavedSearch: (input: SavedSearchInput) =>
       request<SavedSearch>('POST', '/saved-searches', { body: input }),
-    updateSavedSearch: (searchId: string, patch: { q?: string; paused?: boolean; schedule?: SavedSearch['schedule'] }) =>
+    updateSavedSearch: (
+      searchId: string,
+      patch: Omit<SavedSearchInput, 'category' | 'locationProfileId' | 'radiusMiles'> & {
+        paused?: boolean;
+        category?: string | null;
+        locationProfileId?: string | null;
+        radiusMiles?: number | null;
+      },
+    ) =>
       request<SavedSearch>('PATCH', `/saved-searches/${id(searchId)}`, { body: patch }),
     deleteSavedSearch: (searchId: string) => request<{ ok: true }>('DELETE', `/saved-searches/${id(searchId)}`),
     alertLocations: () => request<{ items: AlertLocation[] }>('GET', '/location-profiles'),
@@ -313,8 +368,10 @@ export function createApiClient(options: ApiClientOptions) {
       request<AlertLocation>('PATCH', `/location-profiles/${id(locationId)}`, { body: patch }),
     deleteAlertLocation: (locationId: string) => request<{ ok: true }>('DELETE', `/location-profiles/${id(locationId)}`),
     followedCompanies: () => request<{ items: FollowedCompany[] }>('GET', '/followed-companies'),
-    followCompany: (input: { name: string; sourceUrl?: string }) =>
+    followCompany: (input: { name: string; sourceUrl?: string; aliases?: string[]; roles?: string[]; locations?: string[] }) =>
       request<FollowedCompany>('POST', '/followed-companies', { body: input }),
+    updateFollowedCompany: (companyId: string, patch: { name?: string; aliases?: string[]; roles?: string[]; locations?: string[] }) =>
+      request<FollowedCompany>('PATCH', `/followed-companies/${id(companyId)}`, { body: patch }),
     unfollowCompany: (companyId: string) => request<{ ok: true }>('DELETE', `/followed-companies/${id(companyId)}`),
 
     applications: () => request<{ items: ApplicationItem[] }>('GET', '/applications'),
@@ -344,35 +401,56 @@ export function createApiClient(options: ApiClientOptions) {
 
     interviews: () => request<InterviewList>('GET', '/interviews/text'),
     interview: (sessionId: string) => request<InterviewSession>('GET', `/interviews/text/${id(sessionId)}`),
-    createInterview: (input: { opportunityId: string; stage: InterviewStage }, idempotencyKey: string) =>
+    createInterview: (input: StartInterviewInput, idempotencyKey: string) =>
       request<PaidInterview>('POST', '/interviews/text', { body: input, idempotencyKey }),
     answerInterview: (sessionId: string, answer: string) =>
       request<InterviewSession>('POST', `/interviews/text/${id(sessionId)}/answers`, { body: { answer } }),
     challengeInterview: (sessionId: string, answerId: string, note: string) =>
       request<InterviewSession>('POST', `/interviews/text/${id(sessionId)}/challenges`, { body: { answerId, note } }),
     starStories: () => request<{ items: StarStory[] }>('GET', '/star-stories'),
-    createStarStory: (input: { situation: string; task: string; action: string; result: string; factIds?: string[] }) =>
-      request<StarStory>('POST', '/star-stories', { body: input }),
+    createStarStory: (input: StarStoryInput) => request<StarStory>('POST', '/star-stories', { body: input }),
+    updateStarStory: (storyId: string, input: StarStoryInput) =>
+      request<StarStory>('PATCH', `/star-stories/${id(storyId)}`, { body: input }),
+    deleteStarStory: (storyId: string) => request<{ deleted: true }>('DELETE', `/star-stories/${id(storyId)}`),
 
     voiceInterviews: () => request<VoiceList>('GET', '/interviews/voice'),
     consentVoice: () => request<{ consent: true; version: string }>('POST', '/interviews/voice/consent'),
     /** Withdraws recording consent; new recordings need consent again. */
     withdrawVoiceConsent: () => request<{ consent: false }>('DELETE', '/interviews/voice/consent'),
-    startVoice: (input: { kind: 'practice' | 'negotiation'; opportunityId?: string; stage?: InterviewStage; offer?: string; salarySource?: string }) =>
-      request<VoiceSession>('POST', '/interviews/voice', { body: input }),
-    recordVoice: (
-      sessionId: string,
-      input: { durationSeconds: number; transcript: string },
-      idempotencyKey: string,
-    ) => request<VoiceRecordResult>('POST', `/interviews/voice/${id(sessionId)}/recording`, { body: input, idempotencyKey }),
+    /** A practice session needs a saved listing or a role; a negotiation needs the offer the person entered. */
+    startVoice: (input: {
+      kind: 'practice' | 'negotiation';
+      opportunityId?: string;
+      role?: string;
+      stage?: InterviewStage;
+      offer?: string;
+      salarySource?: string;
+    }) => request<VoiceSession>('POST', '/interviews/voice', { body: input }),
+    /**
+     * Uploads one recorded take (the MediaRecorder blob). The server measures
+     * its length from the file and spends those seconds; transcription, when
+     * a provider is connected, is included.
+     */
+    recordVoice: (sessionId: string, audio: Blob, idempotencyKey: string, language?: 'en' | 'fr') =>
+      request<VoiceRecordResult>('POST', `/interviews/voice/${id(sessionId)}/recording`, {
+        raw: { body: audio, contentType: audio.type || 'audio/webm', headers: language ? { 'X-Transcription-Language': language } : {} },
+        idempotencyKey,
+      }),
+    /** A five-minute link to play back the caller's own stored take. */
+    voiceAudioLink: (sessionId: string) =>
+      request<{ url: string; expiresAt: string; contentType: string }>('GET', `/interviews/voice/${id(sessionId)}/audio`),
     correctVoiceTranscript: (sessionId: string, transcript: string) =>
       request<VoiceSession>('PATCH', `/interviews/voice/${id(sessionId)}/transcript`, { body: { transcript } }),
     deleteVoiceAudio: (sessionId: string) => request<VoiceSession>('DELETE', `/interviews/voice/${id(sessionId)}/audio`),
 
-    createScenario: (
-      options: Array<{ name: string; costCents: number | null; months: number | null; destination: string; wageCents: number | null; source: 'user' | 'estimate' }>,
-      idempotencyKey: string,
-    ) => request<PaidScope<ScenarioResult>>('POST', '/scenarios', { body: { options }, idempotencyKey }),
+    createScenario: (options: ScenarioOptionInput[], idempotencyKey: string, links: ScenarioLinks = {}) =>
+      request<PaidScope<ScenarioResult>>('POST', '/scenarios', { body: { ...links, options }, idempotencyKey }),
+    scenarios: () => request<ScenarioList>('GET', '/scenarios'),
+    scenario: (scenarioId: string) => request<ScenarioResult>('GET', `/scenarios/${id(scenarioId)}`),
+    /** Editing assumptions recomputes from the person's values and is not charged. */
+    updateScenario: (scenarioId: string, patch: ScenarioLinks & { options?: ScenarioOptionInput[] }) =>
+      request<ScenarioResult>('PATCH', `/scenarios/${id(scenarioId)}`, { body: patch }),
+    deleteScenario: (scenarioId: string) => request<{ ok: true }>('DELETE', `/scenarios/${id(scenarioId)}`),
     learningLoop: () => request<LearningLoopView>('GET', '/learning-loop'),
     createForm: (site: string, idempotencyKey: string) =>
       request<PaidScope<FormSession>>('POST', '/forms', { body: { site }, idempotencyKey }),
@@ -384,21 +462,55 @@ export function createApiClient(options: ApiClientOptions) {
     transcribeVoice: (sessionId: string, input: { language: 'en' | 'fr'; mimeType?: string; byteLength?: number }) =>
       request<{ text: string; provider: string; model: string }>('POST', `/interviews/voice/${id(sessionId)}/transcription`, { body: input }),
     maintenance: () => request<MaintenanceView>('GET', '/maintenance'),
-    addAchievement: (title: string) => request<{ id: string; title: string }>('POST', '/maintenance/achievements', { body: { title } }),
-    addPromotionGoal: (desiredTitle: string) =>
-      request<{ id: string; desiredTitle: string }>('POST', '/maintenance/promotion-goals', { body: { desiredTitle } }),
-    addCredential: (name: string, expiresOn: string) =>
-      request<{ id: string; name: string; expiresOn: string; due: boolean }>('POST', '/maintenance/credentials', { body: { name, expiresOn } }),
+    credentialReminders: () => request<{ items: CredentialReminder[] }>('GET', '/maintenance/reminders'),
+    addAchievement: (title: string, more: AchievementInput = {}) =>
+      request<MaintenanceAchievement>('POST', '/maintenance/achievements', { body: { ...more, title } }),
+    updateAchievement: (achievementId: string, patch: AchievementInput) =>
+      request<MaintenanceAchievement>('PATCH', `/maintenance/achievements/${id(achievementId)}`, { body: patch }),
+    deleteAchievement: (achievementId: string) => request<{ ok: true }>('DELETE', `/maintenance/achievements/${id(achievementId)}`),
+    addPromotionGoal: (desiredTitle: string, targetDate?: string | null) =>
+      request<MaintenancePromotionGoal>('POST', '/maintenance/promotion-goals', { body: targetDate === undefined ? { desiredTitle } : { desiredTitle, targetDate } }),
+    updatePromotionGoal: (goalId: string, patch: { desiredTitle?: string; targetDate?: string | null; status?: 'open' | 'dropped' }) =>
+      request<MaintenancePromotionGoal>('PATCH', `/maintenance/promotion-goals/${id(goalId)}`, { body: patch }),
+    deletePromotionGoal: (goalId: string) => request<{ ok: true }>('DELETE', `/maintenance/promotion-goals/${id(goalId)}`),
+    /** Only after the person confirms: updates an experience fact's title or adds a confirmed one. */
+    confirmPromotion: (goalId: string, input: { experienceFactId?: string | null; company?: string | null; startDate?: string | null }) =>
+      request<MaintenancePromotionGoal>('POST', `/maintenance/promotion-goals/${id(goalId)}/confirm`, { body: { ...input, confirmed: true } }),
+    addCredential: (name: string, expiresOn: string, more: CredentialInput = {}) =>
+      request<MaintenanceCredential>('POST', '/maintenance/credentials', { body: { ...more, name, expiresOn } }),
+    updateCredential: (credentialId: string, patch: CredentialInput) =>
+      request<MaintenanceCredential>('PATCH', `/maintenance/credentials/${id(credentialId)}`, { body: patch }),
+    deleteCredential: (credentialId: string) => request<{ ok: true }>('DELETE', `/maintenance/credentials/${id(credentialId)}`),
     mapOpportunities: () => request<MapList>('GET', '/maps'),
     startMap: (idempotencyKey: string) => request<PaidScope<MapSessionResult>>('POST', '/maps', { idempotencyKey }),
-    addStaff: (authUserId: string, role: 'counselor' | 'manager') =>
-      request<{ id: string }>('POST', '/business/staff', { body: { authUserId, role } }),
-    inviteCandidate: (email: string, consent: boolean) =>
-      request<{ id: string }>('POST', '/business/candidates', { body: { email, consent } }),
-    assignCounselor: (staffId: string, candidateId: string) =>
-      request<{ ok: true }>('POST', '/business/assignments', { body: { staffId, candidateId } }),
-    businessOverview: () => request<BusinessOverview>('GET', '/business'),
-    businessCandidate: (candidateId: string) => request<{ id: string; email: string }>('GET', `/business/candidates/${id(candidateId)}`),
+    businessMemberships: () => request<BusinessMemberships>('GET', '/business/memberships'),
+    businessOverview: (workspaceId?: string) => request<BusinessOverview>('GET', `/business${ws(workspaceId)}`),
+    inviteStaff: (email: string, role: BusinessStaffRole, workspaceId?: string) =>
+      request<BusinessInvitation>('POST', `/business/staff${ws(workspaceId)}`, { body: { email, role } }),
+    /** Revokes a pending invitation or removes a member at once. */
+    removeStaff: (staffId: string, workspaceId?: string) => request<{ ok: true }>('DELETE', `/business/staff/${id(staffId)}${ws(workspaceId)}`),
+    inviteCandidate: (email: string, consent: boolean, workspaceId?: string) =>
+      request<BusinessInvitation>('POST', `/business/candidates${ws(workspaceId)}`, { body: { email, consent } }),
+    revokeCandidateInvite: (candidateId: string, workspaceId?: string) =>
+      request<{ ok: true }>('DELETE', `/business/candidates/${id(candidateId)}/invitation${ws(workspaceId)}`),
+    setCandidateArchived: (candidateId: string, archived: boolean, workspaceId?: string) =>
+      request<BusinessCandidateView>('PUT', `/business/candidates/${id(candidateId)}/archived${ws(workspaceId)}`, { body: { archived } }),
+    assignCounselor: (staffId: string, candidateId: string, workspaceId?: string, assigned = true) =>
+      request<{ ok: true }>('POST', `/business/assignments${ws(workspaceId)}`, { body: { staffId, candidateId, assigned } }),
+    businessCandidate: (candidateId: string, workspaceId?: string) =>
+      request<BusinessCandidateDetail>('GET', `/business/candidates/${id(candidateId)}${ws(workspaceId)}`),
+    acceptBusinessInvitation: (token: string) =>
+      request<{ kind: 'staff' | 'candidate'; workspaceId: string }>('POST', '/business/invitations/accept', { body: { token } }),
+    setBusinessShare: (candidateId: string, shareProfile: boolean) =>
+      request<{ shareProfile: boolean }>('PUT', `/business/my/${id(candidateId)}/share`, { body: { shareProfile } }),
+    leaveBusiness: (candidateId: string) => request<{ ok: true }>('DELETE', `/business/my/${id(candidateId)}`),
+    businessQueue: (workspaceId?: string) => request<{ items: BusinessQueueItem[] }>('GET', `/business/queue${ws(workspaceId)}`),
+    addBusinessQueueItem: (input: { title: string; url?: string | null; note?: string; candidateId?: string | null }, workspaceId?: string) =>
+      request<BusinessQueueItem>('POST', `/business/queue${ws(workspaceId)}`, { body: input }),
+    removeBusinessQueueItem: (itemId: string, workspaceId?: string) =>
+      request<{ ok: true }>('DELETE', `/business/queue/${id(itemId)}${ws(workspaceId)}`),
+    businessUsage: (workspaceId?: string) => request<BusinessUsage>('GET', `/business/usage${ws(workspaceId)}`),
+    businessReport: (workspaceId?: string) => request<BusinessReport>('GET', `/business/report${ws(workspaceId)}`),
     humanServices: () => request<HumanServiceList>('GET', '/human-services'),
     bookHumanService: (providerId: string) => request<{ ok: false }>('POST', `/human-services/${id(providerId)}/bookings`),
     recruitingOptIn: () => request<{ discoverable: boolean }>('GET', '/recruiting/opt-in'),
@@ -407,7 +519,8 @@ export function createApiClient(options: ApiClientOptions) {
     recruitingSearch: () => request<RecruitingSearch>('GET', '/recruiting/search'),
     employerCheckout: () => request<{ ok: false }>('POST', '/recruiting/checkout'),
     developerStatus: () => request<DeveloperStatus>('GET', '/developer'),
-    createDeveloperKey: () => request<DeveloperKey>('POST', '/developer/keys'),
+    createDeveloperKey: (environment: ApiKeyEnvironment = 'live') => request<DeveloperKey>('POST', '/developer/keys', { body: { environment } }),
+    revokeDeveloperKey: (keyId: string) => request<{ ok: true }>('DELETE', `/developer/keys/${id(keyId)}`),
     consumeDeveloperRead: (token: string, workspaceId: string) =>
       request<{ readsRemaining: number }>('POST', '/developer/reads', { body: { token, workspaceId } }),
     setWhiteLabel: (brandName: string, attribution: string) =>
@@ -436,6 +549,23 @@ export function createApiClient(options: ApiClientOptions) {
       request<PaidActionPack>('POST', '/action-packs', { body: input, idempotencyKey }),
     updateActionPackChecklist: (actionPackId: string, checklistId: string, done: boolean) =>
       request<ActionPack>('PATCH', `/action-packs/${id(actionPackId)}/checklist/${id(checklistId)}`, { body: { done } }),
+    /** Edits any component; never charges. */
+    updateActionPack: (actionPackId: string, edit: ActionPackEdit) =>
+      request<ActionPack>('PATCH', `/action-packs/${id(actionPackId)}`, { body: edit }),
+    /** Retries a failed component under the pack's existing reservation (no new credit). */
+    retryActionPackComponent: (actionPackId: string, component: 'coverLetter') =>
+      request<PaidActionPack>('POST', `/action-packs/${id(actionPackId)}/retry`, { body: { component } }),
+    /** Gives up on an unfinished pack; its held credit is returned. */
+    cancelActionPack: (actionPackId: string) =>
+      request<{ released: boolean }>('DELETE', `/action-packs/${id(actionPackId)}`),
+    saveActionPackDocuments: (actionPackId: string, components?: Array<'tailoredResume' | 'coverLetter'>) =>
+      request<{ actionPack: ActionPack; savedDocuments: ActionPackSavedDocuments }>(
+        'POST',
+        `/action-packs/${id(actionPackId)}/documents`,
+        { body: components ? { components } : {} },
+      ),
+    exportActionPack: (actionPackId: string, component: 'tailoredResume' | 'coverLetter', format: 'pdf' | 'docx') =>
+      binary(`/action-packs/${id(actionPackId)}/export?component=${component}&format=${format}`),
 
     skillReports: () => request<SkillReportList>('GET', '/learning/skill-reports'),
     getSkillReport: (reportId: string) => request<SkillGapReport>('GET', `/learning/skill-reports/${id(reportId)}`),
@@ -445,11 +575,21 @@ export function createApiClient(options: ApiClientOptions) {
       request<SkillGapReport>('PATCH', `/learning/skill-reports/${id(reportId)}/milestones/${id(milestoneId)}`, {
         body: { completed },
       }),
-    convertMilestoneToEvidence: (reportId: string, milestoneId: string) =>
-      request<{ evidenceId: string }>(
+    /** Free. Needs the milestone ticked; a repeat returns the existing vault item. Ownership text is the person's own. */
+    convertMilestoneToEvidence: (reportId: string, milestoneId: string, ownershipStatement?: string) =>
+      request<LearningEvidenceResult>(
         'POST',
         `/learning/skill-reports/${id(reportId)}/milestones/${id(milestoneId)}/evidence`,
+        { body: ownershipStatement === undefined ? {} : { ownershipStatement } },
       ),
+    setProjectOwnership: (reportId: string, ownershipStatement: string) =>
+      request<SkillGapReport>('PUT', `/learning/skill-reports/${id(reportId)}/project-brief/ownership`, {
+        body: { ownershipStatement },
+      }),
+    addProjectToEvidence: (reportId: string) =>
+      request<LearningEvidenceResult>('POST', `/learning/skill-reports/${id(reportId)}/project-brief/evidence`),
+    saveRubricCheck: (reportId: string, input: RubricCheckInput) =>
+      request<SkillGapReport>('PUT', `/learning/skill-reports/${id(reportId)}/project-brief/rubric-check`, { body: input }),
 
     locations: () => request<LocationProfileList>('GET', '/career-modes/locations'),
     location: (locationId: string) => request<LocationProfile>('GET', `/career-modes/locations/${id(locationId)}`),
@@ -459,6 +599,7 @@ export function createApiClient(options: ApiClientOptions) {
       request<LocationProfile>('PATCH', `/career-modes/locations/${id(locationId)}`, { body: patch }),
     deleteLocation: (locationId: string) => request<{ success: true }>('DELETE', `/career-modes/locations/${id(locationId)}`),
     specialistMode: () => request<CandidateSpecialistMode>('GET', '/career-modes/specialist-mode'),
+    modeContext: () => request<ModeContext>('GET', '/career-modes/context'),
     setSpecialistMode: (input: UpdateSpecialistModeInput) =>
       request<CandidateSpecialistMode>('PUT', '/career-modes/specialist-mode', { body: input }),
 
@@ -485,8 +626,15 @@ export function createApiClient(options: ApiClientOptions) {
     /** V1 integration: creates no career rows. */
     access: () => request<CareerAccessView>('GET', '/access'),
     usage: () => request<UsageSummary>('GET', '/usage'),
+    /** Hides 80/95/100 percent notices once shown. Without ids: every unseen notice of this month. */
+    markUsageWarningsSeen: (ids?: string[]) =>
+      request<{ marked: number }>('POST', '/usage/warnings/seen', { body: ids ? { ids } : {} }),
+    /** Monthly ceiling for automatic top-ups. `null` removes it and turns top-ups off. Charges nothing. */
     setSpendingCap: (spendingCapCents: number | null) =>
-      request<BillingAccount>('PATCH', '/billing/spending-cap', { body: { spendingCapCents } }),
+      request<UsageTopUp>('PATCH', '/billing/spending-cap', { body: { spendingCapCents } }),
+    /** Opt in or out of automatic top-ups. Turning on needs `consent: true` from the person and a spending cap. */
+    setTopUp: (input: { enabled: boolean; consent?: boolean; addons?: Partial<Record<string, string>> }) =>
+      request<UsageTopUp>('PATCH', '/billing/top-up', { body: input }),
     createEstimate: (input: { planId: string; interval: 'monthly' | 'annual' }) =>
       request<SavedEstimate>('POST', '/estimates', { body: input }),
     checkout: (
@@ -507,6 +655,14 @@ export function createApiClient(options: ApiClientOptions) {
       request<{ items: AdminFlagView[] }>('PATCH', '/admin/flags', { body: { feature, enabled } }),
     adminHealth: () => request<{ providers: AdminProviderHealth[] }>('GET', '/admin/health'),
     adminAudit: () => request<{ items: AdminAuditEntry[] }>('GET', '/admin/audit'),
+    adminEvidence: (evidenceId: string) => request<AdminEvidenceView>('GET', `/admin/evidence/${id(evidenceId)}`),
+    recordEvidenceVerification: (evidenceId: string, input: RecordVerificationInput) =>
+      request<AdminEvidenceView>('POST', `/admin/evidence/${id(evidenceId)}/verifications`, { body: input }),
+    revokeEvidenceVerification: (verificationId: string, reason: string) =>
+      request<AdminEvidenceView>('POST', `/admin/evidence/verifications/${id(verificationId)}/revoke`, { body: { reason } }),
+    adminBusiness: () => request<{ items: AdminBusinessRow[] }>('GET', '/admin/business'),
+    adminRecruitingOptIns: () =>
+      request<{ count: number; items: Array<{ candidateAuthUserId: string; updatedAt: string }> }>('GET', '/admin/recruiting/opt-ins'),
     adminModerationQueue: (query: { status?: ModerationStatus } = {}) => {
       const qs = query.status ? `?status=${encodeURIComponent(query.status)}` : '';
       return request<{ items: ModerationQueueItem[] }>('GET', `/admin/moderation/opportunities${qs}`);

@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import en from '../../../public/locales/en/common.json';
 import Sidebar from './Sidebar';
 
-let access: { isSuccess: boolean; data?: { enabled: boolean } } = { isSuccess: false };
+let access: { isSuccess: boolean; data?: { enabled: boolean; reason?: string } } = { isSuccess: false };
 let switchOn = true;
 let pathname = '/dashboard';
 vi.mock('@/components/career/CareerServices', () => ({
@@ -37,29 +37,35 @@ afterEach(() => {
 });
 
 describe('dashboard sidebar: career entry points', () => {
-  it('offers "Add career tools" to someone without career access when the build switch is on', () => {
+  it('offers a plan upgrade (billing, not a separate add-on) to a plan outside the career map', () => {
     access = { isSuccess: true, data: { enabled: false } };
     renderSidebar();
-    expect(screen.getByRole('link', { name: 'Add career tools' }).getAttribute('href')).toBe('/career/plans');
+    expect(screen.getByRole('link', { name: 'Upgrade for career tools' }).getAttribute('href')).toBe('/settings/billing#change-plan');
     expect(screen.queryByRole('link', { name: 'Career Tools' })).toBeNull();
+  });
+
+  it('does not upsell when the account itself is missing or inactive', () => {
+    access = { isSuccess: true, data: { enabled: false, reason: 'v1_account_inactive' } };
+    renderSidebar();
+    expect(screen.queryByRole('link', { name: 'Upgrade for career tools' })).toBeNull();
   });
 
   it('shows the career area instead once access is enabled', () => {
     access = { isSuccess: true, data: { enabled: true } };
     renderSidebar();
     expect(screen.getByRole('link', { name: en.dashboard.career_tools }).getAttribute('href')).toBe('/career');
-    expect(screen.queryByRole('link', { name: 'Add career tools' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Upgrade for career tools' })).toBeNull();
   });
 
   it('shows neither while the access check is pending or failed, nor with the switch off', () => {
     access = { isSuccess: false };
     const { unmount } = renderSidebar();
-    expect(screen.queryByRole('link', { name: 'Add career tools' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Upgrade for career tools' })).toBeNull();
     unmount();
     switchOn = false;
     access = { isSuccess: true, data: { enabled: false } };
     renderSidebar();
-    expect(screen.queryByRole('link', { name: 'Add career tools' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Upgrade for career tools' })).toBeNull();
   });
 });
 

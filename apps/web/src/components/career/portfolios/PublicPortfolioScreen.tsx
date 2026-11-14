@@ -139,6 +139,12 @@ function PortfolioPage({ page }: { page: PublicPortfolioView }) {
                     {item.description ? (
                       <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-career-ink">{item.description}</p>
                     ) : null}
+                    {item.caseStudy?.trim() ? (
+                      <div className="mt-4 border-s-2 border-career-line ps-4">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-career-muted">{t('public_case_study')}</p>
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-career-ink">{item.caseStudy}</p>
+                      </div>
+                    ) : null}
                     {item.linkedSkills.length > 0 ? (
                       <div className="mt-4">
                         <p className="text-xs font-semibold uppercase tracking-wide text-career-muted">
@@ -159,6 +165,22 @@ function PortfolioPage({ page }: { page: PublicPortfolioView }) {
             </ul>
           )}
         </section>
+
+        {/* Skills across the page, when the owner left that section on (the server also omits it). */}
+        {page.sections?.skills !== false && (page.skills?.length ?? 0) > 0 ? (
+          <section className="mt-10" aria-labelledby="portfolio-skills" data-testid="portfolio-skills">
+            <h2 id="portfolio-skills" className="text-xl font-semibold text-career-ink">
+              {t('public_skills')}
+            </h2>
+            <ul className="mt-4 flex flex-wrap gap-2">
+              {page.skills.map((skill) => (
+                <li key={skill} className="rounded-full border border-career-line bg-career-surface px-3 py-1 text-sm text-career-ink">
+                  {skill}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         <footer className="mt-12 border-t border-career-line pt-6 text-center text-sm text-career-muted">
           {t.rich('public_made_with', {

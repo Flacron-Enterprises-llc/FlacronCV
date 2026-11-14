@@ -2,15 +2,17 @@
 
 import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
+import { ALLOWANCES, PLANS } from '@flacroncv/career-shared';
 import { useRouter } from '@/i18n/routing';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { Sparkles, Check, Crown } from 'lucide-react';
-import { PLAN_CONFIGS, SubscriptionPlan } from '@flacroncv/shared-types';
+import { SubscriptionPlan } from '@flacroncv/shared-types';
 import { useAuth } from '@/providers/AuthProvider';
-import { localizedPlanFeatures } from '@/lib/plan-features';
 import { track } from '@/lib/analytics';
 import { fcgeUpgradeClicked } from '@/lib/fcge';
+import { TEMPLATE_TIER, billingPlanHref, nextPlanUp } from '@/components/pricing/plan-catalog';
+import { usePlanFormat } from '@/components/pricing/plan-format';
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -29,7 +31,9 @@ const REASON_ICON = {
 export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }: UpgradeModalProps) {
   const router = useRouter();
   const t = useTranslations('upgrade_modal');
-  const tPricing = useTranslations('pricing');
+  const tPlans = useTranslations('career.plans');
+  const tCatalog = useTranslations('plan_catalog');
+  const fmt = usePlanFormat();
   const { user, degraded, placeholderAccount } = useAuth();
   const exhaustedTracked = useRef(false);
 
@@ -45,81 +49,83 @@ export default function UpgradeModal({ isOpen, onClose, reason = 'ai_credits' }:
 
   const Icon = REASON_ICON[reason];
 
-  // Stored plan, not resolveEffectivePlan — a past_due Pro user must still see
-  // the paid copy (credits reset on the UTC calendar 1st). The placeholder account
-  // always claims Free; treating that as real would tell a paying customer
-  // their allowance never renews whenever the API blips.
+  // Stored plan, not resolveEffectivePlan — a past_due paid user must still see
+  // the paid copy. The placeholder account always claims Free; treating that as
+  // real would tell a paying customer their allowance never renews whenever the
+  // API blips.
   const storedPlan = user?.subscription?.plan;
   const isStoredFree =
     Boolean(user) && !degraded && !placeholderAccount && (storedPlan === SubscriptionPlan.FREE || !storedPlan);
   const copyKey =
     isStoredFree && (reason === 'ai_credits' || reason === 'exports') ? `${reason}_free` : reason;
 
-  // Today this modal always sells Pro. Keep one binding so a later
-  // Free→Enterprise (or Pro→Enterprise) transition cannot update the
-  // benefit list and leave the template sentence advertising a different plan.
-  const offeredPlan = SubscriptionPlan.PRO;
-  const offeredConfig = PLAN_CONFIGS[offeredPlan];
-  const templateReach = t(`template_reach.${offeredConfig.limits.templates}`);
+  // The next of the five plans above the customer's (legacy plans count as
+  // their equivalent tier). Business has nothing above it: Contact Sales.
+  const offeredPlan = nextPlanUp(isStoredFree ? 'free' : storedPlan) ?? null;
+  const templateReach = t(`template_reach.${offeredPlan ? TEMPLATE_TIER[offeredPlan] : 'enterprise'}`);
 
-  // The benefit list is read from PLAN_CONFIGS, not hand-written.
-  //
-  // It previously claimed "Unlimited AI Credits" and "Unlimited CVs & Cover
-  // Letters" for Pro — Pro actually grants 100 credits and 10 CVs. The paywall
-  // was promising more than the plan delivers at the exact moment the user
-  // decides to pay. Reading the real config makes that impossible, and the
-  // advertised-vs-enforced test in the API suite keeps the config itself honest.
-  const offeredFeatures = localizedPlanFeatures(
-    offeredPlan,
-    tPricing,
-    t(`template_reach.${offeredConfig.limits.templates}`),
-  );
+  // Benefits come from the catalog, never hand-written, so the paywall cannot
+  // promise more than the plan delivers.
+  const offeredFeatures = offeredPlan
+    ? [
+        tPlans('benefit.documentCredits', { count: ALLOWANCES[offeredPlan].documentCredits ?? 0 }),
+        tPlans('benefit.resumeAnalyses', { count: ALLOWANCES[offeredPlan].resumeAnalyses ?? 0 }),
+        tCatalog('benefits.resume_versions', { count: ALLOWANCES[offeredPlan].resumeVersions ?? 0, amount: fmt.count(ALLOWANCES[offeredPlan].resumeVersions ?? 0) }),
+        templateReach,
+        ...(ALLOWANCES[offeredPlan].docxExport ? [tCatalog('benefits.docx')] : []),
+        ...(ALLOWANCES[offeredPlan].removeExportBranding ? [tCatalog('benefits.no_branding')] : []),
+        tCatalog('benefits.pdf_unlimited'),
+      ]
+    : [];
 
   const handleUpgrade = () => {
-    fcgeUpgradeClicked(SubscriptionPlan.PRO);
     onClose();
-    router.push('/settings/billing');
+    if (!offeredPlan) {
+      router.push('/pricing#contact-sales');
+      return;
+    }
+    fcgeUpgradeClicked(offeredPlan);
+    router.push(billingPlanHref(offeredPlan, 'monthly'));
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t(`reasons.${copyKey}.title`)} size="md">
       <div className="space-y-6">
-        {/* Icon */}
         <div className="flex justify-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 dark:bg-brand-900/30">
             <Icon className="h-8 w-8 text-brand-600 dark:text-brand-400" />
           </div>
         </div>
 
-        {/* Description */}
         <p className="text-center text-sm text-stone-600 dark:text-stone-400">
           {t(`reasons.${copyKey}.description`, { reach: templateReach })}
         </p>
 
-        {/* What the offered plan actually includes */}
-        <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/50">
-          <h4 className="mb-3 font-semibold text-stone-900 dark:text-white">
-            {t('plan_includes', { plan: offeredConfig.name })}
-          </h4>
-          <ul className="space-y-2 text-sm text-stone-600 dark:text-stone-400">
-            {offeredFeatures.map((feature) => (
-              <li key={feature} className="flex items-start gap-2">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                <span className="min-w-0">{feature}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {offeredPlan ? (
+          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/50">
+            <h4 className="font-semibold text-stone-900 dark:text-white">
+              {t('plan_includes', { plan: fmt.planName(offeredPlan) })}
+            </h4>
+            <p className="mb-3 mt-0.5 text-sm tabular-nums text-stone-600 dark:text-stone-400">
+              {fmt.usd(PLANS[offeredPlan].monthlyCents)}
+              {tCatalog('per_month')}
+            </p>
+            <ul className="space-y-2 text-sm text-stone-600 dark:text-stone-400">
+              {offeredFeatures.map((feature) => (
+                <li key={feature} className="flex items-start gap-2">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                  <span className="min-w-0">{feature}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p className="text-center text-sm text-stone-600 dark:text-stone-400">{tCatalog('upgrade_top_plan')}</p>
+        )}
 
-        {/* Actions */}
         <div className="flex flex-col gap-3 sm:flex-row-reverse">
-          <Button
-            variant="primary"
-            onClick={handleUpgrade}
-            icon={<Crown className="h-4 w-4" />}
-            className="flex-1"
-          >
-            {t('upgrade_now')}
+          <Button variant="primary" onClick={handleUpgrade} icon={<Crown className="h-4 w-4" />} className="flex-1">
+            {offeredPlan ? t('see_plan', { plan: fmt.planName(offeredPlan) }) : tCatalog('contact_sales')}
           </Button>
           <Button variant="secondary" onClick={onClose} className="flex-1">
             {t('maybe_later')}

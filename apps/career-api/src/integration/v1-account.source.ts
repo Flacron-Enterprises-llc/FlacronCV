@@ -2,7 +2,7 @@ import { App, cert, deleteApp, getApps, initializeApp } from 'firebase-admin/app
 import { Firestore, getFirestore } from 'firebase-admin/firestore';
 import { resolveEffectivePlan } from '@flacroncv/shared-types';
 import { careerStatusFromV1, deployEnv, isV1Plan } from '@flacroncv/career-server';
-import type { CareerPurchase, V1AccountSnapshot, V1AccountSource } from '@flacroncv/career-server';
+import type { CareerPurchase, V1AccountSnapshot, V1AccountSource, V1CapacitySubscription, V1PackPurchase } from '@flacroncv/career-server';
 import type { ApplicationStatus } from '@flacroncv/career-shared';
 
 /** Upper bound on tracker rows read for analytics; V1's own export caps collections at 500. */
@@ -27,11 +27,26 @@ export class FirestoreV1AccountSource implements V1AccountSource {
     if (!snapshot.exists) return null;
     const data = snapshot.data() ?? {};
     const plan = resolveEffectivePlan(data.subscription);
+    const v1Plan = isV1Plan(plan) ? plan : 'free';
+    const [packs, capacity] = await Promise.all([
+      this.firestore.collection(V1_PACK_PURCHASES).where('uid', '==', uid).limit(MAX_PURCHASE_ROWS).get(),
+      this.firestore.collection(V1_CAPACITY_SUBSCRIPTIONS).where('uid', '==', uid).limit(MAX_PURCHASE_ROWS).get(),
+    ]);
+    const sub = (data.subscription ?? {}) as Record<string, unknown>;
     return {
       uid,
-      plan: isV1Plan(plan) ? plan : 'free',
+      plan: v1Plan,
       active: data.isActive !== false && !data.deletedAt,
       careerPurchase: careerPurchaseOf(data.careerSubscription),
+      billing: {
+        accountCreatedAt: dateOf(data.createdAt),
+        // Only a paid effective plan has a billing anniversary; a stale period on a Free label is ignored.
+        periodStart: v1Plan === 'free' ? null : dateOf(sub.currentPeriodStart),
+        periodEnd: v1Plan === 'free' ? null : dateOf(sub.currentPeriodEnd),
+        status: typeof sub.status === 'string' ? sub.status : null,
+        packPurchases: packs.docs.map((doc) => packPurchaseOf(doc.id, doc.data())).filter((p): p is V1PackPurchase => p !== null),
+        capacity: capacity.docs.map((doc) => capacityOf(doc.data())).filter((c): c is V1CapacitySubscription => c !== null),
+      },
     };
   }
 
@@ -46,6 +61,44 @@ export class FirestoreV1AccountSource implements V1AccountSource {
     }
     return statuses;
   }
+}
+
+/**
+ * Written only by V1's Stripe webhook handler (`CareerBillingService`):
+ * one document per paid pack (id = Checkout Session or PaymentIntent id) and
+ * one per capacity add-on subscription (id = Stripe subscription id).
+ */
+export const V1_PACK_PURCHASES = 'career_pack_purchases';
+export const V1_CAPACITY_SUBSCRIPTIONS = 'career_capacity_subscriptions';
+const MAX_PURCHASE_ROWS = 500;
+
+function dateOf(value: unknown): Date | null {
+  const v = value as { toDate?: () => Date } | Date | string | null | undefined;
+  const date =
+    v instanceof Date ? v : v && typeof v === 'object' && typeof v.toDate === 'function' ? v.toDate() : typeof v === 'string' ? new Date(v) : null;
+  return date && !Number.isNaN(date.getTime()) ? date : null;
+}
+
+/** A malformed record is skipped, never guessed into a grant. */
+export function packPurchaseOf(id: string, raw: Record<string, unknown>): V1PackPurchase | null {
+  const purchasedAt = dateOf(raw.purchasedAt);
+  const status = raw.status;
+  if (typeof raw.addonId !== 'string' || !purchasedAt || (status !== 'paid' && status !== 'refunded' && status !== 'disputed')) return null;
+  return {
+    purchaseRef: id,
+    addonId: raw.addonId,
+    purchasedAt,
+    amountCents: typeof raw.amountCents === 'number' ? raw.amountCents : null,
+    currency: typeof raw.currency === 'string' ? raw.currency : null,
+    status,
+    autoTopup: raw.autoTopup === true,
+  };
+}
+
+export function capacityOf(raw: Record<string, unknown>): V1CapacitySubscription | null {
+  if (typeof raw.addonId !== 'string' || typeof raw.status !== 'string') return null;
+  const quantity = typeof raw.quantity === 'number' && Number.isInteger(raw.quantity) ? raw.quantity : 0;
+  return { addonId: raw.addonId, quantity, status: raw.status, currentPeriodEnd: dateOf(raw.currentPeriodEnd) };
 }
 
 /** `users/{uid}.careerSubscription` as V1's webhook handler (or the labelled local seed) wrote it. */

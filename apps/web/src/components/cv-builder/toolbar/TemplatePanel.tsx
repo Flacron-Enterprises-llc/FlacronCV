@@ -76,7 +76,7 @@ export default function TemplatePanel() {
   const router = useRouter();
   const t = useTranslations('template_picker');
   const tc = useTranslations('common');
-  // Plan names as the user sees them elsewhere ("Pro", "Enterprise"), not the
+  // The lowest plan that unlocks each tier ("Starter", "Career Pro"), not the
   // raw tier ids ("pro") the tooltip used to print.
   const tierName = (tier: string) =>
     tier === 'enterprise' ? tc('enterprise') : tier === 'free' ? tc('free') : tc('pro');

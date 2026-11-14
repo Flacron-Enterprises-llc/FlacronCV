@@ -5,18 +5,24 @@ import {
   buildSkillReportInput,
   clampTimeBudget,
   EMPTY_SKILL_REPORT_FORM,
+  evidenceErrorMessage,
+  gapBadge,
+  hasEssentialCredential,
   isOpenableUrl,
   milestoneDone,
   milestoneEffort,
+  milestoneEvidenceId,
+  planCostLine,
   reportMeta,
   skillReportErrorMessage,
   skillReportSignature,
   withMilestone,
+  withMilestoneEvidence,
 } from './learning';
 import { PROVIDER_UNAVAILABLE_MESSAGE } from './action-packs';
 
 function report(completed: string[] = []): SkillGapReport {
-  const m = (id: string) => ({ id, title: id, description: '', targetSkill: 'SQL', estimatedHours: 4, estimatedCostCents: 0, resources: [] });
+  const m = (id: string) => ({ id, title: id, description: '', targetSkill: 'SQL', estimatedHours: 4, estimatedCostCents: 0 as number | null, costAsOf: null as string | null, resources: [] });
   return {
     id: 'r1',
     targetRole: 'Analyst',
@@ -78,14 +84,63 @@ describe('progress', () => {
 describe('formatting', () => {
   it('describes the report and the milestone effort', () => {
     expect(reportMeta({ targetIndustry: 'Finance', timeBudgetHoursPerWeek: 6, financialBudgetCents: 25000 })).toBe('Finance · 6 hours/week · $250 budget');
-    expect(milestoneEffort({ estimatedHours: 6, estimatedCostCents: 0 })).toBe('~6h · Free');
-    expect(milestoneEffort({ estimatedHours: 6, estimatedCostCents: 4000 })).toBe('~6h · about $40');
+    expect(milestoneEffort({ estimatedHours: 6, estimatedCostCents: 0, costAsOf: '2026-05' })).toBe('~6h · Free (stated 2026-05; check with the provider)');
+    expect(milestoneEffort({ estimatedHours: 6, estimatedCostCents: 4000, costAsOf: '2026-05-01' })).toBe(
+      '~6h · about $40 (stated 2026-05-01; check with the provider)',
+    );
+  });
+
+  it('never shows an unknown cost as free', () => {
+    expect(milestoneEffort({ estimatedHours: 6, estimatedCostCents: null })).toBe('~6h · Cost unknown');
+    expect(milestoneEffort({ estimatedHours: 6, estimatedCostCents: null, costAsOf: null })).toBe('~6h · Cost unknown');
+    // A cost without the date it was stated is not a known cost either.
+    expect(milestoneEffort({ estimatedHours: 6, estimatedCostCents: 0 })).toBe('~6h · Cost unknown');
+  });
+
+  it('totals only known costs and cannot judge the budget while some are unknown', () => {
+    const r = report();
+    r.financialBudgetCents = 10000;
+    r.learningPlan[0] = { ...r.learningPlan[0], estimatedCostCents: 4000, costAsOf: '2026-05' };
+    r.learningPlan[1] = { ...r.learningPlan[1], estimatedCostCents: null };
+    r.learningPlan[2] = { ...r.learningPlan[2], estimatedCostCents: 0, costAsOf: '2026-05' };
+    expect(planCostLine(r)).toBe(
+      'Known costs: $40 · 1 step with unknown cost (not counted) · Cannot tell if it fits the budget until the unknown costs are checked',
+    );
+    r.learningPlan[1] = { ...r.learningPlan[1], estimatedCostCents: 1000, costAsOf: '2026-05' };
+    expect(planCostLine(r)).toBe('Known costs: $50 · Within budget');
+    r.financialBudgetCents = 2000;
+    expect(planCostLine(r)).toBe('Known costs: $50 · Over budget');
+  });
+
+  it('labels essential credentials apart from preferred skills', () => {
+    expect(gapBadge({ kind: 'credential', importance: 'critical' })).toEqual({ label: 'Essential credential', tone: 'warning' });
+    expect(gapBadge({ kind: 'credential', importance: 'preferred' }).label).toBe('Credential · PREFERRED');
+    expect(gapBadge({ importance: 'preferred' })).toEqual({ label: 'PREFERRED', tone: 'brand' });
+    expect(gapBadge({ kind: 'skill', importance: 'critical' }).label).toBe('CRITICAL GAP');
+    const r = report();
+    expect(hasEssentialCredential(r)).toBe(false);
+    r.skillGaps = [{ skill: 'Licence', currentLevel: 'none', requiredLevel: 'expert', importance: 'critical', kind: 'credential' }];
+    expect(hasEssentialCredential(r)).toBe(true);
   });
 
   it('opens only web links', () => {
     expect(isOpenableUrl('https://example.org/course')).toBe(true);
     expect(isOpenableUrl('javascript:alert(1)')).toBe(false);
     expect(isOpenableUrl('file:///etc/passwd')).toBe(false);
+  });
+});
+
+describe('milestone evidence', () => {
+  it('remembers the vault item per milestone and keeps it when ticks change', () => {
+    const r = withMilestoneEvidence(withMilestone(report(), 'a', true), 'a', 'ev1');
+    expect(milestoneEvidenceId(r, 'a')).toBe('ev1');
+    expect(milestoneEvidenceId(r, 'b')).toBeNull();
+    expect(withMilestone(r, 'b', true).progress.evidenceByMilestone).toEqual({ a: 'ev1' });
+  });
+
+  it('explains that only a ticked milestone can be recorded', () => {
+    const err = new ApiError(400, 'validation_error', { code: 'validation_error', field: 'milestoneId', reason: 'not_completed' });
+    expect(evidenceErrorMessage(err)).toMatch(/Tick the milestone/);
   });
 });
 

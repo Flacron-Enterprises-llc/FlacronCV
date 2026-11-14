@@ -1,26 +1,34 @@
 import type { Pool } from 'pg';
 import { PLAN_ORDER } from '@flacroncv/career-shared';
 import type { ApplicationStatus, PlanId } from '@flacroncv/career-shared';
-import { lockAccount, openBalances } from '../billing/accounts';
-import type { AccountRow } from '../billing/accounts';
-import { CatalogStore, includedUnitsFor } from '../billing/catalog';
+import type { CapacityGrant } from '../billing/capacity';
+import { CatalogStore } from '../billing/catalog';
 import { withTransaction } from '../billing/db';
-import type { Db } from '../billing/db';
-import { periodContaining } from '../billing/periods';
+import { syncV1Plan } from '../billing/v1-sync';
 
 /**
- * FlacronCV V1 owns identity, plans, subscriptions and credits. The career
- * features (the former V2 product) run beside it and never sell a plan of
- * their own. Which career allowances a V1 customer receives is a client
- * decision, so it is configuration: `CAREER_PLAN_MAP`.
- *
- * Every V1 plan maps to `none` unless the map says otherwise, so a missing
- * or empty map switches the career features off for everyone.
+ * FlacronCV V1 owns identity, plans, subscriptions and payments. Since the
+ * five-plan decision (14 Nov 2026) a V1 plan IS the career plan: the five
+ * plans share their ids with the career catalog and map 1:1. The legacy V1
+ * plans keep their customers' price and map to the closest career plan.
+ * `CAREER_PLAN_MAP` can still override any entry (including `none`).
  */
-export const V1_PLANS = ['free', 'pro', 'career_accelerator', 'enterprise'] as const;
+export const V1_PLANS = ['free', 'starter', 'professional', 'career_pro', 'business', 'pro', 'career_accelerator', 'enterprise'] as const;
 export type V1Plan = (typeof V1_PLANS)[number];
 
 export type CareerPlanMap = Record<V1Plan, PlanId | null>;
+
+/** PLAN_CONTRACT "Career access for every plan". */
+export const DEFAULT_CAREER_PLAN_MAP: Readonly<CareerPlanMap> = Object.freeze({
+  free: 'free',
+  starter: 'starter',
+  professional: 'professional',
+  career_pro: 'career_pro',
+  business: 'business',
+  pro: 'starter',
+  career_accelerator: 'professional',
+  enterprise: 'career_pro',
+});
 
 export function isV1Plan(value: unknown): value is V1Plan {
   return typeof value === 'string' && (V1_PLANS as readonly string[]).includes(value);
@@ -29,10 +37,10 @@ export function isV1Plan(value: unknown): value is V1Plan {
 /**
  * `free:none,pro:professional,career_accelerator:career_pro,enterprise:business`.
  * Unknown V1 plans or career plans are a boot error (named, never echoed
- * with a secret). Omitted V1 plans are `none`.
+ * with a secret). Omitted V1 plans keep the default map entry.
  */
 export function parseCareerPlanMap(raw: string | undefined): CareerPlanMap {
-  const map: CareerPlanMap = { free: null, pro: null, career_accelerator: null, enterprise: null };
+  const map: CareerPlanMap = { ...DEFAULT_CAREER_PLAN_MAP };
   const text = raw?.trim() ?? '';
   if (text.length === 0) return map;
   for (const entry of text.split(',')) {
@@ -66,6 +74,58 @@ export interface V1AccountSnapshot {
    * Absent when they never bought one.
    */
   careerPurchase?: CareerPurchase | null;
+  /** Billing facts V1 recorded (verified Stripe state). Absent fields are unknown, never guessed. */
+  billing?: V1BillingFacts | null;
+}
+
+/**
+ * What V1's billing says about the period and the add-ons, as V1's own
+ * webhook handlers wrote it. Read-only here.
+ */
+export interface V1BillingFacts {
+  /** V1 account creation: the Free allowance anniversary. */
+  accountCreatedAt?: Date | null;
+  /** The V1 plan subscription period: the paid allowance anniversary. */
+  periodStart?: Date | null;
+  periodEnd?: Date | null;
+  /** Stripe subscription status of the V1 plan (`trialing` during a configured trial). */
+  status?: string | null;
+  /** One-time packs paid through V1 Stripe (`career_pack_purchases`). */
+  packPurchases?: V1PackPurchase[];
+  /** Recurring capacity add-ons (`career_capacity_subscriptions`). */
+  capacity?: V1CapacitySubscription[];
+}
+
+export interface V1PackPurchase {
+  /** Checkout Session or PaymentIntent id: the idempotency key of the grant. */
+  purchaseRef: string;
+  addonId: string;
+  purchasedAt: Date;
+  amountCents: number | null;
+  currency: string | null;
+  /** `paid` grants; `refunded`/`disputed` revoke the unused units. */
+  status: 'paid' | 'refunded' | 'disputed';
+  autoTopup?: boolean;
+}
+
+export interface V1CapacitySubscription {
+  addonId: string;
+  quantity: number;
+  status: string;
+  currentPeriodEnd: Date | null;
+}
+
+/** Capacity add-ons that count now: same paid-period rule as a plan (`livePurchasedPlan`). */
+export function liveCapacity(subscriptions: readonly V1CapacitySubscription[] | undefined, now: Date): CapacityGrant[] {
+  const out: CapacityGrant[] = [];
+  for (const sub of subscriptions ?? []) {
+    const withinPeriod = sub.currentPeriodEnd !== null && sub.currentPeriodEnd.getTime() > now.getTime();
+    const live =
+      ((sub.status === 'active' || sub.status === 'trialing') && (sub.currentPeriodEnd === null || withinPeriod)) ||
+      ((sub.status === 'past_due' || sub.status === 'canceled') && withinPeriod);
+    if (live) out.push({ addonId: sub.addonId, quantity: sub.quantity });
+  }
+  return out;
 }
 
 /** The provider state V1 recorded for a purchased career entitlement. */
@@ -108,12 +168,18 @@ export interface V1AccountSource {
 
 /** V1 `JobStatus` → the career outcome status. An accepted offer was an offer. */
 const V1_JOB_STATUS: Record<string, ApplicationStatus> = {
-  wishlist: 'saved',
+  // Current V1 statuses (same ids as the career statuses).
+  saved: 'saved',
+  preparing: 'preparing',
   applied: 'applied',
   interviewing: 'interviewing',
+  offered: 'offered',
+  rejected: 'rejected',
+  withdrawn: 'withdrawn',
+  // Legacy V1 statuses still in old documents (shared-types normalizeJobStatus).
+  wishlist: 'saved',
   offer: 'offered',
   accepted: 'offered',
-  rejected: 'rejected',
 };
 
 /** Unknown or missing V1 statuses are dropped rather than guessed. */
@@ -122,7 +188,14 @@ export function careerStatusFromV1(status: unknown): ApplicationStatus | null {
 }
 
 export type CareerAccess =
-  | { enabled: true; v1Plan: V1Plan; careerPlan: PlanId; source: 'v1_plan_map' | 'purchase' }
+  | {
+      enabled: true;
+      v1Plan: V1Plan;
+      careerPlan: PlanId;
+      source: 'v1_plan_map' | 'purchase';
+      /** V1 billing facts for `applyMappedPlan` (period anchor, packs, capacity). Not sent to clients. */
+      billing?: V1BillingFacts | null;
+    }
   | { enabled: false; v1Plan: V1Plan | null; reason: 'plan_not_mapped' | 'v1_account_missing' | 'v1_account_inactive' };
 
 /**
@@ -135,24 +208,24 @@ export function decideCareerAccess(account: V1AccountSnapshot | null, map: Caree
   const mapped = map[account.plan];
   const purchased = livePurchasedPlan(account.careerPurchase, now);
   if (!mapped && !purchased) return { enabled: false, v1Plan: account.plan, reason: 'plan_not_mapped' };
+  const billing = account.billing ?? null;
   if (purchased && (!mapped || PLAN_ORDER.indexOf(purchased) > PLAN_ORDER.indexOf(mapped))) {
-    return { enabled: true, v1Plan: account.plan, careerPlan: purchased, source: 'purchase' };
+    // A legacy career add-on: its own Stripe period is the paid anniversary.
+    const addonFacts: V1BillingFacts = {
+      ...(billing ?? {}),
+      periodStart: null,
+      periodEnd: account.careerPurchase?.currentPeriodEnd ?? null,
+      status: account.careerPurchase?.status ?? null,
+    };
+    return { enabled: true, v1Plan: account.plan, careerPlan: purchased, source: 'purchase', billing: addonFacts };
   }
-  return { enabled: true, v1Plan: account.plan, careerPlan: mapped as PlanId, source: 'v1_plan_map' };
+  return { enabled: true, v1Plan: account.plan, careerPlan: mapped as PlanId, source: 'v1_plan_map', billing };
 }
 
 /**
- * Brings one career billing account in line with the mapped plan.
- *
- * - Runs under the account row lock, so concurrent requests serialise.
- * - Idempotent: a second call with the same plan changes nothing.
- * - A plan change re-grants the current period as "new grant minus units
- *   already used" (floored at 0). Flipping plans therefore never hands out a
- *   second month; it can only move the ceiling.
- * - A unit the new plan does not include loses its remaining balance.
- * - While the V1 plan stays mapped the allowance renews each anniversary
- *   month, as V2 did for an active subscription. Nothing is charged here,
- *   and V1 credits, balances and subscriptions are never read for writing.
+ * Brings one career billing account in line with the mapped plan and the V1
+ * billing facts (period anchor, packs, capacity add-ons). The rules live in
+ * `billing/v1-sync.ts`; see `syncV1Plan`.
  */
 export async function applyMappedPlan(
   pool: Pool,
@@ -162,55 +235,20 @@ export async function applyMappedPlan(
   now: Date,
   catalogs: CatalogStore = new CatalogStore(),
 ): Promise<{ changed: boolean; renewed: boolean }> {
-  return withTransaction(pool, async (db) => {
-    const account = await lockAccount(db, billingAccountId);
-    const snapshot = await catalogs.get(db, account.catalog_version || catalogVersion);
-    const renewed = await renewIfDue(db, account, now);
-    const changed = account.plan_id !== access.careerPlan;
-    if (changed) {
-      await db.query(
-        `UPDATE billing_accounts
-            SET plan_id = $2, interval = 'monthly', status = 'active', trial_end = NULL,
-                provider = NULL, provider_customer_id = NULL, provider_subscription_id = NULL,
-                cancel_at_period_end = false, scheduled_plan_id = NULL, scheduled_interval = NULL,
-                updated_at = now()
-          WHERE id = $1`,
-        [account.id, access.careerPlan],
-      );
-      account.plan_id = access.careerPlan;
-      const kept = includedUnitsFor(snapshot, access.careerPlan).map(([unit]) => unit);
-      await db.query(
-        `UPDATE usage_balances SET included_remaining = 0, updated_at = now()
-          WHERE billing_account_id = $1 AND allowance_period_start = $2
-            AND candidate_auth_user_id IS NULL AND NOT (unit = ANY($3::text[]))`,
-        [account.id, account.allowance_period_start, kept],
-      );
-      await openBalances(db, account, snapshot, { regrant: true });
-    } else if (renewed) {
-      await openBalances(db, account, snapshot);
-    }
-    // A mapped paid plan keeps a paid period equal to the allowance period, so
-    // V2's worker renewal never grants past what V1 currently says.
-    await db.query(
-      `UPDATE billing_accounts
-          SET plan_source = 'v1_mapping', v1_plan = $2, v1_plan_synced_at = $3,
-              period_start = CASE WHEN plan_id = 'free' THEN NULL ELSE allowance_period_start END,
-              period_end = CASE WHEN plan_id = 'free' THEN NULL ELSE allowance_period_end END
-        WHERE id = $1`,
-      [account.id, access.v1Plan, now],
-    );
-    return { changed, renewed };
-  });
-}
-
-async function renewIfDue(db: Db, account: AccountRow, now: Date): Promise<boolean> {
-  if (now < account.allowance_period_end) return false;
-  const period = periodContaining(account.allowance_anchor, now);
-  await db.query(
-    `UPDATE billing_accounts SET allowance_period_start = $2, allowance_period_end = $3, updated_at = now() WHERE id = $1`,
-    [account.id, period.start, period.end],
+  return withTransaction(pool, (db) =>
+    syncV1Plan(
+      db,
+      billingAccountId,
+      {
+        careerPlan: access.careerPlan,
+        v1Plan: access.v1Plan,
+        billing: access.billing ?? null,
+        packPurchases: access.billing?.packPurchases ?? [],
+        capacity: liveCapacity(access.billing?.capacity, now),
+      },
+      catalogVersion,
+      now,
+      catalogs,
+    ),
   );
-  account.allowance_period_start = period.start;
-  account.allowance_period_end = period.end;
-  return true;
 }

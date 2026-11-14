@@ -1,4 +1,5 @@
-import type { ListingCompensation } from './opportunities';
+import { EMPTY_LISTING_DETAILS } from './opportunities';
+import type { ListingArrangement, ListingCompensation, ListingDetails, ListingSchedule, ListingSeniority, OpportunityCategory } from './opportunities';
 
 /**
  * A pasted listing shorter than this is not a vacancy ("abc", a title alone):
@@ -15,6 +16,18 @@ export interface ExtractedListing {
   locations: string[];
   compensation: ListingCompensation;
   sponsorship: ListingSponsorship;
+  /** YYYY-MM-DD from an explicit deadline sentence or label; null when not stated. */
+  deadline: string | null;
+  /** YYYY-MM-DD from an explicit posted/published label; null when not stated. */
+  publishedAt: string | null;
+  /** The listing's own words limiting where a remote worker may live ("US residents only"). */
+  remoteRestriction: string | null;
+  schedule: ListingSchedule | null;
+  arrangement: ListingArrangement | null;
+  seniority: ListingSeniority | null;
+  /** A category the title states plainly ("Summer internship"); null leaves the caller's choice. */
+  category: OpportunityCategory | null;
+  details: ListingDetails;
 }
 
 const NO_PAY: ListingCompensation = { minimum: null, maximum: null, currency: null, period: null };
@@ -132,6 +145,14 @@ export function extractListingFields(text: string): ExtractedListing {
     locations: locations.slice(0, 5),
     compensation: extractCompensation(text),
     sponsorship: extractSponsorship(text),
+    deadline: extractDeadline(lines),
+    publishedAt: extractPublishedAt(lines),
+    remoteRestriction: extractRemoteRestriction(text),
+    schedule: extractSchedule(text),
+    arrangement: extractArrangement(text),
+    seniority: extractSeniority(title),
+    category: extractCategory(first),
+    details: extractDetails(lines),
   };
 }
 
@@ -246,4 +267,165 @@ export function extractSponsorship(text: string): ListingSponsorship {
     return 'stated_yes';
   }
   return 'unknown';
+}
+
+const MONTHS: Record<string, number> = {
+  january: 1, jan: 1, janvier: 1, januar: 1, enero: 1,
+  february: 2, feb: 2, fevrier: 2, février: 2, februar: 2, febrero: 2,
+  march: 3, mar: 3, mars: 3, märz: 3, marz: 3, marzo: 3,
+  april: 4, apr: 4, avril: 4, abril: 4,
+  may: 5, mai: 5, mayo: 5,
+  june: 6, jun: 6, juin: 6, juni: 6, junio: 6,
+  july: 7, jul: 7, juillet: 7, juli: 7, julio: 7,
+  august: 8, aug: 8, août: 8, aout: 8, agosto: 8,
+  september: 9, sep: 9, sept: 9, septembre: 9, septiembre: 9,
+  october: 10, oct: 10, octobre: 10, oktober: 10, octubre: 10,
+  november: 11, nov: 11, novembre: 11, noviembre: 11,
+  december: 12, dec: 12, décembre: 12, decembre: 12, dezember: 12, diciembre: 12,
+};
+
+/**
+ * One unambiguous date in a phrase: ISO (2026-12-01), "1 December 2026" or
+ * "December 1, 2026". A numeric "01/12/2026" is skipped because day and month
+ * order differ by country, and a wrong deadline is worse than none.
+ */
+export function parseStatedDate(phrase: string): string | null {
+  const iso = phrase.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+  if (iso) return validDate(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+  const dayFirst = phrase.match(/(?:^|[^\p{L}\d])(\d{1,2})(?:st|nd|rd|th|er)?\.?\s+(?:de\s+)?(\p{L}{3,10})\.?,?\s+(?:de\s+)?(\d{4})(?!\d)/u);
+  if (dayFirst) {
+    const month = MONTHS[(dayFirst[2] ?? '').toLowerCase()];
+    if (month) return validDate(Number(dayFirst[3]), month, Number(dayFirst[1]));
+  }
+  const monthFirst = phrase.match(/(?:^|[^\p{L}])(\p{L}{3,10})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})(?!\d)/u);
+  if (monthFirst) {
+    const month = MONTHS[(monthFirst[1] ?? '').toLowerCase()];
+    if (month) return validDate(Number(monthFirst[3]), month, Number(monthFirst[2]));
+  }
+  return null;
+}
+
+function validDate(year: number, month: number, day: number): string | null {
+  if (year < 2000 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCMonth() !== month - 1) return null;
+  return date.toISOString().slice(0, 10);
+}
+
+const DEADLINE_CUE =
+  /\b(?:deadline|closing date|closes(?: on)?|apply by|applications? (?:close|due|must be received)(?: by| on)?|apply before|date limite|candidater avant|bewerbungsschluss|bewerbungsfrist|fecha l[íi]mite|plazo)/i;
+const PUBLISHED_CUE = /\b(?:posted(?: on)?|date posted|published(?: on)?|publication date|publi[ée]e? le|ver[öo]ffentlicht(?: am)?|publicad[oa](?: el)?)/i;
+
+export function extractDeadline(lines: readonly string[]): string | null {
+  return dateAfterCue(lines, DEADLINE_CUE);
+}
+
+export function extractPublishedAt(lines: readonly string[]): string | null {
+  return dateAfterCue(lines, PUBLISHED_CUE);
+}
+
+function dateAfterCue(lines: readonly string[], cue: RegExp): string | null {
+  for (const line of lines) {
+    const found = line.match(cue);
+    if (!found) continue;
+    const start = (found.index ?? 0) + found[0].length;
+    const date = parseStatedDate(line.slice(start, start + 60));
+    if (date) return date;
+  }
+  return null;
+}
+
+/**
+ * Remote does not mean worldwide (spec section 2). Only an explicit limit is
+ * read, and it is kept in the listing's own words.
+ */
+export function extractRemoteRestriction(text: string): string | null {
+  const patterns = [
+    /(?:^|[^\p{L}])((?:[A-Z][\p{L}.]*\s){1,4}(?:residents|citizens)\sonly)(?![\p{L}])/u,
+    /\b((?:remote|work from home|telecommut\w*)[^.\n]{0,40}?\b(?:only|restricted to|limited to|open to (?:candidates|applicants|residents) (?:in|of|based in))\b[^.\n]{0,60})/i,
+    /\b(must (?:reside|live|be based|be located|be a resident) (?:in|of) [^.\n]{2,60})/i,
+    /\b(only (?:open|available) to (?:candidates|applicants|residents|people) (?:in|of|based in|located in|living in) [^.\n]{2,60})/i,
+  ];
+  for (const pattern of patterns) {
+    const found = text.match(pattern);
+    if (found?.[1]) return found[1].replace(/\s+/g, ' ').trim().slice(0, 160);
+  }
+  return null;
+}
+
+const SCHEDULE_WORDS: Array<[RegExp, ListingSchedule]> = [
+  [/\bfull[\s-]?time\b|\btemps plein\b|\bvollzeit\b|\btiempo completo\b/i, 'full_time'],
+  [/\bpart[\s-]?time\b|\btemps partiel\b|\bteilzeit\b|\bmedio tiempo\b|\btiempo parcial\b/i, 'part_time'],
+  [/\btemporary\b|\bseasonal\b|\bbefristet\b|\btemporal\b/i, 'temporary'],
+  [/\bcontract(?:or)? (?:role|position|basis)\b|\bfixed[\s-]term\b|\b\d+[\s-]month contract\b|\bcontrat à durée déterminée\b|\bcdd\b/i, 'contract'],
+];
+
+/** One schedule only when exactly one is stated; two different ones stay unknown. */
+export function extractSchedule(text: string): ListingSchedule | null {
+  const found = SCHEDULE_WORDS.filter(([pattern]) => pattern.test(text)).map(([, value]) => value);
+  return found.length === 1 ? (found[0] ?? null) : null;
+}
+
+const ONSITE = /\bon[\s-]?site\b|\bin[\s-]office\b|\bsur site\b|\bvor ort\b|\bpresencial\b/i;
+
+export function extractArrangement(text: string): ListingArrangement | null {
+  if (/\bhybrid\b|\bhybride\b|\bh[íi]brido\b/i.test(text)) return 'hybrid';
+  if (/\b(?:not|no|non)[\s-]remote\b/i.test(text)) return ONSITE.test(text) ? 'onsite' : null;
+  if (/\b(?:fully\s+)?remote\b|\bt[ée]l[ée]travail\b|\bremoto\b/i.test(text)) return 'remote';
+  if (ONSITE.test(text)) return 'onsite';
+  return null;
+}
+
+/** From the title only. "Mid" is never inferred: a title without a level does not state one. */
+export function extractSeniority(title: string): ListingSeniority | null {
+  if (/\b(?:chief|vp|vice president|head of|director|directrice|directeur)\b/i.test(title)) return 'executive';
+  if (/\b(?:lead|principal|staff)\b/i.test(title)) return 'lead';
+  if (/\b(?:senior|sr)\b/i.test(title)) return 'senior';
+  if (/\b(?:junior|jr|entry[\s-]level|graduate|intern|internship|trainee|apprentice|stagiaire|praktikant)\b/i.test(title)) return 'entry';
+  return null;
+}
+
+const CATEGORY_WORDS: Array<[RegExp, OpportunityCategory]> = [
+  [/\bapprenticeship\b|\bapprentice\b|\bapprentissage\b|\bausbildung\b/i, 'apprenticeship'],
+  [/\binternship\b|\bintern\b|\bpraktikum\b|\bpr[áa]cticas\b/i, 'internship'],
+  [/\bgraduate (?:programme|program|scheme|trainee)\b/i, 'graduate_program'],
+  [/\bscholarship\b|\bbourse d'[ée]tudes\b|\bstipendium\b|\bbeca\b/i, 'scholarship'],
+  [/\bfellowship\b/i, 'fellowship'],
+  [/\b(?:career|job|jobs|recruitment) fair\b|\bhiring event\b|\bsalon de l'emploi\b|\bjobmesse\b|\bferia de empleo\b/i, 'career_fair'],
+  [/\bvolunteer\b|\bb[ée]n[ée]vole\b|\bvoluntari[oa]\b/i, 'volunteer'],
+  [/\bfreelance\b|\bfreelancer\b/i, 'freelance'],
+  [/\b(?:funded|free) training\b|\bbootcamp\b/i, 'funded_training'],
+  [/\bcertification\b/i, 'certification'],
+];
+
+/** A category from the first line only, so a body that mentions "internship" in passing changes nothing. */
+export function extractCategory(firstLine: string): OpportunityCategory | null {
+  return CATEGORY_WORDS.find(([pattern]) => pattern.test(firstLine))?.[1] ?? null;
+}
+
+const DETAIL_LABELS: Array<[RegExp, keyof ListingDetails]> = [
+  [/^\s*(?:stipend|allowance|bursary|indemnit[ée] de stage|gratification|verg[üu]tung)\s*[:\-–—]\s*(.+)$/i, 'stipend'],
+  [/^\s*(?:student eligibility|eligible students|open to students)\s*[:\-–—]\s*(.+)$/i, 'studentEligibility'],
+  [/^\s*(?:funding|award|award amount|financement|montant de la bourse|f[öo]rderung|financiaci[óo]n)\s*[:\-–—]\s*(.+)$/i, 'funding'],
+  [/^\s*(?:scope|project scope|deliverables)\s*[:\-–—]\s*(.+)$/i, 'clientScope'],
+  [/^\s*(?:duration|length|commitment|dur[ée]e|dauer|duraci[óo]n)\s*[:\-–—]\s*(.+)$/i, 'duration'],
+  [/^\s*(?:compensation basis|payment basis|budget type|rate type)\s*[:\-–—]\s*(.+)$/i, 'compensationBasis'],
+  [/^\s*(?:event date|date of event|fair date|date de l'[ée]v[ée]nement)\s*[:\-–—]\s*(.+)$/i, 'eventDate'],
+  [/^\s*(?:registration|register|register at|inscription|anmeldung|registro)\s*[:\-–—]\s*(.+)$/i, 'registration'],
+  [/^\s*(?:eligibility|who can apply|who may apply|[ée]ligibilit[ée]|voraussetzungen|requisitos)\s*[:\-–—]\s*(.+)$/i, 'eligibility'],
+];
+
+/** Category-specific facts, only from an explicit label. */
+export function extractDetails(lines: readonly string[]): ListingDetails {
+  const details: ListingDetails = { ...EMPTY_LISTING_DETAILS };
+  for (const line of lines) {
+    for (const [pattern, field] of DETAIL_LABELS) {
+      const found = line.match(pattern);
+      if (!found || details[field] !== null) continue;
+      const value = (found[1] ?? '').trim().slice(0, 300);
+      if (value.length === 0) continue;
+      details[field] = field === 'eventDate' ? parseStatedDate(value) : value;
+    }
+  }
+  return details;
 }

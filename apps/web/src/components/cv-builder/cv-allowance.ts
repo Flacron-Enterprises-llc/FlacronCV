@@ -15,11 +15,15 @@ import { useAuth } from '@/providers/AuthProvider';
  */
 export function useCvAllowance() {
   const { user, degraded, placeholderAccount, refreshUser } = useAuth();
-  const limit = PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)].limits.cvs;
+  const config = PLAN_CONFIGS[resolveEffectivePlan(user?.subscription)];
+  const limit = config.limits.cvs;
   const used = user?.usage?.cvsCreated ?? 0;
   // A degraded/placeholder profile claims Free; never block a paying user on it.
   const known = Boolean(user) && !degraded && !placeholderAccount;
-  const limited = known && limit !== 'unlimited';
+  // Current plans limit STORED CVs (capacity), which this profile does not
+  // carry: the API decides (CV_LIMIT_REACHED → upgrade prompt). Only legacy
+  // plans, which count creations, are pre-checked here.
+  const limited = known && limit !== 'unlimited' && config.legacy;
   const atLimit = limited && used >= (limit as number);
   return { limit, used, limited, atLimit, refreshUser };
 }

@@ -1,97 +1,53 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/providers/AuthProvider';
 import { cn } from '@/lib/utils';
-import { useFormatDate } from '@/lib/use-format-date';
-import { toDate } from '@/lib/format-date';
-import { buildIcsEvent, downloadIcs } from '@/lib/ics';
+import { downloadIcs } from '@/lib/ics';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
-import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import JobFormModal from '@/components/jobs/JobFormModal';
-import { followUpState } from '@/components/jobs/follow-up';
-import { Link } from '@/i18n/routing';
+import JobCard from '@/components/jobs/JobCard';
+import JobBoard from '@/components/jobs/JobBoard';
 import {
-  Plus,
-  Briefcase,
-  Pencil,
-  Trash2,
-  ExternalLink,
-  AlertCircle,
-  MapPin,
-  Clock,
-  Search,
-  Archive,
-  Banknote,
-  User as UserIcon,
-  CalendarClock,
-  CalendarPlus,
-  BellRing,
-  FileText,
-  Mail,
-  SearchX,
-} from 'lucide-react';
+  SORT_KEYS,
+  STATUS_ORDER,
+  applicationCalendarFile,
+  filterJobs,
+  isCapacityError,
+  statusCounts,
+  type CalendarKind,
+  type SortKey,
+} from '@/components/jobs/job-workspace';
+import { Plus, Briefcase, AlertCircle, Search, Archive, SearchX, List, Columns3 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
-import { CoverLetter, CV, JobApplication, JobStatus } from '@flacroncv/shared-types';
+import {
+  CoverLetter,
+  CV,
+  JobApplication,
+  JobCapacity,
+  JobChecklistItem,
+  JobStatus,
+  UpdateJobData,
+} from '@flacroncv/shared-types';
 import { TOUR_TARGETS } from '@/lib/app-tour';
 
-const STATUS_ORDER: JobStatus[] = [
-  JobStatus.WISHLIST,
-  JobStatus.APPLIED,
-  JobStatus.INTERVIEWING,
-  JobStatus.OFFER,
-  JobStatus.REJECTED,
-  JobStatus.ACCEPTED,
-];
-
-const STATUS_VARIANT: Record<JobStatus, 'default' | 'info' | 'warning' | 'brand' | 'danger' | 'success'> = {
-  [JobStatus.WISHLIST]: 'default',
-  [JobStatus.APPLIED]: 'info',
-  [JobStatus.INTERVIEWING]: 'warning',
-  [JobStatus.OFFER]: 'brand',
-  [JobStatus.REJECTED]: 'danger',
-  [JobStatus.ACCEPTED]: 'success',
-};
-
-type SortKey = 'updated' | 'applied' | 'company' | 'position' | 'status';
-
-/** Filename-safe fragment of a company or position name. */
-function slug(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-}
-
-/** Epoch millis for any date-ish value; 0 when absent so it sorts last. */
-function time(value: unknown): number {
-  const d = toDate(value);
-  return d ? d.getTime() : 0;
-}
-
-const SORTERS: Record<SortKey, (a: JobApplication, b: JobApplication) => number> = {
-  // Most recently touched first — the default, matching the API's ordering.
-  updated: (a, b) => time(b.updatedAt) - time(a.updatedAt),
-  // Newest application first; entries with no applied date sort to the end.
-  applied: (a, b) => time(b.appliedDate) - time(a.appliedDate),
-  company: (a, b) => a.company.localeCompare(b.company),
-  position: (a, b) => a.position.localeCompare(b.position),
-  // Pipeline order (wishlist → accepted) rather than alphabetical, which would
-  // be meaningless for a funnel.
-  status: (a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status),
-};
+type View = 'list' | 'board';
+const VIEW_KEY = 'flacroncv.jobs.view';
 
 export default function JobsPage(): React.JSX.Element | null {
   const t = useTranslations('jobs');
   const tCommon = useTranslations('common');
   const formatApiError = useApiErrorMessage();
-  const formatDate = useFormatDate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  const [view, setView] = useState<View>('list');
   const [filter, setFilter] = useState<'all' | JobStatus>('all');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortKey>('updated');
@@ -101,9 +57,34 @@ export default function JobsPage(): React.JSX.Element | null {
   const [deleteTarget, setDeleteTarget] = useState<JobApplication | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // The chosen view is a per-browser convenience; storage may be unavailable.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(VIEW_KEY) === 'board') setView('board');
+    } catch {
+      /* private mode: default view */
+    }
+  }, []);
+  const chooseView = (next: View) => {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_KEY, next);
+    } catch {
+      /* not remembered, still switched */
+    }
+  };
+
   const { data: jobs, isLoading, isError, refetch } = useQuery({
     queryKey: ['jobs'],
     queryFn: () => api.get<JobApplication[]>('/jobs'),
+    enabled: !!user,
+  });
+
+  // Tracked-application usage. `limit` is null until a plan limit is wired,
+  // in which case nothing is shown (no invented number).
+  const { data: capacity } = useQuery({
+    queryKey: ['jobs', 'capacity'],
+    queryFn: () => api.get<JobCapacity>('/jobs/capacity'),
     enabled: !!user,
   });
 
@@ -128,24 +109,9 @@ export default function JobsPage(): React.JSX.Element | null {
   // else (counts, search, sort) operates on that same visible set so the tab
   // numbers always describe what the list is actually showing.
   const visible = (jobs ?? []).filter((j) => !!j.archived === showArchived);
-
-  // Per-status counts for the filter tabs.
-  const counts = visible.reduce<Record<string, number>>(
-    (acc, j) => ({ ...acc, [j.status]: (acc[j.status] ?? 0) + 1 }),
-    {},
-  );
-
-  const query = search.trim().toLowerCase();
-  const filtered = visible
-    .filter((j) => filter === 'all' || j.status === filter)
-    .filter(
-      (j) =>
-        !query ||
-        [j.company, j.position, j.location, j.notes, j.contactName]
-          .filter(Boolean)
-          .some((field) => field!.toLowerCase().includes(query)),
-    )
-    .sort(SORTERS[sort]);
+  const counts = statusCounts(visible);
+  // The board shows every stage as a column, so the status tab does not narrow it.
+  const filtered = filterJobs(visible, { status: view === 'board' ? 'all' : filter, search, sort });
 
   // Applications exist but the current view hides all of them (status tab,
   // search, or the archived toggle). "No applications yet — add your first"
@@ -157,18 +123,18 @@ export default function JobsPage(): React.JSX.Element | null {
     setShowArchived(false);
   };
 
-  // Optimistic inline status change: the <select> reflects the new value
-  // immediately (writing it into the cache), rolls back on failure, and
-  // reconciles with the server on settle — so it never snaps back to the stale
-  // value mid-save (R4). The row's select is disabled while its write is in flight.
-  const statusMutation = useMutation({
-    mutationFn: ({ job, status }: { job: JobApplication; status: JobStatus }) =>
-      api.put(`/jobs/${job.id}`, { status }),
-    onMutate: async ({ job, status }) => {
+  // Optimistic inline change (status from the select or a board drop, a
+  // checklist tick): the cache reflects the new value immediately, rolls back
+  // on failure, and reconciles with the server on settle — so it never snaps
+  // back to the stale value mid-save. The card's controls are disabled meanwhile.
+  const patchMutation = useMutation({
+    mutationFn: ({ job, patch }: { job: JobApplication; patch: UpdateJobData }) =>
+      api.put<JobApplication>(`/jobs/${job.id}`, patch),
+    onMutate: async ({ job, patch }) => {
       await queryClient.cancelQueries({ queryKey: ['jobs'] });
       const previous = queryClient.getQueryData<JobApplication[]>(['jobs']);
       queryClient.setQueryData<JobApplication[]>(['jobs'], (old) =>
-        (old ?? []).map((j) => (j.id === job.id ? { ...j, status } : j)),
+        (old ?? []).map((j) => (j.id === job.id ? ({ ...j, ...patch } as JobApplication) : j)),
       );
       return { previous };
     },
@@ -176,6 +142,15 @@ export default function JobsPage(): React.JSX.Element | null {
       if (ctx?.previous) queryClient.setQueryData(['jobs'], ctx.previous);
       toast.error(formatApiError(e, t('save_error')));
     },
+    onSettled: invalidate,
+  });
+  const busyId = patchMutation.isPending ? (patchMutation.variables?.job.id ?? null) : null;
+
+  const refreezeMutation = useMutation({
+    mutationFn: ({ job, kind }: { job: JobApplication; kind: 'cv' | 'cover_letter' }) =>
+      api.post<JobApplication>(`/jobs/${job.id}/refreeze`, { kind }),
+    onSuccess: () => toast.success(t('refrozen')),
+    onError: (e) => toast.error(formatApiError(e, t('save_error'))),
     onSettled: invalidate,
   });
 
@@ -203,37 +178,29 @@ export default function JobsPage(): React.JSX.Element | null {
       invalidate();
       toast.success(job.archived ? t('unarchived') : t('archived_toast'));
     } catch (e) {
-      toast.error(formatApiError(e, t('save_error')));
+      // Restoring counts toward the plan capacity again.
+      toast.error(isCapacityError(e) ? t('capacity_reached') : formatApiError(e, t('save_error')));
     }
   };
 
   /**
-   * Export a scheduled interview as a `.ics` download.
+   * Export an interview, follow-up or deadline as a `.ics` download.
    *
    * A file rather than a calendar API: it imports into Google, Outlook and Apple
-   * alike, and needs no OAuth token from the user. Defaults to one hour, since
-   * the tracker only records a start time.
+   * alike, and needs no OAuth token from the user.
    */
-  const handleAddToCalendar = (job: JobApplication) => {
-    const content = buildIcsEvent({
-      title: t('calendar_summary', { position: job.position, company: job.company }),
-      description: [
-        t('calendar_description', { position: job.position, company: job.company }),
-        job.jobUrl,
-      ]
-        .filter(Boolean)
-        .join('\n'),
-      location: job.location,
-      start: job.interviewDate,
-      url: job.jobUrl,
+  const handleCalendar = (job: JobApplication, kind: CalendarKind) => {
+    const names = { position: job.position, company: job.company };
+    const file = applicationCalendarFile(job, kind, {
+      title: t(`calendar.${kind}.summary`, names),
+      description: t(`calendar.${kind}.description`, names),
     });
-    // No parseable interview date means there is nothing to schedule.
-    if (!content) {
+    // No parseable date means there is nothing to schedule.
+    if (!file) {
       toast.error(t('calendar_error'));
       return;
     }
-    const name = [slug(job.company), slug(job.position)].filter(Boolean).join('-') || 'interview';
-    downloadIcs(`interview-${name}.ics`, content);
+    downloadIcs(file.filename, file.content);
     toast.success(t('calendar_downloaded'));
   };
 
@@ -246,20 +213,44 @@ export default function JobsPage(): React.JSX.Element | null {
     setModalOpen(true);
   };
 
+  const cardActions = {
+    onEdit: openEdit,
+    onArchive: (job: JobApplication) => void handleArchive(job),
+    onDelete: (job: JobApplication) => setDeleteTarget(job),
+    onStatus: (job: JobApplication, status: JobStatus) => patchMutation.mutate({ job, patch: { status } }),
+    onChecklist: (job: JobApplication, checklist: JobChecklistItem[]) =>
+      patchMutation.mutate({ job, patch: { checklist } }),
+    onCalendar: handleCalendar,
+    onRefreeze: (job: JobApplication, kind: 'cv' | 'cover_letter') => refreezeMutation.mutate({ job, kind }),
+  };
+
+  const tabClass = (active: boolean) =>
+    cn(
+      'flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+      active
+        ? 'bg-brand-600 text-white'
+        : 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700',
+    );
+
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className={cn('mx-auto space-y-6', view === 'board' ? 'max-w-7xl' : 'max-w-4xl')}>
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" data-tour={TOUR_TARGETS.jobs}>
         <div>
           <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{t('title')}</h1>
           <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{t('subtitle')}</p>
+          {capacity && capacity.limit !== null && (
+            <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+              {t('capacity', { used: capacity.used, limit: capacity.limit })}
+            </p>
+          )}
         </div>
         <Button icon={<Plus className="h-4 w-4" />} onClick={openNew}>
           {t('add')}
         </Button>
       </div>
 
-      {/* Search + sort */}
+      {/* Search + sort + view */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
@@ -275,7 +266,7 @@ export default function JobsPage(): React.JSX.Element | null {
             className="w-full rounded-lg border border-stone-300 bg-white py-2 ps-9 pe-3 text-sm text-stone-900 placeholder:text-stone-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-stone-600 dark:bg-stone-800 dark:text-white"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <label className="sr-only" htmlFor="job-sort">
             {t('sort_label')}
           </label>
@@ -285,57 +276,60 @@ export default function JobsPage(): React.JSX.Element | null {
             onChange={(e) => setSort(e.target.value as SortKey)}
             className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-200"
           >
-            {(['updated', 'applied', 'company', 'position', 'status'] as SortKey[]).map((k) => (
+            {SORT_KEYS.map((k) => (
               <option key={k} value={k}>
                 {t(`sort.${k}`)}
               </option>
             ))}
           </select>
-          <button
-            onClick={() => setShowArchived((v) => !v)}
-            aria-pressed={showArchived}
-            className={cn(
-              'flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-              showArchived
-                ? 'bg-brand-600 text-white'
-                : 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700',
-            )}
-          >
+          <button onClick={() => setShowArchived((v) => !v)} aria-pressed={showArchived} className={tabClass(showArchived)}>
             <Archive className="h-4 w-4" />
             {t('archived')}
           </button>
+          <div role="group" aria-label={t('view_label')} className="flex gap-1">
+            <button onClick={() => chooseView('list')} aria-pressed={view === 'list'} className={tabClass(view === 'list')}>
+              <List className="h-4 w-4" aria-hidden="true" />
+              {t('view_list')}
+            </button>
+            <button onClick={() => chooseView('board')} aria-pressed={view === 'board'} className={tabClass(view === 'board')}>
+              <Columns3 className="h-4 w-4" aria-hidden="true" />
+              {t('view_board')}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Status filter, each tab carrying its own count */}
-      <div className="flex flex-wrap items-center gap-2">
-        {(['all', ...STATUS_ORDER] as const).map((s) => {
-          const count = s === 'all' ? visible.length : (counts[s] ?? 0);
-          return (
-            <button
-              key={s}
-              onClick={() => setFilter(s)}
-              aria-pressed={filter === s}
-              className={cn(
-                'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-                filter === s
-                  ? 'bg-brand-600 text-white shadow-sm'
-                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700',
-              )}
-            >
-              {s === 'all' ? t('filter_all') : t(`status.${s}`)}
-              <span
+      {/* Status filter (list view), each tab carrying its own count */}
+      {view === 'list' && (
+        <div className="flex flex-wrap items-center gap-2">
+          {(['all', ...STATUS_ORDER] as const).map((s) => {
+            const count = s === 'all' ? visible.length : counts[s];
+            return (
+              <button
+                key={s}
+                onClick={() => setFilter(s)}
+                aria-pressed={filter === s}
                 className={cn(
-                  'rounded-full px-1.5 text-[11px] font-semibold tabular-nums',
-                  filter === s ? 'bg-white/25' : 'bg-stone-200 dark:bg-stone-700',
+                  'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  filter === s
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700',
                 )}
               >
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+                {s === 'all' ? t('filter_all') : t(`status.${s}`)}
+                <span
+                  className={cn(
+                    'rounded-full px-1.5 text-[11px] font-semibold tabular-nums',
+                    filter === s ? 'bg-white/25' : 'bg-stone-200 dark:bg-stone-700',
+                  )}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Body */}
       {isLoading ? (
@@ -355,16 +349,7 @@ export default function JobsPage(): React.JSX.Element | null {
             {t('retry')}
           </Button>
         </Card>
-      ) : filtered.length === 0 && hasApplications ? (
-        <Card className="flex flex-col items-center justify-center py-16 text-center">
-          <SearchX className="mb-4 h-12 w-12 text-stone-300 dark:text-stone-600" />
-          <h3 className="text-lg font-semibold text-stone-900 dark:text-white">{t('no_match_title')}</h3>
-          <p className="mt-1 max-w-sm text-sm text-stone-500 dark:text-stone-400">{t('no_match_desc')}</p>
-          <Button className="mt-6" variant="secondary" onClick={clearFilters}>
-            {t('clear_filters')}
-          </Button>
-        </Card>
-      ) : filtered.length === 0 ? (
+      ) : !hasApplications ? (
         <Card className="flex flex-col items-center justify-center py-16 text-center">
           <Briefcase className="mb-4 h-12 w-12 text-stone-300 dark:text-stone-600" />
           <h3 className="text-lg font-semibold text-stone-900 dark:text-white">{t('empty_title')}</h3>
@@ -373,183 +358,34 @@ export default function JobsPage(): React.JSX.Element | null {
             {t('add')}
           </Button>
         </Card>
+      ) : filtered.length === 0 && view === 'list' ? (
+        <Card className="flex flex-col items-center justify-center py-16 text-center">
+          <SearchX className="mb-4 h-12 w-12 text-stone-300 dark:text-stone-600" />
+          <h3 className="text-lg font-semibold text-stone-900 dark:text-white">{t('no_match_title')}</h3>
+          <p className="mt-1 max-w-sm text-sm text-stone-500 dark:text-stone-400">{t('no_match_desc')}</p>
+          <Button className="mt-6" variant="secondary" onClick={clearFilters}>
+            {t('clear_filters')}
+          </Button>
+        </Card>
+      ) : view === 'board' ? (
+        <JobBoard
+          jobs={filtered}
+          cvTitles={cvTitles}
+          letterTitles={letterTitles}
+          busyId={busyId}
+          {...cardActions}
+        />
       ) : (
         <div className="space-y-3">
           {filtered.map((job) => (
-            <Card key={job.id}>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-base font-semibold text-stone-900 dark:text-white">
-                      {job.position}
-                    </h3>
-                    <Badge variant={STATUS_VARIANT[job.status]}>{t(`status.${job.status}`)}</Badge>
-                  </div>
-                  <p className="mt-0.5 text-sm text-stone-600 dark:text-stone-400">{job.company}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
-                    {job.location && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3.5 w-3.5" />
-                        {job.location}
-                      </span>
-                    )}
-                    {job.appliedDate && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5" />
-                        {formatDate(job.appliedDate)}
-                      </span>
-                    )}
-                    {job.salaryRange && (
-                      <span className="flex items-center gap-1">
-                        <Banknote className="h-3.5 w-3.5" />
-                        {job.salaryRange}
-                      </span>
-                    )}
-                    {job.contactName && (
-                      <span className="flex items-center gap-1">
-                        <UserIcon className="h-3.5 w-3.5" />
-                        {job.contactEmail ? (
-                          <a href={`mailto:${job.contactEmail}`} className="hover:underline">
-                            {job.contactName}
-                          </a>
-                        ) : (
-                          job.contactName
-                        )}
-                      </span>
-                    )}
-                    {job.interviewDate && (
-                      <span className="flex items-center gap-1 font-medium text-brand-600 dark:text-brand-400">
-                        <CalendarClock className="h-3.5 w-3.5" />
-                        {t('interview_on', { date: formatDate(job.interviewDate) })}
-                      </span>
-                    )}
-                    {job.followUpDate && (() => {
-                      // Only a live application needs chasing: a reminder left
-                      // on an archived, rejected or accepted one is history.
-                      const live =
-                        !job.archived && job.status !== JobStatus.REJECTED && job.status !== JobStatus.ACCEPTED;
-                      const due = live ? followUpState(job.followUpDate) : null;
-                      const date = formatDate(job.followUpDate);
-                      // Colour plus words: the state is in the text, not only the hue.
-                      return due === 'overdue' ? (
-                        <span className="flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-300">
-                          <BellRing className="h-3.5 w-3.5" aria-hidden="true" />
-                          {t('follow_up_overdue', { date })}
-                        </span>
-                      ) : due === 'today' ? (
-                        <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                          <BellRing className="h-3.5 w-3.5" aria-hidden="true" />
-                          {t('follow_up_today')}
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1">
-                          <BellRing className="h-3.5 w-3.5" aria-hidden="true" />
-                          {t('follow_up_on', { date })}
-                        </span>
-                      );
-                    })()}
-                    {job.jobUrl && (
-                      <a
-                        href={job.jobUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-brand-600 hover:underline dark:text-brand-400"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        {t('view_posting')}
-                      </a>
-                    )}
-                  </div>
-                  {/* The documents actually sent for this application. A link
-                      to a since-deleted document is simply not shown. */}
-                  {((job.linkedCVId && cvTitles.has(job.linkedCVId)) ||
-                    (job.linkedCoverLetterId && letterTitles.has(job.linkedCoverLetterId))) && (
-                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                      {job.linkedCVId && cvTitles.has(job.linkedCVId) && (
-                        <Link
-                          href={`/cv/${job.linkedCVId}`}
-                          className="flex min-w-0 items-center gap-1 text-brand-600 hover:underline dark:text-brand-400"
-                        >
-                          <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                          <span className="truncate">
-                            {t('linked_cv_link', { title: cvTitles.get(job.linkedCVId) ?? '' })}
-                          </span>
-                        </Link>
-                      )}
-                      {job.linkedCoverLetterId && letterTitles.has(job.linkedCoverLetterId) && (
-                        <Link
-                          href={`/cover-letters/${job.linkedCoverLetterId}`}
-                          className="flex min-w-0 items-center gap-1 text-brand-600 hover:underline dark:text-brand-400"
-                        >
-                          <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                          <span className="truncate">
-                            {t('linked_cover_letter_link', { title: letterTitles.get(job.linkedCoverLetterId) ?? '' })}
-                          </span>
-                        </Link>
-                      )}
-                    </div>
-                  )}
-                  {job.notes && (
-                    <p className="mt-2 whitespace-pre-wrap break-words text-sm text-stone-500 dark:text-stone-400">
-                      {job.notes}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                  <label className="sr-only" htmlFor={`status-${job.id}`}>
-                    {t('status_label')}
-                  </label>
-                  <select
-                    id={`status-${job.id}`}
-                    value={job.status}
-                    disabled={statusMutation.isPending && statusMutation.variables?.job.id === job.id}
-                    onChange={(e) => statusMutation.mutate({ job, status: e.target.value as JobStatus })}
-                    className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-200"
-                  >
-                    {STATUS_ORDER.map((s) => (
-                      <option key={s} value={s}>
-                        {t(`status.${s}`)}
-                      </option>
-                    ))}
-                  </select>
-                  {job.interviewDate && (
-                    <button
-                      onClick={() => handleAddToCalendar(job)}
-                      aria-label={t('add_to_calendar')}
-                      title={t('add_to_calendar')}
-                      className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-brand-600 dark:hover:bg-stone-800 dark:hover:text-brand-400"
-                    >
-                      <CalendarPlus className="h-4 w-4" />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => openEdit(job)}
-                    aria-label={t('edit')}
-                    title={t('edit')}
-                    className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-stone-800 dark:hover:text-stone-200"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleArchive(job)}
-                    aria-label={job.archived ? t('unarchive') : t('archive')}
-                    title={job.archived ? t('unarchive') : t('archive')}
-                    className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-stone-800 dark:hover:text-stone-200"
-                  >
-                    <Archive className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => setDeleteTarget(job)}
-                    aria-label={t('delete')}
-                    title={t('delete')}
-                    className="rounded-lg p-1.5 text-stone-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </Card>
+            <JobCard
+              key={job.id}
+              job={job}
+              cvTitles={cvTitles}
+              letterTitles={letterTitles}
+              busy={busyId === job.id || (refreezeMutation.isPending && refreezeMutation.variables?.job.id === job.id)}
+              {...cardActions}
+            />
           ))}
         </div>
       )}

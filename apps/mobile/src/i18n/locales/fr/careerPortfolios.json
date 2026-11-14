@@ -37,7 +37,8 @@
     "capacity": "Cette offre n'a plus de place pour une autre page.",
     "off": "Les pages de portfolio sont désactivées pour le moment.",
     "validation": "Vérifiez les champs comportant des erreurs.",
-    "failed": "Cette modification n'a pas été enregistrée."
+    "failed": "Cette modification n'a pas été enregistrée.",
+    "caseStudy": "Chaque étude de cas doit faire moins de {max} caractères."
   },
   "editor": {
     "newTitle": "Nouvelle page de portfolio",
@@ -95,6 +96,15 @@
     "privateOnly": "Privé uniquement : non affiché sur la page",
     "createPage": "Créer la page",
     "savePage": "Enregistrer la page",
-    "savedButton": "Enregistrée"
+    "savedButton": "Enregistrée",
+    "caseStudyLabel": "Étude de cas pour « {title} » (facultatif)",
+    "sectionsTitle": "Sections de la page",
+    "sectionsHint": "Seules les sections activées sont affichées. Les coordonnées exigent aussi leur propre accord ci-dessous.",
+    "section": {
+      "summary": "Résumé (accroche)",
+      "evidence": "Preuves sélectionnées",
+      "skills": "Compétences",
+      "contact": "Contact (seules les coordonnées acceptées ci-dessous)"
+    }
   }
 }

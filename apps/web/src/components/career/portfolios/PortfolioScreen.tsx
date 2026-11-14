@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { isApiError, type ApiClient, type CareerEvidence, type PortfolioPage } from '@flacroncv/career-api-client';
+import { DEFAULT_PORTFOLIO_SECTIONS, type PortfolioSections } from '@flacroncv/career-shared';
 import {
   Button,
   Card,
@@ -44,6 +45,8 @@ export function PortfolioScreen({
   const [showEmail, setShowEmail] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
   const [evidenceIds, setEvidenceIds] = useState<string[]>([]);
+  const [sections, setSections] = useState<PortfolioSections>({ ...DEFAULT_PORTFOLIO_SECTIONS });
+  const [caseStudies, setCaseStudies] = useState<Record<string, string>>({});
   const [working, setWorking] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +65,8 @@ export function PortfolioScreen({
     setShowEmail(false);
     setShowPhone(false);
     setEvidenceIds([]);
+    setSections({ ...DEFAULT_PORTFOLIO_SECTIONS });
+    setCaseStudies({});
     setNote(null);
     setError(null);
   }
@@ -106,6 +111,8 @@ export function PortfolioScreen({
     setShowEmail(page.showEmail);
     setShowPhone(page.showPhone);
     setEvidenceIds(page.evidenceIds);
+    setSections(page.sections ?? { ...DEFAULT_PORTFOLIO_SECTIONS });
+    setCaseStudies(page.caseStudies ?? {});
     setSelectedId(page.id);
   }, []);
 
@@ -186,6 +193,9 @@ export function PortfolioScreen({
       contactEmail: email.trim() || null,
       contactPhone: phone.trim() || null,
       evidenceIds,
+      sections,
+      // Case studies only for items that stay on the page.
+      caseStudies: Object.fromEntries(evidenceIds.map((id) => [id, caseStudies[id] ?? ''])),
     }), t('saved'));
   }
 
@@ -301,6 +311,16 @@ export function PortfolioScreen({
             <input type="checkbox" checked={showPhone} onChange={(event) => setShowPhone(event.target.checked)} />
             {t('show_phone')}
           </label>
+          <fieldset className="grid grid-cols-1 gap-1">
+            <legend className="text-sm font-semibold text-career-ink">{t('sections_label')}</legend>
+            <p className="text-sm text-career-muted">{t('sections_help')}</p>
+            {(['summary', 'evidence', 'skills', 'contact'] as const).map((key) => (
+              <label key={key} className="inline-flex min-h-career-touch items-center gap-2 text-sm text-career-ink">
+                <input type="checkbox" checked={sections[key]} onChange={(event) => setSections((current) => ({ ...current, [key]: event.target.checked }))} />
+                {t(`section_${key}`)}
+              </label>
+            ))}
+          </fieldset>
           <fieldset className="grid grid-cols-1 gap-2">
             <legend className="text-sm font-semibold text-career-ink">{t('evidence_label')}</legend>
             {shareable.length === 0 ? <p className="text-sm text-career-muted">{t('evidence_empty')}</p> : null}
@@ -315,6 +335,23 @@ export function PortfolioScreen({
                 {item.title}
               </label>
             ))}
+            {evidence
+              .filter((item) => evidenceIds.includes(item.id))
+              .map((item) => (
+                <div key={`case-${item.id}`} className="space-y-1">
+                  <label className="block text-sm font-semibold text-career-ink" htmlFor={`case-${item.id}`}>
+                    {t('case_study_label', { title: item.title })}
+                  </label>
+                  <textarea
+                    id={`case-${item.id}`}
+                    rows={3}
+                    maxLength={4000}
+                    className="block w-full rounded-md border border-career-line bg-career-surface px-3 py-2 text-base text-career-ink"
+                    value={caseStudies[item.id] ?? ''}
+                    onChange={(event) => setCaseStudies((current) => ({ ...current, [item.id]: event.target.value }))}
+                  />
+                </div>
+              ))}
           </fieldset>
           {selected && selected.visibility !== 'draft' && sharePath ? (
             <div className="flex flex-wrap items-center gap-2">

@@ -32,7 +32,10 @@ import {
   duplicateConfirmMessage,
   isValidContactEmail,
   JOB_FIELD_MAX,
+  jobContacts,
+  jobOutcomeLabel,
   jobStatusLabel,
+  normalizeStatus,
   optionalJobField,
   STATUS_ORDER,
 } from '../../lib/job-tracker';
@@ -42,12 +45,12 @@ import { colors } from '../../theme/colors';
 import { CoverLetter } from '../../types/cover-letter.types';
 import { CV } from '../../types/cv.types';
 import { JobStatus } from '../../types/enums';
-import { JobApplication, JobWritePayload } from '../../types/job.types';
+import { JOB_LIMITS, JobApplication, JobWritePayload } from '../../types/job.types';
 import { Button } from '../ui/Button';
 import { ErrorState } from '../ui/ErrorState';
 import { Input } from '../ui/Input';
 import { Modal } from '../ui/Modal';
-import { shareInterviewIcs } from './share-interview-ics';
+import { shareDeadlineIcs, shareInterviewIcs } from './share-interview-ics';
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
@@ -93,13 +96,36 @@ function makeSchema(t: (key: string) => string) {
     followUpDate: z
       .string()
       .refine((s) => s === '' || isValidDateOnly(s), t('form.dateFormat')),
+    deadline: z
+      .string()
+      .refine((s) => s === '' || isValidDateOnly(s), t('form.dateFormat')),
     location: z.string().max(JOB_FIELD_MAX.location, t('form.tooLong200')),
     salaryRange: z.string().max(JOB_FIELD_MAX.salaryRange, t('form.tooLong100')),
-    contactName: z.string().max(JOB_FIELD_MAX.contactName, t('form.tooLong200')),
-    contactEmail: z
-      .string()
-      .max(JOB_FIELD_MAX.contactEmail)
-      .refine((s) => isValidContactEmail(s), t('form.invalidEmail')),
+    contacts: z
+      .array(
+        z.object({
+          id: z.string().optional(),
+          name: z.string().max(JOB_LIMITS.contactName, t('form.tooLong200')),
+          role: z.string().max(JOB_LIMITS.contactRole, t('form.tooLong200')),
+          email: z
+            .string()
+            .max(JOB_LIMITS.contactEmail)
+            .refine((s) => isValidContactEmail(s), t('form.invalidEmail')),
+          phone: z.string().max(JOB_LIMITS.contactPhone),
+          notes: z.string().max(JOB_LIMITS.contactNotes),
+        }),
+      )
+      .max(JOB_LIMITS.contacts),
+    checklist: z
+      .array(
+        z.object({
+          id: z.string().optional(),
+          label: z.string().max(JOB_LIMITS.checklistLabel),
+          kind: z.enum(['document', 'task']),
+          done: z.boolean(),
+        }),
+      )
+      .max(JOB_LIMITS.checklistItems),
     jobUrl: z.string().max(2048),
     linkedCVId: z.string(),
     linkedCoverLetterId: z.string(),
@@ -116,10 +142,11 @@ const EMPTY: FormData = {
   appliedDate: '',
   interviewDate: '',
   followUpDate: '',
+  deadline: '',
   location: '',
   salaryRange: '',
-  contactName: '',
-  contactEmail: '',
+  contacts: [],
+  checklist: [],
   jobUrl: '',
   linkedCVId: '',
   linkedCoverLetterId: '',
@@ -155,14 +182,22 @@ function valuesFromJob(job: JobApplication): FormData {
   return {
     position: job.position ?? '',
     company: job.company ?? '',
-    status: job.status ?? JobStatus.WISHLIST,
+    status: normalizeStatus(job.status),
     appliedDate: toDateOnlyInput(job.appliedDate),
     interviewDate: toDateTimeInput(job.interviewDate),
     followUpDate: toDateOnlyInput(job.followUpDate),
+    deadline: toDateOnlyInput(job.deadline),
     location: job.location ?? '',
     salaryRange: job.salaryRange ?? '',
-    contactName: job.contactName ?? '',
-    contactEmail: job.contactEmail ?? '',
+    contacts: jobContacts(job).map((c) => ({
+      id: c.id,
+      name: c.name ?? '',
+      role: c.role ?? '',
+      email: c.email ?? '',
+      phone: c.phone ?? '',
+      notes: c.notes ?? '',
+    })),
+    checklist: (job.checklist ?? []).map((i) => ({ id: i.id, label: i.label, kind: i.kind, done: i.done })),
     jobUrl: job.jobUrl ?? '',
     linkedCVId: job.linkedCVId ?? '',
     linkedCoverLetterId: job.linkedCoverLetterId ?? '',
@@ -178,11 +213,20 @@ function toPayload(data: FormData, isEdit: boolean): JobWritePayload {
     jobUrl: optionalJobField(data.jobUrl, isEdit),
     location: optionalJobField(data.location, isEdit),
     salaryRange: optionalJobField(data.salaryRange, isEdit),
-    contactName: optionalJobField(data.contactName, isEdit),
-    contactEmail: optionalJobField(data.contactEmail, isEdit),
     appliedDate: optionalJobField(data.appliedDate, isEdit),
     interviewDate: optionalJobField(data.interviewDate, isEdit),
     followUpDate: optionalJobField(data.followUpDate, isEdit),
+    deadline: optionalJobField(data.deadline, isEdit),
+    // Lists are sent whole; the server keeps the ids it is given and drops empty rows.
+    contacts: data.contacts.map((c) => ({
+      id: c.id,
+      name: c.name.trim(),
+      role: c.role.trim() || null,
+      email: c.email.trim() || null,
+      phone: c.phone.trim() || null,
+      notes: c.notes.trim() || null,
+    })),
+    checklist: data.checklist.map((i) => ({ id: i.id, label: i.label.trim(), kind: i.kind, done: i.done })),
     notes: optionalJobField(data.notes, isEdit),
     linkedCVId: optionalJobField(data.linkedCVId, isEdit),
     linkedCoverLetterId: optionalJobField(data.linkedCoverLetterId, isEdit),
@@ -425,6 +469,11 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
             );
           })}
         </View>
+        {initialJob && jobOutcomeLabel(initialJob) ? (
+          <Text className="text-stone-600 text-sm mb-4">
+            {t('form.outcome', { outcome: jobOutcomeLabel(initialJob) ?? '' })}
+          </Text>
+        ) : null}
 
         <Controller
           control={control}
@@ -485,36 +534,6 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
         />
         <Controller
           control={control}
-          name="contactName"
-          render={({ field }) => (
-            <Input
-              label={t('form.contactName')}
-              placeholder={t('form.contactNamePh')}
-              value={field.value}
-              onChangeText={field.onChange}
-              error={errors.contactName?.message}
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name="contactEmail"
-          render={({ field }) => (
-            <Input
-              label={t('form.contactEmail')}
-              placeholder="recruiter@company.com"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="email-address"
-              textContentType="emailAddress"
-              value={field.value}
-              onChangeText={field.onChange}
-              error={errors.contactEmail?.message}
-            />
-          )}
-        />
-        <Controller
-          control={control}
           name="interviewDate"
           render={({ field }) => (
             <Input
@@ -543,6 +562,21 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
             />
           )}
         />
+        <Controller
+          control={control}
+          name="deadline"
+          render={({ field }) => (
+            <Input
+              label={t('form.deadline')}
+              placeholder="YYYY-MM-DD"
+              hint={t('form.optionalExample', { example: '2026-09-30' })}
+              autoCapitalize="none"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.deadline?.message}
+            />
+          )}
+        />
 
         <Text className="text-sm font-medium text-stone-700 mb-1.5">{t('form.cvUsed')}</Text>
         <TouchableOpacity
@@ -563,6 +597,21 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
             {selectedLetter?.title ?? t('form.none')}
           </Text>
         </TouchableOpacity>
+        <Text className="text-stone-500 text-xs -mt-2 mb-1">{t('form.frozenOnLink')}</Text>
+        {initialJob?.cvSnapshot ? (
+          <Text className="text-stone-500 text-xs mb-1">
+            {t('form.frozenCv', {
+              title: initialJob.cvSnapshot.title,
+              version: initialJob.cvSnapshot.versionNumber ?? '—',
+            })}
+          </Text>
+        ) : null}
+        {initialJob?.coverLetterSnapshot ? (
+          <Text className="text-stone-500 text-xs mb-1">
+            {t('form.frozenLetter', { title: initialJob.coverLetterSnapshot.title })}
+          </Text>
+        ) : null}
+        <View className="mb-4" />
 
         <Controller
           control={control}
@@ -581,6 +630,143 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
             />
           )}
         />
+
+        <Text className="text-base font-bold text-stone-900 mt-2 mb-2">{t('form.contacts')}</Text>
+        {values.contacts.map((contact, index) => {
+          const n = index + 1;
+          const set = (patch: Partial<FormData['contacts'][number]>) =>
+            setValue(
+              'contacts',
+              values.contacts.map((c, i) => (i === index ? { ...c, ...patch } : c)),
+              { shouldDirty: true, shouldValidate: !!errors.contacts },
+            );
+          const rowErrors = errors.contacts?.[index];
+          return (
+            <View key={contact.id ?? `new-${index}`} className="bg-white border border-stone-200 rounded-xl p-3 mb-3">
+              <View className="flex-row items-center justify-between mb-2">
+                <Text className="text-sm font-semibold text-stone-700">{t('form.contactN', { n })}</Text>
+                <TouchableOpacity
+                  onPress={() => setValue('contacts', values.contacts.filter((_, i) => i !== index), { shouldDirty: true })}
+                  className="w-11 h-11 items-center justify-center"
+                  accessibilityRole="button"
+                  accessibilityLabel={t('form.removeContact', { n })}
+                >
+                  <Ionicons name="trash-outline" size={18} color={colors.stone[500]} />
+                </TouchableOpacity>
+              </View>
+              <Input
+                label={t('form.contactName')}
+                placeholder={t('form.contactNamePh')}
+                value={contact.name}
+                onChangeText={(name) => set({ name })}
+                error={rowErrors?.name?.message}
+              />
+              <Input
+                label={t('form.contactRole')}
+                placeholder={t('form.contactRolePh')}
+                value={contact.role}
+                onChangeText={(role) => set({ role })}
+                error={rowErrors?.role?.message}
+              />
+              <Input
+                label={t('form.contactEmail')}
+                placeholder="recruiter@company.com"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                value={contact.email}
+                onChangeText={(email) => set({ email })}
+                error={rowErrors?.email?.message}
+              />
+              <Input
+                label={t('form.contactPhone')}
+                keyboardType="phone-pad"
+                textContentType="telephoneNumber"
+                value={contact.phone}
+                onChangeText={(phone) => set({ phone })}
+              />
+              <Input
+                label={t('form.contactNotes')}
+                multiline
+                numberOfLines={2}
+                textAlignVertical="top"
+                value={contact.notes}
+                onChangeText={(notes) => set({ notes })}
+              />
+            </View>
+          );
+        })}
+        {values.contacts.length < JOB_LIMITS.contacts ? (
+          <TouchableOpacity
+            onPress={() =>
+              setValue('contacts', [...values.contacts, { name: '', role: '', email: '', phone: '', notes: '' }], {
+                shouldDirty: true,
+              })
+            }
+            className="flex-row items-center min-h-[44px] mb-4"
+            accessibilityRole="button"
+          >
+            <Ionicons name="add-circle-outline" size={20} color={colors.brand[600]} />
+            <Text className="text-brand-600 font-semibold ms-1.5">{t('form.addContact')}</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        <Text className="text-base font-bold text-stone-900 mt-2 mb-2">{t('form.checklist')}</Text>
+        {values.checklist.map((item, index) => {
+          const n = index + 1;
+          const set = (patch: Partial<FormData['checklist'][number]>) =>
+            setValue(
+              'checklist',
+              values.checklist.map((c, i) => (i === index ? { ...c, ...patch } : c)),
+              { shouldDirty: true },
+            );
+          return (
+            <View key={item.id ?? `new-${index}`} className="flex-row items-center mb-2">
+              <TouchableOpacity
+                onPress={() => set({ done: !item.done })}
+                className="w-11 h-11 items-center justify-center"
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: item.done }}
+                accessibilityLabel={t('form.checklistToggle', { n })}
+              >
+                <Ionicons
+                  name={item.done ? 'checkbox' : 'square-outline'}
+                  size={22}
+                  color={item.done ? colors.brand[600] : colors.stone[400]}
+                />
+              </TouchableOpacity>
+              <View className="flex-1">
+                <Input
+                  placeholder={t('form.checklistItemPh')}
+                  value={item.label}
+                  onChangeText={(label) => set({ label })}
+                  accessibilityLabel={t('form.checklistItemPh')}
+                />
+              </View>
+              <TouchableOpacity
+                onPress={() => setValue('checklist', values.checklist.filter((_, i) => i !== index), { shouldDirty: true })}
+                className="w-11 h-11 items-center justify-center"
+                accessibilityRole="button"
+                accessibilityLabel={t('form.removeChecklistItem', { n })}
+              >
+                <Ionicons name="trash-outline" size={18} color={colors.stone[500]} />
+              </TouchableOpacity>
+            </View>
+          );
+        })}
+        {values.checklist.length < JOB_LIMITS.checklistItems ? (
+          <TouchableOpacity
+            onPress={() =>
+              setValue('checklist', [...values.checklist, { label: '', kind: 'task', done: false }], { shouldDirty: true })
+            }
+            className="flex-row items-center min-h-[44px] mb-4"
+            accessibilityRole="button"
+          >
+            <Ionicons name="add-circle-outline" size={20} color={colors.brand[600]} />
+            <Text className="text-brand-600 font-semibold ms-1.5">{t('form.addChecklistItem')}</Text>
+          </TouchableOpacity>
+        ) : null}
 
         <Button
           variant="primary"
@@ -602,6 +788,16 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
                 accessibilityLabel={t('form.addToCalendarA11y')}
               >
                 {t('form.addToCalendar')}
+              </Button>
+            ) : null}
+            {initialJob.deadline ? (
+              <Button
+                variant="outline"
+                fullWidth
+                icon={<Ionicons name="flag-outline" size={18} color={colors.stone[700]} />}
+                onPress={() => void shareDeadlineIcs(initialJob)}
+              >
+                {t('form.addDeadlineToCalendar')}
               </Button>
             ) : null}
             <Button

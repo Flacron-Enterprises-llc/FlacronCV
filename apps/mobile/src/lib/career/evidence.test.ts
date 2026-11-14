@@ -12,7 +12,11 @@ import {
   checkUploadSize,
   evidenceFileErrorMessage,
   evidenceFormDirty,
+  evidenceLabelLimit,
   evidenceLabelView,
+  needsRedactionConfirm,
+  toggleFactId,
+  verificationRows,
   evidenceSaveErrorMessage,
   formFromEvidence,
   formatBytes,
@@ -44,6 +48,11 @@ const item: CareerEvidence = {
   verifiedAt: null,
   verifierName: null,
   isPortfolioShared: true,
+  linkedFactIds: ['f1'],
+  confidential: false,
+  redactionNote: null,
+  redactionConfirmedAt: null,
+  verifications: [],
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 };
@@ -118,6 +127,88 @@ describe('evidence form', () => {
     const stored = toUpdateEvidenceInput(formFromEvidence({ ...item, attachmentStored: true }), true);
     expect('attachmentUrl' in stored).toBe(false);
     expect('attachmentName' in stored).toBe(false);
+  });
+
+  it('accepts http and https links only, without credentials (the API rule)', () => {
+    const ok = { ...EMPTY_EVIDENCE_FORM, title: 'A' };
+    expect(validateEvidenceForm({ ...ok, attachmentUrl: 'http://example.com/x' }).attachmentUrl).toBeUndefined();
+    expect(validateEvidenceForm({ ...ok, attachmentUrl: 'data:text/html,hi' }).attachmentUrl).toBeDefined();
+    expect(validateEvidenceForm({ ...ok, attachmentUrl: 'https://me:pw@example.com' }).attachmentUrl).toBeDefined();
+    const refused = new ApiError(400, 'validation_error', { code: 'validation_error', field: 'attachmentUrl', reason: 'unsafe_url' });
+    expect(evidenceSaveErrorMessage(refused)).toBe('Use a link that starts with https:// or http://.');
+  });
+
+  it('requires a redaction confirmation before a confidential item is shared', () => {
+    const form = { ...formFromEvidence(item), confidential: true };
+    expect(needsRedactionConfirm(form)).toBe(true);
+    expect(validateEvidenceForm(form).redactionConfirmed).toBe('Confirm the redaction before sharing a confidential item.');
+    expect(validateEvidenceForm({ ...form, isPortfolioShared: false }).redactionConfirmed).toBeUndefined();
+    expect(validateEvidenceForm({ ...form, redactionConfirmed: true }).redactionConfirmed).toBeUndefined();
+    const refused = new ApiError(400, 'validation_error', { code: 'validation_error', field: 'redactionConfirmed', reason: 'required' });
+    expect(evidenceSaveErrorMessage(refused)).toBe('Confirm the redaction before sharing a confidential item.');
+  });
+
+  it('sends the redaction confirmation only when it changes', () => {
+    const confirmed = { ...item, confidential: true, redactionNote: 'Names blurred', redactionConfirmedAt: '2026-02-01T00:00:00Z' };
+    const base = formFromEvidence(confirmed);
+    expect(base.redactionConfirmed).toBe(true);
+    const unchanged = toUpdateEvidenceInput({ ...base, title: 'New' }, false, base);
+    expect('redactionConfirmed' in unchanged).toBe(false);
+    expect(unchanged).toMatchObject({ confidential: true, redactionNote: 'Names blurred', linkedFactIds: ['f1'] });
+    const fresh = formFromEvidence(item);
+    expect(toUpdateEvidenceInput({ ...fresh, confidential: true, redactionConfirmed: true }, false, fresh).redactionConfirmed).toBe(true);
+    // Turning confidential off clears the note; the API then drops the confirmation itself.
+    expect(toUpdateEvidenceInput({ ...base, confidential: false, redactionConfirmed: false }, false, base)).toMatchObject({
+      confidential: false,
+      redactionNote: null,
+    });
+    expect(
+      toCreateEvidenceInput({ ...EMPTY_EVIDENCE_FORM, title: 'T', confidential: true, redactionNote: ' x ', redactionConfirmed: true, isPortfolioShared: true }),
+    ).toMatchObject({ confidential: true, redactionNote: 'x', redactionConfirmed: true });
+  });
+
+  it('links facts, treating order as no change', () => {
+    const form = formFromEvidence(item);
+    expect(toggleFactId(form.linkedFactIds, 'f2')).toEqual(['f1', 'f2']);
+    expect(evidenceFormDirty({ ...form, linkedFactIds: ['f1'] }, form)).toBe(false);
+    expect(evidenceFormDirty({ ...form, linkedFactIds: ['f1', 'f2'] }, form)).toBe(true);
+    expect(validateEvidenceForm({ ...form, linkedFactIds: Array.from({ length: 51 }, (_, i) => String(i)) }).linkedFactIds).toBeDefined();
+    const refused = new ApiError(400, 'validation_error', { code: 'validation_error', field: 'linkedFactIds', reason: 'unknown' });
+    expect(evidenceSaveErrorMessage(refused)).toContain('no longer exists');
+  });
+
+  it('shows the full verification history read-only, expired and revoked included', () => {
+    const rows = verificationRows([
+      {
+        id: 'v2', label: 'issuer_verified', method: 'issuer_registry', checkedOn: '2026-03-01', scope: 'AWS SA Associate',
+        issuerName: 'AWS', permissionEvidence: 'consent', expiresOn: '2029-03-01', revokedAt: null, revokedReason: null,
+        recordedBy: 'operator', createdAt: '2026-03-01T00:00:00Z', active: true,
+      },
+      {
+        id: 'v1', label: 'reference_confirmed', method: 'reference_contact', checkedOn: '2025-01-01', scope: 'Led the team',
+        issuerName: 'J. Doe', permissionEvidence: 'consent', expiresOn: null, revokedAt: '2026-01-01T00:00:00Z', revokedReason: 'Withdrawn',
+        recordedBy: 'operator', createdAt: '2025-01-01T00:00:00Z', active: false,
+      },
+      {
+        id: 'v0', label: 'assessment_completed', method: 'assessment', checkedOn: '2020-01-01', scope: 'Test',
+        issuerName: 'Board', permissionEvidence: 'consent', expiresOn: '2021-01-01', revokedAt: null, revokedReason: null,
+        recordedBy: 'operator', createdAt: '2020-01-01T00:00:00Z', active: false,
+      },
+    ]);
+    expect(rows.map((row) => row.status)).toEqual(['active', 'revoked', 'expired']);
+    expect(rows[0]).toMatchObject({ label: 'ISSUER VERIFIED', statusText: null });
+    expect(rows[0].lines).toEqual([
+      'Checked on 2026-03-01 · Issuer register',
+      'Issuer or assessment: AWS',
+      'Covers: AWS SA Associate',
+      'Valid until 2029-03-01',
+    ]);
+    expect(rows[1].statusText).toBe('Revoked');
+    expect(rows[1].lines).toContain('Revoked: Withdrawn');
+    expect(rows[2].statusText).toBe('Expired');
+    expect(verificationRows(undefined)).toEqual([]);
+    expect(evidenceLabelLimit('issuer_verified')).toContain('issuer');
+    expect(evidenceLabelLimit('anything')).toBe('Your own statement. Nothing has been checked.');
   });
 
   it('hides the link of a stored file from the form', () => {

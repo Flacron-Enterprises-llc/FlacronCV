@@ -92,16 +92,52 @@ describe('text interviews over HTTP', () => {
       .send({ situation: 'SQL', task: 'SQL', action: 'SQL', result: 'raised 50 million' });
     expect(invented.status).toBe(400);
     expect(invented.body).toMatchObject({ code: 'validation_error', field: 'result', reason: 'number_not_in_facts' });
+    const achievement = await http()
+      .post('/api/career/v1/facts')
+      .set('Authorization', auth)
+      .send({ factType: 'achievement', value: { statement: 'Reconciled the SQL ledger every week' }, confirmation: 'confirmed' });
+    expect(achievement.status).toBe(201);
     const story = await http()
       .post('/api/career/v1/star-stories')
       .set('Authorization', auth)
-      .send({ situation: 'SQL', task: 'SQL', action: 'SQL', result: 'SQL' });
+      .send({ situation: 'SQL', task: 'SQL', action: 'SQL', result: 'Reconciled the SQL ledger every week.' });
     expect(story.status).toBe(201);
-    expect(story.body.result).toBe('SQL');
+    expect(story.body.factIds).toContain(achievement.body.id);
+    const edited = await http()
+      .patch(`/api/career/v1/star-stories/${story.body.id}`)
+      .set('Authorization', auth)
+      .send({ situation: 'SQL', task: 'SQL', action: 'Wrote the checks', result: 'Reconciled the SQL ledger every week.' });
+    expect(edited.status).toBe(200);
+    expect(edited.body.action).toBe('Wrote the checks');
+    const award = await http()
+      .patch(`/api/career/v1/star-stories/${story.body.id}`)
+      .set('Authorization', auth)
+      .send({ situation: 'SQL', task: 'SQL', action: 'SQL', result: 'Reconciled the SQL ledger and won the Gold Award.' });
+    expect(award.status).toBe(400);
+    expect(award.body).toMatchObject({ code: 'validation_error', field: 'result', reason: 'result_not_in_facts' });
+
+    // Practice by typed role, three questions, no saved listing.
+    const byRole = await http()
+      .post('/api/career/v1/interviews/text')
+      .set('Authorization', auth)
+      .set('Idempotency-Key', 'http-interview-role')
+      .send({ role: 'Ledger analyst', stage: 'recruiter', questionCount: 3 });
+    expect(byRole.status).toBe(201);
+    expect(byRole.body.session.questions).toHaveLength(3);
+    expect(byRole.body.session.opportunityId).toBeNull();
+    const badCount = await http()
+      .post('/api/career/v1/interviews/text')
+      .set('Authorization', auth)
+      .set('Idempotency-Key', 'http-interview-count')
+      .send({ role: 'Ledger analyst', stage: 'recruiter', questionCount: 12 });
+    expect(badCount.status).toBe(400);
+    const removed = await http().delete(`/api/career/v1/star-stories/${story.body.id}`).set('Authorization', auth);
+    expect(removed.status).toBe(200);
+    expect(removed.body).toEqual({ deleted: true });
     const still = await t.db.pool.query<{ n: number }>(
       `SELECT count(*)::int AS n FROM usage_ledger WHERE unit = 'text_interview' AND state = 'committed'`,
     );
-    expect(still.rows[0].n).toBe(1);
+    expect(still.rows[0].n).toBe(2);
 
     const other = await http().get(`/api/career/v1/interviews/text/${created.body.session.id}`).set('Authorization', bearer('http-interview-other'));
     expect(other.status).toBe(403);

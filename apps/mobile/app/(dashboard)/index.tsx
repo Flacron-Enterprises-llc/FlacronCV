@@ -23,7 +23,7 @@ import { SubscriptionPlan } from '../../src/types/enums';
 import { PLAN_CONFIGS } from '../../src/types/subscription.types';
 import { PAID_UPGRADES_ENABLED } from '../../src/config/paid-upgrades';
 import { CAREER_ENABLED } from '../../src/config/career';
-import { effectivePlanForCopy } from '../../src/lib/entitlements';
+import { effectivePlanForCopy, isCatalogPaidPlan, planForDisplay } from '../../src/lib/entitlements';
 import {
   confirmVerifiedEmail,
   resendVerificationEmail,
@@ -104,7 +104,13 @@ export default function DashboardScreen() {
       bgClass: 'bg-brand-100',
     },
   };
-  const badge = plan ? planBadge[plan] : null;
+  const displayPlan = user ? planForDisplay(user.subscription) : null;
+  const legacyBadge = plan ? planBadge[plan] : null;
+  // Current five-plan subscribers see their real plan name; legacy badges are unchanged.
+  const badge =
+    legacyBadge && displayPlan && isCatalogPaidPlan(displayPlan)
+      ? { ...legacyBadge, label: ts(`plans.${displayPlan}`) }
+      : legacyBadge;
 
   const pullRefreshing =
     (userFetching || cvsFetching || clFetching) &&

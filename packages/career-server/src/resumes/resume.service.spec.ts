@@ -221,6 +221,33 @@ describe('ResumeStudioService', () => {
     expect(tailoredJson).not.toContain('COBOL');
   });
 
+  it("does not tailor to another candidate's private pasted listing", async () => {
+    const owner = await person('resume-private-owner');
+    const intruder = await person('resume-private-intruder');
+    const pasted = await db.pool.query<{ id: string }>(
+      `INSERT INTO opportunities (category, provider, source_id, title, organization, status, candidate_auth_user_id)
+       VALUES ('job', 'paste', 'resume-private-1', 'Archivist', 'Private Co', 'open', $1) RETURNING id`,
+      [owner.authUserId],
+    );
+    const pastedRevision = await db.pool.query<{ id: string }>(
+      `INSERT INTO opportunity_revisions (opportunity_id, revision, title, organization, description, status)
+       VALUES ($1, 1, 'Archivist', 'Private Co', 'Keep the archive catalogue accurate with SQL and careful records work.', 'open') RETURNING id`,
+      [pasted.rows[0].id],
+    );
+    await db.pool.query(`UPDATE opportunities SET current_revision_id = $2 WHERE id = $1`, [
+      pasted.rows[0].id,
+      pastedRevision.rows[0].id,
+    ]);
+    const privateId = pasted.rows[0].id;
+    await profiles.createFact(intruder, { factType: 'skill', value: { name: 'SQL' }, confirmation: 'confirmed' });
+    const created = await resumes.create(intruder, { title: 'Intruder', language: 'en' });
+    const refused = await resumes
+      .tailor(intruder, created.id, { opportunityId: privateId }, 'tailor-private')
+      .catch((error: unknown) => error);
+    expect(isBillingError(refused, 'not_found')).toBe(true);
+    expect(await states(intruder)).toEqual([]);
+  });
+
   it('refuses generate before reserving when the profile has no confirmed job or school', async () => {
     const p = await person('resume-skill-only');
     await profiles.createFact(p, { factType: 'skill', value: { name: 'SQL' }, confirmation: 'confirmed' });

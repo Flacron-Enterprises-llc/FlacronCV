@@ -1,13 +1,30 @@
+import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsEmail,
-  IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   Matches,
   MaxLength,
+  ValidateNested,
 } from 'class-validator';
-import { CreateJobData, JobStatus } from '@flacroncv/shared-types';
+import {
+  CreateJobData,
+  JOB_LIMITS,
+  JOB_OUTCOMES,
+  JOB_STATUS_INPUTS,
+  JobDescriptionSource,
+  JobOutcome,
+  JobStatus,
+  LegacyJobStatus,
+} from '@flacroncv/shared-types';
+import { JobChecklistItemDto, JobContactDto, JobFormAnswerDto } from './job-parts.dto';
+
+/** Calendar date as an <input type=date> produces it. */
+export const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 export class CreateJobDto implements CreateJobData {
   @IsString()
@@ -30,9 +47,10 @@ export class CreateJobDto implements CreateJobData {
   @MaxLength(200)
   location?: string | null;
 
+  /** Legacy values (wishlist/offer/accepted) from older apps are accepted and normalised by the service. */
   @IsOptional()
-  @IsEnum(JobStatus, { message: `status must be one of: ${Object.values(JobStatus).join(', ')}` })
-  status?: JobStatus;
+  @IsIn(JOB_STATUS_INPUTS, { message: `status must be one of: ${JOB_STATUS_INPUTS.join(', ')}` })
+  status?: JobStatus | LegacyJobStatus;
 
   @IsOptional()
   @IsString()
@@ -60,11 +78,13 @@ export class CreateJobDto implements CreateJobData {
   @MaxLength(100)
   salaryRange?: string | null;
 
+  /** @deprecated Old single contact (apps from before `contacts`). */
   @IsOptional()
   @IsString()
   @MaxLength(200)
   contactName?: string | null;
 
+  /** @deprecated Old single contact (apps from before `contacts`). */
   @IsOptional()
   @IsEmail({}, { message: 'contactEmail must be a valid email address' })
   @MaxLength(320)
@@ -81,6 +101,51 @@ export class CreateJobDto implements CreateJobData {
   @IsString()
   @MaxLength(20)
   followUpDate?: string | null;
+
+  /** ISO date the application closes. New field, so its format is enforced. */
+  @IsOptional()
+  @Matches(DATE_ONLY, { message: 'deadline must be a date (YYYY-MM-DD)' })
+  deadline?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(JOB_LIMITS.descriptionChars)
+  jobDescription?: string | null;
+
+  @IsOptional()
+  @IsIn(['pasted', 'opportunity'])
+  jobDescriptionSource?: JobDescriptionSource | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(JOB_LIMITS.contacts)
+  @ValidateNested({ each: true })
+  @Type(() => JobContactDto)
+  contacts?: JobContactDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(JOB_LIMITS.checklistItems)
+  @ValidateNested({ each: true })
+  @Type(() => JobChecklistItemDto)
+  checklist?: JobChecklistItemDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(JOB_LIMITS.formAnswers)
+  @ValidateNested({ each: true })
+  @Type(() => JobFormAnswerDto)
+  formAnswers?: JobFormAnswerDto[];
+
+  /** User-reported outcome; the origin is always recorded server-side as user_reported. */
+  @IsOptional()
+  @IsIn(JOB_OUTCOMES)
+  outcome?: JobOutcome | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(JOB_LIMITS.opportunityId)
+  opportunityId?: string | null;
 
   @IsOptional()
   @IsBoolean()

@@ -6,10 +6,10 @@ import { Button } from '../../../src/components/ui/Button';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../src/components/ui/Skeleton';
-import { useRecruitingOptIn, useSetRecruitingOptIn } from '../../../src/hooks/career/recruiting';
+import { useRecruitingCount, useRecruitingOptIn, useSetRecruitingOptIn } from '../../../src/hooks/career/recruiting';
 import { useCareerAccess } from '../../../src/hooks/useCareer';
 import { useLeaveGuard } from '../../../src/hooks/useLeaveGuard';
-import { optInSaveError, RECRUITING_COPY, statusLine } from '../../../src/lib/career/recruiting';
+import { countLine, optInSaveError, RECRUITING_COPY, statusLine } from '../../../src/lib/career/recruiting';
 import { careerErrorMessage } from '../../../src/lib/career-view';
 import { colors } from '../../../src/theme/colors';
 import { useT } from '../../../src/i18n';
@@ -25,6 +25,7 @@ export default function CareerRecruitingScreen() {
   const access = useCareerAccess();
   const current = useRecruitingOptIn();
   const save = useSetRecruitingOptIn();
+  const count = useRecruitingCount();
   const [choice, setChoice] = useState<boolean | null>(null);
   const [note, setNote] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
 
@@ -93,6 +94,25 @@ export default function CareerRecruitingScreen() {
           <View className="mt-4 self-start">
             <Button onPress={onSave} loading={save.isPending} disabled={save.isPending || (!dirty && saved !== null)}>
               {RECRUITING_COPY.save}
+            </Button>
+          </View>
+        </View>
+        <View className="bg-white rounded-2xl border border-stone-100 p-5 mt-4">
+          <Text className="font-bold text-stone-900 text-base">{t('recruiting.countTitle')}</Text>
+          <Text className="text-stone-500 text-sm mt-1 leading-5">{t('recruiting.countHelp')}</Text>
+          {count.data !== undefined && count.data !== null ? (
+            <Text className="text-stone-900 text-sm font-semibold mt-3" accessibilityLiveRegion="polite">
+              {countLine(count.data)}
+            </Text>
+          ) : null}
+          {count.error ? (
+            <Text className="text-red-700 text-sm mt-3" accessibilityRole="alert">
+              {careerErrorMessage(count.error, t('recruiting.countFailed'))}
+            </Text>
+          ) : null}
+          <View className="mt-3 self-start">
+            <Button variant="outline" onPress={() => void count.refetch()} loading={count.isFetching} disabled={count.isFetching}>
+              {t('recruiting.countButton')}
             </Button>
           </View>
         </View>

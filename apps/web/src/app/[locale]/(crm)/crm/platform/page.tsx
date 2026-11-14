@@ -11,6 +11,7 @@ import {
   PlatformTopTemplate,
 } from '@flacroncv/shared-types';
 import CRMStatCard from '@/components/crm/CRMStatCard';
+import { crmPlanLabel } from '@/lib/plan-labels';
 import {
   Users,
   FileText,
@@ -122,10 +123,14 @@ export default function CRMPlatformPage(): React.JSX.Element {
   ];
 
   const planBreakdown = [
-    { label: t('plan_free'), count: overview?.usersByPlan.free ?? 0, color: 'bg-stone-400 dark:bg-stone-500', textColor: 'text-stone-600 dark:text-stone-400', icon: Users },
-    { label: t('plan_pro'), count: overview?.usersByPlan.pro ?? 0, color: 'bg-brand-500', textColor: 'text-brand-600 dark:text-brand-400', icon: Shield },
-    { label: t('plan_career_accelerator'), count: overview?.usersByPlan.career_accelerator ?? 0, color: 'bg-fuchsia-500', textColor: 'text-fuchsia-600 dark:text-fuchsia-400', icon: Briefcase },
-    { label: t('plan_enterprise'), count: overview?.usersByPlan.enterprise ?? 0, color: 'bg-violet-500', textColor: 'text-violet-600 dark:text-violet-400', icon: Crown },
+    { label: crmPlanLabel(t, 'free'), count: overview?.usersByPlan.free ?? 0, color: 'bg-stone-400 dark:bg-stone-500', textColor: 'text-stone-600 dark:text-stone-400', icon: Users },
+    { label: crmPlanLabel(t, 'starter'), count: overview?.usersByPlan.starter ?? 0, color: 'bg-sky-500', textColor: 'text-sky-600 dark:text-sky-400', icon: Shield },
+    { label: crmPlanLabel(t, 'professional'), count: overview?.usersByPlan.professional ?? 0, color: 'bg-brand-500', textColor: 'text-brand-600 dark:text-brand-400', icon: Shield },
+    { label: crmPlanLabel(t, 'career_pro'), count: overview?.usersByPlan.career_pro ?? 0, color: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400', icon: Briefcase },
+    { label: crmPlanLabel(t, 'business'), count: overview?.usersByPlan.business ?? 0, color: 'bg-amber-500', textColor: 'text-amber-600 dark:text-amber-400', icon: Crown },
+    { label: crmPlanLabel(t, 'pro'), count: overview?.usersByPlan.pro ?? 0, color: 'bg-brand-300', textColor: 'text-brand-500 dark:text-brand-300', icon: Shield },
+    { label: crmPlanLabel(t, 'career_accelerator'), count: overview?.usersByPlan.career_accelerator ?? 0, color: 'bg-fuchsia-500', textColor: 'text-fuchsia-600 dark:text-fuchsia-400', icon: Briefcase },
+    { label: crmPlanLabel(t, 'enterprise'), count: overview?.usersByPlan.enterprise ?? 0, color: 'bg-violet-500', textColor: 'text-violet-600 dark:text-violet-400', icon: Crown },
   ];
 
   const totalPlanUsers = planBreakdown.reduce((s, p) => s + p.count, 0);

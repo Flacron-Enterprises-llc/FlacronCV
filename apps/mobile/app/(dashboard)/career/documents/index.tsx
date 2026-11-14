@@ -9,7 +9,7 @@ import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../../src/components/ui/Skeleton';
 import { useCareerAccess, useCareerResumes, useCareerWritingList } from '../../../../src/hooks/useCareer';
-import { creditLine, letterTemplateName, resumeTemplateName } from '../../../../src/lib/career/documents';
+import { creditLine, letterTemplateName, resumeTemplateName, writingTypeLabel } from '../../../../src/lib/career/documents';
 import { careerErrorMessage, formatDay } from '../../../../src/lib/career-view';
 import { useT } from '../../../../src/i18n';
 import { RTL_FLIP } from '../../../../src/i18n/native';
@@ -25,8 +25,7 @@ export default function CareerDocumentsScreen() {
   const router = useRouter();
   const t = useT('careerDocuments');
   const tk = useT('career');
-  const writingLabel = (type: string) =>
-    type === 'cover_letter' ? t('writingTypes.cover_letter') : type === 'bio' ? t('writingTypes.bio') : type === 'linkedin' ? t('writingTypes.linkedin') : type === 'outreach' ? t('list.outreachMessage') : type;
+  const writingLabel = (type: string) => (type === 'outreach' ? t('list.outreachMessage') : writingTypeLabel(type));
   const access = useCareerAccess();
   const resumes = useCareerResumes();
   const writing = useCareerWritingList();

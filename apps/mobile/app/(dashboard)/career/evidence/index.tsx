@@ -102,6 +102,14 @@ export default function EvidenceListScreen() {
                   {item.linkedSkills.join(' · ')}
                 </Text>
               ) : null}
+              {item.confidential || (item.linkedFactIds?.length ?? 0) > 0 ? (
+                <View className="flex-row flex-wrap items-center gap-2 mt-2">
+                  {item.confidential ? <Pill label={t('list.confidential')} tone="warning" /> : null}
+                  {(item.linkedFactIds?.length ?? 0) > 0 ? (
+                    <Text className="text-stone-500 text-xs">{t('list.linkedFacts', { count: item.linkedFactIds.length })}</Text>
+                  ) : null}
+                </View>
+              ) : null}
               <View className="flex-row items-center justify-between mt-3">
                 <View className="flex-row items-center flex-1 me-2">
                   {item.attachmentStored || item.attachmentUrl ? (

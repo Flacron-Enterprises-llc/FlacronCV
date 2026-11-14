@@ -58,7 +58,7 @@ export interface ClosureSweepResult {
 export const RETAINED_AFTER_DELETION = [
   'billing_accounts (sign-in id cleared; provider customer id kept for refunds and disputes)',
   'usage_ledger, usage_balances (candidate id cleared; the ledger is append-only)',
-  'purchases, packs, billing_events, checkout_sessions, usage_warnings, organization_entitlements, voice_meter_remainders',
+  'purchases, packs, billing_events, checkout_sessions, usage_warnings, organization_entitlements, voice_meter_remainders, billing_adjustments',
   'workspaces (name and owner cleared; billing rows reference it)',
   'admin_audit (actor replaced with "deleted-account" when the person was an operator)',
   'migration_keys (V1 document ids only; V2 has no V1 import, so normally empty)',
@@ -456,6 +456,8 @@ async function storedObjectKeys(pool: Pool, owner: Principal): Promise<string[]>
   const res = await pool.query<{ key: string }>(
     `SELECT object_key AS key FROM account_exports WHERE auth_user_id = $1 AND object_key IS NOT NULL
      UNION SELECT attachment_object_key FROM career_evidence WHERE candidate_auth_user_id = $1 AND attachment_object_key IS NOT NULL
+     UNION SELECT r.audio_object_key FROM voice_audio_records r JOIN voice_interview_sessions s ON s.id = r.session_id
+            WHERE s.candidate_auth_user_id = $1 AND r.audio_object_key IS NOT NULL
      UNION SELECT object_key FROM stored_object_intents WHERE candidate_auth_user_id = $1`,
     [owner.authUserId],
   );
@@ -468,6 +470,8 @@ export const PERSONAL_COLUMNS: ReadonlyArray<readonly [string, string]> = [
   ['digests', 'recipient_auth_user_id'],
   ['alert_settings', 'candidate_auth_user_id'],
   ['saved_searches', 'candidate_auth_user_id'],
+  ['saved_opportunities', 'candidate_auth_user_id'],
+  ['career_reminders', 'candidate_auth_user_id'],
   ['followed_companies', 'candidate_auth_user_id'],
   ['location_profiles', 'candidate_auth_user_id'],
   ['applications', 'candidate_auth_user_id'],
@@ -510,7 +514,7 @@ export const PERSONAL_COLUMNS: ReadonlyArray<readonly [string, string]> = [
 ];
 /** Cleared only in the final pass, because the account is found through them. */
 const ACCOUNT_LINKS = ['usage_ledger', 'usage_balances', 'billing_accounts'];
-export const OWNER_WORKSPACE_TABLES = ['api_keys', 'white_label_configs', 'business_staff', 'business_candidates'] as const;
+export const OWNER_WORKSPACE_TABLES = ['api_keys', 'white_label_configs', 'business_staff', 'business_candidates', 'business_queue_items'] as const;
 
 /**
  * Tables that still hold the person's id (or the owner workspace's records).
@@ -532,6 +536,8 @@ export async function remainingPersonalData(db: Db, owner: Principal, options: {
   if (email) {
     const res = await db.query(`SELECT 1 FROM business_candidates WHERE lower(trim(email)) = $1 LIMIT 1`, [email]);
     if (res.rows.length > 0) left.push('business_candidates.email');
+    const invites = await db.query(`SELECT 1 FROM business_staff WHERE accepted_at IS NULL AND lower(trim(invite_email)) = $1 LIMIT 1`, [email]);
+    if (invites.rows.length > 0) left.push('business_staff.invite_email');
   }
   if (!options.final) return left;
   const user = await db.query(`SELECT 1 FROM users WHERE auth_user_id = $1`, [owner.authUserId]);
@@ -553,6 +559,9 @@ async function erasePersonalData(db: Db, owner: Principal, options: { removeUser
   await run(`DELETE FROM alert_items WHERE recipient_auth_user_id = $1`);
   await run(`DELETE FROM alert_settings WHERE candidate_auth_user_id = $1`);
   await run(`DELETE FROM saved_searches WHERE candidate_auth_user_id = $1`);
+  await run(`DELETE FROM saved_opportunities WHERE candidate_auth_user_id = $1`);
+  await run(`DELETE FROM reminder_deliveries WHERE reminder_id IN (SELECT id FROM career_reminders WHERE candidate_auth_user_id = $1)`);
+  await run(`DELETE FROM career_reminders WHERE candidate_auth_user_id = $1`);
   await run(`DELETE FROM followed_companies WHERE candidate_auth_user_id = $1`);
   await run(`DELETE FROM location_profiles WHERE candidate_auth_user_id = $1`);
   await run(`DELETE FROM application_reminders WHERE application_id IN (SELECT id FROM applications WHERE candidate_auth_user_id = $1)`);
@@ -590,6 +599,9 @@ async function erasePersonalData(db: Db, owner: Principal, options: { removeUser
   );
   await run(`DELETE FROM business_staff WHERE ${staffWhere}`, [uid, ws]);
   await run(`DELETE FROM business_candidates WHERE workspace_id = $1 OR ($2::text IS NOT NULL AND lower(trim(email)) = $2)`, [ws, email]);
+  // Pending staff invitations naming the person's verified address, in any workspace.
+  await run(`DELETE FROM business_staff WHERE accepted_at IS NULL AND $1::text IS NOT NULL AND lower(trim(invite_email)) = $1`, [email]);
+  await run(`DELETE FROM business_queue_items WHERE workspace_id = $1`, [ws]);
   await run(`DELETE FROM api_keys WHERE workspace_id = $1`, [ws]);
   await run(`DELETE FROM white_label_configs WHERE workspace_id = $1`, [ws]);
 

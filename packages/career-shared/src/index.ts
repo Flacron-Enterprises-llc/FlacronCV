@@ -151,8 +151,30 @@ export type { AlertChannel, AlertReasonCode, DigestChoice } from './alerts';
 export { applicationCalendar, isApplicationStatus, isDateOnly, APPLICATION_STATUSES } from './applications';
 export { nextDeadline, savedApplicationCount, stageCounts, suggestNextAction, utcDateOnly } from './dashboard';
 export type { DashboardAction, DashboardApplication } from './dashboard';
-export { interviewFeedback, interviewQuestions, interviewSummary, isInterviewStage, numbersMissingFrom, INTERVIEW_STAGES, MAX_INTERVIEW_QUESTIONS } from './interview';
-export type { InterviewFeedback, InterviewQuestion, InterviewStage } from './interview';
+export {
+  checkStarResult,
+  interviewFeedback,
+  interviewQuestions,
+  interviewReport,
+  interviewSummary,
+  isInterviewQuestionCount,
+  isInterviewStage,
+  numbersMissingFrom,
+  FEEDBACK_DIMENSIONS,
+  INTERVIEW_STAGES,
+  MAX_INTERVIEW_QUESTIONS,
+  MAX_INTERVIEW_ROLE,
+  MIN_INTERVIEW_QUESTIONS,
+} from './interview';
+export type {
+  FeedbackDimension,
+  InterviewDimensionResult,
+  InterviewFeedback,
+  InterviewQuestion,
+  InterviewReport,
+  InterviewStage,
+  StarResultCheck,
+} from './interview';
 export type { ApplicationStatus, ChecklistItem } from './applications';
 export { cosine, explainMatch, fakeEmbedding, matchTokens } from './match';
 export type { MatchExplanation, MatchFit, MatchGap, MatchLine, MatchListing, MatchReason, MatchUnknown } from './match';
@@ -172,10 +194,19 @@ export {
   employerMentions,
   employmentTenure,
   evaluateCoverLetter,
+  evaluateProse,
   isCoverLetterTemplateId,
+  isProseWritingType,
   isWritingType,
+  normalizeWritingContext,
+  proseReady,
+  salutationNames,
   writingBody,
   writingTitle,
+  PROSE_LIMITS,
+  PROSE_WRITING_TYPES,
+  TARGETED_WRITING_TYPES,
+  WRITING_CONTEXT_LIMITS,
   WRITING_TYPES,
 } from './writing';
 export type {
@@ -184,6 +215,10 @@ export type {
   CoverLetterTemplate,
   CoverLetterTemplateId,
   EmploymentTenure,
+  ProseCheckContext,
+  ProseParts,
+  ProseWritingType,
+  WritingContext,
   WritingDraft,
   WritingType,
 } from './writing';
@@ -201,24 +236,49 @@ export type {
 export {
   EVIDENCE_LABELS,
   EVIDENCE_TYPES,
+  VERIFICATION_METHODS,
+  VERIFIED_LABELS,
   defaultEvidenceLabel,
+  effectiveEvidenceLabel,
   isEvidenceLabel,
   isEvidenceType,
+  isVerificationMethod,
+  isVerifiedLabel,
+  safeEvidenceUrl,
+  verificationActive,
 } from './evidence';
 export type {
   CareerEvidence,
   CreateEvidenceInput,
   EvidenceLabel,
   EvidenceType,
+  EvidenceVerification,
+  RecordVerificationInput,
   UpdateEvidenceInput,
+  VerificationMethod,
+  VerifiedLabel,
 } from './evidence';
 export {
   actionPackNextStepCodes,
   defaultActionPackChecklist,
   defaultActionPackNextSteps,
   ACTION_PACK_CHECKLIST_IDS,
+  ACTION_PACK_COMPONENTS,
+  ACTION_PACK_EDIT_LIMITS,
+  ACTION_PACK_LETTER_ATTEMPTS,
+  ACTION_PACK_STATUSES,
+  applyActionPackEdit,
+  tailorActionPackResume,
 } from './action-pack';
-export type { ActionPackNextStepCode } from './action-pack';
+export type {
+  ActionPackComponent,
+  ActionPackEdit,
+  ActionPackEditResult,
+  ActionPackNextStepCode,
+  ActionPackSavedDocuments,
+  ActionPackStatus,
+  TailoredResumeResult,
+} from './action-pack';
 export type {
   ActionPack,
   ActionPackChecklistItem,
@@ -231,8 +291,17 @@ export type {
 } from './action-pack';
 export {
   computeLearningProgress,
+  isEssentialCredential,
+  learningPlanCost,
 } from './learning';
 export type {
+  BridgeRole,
+  LearningPlanCost,
+  RequirementKind,
+  RubricCheckInput,
+  RubricCriterionCheck,
+  RubricSelfCheck,
+  TransferableSkill,
   CreateSkillReportInput,
   GapImportance,
   LearningPlanMilestone,
@@ -247,13 +316,34 @@ export type {
   UpdateLearningProgressInput,
 } from './learning';
 export {
+  LICENSE_TRANSFERS,
+  LOCATION_KINDS,
+  LOCATION_NOTES_MAX,
+  LOCATION_PLACE_MAX,
+  MAX_ACTIVE_MODES,
+  MODE_BASE_CONSTRAINTS,
+  REMOTE_FLEXIBILITIES,
+  REMOTE_REGION_MAX,
   SPECIALIST_MODES,
+  SPECIALIST_MODE_IDS,
+  TARGET_TIMELINES,
+  WORK_AUTHORIZATIONS,
+  buildModeContext,
+  isSpecialistMode,
+  locationDateProblem,
+  modeContextPrompt,
   validateRadiusLimit,
 } from './career-modes';
 export type {
   CandidateSpecialistMode,
   CreateLocationProfileInput,
+  LicenseTransfer,
+  LocationKind,
   LocationProfile,
+  LocationProfileList,
+  ModeContext,
+  ModeFilterSuggestion,
+  ModeLocationSummary,
   RemoteFlexibility,
   SpecialistMode,
   SpecialistModeMetadata,
@@ -282,6 +372,23 @@ export {
   learningLoopReport,
   mapSessionView,
   transcriptionRequest,
+  API_KEY_ENVIRONMENTS,
+  API_KEY_RATE_PER_MINUTE,
+  BUSINESS_INVITE_TTL_DAYS,
+  BUSINESS_SCOPES,
+  BUSINESS_STAFF_ROLES,
+  CREDENTIAL_DUE_DAYS,
+  MAINTENANCE_DETAILS_MAX,
+  MAINTENANCE_TITLE_MAX,
+  SCENARIO_NOTE_MAX,
+  SCENARIO_SOURCES,
+  SCENARIO_TEXT_MAX,
+  SCENARIO_UNCERTAINTIES,
+  apiKeyEnvironmentOf,
+  apiKeyPrefix,
+  credentialReminders,
+  isBusinessStaffRole,
+  isCalendarDate,
 } from './remaining';
 export type {
   FormFillDocument,
@@ -291,17 +398,46 @@ export type {
   ScenarioComparison,
   ScenarioOptionInput,
   ScenarioOptionView,
+  ScenarioSource,
+  ScenarioUncertainty,
+  ScenarioWageLabel,
+  SavedScenario,
+  ApiKeyEnvironment,
+  BusinessCandidateStatus,
+  BusinessRole,
+  BusinessScope,
+  BusinessStaffRole,
+  CredentialReminder,
+  MaintenanceAchievement,
+  MaintenanceCredential,
+  MaintenancePromotionGoal,
+  PromotionGoalStatus,
   TranscriptionLanguage,
   TranscriptionRequest,
 } from './remaining';
-export { applyVoiceSeconds, negotiationGuidance, voiceRemainingSeconds, voiceSessionSummary, VOICE_CONSENT_VERSION, MAX_VOICE_RECORD_SECONDS } from './voice';
-export type { VoiceSpend } from './voice';
-export { portfolioPath } from './portfolio';
+export {
+  applyVoiceSeconds,
+  negotiationGuidance,
+  voiceRemainingSeconds,
+  voiceSessionSummary,
+  VOICE_CONSENT_VERSION,
+  MAX_VOICE_RECORD_SECONDS,
+  MAX_VOICE_TAKE_SECONDS,
+  VOICE_AUDIO_CONTENT_TYPES,
+  VOICE_UPLOAD_MAX_BYTES,
+  VOICE_NO_RECORDING_SUMMARY,
+  voiceAudioContentType,
+  voicePendingSummary,
+  voiceRecordingSeconds,
+} from './voice';
+export type { VoiceAudioContentType, VoiceSpend } from './voice';
+export { CASE_STUDY_MAX, DEFAULT_PORTFOLIO_SECTIONS, portfolioPath, portfolioSections } from './portfolio';
 export type {
   CreatePortfolioInput,
   PortfolioItem,
   PortfolioPage,
   PortfolioQr,
+  PortfolioSections,
   PortfolioVisibility,
   PublicPortfolioView,
   PublishPortfolioInput,
@@ -344,3 +480,66 @@ export {
   v2ResumeTemplateFor,
 } from './shared-records';
 export type { FactForDocument, SharedCvDocument, SharedCvItem, SharedCvSection, SharedCvSectionType, SharedDocumentResult, SharedItemValue } from './shared-records';
+
+// wp-opps: listing model, explainable matching, alert tiers, reminders, format readability.
+export {
+  categoryFamily,
+  distanceMiles,
+  fieldsForCategory,
+  filterCategoryColumn,
+  foldText,
+  isFilterCategory,
+  isListingArrangement,
+  isListingSchedule,
+  isListingSeniority,
+  isOpportunityCategory,
+  listingDetailsOf,
+  placeMatchesLocations,
+  EMPTY_LISTING_DETAILS,
+  LISTING_ARRANGEMENTS,
+  LISTING_DETAIL_FIELDS,
+  LISTING_SCHEDULES,
+  LISTING_SENIORITIES,
+  OPPORTUNITY_CATEGORIES,
+  OPPORTUNITY_FILTER_CATEGORIES,
+} from './opportunities';
+export type {
+  CategoryFamily,
+  ListingArrangement,
+  ListingDetailField,
+  ListingDetails,
+  ListingSchedule,
+  ListingSeniority,
+  OpportunityCategory,
+  OpportunityFilterCategory,
+} from './opportunities';
+export {
+  extractArrangement,
+  extractCategory,
+  extractDeadline,
+  extractDetails,
+  extractPublishedAt,
+  extractRemoteRestriction,
+  extractSchedule,
+  extractSeniority,
+  parseStatedDate,
+} from './listing-extract';
+export { matchLabel, preferenceChecks, requiredCredentials, PREFERENCE_DIMENSIONS } from './match';
+export type { MatchCredential, MatchLabel, MatchLabelReason, PreferenceCheck, PreferenceDimension } from './match';
+export {
+  alertTierAtLeast,
+  alertTierMinimumPlan,
+  companyMatches,
+  filterTier,
+  meetsRelevance,
+  reminderDue,
+  reminderLeadDays,
+  ALERT_TIER_ORDER,
+  ENHANCED_FILTERS,
+  PERSONALIZED_FILTERS,
+  RELEVANCE_THRESHOLDS,
+  REMINDER_KINDS,
+} from './alerts';
+export type { AlertTier, RelevanceThreshold, ReminderKind, SavedSearchFilterKey } from './alerts';
+export { formatIssues, FORMAT_ISSUE_CODES, LONG_LINE_CHARS } from './readability';
+export type { FormatIssue, FormatIssueCode } from './readability';

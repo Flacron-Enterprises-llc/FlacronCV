@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { applyVoiceSeconds, negotiationGuidance, voiceRemainingSeconds, voiceSessionSummary } from './voice';
+import {
+  applyVoiceSeconds,
+  negotiationGuidance,
+  voiceAudioContentType,
+  voicePendingSummary,
+  voiceRecordingSeconds,
+  voiceRemainingSeconds,
+  voiceSessionSummary,
+} from './voice';
 
 describe('voice metering', () => {
   it('drops the balance by the recorded seconds', () => {
@@ -37,5 +45,28 @@ describe('voice metering', () => {
     expect(guidance).toContain('80000 USD');
     expect(guidance).toContain('the pasted posting');
     expect(guidance).not.toMatch(/emotion|honesty|personality|guaranteed/i);
+  });
+});
+
+describe('recorded audio', () => {
+  it('accepts only the MediaRecorder containers, ignoring codec parameters', () => {
+    expect(voiceAudioContentType('audio/webm;codecs=opus')).toBe('audio/webm');
+    expect(voiceAudioContentType('AUDIO/OGG')).toBe('audio/ogg');
+    expect(voiceAudioContentType('audio/mp4')).toBe('audio/mp4');
+    expect(voiceAudioContentType('audio/wav')).toBeNull();
+    expect(voiceAudioContentType(undefined)).toBeNull();
+  });
+
+  it('bills whole seconds from the measured length, at least one', () => {
+    expect(voiceRecordingSeconds(90_000)).toBe(90);
+    expect(voiceRecordingSeconds(89_499)).toBe(89);
+    expect(voiceRecordingSeconds(200)).toBe(1);
+    expect(voiceRecordingSeconds(0)).toBe(0);
+    expect(voiceRecordingSeconds(Number.NaN)).toBe(0);
+  });
+
+  it('a pending summary states the time only and infers nothing', () => {
+    expect(voicePendingSummary(12)).toBe('Recorded 12 seconds. Add the transcript to get feedback.');
+    expect(voicePendingSummary(12)).not.toMatch(/emotion|honesty|personality|confident|nervous/i);
   });
 });

@@ -8,6 +8,35 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
+/** Envelope keys the filter owns; a service body can never override them. */
+const ENVELOPE_KEYS = new Set(['success', 'statusCode', 'message', 'code', 'timestamp', 'path', 'error', 'stack']);
+
+/**
+ * Structured fields a service set next to an explicit `code` (for example
+ * `minimumPlan` for UPGRADE_REQUIRED, `limit` for a capacity refusal), so a
+ * client can act on them without parsing English. Only when the body carries
+ * a code (a deliberate, documented refusal), and only plain values: strings,
+ * finite numbers, booleans, null, or flat arrays of those. Nested objects,
+ * stacks and anything else stay server-side.
+ */
+export function safeErrorDetails(body: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(body)) {
+    if (ENVELOPE_KEYS.has(key)) continue;
+    if (isPlain(value) || (Array.isArray(value) && value.length <= 50 && value.every(isPlain))) out[key] = value;
+  }
+  return out;
+}
+
+function isPlain(value: unknown): boolean {
+  return (
+    value === null ||
+    typeof value === 'boolean' ||
+    (typeof value === 'string' && value.length <= 500) ||
+    (typeof value === 'number' && Number.isFinite(value))
+  );
+}
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -20,6 +49,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
     let code: string | undefined;
+    let details: Record<string, unknown> = {};
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -31,6 +61,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message = body.message?.toString() || exception.message;
         if (typeof body.code === 'string' && body.code.length > 0) {
           code = body.code;
+          details = safeErrorDetails(body);
         }
       }
     } else if (exception instanceof Error) {
@@ -48,6 +79,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       success: false,
       statusCode: status,
       message,
+      ...details,
       ...(code ? { code } : {}),
       timestamp: new Date().toISOString(),
       path: request.url,

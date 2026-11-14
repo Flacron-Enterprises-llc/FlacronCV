@@ -1,80 +1,96 @@
 'use client';
 import React from 'react';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams, usePathname } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { AlertCircle, Check, Crown, Download, ExternalLink, Info, Receipt } from 'lucide-react';
+import { toast } from 'sonner';
+import type { BillingInterval, PlanId } from '@flacroncv/career-shared';
+import { SubscriptionPlan, type BillingInvoice, TRIAL_PERIOD_DAYS } from '@flacroncv/shared-types';
 import { Link } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
 import { api, ApiError } from '@/lib/api';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  User,
-  SubscriptionPlan,
-  PLAN_CONFIGS,
-  BillingInvoice,
-  TRIAL_PERIOD_DAYS,
-  customerFacingPlans,
-  isPlanPurchasable,
-  YEARLY_BILLING_ENABLED,
-  yearlySavingsPercent,
-} from '@flacroncv/shared-types';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import {
-  Crown,
-  Zap,
-  FileText,
-  Mail,
-  Sparkles,
-  Download,
-  Check,
-  X,
-  ExternalLink,
-  Receipt,
-  AlertCircle,
-  Info,
-} from 'lucide-react';
-import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
 import { fcgeTrack, fcgeUpgradeClicked } from '@/lib/fcge';
 import { toDate } from '@/lib/format-date';
 import { shouldClaimCheckoutSuccess } from '@/lib/checkout-verify';
-import { localizedPlanFeatures } from '@/lib/plan-features';
-import { formatUsd } from '@/lib/format-price';
-import { legalDocLinks } from '@/components/auth/LegalAcceptanceModal';
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage';
-import { CareerAddonBillingCard } from '@/components/career/CareerAddonBillingCard';
+import { isCareerEnabled, useCareerApi } from '@/components/career/CareerServices';
+import {
+  careerBillingStatusKey,
+  careerRenewal,
+  formatCareerDate,
+  hasStripeCareerSubscription,
+  type CareerBillingStatusView,
+} from '@/components/career/career-subscription';
+import { isLegacyPlan, isPricingPlan, equivalentPlan } from '@/components/pricing/plan-catalog';
+import { addonById } from '@flacroncv/career-shared';
+import {
+  CAPACITY_CHECKOUT_ENDPOINT,
+  PACK_CHECKOUT_ENDPOINT,
+  PLAN_AVAILABILITY_QUERY_KEY,
+  anyAddonOnSale,
+  usePlanAvailability,
+} from '@/components/pricing/plan-availability';
+import { AddonCatalog, useAddonAllowance } from '@/components/pricing/AddonCatalog';
+import { usePlanFormat } from '@/components/pricing/plan-format';
+import { PlanComparison } from '@/components/pricing/PlanComparison';
+import { ChangePlanPanel } from '@/components/pricing/billing/ChangePlanPanel';
+import { AllowanceTable, PackBalances, UsageWarningsBanner } from '@/components/pricing/billing/AllowancePanel';
+import { SpendingCapCard } from '@/components/pricing/billing/SpendingCapCard';
+import {
+  activePacks,
+  careerAllowanceRows,
+  usageWarnings,
+  v1AllowanceRows,
+  type V1Usage,
+} from '@/components/pricing/billing/billing-model';
 
+/**
+ * Settings → Billing: the single plan page (spec §16 "Billing and usage").
+ * Current plan and renewal, allowance by unit (V1 counters and career units),
+ * 80/95/100% warnings, packs and their expiry, purchase history, plan changes
+ * between the five plans, cancellation through the Stripe portal and — only
+ * while packs are on sale — the add-on catalog and a spending cap. The former
+ * career plans page redirects here.
+ */
 export default function BillingPage(): React.JSX.Element | null {
   const t = useTranslations('billing');
   const tPricing = useTranslations('pricing');
-  // Plan names and prices in the visitor's language, as on the pricing page;
-  // PLAN_CONFIGS names are English.
-  const planName = (plan: SubscriptionPlan) =>
-    (['free', 'pro', 'enterprise', 'career_accelerator'] as string[]).includes(plan)
-      ? tPricing(plan)
-      : PLAN_CONFIGS[plan].name;
-  const tUpgrade = useTranslations('upgrade_modal');
+  const tCatalog = useTranslations('plan_catalog');
+  const tPlan = useTranslations('career.plans.plan');
+  const tCareerPlans = useTranslations('career.plans');
   const formatApiError = useApiErrorMessage();
   const queryClient = useQueryClient();
   const { user, refreshUser } = useAuth();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const locale = pathname.split('/')[1] || 'en';
-  const [billingInterval, setBillingInterval] = useState<'monthly' | 'yearly'>('monthly');
+  const careerOn = isCareerEnabled();
+  const careerApi = useCareerApi();
+  const { availability } = usePlanAvailability({ includeAddons: Boolean(user) });
+  const fmt = usePlanFormat();
+  const addonAllowance = useAddonAllowance();
   const [syncSuccess, setSyncSuccess] = useState(false);
   const [syncFailed, setSyncFailed] = useState(false);
   const [verifying, setVerifying] = useState(searchParams.get('success') === 'true');
+  const [buyingAddon, setBuyingAddon] = useState<string | null>(null);
+  // An add-on is bought only after its own review (price, billing, expiry): spec §11 explicit consent.
+  const [reviewAddon, setReviewAddon] = useState<string | null>(null);
   // Stripe sends the user back with ?canceled=true when they leave checkout.
-  // Without a word here the page looked as if nothing had happened at all.
   const checkoutCanceled = searchParams.get('canceled') === 'true';
+  // Add-on checkouts return with ?pack= or ?addon= (server-chosen URLs). The
+  // pack itself is granted by the webhook, so "success" only says payment went through.
+  const addonReturn = searchParams.get('pack') ?? searchParams.get('addon');
 
   // Stripe puts ?success=true on the return URL even when payment did not
   // complete. Only a successful verify-session with a paid plan may show the
-  // activated banner. A failed verify used to wait 3s, refresh, and claim
-  // success without looking at the plan.
+  // activated banner.
   useEffect(() => {
     if (searchParams.get('success') !== 'true') return;
     const sessionId = searchParams.get('session_id');
@@ -86,9 +102,7 @@ export default function BillingPage(): React.JSX.Element | null {
 
     let cancelled = false;
     api
-      .post<{ plan: SubscriptionPlan; status: string }>('/payments/verify-session', {
-        sessionId,
-      })
+      .post<{ plan: SubscriptionPlan; status: string }>('/payments/verify-session', { sessionId })
       .then(async (res) => {
         await refreshUser();
         if (cancelled) return;
@@ -97,7 +111,7 @@ export default function BillingPage(): React.JSX.Element | null {
           setSyncFailed(false);
           track('plan_upgraded');
           if (res?.status === 'trialing') {
-            fcgeTrack('trial_started', { plan: 'pro', trialDays: TRIAL_PERIOD_DAYS, days: TRIAL_PERIOD_DAYS });
+            fcgeTrack('trial_started', { plan: res.plan, trialDays: TRIAL_PERIOD_DAYS, days: TRIAL_PERIOD_DAYS });
           }
         } else {
           setSyncSuccess(false);
@@ -117,42 +131,48 @@ export default function BillingPage(): React.JSX.Element | null {
     return () => {
       cancelled = true;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const currentPlan = user?.subscription?.plan || SubscriptionPlan.FREE;
-  const currentPlanConfig = PLAN_CONFIGS[currentPlan];
+  const currentPlan: string = user?.subscription?.plan || SubscriptionPlan.FREE;
   const isFreePlan = currentPlan === SubscriptionPlan.FREE;
+  const legacy = isLegacyPlan(currentPlan);
   // The Stripe portal only exists for accounts with a Stripe customer. A paid
-  // plan without one (granted by support/admin, or billed by a mobile store)
-  // has nothing to open, and the button used to fail with "please subscribe
-  // first" — so those accounts get a pointer to support instead.
+  // plan without one (granted by support, or billed by a mobile store) has
+  // nothing to open, so those accounts get a pointer to support instead.
   const hasStripeCustomer = !!user?.subscription?.stripeCustomerId;
 
-  // Server is the source of truth for the Pro trial label. Fail closed: never
-  // show Start trial from Firestore flags alone (MC2 residual / MC5).
-  const {
-    data: trialEligibility,
-    isLoading: trialEligibilityLoading,
-    refetch: refetchTrialEligibility,
-  } = useQuery({
+  // Server is the source of truth for the trial label. Fail closed.
+  const { data: trialEligibility } = useQuery({
     queryKey: ['trial-eligibility'],
     queryFn: () => api.get<{ eligible: boolean }>('/payments/trial-eligibility'),
     enabled: !!user && isFreePlan,
   });
-  const trialEligible = trialEligibility?.eligible === true;
-  const proAwaitingEligibility = isFreePlan && trialEligibilityLoading;
 
-  // Fetch usage stats
   const { data: usage } = useQuery({
     queryKey: ['usage'],
-    queryFn: () => api.get<User['usage']>('/users/me/usage'),
+    queryFn: () => api.get<V1Usage>('/users/me/usage'),
     enabled: !!user,
   });
 
-  // Real billing history (A3). The API returns [] for users with no Stripe
-  // customer, so this is safe to fetch for anyone signed in (incl. downgraded
-  // users who still have past invoices).
+  const careerUsage = useQuery({
+    queryKey: ['career-usage', user?.uid ?? 'anon'],
+    queryFn: () => careerApi.usage(),
+    enabled: Boolean(user) && careerOn,
+    retry: false,
+  });
+
+  // Customers who bought the former career add-on keep that separate Stripe
+  // subscription until it ends; it is listed here and managed in the portal.
+  const careerStatus = useQuery<CareerBillingStatusView>({
+    queryKey: careerBillingStatusKey(user?.uid),
+    queryFn: () => api.get<CareerBillingStatusView>('/career-billing/status'),
+    enabled: Boolean(user) && careerOn,
+    retry: false,
+  });
+  const addonSub = careerStatus.data?.careerSubscription ?? null;
+  const addonRenewal = careerRenewal(addonSub);
+
   const {
     data: invoices,
     isLoading: invoicesLoading,
@@ -166,12 +186,19 @@ export default function BillingPage(): React.JSX.Element | null {
 
   const formatMoney = (amountMinor: number, currency: string) => {
     try {
-      return new Intl.NumberFormat(locale, { style: 'currency', currency: currency.toUpperCase() }).format(
+      return new Intl.NumberFormat(`${locale}-u-nu-latn`, { style: 'currency', currency: currency.toUpperCase() }).format(
         amountMinor / 100,
       );
     } catch {
       return `${(amountMinor / 100).toFixed(2)} ${currency.toUpperCase()}`;
     }
+  };
+
+  /** Accepts every shape a Firestore timestamp arrives in; '-' for anything unparseable. */
+  const formatDate = (date: unknown) => {
+    const d = toDate(date);
+    if (!d) return '-';
+    return d.toLocaleDateString(`${locale}-u-nu-latn`, { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
   const invoiceStatusVariant: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
@@ -183,34 +210,17 @@ export default function BillingPage(): React.JSX.Element | null {
   };
   const invoiceStatusKeys = ['paid', 'open', 'void', 'uncollectible', 'draft'];
 
-  // Create checkout session mutation
   const checkoutMutation = useMutation({
-    mutationFn: ({
-      plan,
-      interval,
-      expectTrial,
-    }: {
-      plan: SubscriptionPlan;
-      interval: 'monthly' | 'yearly';
-      expectTrial?: boolean;
-    }) => {
-      // A plan with no configured Stripe price (e.g. Career Accelerator until
-      // the client sets it) is not purchasable. This stays a client-side check
-      // so the user gets "coming soon" rather than a round-trip and an error.
-      if (!PLAN_CONFIGS[plan].stripePriceIdMonthly) return Promise.reject(new Error(t('coming_soon')));
-
-      // Send the PLAN, never a price id. The server resolves the actual Stripe
-      // price from its own configuration — the ids in PLAN_CONFIGS are only
-      // fallbacks and belong to whichever Stripe account was current when they
-      // were written, which is not necessarily the one the API is talking to.
-      return api.post<{ url: string }>('/payments/create-checkout-session', {
+    mutationFn: ({ plan, interval, expectTrial }: { plan: PlanId; interval: BillingInterval; expectTrial: boolean }) =>
+      // Send the PLAN, never a price id: the server resolves the Stripe price
+      // from its own configuration and refuses plans it cannot sell.
+      api.post<{ url: string }>('/payments/create-checkout-session', {
         plan,
-        interval,
+        interval: interval === 'annual' ? 'yearly' : 'monthly',
         successUrl: `${window.location.origin}/${locale}/settings/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${window.location.origin}/${locale}/settings/billing?canceled=true`,
         ...(expectTrial ? { expectTrial: true } : {}),
-      });
-    },
+      }),
     onSuccess: (data, variables) => {
       track('checkout_started', { plan: variables.plan, interval: variables.interval });
       window.location.href = data.url;
@@ -220,14 +230,18 @@ export default function BillingPage(): React.JSX.Element | null {
         toast.error(t('trial_not_eligible'));
         queryClient.setQueryData(['trial-eligibility'], { eligible: false });
         void refreshUser();
-        void refetchTrialEligibility();
+        return;
+      }
+      if (error instanceof ApiError && error.code === 'PLAN_NOT_CONFIGURED') {
+        // The server's answer wins over a stale "on sale": refresh what the cards show.
+        toast.error(tCatalog('not_configured_error'));
+        void queryClient.invalidateQueries({ queryKey: PLAN_AVAILABILITY_QUERY_KEY });
         return;
       }
       toast.error(formatApiError(error, t('checkoutError')));
     },
   });
 
-  // Create portal session mutation
   const portalMutation = useMutation({
     mutationFn: () =>
       api.post<{ url: string }>('/payments/create-portal-session', {
@@ -240,6 +254,43 @@ export default function BillingPage(): React.JSX.Element | null {
       toast.error(formatApiError(error, t('portalError')));
     },
   });
+
+  async function buyAddon(addonId: string) {
+    if (buyingAddon) return;
+    const addon = addonById(addonId);
+    if (!addon) return;
+    setBuyingAddon(addonId);
+    try {
+      // The server re-checks the plan, the Stripe price and that this amount is what it will charge.
+      const data =
+        addon.billing === 'monthly'
+          ? await api.post<{ url: string }>(CAPACITY_CHECKOUT_ENDPOINT, {
+              addonId,
+              quantity: 1,
+              expectedAmountCents: addon.priceCents,
+              confirmed: true,
+              // Stripe returns to /{locale}/settings/billing in the visitor's language.
+              locale,
+            })
+          : await api.post<{ url: string }>(PACK_CHECKOUT_ENDPOINT, {
+              addonId,
+              expectedAmountCents: addon.priceCents,
+              confirmed: true,
+              locale,
+            });
+      window.location.href = data.url;
+    } catch (error) {
+      // The API names the minimum plan when it can; the catalog knows it either way.
+      const upgrade = error instanceof ApiError && error.code === 'UPGRADE_REQUIRED' && typeof error.details?.minimumPlan !== 'string';
+      toast.error(
+        upgrade
+          ? t('errors.upgradeRequiredPlan', { plan: tPlan(addon.minPlan === 'free' ? 'starter' : addon.minPlan) })
+          : formatApiError(error, tCatalog('addon_checkout_error')),
+      );
+      void queryClient.invalidateQueries({ queryKey: PLAN_AVAILABILITY_QUERY_KEY });
+      setBuyingAddon(null);
+    }
+  }
 
   const getStatusBadge = () => {
     const status = user?.subscription?.status || 'active';
@@ -260,154 +311,33 @@ export default function BillingPage(): React.JSX.Element | null {
     );
   };
 
-  /**
-   * `currentPeriodEnd` is written to Firestore as a Date, so it reaches the
-   * client as a serialised Firestore Timestamp — `{_seconds, _nanoseconds}` —
-   * not as a Date or an ISO string. That object is truthy, so it passed the
-   * `!date` guard, and `new Date({_seconds: …})` yields an Invalid Date whose
-   * `toLocaleDateString()` returns the literal string "Invalid Date". Hence
-   * "Your free trial ends on Invalid Date".
-   *
-   * `toDate` understands every shape a Firestore timestamp arrives in and
-   * returns null for anything unparseable. The parameter is `unknown` because
-   * the old signature — `Date | string | null | undefined` — did not describe
-   * the value actually being passed, which is what hid the bug from the
-   * type-checker.
-   */
-  const formatDate = (date: unknown) => {
-    const d = toDate(date);
-    if (!d) return '-';
-    return d.toLocaleDateString(locale, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
+  const planLabel = isPricingPlan(currentPlan)
+    ? tPlan(currentPlan)
+    : legacy
+      ? tCatalog('legacy_label', { plan: tPricing(currentPlan) })
+      : currentPlan;
 
-  const usageItems = [
-    {
-      icon: FileText,
-      label: t('usage.cvsCreated'),
-      value: usage?.cvsCreated ?? user?.usage?.cvsCreated ?? 0,
-      limit: PLAN_CONFIGS[currentPlan].limits.cvs,
-      color: 'text-brand-600 dark:text-brand-400',
-      bg: 'bg-brand-50 dark:bg-brand-900/30',
-    },
-    {
-      icon: Mail,
-      label: t('usage.coverLetters'),
-      value: usage?.coverLettersCreated ?? user?.usage?.coverLettersCreated ?? 0,
-      limit: PLAN_CONFIGS[currentPlan].limits.coverLetters,
-      color: 'text-stone-600 dark:text-stone-400',
-      bg: 'bg-stone-100 dark:bg-stone-800',
-    },
-    {
-      icon: Sparkles,
-      label: t('usage.aiCredits'),
-      value: usage?.aiCreditsUsed ?? user?.usage?.aiCreditsUsed ?? 0,
-      limit: PLAN_CONFIGS[currentPlan].limits.aiCredits,
-      color: 'text-stone-600 dark:text-stone-400',
-      bg: 'bg-stone-100 dark:bg-stone-800',
-    },
-    {
-      icon: Download,
-      label: t('usage.exports'),
-      value: usage?.exportsThisMonth ?? user?.usage?.exportsThisMonth ?? 0,
-      limit: PLAN_CONFIGS[currentPlan].limits.exports,
-      color: 'text-stone-600 dark:text-stone-400',
-      bg: 'bg-stone-100 dark:bg-stone-800',
-    },
-  ];
-
-  // Same visibility rule as the public pricing page — a plan is listed only if
-  // a customer can actually buy it. This is what keeps the two catalogues in
-  // agreement; previously this page advertised Career Accelerator ("coming
-  // soon") while public pricing did not list it at all.
-  const visiblePlans = customerFacingPlans();
-
-  // Price and suffix for the SELECTED interval, used by both the plan cards and
-  // the comparison table so they cannot tell different stories. The cards used
-  // to render priceMonthly unconditionally — harmless only while the Yearly
-  // toggle was disabled. With annual selectable that would advertise
-  // "$29.99/month" on a button that charges $299.99 once.
-  const planAmount = (plan: SubscriptionPlan) =>
-    billingInterval === 'yearly' ? PLAN_CONFIGS[plan].priceYearly : PLAN_CONFIGS[plan].priceMonthly;
-  const intervalSuffix = billingInterval === 'yearly' ? t('per_year') : `/${t('plans.month')}`;
-
-  const plans = visiblePlans.map((key) =>
-    key === SubscriptionPlan.FREE
-      ? { key, price: '$0', period: t('plans.free') }
-      : { key, price: formatUsd(planAmount(key), locale), period: intervalSuffix },
+  const careerRows = useMemo(() => careerAllowanceRows(careerUsage.data), [careerUsage.data]);
+  const v1Rows = useMemo(
+    () => v1AllowanceRows(currentPlan, usage ?? user?.usage, new Set(careerRows.map((row) => row.key))),
+    [careerRows, currentPlan, usage, user?.usage],
   );
-
-  // Career Accelerator becomes purchasable — and publicly visible — only once
-  // a real Stripe monthly price is set. Filling stripePriceIdMonthly is the
-  // launch pin. Do not fill it by accident.
-  const careerPurchasable = isPlanPurchasable(SubscriptionPlan.CAREER_ACCELERATOR);
-
-  // Label comes only from GET /payments/trial-eligibility. Until that returns
-  // eligible: true, this is Upgrade (or a loading CTA) — never Start trial.
+  const warnings = useMemo(() => usageWarnings([...v1Rows, ...careerRows]), [careerRows, v1Rows]);
+  const packs = useMemo(() => activePacks(careerUsage.data), [careerUsage.data]);
+  const packsOnSale = anyAddonOnSale(availability);
   const isTrialing = user?.subscription?.status === 'trialing';
-  const proCta = proAwaitingEligibility
-    ? t('checking_trial')
-    : trialEligible
-      ? t('start_trial', { days: TRIAL_PERIOD_DAYS })
-      : t('upgradeTo', { plan: 'Pro' });
-  const enterpriseCta = t('choose_enterprise');
-  const trialDisclosure =
-    trialEligible
-      ? t('trial_disclosure', {
-          days: TRIAL_PERIOD_DAYS,
-          price: formatUsd(planAmount(SubscriptionPlan.PRO), locale),
-          interval: billingInterval === 'yearly' ? t('plans.year') : t('plans.month'),
-        })
-      : null;
-
-  const formatLimit = (value: number | 'unlimited') =>
-    value === 'unlimited' ? t('features.unlimited') : String(value);
-
-  const formatCreationLimit = (plan: SubscriptionPlan, value: number | 'unlimited') => {
-    if (value === 'unlimited') return t('features.unlimited');
-    return plan === SubscriptionPlan.FREE ? String(value) : `${value}${t('plans.perMonth')}`;
-  };
-
-  const comparisonFeatures: { label: string; cell: (plan: SubscriptionPlan) => string | boolean }[] = [
-    {
-      label: t('features.cvs'),
-      cell: (plan) => formatCreationLimit(plan, PLAN_CONFIGS[plan].limits.cvs),
-    },
-    {
-      label: t('features.coverLetters'),
-      cell: (plan) => formatCreationLimit(plan, PLAN_CONFIGS[plan].limits.coverLetters),
-    },
-    {
-      label: t('features.aiCredits'),
-      cell: (plan) => formatLimit(PLAN_CONFIGS[plan].limits.aiCredits),
-    },
-    {
-      label: t('features.templates'),
-      cell: (plan) =>
-        PLAN_CONFIGS[plan].limits.templates === SubscriptionPlan.ENTERPRISE,
-    },
-    {
-      label: t('features.unlimitedExports'),
-      cell: (plan) => PLAN_CONFIGS[plan].limits.exports === 'unlimited',
-    },
-    {
-      label: t('features.docxExport'),
-      cell: (plan) => plan !== SubscriptionPlan.FREE,
-    },
-    {
-      label: t('features.prioritySupport'),
-      cell: (plan) => plan !== SubscriptionPlan.FREE,
-    },
-  ];
+  const renewalDate =
+    !isFreePlan && user?.subscription?.currentPeriodEnd ? formatDate(user.subscription.currentPeriodEnd) : null;
+  const allowanceRenewal = careerUsage.data?.renewalDate ? formatDate(careerUsage.data.renewalDate) : renewalDate;
+  // After a downgrade or cancellation, files above the new storage limit are kept until `graceUntil`.
+  const storage = careerUsage.data?.storage;
+  const storageGrace = storage?.graceUntil && storage.excessBytes > 0 ? { graceUntil: storage.graceUntil, excessBytes: storage.excessBytes } : null;
 
   return (
     <div className="space-y-6">
       {syncSuccess && (
         <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 dark:border-emerald-800 dark:bg-emerald-900/20">
-          <Check className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+          <Check className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <div>
             <p className="font-semibold text-emerald-800 dark:text-emerald-300">{t('activated_title')}</p>
             <p className="text-sm text-emerald-600 dark:text-emerald-400">{t('activated_desc')}</p>
@@ -417,7 +347,7 @@ export default function BillingPage(): React.JSX.Element | null {
 
       {syncFailed && !syncSuccess && (
         <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-4 dark:border-red-800 dark:bg-red-900/20">
-          <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+          <AlertCircle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
           <div>
             <p className="font-semibold text-red-800 dark:text-red-300">{t('verify_failed_title')}</p>
             <p className="text-sm text-red-600 dark:text-red-400">{t('verify_failed_desc')}</p>
@@ -442,45 +372,87 @@ export default function BillingPage(): React.JSX.Element | null {
         </div>
       )}
 
-      {/* Current Plan */}
+      {addonReturn === 'success' || addonReturn === 'canceled' ? (
+        <div
+          role="status"
+          className="flex items-center gap-3 rounded-xl border border-stone-200 bg-white px-5 py-4 dark:border-stone-700 dark:bg-stone-900"
+        >
+          <Info className="h-5 w-5 shrink-0 text-stone-500 dark:text-stone-400" aria-hidden />
+          <p className="text-sm text-stone-700 dark:text-stone-300">
+            {tCatalog(addonReturn === 'success' ? 'addon_return_success' : 'addon_return_canceled')}
+          </p>
+        </div>
+      ) : null}
+
+      <UsageWarningsBanner warnings={warnings} renewal={allowanceRenewal} canBuyPacks={packsOnSale} />
+
+      {storageGrace ? (
+        <div
+          role="status"
+          data-testid="storage-grace"
+          className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 dark:border-amber-800 dark:bg-amber-900/20"
+        >
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+          <p className="text-sm text-amber-900 dark:text-amber-200">
+            {t('storage_grace', { excess: fmt.storage(storageGrace.excessBytes), date: formatDate(storageGrace.graceUntil) })}
+          </p>
+        </div>
+      ) : null}
+
+      {/* Current plan */}
       <Card>
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-900/30">
-                <Crown className="h-6 w-6 text-brand-600 dark:text-brand-400" />
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-900/30">
+              <Crown className="h-6 w-6 text-brand-600 dark:text-brand-400" aria-hidden />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-lg font-semibold text-stone-900 dark:text-white" data-testid="current-plan-name">
+                  {planLabel}
+                </h3>
+                {getStatusBadge()}
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-stone-900 dark:text-white">
-                    {planName(currentPlan)} {t('plan')}
-                  </h3>
-                  {getStatusBadge()}
-                </div>
-                {!isFreePlan && user?.subscription?.currentPeriodEnd && (
-                  <p className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">
-                    {isTrialing
-                      ? t('trialEnds', { date: formatDate(user.subscription.currentPeriodEnd) })
-                      : user?.subscription?.cancelAtPeriodEnd
-                        ? t('canceledAt', { date: formatDate(user.subscription.currentPeriodEnd) })
-                        : t('renewsAt', { date: formatDate(user.subscription.currentPeriodEnd) })}
-                  </p>
-                )}
-              </div>
+              {renewalDate ? (
+                <p className="text-sm text-stone-500 dark:text-stone-400">
+                  {isTrialing
+                    ? t('trialEnds', { date: renewalDate })
+                    : user?.subscription?.cancelAtPeriodEnd
+                      ? t('canceledAt', { date: renewalDate })
+                      : t('renewsAt', { date: renewalDate })}
+                </p>
+              ) : null}
+              {isFreePlan ? <p className="text-sm text-stone-500 dark:text-stone-400">{tCatalog('free_renewal_note')}</p> : null}
+              {legacy ? (
+                <p className="text-sm text-stone-600 dark:text-stone-300" data-testid="legacy-note">
+                  {tCatalog('legacy_note', { tier: tPlan(equivalentPlan(currentPlan)) })}
+                </p>
+              ) : null}
+              {hasStripeCareerSubscription(addonSub) ? (
+                <p className="text-sm text-stone-600 dark:text-stone-300">
+                  {tCatalog('career_addon_note', {
+                    plan: addonSub?.plan && isPricingPlan(addonSub.plan) ? tPlan(addonSub.plan) : tCatalog('career_addon'),
+                  })}
+                  {addonRenewal ? ` ${tCareerPlans(addonRenewal.key, { date: formatCareerDate(addonRenewal.date, locale) })}` : ''}
+                </p>
+              ) : null}
             </div>
           </div>
 
-          {!isFreePlan && hasStripeCustomer && (
-            <Button
-              variant="secondary"
-              onClick={() => portalMutation.mutate()}
-              loading={portalMutation.isPending}
-              icon={<ExternalLink className="h-4 w-4" />}
-            >
-              {t('manageSubscription')}
-            </Button>
-          )}
-          {!isFreePlan && !hasStripeCustomer && (
+          {!isFreePlan && hasStripeCustomer ? (
+            <div className="flex shrink-0 flex-col items-stretch gap-1 sm:items-end">
+              <Button
+                variant="secondary"
+                onClick={() => portalMutation.mutate()}
+                loading={portalMutation.isPending}
+                icon={<ExternalLink className="h-4 w-4" />}
+              >
+                {t('manageSubscription')}
+              </Button>
+              <p className="max-w-xs text-xs text-stone-500 dark:text-stone-400">{tCatalog('portal_cancel_note')}</p>
+            </div>
+          ) : null}
+          {!isFreePlan && !hasStripeCustomer ? (
             <p className="max-w-xs text-sm text-stone-500 dark:text-stone-400">
               {t.rich('managed_by_support', {
                 link: (chunks) => (
@@ -493,450 +465,78 @@ export default function BillingPage(): React.JSX.Element | null {
                 ),
               })}
             </p>
-          )}
+          ) : null}
         </div>
       </Card>
 
-      {/* Optional career tools add-on (career build switch only). Its own Stripe
-          subscription on the same customer, so the same portal manages it. */}
-      <CareerAddonBillingCard onManage={() => portalMutation.mutate()} managing={portalMutation.isPending} />
+      <AllowanceTable
+        rows={[...v1Rows, ...careerRows]}
+        title={isFreePlan ? t('usage.title_free') : t('usage.title')}
+      />
+      {careerOn && careerUsage.isError ? (
+        <p className="text-sm text-stone-500 dark:text-stone-400">{tCatalog('career_usage_unavailable')}</p>
+      ) : null}
 
-      {/* Upgrade Options - Only for free plan */}
-      {isFreePlan && (
+      <PackBalances packs={packs} formatDate={(iso) => formatDate(iso)} />
+
+      <ChangePlanPanel
+        currentPlan={currentPlan}
+        hasPaidStripeSubscription={!isFreePlan && hasStripeCustomer}
+        managedElsewhere={!isFreePlan && !hasStripeCustomer}
+        initialPlan={searchParams.get('plan')}
+        initialInterval={searchParams.get('interval')}
+        trialEligible={trialEligibility?.eligible === true}
+        checkoutPending={checkoutMutation.isPending}
+        portalPending={portalMutation.isPending}
+        onCheckout={(plan, interval, expectTrial) => {
+          fcgeUpgradeClicked(plan);
+          checkoutMutation.mutate({ plan, interval, expectTrial });
+        }}
+        onPortal={() => portalMutation.mutate()}
+        onPlanChanged={() => {
+          void refreshUser();
+          void queryClient.invalidateQueries({ queryKey: ['usage'] });
+          void queryClient.invalidateQueries({ queryKey: ['invoices'] });
+          void queryClient.invalidateQueries({ queryKey: ['career-usage'] });
+        }}
+      />
+
+      {packsOnSale ? (
         <>
-          {/* Billing Interval Toggle */}
-          <div className="flex justify-center">
-            <div className="inline-flex items-center gap-3 rounded-full border border-stone-200 bg-white p-1 dark:border-stone-700 dark:bg-stone-800">
-              <button
-                type="button"
-                aria-pressed={billingInterval === 'monthly'}
-                className={`rounded-full px-6 py-2 text-sm font-medium transition-all ${
-                  billingInterval === 'monthly'
-                    ? 'bg-brand-600 text-white shadow-sm'
-                    : 'text-stone-600 hover:text-stone-900 dark:text-stone-400'
-                }`}
-                onClick={() => setBillingInterval('monthly')}
-              >
-                {t('monthly')}
-              </button>
-              {/* Follows YEARLY_BILLING_ENABLED rather than being hard-disabled.
-                  Real year-interval Stripe prices are configured and verified
-                  ($299.99 and $999.99, interval=year), so annual is genuinely
-                  purchasable and labelling it "Coming soon" was false. The flag
-                  still governs: if the annual price ids are ever removed it
-                  turns off, and this control reverts to disabled with the
-                  badge — see the yearly-billing guard in plan-advertising.spec. */}
-              <button
-                type="button"
-                disabled={!YEARLY_BILLING_ENABLED}
-                title={YEARLY_BILLING_ENABLED ? undefined : t('yearly_unavailable_note')}
-                aria-pressed={billingInterval === 'yearly'}
-                onClick={() => YEARLY_BILLING_ENABLED && setBillingInterval('yearly')}
-                className={`rounded-full px-6 py-2 text-sm font-medium transition-all ${
-                  !YEARLY_BILLING_ENABLED
-                    ? 'cursor-not-allowed text-stone-400 dark:text-stone-500'
-                    : billingInterval === 'yearly'
-                      ? 'bg-brand-600 text-white shadow-sm'
-                      : 'text-stone-600 hover:text-stone-900 dark:text-stone-400'
-                }`}
-              >
-                {t('yearly')}
-                {YEARLY_BILLING_ENABLED ? (
-                  // On the selected (brand-filled) pill green-on-blue is unreadable,
-                  // so the badge turns white there and stays green otherwise.
-                  <span
-                    className={`ms-1.5 text-xs font-semibold ${
-                      billingInterval === 'yearly'
-                        ? 'text-white'
-                        : 'text-emerald-600 dark:text-emerald-400'
-                    }`}
-                  >
-                    {t('yearly_save', { percent: yearlySavingsPercent(SubscriptionPlan.PRO) })}
-                  </span>
-                ) : (
-                  <span className="ms-1.5 text-xs font-semibold text-amber-500">{t('yearly_coming_soon')}</span>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* auto-fit/minmax rather than lg:grid-cols-3: viewport breakpoints
-              ignore the 256px sidebar, so 3 columns were being forced into ~790px
-              and each card collapsed to ~250px (clipped by Card's overflow-hidden).
-              This reflows to 2 or 1 column based on the ACTUAL container width.
-              min(100%,17rem) keeps it safe on very narrow screens. */}
-          <div className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))]">
-          {/* Pro Plan */}
-          <Card className="relative overflow-hidden border-brand-200 dark:border-brand-800">
-            <div className="absolute end-0 top-0 rounded-es-lg bg-brand-600 px-3 py-1">
-              <span className="text-xs font-semibold text-white">{t('popular')}</span>
-            </div>
-            <div className="mb-6">
-              <h4 className="text-lg font-semibold text-stone-900 dark:text-white">
-                {t('proTitle')}
-              </h4>
-              {/* flex-wrap: the Card is overflow-hidden (for the corner badge), so
-                  without wrapping the "/month" suffix is clipped on narrow cards. */}
-              <div className="mt-2 flex flex-wrap items-baseline gap-1">
-                <span className="text-3xl font-bold text-stone-900 dark:text-white">
-                  ${planAmount(SubscriptionPlan.PRO).toFixed(2)}
-                </span>
-                <span className="text-sm text-stone-500 dark:text-stone-400">
-                  {intervalSuffix}
-                </span>
-              </div>
-            </div>
-            <ul className="mb-6 space-y-3">
-              {localizedPlanFeatures(
-                SubscriptionPlan.PRO,
-                tPricing,
-                tUpgrade(`template_reach.${PLAN_CONFIGS[SubscriptionPlan.PRO].limits.templates}`),
-              ).map((feature) => (
-                <li key={feature} className="flex items-start gap-2">
-                  <Check className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" />
-                  <span className="min-w-0 break-words text-sm text-stone-600 dark:text-stone-400">{feature}</span>
-                </li>
-              ))}
-            </ul>
-            <Button
-              className="w-full"
-              onClick={() => {
-                fcgeUpgradeClicked(SubscriptionPlan.PRO);
-                checkoutMutation.mutate({
-                  plan: SubscriptionPlan.PRO,
-                  interval: billingInterval,
-                  ...(trialEligible ? { expectTrial: true } : {}),
-                });
-              }}
-              loading={checkoutMutation.isPending || proAwaitingEligibility}
-              disabled={proAwaitingEligibility}
-              icon={<Zap className="h-4 w-4" />}
-            >
-              {proCta}
-            </Button>
-            {trialDisclosure && (
-              <p className="mt-3 text-xs leading-5 text-stone-500 dark:text-stone-400">
-                {trialDisclosure}
-              </p>
-            )}
-          </Card>
-
-          {/* Career Accelerator. Rendered only when it is genuinely purchasable
-              — an advertised plan with no checkout is the inconsistency the
-              client flagged between this page and public pricing. */}
-          {careerPurchasable && (
-          <Card className="relative overflow-hidden">
-            <div className="mb-6">
-              <h4 className="text-lg font-semibold text-stone-900 dark:text-white">
-                {planName(SubscriptionPlan.CAREER_ACCELERATOR)}
-              </h4>
-              {/* flex-wrap: the Card is overflow-hidden (for the corner badge), so
-                  without wrapping the "/month" suffix is clipped on narrow cards. */}
-              <div className="mt-2 flex flex-wrap items-baseline gap-1">
-                <span className="text-3xl font-bold text-stone-900 dark:text-white">
-                  ${planAmount(SubscriptionPlan.CAREER_ACCELERATOR).toFixed(2)}
-                </span>
-                <span className="text-sm text-stone-500 dark:text-stone-400">
-                  {intervalSuffix}
-                </span>
-              </div>
-            </div>
-            <ul className="mb-6 space-y-3">
-              {localizedPlanFeatures(
-                SubscriptionPlan.CAREER_ACCELERATOR,
-                tPricing,
-                tUpgrade(`template_reach.${PLAN_CONFIGS[SubscriptionPlan.CAREER_ACCELERATOR].limits.templates}`),
-              ).map((feature) => (
-                <li key={feature} className="flex items-start gap-2">
-                  <Check className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" />
-                  <span className="min-w-0 break-words text-sm text-stone-600 dark:text-stone-400">{feature}</span>
-                </li>
-              ))}
-            </ul>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                fcgeUpgradeClicked(SubscriptionPlan.CAREER_ACCELERATOR);
-                checkoutMutation.mutate({ plan: SubscriptionPlan.CAREER_ACCELERATOR, interval: billingInterval });
-              }}
-              loading={checkoutMutation.isPending}
-              icon={<Sparkles className="h-4 w-4" />}
-            >
-              {t('upgradeTo', { plan: PLAN_CONFIGS[SubscriptionPlan.CAREER_ACCELERATOR].name })}
-            </Button>
-          </Card>
-          )}
-
-          {/* Enterprise Plan */}
           <Card>
-            <div className="mb-6">
-              <h4 className="text-lg font-semibold text-stone-900 dark:text-white">
-                {t('enterpriseTitle')}
-              </h4>
-              {/* flex-wrap: the Card is overflow-hidden (for the corner badge), so
-                  without wrapping the "/month" suffix is clipped on narrow cards. */}
-              <div className="mt-2 flex flex-wrap items-baseline gap-1">
-                <span className="text-3xl font-bold text-stone-900 dark:text-white">
-                  ${planAmount(SubscriptionPlan.ENTERPRISE).toFixed(2)}
-                </span>
-                <span className="text-sm text-stone-500 dark:text-stone-400">
-                  {intervalSuffix}
-                </span>
-              </div>
-            </div>
-            <ul className="mb-6 space-y-3">
-              {localizedPlanFeatures(
-                SubscriptionPlan.ENTERPRISE,
-                tPricing,
-                tUpgrade(`template_reach.${PLAN_CONFIGS[SubscriptionPlan.ENTERPRISE].limits.templates}`),
-              ).map((feature) => (
-                <li key={feature} className="flex items-start gap-2">
-                  <Check className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" />
-                  <span className="min-w-0 break-words text-sm text-stone-600 dark:text-stone-400">{feature}</span>
-                </li>
-              ))}
-            </ul>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                fcgeUpgradeClicked(SubscriptionPlan.ENTERPRISE);
-                checkoutMutation.mutate({ plan: SubscriptionPlan.ENTERPRISE, interval: billingInterval });
-              }}
-              loading={checkoutMutation.isPending}
-              icon={<Crown className="h-4 w-4" />}
-            >
-              {enterpriseCta}
-            </Button>
+            <AddonCatalog includeAddons onBuy={isFreePlan ? undefined : (id) => setReviewAddon(id)} buying={buyingAddon} />
+            {reviewAddon && addonById(reviewAddon) ? (
+              <AddonReview
+                name={tCatalog(`addons.${reviewAddon}`)}
+                allowance={addonAllowance(addonById(reviewAddon)!)}
+                price={fmt.usd(addonById(reviewAddon)!.priceCents)}
+                monthly={addonById(reviewAddon)!.billing === 'monthly'}
+                expiryMonths={addonById(reviewAddon)!.expiresAfterMonths ?? null}
+                busy={buyingAddon === reviewAddon}
+                onConfirm={() => void buyAddon(reviewAddon)}
+                onCancel={() => setReviewAddon(null)}
+              />
+            ) : null}
+            {isFreePlan ? <p className="mt-3 text-sm text-stone-600 dark:text-stone-400">{tCatalog('addons_free_note')}</p> : null}
           </Card>
-        </div>
-        {/* I.7 — at the checkout CTAs, not on Stripe's hosted page. One
-            block for all three cards so we do not repeat it per plan. */}
-        <p className="mt-6 text-center text-xs leading-5 text-stone-500 dark:text-stone-400">
-          {tPricing('terms_renewal_desc')}
-        </p>
-        <p className="mt-2 text-center text-xs leading-5 text-stone-500 dark:text-stone-400">
-          {t.rich('checkout_legal', legalDocLinks())}
-        </p>
+          {careerOn && user && !isFreePlan ? <SpendingCapCard api={careerApi} userId={user.uid} /> : null}
         </>
-      )}
+      ) : null}
 
-      {/* Usage Stats */}
       <Card>
-        {/* Plan-keyed, not cadence-keyed: "Free Plan Usage" stays honest
-            before and after F.3 (which changes who the cron resets, not
-            this heading). Paid keep "Usage This Month". */}
-        <h3 className="mb-6 text-lg font-semibold text-stone-900 dark:text-white">
-          {isFreePlan ? t('usage.title_free') : t('usage.title')}
-        </h3>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          {usageItems.map((item) => {
-            const limitDisplay =
-              item.limit === 'unlimited' ? '\u221E' : String(item.limit);
-            const percentage =
-              item.limit === 'unlimited'
-                ? 0
-                : Math.min((item.value / (item.limit as number)) * 100, 100);
-            const remaining =
-              item.limit === 'unlimited'
-                ? null
-                : Math.max(0, (item.limit as number) - item.value);
-
-            return (
-              <div
-                key={item.label}
-                className="rounded-lg border border-stone-200 p-4 dark:border-stone-700"
-              >
-                <div className="mb-3 flex items-center gap-3">
-                  <div
-                    className={`flex h-9 w-9 items-center justify-center rounded-lg ${item.bg}`}
-                  >
-                    <item.icon className={`h-5 w-5 ${item.color}`} />
-                  </div>
-                  <span className="text-sm font-medium text-stone-700 dark:text-stone-300">
-                    {item.label}
-                  </span>
-                </div>
-                <div className="flex items-end justify-between">
-                  <span className="text-2xl font-bold text-stone-900 dark:text-white">
-                    {item.value}
-                  </span>
-                  <span className="text-sm text-stone-500 dark:text-stone-400">
-                    / {limitDisplay}
-                  </span>
-                </div>
-                {item.limit !== 'unlimited' && (
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-700">
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        percentage >= 90
-                          ? 'bg-red-500'
-                          : percentage >= 70
-                            ? 'bg-amber-500'
-                            : 'bg-brand-500'
-                      }`}
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                )}
-                {remaining !== null && (
-                  <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-400">
-                    {t('usage.remaining', { count: remaining })}
-                  </p>
-                )}
-                {remaining !== null && remaining > 0 && percentage >= 70 && (
-                  <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
-                    {t('usage.low')}
-                  </p>
-                )}
-                {remaining === 0 && isFreePlan && (
-                  <Button
-                    variant="outline"
-                    className="mt-3 w-full"
-                    onClick={() => {
-                      fcgeUpgradeClicked(SubscriptionPlan.PRO);
-                      checkoutMutation.mutate({
-                        plan: SubscriptionPlan.PRO,
-                        interval: billingInterval,
-                      });
-                    }}
-                    loading={checkoutMutation.isPending}
-                    icon={<Zap className="h-4 w-4" />}
-                  >
-                    {proCta}
-                  </Button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      {/* Feature Comparison — table on md+, stacked plan cards on small screens
-          (client §35 / K.3: no horizontal-scroll pricing table on mobile). */}
-      <Card padding="none">
-        <div className="p-6 pb-0">
-          <h3 className="text-lg font-semibold text-stone-900 dark:text-white">
-            {t('comparison.title')}
-          </h3>
-        </div>
-
-        {/* Mobile: one card per plan, feature rows underneath — no sideways scroll. */}
-        <div className="mt-4 space-y-4 px-4 pb-6 md:hidden">
-          {plans.map((plan) => (
-            <div
-              key={plan.key}
-              className="rounded-xl border border-stone-200 p-4 dark:border-stone-700"
-            >
-              <div className="mb-3 border-b border-stone-100 pb-3 dark:border-stone-700/50">
-                <p className="font-semibold text-stone-900 dark:text-white">
-                  {planName(plan.key)}
-                </p>
-                <p className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">
-                  {plan.price}
-                  {plan.key !== SubscriptionPlan.FREE && intervalSuffix}
-                </p>
-              </div>
-              <ul className="space-y-2.5">
-                {comparisonFeatures.map((feature) => {
-                  const value = feature.cell(plan.key);
-                  return (
-                    <li
-                      key={feature.label}
-                      className="flex items-center justify-between gap-3 text-sm"
-                    >
-                      <span className="text-stone-600 dark:text-stone-400">{feature.label}</span>
-                      {typeof value === 'boolean' ? (
-                        value ? (
-                          <Check className="h-5 w-5 shrink-0 text-emerald-500" aria-hidden />
-                        ) : (
-                          <X
-                            className="h-5 w-5 shrink-0 text-stone-300 dark:text-stone-600"
-                            aria-hidden
-                          />
-                        )
-                      ) : (
-                        <span className="shrink-0 font-medium text-stone-900 dark:text-white">
-                          {value}
-                        </span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
-        </div>
-
-        {/* Desktop / tablet landscape: full comparison table. */}
-        <div className="mt-4 hidden overflow-x-auto md:block">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-stone-200 dark:border-stone-700">
-                <th className="px-6 py-3 text-start text-sm font-medium text-stone-500 dark:text-stone-400">
-                  {t('comparison.feature')}
-                </th>
-                {plans.map((plan) => (
-                  <th
-                    key={plan.key}
-                    className="px-6 py-3 text-center text-sm font-medium text-stone-500 dark:text-stone-400"
-                  >
-                    <div>{planName(plan.key)}</div>
-                    <div className="mt-0.5 text-xs font-normal">
-                      {plan.price}
-                      {plan.key !== SubscriptionPlan.FREE && <span>{intervalSuffix}</span>}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-stone-100 dark:divide-stone-700/50">
-              {comparisonFeatures.map((feature) => (
-                <tr key={feature.label}>
-                  <td className="px-6 py-3 text-sm text-stone-700 dark:text-stone-300">
-                    {feature.label}
-                  </td>
-                  {/* Iterate the SAME `plans` array the header uses. A fixed
-                      four-cell list here silently misaligned the table the
-                      moment plan visibility became dynamic: with Career
-                      Accelerator unpurchasable the header renders 3 columns
-                      while the body emitted 4, so every value shifted one
-                      column left and "Enterprise" sat above Career
-                      Accelerator's limits. Driving both from one source makes
-                      that class of mismatch impossible. */}
-                  {plans.map((plan) => {
-                    const value = feature.cell(plan.key);
-                    return (
-                      <td key={plan.key} className="px-6 py-3 text-center">
-                        {typeof value === 'boolean' ? (
-                          value ? (
-                            <Check className="mx-auto h-5 w-5 text-emerald-500" />
-                          ) : (
-                            <X className="mx-auto h-5 w-5 text-stone-300 dark:text-stone-600" />
-                          )
-                        ) : (
-                          <span className="text-sm font-medium text-stone-900 dark:text-white">
-                            {value}
-                          </span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <PlanComparison
+          interval="monthly"
+          currentPlan={isPricingPlan(currentPlan) ? currentPlan : null}
+          showDefinitions={false}
+          headingId="billing-compare-title"
+        />
       </Card>
 
       {/* Billing History */}
       <Card>
         <div className="flex items-center gap-3">
-          <Receipt className="h-5 w-5 text-stone-400" />
-          <h3 className="text-lg font-semibold text-stone-900 dark:text-white">
-            {t('history.title')}
-          </h3>
+          <Receipt className="h-5 w-5 text-stone-400" aria-hidden />
+          <h3 className="text-lg font-semibold text-stone-900 dark:text-white">{t('history.title')}</h3>
         </div>
         {invoicesLoading ? (
           <div className="mt-6 space-y-2">
@@ -955,9 +555,7 @@ export default function BillingPage(): React.JSX.Element | null {
         ) : invoices && invoices.length > 0 ? (
           <ul className="mt-4 divide-y divide-stone-100 dark:divide-stone-700/50">
             {invoices.map((inv) => {
-              const label = invoiceStatusKeys.includes(inv.status)
-                ? t(`history.st_${inv.status}`)
-                : inv.status;
+              const label = invoiceStatusKeys.includes(inv.status) ? t(`history.st_${inv.status}`) : inv.status;
               const link = inv.invoicePdf || inv.hostedInvoiceUrl;
               const isPdf = !!inv.invoicePdf;
               return (
@@ -997,9 +595,7 @@ export default function BillingPage(): React.JSX.Element | null {
             <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-stone-100 dark:bg-stone-700">
               <Receipt className="h-6 w-6 text-stone-400" />
             </div>
-            <p className="text-sm text-stone-500 dark:text-stone-400">
-              {t('history.empty')}
-            </p>
+            <p className="text-sm text-stone-500 dark:text-stone-400">{t('history.empty')}</p>
             {!isFreePlan && hasStripeCustomer && (
               <Button
                 variant="ghost"
@@ -1015,5 +611,52 @@ export default function BillingPage(): React.JSX.Element | null {
         )}
       </Card>
     </div>
+  );
+}
+
+function AddonReview({
+  name,
+  allowance,
+  price,
+  monthly,
+  expiryMonths,
+  busy,
+  onConfirm,
+  onCancel,
+}: {
+  name: string;
+  allowance: string;
+  price: string;
+  monthly: boolean;
+  expiryMonths: number | null;
+  busy: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const t = useTranslations('plan_catalog.addon_review');
+  return (
+    <section
+      aria-labelledby="addon-review-title"
+      data-testid="addon-review"
+      className="mt-5 rounded-xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-900"
+    >
+      <h4 id="addon-review-title" className="font-semibold text-stone-900 dark:text-white">
+        {t('title', { name })}
+      </h4>
+      <ul className="mt-2 list-disc space-y-1 ps-5 text-sm text-stone-700 dark:text-stone-300">
+        <li>{allowance}</li>
+        <li>{monthly ? t('monthly', { price }) : t('one_time', { price })}</li>
+        {expiryMonths ? <li>{t('expiry', { months: expiryMonths })}</li> : null}
+        <li>{t('taxes')}</li>
+      </ul>
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <Button onClick={onConfirm} loading={busy}>
+          {t('continue')}
+        </Button>
+        <Button variant="secondary" onClick={onCancel}>
+          {t('cancel')}
+        </Button>
+      </div>
+    </section>
   );
 }

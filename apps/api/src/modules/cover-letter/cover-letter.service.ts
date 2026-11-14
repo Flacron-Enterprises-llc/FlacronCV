@@ -13,12 +13,12 @@ import {
   GenerateCoverLetterData,
   CoverLetterStatus,
   CVSectionType,
-  PLAN_CONFIGS,
   resolveEffectivePlan,
   canUseCoverLetterTemplate,
 } from '@flacroncv/shared-types';
 import { v4 as uuidv4 } from 'uuid';
 import { toLetterHtml } from './letter-html';
+import { canCreateDocument } from '../users/document-capacity';
 import { CreateCoverLetterInput, StoredCoverLetter, UpdateCoverLetterInput } from './letter-locale';
 
 @Injectable()
@@ -42,9 +42,8 @@ export class CoverLetterService {
   ): Promise<CoverLetter> {
     await this.abuse.assertNewConsumption(userId, 'create');
     const user = await this.usersService.findByIdOrThrow(userId);
-    const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
-
-    if (limits.coverLetters !== 'unlimited' && user.usage.coverLettersCreated >= limits.coverLetters) {
+    // Legacy plans: creations this cycle. Current plans: stored letters (capacity).
+    if (!(await canCreateDocument(this.firebaseAdmin.firestore, user, 'coverLetters'))) {
       throw new ForbiddenException('Cover letter limit reached. Please upgrade.');
     }
 
@@ -250,8 +249,7 @@ export class CoverLetterService {
 
   async duplicate(id: string, userId: string): Promise<CoverLetter> {
     const user = await this.usersService.findByIdOrThrow(userId);
-    const limits = PLAN_CONFIGS[resolveEffectivePlan(user.subscription)].limits;
-    if (limits.coverLetters !== 'unlimited' && user.usage.coverLettersCreated >= limits.coverLetters) {
+    if (!(await canCreateDocument(this.firebaseAdmin.firestore, user, 'coverLetters'))) {
       throw new ForbiddenException('Cover letter limit reached. Please upgrade.');
     }
 

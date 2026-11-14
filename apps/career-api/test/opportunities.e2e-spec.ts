@@ -47,8 +47,9 @@ describe('opportunities over HTTP', () => {
     expect(wide.body).toMatchObject({ code: 'validation_error', field: 'radiusMiles', limit: 25 });
 
     const other = await http().get(`/api/career/v1/opportunities/${created.body.id}`).set('Authorization', bearer('http-opp-other'));
-    expect(other.status).toBe(403);
-    expect(other.body).toEqual({ code: 'permission_denied' });
+    // Another person's paste looks exactly like a missing listing (no existence leak).
+    expect(other.status).toBe(404);
+    expect(other.body).toMatchObject({ code: 'not_found' });
 
     const missing = await http()
       .get('/api/career/v1/opportunities/00000000-0000-4000-8000-000000000099')

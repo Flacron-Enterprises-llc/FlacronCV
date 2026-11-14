@@ -24,7 +24,11 @@ import { useT } from '../../../src/i18n';
 import { RTL_FLIP } from '../../../src/i18n/native';
 import { requestFailureMessage } from '../../../src/lib/api-errors';
 import {
+  checklistProgress,
   filterAndSortJobs,
+  jobContacts,
+  jobOutcomeLabel,
+  normalizeStatus,
   jobSortLabel,
   type JobSortKey,
   jobStatusLabel,
@@ -38,13 +42,14 @@ import { colors } from '../../../src/theme/colors';
 import { JobStatus } from '../../../src/types/enums';
 import { JobApplication } from '../../../src/types/job.types';
 
-const STATUS_BADGE: Record<JobStatus, 'default' | 'info' | 'warning' | 'brand' | 'danger' | 'success'> = {
-  [JobStatus.WISHLIST]: 'default',
-  [JobStatus.APPLIED]: 'info',
-  [JobStatus.INTERVIEWING]: 'warning',
-  [JobStatus.OFFER]: 'brand',
-  [JobStatus.REJECTED]: 'danger',
-  [JobStatus.ACCEPTED]: 'success',
+const STATUS_BADGE: Record<string, 'default' | 'info' | 'warning' | 'brand' | 'danger' | 'success'> = {
+  saved: 'default',
+  preparing: 'info',
+  applied: 'info',
+  interviewing: 'warning',
+  offered: 'brand',
+  rejected: 'danger',
+  withdrawn: 'default',
 };
 
 function MetaLine({
@@ -105,6 +110,9 @@ export default function JobsScreen() {
   const renderJob = ({ item }: { item: JobApplication }) => {
     const archivePending = archiveJob.isPending && archiveJob.variables?.job.id === item.id;
     const statusLabel = jobStatusLabel(item.status);
+    const outcomeLabel = jobOutcomeLabel(item);
+    const contact = jobContacts(item)[0];
+    const progress = checklistProgress(item);
     const names = { position: item.position, company: item.company };
     return (
       <View className="bg-white border border-stone-100 rounded-2xl mb-3 overflow-hidden">
@@ -125,8 +133,9 @@ export default function JobsScreen() {
                 {item.company}
               </Text>
             </View>
-            <Badge variant={STATUS_BADGE[item.status] ?? 'default'}>{statusLabel}</Badge>
+            <Badge variant={STATUS_BADGE[normalizeStatus(item.status)] ?? 'default'}>{statusLabel}</Badge>
           </View>
+          {outcomeLabel ? <Text className="text-stone-600 text-xs font-medium mt-1">{outcomeLabel}</Text> : null}
           <View className="flex-row flex-wrap mt-1">
             {item.location ? <MetaLine icon="location-outline" text={item.location} /> : null}
             <MetaLine
@@ -138,7 +147,15 @@ export default function JobsScreen() {
               }
             />
             {item.salaryRange ? <MetaLine icon="cash-outline" text={item.salaryRange} /> : null}
-            {item.contactName ? <MetaLine icon="person-outline" text={item.contactName} /> : null}
+            {contact?.name || contact?.email ? (
+              <MetaLine icon="person-outline" text={contact.name || contact.email || ''} />
+            ) : null}
+            {item.deadline ? (
+              <MetaLine icon="flag-outline" text={t('card.deadline', { date: formatDate(item.deadline) })} accent />
+            ) : null}
+            {progress.total > 0 ? (
+              <MetaLine icon="checkbox-outline" text={t('card.checklist', { done: progress.done, total: progress.total })} />
+            ) : null}
             {item.interviewDate ? (
               <MetaLine icon="calendar-outline" text={t('card.interview', { date: formatDate(item.interviewDate) })} accent />
             ) : null}
