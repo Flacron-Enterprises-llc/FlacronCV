@@ -62,10 +62,18 @@ export const metadata: Metadata = {
     images: ['/og.png'],
   },
   icons: {
+    // Transparent mark (no white tile), like the Flacron Energy favicon.
+    // The SVG switches the navy C to white when the browser UI is dark;
+    // PNG/ICO are the fallbacks. Google Search wants a multiple of 48 px.
+    // The apple-touch and Android icons keep their solid background
+    // (iOS fills transparency with black).
     icon: [
-      { url: '/favicon.ico' },
-      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '16x16 32x32 48x48' },
+      { url: '/favicon-48x48.png', sizes: '48x48', type: 'image/png' },
+      { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
     ],
     apple: '/apple-touch-icon.png',
     other: [
