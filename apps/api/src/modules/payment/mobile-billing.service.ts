@@ -19,7 +19,8 @@ import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/audit-actions';
 import { VerifyMobilePurchaseDto } from './dto/verify-mobile-purchase.dto';
-import { IapProductMap, mapIapProductId } from './iap-product-map';
+import { IapProductMap, currentIapProductsFromEnv, mapIapProductId } from './iap-product-map';
+import { isCurrentPaidPlan } from './plan-prices';
 import {
   InvalidStoreReceiptError,
   StoreNotConfiguredError,
@@ -207,10 +208,14 @@ export class MobileBillingService {
         verified.provider === BillingProvider.APPLE ? verified.originalTransactionId : null,
       'subscription.purchaseToken':
         verified.provider === BillingProvider.GOOGLE ? verified.purchaseToken : null,
+      // Current plans count their monthly allowance from the paid period start
+      // (as the Stripe path writes it); legacy plans ignore it.
+      ...(verified.periodStart ? { 'subscription.currentPeriodStart': verified.periodStart } : {}),
       'usage.aiCreditsLimit': limits.aiCredits,
       updatedAt: now,
     });
     await batch.commit();
+    await this.refreshUsageWindow(userId, plan);
 
     this.logger.log(`Store grant for user ${userId}: ${plan} (${verified.provider})`);
     const metadata = { provider: verified.provider, plan, productId: verified.productId };
@@ -267,9 +272,24 @@ export class MobileBillingService {
     provider: BillingProvider.APPLE | BillingProvider.GOOGLE,
     productId: string,
   ): SubscriptionPlan | null {
-    const key = provider === BillingProvider.APPLE ? 'iap.apple.products' : 'iap.google.products';
-    const products = this.configService.get<IapProductMap>(key) ?? {};
-    return mapIapProductId(products, productId);
+    const store = provider === BillingProvider.APPLE ? 'apple' : 'google';
+    // Legacy Pro / Enterprise products from configuration.ts (unchanged), plus the
+    // five-plan products straight from env (APPLE_STARTER_MONTHLY_PRODUCT_ID …).
+    const legacy = this.configService.get<IapProductMap>(`iap.${store}.products`) ?? {};
+    const current = currentIapProductsFromEnv(store, (name) => this.configService.get<string>(name));
+    return mapIapProductId({ ...legacy, ...current }, productId);
+  }
+
+  /** Open the new monthly window after a current-plan grant (best effort, as the Stripe path does). */
+  private async refreshUsageWindow(userId: string, plan: SubscriptionPlan): Promise<void> {
+    if (!isCurrentPaidPlan(plan)) return;
+    const users = this.usersService as unknown as { rolloverUsageIfDue?: (uid: string) => Promise<boolean> };
+    if (typeof users.rolloverUsageIfDue !== 'function') return;
+    try {
+      await users.rolloverUsageIfDue(userId);
+    } catch (err) {
+      this.logger.warn(`Usage window refresh failed for ${userId}: ${(err as Error).name}`);
+    }
   }
 
   private mapStoreError(err: unknown): never {

@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { Fact, Resume, UsageSummary } from '../../../../../packages/career-api-client/src/types';
 import { JobStatus } from '../../types/enums';
 import type { JobApplication } from '../../types/job.types';
-import { actionLabel, actionRoute, applicationsFromV1Jobs, careerOverview, unitLabel } from './overview';
+import type { AlertItem, OpportunityItem } from '../../../../../packages/career-api-client/src/types';
+import { actionLabel, actionRoute, applicationsFromV1Jobs, careerOverview, nextFollowUp, relevantListings, unitLabel, upcomingDeadlines } from './overview';
 
 function job(partial: Partial<JobApplication> & { id: string; status: JobStatus }): JobApplication {
   return {
@@ -44,16 +45,16 @@ const usage: UsageSummary = {
 };
 
 describe('applicationsFromV1Jobs', () => {
-  it('maps V1 statuses like the website and drops archived or deleted entries', () => {
+  it('maps V1 statuses like the website and drops archived or deleted entries; a follow-up is never a deadline', () => {
     const items = applicationsFromV1Jobs([
-      job({ id: 'a', status: JobStatus.WISHLIST, followUpDate: '2026-11-20' }),
+      job({ id: 'a', status: JobStatus.WISHLIST, followUpDate: '2026-11-15', deadline: '2026-11-20', opportunityId: 'o1' }),
       job({ id: 'b', status: JobStatus.OFFER, company: '' }),
       job({ id: 'c', status: JobStatus.ACCEPTED }),
       job({ id: 'd', status: JobStatus.APPLIED, archived: true }),
       job({ id: 'e', status: JobStatus.APPLIED, deletedAt: '2026-01-01' }),
     ]);
     expect(items).toEqual([
-      { id: 'a', opportunityId: '', status: 'saved', title: 'Analyst · Fictional Co', deadline: '2026-11-20' },
+      { id: 'a', opportunityId: 'o1', status: 'saved', title: 'Analyst · Fictional Co', deadline: '2026-11-20' },
       { id: 'b', opportunityId: '', status: 'offered', title: 'Analyst', deadline: null },
       { id: 'c', opportunityId: '', status: 'offered', title: 'Analyst · Fictional Co', deadline: null },
     ]);
@@ -76,14 +77,17 @@ describe('careerOverview', () => {
       ...base,
       facts: fullProfile,
       jobs: [
-        job({ id: 'past', status: JobStatus.WISHLIST, followUpDate: '2026-11-01' }),
-        job({ id: 'late', status: JobStatus.APPLIED, followUpDate: '2026-12-24' }),
-        job({ id: 'soon', status: JobStatus.WISHLIST, followUpDate: '2026-11-20', position: 'Planner' }),
+        job({ id: 'past', status: JobStatus.WISHLIST, deadline: '2026-11-01' }),
+        job({ id: 'late', status: JobStatus.APPLIED, deadline: '2026-12-24' }),
+        job({ id: 'soon', status: JobStatus.WISHLIST, deadline: '2026-11-20', position: 'Planner' }),
+        job({ id: 'follow', status: JobStatus.APPLIED, followUpDate: '2026-11-14' }),
       ],
     });
     expect(overview.action).toMatchObject({ kind: 'application', reason: 'deadline', applicationId: 'soon', deadline: '2026-11-20' });
     expect(overview.deadline?.id).toBe('soon');
     expect(overview.saved).toBe(2);
+    // The follow-up is shown as a follow-up, not as the deadline.
+    expect(overview.followUp).toEqual({ id: 'follow', title: 'Analyst · Fictional Co', date: '2026-11-14' });
     expect(actionRoute(overview.action)).toBe('/(dashboard)/jobs');
     expect(actionLabel(overview.action, 'Nov 20, 2026')).toBe('Review the deadline for Planner · Fictional Co');
   });
@@ -125,5 +129,91 @@ describe('unitLabel', () => {
     expect(unitLabel('document_credit')).toBe('Document credits');
     expect(unitLabel('text_interview')).toBe('Text interviews');
     expect(unitLabel('something_new')).toBe('something_new');
+  });
+});
+
+describe('listings and deadlines on the overview', () => {
+  const listing = (id: string, partial: Partial<OpportunityItem> = {}): OpportunityItem =>
+    ({
+      id,
+      category: 'job',
+      provider: 'paste',
+      title: `Listing ${id}`,
+      organization: null,
+      status: 'open',
+      label: 'open',
+      sourceUrl: null,
+      checkedAt: '',
+      deadline: null,
+      locations: [],
+      compensation: { minimum: null, maximum: null, currency: null, period: null },
+      sponsorship: 'unknown',
+      ...partial,
+    }) as OpportunityItem;
+  const alertFor = (opportunityId: string, deadline: string | null = null): AlertItem =>
+    ({
+      id: `a-${opportunityId}`,
+      opportunityId,
+      title: `Alert ${opportunityId}`,
+      organization: null,
+      revisionId: 'r',
+      reason: { code: 'saved_search', fit: null },
+      basic: deadline ? { provider: 'paste', category: 'job', locations: [], sourceUrl: null, checkedAt: '', compensation: { minimum: null, maximum: null, currency: null, period: null }, deadline } : undefined,
+      createdAt: '',
+    }) as AlertItem;
+
+  it('lists saved listings first, then alerts not already saved, at most five, leaving expired ones out', () => {
+    const relevant = relevantListings(
+      [listing('s1'), listing('s2', { label: 'expired' })],
+      [alertFor('s1'), alertFor('x1', '2026-12-01'), alertFor('x2'), alertFor('x3'), alertFor('x4'), alertFor('x5')],
+    );
+    expect(relevant.map((entry) => [entry.id, entry.source])).toEqual([
+      ['s1', 'saved'],
+      ['x1', 'alert'],
+      ['x2', 'alert'],
+      ['x3', 'alert'],
+      ['x4', 'alert'],
+    ]);
+    expect(relevant[1].deadline).toBe('2026-12-01');
+  });
+
+  it('shows only real deadlines, today or later, nearest first, with what kind of deadline each is', () => {
+    const deadlines = upcomingDeadlines(
+      [listing('s1', { deadline: '2026-12-10' }), listing('s2', { deadline: '2026-11-01' })],
+      [
+        { id: 'a1', opportunityId: '', status: 'applied', title: 'App', deadline: '2026-11-20' },
+        { id: 'a2', opportunityId: '', status: 'rejected', title: 'Closed', deadline: '2026-11-21' },
+      ],
+      '2026-11-13',
+    );
+    expect(deadlines.map((entry) => [entry.id, entry.kind, entry.date])).toEqual([
+      ['a1', 'application', '2026-11-20'],
+      ['s1', 'listing', '2026-12-10'],
+    ]);
+  });
+
+  it('skips follow-ups of closed applications and past days', () => {
+    expect(
+      nextFollowUp(
+        [
+          job({ id: 'r', status: JobStatus.REJECTED, followUpDate: '2026-11-14' }),
+          job({ id: 'p', status: JobStatus.APPLIED, followUpDate: '2026-11-01' }),
+        ],
+        '2026-11-13',
+      ),
+    ).toBeNull();
+  });
+
+  it('opens interview practice with the listing behind an interviewing application', () => {
+    const overview = careerOverview({
+      facts: fullProfile,
+      jobs: [job({ id: 'i', status: JobStatus.INTERVIEWING, opportunityId: 'o9' })],
+      alertCount: 0,
+      usage,
+      resumes: [],
+      today: '2026-11-13',
+    });
+    expect(overview.practiceOpportunityId).toBe('o9');
+    expect(actionRoute(overview.action)).toBe('/(dashboard)/career/interviews?opportunityId=o9');
   });
 });

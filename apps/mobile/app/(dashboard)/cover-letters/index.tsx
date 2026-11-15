@@ -12,7 +12,7 @@ import {
   useDuplicateCoverLetter,
 } from '../../../src/hooks/useCoverLetters';
 import { useAuthStore } from '../../../src/store/auth-store';
-import { canCreateCoverLetter, effectivePlanForCopy } from '../../../src/lib/entitlements';
+import { canCreateCoverLetter, planForDisplay } from '../../../src/lib/entitlements';
 import { alertIfUnverifiedEmail } from '../../../src/lib/email-verification';
 import {
   coverLetterLimitReachedMessage,
@@ -62,8 +62,8 @@ export default function CoverLettersScreen() {
   const alertLimitReached = () => {
     Alert.alert(
       t('limitReachedTitle'),
-      coverLetterLimitReachedMessage(effectivePlanForCopy(user?.subscription)),
-      upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+      coverLetterLimitReachedMessage(planForDisplay(user?.subscription)),
+      upgradeAlertButtons(() => router.push('/(dashboard)/settings/plans')),
     );
   };
 

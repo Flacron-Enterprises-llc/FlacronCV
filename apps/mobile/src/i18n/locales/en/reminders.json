@@ -16,6 +16,10 @@
     "followUpToday": "Follow-up today",
     "followUpTodayWith": "Follow-up today with {company}",
     "interviewToday": "Interview today at {time}",
-    "interviewTodayWith": "Interview today at {time} with {company}"
+    "interviewTodayWith": "Interview today at {time} with {company}",
+    "deadlineTomorrow": "Application deadline tomorrow",
+    "deadlineTomorrowWith": "Application deadline tomorrow: {company}",
+    "deadlineToday": "Application deadline today",
+    "deadlineTodayWith": "Application deadline today: {company}"
   }
 }

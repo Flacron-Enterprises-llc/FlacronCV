@@ -225,5 +225,22 @@
       "language": "Nuevo idioma",
       "reference": "Nueva referencia"
     }
+  },
+  "web": {
+    "sharing_title": "Compartir y portafolio",
+    "sharing_body": "Elige qué publicar, compartir en privado o mostrar con un código QR.",
+    "sharing_link": "Abrir portafolios",
+    "mode_title": "Modo de carrera",
+    "mode_body": "Elige modos especializados, ubicaciones actuales y futuras y disponibilidad.",
+    "mode_link": "Abrir modos de carrera",
+    "achievement_prompt": "¿Añadir una cifra? Por ejemplo cuántos usuarios, cuánto más rápido o cuánto se ahorró. Solo si la conoces; si no, déjalo vacío. FlacronCV nunca añade una.",
+    "readability": {
+      "format_title": "Comprobaciones de formato",
+      "format_note": "Cómo puede leer el texto un sistema de selección. Aparte del encaje con el puesto.",
+      "format_long_line": "Una línea muy larga puede cortarse mal. Divídela en puntos más cortos.",
+      "format_table_marker": "Tabulaciones, columnas o tablas pueden leerse en otro orden.",
+      "format_unusual_characters": "Iconos, emojis o símbolos raros pueden perderse o deformarse.",
+      "format_missing_contact": "No hay correo ni teléfono en la sección de contacto."
+    }
   }
 }

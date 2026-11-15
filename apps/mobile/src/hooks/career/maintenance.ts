@@ -57,3 +57,17 @@ export function useMaintenanceActions() {
     deleteCredential: useMutation({ mutationFn: (id: string) => careerApi.deleteCredential(id), onSuccess: refresh }),
   };
 }
+
+/** Confirms a promotion goal: its title becomes a job title in the confirmed profile (free). */
+export function useConfirmPromotion() {
+  const queryClient = useQueryClient();
+  const uid = useUid();
+  return useMutation({
+    mutationFn: (input: { id: string; body: { experienceFactId: string } | { company: string; startDate: string | null } }) =>
+      careerApi.confirmPromotion(input.id, input.body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: key(uid) });
+      void queryClient.invalidateQueries({ queryKey: ['career', uid, 'facts'] });
+    },
+  });
+}

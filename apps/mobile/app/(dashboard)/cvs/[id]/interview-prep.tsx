@@ -15,7 +15,7 @@ import { extractJsonObject } from '../../../../src/lib/ai-json';
 import { requestFailureMessage } from '../../../../src/lib/api-errors';
 import { alertIfUnverifiedEmail } from '../../../../src/lib/email-verification';
 import { engineFailureMessage } from '../../../../src/lib/engine-errors';
-import { canUseAI } from '../../../../src/lib/entitlements';
+import { canUseAI, planForDisplay } from '../../../../src/lib/entitlements';
 import { serializeCVToText } from '../../../../src/lib/serialize-cv';
 import { useT } from '../../../../src/i18n';
 import { RTL_FLIP } from '../../../../src/i18n/native';
@@ -124,8 +124,8 @@ export default function InterviewPrepScreen() {
     ) {
       Alert.alert(
         t('shared.creditsExhaustedTitle'),
-        aiCreditsExhaustedMessage('summary'),
-        upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+        aiCreditsExhaustedMessage('summary', planForDisplay(user.subscription)),
+        upgradeAlertButtons(() => router.push('/(dashboard)/settings/plans')),
       );
       return;
     }

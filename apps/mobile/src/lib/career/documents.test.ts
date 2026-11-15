@@ -24,6 +24,7 @@ import {
   resumeTitleError,
   templatePatch,
   versionMeta,
+  opportunityParam,
 } from './documents';
 
 function version(over: Partial<ResumeVersion> = {}): ResumeVersion {
@@ -199,5 +200,16 @@ describe('writing types and notes', () => {
     expect(date.ok ? null : date.message).toMatch(/real date/);
     const long = writingContextInput('bio', { ...EMPTY_WRITING_CONTEXT, organization: 'x'.repeat(121) }, false);
     expect(long.ok ? null : long.message).toMatch(/120/);
+  });
+});
+
+describe('the listing parameter', () => {
+  it('accepts only a well-formed listing id', () => {
+    expect(opportunityParam('opp_123-a')).toBe('opp_123-a');
+    expect(opportunityParam(['abc', 'def'])).toBe('abc');
+    expect(opportunityParam('../etc')).toBeNull();
+    expect(opportunityParam('')).toBeNull();
+    expect(opportunityParam('x'.repeat(101))).toBeNull();
+    expect(opportunityParam(undefined)).toBeNull();
   });
 });

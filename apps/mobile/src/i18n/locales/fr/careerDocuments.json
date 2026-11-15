@@ -183,7 +183,10 @@
     "noSavedOpps": "Aucune opportunité enregistrée pour l’instant. Enregistrez ou collez-en une dans Opportunités enregistrées.",
     "tailorToA11y": "Adapter à {title}",
     "expired": "Expirée",
-    "open": "Ouverte"
+    "open": "Ouverte",
+    "tailorListingTitle": "Adapter à : {title}",
+    "tailorListingNote": "Vous avez ouvert ce CV pour une offre. L’adaptation crée une nouvelle version à partir de vos faits confirmés et utilise un crédit de document ; votre accord est demandé avant.",
+    "tailorListingButton": "Adapter à cette offre"
   },
   "letter": {
     "textFailed": "Rien n’a été modifié. Votre texte est toujours là ; réessayez.",
@@ -193,5 +196,13 @@
     "textA11y": "Texte de la lettre",
     "noCreditsNote": "Enregistrer et exporter n’utilisent aucun crédit carrière.",
     "typedSaved": "Votre texte saisi est enregistré avec la nouvelle mise en page."
+  },
+  "forListing": {
+    "title": "Préparation pour : {title}",
+    "openedListing": "L’offre que vous avez ouverte",
+    "body": "Ouvrez un CV ci-dessous pour l’adapter à cette offre, ou rédigez une lettre pour elle. L’adaptation et la rédaction utilisent chacune un crédit de document, et votre accord est demandé avant.",
+    "write": "Rédiger une lettre pour cette offre",
+    "clear": "Pas pour cette offre",
+    "clearA11y": "Ne plus préparer de documents pour cette offre"
   }
 }

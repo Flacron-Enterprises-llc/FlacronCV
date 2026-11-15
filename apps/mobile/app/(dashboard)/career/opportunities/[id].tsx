@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Crypto from 'expo-crypto';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Linking, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { MatchResult, OpportunityDetail, ReportReason, ViewerReport } from '../../../../../../packages/career-api-client/src/types';
 import { CareerHeader, Pill } from '../../../../src/components/career/CareerHeader';
+import { ListingFacts } from '../../../../src/components/career/ListingFacts';
 import { Button } from '../../../../src/components/ui/Button';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
@@ -18,20 +19,20 @@ import {
   useOpportunityTrust,
   useReportOpportunity,
   useSavedMatch,
+  useToggleSaveOpportunity,
+  useTrackOpportunity,
+  type TrackResult,
 } from '../../../../src/hooks/career/opportunities';
+import { compareUpgradeText, explainMatch, labelTone } from '../../../../src/lib/career/match-explain';
+import { providerLabel } from '../../../../src/lib/career/opportunity-search';
 import { useCareerAccess, useCareerResumes } from '../../../../src/hooks/useCareer';
 import {
   compareErrorMessage,
   confidenceText,
-  FIT_LABEL,
   isStale,
-  locationsText,
-  matchLines,
   notAScore,
   notStated,
   openableUrl,
-  overlapText,
-  payText,
   pickTrust,
   remainingAnalyses,
   remainingText,
@@ -40,13 +41,13 @@ import {
   reportErrorMessage,
   reportStatusText,
   signalText,
-  sponsorshipText,
   trustDisclaimer,
   trustNone,
   versionChoices,
 } from '../../../../src/lib/career/opportunities';
 import { careerErrorMessage, formatDay } from '../../../../src/lib/career-view';
 import { t as tNow, useT } from '../../../../src/i18n';
+import { RTL_FLIP } from '../../../../src/i18n/native';
 import { colors } from '../../../../src/theme/colors';
 
 /**
@@ -101,6 +102,7 @@ export default function OpportunityDetailScreen() {
         }
       >
         <ListingCard item={item} stale={isStale(item.checkedAt, nowMs)} />
+        <ActionsCard item={item} />
         <TrustCard item={item} trust={pickTrust(item, trust.data)} />
         <CompareCard item={item} />
       </ScrollView>
@@ -136,18 +138,10 @@ function SourceLink({ url }: { url: string }) {
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <View className="flex-row mt-2">
-      <Text className="text-stone-500 text-sm w-28">{label}</Text>
-      <Text className="text-stone-900 text-sm flex-1">{value}</Text>
-    </View>
-  );
-}
-
 function ListingCard({ item, stale }: { item: OpportunityDetail; stale: boolean }) {
   const source = openableUrl(item.sourceUrl);
   const t = useT('careerJobs');
+  const to = useT('careerOpportunities');
   const tk = useT('career');
   return (
     <>
@@ -163,11 +157,9 @@ function ListingCard({ item, stale }: { item: OpportunityDetail; stale: boolean 
           <Text className="text-stone-500 text-sm flex-1 me-2">{item.organization ?? notStated()}</Text>
           <Pill label={item.label === 'expired' ? tk('shared.expiredPill') : tk('shared.openPill')} tone={item.label === 'expired' ? 'default' : 'success'} />
         </View>
-        <Field label={t('detail.locations')} value={locationsText(item.locations)} />
-        <Field label={t('detail.pay')} value={payText(item.compensation)} />
-        <Field label={t('detail.sponsorship')} value={sponsorshipText(item.sponsorship)} />
-        <Field label={t('detail.deadline')} value={formatDay(item.deadline) ?? notStated()} />
+        <ListingFacts item={item} />
         <Text className="text-stone-400 text-xs mt-3">{t('detail.lastChecked', { date: item.checkedAt.slice(0, 10) })}</Text>
+        <Text className="text-stone-400 text-xs mt-1">{to('source_line', { provider: providerLabel(item.provider) })}</Text>
         <Text className="text-stone-900 text-sm mt-4 leading-5" selectable>
           {item.description}
         </Text>
@@ -324,6 +316,9 @@ function CompareCard({ item }: { item: OpportunityDetail }) {
   const saved = useSavedMatch(item.id, selected);
   const create = useCreateMatch(item.id);
   const [error, setError] = useState<string | null>(null);
+  const [upgrade, setUpgrade] = useState<string | null>(null);
+  const router = useRouter();
+  const to = useT('careerOpportunities');
   // One key per comparison (listing + CV version): a retry after a failure reuses it, so it is never charged twice.
   const keyRef = useRef<{ pair: string; key: string } | null>(null);
 
@@ -353,7 +348,11 @@ function CompareCard({ item }: { item: OpportunityDetail }) {
         onSuccess: () => {
           keyRef.current = null;
         },
-        onError: (caught) => setError(compareErrorMessage(caught)),
+        onError: (caught) => {
+          const plan = compareUpgradeText(caught);
+          setUpgrade(plan);
+          setError(plan ? null : compareErrorMessage(caught));
+        },
       },
     );
   };
@@ -428,28 +427,154 @@ function CompareCard({ item }: { item: OpportunityDetail }) {
         </View>
       ) : null}
 
+      {upgrade ? (
+        <View className="bg-warning-bg rounded-xl p-3 mt-3" accessibilityLiveRegion="polite">
+          <Text className="text-warning font-semibold text-sm">{to('compare_upgrade_title')}</Text>
+          <Text className="text-warning text-sm mt-1 leading-5">{upgrade}</Text>
+          <TouchableOpacity onPress={() => router.push('/(dashboard)/career/plans' as Href)} className="min-h-[44px] justify-center" accessibilityRole="link">
+            <Text className="text-brand-600 font-semibold text-sm">{to('compare_upgrade_link')}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
       {match ? <MatchView match={match} /> : null}
     </View>
   );
 }
 
 function MatchView({ match }: { match: MatchResult }) {
-  const lines = matchLines(match);
   const t = useT('careerJobs');
-  const icon = { reason: 'checkmark-circle-outline', gap: 'remove-circle-outline', unknown: 'help-circle-outline' } as const;
-  const tint = { reason: colors.success.DEFAULT, gap: colors.warning.DEFAULT, unknown: colors.stone[500] };
+  const to = useT('careerOpportunities');
+  const view = explainMatch(match);
   return (
     <View className="mt-4 pt-4 border-t border-stone-100" accessibilityLiveRegion="polite">
-      <Text className="font-bold text-stone-900">{FIT_LABEL[match.fit]}</Text>
-      <Text className="text-stone-500 text-xs mt-1 leading-4">{notAScore()}</Text>
-      <Text className="text-stone-700 text-sm mt-2">{overlapText(match.overlap)}</Text>
-      {lines.map((line) => (
-        <View key={line.key} className="flex-row mt-2">
-          <Ionicons name={icon[line.kind]} size={16} color={tint[line.kind]} />
-          <Text className="text-stone-800 text-sm ms-1.5 flex-1 leading-5">{line.text}</Text>
-        </View>
+      <View className="flex-row flex-wrap items-center">
+        <Text className="font-bold text-stone-900 text-base me-2" accessibilityRole="header">
+          {view.labelText}
+        </Text>
+        <Pill label={view.fitText} tone={labelTone(view.label)} />
+      </View>
+      {view.reasons.map((reason) => (
+        <Text key={reason} className="text-stone-600 text-sm mt-1 leading-5">
+          {reason}
+        </Text>
       ))}
+      <Text className="text-stone-500 text-xs mt-1 leading-4">{notAScore()}</Text>
+      <MatchSection title={to('section_qualification')} lines={view.qualification} icon="school-outline" />
+      <MatchSection title={to('section_preferences')} lines={view.preferences} icon="options-outline" empty={to('preferences_none')} />
+      {view.notSetCount > 0 ? <Text className="text-stone-400 text-xs mt-1">{to('preferences_not_set', { count: view.notSetCount })}</Text> : null}
+      <MatchSection title={to('section_unknowns')} lines={view.unknowns} icon="help-circle-outline" />
       <Text className="text-stone-400 text-xs mt-3">{t('match.compared', { date: formatDay(match.createdAt) ?? '' })}</Text>
     </View>
+  );
+}
+
+function MatchSection({ title, lines, icon, empty }: { title: string; lines: string[]; icon: keyof typeof Ionicons.glyphMap; empty?: string }) {
+  if (lines.length === 0 && !empty) return null;
+  return (
+    <View className="mt-4">
+      <Text className="text-stone-900 text-sm font-semibold" accessibilityRole="header">
+        {title}
+      </Text>
+      {lines.length === 0 ? <Text className="text-stone-500 text-sm mt-1 leading-5">{empty}</Text> : null}
+      {lines.map((line, index) => (
+        <View key={`${index}-${line}`} className="flex-row mt-1.5">
+          <Ionicons name={icon} size={16} color={colors.stone[500]} />
+          <Text className="text-stone-800 text-sm ms-1.5 flex-1 leading-5">{line}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/**
+ * What next (website "actions"): save, track in the V1 Job Tracker (one entry
+ * per listing, same payload as the website), and prepare an application —
+ * the résumé studio, the action pack and interview practice open with this
+ * listing preselected (?opportunityId=).
+ */
+function ActionsCard({ item }: { item: OpportunityDetail }) {
+  const router = useRouter();
+  const to = useT('careerOpportunities');
+  const save = useToggleSaveOpportunity();
+  const track = useTrackOpportunity();
+  const [tracked, setTracked] = useState<TrackResult | 'failed' | null>(null);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const saved = item.saved === true;
+  const param = encodeURIComponent(item.id);
+  const open = (path: string) => router.push(path as Href);
+
+  const onTrack = () => {
+    if (track.isPending) return;
+    setTracked(null);
+    track.mutate(
+      { item, unstatedCompany: to('employer_not_stated') },
+      { onSuccess: (result) => setTracked(result), onError: () => setTracked('failed') },
+    );
+  };
+
+  const onSave = () => {
+    if (save.isPending) return;
+    setSaveFailed(false);
+    save.mutate(item, { onError: () => setSaveFailed(true) });
+  };
+
+  return (
+    <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+      <Text className="font-bold text-stone-900 text-base mb-3" accessibilityRole="header">
+        {to('actions_title')}
+      </Text>
+      <View className="gap-2">
+        <Button
+          variant="outline"
+          onPress={onSave}
+          loading={save.isPending}
+          accessibilityState={{ selected: saved }}
+          icon={<Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={18} color={colors.stone[700]} />}
+        >
+          {saved ? to('saved_button') : to('save_button')}
+        </Button>
+        <Button
+          variant="outline"
+          onPress={onTrack}
+          loading={track.isPending}
+          disabled={tracked === 'added'}
+          icon={<Ionicons name="briefcase-outline" size={18} color={colors.stone[700]} />}
+        >
+          {to('track_button')}
+        </Button>
+      </View>
+      {saveFailed ? (
+        <Text className="text-red-600 text-sm mt-3" accessibilityRole="alert">
+          {to('save_failed')}
+        </Text>
+      ) : null}
+      {tracked === 'added' || tracked === 'already' ? (
+        <View className="mt-3 flex-row flex-wrap items-center" accessibilityLiveRegion="polite">
+          <Text className="text-stone-700 text-sm me-2">{tracked === 'added' ? to('track_added') : to('track_already')}</Text>
+          <TouchableOpacity onPress={() => open('/(dashboard)/jobs')} className="min-h-[44px] justify-center" accessibilityRole="link">
+            <Text className="text-brand-600 font-semibold text-sm">{to('track_open')}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+      {tracked === 'failed' ? (
+        <Text className="text-red-600 text-sm mt-3" accessibilityRole="alert">
+          {to('track_failed')}
+        </Text>
+      ) : null}
+      <Text className="text-stone-900 text-sm font-semibold mt-4">{to('prepare_title')}</Text>
+      <LinkRow label={to('prepare_resume')} onPress={() => open(`/(dashboard)/career/documents?opportunityId=${param}`)} />
+      <LinkRow label={to('prepare_action_pack')} onPress={() => open(`/(dashboard)/career/action-pack?opportunityId=${param}`)} />
+      <LinkRow label={to('practice')} onPress={() => open(`/(dashboard)/career/interviews?opportunityId=${param}`)} />
+    </View>
+  );
+}
+
+function LinkRow({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <TouchableOpacity onPress={onPress} className="flex-row items-center min-h-[44px]" accessibilityRole="link">
+      <Text className="text-brand-600 font-semibold text-sm flex-1">{label}</Text>
+      <Ionicons name="chevron-forward" size={16} color={colors.brand[600]} style={RTL_FLIP} />
+    </TouchableOpacity>
   );
 }

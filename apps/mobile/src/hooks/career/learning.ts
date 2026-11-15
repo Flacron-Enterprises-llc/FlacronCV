@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { SkillGapReport, SkillReportList } from '../../../../../packages/career-api-client/src/types';
+import type { RubricCheckInput, SkillGapReport, SkillReportList } from '../../../../../packages/career-api-client/src/types';
 import { careerApi } from '../../lib/career-api';
 import { replacePack } from '../../lib/career/action-packs';
 import { withMilestone, withMilestoneEvidence, type SkillReportInput } from '../../lib/career/learning';
@@ -86,8 +86,10 @@ export function useConvertMilestone(reportId: string | undefined) {
   const queryClient = useQueryClient();
   const uid = useUid();
   return useMutation({
-    mutationFn: (milestoneId: string) => careerApi.convertMilestoneToEvidence(reportId as string, milestoneId),
-    onSuccess: (result, milestoneId) => {
+    // The ownership statement is the person's own words and optional; it is never written for them.
+    mutationFn: (input: { milestoneId: string; ownershipStatement?: string }) =>
+      careerApi.convertMilestoneToEvidence(reportId as string, input.milestoneId, input.ownershipStatement),
+    onSuccess: (result, { milestoneId }) => {
       const record = (report: SkillGapReport) => withMilestoneEvidence(report, milestoneId, result.evidenceId);
       queryClient.setQueryData<SkillGapReport>(reportKey(uid, reportId), (current) => (current ? record(current) : current));
       queryClient.setQueryData<SkillReportList>(listKey(uid), (current) =>
@@ -95,5 +97,50 @@ export function useConvertMilestone(reportId: string | undefined) {
       );
       void queryClient.invalidateQueries({ queryKey: ['career', uid, 'evidence'] });
     },
+  });
+}
+
+function useWriteReport() {
+  const queryClient = useQueryClient();
+  const uid = useUid();
+  return (report: SkillGapReport) => {
+    queryClient.setQueryData(reportKey(uid, report.id), report);
+    queryClient.setQueryData<SkillReportList>(listKey(uid), (current) => (current ? { ...current, items: replacePack(current.items, report) } : current));
+  };
+}
+
+/** Saves the person's ownership statement for the project brief (free). */
+export function useSetProjectOwnership(reportId: string | undefined) {
+  const write = useWriteReport();
+  return useMutation({
+    mutationFn: (statement: string) => careerApi.setProjectOwnership(reportId as string, statement),
+    onSuccess: (report) => write(report),
+  });
+}
+
+/** Adds the finished project to the evidence vault once (a repeat returns the same item). */
+export function useAddProjectToEvidence(reportId: string | undefined) {
+  const queryClient = useQueryClient();
+  const uid = useUid();
+  return useMutation({
+    mutationFn: () => careerApi.addProjectToEvidence(reportId as string),
+    onSuccess: (result) => {
+      const record = (report: SkillGapReport) =>
+        report.projectBrief ? { ...report, projectBrief: { ...report.projectBrief, evidenceId: result.evidenceId } } : report;
+      queryClient.setQueryData<SkillGapReport>(reportKey(uid, reportId), (current) => (current ? record(current) : current));
+      queryClient.setQueryData<SkillReportList>(listKey(uid), (current) =>
+        current ? { ...current, items: current.items.map((r) => (r.id === reportId ? record(r) : r)) } : current,
+      );
+      void queryClient.invalidateQueries({ queryKey: ['career', uid, 'evidence'] });
+    },
+  });
+}
+
+/** Saves the rubric self-check (free; never an independent assessment). */
+export function useSaveRubricCheck(reportId: string | undefined) {
+  const write = useWriteReport();
+  return useMutation({
+    mutationFn: (input: RubricCheckInput) => careerApi.saveRubricCheck(reportId as string, input),
+    onSuccess: (report) => write(report),
   });
 }

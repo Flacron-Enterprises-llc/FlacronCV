@@ -19,7 +19,8 @@
     "coverLetters": "Cartas de presentación",
     "downloads": "Descargas",
     "thisMonth": "Este mes",
-    "usedThisMonth": "Usados este mes"
+    "usedThisMonth": "Usados este mes",
+    "unlimited": "Ilimitado"
   },
   "quickActions": {
     "title": "Acciones rápidas",
@@ -42,5 +43,28 @@
     "title": "Mejorar a Pro",
     "body": "Desbloquea {cvs} CVs, {credits} créditos Engine y más",
     "cta": "Mejorar ahora — {price}/mes"
+  },
+  "greeting": {
+    "named": "¡Hola de nuevo, {name}!",
+    "plain": "¡Hola de nuevo!",
+    "firstNamed": "¡Te damos la bienvenida, {name}!",
+    "first": "¡Te damos la bienvenida a FlacronCV!",
+    "subtitle": "Así está tu cuenta hoy."
+  },
+  "jobs": {
+    "title": "Seguimiento de empleos",
+    "error": "No pudimos cargar tus candidaturas.",
+    "empty": "Aún no sigues ninguna candidatura. Añade los puestos a los que te postulas para tener cada etapa en un solo lugar.",
+    "open": "Abrir el seguimiento de candidaturas",
+    "status": {
+      "saved": "Guardada",
+      "applied": "Postulada",
+      "interviewing": "Entrevistando",
+      "offered": "Oferta recibida"
+    }
+  },
+  "upgradePlans": {
+    "title": "Saca más partido a FlacronCV",
+    "cta": "Comparar planes"
   }
 }

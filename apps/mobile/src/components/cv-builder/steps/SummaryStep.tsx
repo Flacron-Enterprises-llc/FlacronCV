@@ -17,7 +17,7 @@ import axios from 'axios';
 import { useCVStore } from '../../../store/cv-store';
 import { useGenerateSummary } from '../../../hooks/useAI';
 import { useAuthStore } from '../../../store/auth-store';
-import { canUseAI } from '../../../lib/entitlements';
+import { canUseAI, planForDisplay } from '../../../lib/entitlements';
 import { alertIfUnverifiedEmail } from '../../../lib/email-verification';
 import {
   aiCreditsExhaustedMessage,
@@ -168,8 +168,8 @@ export function SummaryStep({ onValidChange }: SummaryStepProps) {
     )) {
       Alert.alert(
         t('summary.creditsExhaustedTitle'),
-        aiCreditsExhaustedMessage('summary'),
-        upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+        aiCreditsExhaustedMessage('summary', planForDisplay(user.subscription)),
+        upgradeAlertButtons(() => router.push('/(dashboard)/settings/plans')),
       );
       return;
     }

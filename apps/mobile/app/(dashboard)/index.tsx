@@ -19,17 +19,27 @@ import { useAuthStore } from '../../src/store/auth-store';
 import { useCVList } from '../../src/hooks/useCVs';
 import { useCoverLetterList } from '../../src/hooks/useCoverLetters';
 import { useCurrentUser } from '../../src/hooks/useUser';
-import { SubscriptionPlan } from '../../src/types/enums';
-import { PLAN_CONFIGS } from '../../src/types/subscription.types';
+import { useJobList } from '../../src/hooks/useJobs';
+import { useV1Usage } from '../../src/hooks/usePayment';
 import { PAID_UPGRADES_ENABLED } from '../../src/config/paid-upgrades';
 import { CAREER_ENABLED } from '../../src/config/career';
-import { effectivePlanForCopy, isCatalogPaidPlan, planForDisplay } from '../../src/lib/entitlements';
+import { planForDisplay, sharedPlanLimits } from '../../src/lib/entitlements';
+import { canPurchaseInApp } from '../../src/lib/billing';
+import {
+  documentStats,
+  greetingKey,
+  greetingName,
+  HOME_PIPELINE,
+  isFirstVisit,
+  jobPipelineCounts,
+} from '../../src/lib/home-dashboard';
+import { planBenefits, planName } from '../../src/lib/plan-catalog';
 import {
   confirmVerifiedEmail,
   resendVerificationEmail,
 } from '../../src/lib/email-verification';
 import { colors } from '../../src/theme/colors';
-import { formatCurrency, t as tNow, useT } from '../../src/i18n';
+import { formatNumber, t as tNow, useT } from '../../src/i18n';
 import { RTL_FLIP } from '../../src/i18n/native';
 
 function loadFailureMessage(err: unknown): string {
@@ -42,6 +52,9 @@ function loadFailureMessage(err: unknown): string {
 export default function DashboardScreen() {
   const t = useT('dashboard');
   const ts = useT('settings');
+  const tPlans = useT('plans');
+  const liveUsage = useV1Usage();
+  const jobs = useJobList();
   const router = useRouter();
   const { user: authUser, syncUser, userSyncError, emailVerified } = useAuthStore();
   const {
@@ -86,31 +99,25 @@ export default function DashboardScreen() {
     void refetchCLs();
   };
 
-  const plan = user ? effectivePlanForCopy(user.subscription) : null;
-  const planBadge = {
-    [SubscriptionPlan.FREE]: {
-      label: t('header.planBadge.free'),
-      textClass: 'text-stone-600',
-      bgClass: 'bg-stone-100',
-    },
-    [SubscriptionPlan.PRO]: {
-      label: t('header.planBadge.pro'),
-      textClass: 'text-brand-700',
-      bgClass: 'bg-brand-100',
-    },
-    [SubscriptionPlan.ENTERPRISE]: {
-      label: ts('plans.enterprise'),
-      textClass: 'text-brand-700',
-      bgClass: 'bg-brand-100',
-    },
-  };
-  const displayPlan = user ? planForDisplay(user.subscription) : null;
-  const legacyBadge = plan ? planBadge[plan] : null;
-  // Current five-plan subscribers see their real plan name; legacy badges are unchanged.
-  const badge =
-    legacyBadge && displayPlan && isCatalogPaidPlan(displayPlan)
-      ? { ...legacyBadge, label: ts(`plans.${displayPlan}`) }
-      : legacyBadge;
+  // The real (effective) plan: five-plan or legacy. Legacy Free / Pro keep their old badge wording.
+  const plan = user ? planForDisplay(user.subscription) : null;
+  const badge = plan
+    ? {
+        label: plan === 'free' ? t('header.planBadge.free') : plan === 'pro' ? t('header.planBadge.pro') : planName(plan),
+        textClass: plan === 'free' ? 'text-stone-600' : 'text-brand-700',
+        bgClass: plan === 'free' ? 'bg-stone-100' : 'bg-brand-100',
+      }
+    : null;
+  // Live counters (stored CVs / letters for capacity plans); the sign-in snapshot until they load.
+  const counters = liveUsage.data ?? usage;
+  const limits = user ? sharedPlanLimits(user.subscription) : null;
+  const docs = plan ? documentStats(plan, counters) : null;
+  const aiLimit = limits ? Math.min(usage?.aiCreditsLimit ?? limits.aiCredits, limits.aiCredits) : 0;
+  const ratio = (used: number, limit: number | null) =>
+    limit === null ? `${formatNumber(used)} · ${t('stats.unlimited')}` : `${formatNumber(used)} / ${formatNumber(limit)}`;
+  const firstName = greetingName(user);
+  const greeting = t(`greeting.${greetingKey(isFirstVisit(user), !!firstName)}`, { name: firstName });
+  const pipeline = jobPipelineCounts(jobs.data);
 
   const pullRefreshing =
     (userFetching || cvsFetching || clFetching) &&
@@ -135,10 +142,10 @@ export default function DashboardScreen() {
         <View className="px-5 pt-4 pb-6 bg-white border-b border-stone-100">
           <View className="flex-row items-center justify-between">
             <View className="flex-1">
-              <Text className="text-stone-400 text-sm">{t('header.welcomeBack')}</Text>
-              <Text className="text-xl font-bold text-stone-900" numberOfLines={1}>
-                {user?.displayName ?? user?.profile?.firstName ?? ts('header.userFallback')} 👋
+              <Text className="text-xl font-bold text-stone-900" numberOfLines={2} accessibilityRole="header">
+                {user ? greeting : ts('header.userFallback')}
               </Text>
+              <Text className="text-stone-500 text-sm mt-0.5">{t('greeting.subtitle')}</Text>
             </View>
             <View className="flex-row items-center gap-2">
               {accountFailed ? (
@@ -211,25 +218,25 @@ export default function DashboardScreen() {
               <View className="flex-row gap-3 mb-3">
                 <StatsCard
                   label={t('stats.cvsCreated')}
-                  value={usage.cvsCreated}
+                  value={docs ? ratio(docs.cvs.used, docs.cvs.limit) : formatNumber(usage.cvsCreated)}
                   icon="document-text"
                 />
                 <StatsCard
                   label={t('stats.coverLetters')}
-                  value={usage.coverLettersCreated}
+                  value={docs ? ratio(docs.coverLetters.used, docs.coverLetters.limit) : formatNumber(usage.coverLettersCreated)}
                   icon="mail"
                 />
               </View>
               <View className="flex-row gap-3 mb-6">
                 <StatsCard
                   label={t('stats.downloads')}
-                  value={usage.exportsThisMonth}
+                  value={formatNumber(counters?.exportsThisMonth ?? usage.exportsThisMonth)}
                   icon="download"
                   subtitle={t('stats.thisMonth')}
                 />
                 <StatsCard
                   label={ts('usage.credits')}
-                  value={`${usage.aiCreditsUsed}/${usage.aiCreditsLimit}`}
+                  value={ratio(counters?.aiCreditsUsed ?? usage.aiCreditsUsed, aiLimit)}
                   icon="sparkles"
                   subtitle={t('stats.usedThisMonth')}
                 />
@@ -323,26 +330,66 @@ export default function DashboardScreen() {
           />
         </View>
 
-        {/* Upgrade Banner (Free users) — hidden when paid upgrades are off (S1). */}
-        {PAID_UPGRADES_ENABLED && plan === SubscriptionPlan.FREE && (
+        {/* Job tracker summary (website RecentActivity). */}
+        <View className="px-5 mb-8">
+          <View className="bg-white rounded-2xl border border-stone-100 p-4">
+            <View className="flex-row items-center mb-3">
+              <Ionicons name="briefcase-outline" size={18} color={colors.stone[400]} />
+              <Text className="font-bold text-stone-900 ms-2" accessibilityRole="header">{t('jobs.title')}</Text>
+            </View>
+            {jobs.isPending && !jobs.data ? (
+              <View className="h-16 bg-stone-100 rounded-xl" />
+            ) : jobs.isError ? (
+              <Text className="text-stone-600 text-sm">{t('jobs.error')}</Text>
+            ) : pipeline.active === 0 ? (
+              <Text className="text-stone-600 text-sm leading-5">{t('jobs.empty')}</Text>
+            ) : (
+              <View className="flex-row flex-wrap gap-2">
+                {HOME_PIPELINE.map((stage) => (
+                  <View
+                    key={stage}
+                    className="bg-stone-50 rounded-xl px-3 py-2"
+                    style={{ flexBasis: '47%', flexGrow: 1 }}
+                    accessible
+                    accessibilityLabel={`${t(`jobs.status.${stage}`)}: ${pipeline.counts[stage]}`}
+                  >
+                    <Text className="text-stone-500 text-xs" numberOfLines={1}>{t(`jobs.status.${stage}`)}</Text>
+                    <Text className="text-stone-900 text-xl font-bold">{formatNumber(pipeline.counts[stage])}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            <TouchableOpacity
+              onPress={() => router.push('./jobs')}
+              className="mt-3 flex-row items-center min-h-[44px]"
+              accessibilityRole="button"
+            >
+              <Text className="text-brand-600 font-semibold text-sm me-1">{t('jobs.open')}</Text>
+              <Ionicons name="arrow-forward" size={16} color={colors.brand[600]} style={RTL_FLIP} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Upgrade banner — Free accounts, only when the app can sell a plan (in-app purchase). */}
+        {PAID_UPGRADES_ENABLED && plan === 'free' && canPurchaseInApp(user?.subscription) && (
           <View className="mx-5 mb-8">
             <View className="bg-brand-600 rounded-2xl p-5 overflow-hidden">
               <View className="flex-row items-center justify-between">
                 <View className="flex-1">
-                  <Text className="text-white font-bold text-lg">{t('upgrade.title')}</Text>
-                  <Text className="text-brand-100 text-sm mt-0.5">
-                    {t('upgrade.body', { cvs: PLAN_CONFIGS[SubscriptionPlan.PRO].limits.cvs, credits: PLAN_CONFIGS[SubscriptionPlan.PRO].limits.aiCredits })}
-                  </Text>
+                  <Text className="text-white font-bold text-lg">{t('upgradePlans.title')}</Text>
+                  <Text className="text-brand-100 text-sm mt-1">{tPlans('planIncludes', { plan: planName('starter') })}</Text>
+                  {planBenefits('starter').slice(0, 4).map((benefit) => (
+                    <Text key={benefit} className="text-white text-sm mt-0.5">{'\u2022 '}{benefit}</Text>
+                  ))}
                 </View>
                 <Ionicons name="sparkles" size={36} color="rgba(255,255,255,0.6)" />
               </View>
               <TouchableOpacity
-                onPress={() => router.push('/(dashboard)/settings/billing')}
-                className="bg-white mt-4 rounded-xl py-2.5 items-center"
+                onPress={() => router.push('/(dashboard)/settings/plans')}
+                className="bg-white mt-4 rounded-xl min-h-[44px] items-center justify-center"
+                accessibilityRole="button"
               >
-                <Text className="text-brand-600 font-bold">
-                  {t('upgrade.cta', { price: formatCurrency(PLAN_CONFIGS[SubscriptionPlan.PRO].priceMonthly, 'usd') })}
-                </Text>
+                <Text className="text-brand-600 font-bold">{t('upgradePlans.cta')}</Text>
               </TouchableOpacity>
             </View>
           </View>

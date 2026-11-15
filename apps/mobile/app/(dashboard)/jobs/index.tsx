@@ -23,6 +23,9 @@ import { useArchiveJob, useJobList } from '../../../src/hooks/useJobs';
 import { useT } from '../../../src/i18n';
 import { RTL_FLIP } from '../../../src/i18n/native';
 import { requestFailureMessage } from '../../../src/lib/api-errors';
+import { promptForError, showUpgradePrompt } from '../../../src/config/paid-upgrades';
+import { planForDisplay } from '../../../src/lib/entitlements';
+import { useAuthStore } from '../../../src/store/auth-store';
 import {
   checklistProgress,
   filterAndSortJobs,
@@ -101,8 +104,14 @@ export default function JobsScreen() {
       { job, archived },
       {
         onSuccess: () => Alert.alert(archived ? t('archive.archived') : t('archive.restored')),
-        onError: (err) =>
-          Alert.alert(t('form.saveErrorTitle'), requestFailureMessage(err, t('form.archiveError'))),
+        onError: (err) => {
+          const prompt = promptForError(err, planForDisplay(useAuthStore.getState().user?.subscription));
+          if (prompt) {
+            showUpgradePrompt(prompt, () => router.push('/(dashboard)/settings/plans'));
+            return;
+          }
+          Alert.alert(t('form.saveErrorTitle'), requestFailureMessage(err, t('form.archiveError')));
+        },
       },
     );
   };

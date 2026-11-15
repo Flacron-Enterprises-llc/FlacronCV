@@ -212,6 +212,7 @@ export class StoreWebhookService {
         expiresAt: inspected.expiresAt,
         originalTransactionId: inspected.originalTransactionId,
         purchaseToken: inspected.purchaseToken,
+        ...(inspected.periodStart ? { periodStart: inspected.periodStart } : {}),
       };
       const plan = await this.mobileBilling.grantFromStore(userId, verified, { type: 'system' });
       if (!plan) {

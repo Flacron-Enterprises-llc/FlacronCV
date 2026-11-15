@@ -15,8 +15,8 @@ import { requestFailureMessage } from '../../../../src/lib/api-errors';
 import { useExportCV } from '../../../../src/hooks/useExport';
 import { useCVStore } from '../../../../src/store/cv-store';
 import { useAuthStore } from '../../../../src/store/auth-store';
-import { canExport } from '../../../../src/lib/entitlements';
-import { exportLimitReachedMessage, upgradeAlertButtons } from '../../../../src/config/paid-upgrades';
+import { canExport, planForDisplay, sharedPlanLimits } from '../../../../src/lib/entitlements';
+import { exportLimitReachedMessage, limitPrompt, showUpgradePrompt, upgradeAlertButtons } from '../../../../src/config/paid-upgrades';
 import { colors } from '../../../../src/theme/colors';
 import { t as tNow, useT } from '../../../../src/i18n';
 import { RTL_FLIP } from '../../../../src/i18n/native';
@@ -103,9 +103,14 @@ export default function CVEditorScreen() {
     if (!canExport(user?.subscription, exports)) {
       Alert.alert(
         t('editor.exportLimitTitle'),
-        exportLimitReachedMessage(),
-        upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+        exportLimitReachedMessage(planForDisplay(user?.subscription)),
+        upgradeAlertButtons(() => router.push('/(dashboard)/settings/plans')),
       );
+      return;
+    }
+    // DOCX starts on Starter. Only a loaded account is pre-checked; the server decides otherwise.
+    if (format === 'docx' && user && !sharedPlanLimits(user.subscription).docxExport) {
+      showUpgradePrompt(limitPrompt('docx', planForDisplay(user.subscription)), () => router.push('/(dashboard)/settings/plans'));
       return;
     }
 

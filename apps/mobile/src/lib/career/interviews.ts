@@ -3,11 +3,14 @@ import {
   MAX_INTERVIEW_QUESTIONS,
   MAX_INTERVIEW_ROLE,
   MIN_INTERVIEW_QUESTIONS,
+  interviewReport,
+  type FeedbackDimension,
 } from '../../../../../packages/career-shared/src/interview';
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
 import type {
   InterviewFeedback,
   InterviewList,
+  InterviewReport,
   InterviewSession,
   InterviewStage,
   StartInterviewInput,
@@ -282,4 +285,70 @@ export function interviewErrorMessage(error: unknown, action: InterviewAction): 
 export function sessionStatus(session: InterviewSession): string {
   const { answered, total, complete } = sessionProgress(session);
   return complete ? t('careerInterviews.status.complete', { total }) : t('careerInterviews.status.progress', { answered, total });
+}
+
+// ------------------------------------------------------------ session report
+
+/**
+ * The end-of-session report: the server's when it sent one, else rebuilt
+ * from the stored labels with career-shared's `interviewReport` (an older
+ * session replayed without `report`), exactly as the website does.
+ */
+export function sessionReport(session: InterviewSession): InterviewReport {
+  return session.report ?? interviewReport(session.answers, session.questions.length);
+}
+
+/** Report lines in the current language: strengths, gaps, and the answers that lacked evidence. */
+export function reportLines(report: InterviewReport): { strengths: string[]; gaps: string[]; evidence: string } {
+  const line = (item: InterviewReport['dimensions'][number]) =>
+    t('careerInterviews.session.reportDimension', { dimension: DIMENSION_LABEL[item.dimension], met: item.met, answered: item.answered });
+  return {
+    strengths: report.dimensions.filter((item) => item.verdict === 'strength').map(line),
+    gaps: report.dimensions.filter((item) => item.verdict === 'gap').map(line),
+    evidence:
+      report.lackingEvidence.length > 0
+        ? t('careerInterviews.session.reportLacking', { count: report.lackingEvidence.length, list: report.lackingEvidence.join(', ') })
+        : t('careerInterviews.session.reportAllEvidence'),
+  };
+}
+
+const DIMENSION_LABEL: Record<FeedbackDimension, string> = {
+  get relevance() {
+    return t('careerInterviews.feedback.relevance');
+  },
+  get structure() {
+    return t('careerInterviews.feedback.structure');
+  },
+  get specificity() {
+    return t('careerInterviews.feedback.specificity');
+  },
+  get evidence() {
+    return t('careerInterviews.feedback.evidence');
+  },
+};
+
+// ------------------------------------------------------------ answer → STAR story
+
+export interface StoryPrefill {
+  draft: StoryDraft;
+  factIds: string[];
+  /** The question number the answer was given to (1-based, as the server numbers them). */
+  index: number;
+}
+
+/**
+ * A STAR story started from one saved answer, as on the website: only the
+ * candidate's own words go in (as the action), linked to the confirmed fact
+ * the question was built from. The result stays empty because it must come
+ * from a confirmed achievement, which the candidate chooses.
+ */
+export function storyPrefill(session: InterviewSession, answerId: string): StoryPrefill | null {
+  const answer = session.answers.find((item) => item.id === answerId);
+  if (!answer) return null;
+  const question = session.questions.find((item) => item.index === answer.index);
+  return {
+    draft: { ...EMPTY_STORY, action: answer.answer.slice(0, STORY_MAX) },
+    factIds: question ? [question.factId] : [],
+    index: answer.index,
+  };
 }

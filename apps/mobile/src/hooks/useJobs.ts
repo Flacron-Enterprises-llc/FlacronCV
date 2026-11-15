@@ -106,3 +106,19 @@ export function useDeleteJob() {
     },
   });
 }
+
+/**
+ * "Use current version": freezes the CV or cover letter as it is now with this
+ * application (`POST /jobs/:id/refreeze`, same as the website). Earlier
+ * snapshots are never edited in place.
+ */
+export function useRefreezeJob(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (kind: 'cv' | 'cover_letter') => api.post<JobApplication>(`/jobs/${id}/refreeze`, { kind }),
+    onSuccess: (job) => {
+      qc.setQueryData(['job', id], job);
+      qc.invalidateQueries({ queryKey: ['jobs'] });
+    },
+  });
+}

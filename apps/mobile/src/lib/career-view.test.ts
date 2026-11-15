@@ -135,8 +135,11 @@ describe('visibleAreas', () => {
     expect(keys).toContain('profile');
   });
 
-  it('marks the browser extension as desktop only', () => {
-    expect(visibleAreas({}).find((a) => a.key === 'forms')?.where).toBe('desktop');
+  it('lists forms, business and developer with in-app screens that state their own availability', () => {
+    const areas = visibleAreas({});
+    expect(areas.find((a) => a.key === 'forms')?.route).toBe('/(dashboard)/career/forms');
+    expect(areas.find((a) => a.key === 'business')?.route).toBe('/(dashboard)/career/business');
+    expect(areas.find((a) => a.key === 'developer')?.route).toBe('/(dashboard)/career/developer');
   });
 
   it('points every in-app area at a screen file that exists', () => {

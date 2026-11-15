@@ -178,6 +178,7 @@ export const CAREER_AREAS: CareerArea[] = [
   { key: 'opportunities', get title() { return t('career.areas.opportunities.title'); }, get body() { return t('career.areas.opportunities.body'); }, where: 'app', route: '/(dashboard)/career/opportunities' },
   { key: 'map', get title() { return t('career.areas.map.title'); }, get body() { return t('career.areas.map.body'); }, where: 'app', route: '/(dashboard)/career/opportunities/map', feature: 'mapSessions' },
   { key: 'alerts', get title() { return t('career.areas.alerts.title'); }, get body() { return t('career.areas.alerts.body'); }, where: 'app', route: '/(dashboard)/career/alerts', feature: 'alertItems' },
+  { key: 'reminders', get title() { return t('careerAlerts.remindersScreen.areaTitle'); }, get body() { return t('careerAlerts.remindersScreen.areaBody'); }, where: 'app', route: '/(dashboard)/career/reminders' },
   { key: 'tracker', get title() { return t('career.areas.tracker.title'); }, get body() { return t('career.areas.tracker.body'); }, where: 'app', route: '/(dashboard)/jobs' },
   { key: 'outcomes', get title() { return t('career.areas.outcomes.title'); }, get body() { return t('career.areas.outcomes.body'); }, where: 'app', route: '/(dashboard)/career/learning-loop', feature: 'applicationAnalytics' },
   { key: 'evidence', get title() { return t('career.areas.evidence.title'); }, get body() { return t('career.areas.evidence.body'); }, where: 'app', route: '/(dashboard)/career/evidence', feature: 'evidenceItems' },
@@ -192,7 +193,10 @@ export const CAREER_AREAS: CareerArea[] = [
   { key: 'recruiting', get title() { return t('career.areas.recruiting.title'); }, get body() { return t('career.areas.recruiting.body'); }, where: 'app', route: '/(dashboard)/career/recruiting' },
   { key: 'services', get title() { return t('career.areas.services.title'); }, get body() { return t('career.areas.services.body'); }, where: 'app', route: '/(dashboard)/career/services' },
   { key: 'data', get title() { return t('career.areas.data.title'); }, get body() { return t('career.areas.data.body'); }, where: 'app', route: '/(dashboard)/career/data' },
-  { key: 'forms', get title() { return t('career.areas.forms.title'); }, get body() { return t('career.areas.forms.body'); }, where: 'desktop' },
+  // Business, developer and forms screens gate themselves (available / coming soon / not in your plan; src/lib/career/nav.ts).
+  { key: 'business', get title() { return t('careerBusiness.nav.business'); }, get body() { return t('careerBusiness.scope.businessMetaDescription'); }, where: 'app', route: '/(dashboard)/career/business' },
+  { key: 'developer', get title() { return t('careerBusiness.nav.developer'); }, get body() { return t('careerBusiness.scope.developerMetaDescription'); }, where: 'app', route: '/(dashboard)/career/developer' },
+  { key: 'forms', get title() { return t('career.areas.forms.title'); }, get body() { return t('career.areas.forms.body'); }, where: 'app', route: '/(dashboard)/career/forms' },
 ];
 
 export function visibleAreas(features: Record<string, boolean> | undefined): CareerArea[] {

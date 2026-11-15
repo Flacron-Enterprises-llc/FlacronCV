@@ -225,5 +225,22 @@
       "language": "Neue Sprache",
       "reference": "Neue Referenz"
     }
+  },
+  "web": {
+    "sharing_title": "Teilen und Portfolio",
+    "sharing_body": "Wählen Sie, was Sie veröffentlichen, privat teilen oder per QR-Code zeigen.",
+    "sharing_link": "Portfolios öffnen",
+    "mode_title": "Karrieremodus",
+    "mode_body": "Wählen Sie Spezialmodi, aktuelle und künftige Orte sowie Verfügbarkeit.",
+    "mode_link": "Karrieremodi öffnen",
+    "achievement_prompt": "Eine Zahl ergänzen? Zum Beispiel wie viele Nutzer, wie viel schneller oder wie viel gespart. Nur wenn Sie sie kennen; sonst leer lassen. FlacronCV fügt nie eine hinzu.",
+    "readability": {
+      "format_title": "Formatprüfungen",
+      "format_note": "Wie der Text ein Bewerbermanagementsystem übersteht. Getrennt von der Passung.",
+      "format_long_line": "Eine sehr lange Zeile kann falsch getrennt werden. Teilen Sie sie auf.",
+      "format_table_marker": "Tabs, Spalten oder Tabellen können in falscher Reihenfolge gelesen werden.",
+      "format_unusual_characters": "Icons, Emoji oder ungewöhnliche Zeichen können verloren gehen.",
+      "format_missing_contact": "Keine E-Mail oder Telefonnummer im Kontaktbereich."
+    }
   }
 }

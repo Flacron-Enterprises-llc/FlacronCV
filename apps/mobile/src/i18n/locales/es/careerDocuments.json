@@ -183,7 +183,10 @@
     "noSavedOpps": "Aún no hay oportunidades guardadas. Primero guarda o pega una en Oportunidades guardadas.",
     "tailorToA11y": "Adaptar a {title}",
     "expired": "Caducada",
-    "open": "Abierta"
+    "open": "Abierta",
+    "tailorListingTitle": "Adaptar a: {title}",
+    "tailorListingNote": "Abriste este CV para una oferta. Adaptarlo crea una versión nueva con tus datos confirmados y usa un crédito de documento; se te pregunta antes.",
+    "tailorListingButton": "Adaptar a esta oferta"
   },
   "letter": {
     "textFailed": "No se cambió nada. Tu texto sigue aquí; inténtalo de nuevo.",
@@ -193,5 +196,13 @@
     "textA11y": "Texto de la carta",
     "noCreditsNote": "Guardar y exportar no usan créditos profesionales.",
     "typedSaved": "Tu texto escrito se guarda junto con el nuevo diseño."
+  },
+  "forListing": {
+    "title": "Preparando para: {title}",
+    "openedListing": "La oferta que abriste",
+    "body": "Abre un CV abajo para adaptarlo a esta oferta, o escribe una carta para ella. Adaptar y escribir usan un crédito de documento cada uno, y se te pregunta antes.",
+    "write": "Escribir una carta para esta oferta",
+    "clear": "No para esta oferta",
+    "clearA11y": "Dejar de preparar documentos para esta oferta"
   }
 }

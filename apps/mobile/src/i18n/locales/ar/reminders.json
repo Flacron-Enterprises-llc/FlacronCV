@@ -16,6 +16,10 @@
     "followUpToday": "متابعة اليوم",
     "followUpTodayWith": "متابعة اليوم مع {company}",
     "interviewToday": "مقابلة اليوم الساعة {time}",
-    "interviewTodayWith": "مقابلة اليوم الساعة {time} مع {company}"
+    "interviewTodayWith": "مقابلة اليوم الساعة {time} مع {company}",
+    "deadlineTomorrow": "الموعد النهائي للتقديم غدًا",
+    "deadlineTomorrowWith": "الموعد النهائي للتقديم غدًا: {company}",
+    "deadlineToday": "الموعد النهائي للتقديم اليوم",
+    "deadlineTodayWith": "الموعد النهائي للتقديم اليوم: {company}"
   }
 }

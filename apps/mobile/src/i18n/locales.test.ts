@@ -46,6 +46,16 @@ const SAME_AS_ENGLISH: Record<string, string> = {
   'fr:settings.plans.career_pro': 'plan name',
   'fr:settings.plans.starter': 'plan name',
   'ur:settings.plans.career_pro': 'plan name',
+  // Plans & billing (website plan_catalog.* / career_pricing.*): units and loanwords.
+  'es:plans.cell.storageMb': 'unit symbol (website plan_catalog.storage_mb)',
+  'es:plans.cell.storageGb': 'unit symbol (website plan_catalog.storage_gb)',
+  'de:plans.cell.storageMb': 'unit symbol (website plan_catalog.storage_mb)',
+  'de:plans.cell.storageGb': 'unit symbol (website plan_catalog.storage_gb)',
+  'ur:plans.cell.storageMb': 'unit symbol (website plan_catalog.storage_mb)',
+  'ur:plans.cell.storageGb': 'unit symbol (website plan_catalog.storage_gb)',
+  'fr:plans.cell.miles': 'same word in French (website career_pricing.miles)',
+  'fr:plans.usageUnits.exports': 'same word in French (website plan_catalog.usage_units.exports)',
+  'de:plans.levels.trends': 'same word in German (website career_pricing.levels.trends)',
   // Words spelled the same in the target language.
   'fr:common.ok': 'French uses "OK" on buttons',
   'de:common.ok': 'German uses "OK" on buttons',

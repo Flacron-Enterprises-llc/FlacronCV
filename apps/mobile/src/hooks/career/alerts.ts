@@ -1,7 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from '../../lib/api';
 import { careerApi } from '../../lib/career-api';
+import { markedRead } from '../../lib/career/reminders';
+import { trackerReminders } from '../../lib/job-from-opportunity';
+import type { JobApplication } from '../../types/job.types';
 import { useEntitled, useUid } from '../useCareer';
-import type { AlertList, AlertSettings, SavedSearch } from '../../../../../packages/career-api-client/src/types';
+import type { AlertList, AlertSettings, ReminderList, SavedSearch, SavedSearchInput } from '../../../../../packages/career-api-client/src/types';
 
 /**
  * Alerts, saved searches, alert locations and followed companies. Every key
@@ -42,6 +46,40 @@ export function useFollowedCompanies() {
   });
 }
 
+/**
+ * Career reminders. Tracker follow-up and interview dates are pushed first
+ * (`POST /reminders/tracker-sync`, best effort: the tracker is another
+ * service), then the list is read. Reminders never use alert items.
+ */
+export function useReminders(enabled = true) {
+  const { uid, entitled } = useEntitled();
+  return useQuery<ReminderList>({
+    queryKey: ['career', uid, 'reminders'],
+    queryFn: async () => {
+      try {
+        const items = trackerReminders(await api.get<JobApplication[]>('/jobs'));
+        if (items.length > 0) await careerApi.syncTrackerReminders(items);
+      } catch {
+        // Shown again after the next successful sync.
+      }
+      return careerApi.reminders();
+    },
+    enabled: entitled && enabled,
+    retry: false,
+  });
+}
+
+export function useMarkReminderRead() {
+  const queryClient = useQueryClient();
+  const uid = useUid();
+  return useMutation({
+    mutationFn: (reminderId: string) => careerApi.markReminderRead(reminderId),
+    onSuccess: (_result, reminderId) => {
+      queryClient.setQueryData<ReminderList>(['career', uid, 'reminders'], (current) => (current ? markedRead(current, reminderId) : current));
+    },
+  });
+}
+
 export function useAlertActions() {
   const queryClient = useQueryClient();
   const uid = useUid();
@@ -63,11 +101,11 @@ export function useAlertActions() {
       },
     }),
     createSearch: useMutation({
-      mutationFn: (input: { q: string; schedule?: SavedSearch['schedule']; locationProfileId?: string }) => careerApi.createSavedSearch(input),
+      mutationFn: (input: SavedSearchInput) => careerApi.createSavedSearch(input),
       onSuccess: () => void refresh('saved-searches'),
     }),
     updateSearch: useMutation({
-      mutationFn: (input: { id: string; patch: { paused?: boolean; schedule?: SavedSearch['schedule'] } }) =>
+      mutationFn: (input: { id: string; patch: { paused?: boolean; schedule?: SavedSearch['schedule']; relevance?: SavedSearchInput['relevance'] } }) =>
         careerApi.updateSavedSearch(input.id, input.patch),
       onSuccess: (next) => {
         queryClient.setQueryData<SavedSearch[]>(['career', uid, 'saved-searches'], (current) =>
@@ -97,7 +135,14 @@ export function useAlertActions() {
       },
     }),
     follow: useMutation({
-      mutationFn: (input: { name: string; sourceUrl?: string }) => careerApi.followCompany(input),
+      mutationFn: (input: { name: string; sourceUrl?: string; aliases?: string[]; roles?: string[]; locations?: string[] }) =>
+        careerApi.followCompany(input),
+      onSuccess: () => void refresh('followed-companies'),
+    }),
+    /** Name, aliases, roles and places of a followed company (PATCH /followed-companies/:id). */
+    updateCompany: useMutation({
+      mutationFn: (input: { id: string; patch: { name?: string; aliases?: string[]; roles?: string[]; locations?: string[] } }) =>
+        careerApi.updateFollowedCompany(input.id, input.patch),
       onSuccess: () => void refresh('followed-companies'),
     }),
     unfollow: useMutation({

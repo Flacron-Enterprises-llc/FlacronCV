@@ -6,13 +6,22 @@ describe('human review services', () => {
     const rows = serviceRows({
       items: [{ id: 'review-not-open', name: 'Named review desk', scope: 'A person reviews selected material', priceCents: null, bookingOpen: false, note: 'Closed.' }],
     });
-    expect(rows).toEqual([{ id: 'review-not-open', name: 'Named review desk', scope: 'A person reviews selected material', note: 'Closed.', bookable: false }]);
+    expect(rows).toEqual([
+      {
+        id: 'review-not-open',
+        name: 'Named review desk',
+        scope: 'A person reviews material you choose.',
+        note: 'This is a person, not AI feedback. Booking stays closed until commercial terms are set.',
+        bookable: false,
+      },
+    ]);
     expect(Object.keys(rows[0])).not.toContain('priceCents');
   });
 
   it('falls back to the closed note and handles no data', () => {
     const rows = serviceRows({ items: [{ id: 'a', name: 'A', scope: 's', priceCents: null, bookingOpen: false, note: '' }] });
     expect(rows[0].note).toBe(SERVICES_COPY.closedBody);
+    expect(rows[0].name).toBe('A');
     expect(serviceRows(undefined)).toEqual([]);
   });
 });

@@ -1,5 +1,5 @@
 import { ApiError } from '../../../../../packages/career-api-client/src/client';
-import type { SkillGapReport } from '../../../../../packages/career-api-client/src/types';
+import type { RubricCheckInput, SkillGapReport } from '../../../../../packages/career-api-client/src/types';
 import {
   isEssentialCredential,
   learningPlanCost,
@@ -228,5 +228,91 @@ export function evidenceErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.code === 'validation_error' && error.body.reason === 'not_completed') {
     return t('careerPlans.learning.errors.tickFirst');
   }
+  if (error instanceof ApiError && error.code === 'capacity_exceeded') return t('careerPlans.brief.evidence_capacity_exceeded');
+  if (error instanceof ApiError && error.code === 'feature_unavailable') return t('careerPlans.brief.evidence_feature_unavailable');
+  if (error instanceof ApiError && error.code === 'plan_upgrade_required') return t('careerPlans.brief.evidence_plan_upgrade');
   return careerErrorMessage(error, t('careerPlans.learning.errors.evidenceFailed'));
+}
+
+/** After "add to vault": a repeat returns the item already there instead of making a second one. */
+export function evidenceResultMessage(created: boolean): string {
+  return created ? t('careerPlans.learning.addedBanner') : t('careerPlans.brief.evidence_already_recorded');
+}
+
+// ---------------------------------------------------------------------------
+// Charge notice before a paid report (spec section 21).
+
+export function reportBalanceText(remaining: number | null): string {
+  return remaining === null ? t('careerPlans.brief.charge_remaining_unknown') : t('careerPlans.brief.charge_remaining_value', { count: remaining });
+}
+
+// ---------------------------------------------------------------------------
+// Project brief: the person's ownership statement, the finished project in
+// the evidence vault, and a rubric self-check against delivered evidence
+// (website ProjectBriefPanel). All free: the brief came with the report.
+
+export const OWNERSHIP_MAX = 2000;
+export const RUBRIC_NOTE_MAX = 1000;
+
+type Brief = NonNullable<SkillGapReport['projectBrief']>;
+
+export interface CriterionDraft {
+  met: boolean;
+  note: string;
+}
+
+/** Saved ownership statement ('' when none). It is never generated: only the person writes it. */
+export function savedOwnership(brief: Pick<Brief, 'ownershipStatement'>): string {
+  return brief.ownershipStatement ?? '';
+}
+
+/** Whether "Save statement" has something new to save. */
+export function canSaveOwnership(draft: string, brief: Pick<Brief, 'ownershipStatement'>): boolean {
+  const text = draft.trim();
+  return text.length > 0 && text.length <= OWNERSHIP_MAX && text !== savedOwnership(brief);
+}
+
+/** The rubric drafts, starting from the saved self-check when there is one. */
+export function initialCriteria(brief: Pick<Brief, 'rubrics' | 'rubricCheck'>): Record<string, CriterionDraft> {
+  const out: Record<string, CriterionDraft> = {};
+  for (const rubric of brief.rubrics) {
+    const saved = brief.rubricCheck?.criteria.find((c) => c.criterionId === rubric.id);
+    out[rubric.id] = { met: saved?.met ?? false, note: saved?.note ?? '' };
+  }
+  return out;
+}
+
+/** Every criterion of the brief, in order, with what the person marked. */
+export function rubricCheckInput(
+  brief: Pick<Brief, 'rubrics'>,
+  criteria: Record<string, CriterionDraft>,
+  evidenceIds: string[],
+): RubricCheckInput {
+  return {
+    evidenceIds: Array.from(new Set(evidenceIds)),
+    criteria: brief.rubrics.map((rubric) => ({
+      criterionId: rubric.id,
+      met: criteria[rubric.id]?.met ?? false,
+      note: (criteria[rubric.id]?.note ?? '').trim(),
+    })),
+  };
+}
+
+/** Adds or removes one id (no duplicates). */
+export function toggleId(ids: string[], id: string): string[] {
+  return ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
+}
+
+/** "Self-check from 2 May 2026: 2 of 3 criteria met. Not an independent assessment." */
+export function rubricStatusLine(check: NonNullable<Brief['rubricCheck']>, date: string): string {
+  return t('careerPlans.brief.rubric_check_status', {
+    met: check.criteria.filter((c) => c.met).length,
+    total: check.criteria.length,
+    date,
+  });
+}
+
+/** Rubric weight as a percent in the current language. */
+export function rubricWeight(weight: number): string {
+  return `${formatNumber(weight)}%`;
 }

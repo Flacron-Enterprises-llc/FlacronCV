@@ -23,6 +23,13 @@ export function engineFailureMessage(
   if (code === 'AI_CREDIT_NOT_REFUNDED') {
     return t('errors.engine.creditNotRefunded');
   }
+  // Five-plan metering (same codes the website maps): nothing ran, nothing was used.
+  if (code === 'USAGE_METER_UNAVAILABLE') {
+    return t('plans.upgrade.fact.meter');
+  }
+  if (code === 'ANALYSES_EXHAUSTED') {
+    return t('plans.upgrade.fact.analyses');
+  }
   if (/credit/i.test(message)) {
     return aiCreditsExhaustedMessage('summaryHttp');
   }

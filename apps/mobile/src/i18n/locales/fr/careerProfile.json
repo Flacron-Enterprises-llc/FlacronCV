@@ -225,5 +225,22 @@
       "language": "Nouvelle langue",
       "reference": "Nouvelle référence"
     }
+  },
+  "web": {
+    "sharing_title": "Partage et portfolio",
+    "sharing_body": "Choisissez ce que vous publiez, partagez en privé ou affichez via un QR code.",
+    "sharing_link": "Ouvrir les portfolios",
+    "mode_title": "Mode de carrière",
+    "mode_body": "Choisissez des modes spécialisés, vos lieux actuels et futurs, et votre disponibilité.",
+    "mode_link": "Ouvrir les modes de carrière",
+    "achievement_prompt": "Ajouter un chiffre ? Par exemple combien d’utilisateurs, combien plus rapide, combien économisé. Seulement si vous le savez ; sinon laissez vide. FlacronCV n’en ajoute jamais.",
+    "readability": {
+      "format_title": "Vérifications de mise en forme",
+      "format_note": "Comment le texte peut passer un logiciel de recrutement. Indépendant de l’adéquation au poste.",
+      "format_long_line": "Une ligne très longue peut être mal découpée. Coupez-la en points plus courts.",
+      "format_table_marker": "Tabulations, colonnes ou tableaux peuvent être lus dans le mauvais ordre.",
+      "format_unusual_characters": "Icônes, emoji ou symboles inhabituels peuvent disparaître ou être déformés.",
+      "format_missing_contact": "Aucun e-mail ni téléphone dans la section contact."
+    }
   }
 }

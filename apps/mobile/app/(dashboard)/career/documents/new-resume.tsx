@@ -1,4 +1,4 @@
-import { useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,7 +9,7 @@ import { Input } from '../../../../src/components/ui/Input';
 import { useCreateResume } from '../../../../src/hooks/career/documents';
 import { useCareerAccess } from '../../../../src/hooks/useCareer';
 import { useT } from '../../../../src/i18n';
-import { createResumeFailure, defaultResumeTitle, RESUME_TEMPLATE_OPTIONS, resumeTitleError } from '../../../../src/lib/career/documents';
+import { createResumeFailure, defaultResumeTitle, opportunityParam, RESUME_TEMPLATE_OPTIONS, resumeTitleError } from '../../../../src/lib/career/documents';
 
 /**
  * New career CV (website: resume studio "Create resume"). Composed from the
@@ -22,6 +22,9 @@ export default function NewCareerResumeScreen() {
   const tk = useT('career');
   const access = useCareerAccess();
   const create = useCreateResume();
+  // Opened for a listing: the new CV opens with tailoring to it offered (free to create; tailoring asks first).
+  const { opportunityId: rawListing } = useLocalSearchParams<{ opportunityId?: string }>();
+  const forListing = opportunityParam(rawListing);
   const [title, setTitle] = useState(defaultResumeTitle);
   const [language, setLanguage] = useState<'en' | 'fr'>('en');
   const [templateId, setTemplateId] = useState('classic');
@@ -33,7 +36,9 @@ export default function NewCareerResumeScreen() {
     if (resumeTitleError(title) || create.isPending) return;
     create.mutate(
       { title: title.trim(), language, templateId },
-      { onSuccess: (created) => router.replace(`/(dashboard)/career/documents/resume/${created.id}` as Href) },
+      { onSuccess: (created) => router.replace(
+          `/(dashboard)/career/documents/resume/${created.id}${forListing ? `?opportunityId=${encodeURIComponent(forListing)}` : ''}` as Href,
+        ) },
     );
   };
 

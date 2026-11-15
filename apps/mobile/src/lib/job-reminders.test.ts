@@ -73,6 +73,8 @@ import {
   cancelJobReminders,
   followUpReminderBody,
   followUpTriggerAt,
+  deadlineReminderBody,
+  deadlineTriggerAt,
   interviewReminderBody,
   interviewTriggerAt,
   jobHref,
@@ -124,7 +126,7 @@ function job(partial: {
 
 async function mapOf() {
   const raw = storage.get(JOB_REMINDER_STORAGE_KEY);
-  return raw ? (JSON.parse(raw) as Record<string, { followUp?: { id: string; at: string }; interview?: { id: string; at: string } }>) : {};
+  return raw ? (JSON.parse(raw) as Record<string, { followUp?: { id: string; at: string }; interview?: { id: string; at: string }; deadline?: { id: string; at: string } }>) : {};
 }
 
 describe('job reminder date parsing', () => {
@@ -362,5 +364,49 @@ describe('notification tap routing', () => {
     };
     expect(jobIdFromNotificationResponse(response as never)).toBe('abc');
     expect(jobIdFromNotificationResponse(null)).toBeNull();
+  });
+});
+
+describe('application deadline reminders', () => {
+  beforeEach(() => {
+    storage.clear();
+    scheduled.length = 0;
+    nextId = 1;
+    permission = 'granted';
+    pushOn = true;
+    pinClock();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('fires at 09:00 the day before, or on the day when the day before has passed', () => {
+    const early = deadlineTriggerAt(ymd(3), PINNED_NOW);
+    expect(early?.sameDay).toBe(false);
+    expect(early?.at.getDate()).toBe(new Date(PINNED_NOW.getFullYear(), PINNED_NOW.getMonth(), PINNED_NOW.getDate() + 2).getDate());
+    expect(early?.at.getHours()).toBe(9);
+    // Deadline tomorrow: today 09:00 has passed (noon), so the reminder is tomorrow 09:00.
+    const late = deadlineTriggerAt(ymd(1), PINNED_NOW);
+    expect(late?.sameDay).toBe(true);
+    expect(late?.at.getHours()).toBe(9);
+    expect(deadlineTriggerAt(ymd(0), PINNED_NOW)).toBeNull();
+    expect(deadlineTriggerAt('not a date', PINNED_NOW)).toBeNull();
+  });
+
+  it('names the deadline, never a follow-up', () => {
+    expect(deadlineReminderBody('Acme', false)).toBe('Application deadline tomorrow: Acme');
+    expect(deadlineReminderBody(' ', true)).toBe('Application deadline today');
+  });
+
+  it('schedules a deadline slot next to the follow-up and cancels it when the deadline is cleared', async () => {
+    await syncJobReminder({ ...job({ id: 'j1', followUpDate: ymd(1) }), deadline: ymd(5) }, { skipPreferenceCheck: true });
+    expect(scheduled.map((s) => s.body)).toEqual(['Follow-up today with Acme', 'Application deadline tomorrow: Acme']);
+    let stored = await mapOf();
+    expect(stored.j1.deadline?.id).toBe('notif-2');
+    await syncJobReminder({ ...job({ id: 'j1', followUpDate: ymd(1) }), deadline: null }, { skipPreferenceCheck: true });
+    stored = await mapOf();
+    expect(stored.j1.deadline).toBeUndefined();
+    expect(stored.j1.followUp?.id).toBe('notif-1');
   });
 });

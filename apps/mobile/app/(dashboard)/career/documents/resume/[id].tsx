@@ -16,6 +16,7 @@ import {
   changedLines,
   creditLine,
   isRevisionConflict,
+  opportunityParam,
   paidFailure,
   readabilityLines,
   RESUME_TEMPLATE_OPTIONS,
@@ -24,6 +25,7 @@ import {
   versionMeta,
 } from '../../../../../src/lib/career/documents';
 import { shareCareerFile } from '../../../../../src/lib/career-files';
+import { formatChecksNote, formatChecksTitle, formatIssueLines } from '../../../../../src/lib/career/readability';
 import { careerErrorMessage, FACT_TYPE_LABEL } from '../../../../../src/lib/career-view';
 import { careerDrafts } from '../../../../../src/store/career-drafts';
 import { useLeaveGuard } from '../../../../../src/hooks/useLeaveGuard';
@@ -41,7 +43,9 @@ import { colors } from '../../../../../src/theme/colors';
  * is never overwritten. Lines stay tied to their fact.
  */
 export default function CareerResumeScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, opportunityId: rawListing } = useLocalSearchParams<{ id: string; opportunityId?: string }>();
+  // Opened for a listing (?opportunityId=): tailoring to it is offered, still behind the credit confirmation.
+  const forListing = opportunityParam(rawListing);
   const t = useT('careerDocuments');
   const tk = useT('career');
   const tc = useT('common');
@@ -193,6 +197,7 @@ export default function CareerResumeScreen() {
   const failure = paid.error ? paidFailure(paid.error, credit) : null;
   const report = readability.data && version && readability.data.versionId === version.id ? readability.data : null;
   const listings = opportunities.data?.items ?? [];
+  const listingTitle = forListing ? (listings.find((item) => item.id === forListing)?.title ?? t('forListing.openedListing')) : null;
 
   let content: React.ReactNode;
   if (resume.isLoading) {
@@ -207,6 +212,7 @@ export default function CareerResumeScreen() {
     content = <ErrorState message={t('resume.noVersion')} />;
   } else {
     const issues = report ? readabilityLines(report.issues) : [];
+    const formatLines = report ? formatIssueLines(report.formatIssues) : [];
     content = (
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 140 }} keyboardShouldPersistTaps="handled">
         {restored && dirty ? (
@@ -257,9 +263,40 @@ export default function CareerResumeScreen() {
               {issues.map((line) => (
                 <Text key={line} className="text-stone-700 text-sm mt-1.5">{`• ${line}`}</Text>
               ))}
+              {formatLines.length > 0 ? (
+                <View className="mt-3">
+                  <Text className="font-semibold text-stone-900" accessibilityRole="header">
+                    {formatChecksTitle()}
+                  </Text>
+                  <Text className="text-stone-500 text-xs mt-0.5 leading-4">{formatChecksNote()}</Text>
+                  {formatLines.map((line) => (
+                    <Text key={line.key} className="text-stone-700 text-sm mt-1.5">{`• ${line.text}`}</Text>
+                  ))}
+                </View>
+              ) : null}
             </View>
           ) : null}
         </View>
+
+        {forListing && listingTitle ? (
+          <View className="bg-brand-50 border border-brand-100 rounded-2xl p-4 mb-4">
+            <Text className="font-semibold text-stone-900" accessibilityRole="header">
+              {t('resume.tailorListingTitle', { title: listingTitle })}
+            </Text>
+            <Text className="text-stone-600 text-xs mt-0.5 mb-3 leading-4">
+              {[t('resume.tailorListingNote'), creditLine(credit)].filter(Boolean).join(' ')}
+            </Text>
+            <Button
+              size="sm"
+              onPress={() => confirmPaid(forListing, t('resume.tailorWhat'))}
+              loading={paid.isPending && paid.variables?.opportunityId === forListing}
+              disabled={busy}
+              accessibilityLabel={t('resume.tailorToA11y', { title: listingTitle })}
+            >
+              {t('resume.tailorListingButton')}
+            </Button>
+          </View>
+        ) : null}
 
         <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-5">
           <Text className="font-semibold text-stone-900">{t('resume.newVersionHeading')}</Text>

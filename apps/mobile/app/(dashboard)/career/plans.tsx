@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter, type Href } from 'expo-router';
 import React, { useState } from 'react';
 import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import type { CareerAccessView } from '../../../../../packages/career-api-client/src/types';
 import type { PlanId } from '../../../../../packages/career-shared/src/catalog';
 import { CareerHeader, Pill } from '../../../src/components/career/CareerHeader';
 import { SHOW_CAREER_PRICES } from '../../../src/config/career';
@@ -17,6 +19,8 @@ import {
   rowValue,
 } from '../../../src/lib/career/plans';
 import { useT } from '../../../src/i18n';
+import { RTL_FLIP } from '../../../src/i18n/native';
+import { careerLinkRows, linkLabel, stateLabel } from '../../../src/lib/career/nav';
 import { colors } from '../../../src/theme/colors';
 
 /**
@@ -129,7 +133,47 @@ export default function CareerPlansScreen() {
           <Text className="text-stone-500 text-xs mt-4 leading-4">{[t('currency'), t('taxes'), t('annualNote')].join(' ')}</Text>
         ) : null}
         <Text className="text-stone-500 text-xs mt-3 leading-4">{t('renewalNote')}</Text>
+        {access.data?.enabled ? <AreaStates access={access.data} /> : null}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/**
+ * Every career area with its state for this account (website CareerNav,
+ * spec section 21): available, coming soon, or not in your plan. Each row
+ * opens the area, which explains its own state; nothing here is a purchase.
+ */
+function AreaStates({ access }: { access: CareerAccessView }) {
+  const t = useT('careerBusiness');
+  const router = useRouter();
+  return (
+    <View className="mt-6">
+      <Text className="text-base font-bold text-stone-900" accessibilityRole="header">
+        {t('mobile.areasHeading')}
+      </Text>
+      <Text className="text-stone-500 text-sm mt-1 leading-5">{t('mobile.areasHelp')}</Text>
+      {careerLinkRows(access).map((section) => (
+        <View key={section.key} className="bg-white rounded-2xl border border-stone-100 mt-3 overflow-hidden">
+          <Text className="text-xs font-semibold uppercase tracking-wide text-stone-500 px-4 pt-3 pb-1">{linkLabel(`group${section.key[0].toUpperCase()}${section.key.slice(1)}`)}</Text>
+          {section.links.map((link) => {
+            const badge = stateLabel(link.state);
+            return (
+              <TouchableOpacity
+                key={link.href}
+                onPress={() => router.push(link.route as Href)}
+                className="flex-row items-center px-4 min-h-[48px] border-t border-stone-100"
+                accessibilityRole="link"
+                accessibilityLabel={`${linkLabel(link.key)}, ${badge ?? t('mobile.stateAvailable')}`}
+              >
+                <Text className={`flex-1 text-sm me-2 ${link.state === 'available' ? 'text-stone-900' : 'text-stone-500'}`}>{linkLabel(link.key)}</Text>
+                {badge ? <Pill label={badge} tone={link.state === 'plan' ? 'warning' : 'default'} /> : null}
+                <Ionicons name="chevron-forward" size={16} color={colors.stone[300]} style={[{ marginStart: 6 }, RTL_FLIP]} />
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ))}
+    </View>
   );
 }

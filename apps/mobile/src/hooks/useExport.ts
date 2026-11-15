@@ -16,10 +16,17 @@ import { api } from '../lib/api';
 import { ExportResponse } from '../types/api.types';
 import { useAuthStore } from '../store/auth-store';
 import {
+  docxNotIncludedMessage,
   exportLimitReachedMessage,
-  PAID_UPGRADES_ENABLED,
   upgradeAlertButtons,
 } from '../config/paid-upgrades';
+import { planForDisplay } from '../lib/entitlements';
+
+/** The signed-in account's effective plan, for limit copy (null before the account loads). */
+function currentPlan(): string | undefined {
+  const user = useAuthStore.getState().user;
+  return user ? planForDisplay(user.subscription) : undefined;
+}
 
 /** API Puppeteer export body (before TransformInterceptor wrap). */
 type ServerExportBody = { downloadUrl: string; expiresAt: string | Date };
@@ -72,12 +79,10 @@ function exportRequestFailureMessage(err: unknown): string {
     return t('common.noConnection');
   }
   if (isLimitRejection(err)) {
-    return exportLimitReachedMessage();
+    return exportLimitReachedMessage(currentPlan());
   }
   if (isDocxRejection(err)) {
-    return PAID_UPGRADES_ENABLED
-      ? t('exports.docxRequiresPro')
-      : t('exports.docxNotIncluded');
+    return docxNotIncludedMessage(currentPlan());
   }
   return t('exports.failed');
 }
@@ -87,7 +92,7 @@ function alertExportRequestError(err: unknown): void {
     Alert.alert(
       t('exports.limitTitle'),
       exportRequestFailureMessage(err),
-      upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+      upgradeAlertButtons(() => router.push('/(dashboard)/settings/plans')),
     );
     return;
   }
@@ -95,7 +100,7 @@ function alertExportRequestError(err: unknown): void {
     Alert.alert(
       t('exports.failedTitle'),
       exportRequestFailureMessage(err),
-      upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+      upgradeAlertButtons(() => router.push('/(dashboard)/settings/plans')),
     );
     return;
   }

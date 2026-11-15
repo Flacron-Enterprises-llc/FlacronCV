@@ -178,6 +178,7 @@ export default function CareerProfileScreen() {
           </View>
         }
         ListFooterComponent={
+          <View>
           <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-2">
             <Text className="font-bold text-stone-900 mb-1">{t('screen.prefsTitle')}</Text>
             {profile.isLoading ? (
@@ -206,6 +207,19 @@ export default function CareerProfileScreen() {
                 {t('screen.editPrefs')}
               </Button>
             </View>
+          </View>
+          <LinkCard
+            title={t('web.sharing_title')}
+            body={t('web.sharing_body')}
+            link={t('web.sharing_link')}
+            onPress={() => router.push('/(dashboard)/career/portfolios' as Href)}
+          />
+          <LinkCard
+            title={t('web.mode_title')}
+            body={t('web.mode_body')}
+            link={t('web.mode_link')}
+            onPress={() => router.push('/(dashboard)/career/relocation' as Href)}
+          />
           </View>
         }
         renderItem={({ item }) => {
@@ -451,6 +465,22 @@ function ImportSheet({
         </Button>
       </View>
     </Modal>
+  );
+}
+
+/** Website profile cards "Sharing and portfolio" and "Career mode": both are part of this version. */
+function LinkCard({ title, body, link, onPress }: { title: string; body: string; link: string; onPress: () => void }) {
+  return (
+    <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-3">
+      <Text className="font-bold text-stone-900 mb-1" accessibilityRole="header">
+        {title}
+      </Text>
+      <Text className="text-stone-500 text-sm leading-5">{body}</Text>
+      <TouchableOpacity onPress={onPress} className="min-h-[44px] flex-row items-center self-start" accessibilityRole="link">
+        <Text className="text-brand-600 font-semibold text-sm me-1">{link}</Text>
+        <Ionicons name="chevron-forward" size={16} color={colors.brand[600]} style={RTL_FLIP} />
+      </TouchableOpacity>
+    </View>
   );
 }
 

@@ -9,7 +9,7 @@ import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../../src/components/ui/Skeleton';
 import { useEvidenceGate, useEvidenceList } from '../../../../src/hooks/career/evidence';
 import { useCareerAccess } from '../../../../src/hooks/useCareer';
-import { evidenceLabelView, evidenceTypeLabel, formatBytes } from '../../../../src/lib/career/evidence';
+import { evidenceLabelLimit, evidenceLabelView, evidenceTypeLabel, formatBytes } from '../../../../src/lib/career/evidence';
 import { careerErrorMessage } from '../../../../src/lib/career-view';
 import { colors } from '../../../../src/theme/colors';
 import { useT } from '../../../../src/i18n';
@@ -91,6 +91,8 @@ export default function EvidenceListScreen() {
                 <Text className="text-xs font-semibold text-stone-500 uppercase tracking-wide">{evidenceTypeLabel(item.evidenceType)}</Text>
                 <Pill label={label.text} tone={label.tone} />
               </View>
+              {/* What the label does and does not establish (website: label_*_limit under each badge). */}
+              <Text className="text-stone-500 text-xs mb-1 leading-4">{evidenceLabelLimit(item.evidenceLabel)}</Text>
               <Text className="font-bold text-stone-900">{item.title}</Text>
               {item.description ? (
                 <Text className="text-stone-500 text-sm mt-0.5" numberOfLines={2}>
@@ -102,11 +104,14 @@ export default function EvidenceListScreen() {
                   {item.linkedSkills.join(' · ')}
                 </Text>
               ) : null}
-              {item.confidential || (item.linkedFactIds?.length ?? 0) > 0 ? (
+              {item.confidential || (item.linkedFactIds?.length ?? 0) > 0 || (item.verifications?.length ?? 0) > 0 ? (
                 <View className="flex-row flex-wrap items-center gap-2 mt-2">
                   {item.confidential ? <Pill label={t('list.confidential')} tone="warning" /> : null}
                   {(item.linkedFactIds?.length ?? 0) > 0 ? (
                     <Text className="text-stone-500 text-xs">{t('list.linkedFacts', { count: item.linkedFactIds.length })}</Text>
+                  ) : null}
+                  {(item.verifications?.length ?? 0) > 0 ? (
+                    <Text className="text-stone-500 text-xs">{t('history.title', { count: item.verifications?.length ?? 0 })}</Text>
                   ) : null}
                 </View>
               ) : null}

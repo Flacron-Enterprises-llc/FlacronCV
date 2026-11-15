@@ -37,6 +37,8 @@ export interface VerifiedStorePurchase {
   expiresAt: Date;
   originalTransactionId?: string;
   purchaseToken?: string;
+  /** Start of the paid period (Apple purchaseDate, Google startTime), when the store sends it. */
+  periodStart?: Date;
 }
 
 export interface InspectedStorePurchase {
@@ -45,6 +47,8 @@ export interface InspectedStorePurchase {
   expiresAt: Date | null;
   originalTransactionId?: string;
   purchaseToken?: string;
+  /** Start of the paid period (Apple purchaseDate, Google startTime), when the store sends it. */
+  periodStart?: Date;
   /** Store returned this purchase. */
   found: boolean;
   /** Found and currently entitled (active / grace / cancelled-but-unexpired). */
@@ -97,6 +101,7 @@ export class StoreReceiptVerifier {
     }
     const productId = typeof payload.productId === 'string' ? payload.productId : '';
     const expiresAt = coerceStoreDate(payload.expiresDate);
+    const periodStart = coerceStoreDate(payload.purchaseDate) ?? undefined;
     const originalTransactionId =
       (typeof payload.originalTransactionId === 'string' && payload.originalTransactionId) ||
       (typeof payload.transactionId === 'string' && payload.transactionId) ||
@@ -109,6 +114,7 @@ export class StoreReceiptVerifier {
       productId,
       expiresAt,
       originalTransactionId,
+      ...(periodStart ? { periodStart } : {}),
       found: true,
       entitled,
     };
@@ -145,6 +151,7 @@ export class StoreReceiptVerifier {
     }
     const body = (await res.json()) as {
       subscriptionState?: string;
+      startTime?: string;
       lineItems?: Array<{ productId?: string; expiryTime?: string }>;
     };
     const state = body.subscriptionState ?? '';
@@ -156,6 +163,7 @@ export class StoreReceiptVerifier {
     const line = body.lineItems?.find((item) => item.productId) ?? body.lineItems?.[0];
     const productId = line?.productId ?? '';
     const expiresAt = coerceStoreDate(line?.expiryTime);
+    const periodStart = coerceStoreDate(body.startTime) ?? undefined;
     const entitled =
       entitledStates.has(state) &&
       !!productId &&
@@ -166,6 +174,7 @@ export class StoreReceiptVerifier {
       productId,
       expiresAt,
       purchaseToken: token,
+      ...(periodStart ? { periodStart } : {}),
       found: true,
       entitled,
     };
@@ -191,6 +200,7 @@ export class StoreReceiptVerifier {
       expiresAt: inspected.expiresAt,
       originalTransactionId: inspected.originalTransactionId,
       purchaseToken: inspected.purchaseToken,
+      ...(inspected.periodStart ? { periodStart: inspected.periodStart } : {}),
     };
   }
 

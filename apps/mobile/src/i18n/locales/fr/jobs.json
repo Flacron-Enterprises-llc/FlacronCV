@@ -17,7 +17,8 @@
     "applied": "Date de candidature",
     "company": "Entreprise (A–Z)",
     "position": "Poste (A–Z)",
-    "status": "Statut"
+    "status": "Statut",
+    "deadline": "Date limite (la plus proche)"
   },
   "list": {
     "title": "Suivi des candidatures",
@@ -147,5 +148,73 @@
     "rejected": "Non retenu",
     "withdrawn": "Candidature retirée",
     "no_response": "Pas de réponse"
+  },
+  "workspace": {
+    "outcome_label": "Comment cela s’est terminé",
+    "outcome_none": "Pas encore décidé",
+    "outcome_help": "Enregistré comme indiqué par vous. Jamais rempli automatiquement.",
+    "refreeze": "Utiliser la version actuelle",
+    "refrozen": "Version actuelle enregistrée avec cette candidature",
+    "show_letter": "Afficher la lettre",
+    "hide_letter": "Masquer la lettre",
+    "letter_truncated": "(La lettre était trop longue pour être conservée en entier ; le début est affiché.)",
+    "frozen_help": "Les modifications ultérieures de votre CV ou lettre ne changent pas ce qui est enregistré ici.",
+    "description_from_opportunity": "Enregistrée depuis l’offre.",
+    "description_pasted": "Collée par vous.",
+    "description_ph": "Collez la description du poste pour la conserver même si l’annonce disparaît.",
+    "answer": {
+      "question_n": "Question n° {n}",
+      "question_ph": "Question du formulaire de candidature",
+      "answer_n": "Réponse {n}",
+      "answer_ph": "Votre réponse",
+      "remove": "Supprimer la question {n}",
+      "add": "Ajouter une question"
+    },
+    "drafts": {
+      "referral_request": {
+        "button": "Rédiger une demande de recommandation",
+        "title": "Brouillon de demande de recommandation",
+        "intro": "Créez un brouillon demandant à un contact de vous recommander pour {position} chez {company}."
+      },
+      "thank_you": {
+        "button": "Rédiger un mot de remerciement",
+        "title": "Brouillon de remerciement",
+        "intro": "Créez un brouillon de remerciement pour votre entretien pour {position} chez {company}."
+      },
+      "uses_allowance": "Cela utilise un brouillon IA de votre forfait. Vous le relisez et l’envoyez vous-même ; rien n’est envoyé à votre place.",
+      "no_opportunity": "Cette candidature n’est pas liée à une offre enregistrée : le brouillon utilise seulement l’entreprise, le poste et le contact saisis ici. Relisez-le avant de l’envoyer.",
+      "problem": {
+        "quota": "Vous n’avez plus de brouillons IA pour cette période.",
+        "upgrade": "Votre forfait n’inclut pas ce brouillon.",
+        "unavailable": "La rédaction IA n’est pas disponible pour le moment. Rien n’a été débité.",
+        "unsupported": "Ce type de brouillon n’est pas encore disponible.",
+        "missing": "L’offre liée est introuvable.",
+        "failed": "Le brouillon n’a pas pu être créé. Veuillez réessayer.",
+        "missing_target": "Ajoutez d’abord l’entreprise ou le poste à cette candidature, pour que le brouillon sache à qui il s’adresse. Rien n’a été débité."
+      },
+      "see_plans": "Voir les forfaits",
+      "retry": "Réessayer",
+      "create": "Créer le brouillon",
+      "review_before_sending": "Relisez et modifiez ce brouillon avant de l’envoyer.",
+      "draft_label": "Texte du brouillon",
+      "copy": "Copier",
+      "copied": "Brouillon copié",
+      "copy_failed": "Copie impossible. Sélectionnez le texte et copiez-le manuellement.",
+      "edit_in_documents": "Modifier dans Documents",
+      "share": "Partager le brouillon"
+    },
+    "section": {
+      "documents": "Documents utilisés",
+      "description": "Description du poste",
+      "form_answers": "Réponses au formulaire",
+      "outcome": "Résultat"
+    },
+    "calendar": {
+      "follow_up": {
+        "button": "Ajouter la relance au calendrier",
+        "summary": "Relance : {position} chez {company}",
+        "description": "Relancez votre candidature au poste de {position} chez {company}."
+      }
+    }
   }
 }

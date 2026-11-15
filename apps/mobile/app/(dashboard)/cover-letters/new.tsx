@@ -22,7 +22,7 @@ import { useGenerateJobDescription } from '../../../src/hooks/useAI';
 import { useCVList } from '../../../src/hooks/useCVs';
 import { api } from '../../../src/lib/api';
 import { useAuthStore } from '../../../src/store/auth-store';
-import { canCreateCoverLetter, canUseAI, effectivePlanForCopy } from '../../../src/lib/entitlements';
+import { canCreateCoverLetter, canUseAI, planForDisplay } from '../../../src/lib/entitlements';
 import { isLimitRejection, requestFailureMessage } from '../../../src/lib/api-errors';
 import { alertIfUnverifiedEmail } from '../../../src/lib/email-verification';
 import {
@@ -123,7 +123,7 @@ export default function NewCoverLetterScreen() {
     if (openId) router.replace(`/(dashboard)/cover-letters/${openId}`);
   }, [openId, router]);
 
-  const goToBilling = () => router.push('/(dashboard)/settings/billing');
+  const goToBilling = () => router.push('/(dashboard)/settings/plans');
 
   const ensureLetterQuota = (): boolean => {
     if (!user?.usage) {
@@ -133,7 +133,7 @@ export default function NewCoverLetterScreen() {
     if (!canCreateCoverLetter(user.subscription, user.usage.coverLettersCreated)) {
       Alert.alert(
         t('limitReachedTitle'),
-        coverLetterLimitReachedMessage(effectivePlanForCopy(user.subscription)),
+        coverLetterLimitReachedMessage(planForDisplay(user.subscription)),
         upgradeAlertButtons(goToBilling),
       );
       return false;
@@ -143,7 +143,7 @@ export default function NewCoverLetterScreen() {
 
   const ensureAICredits = (): boolean => {
     if (!canUseAI(user?.subscription, user?.usage?.aiCreditsUsed ?? 0, user?.usage?.aiCreditsLimit)) {
-      Alert.alert(t('ai.creditsExhausted'), aiCreditsExhaustedMessage('coverLetter'), upgradeAlertButtons(goToBilling));
+      Alert.alert(t('ai.creditsExhausted'), aiCreditsExhaustedMessage('coverLetter', user ? planForDisplay(user.subscription) : undefined), upgradeAlertButtons(goToBilling));
       return false;
     }
     return true;
@@ -154,7 +154,7 @@ export default function NewCoverLetterScreen() {
     if (isLimitRejection(err)) {
       Alert.alert(
         t('limitReachedTitle'),
-        coverLetterLimitReachedMessage(effectivePlanForCopy(user?.subscription)),
+        coverLetterLimitReachedMessage(planForDisplay(user?.subscription)),
         upgradeAlertButtons(goToBilling),
       );
       return;

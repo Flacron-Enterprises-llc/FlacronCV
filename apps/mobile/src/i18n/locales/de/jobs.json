@@ -17,7 +17,8 @@
     "applied": "Bewerbungsdatum",
     "company": "Firma (A–Z)",
     "position": "Position (A–Z)",
-    "status": "Status"
+    "status": "Status",
+    "deadline": "Frist (nächste zuerst)"
   },
   "list": {
     "title": "Bewerbungs-Tracker",
@@ -147,5 +148,73 @@
     "rejected": "Nicht ausgewählt",
     "withdrawn": "Bewerbung zurückgezogen",
     "no_response": "Keine Antwort"
+  },
+  "workspace": {
+    "outcome_label": "Wie es ausging",
+    "outcome_none": "Noch offen",
+    "outcome_help": "Wird als Ihre Angabe gespeichert und nie automatisch ausgefüllt.",
+    "refreeze": "Aktuelle Version verwenden",
+    "refrozen": "Aktuelle Version bei dieser Bewerbung gespeichert",
+    "show_letter": "Anschreiben anzeigen",
+    "hide_letter": "Anschreiben ausblenden",
+    "letter_truncated": "(Das Anschreiben war zu lang, um es vollständig zu speichern; der Anfang wird gezeigt.)",
+    "frozen_help": "Spätere Änderungen an Lebenslauf oder Anschreiben ändern nicht, was hier gespeichert ist.",
+    "description_from_opportunity": "Aus der Stellenanzeige übernommen.",
+    "description_pasted": "Von Ihnen eingefügt.",
+    "description_ph": "Fügen Sie die Stellenbeschreibung ein, damit sie erhalten bleibt, auch wenn die Anzeige entfernt wird.",
+    "answer": {
+      "question_n": "Frage {n}",
+      "question_ph": "Frage aus dem Bewerbungsformular",
+      "answer_n": "Antwort {n}",
+      "answer_ph": "Ihre Antwort",
+      "remove": "Frage {n} entfernen",
+      "add": "Frage hinzufügen"
+    },
+    "drafts": {
+      "referral_request": {
+        "button": "Empfehlungsanfrage entwerfen",
+        "title": "Entwurf einer Empfehlungsanfrage",
+        "intro": "Erstellen Sie einen Entwurf, in dem Sie einen Kontakt um eine Empfehlung für {position} bei {company} bitten."
+      },
+      "thank_you": {
+        "button": "Dankesnachricht entwerfen",
+        "title": "Entwurf einer Dankesnachricht",
+        "intro": "Erstellen Sie einen Dankesentwurf für Ihr Gespräch als {position} bei {company}."
+      },
+      "uses_allowance": "Dies verbraucht einen KI-Entwurf aus Ihrem Kontingent. Sie prüfen und senden ihn selbst; nichts wird für Sie gesendet.",
+      "no_opportunity": "Diese Bewerbung ist mit keiner gespeicherten Stelle verknüpft, daher nutzt der Entwurf nur das Unternehmen, die Position und den Kontakt, die du hier eingetragen hast. Prüfe ihn vor dem Senden.",
+      "problem": {
+        "quota": "Sie haben in diesem Zeitraum keine KI-Entwürfe mehr.",
+        "upgrade": "Ihr Tarif enthält diesen Entwurf nicht.",
+        "unavailable": "KI-Entwürfe sind gerade nicht verfügbar. Es wurde nichts abgerechnet.",
+        "unsupported": "Diese Art von Entwurf ist noch nicht verfügbar.",
+        "missing": "Die verknüpfte Stelle wurde nicht gefunden.",
+        "failed": "Der Entwurf konnte nicht erstellt werden. Bitte erneut versuchen.",
+        "missing_target": "Trage zuerst das Unternehmen oder die Position in diese Bewerbung ein, damit der Entwurf weiß, an wen er geht. Es wurde nichts berechnet."
+      },
+      "see_plans": "Tarife ansehen",
+      "retry": "Erneut versuchen",
+      "create": "Entwurf erstellen",
+      "review_before_sending": "Prüfen und bearbeiten Sie diesen Entwurf vor dem Senden.",
+      "draft_label": "Entwurfstext",
+      "copy": "Kopieren",
+      "copied": "Entwurf kopiert",
+      "copy_failed": "Kopieren fehlgeschlagen. Markieren Sie den Text und kopieren Sie ihn manuell.",
+      "edit_in_documents": "In Dokumenten bearbeiten",
+      "share": "Entwurf teilen"
+    },
+    "section": {
+      "documents": "Verwendete Unterlagen",
+      "description": "Stellenbeschreibung",
+      "form_answers": "Antworten im Bewerbungsformular",
+      "outcome": "Ergebnis"
+    },
+    "calendar": {
+      "follow_up": {
+        "button": "Nachfassen zum Kalender hinzufügen",
+        "summary": "Nachfassen: {position} bei {company}",
+        "description": "Fassen Sie bei Ihrer Bewerbung als {position} bei {company} nach."
+      }
+    }
   }
 }

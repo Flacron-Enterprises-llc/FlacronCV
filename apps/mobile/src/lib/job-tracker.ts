@@ -69,15 +69,16 @@ export function jobContacts(job: Pick<JobApplication, 'contacts' | 'contactName'
   return [{ id: 'legacy-contact', name: job.contactName ?? '', role: null, email: job.contactEmail, phone: null, notes: null }];
 }
 
-export type JobSortKey = 'updated' | 'applied' | 'company' | 'position' | 'status';
+export type JobSortKey = 'updated' | 'applied' | 'deadline' | 'company' | 'position' | 'status';
 
 /** Sort menu order. */
-export const SORT_KEYS: JobSortKey[] = ['updated', 'applied', 'company', 'position', 'status'];
+export const SORT_KEYS: JobSortKey[] = ['updated', 'applied', 'deadline', 'company', 'position', 'status'];
 
 /** Website `jobs.sort.*` wording, read in the current language at call time. */
 const SORT_LABEL: Record<JobSortKey, () => string> = {
   updated: () => t('jobs.sort.updated'),
   applied: () => t('jobs.sort.applied'),
+  deadline: () => t('jobs.sort.deadline'),
   company: () => t('jobs.sort.company'),
   position: () => t('jobs.sort.position'),
   status: () => t('jobs.sort.status'),
@@ -96,6 +97,13 @@ function time(value: unknown): number {
 const SORTERS: Record<JobSortKey, (a: JobApplication, b: JobApplication) => number> = {
   updated: (a, b) => time(b.updatedAt) - time(a.updatedAt),
   applied: (a, b) => time(b.appliedDate) - time(a.appliedDate),
+  // Soonest application deadline first; entries without one sort last (website).
+  deadline: (a, b) => {
+    const da = time(a.deadline);
+    const db = time(b.deadline);
+    if (!da || !db) return (da ? 0 : 1) - (db ? 0 : 1);
+    return da - db;
+  },
   company: (a, b) => (a.company ?? '').localeCompare(b.company ?? ''),
   position: (a, b) => (a.position ?? '').localeCompare(b.position ?? ''),
   status: (a, b) => STATUS_ORDER.indexOf(normalizeStatus(a.status)) - STATUS_ORDER.indexOf(normalizeStatus(b.status)),

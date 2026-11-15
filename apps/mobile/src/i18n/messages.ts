@@ -25,6 +25,12 @@ import fr_careerAlerts from './locales/fr/careerAlerts.json';
 import de_careerAlerts from './locales/de/careerAlerts.json';
 import ar_careerAlerts from './locales/ar/careerAlerts.json';
 import ur_careerAlerts from './locales/ur/careerAlerts.json';
+import en_careerBusiness from './locales/en/careerBusiness.json';
+import es_careerBusiness from './locales/es/careerBusiness.json';
+import fr_careerBusiness from './locales/fr/careerBusiness.json';
+import de_careerBusiness from './locales/de/careerBusiness.json';
+import ar_careerBusiness from './locales/ar/careerBusiness.json';
+import ur_careerBusiness from './locales/ur/careerBusiness.json';
 import en_careerDocuments from './locales/en/careerDocuments.json';
 import es_careerDocuments from './locales/es/careerDocuments.json';
 import fr_careerDocuments from './locales/fr/careerDocuments.json';
@@ -37,6 +43,12 @@ import fr_careerEvidence from './locales/fr/careerEvidence.json';
 import de_careerEvidence from './locales/de/careerEvidence.json';
 import ar_careerEvidence from './locales/ar/careerEvidence.json';
 import ur_careerEvidence from './locales/ur/careerEvidence.json';
+import en_careerHome from './locales/en/careerHome.json';
+import es_careerHome from './locales/es/careerHome.json';
+import fr_careerHome from './locales/fr/careerHome.json';
+import de_careerHome from './locales/de/careerHome.json';
+import ar_careerHome from './locales/ar/careerHome.json';
+import ur_careerHome from './locales/ur/careerHome.json';
 import en_careerHub from './locales/en/careerHub.json';
 import es_careerHub from './locales/es/careerHub.json';
 import fr_careerHub from './locales/fr/careerHub.json';
@@ -61,6 +73,12 @@ import fr_careerModes from './locales/fr/careerModes.json';
 import de_careerModes from './locales/de/careerModes.json';
 import ar_careerModes from './locales/ar/careerModes.json';
 import ur_careerModes from './locales/ur/careerModes.json';
+import en_careerOpportunities from './locales/en/careerOpportunities.json';
+import es_careerOpportunities from './locales/es/careerOpportunities.json';
+import fr_careerOpportunities from './locales/fr/careerOpportunities.json';
+import de_careerOpportunities from './locales/de/careerOpportunities.json';
+import ar_careerOpportunities from './locales/ar/careerOpportunities.json';
+import ur_careerOpportunities from './locales/ur/careerOpportunities.json';
 import en_careerPlans from './locales/en/careerPlans.json';
 import es_careerPlans from './locales/es/careerPlans.json';
 import fr_careerPlans from './locales/fr/careerPlans.json';
@@ -145,6 +163,12 @@ import fr_onboarding from './locales/fr/onboarding.json';
 import de_onboarding from './locales/de/onboarding.json';
 import ar_onboarding from './locales/ar/onboarding.json';
 import ur_onboarding from './locales/ur/onboarding.json';
+import en_plans from './locales/en/plans.json';
+import es_plans from './locales/es/plans.json';
+import fr_plans from './locales/fr/plans.json';
+import de_plans from './locales/de/plans.json';
+import ar_plans from './locales/ar/plans.json';
+import ur_plans from './locales/ur/plans.json';
 import en_reminders from './locales/en/reminders.json';
 import es_reminders from './locales/es/reminders.json';
 import fr_reminders from './locales/fr/reminders.json';
@@ -200,12 +224,15 @@ export const MESSAGES = {
     "auth": en_auth,
     "career": en_career,
     "careerAlerts": en_careerAlerts,
+    "careerBusiness": en_careerBusiness,
     "careerDocuments": en_careerDocuments,
     "careerEvidence": en_careerEvidence,
+    "careerHome": en_careerHome,
     "careerHub": en_careerHub,
     "careerInterviews": en_careerInterviews,
     "careerJobs": en_careerJobs,
     "careerModes": en_careerModes,
+    "careerOpportunities": en_careerOpportunities,
     "careerPlans": en_careerPlans,
     "careerPortfolios": en_careerPortfolios,
     "careerProfile": en_careerProfile,
@@ -220,6 +247,7 @@ export const MESSAGES = {
     "jobs": en_jobs,
     "notices": en_notices,
     "onboarding": en_onboarding,
+    "plans": en_plans,
     "reminders": en_reminders,
     "settings": en_settings,
     "subscription": en_subscription,
@@ -234,12 +262,15 @@ export const MESSAGES = {
     "auth": es_auth,
     "career": es_career,
     "careerAlerts": es_careerAlerts,
+    "careerBusiness": es_careerBusiness,
     "careerDocuments": es_careerDocuments,
     "careerEvidence": es_careerEvidence,
+    "careerHome": es_careerHome,
     "careerHub": es_careerHub,
     "careerInterviews": es_careerInterviews,
     "careerJobs": es_careerJobs,
     "careerModes": es_careerModes,
+    "careerOpportunities": es_careerOpportunities,
     "careerPlans": es_careerPlans,
     "careerPortfolios": es_careerPortfolios,
     "careerProfile": es_careerProfile,
@@ -254,6 +285,7 @@ export const MESSAGES = {
     "jobs": es_jobs,
     "notices": es_notices,
     "onboarding": es_onboarding,
+    "plans": es_plans,
     "reminders": es_reminders,
     "settings": es_settings,
     "subscription": es_subscription,
@@ -268,12 +300,15 @@ export const MESSAGES = {
     "auth": fr_auth,
     "career": fr_career,
     "careerAlerts": fr_careerAlerts,
+    "careerBusiness": fr_careerBusiness,
     "careerDocuments": fr_careerDocuments,
     "careerEvidence": fr_careerEvidence,
+    "careerHome": fr_careerHome,
     "careerHub": fr_careerHub,
     "careerInterviews": fr_careerInterviews,
     "careerJobs": fr_careerJobs,
     "careerModes": fr_careerModes,
+    "careerOpportunities": fr_careerOpportunities,
     "careerPlans": fr_careerPlans,
     "careerPortfolios": fr_careerPortfolios,
     "careerProfile": fr_careerProfile,
@@ -288,6 +323,7 @@ export const MESSAGES = {
     "jobs": fr_jobs,
     "notices": fr_notices,
     "onboarding": fr_onboarding,
+    "plans": fr_plans,
     "reminders": fr_reminders,
     "settings": fr_settings,
     "subscription": fr_subscription,
@@ -302,12 +338,15 @@ export const MESSAGES = {
     "auth": de_auth,
     "career": de_career,
     "careerAlerts": de_careerAlerts,
+    "careerBusiness": de_careerBusiness,
     "careerDocuments": de_careerDocuments,
     "careerEvidence": de_careerEvidence,
+    "careerHome": de_careerHome,
     "careerHub": de_careerHub,
     "careerInterviews": de_careerInterviews,
     "careerJobs": de_careerJobs,
     "careerModes": de_careerModes,
+    "careerOpportunities": de_careerOpportunities,
     "careerPlans": de_careerPlans,
     "careerPortfolios": de_careerPortfolios,
     "careerProfile": de_careerProfile,
@@ -322,6 +361,7 @@ export const MESSAGES = {
     "jobs": de_jobs,
     "notices": de_notices,
     "onboarding": de_onboarding,
+    "plans": de_plans,
     "reminders": de_reminders,
     "settings": de_settings,
     "subscription": de_subscription,
@@ -336,12 +376,15 @@ export const MESSAGES = {
     "auth": ar_auth,
     "career": ar_career,
     "careerAlerts": ar_careerAlerts,
+    "careerBusiness": ar_careerBusiness,
     "careerDocuments": ar_careerDocuments,
     "careerEvidence": ar_careerEvidence,
+    "careerHome": ar_careerHome,
     "careerHub": ar_careerHub,
     "careerInterviews": ar_careerInterviews,
     "careerJobs": ar_careerJobs,
     "careerModes": ar_careerModes,
+    "careerOpportunities": ar_careerOpportunities,
     "careerPlans": ar_careerPlans,
     "careerPortfolios": ar_careerPortfolios,
     "careerProfile": ar_careerProfile,
@@ -356,6 +399,7 @@ export const MESSAGES = {
     "jobs": ar_jobs,
     "notices": ar_notices,
     "onboarding": ar_onboarding,
+    "plans": ar_plans,
     "reminders": ar_reminders,
     "settings": ar_settings,
     "subscription": ar_subscription,
@@ -370,12 +414,15 @@ export const MESSAGES = {
     "auth": ur_auth,
     "career": ur_career,
     "careerAlerts": ur_careerAlerts,
+    "careerBusiness": ur_careerBusiness,
     "careerDocuments": ur_careerDocuments,
     "careerEvidence": ur_careerEvidence,
+    "careerHome": ur_careerHome,
     "careerHub": ur_careerHub,
     "careerInterviews": ur_careerInterviews,
     "careerJobs": ur_careerJobs,
     "careerModes": ur_careerModes,
+    "careerOpportunities": ur_careerOpportunities,
     "careerPlans": ur_careerPlans,
     "careerPortfolios": ur_careerPortfolios,
     "careerProfile": ur_careerProfile,
@@ -390,6 +437,7 @@ export const MESSAGES = {
     "jobs": ur_jobs,
     "notices": ur_notices,
     "onboarding": ur_onboarding,
+    "plans": ur_plans,
     "reminders": ur_reminders,
     "settings": ur_settings,
     "subscription": ur_subscription,

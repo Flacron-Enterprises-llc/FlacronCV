@@ -16,6 +16,10 @@
     "followUpToday": "Relance aujourd'hui",
     "followUpTodayWith": "Relance aujourd'hui avec {company}",
     "interviewToday": "Entretien aujourd'hui à {time}",
-    "interviewTodayWith": "Entretien aujourd'hui à {time} avec {company}"
+    "interviewTodayWith": "Entretien aujourd'hui à {time} avec {company}",
+    "deadlineTomorrow": "Date limite de candidature demain",
+    "deadlineTomorrowWith": "Date limite de candidature demain : {company}",
+    "deadlineToday": "Date limite de candidature aujourd’hui",
+    "deadlineTodayWith": "Date limite de candidature aujourd’hui : {company}"
   }
 }

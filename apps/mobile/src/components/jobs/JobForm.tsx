@@ -24,9 +24,16 @@ import {
   useArchiveJob,
   useCreateJob,
   useDeleteJob,
+  useRefreezeJob,
   useUpdateJob,
 } from '../../hooks/useJobs';
+import { ANSWER_LIMITS, JOB_OUTCOMES, letterText } from '../../lib/job-workspace';
+import { ApplicationDrafts } from './ApplicationDrafts';
+import { DateInput } from './DateInput';
 import { requestFailureMessage } from '../../lib/api-errors';
+import { promptForError, showUpgradePrompt } from '../../config/paid-upgrades';
+import { planForDisplay } from '../../lib/entitlements';
+import { useAuthStore } from '../../store/auth-store';
 import { cancelJobReminders, syncJobReminder } from '../../lib/job-reminders';
 import {
   duplicateConfirmMessage,
@@ -50,7 +57,7 @@ import { Button } from '../ui/Button';
 import { ErrorState } from '../ui/ErrorState';
 import { Input } from '../ui/Input';
 import { Modal } from '../ui/Modal';
-import { shareDeadlineIcs, shareInterviewIcs } from './share-interview-ics';
+import { shareDeadlineIcs, shareFollowUpIcs, shareInterviewIcs } from './share-interview-ics';
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
@@ -127,6 +134,17 @@ function makeSchema(t: (key: string) => string) {
       )
       .max(JOB_LIMITS.checklistItems),
     jobUrl: z.string().max(2048),
+    jobDescription: z.string().max(ANSWER_LIMITS.description),
+    formAnswers: z
+      .array(
+        z.object({
+          id: z.string().optional(),
+          question: z.string().max(ANSWER_LIMITS.question),
+          answer: z.string().max(ANSWER_LIMITS.answer),
+        }),
+      )
+      .max(ANSWER_LIMITS.formAnswers),
+    outcome: z.string(),
     linkedCVId: z.string(),
     linkedCoverLetterId: z.string(),
     notes: z.string().max(5000),
@@ -148,6 +166,9 @@ const EMPTY: FormData = {
   contacts: [],
   checklist: [],
   jobUrl: '',
+  jobDescription: '',
+  formAnswers: [],
+  outcome: '',
   linkedCVId: '',
   linkedCoverLetterId: '',
   notes: '',
@@ -199,6 +220,9 @@ function valuesFromJob(job: JobApplication): FormData {
     })),
     checklist: (job.checklist ?? []).map((i) => ({ id: i.id, label: i.label, kind: i.kind, done: i.done })),
     jobUrl: job.jobUrl ?? '',
+    jobDescription: job.jobDescription ?? '',
+    formAnswers: (job.formAnswers ?? []).map((a) => ({ id: a.id, question: a.question, answer: a.answer })),
+    outcome: job.outcome ?? '',
     linkedCVId: job.linkedCVId ?? '',
     linkedCoverLetterId: job.linkedCoverLetterId ?? '',
     notes: job.notes ?? '',
@@ -227,6 +251,13 @@ function toPayload(data: FormData, isEdit: boolean): JobWritePayload {
       notes: c.notes.trim() || null,
     })),
     checklist: data.checklist.map((i) => ({ id: i.id, label: i.label.trim(), kind: i.kind, done: i.done })),
+    // Rows with neither a question nor an answer are left out; the server keeps the ids it is given.
+    formAnswers: data.formAnswers
+      .filter((a) => a.question.trim() || a.answer.trim())
+      .map((a) => ({ id: a.id, question: a.question.trim(), answer: a.answer.trim() })),
+    jobDescription: optionalJobField(data.jobDescription, isEdit),
+    // Only an edit can report how it ended; a cleared choice is sent as null ("not decided yet").
+    ...(isEdit ? { outcome: (data.outcome || null) as JobWritePayload['outcome'] } : {}),
     notes: optionalJobField(data.notes, isEdit),
     linkedCVId: optionalJobField(data.linkedCVId, isEdit),
     linkedCoverLetterId: optionalJobField(data.linkedCoverLetterId, isEdit),
@@ -276,6 +307,8 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
   const updateJob = useUpdateJob(jobId ?? '');
   const deleteJob = useDeleteJob();
   const archiveJob = useArchiveJob();
+  const refreeze = useRefreezeJob(jobId ?? '');
+  const [letterOpen, setLetterOpen] = useState(false);
   const cvsQuery = useCVList(1, 100);
   const lettersQuery = useCoverLetterList(1, 100);
   const [picker, setPicker] = useState<PickerKind>(null);
@@ -320,7 +353,9 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
       const saved = isEdit
         ? await updateJob.mutateAsync(payload)
         : await createJob.mutateAsync(payload);
-      const hasDates = !!(data.followUpDate.trim() || data.interviewDate.trim());
+      const hasDates = !!(data.followUpDate.trim() || data.interviewDate.trim() || data.deadline.trim());
+      // The permission prompt names follow-ups and interviews; a deadline alone is scheduled only when notifications are already on.
+      const askFor = !!(data.followUpDate.trim() || data.interviewDate.trim());
 
       const afterSave = async (result: PushPromptResult) => {
         try {
@@ -337,7 +372,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
         router.back();
       };
 
-      if (hasDates) {
+      if (askFor) {
         maybeAskPushAfterFollowUpSave(
           {
             followUp: !!data.followUpDate.trim(),
@@ -351,10 +386,27 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
         await afterSave('already');
       }
     } catch (err) {
+      // JOB_CAPACITY_REACHED and other plan refusals: say which plan includes more.
+      const prompt = promptForError(err, planForDisplay(useAuthStore.getState().user?.subscription));
+      if (prompt) {
+        showUpgradePrompt(prompt, () => router.push('/(dashboard)/settings/plans'));
+        return;
+      }
       Alert.alert(t('form.saveErrorTitle'), saveFailureMessage(err));
     } finally {
       setSaving(false);
     }
+  };
+
+  // The job as last saved: a "use current version" result replaces the snapshots shown here.
+  const snapshot = refreeze.data ?? initialJob;
+
+  const onRefreeze = (kind: 'cv' | 'cover_letter') => {
+    if (!jobId || refreeze.isPending) return;
+    refreeze.mutate(kind, {
+      onSuccess: () => Alert.alert(t('workspace.refrozen')),
+      onError: (err) => Alert.alert(t('form.saveErrorTitle'), requestFailureMessage(err, t('form.saveError'))),
+    });
   };
 
   const onDelete = () => {
@@ -479,14 +531,12 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           control={control}
           name="appliedDate"
           render={({ field }) => (
-            <Input
+            <DateInput
               label={t('form.appliedDate')}
-              placeholder="YYYY-MM-DD"
-              hint={t('form.optionalExample', { example: '2026-09-08' })}
-              autoCapitalize="none"
               value={field.value}
-              onChangeText={field.onChange}
+              onChange={field.onChange}
               error={errors.appliedDate?.message}
+              quickPicks={[0]}
             />
           )}
         />
@@ -536,14 +586,13 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           control={control}
           name="interviewDate"
           render={({ field }) => (
-            <Input
+            <DateInput
               label={t('form.interview')}
-              placeholder="YYYY-MM-DDTHH:mm"
-              hint={t('form.optionalExample', { example: '2026-09-12T14:30' })}
-              autoCapitalize="none"
               value={field.value}
-              onChangeText={field.onChange}
+              onChange={field.onChange}
               error={errors.interviewDate?.message}
+              withTime
+              hint={t('form.optionalExample', { example: '2026-09-12T14:30' })}
             />
           )}
         />
@@ -551,14 +600,12 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           control={control}
           name="followUpDate"
           render={({ field }) => (
-            <Input
+            <DateInput
               label={t('form.followUpDate')}
-              placeholder="YYYY-MM-DD"
-              hint={t('form.optionalExample', { example: '2026-09-20' })}
-              autoCapitalize="none"
               value={field.value}
-              onChangeText={field.onChange}
+              onChange={field.onChange}
               error={errors.followUpDate?.message}
+              quickPicks={[3, 7, 14]}
             />
           )}
         />
@@ -566,14 +613,12 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           control={control}
           name="deadline"
           render={({ field }) => (
-            <Input
+            <DateInput
               label={t('form.deadline')}
-              placeholder="YYYY-MM-DD"
-              hint={t('form.optionalExample', { example: '2026-09-30' })}
-              autoCapitalize="none"
               value={field.value}
-              onChangeText={field.onChange}
+              onChange={field.onChange}
               error={errors.deadline?.message}
+              quickPicks={[7, 14, 30]}
             />
           )}
         />
@@ -598,20 +643,63 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           </Text>
         </TouchableOpacity>
         <Text className="text-stone-500 text-xs -mt-2 mb-1">{t('form.frozenOnLink')}</Text>
-        {initialJob?.cvSnapshot ? (
-          <Text className="text-stone-500 text-xs mb-1">
-            {t('form.frozenCv', {
-              title: initialJob.cvSnapshot.title,
-              version: initialJob.cvSnapshot.versionNumber ?? '—',
-            })}
-          </Text>
+        {snapshot?.cvSnapshot ? (
+          <View className="flex-row flex-wrap items-center mb-1">
+            <Text className="text-stone-500 text-xs me-2">
+              {t('form.frozenCv', {
+                title: snapshot.cvSnapshot.title,
+                version: snapshot.cvSnapshot.versionNumber ?? '—',
+              })}
+            </Text>
+            <SmallLink label={t('workspace.refreeze')} disabled={refreeze.isPending} onPress={() => onRefreeze('cv')} />
+          </View>
         ) : null}
-        {initialJob?.coverLetterSnapshot ? (
-          <Text className="text-stone-500 text-xs mb-1">
-            {t('form.frozenLetter', { title: initialJob.coverLetterSnapshot.title })}
-          </Text>
+        {snapshot?.coverLetterSnapshot ? (
+          <View className="mb-1">
+            <View className="flex-row flex-wrap items-center">
+              <Text className="text-stone-500 text-xs me-2">{t('form.frozenLetter', { title: snapshot.coverLetterSnapshot.title })}</Text>
+              <SmallLink label={letterOpen ? t('workspace.hide_letter') : t('workspace.show_letter')} onPress={() => setLetterOpen((v) => !v)} expanded={letterOpen} />
+              <SmallLink label={t('workspace.refreeze')} disabled={refreeze.isPending} onPress={() => onRefreeze('cover_letter')} />
+            </View>
+            {letterOpen ? (
+              <Text className="text-stone-700 text-xs bg-stone-100 rounded-xl p-3 mt-1 leading-5" selectable>
+                {[letterText(snapshot.coverLetterSnapshot.content), snapshot.coverLetterSnapshot.truncated ? t('workspace.letter_truncated') : null].filter(Boolean).join('\n')}
+              </Text>
+            ) : null}
+          </View>
         ) : null}
+        {snapshot?.cvSnapshot || snapshot?.coverLetterSnapshot ? <Text className="text-stone-400 text-xs mb-1">{t('workspace.frozen_help')}</Text> : null}
         <View className="mb-4" />
+
+        <Text className="text-base font-bold text-stone-900 mt-2 mb-2">{t('workspace.section.description')}</Text>
+        <Controller
+          control={control}
+          name="jobDescription"
+          render={({ field }) => (
+            <Input
+              placeholder={t('workspace.description_ph')}
+              accessibilityLabel={t('workspace.section.description')}
+              multiline
+              numberOfLines={6}
+              textAlignVertical="top"
+              className="min-h-[140px]"
+              maxLength={ANSWER_LIMITS.description}
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.jobDescription?.message}
+              hint={[
+                initialJob?.jobDescription && field.value === initialJob.jobDescription
+                  ? initialJob.jobDescriptionSource === 'opportunity'
+                    ? t('workspace.description_from_opportunity')
+                    : t('workspace.description_pasted')
+                  : null,
+                `${field.value.length} / ${ANSWER_LIMITS.description}`,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            />
+          )}
+        />
 
         <Controller
           control={control}
@@ -768,6 +856,84 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
           </TouchableOpacity>
         ) : null}
 
+        <Text className="text-base font-bold text-stone-900 mt-2 mb-2">{t('workspace.section.form_answers')}</Text>
+        {values.formAnswers.map((row, index) => {
+          const n = index + 1;
+          const set = (patch: Partial<FormData['formAnswers'][number]>) =>
+            setValue(
+              'formAnswers',
+              values.formAnswers.map((a, i) => (i === index ? { ...a, ...patch } : a)),
+              { shouldDirty: true },
+            );
+          return (
+            <View key={row.id ?? `new-answer-${index}`} className="bg-white border border-stone-200 rounded-xl p-3 mb-3">
+              <View className="flex-row items-center justify-between mb-1">
+                <Text className="text-sm font-semibold text-stone-700">{t('workspace.answer.question_n', { n })}</Text>
+                <TouchableOpacity
+                  onPress={() => setValue('formAnswers', values.formAnswers.filter((_, i) => i !== index), { shouldDirty: true })}
+                  className="w-11 h-11 items-center justify-center"
+                  accessibilityRole="button"
+                  accessibilityLabel={t('workspace.answer.remove', { n })}
+                >
+                  <Ionicons name="trash-outline" size={18} color={colors.stone[500]} />
+                </TouchableOpacity>
+              </View>
+              <Input
+                placeholder={t('workspace.answer.question_ph')}
+                accessibilityLabel={t('workspace.answer.question_n', { n })}
+                value={row.question}
+                maxLength={ANSWER_LIMITS.question}
+                onChangeText={(question) => set({ question })}
+              />
+              <Input
+                placeholder={t('workspace.answer.answer_ph')}
+                accessibilityLabel={t('workspace.answer.answer_n', { n })}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                className="min-h-[80px]"
+                value={row.answer}
+                maxLength={ANSWER_LIMITS.answer}
+                onChangeText={(answer) => set({ answer })}
+              />
+            </View>
+          );
+        })}
+        {values.formAnswers.length < ANSWER_LIMITS.formAnswers ? (
+          <TouchableOpacity
+            onPress={() => setValue('formAnswers', [...values.formAnswers, { question: '', answer: '' }], { shouldDirty: true })}
+            className="flex-row items-center min-h-[44px] mb-4"
+            accessibilityRole="button"
+          >
+            <Ionicons name="add-circle-outline" size={20} color={colors.brand[600]} />
+            <Text className="text-brand-600 font-semibold ms-1.5">{t('workspace.answer.add')}</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {isEdit ? (
+          <View className="mb-4">
+            <Text className="text-base font-bold text-stone-900 mt-2 mb-2">{t('workspace.outcome_label')}</Text>
+            <View className="flex-row flex-wrap" accessibilityRole="radiogroup" accessibilityLabel={t('workspace.outcome_label')}>
+              {['', ...JOB_OUTCOMES].map((outcome) => {
+                const selected = values.outcome === outcome;
+                const label = outcome ? t(`outcome.${outcome}`) : t('workspace.outcome_none');
+                return (
+                  <TouchableOpacity
+                    key={outcome || 'none'}
+                    onPress={() => setValue('outcome', outcome, { shouldDirty: true })}
+                    className={`min-h-[44px] justify-center px-3 me-2 mb-2 rounded-xl border ${selected ? 'bg-brand-600 border-brand-600' : 'bg-white border-stone-200'}`}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                  >
+                    <Text className={selected ? 'text-white font-semibold text-sm' : 'text-stone-700 text-sm'}>{label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text className="text-stone-400 text-xs leading-4">{t('workspace.outcome_help')}</Text>
+          </View>
+        ) : null}
+
         <Button
           variant="primary"
           fullWidth
@@ -790,6 +956,16 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
                 {t('form.addToCalendar')}
               </Button>
             ) : null}
+            {initialJob.followUpDate ? (
+              <Button
+                variant="outline"
+                fullWidth
+                icon={<Ionicons name="alarm-outline" size={18} color={colors.stone[700]} />}
+                onPress={() => void shareFollowUpIcs(initialJob)}
+              >
+                {t('workspace.calendar.follow_up.button')}
+              </Button>
+            ) : null}
             {initialJob.deadline ? (
               <Button
                 variant="outline"
@@ -800,6 +976,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
                 {t('form.addDeadlineToCalendar')}
               </Button>
             ) : null}
+            <ApplicationDrafts job={snapshot ?? initialJob} />
             <Button
               variant="outline"
               fullWidth
@@ -843,6 +1020,20 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
         }}
       />
     </KeyboardAvoidingView>
+  );
+}
+
+function SmallLink({ label, onPress, disabled, expanded }: { label: string; onPress: () => void; disabled?: boolean; expanded?: boolean }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled}
+      className="min-h-[44px] justify-center me-3"
+      accessibilityRole="button"
+      accessibilityState={{ disabled, expanded }}
+    >
+      <Text className={`text-xs font-semibold ${disabled ? 'text-stone-400' : 'text-brand-600'}`}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 

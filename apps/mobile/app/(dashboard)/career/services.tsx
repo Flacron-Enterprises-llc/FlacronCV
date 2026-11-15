@@ -20,6 +20,7 @@ import { useT } from '../../../src/i18n';
  */
 export default function CareerServicesScreen() {
   const t = useT('careerModes');
+  const tb = useT('careerBusiness');
   const access = useCareerAccess();
   const list = useHumanServices();
 
@@ -46,7 +47,22 @@ export default function CareerServicesScreen() {
         keyExtractor={(row) => row.id}
         contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} tintColor={colors.brand[600]} />}
-        ListHeaderComponent={<Text className="text-stone-500 text-sm mb-4 leading-5">{SERVICES_COPY.intro}</Text>}
+        ListHeaderComponent={
+          <>
+            <View
+              className="bg-white border border-stone-100 rounded-2xl p-4 mb-4"
+              accessible
+              accessibilityLabel={`${tb('scope.comingSoon')}. ${tb('scope.servicesSoonTitle')}. ${tb('scope.servicesSoonBody')}`}
+            >
+              <View className="flex-row items-center flex-wrap gap-2">
+                <Pill label={tb('scope.comingSoon')} />
+                <Text className="font-bold text-stone-900 flex-1">{tb('scope.servicesSoonTitle')}</Text>
+              </View>
+              <Text className="text-stone-500 text-sm mt-2 leading-5">{tb('scope.servicesSoonBody')}</Text>
+            </View>
+            <Text className="text-stone-500 text-sm mb-4 leading-5">{SERVICES_COPY.intro}</Text>
+          </>
+        }
         ListEmptyComponent={<EmptyState icon="people-outline" title={SERVICES_COPY.empty} />}
         renderItem={({ item }) => (
           <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">

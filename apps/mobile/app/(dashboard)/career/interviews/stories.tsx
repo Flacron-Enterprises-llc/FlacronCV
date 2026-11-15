@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CareerHeader } from '../../../../src/components/career/CareerHeader';
@@ -7,7 +8,7 @@ import { Button } from '../../../../src/components/ui/Button';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../../src/components/ui/Skeleton';
-import { useCreateStarStory, useDeleteStarStory, useStarStories, useUpdateStarStory } from '../../../../src/hooks/career/interviews';
+import { useCreateStarStory, useDeleteStarStory, useInterview, useStarStories, useUpdateStarStory } from '../../../../src/hooks/career/interviews';
 import { useCareerAccess, useCareerFacts } from '../../../../src/hooks/useCareer';
 import { useLeaveGuard } from '../../../../src/hooks/useLeaveGuard';
 import {
@@ -21,6 +22,7 @@ import {
   storyFieldErrors,
   storyInput,
   storyIsDirty,
+  storyPrefill,
   storyToDraft,
   type StoryDraft,
   type StoryField,
@@ -36,6 +38,8 @@ import { useT } from '../../../../src/i18n';
  * career API. Picking facts is optional; without a pick the story is linked to
  * all confirmed facts. Saving a story uses no text interview. Saved stories
  * can be edited (the same checks apply) or deleted after a confirmation.
+ * Opened from an interview answer (`?fromSession=&answerId=`), the form
+ * starts with that answer as the action and the question's confirmed fact.
  */
 export default function StarStoriesScreen() {
   const t = useT('careerInterviews');
@@ -51,11 +55,27 @@ export default function StarStoriesScreen() {
   const [factIds, setFactIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<Partial<Record<StoryField, string>>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const params = useLocalSearchParams<{ fromSession?: string; answerId?: string }>();
+  const fromSession = typeof params.fromSession === 'string' ? params.fromSession : undefined;
+  const source = useInterview(fromSession);
+  const [fromAnswer, setFromAnswer] = useState<number | null>(null);
+  const prefilled = useRef(false);
 
   const dirty = editing ? storyChanged(draft, storyToDraft(editing)) : storyIsDirty(draft);
   useLeaveGuard(dirty);
 
   const confirmed = useMemo(() => (facts.data?.items ?? []).filter((f) => f.confirmation === 'confirmed'), [facts.data]);
+
+  // Start once from the chosen answer; never overwrite what the person has typed since.
+  useEffect(() => {
+    if (prefilled.current || !source.data || typeof params.answerId !== 'string') return;
+    const prefill = storyPrefill(source.data, params.answerId);
+    prefilled.current = true;
+    if (!prefill) return;
+    setDraft(prefill.draft);
+    setFactIds(prefill.factIds);
+    setFromAnswer(prefill.index);
+  }, [source.data, params.answerId]);
 
   const setField = (field: StoryField, text: string) => {
     setDraft((prev) => ({ ...prev, [field]: text }));
@@ -66,6 +86,7 @@ export default function StarStoriesScreen() {
     setFactIds((prev) => (prev.includes(factId) ? prev.filter((x) => x !== factId) : [...prev, factId]));
 
   const resetForm = () => {
+    setFromAnswer(null);
     setEditing(null);
     setDraft(EMPTY_STORY);
     setFactIds([]);
@@ -179,6 +200,11 @@ export default function StarStoriesScreen() {
             {t('stories.body')}
           </Text>
           <Text className="text-stone-500 text-xs mt-1 mb-4 leading-4">{t('stories.resultRule')}</Text>
+          {fromAnswer !== null && !editing ? (
+            <View className="bg-brand-50 rounded-xl p-3 mb-4" accessibilityLiveRegion="polite">
+              <Text className="text-brand-800 text-sm leading-5">{t('stories.fromAnswer', { index: fromAnswer })}</Text>
+            </View>
+          ) : null}
           {STORY_FIELDS.map((field) => (
             <View key={field} className="mb-4">
               <Text className="text-sm font-medium text-stone-700 mb-1.5">{STORY_FIELD_LABEL[field]}</Text>

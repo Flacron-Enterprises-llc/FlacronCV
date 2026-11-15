@@ -12,7 +12,6 @@ import { SkeletonCard } from '../../../../src/components/ui/Skeleton';
 import {
   lockedTemplateMessage,
   lockedTemplateTitle,
-  PAID_UPGRADES_ENABLED,
   upgradeAlertButtons,
 } from '../../../../src/config/paid-upgrades';
 import { useUpdateCVDesign } from '../../../../src/hooks/useCVDesign';
@@ -40,11 +39,10 @@ import {
   normalizeHex,
   SECTION_STYLE_OPTIONS,
   templateTier,
-  tierLabel,
 } from '../../../../src/lib/cv-design';
 import { useT } from '../../../../src/i18n';
 import { RTL_FLIP } from '../../../../src/i18n/native';
-import { effectivePlanForCopy, resolveEffectivePlan } from '../../../../src/lib/entitlements';
+import { planForDisplay, resolveEffectivePlan } from '../../../../src/lib/entitlements';
 import { useAuthStore } from '../../../../src/store/auth-store';
 import { colors } from '../../../../src/theme/colors';
 import { TemplateCategory } from '../../../../src/types/enums';
@@ -138,12 +136,12 @@ export default function CVDesignScreen() {
   useLeaveGuard(dirty && !saveDesign.isPending);
 
   const plan = resolveEffectivePlan(user?.subscription);
-  const planForCopy = effectivePlanForCopy(user?.subscription);
+  const planForCopy = planForDisplay(user?.subscription);
   const templates = templatesQuery.data ?? [];
   const currentTemplate = templates.find((t) => t.id === draft?.templateId);
 
   const showUpgrade = (title: string, message: string) => {
-    Alert.alert(title, message, upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')));
+    Alert.alert(title, message, upgradeAlertButtons(() => router.push('/(dashboard)/settings/plans')));
   };
 
   const update = (patch: Partial<DesignDraft>) => setDraft((d) => (d ? { ...d, ...patch } : d));
@@ -181,13 +179,10 @@ export default function CVDesignScreen() {
   const pickLayout = (layout: CVLayout) => {
     if (!draft || !original) return;
     if (!canSelectLayout(layout, plan, original.layout)) {
-      const tier = tierLabel(layoutTier(layout));
-      const label = layoutLabel(layout);
+      // Same five-plan wording as templates: the lowest plan that includes it, and what this plan includes.
       showUpgrade(
         lockedTemplateTitle(layoutTier(layout)),
-        PAID_UPGRADES_ENABLED
-          ? t('layoutRequires', { layout: label, tier })
-          : t('layoutIncluded', { layout: label, tier, plan: tierLabel(planForCopy) }),
+        lockedTemplateMessage(layoutLabel(layout), layoutTier(layout), planForCopy),
       );
       return;
     }
@@ -514,7 +509,7 @@ export default function CVDesignScreen() {
         }}
         onUpgrade={() => {
           setPreviewing(null);
-          router.push('/(dashboard)/settings/billing');
+          router.push('/(dashboard)/settings/plans');
         }}
       />
     </SafeAreaView>

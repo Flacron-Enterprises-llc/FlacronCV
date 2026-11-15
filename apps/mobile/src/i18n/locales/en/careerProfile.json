@@ -225,5 +225,22 @@
       "language": "New language",
       "reference": "New reference"
     }
+  },
+  "web": {
+    "sharing_title": "Sharing and portfolio",
+    "sharing_body": "Choose what to publish, share privately or show on a career-fair QR code.",
+    "sharing_link": "Open portfolios",
+    "mode_title": "Career mode",
+    "mode_body": "Pick specialist modes, current and future locations, and availability.",
+    "mode_link": "Open career modes",
+    "achievement_prompt": "Add a number? For example how many users, how much faster, or how much was saved. Only if you know it; leave it empty otherwise. FlacronCV never adds one.",
+    "readability": {
+      "format_title": "Format checks",
+      "format_note": "How the text may survive an applicant tracking system. Separate from job fit.",
+      "format_long_line": "A very long line may be split badly. Break it into shorter points.",
+      "format_table_marker": "Tabs, columns or table lines may be read in the wrong order.",
+      "format_unusual_characters": "Icons, emoji or unusual symbols may be dropped or garbled.",
+      "format_missing_contact": "No email or phone number in the contact section."
+    }
   }
 }

@@ -16,12 +16,10 @@ import {
   signOutEverywhere,
 } from '../../../src/lib/account-settings';
 import { requestFailureMessage } from '../../../src/lib/api-errors';
-import { effectivePlanForCopy, planForDisplay } from '../../../src/lib/entitlements';
-import { PLAN_CONFIGS } from '../../../src/types/subscription.types';
+import { planForDisplay, sharedPlanLimits } from '../../../src/lib/entitlements';
 import { JobApplication } from '../../../src/types/job.types';
 import { Locale } from '../../../src/types/enums';
 import { openLegalDocument } from '../../../src/lib/legal-acceptance';
-import { PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
 import { CAREER_ENABLED } from '../../../src/config/career';
 import { Avatar } from '../../../src/components/ui/Avatar';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
@@ -73,6 +71,7 @@ function planName(plan: string, t: TFunction): string {
 export default function SettingsScreen() {
   const t = useT('settings');
   const tc = useT('common');
+  const tPlans = useT('plans');
   const locale = useLocale();
   const router = useRouter();
   const replayTour = useAppTourReplay();
@@ -93,8 +92,8 @@ export default function SettingsScreen() {
   const usageFailed = !usage && !!(userError || userSyncError);
   const usageLoading = !usage && !usageFailed;
   // user === null is not Free — only resolve a plan when the account document loaded.
-  const plan = currentUser ? effectivePlanForCopy(currentUser.subscription) : null;
-  const planConfig = plan ? PLAN_CONFIGS[plan] : null;
+  // Limits of the real (effective) plan — five-plan or legacy — from shared-types.
+  const planConfig = currentUser ? { limits: sharedPlanLimits(currentUser.subscription) } : null;
   const displayPlan = currentUser ? planForDisplay(currentUser.subscription) : null;
   const pushOn = currentUser?.preferences?.pushNotifications === true;
 
@@ -302,9 +301,14 @@ export default function SettingsScreen() {
       items: [
         {
           icon: 'card-outline',
-          label: PAID_UPGRADES_ENABLED ? t('menu.billingPlans') : t('menu.planUsage'),
+          label: tPlans('billingTitle'),
           onPress: () => router.push('/(dashboard)/settings/billing'),
           badge: displayPlan ? planName(displayPlan, t).toLocaleUpperCase() : undefined,
+        },
+        {
+          icon: 'pricetags-outline',
+          label: tPlans('title'),
+          onPress: () => router.push('/(dashboard)/settings/plans'),
         },
       ],
     },

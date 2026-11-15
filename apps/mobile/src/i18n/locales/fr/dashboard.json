@@ -19,7 +19,8 @@
     "coverLetters": "Lettres de motivation",
     "downloads": "Téléchargements",
     "thisMonth": "Ce mois-ci",
-    "usedThisMonth": "Utilisés ce mois-ci"
+    "usedThisMonth": "Utilisés ce mois-ci",
+    "unlimited": "Illimité"
   },
   "quickActions": {
     "title": "Actions rapides",
@@ -42,5 +43,28 @@
     "title": "Passer à Pro",
     "body": "Débloquez {cvs} CV, {credits} crédits Engine et plus encore",
     "cta": "Passer à Pro — {price}/mois"
+  },
+  "greeting": {
+    "named": "Bon retour, {name} !",
+    "plain": "Bon retour !",
+    "firstNamed": "Bienvenue, {name} !",
+    "first": "Bienvenue sur FlacronCV !",
+    "subtitle": "Voici où en est votre compte aujourd’hui."
+  },
+  "jobs": {
+    "title": "Suivi des candidatures",
+    "error": "Impossible de charger vos candidatures.",
+    "empty": "Aucune candidature suivie pour l’instant. Ajoutez les postes visés pour garder chaque étape au même endroit.",
+    "open": "Ouvrir le suivi des candidatures",
+    "status": {
+      "saved": "Enregistrée",
+      "applied": "Postulée",
+      "interviewing": "Entretien",
+      "offered": "Offre reçue"
+    }
+  },
+  "upgradePlans": {
+    "title": "Tirez le meilleur de FlacronCV",
+    "cta": "Comparer les formules"
   }
 }

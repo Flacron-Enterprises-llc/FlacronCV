@@ -11,7 +11,7 @@ import { SkeletonCard } from '../../../src/components/ui/Skeleton';
 import { useTemplates } from '../../../src/hooks/useTemplates';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { SubscriptionPlan, TemplateCategory } from '../../../src/types/enums';
-import { canAccessTemplate, effectivePlanForCopy } from '../../../src/lib/entitlements';
+import { canAccessTemplate, planForDisplay } from '../../../src/lib/entitlements';
 import {
   lockedTemplateMessage,
   lockedTemplateTitle,
@@ -49,7 +49,7 @@ export default function TemplatesScreen() {
   });
 
   const handleSelectTemplate = (template: Template) => {
-    const plan = effectivePlanForCopy(subscription);
+    const plan = planForDisplay(subscription);
     if (!canAccessTemplate(subscription, template.tier)) {
       if (!PAID_UPGRADES_ENABLED) {
         Alert.alert(
@@ -61,7 +61,7 @@ export default function TemplatesScreen() {
       Alert.alert(
         lockedTemplateTitle(template.tier),
         lockedTemplateMessage(template.name, template.tier, plan),
-        upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+        upgradeAlertButtons(() => router.push('/(dashboard)/settings/plans')),
       );
       return;
     }
@@ -138,7 +138,7 @@ export default function TemplatesScreen() {
         userCanAccess={previewing ? canAccessTemplate(subscription, previewing.tier) : true}
         lockedMessage={
           previewing
-            ? lockedTemplateMessage(previewing.name, previewing.tier, effectivePlanForCopy(subscription))
+            ? lockedTemplateMessage(previewing.name, previewing.tier, planForDisplay(subscription))
             : undefined
         }
         onSelect={() => {
@@ -148,7 +148,7 @@ export default function TemplatesScreen() {
         }}
         onUpgrade={() => {
           setPreviewing(null);
-          router.push('/(dashboard)/settings/billing');
+          router.push('/(dashboard)/settings/plans');
         }}
       />
     </SafeAreaView>

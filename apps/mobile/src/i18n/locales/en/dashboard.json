@@ -19,7 +19,8 @@
     "coverLetters": "Cover Letters",
     "downloads": "Downloads",
     "thisMonth": "This month",
-    "usedThisMonth": "Used this month"
+    "usedThisMonth": "Used this month",
+    "unlimited": "Unlimited"
   },
   "quickActions": {
     "title": "Quick Actions",
@@ -42,5 +43,28 @@
     "title": "Upgrade to Pro",
     "body": "Unlock {cvs} CVs, {credits} Engine credits & more",
     "cta": "Upgrade Now — {price}/mo"
+  },
+  "greeting": {
+    "named": "Welcome back, {name}!",
+    "plain": "Welcome back!",
+    "firstNamed": "Welcome, {name}!",
+    "first": "Welcome to FlacronCV!",
+    "subtitle": "Here is where your account stands today."
+  },
+  "jobs": {
+    "title": "Job Tracker",
+    "error": "We could not load your job applications.",
+    "empty": "No applications tracked yet. Add the roles you are applying for to keep every stage in one place.",
+    "open": "Open job tracker",
+    "status": {
+      "saved": "Saved",
+      "applied": "Applied",
+      "interviewing": "Interviewing",
+      "offered": "Offered"
+    }
+  },
+  "upgradePlans": {
+    "title": "Get more out of FlacronCV",
+    "cta": "Compare plans"
   }
 }

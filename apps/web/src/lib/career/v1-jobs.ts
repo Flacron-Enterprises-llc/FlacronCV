@@ -100,9 +100,10 @@ export interface V1JobInput {
 export function v1JobFromOpportunity(item: OpportunityDetail, unstatedCompany: string): V1JobInput {
   return {
     company: statedOrganization(item.organization) ?? unstatedCompany,
-    position: item.title.slice(0, 300),
+    // The V1 jobs DTO rejects more than 200 characters.
+    position: item.title.slice(0, 200),
     jobUrl: item.sourceUrl,
-    location: item.locations.length > 0 ? item.locations.join(', ').slice(0, 300) : null,
+    location: item.locations.length > 0 ? item.locations.join(', ').slice(0, 200) : null,
     status: 'saved',
     opportunityId: item.id,
     jobDescription: item.description ? item.description.slice(0, 20_000) : null,

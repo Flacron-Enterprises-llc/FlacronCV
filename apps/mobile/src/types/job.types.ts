@@ -130,6 +130,12 @@ export interface JobWritePayload {
   /** Sent whole; replaces the single contactName/contactEmail pair of older app versions. */
   contacts?: JobContactInput[];
   checklist?: JobChecklistItemInput[];
+  /** Sent whole, like contacts and the checklist. */
+  formAnswers?: { id?: string; question: string; answer: string }[];
+  jobDescription?: string | null;
+  jobDescriptionSource?: 'pasted' | 'opportunity' | null;
+  /** Reported by the person; the server records the origin and time. */
+  outcome?: JobOutcome | null;
 }
 
 /** PUT /jobs/:id partial body — archive/unarchive sends only `{ archived }` (as the website does). */

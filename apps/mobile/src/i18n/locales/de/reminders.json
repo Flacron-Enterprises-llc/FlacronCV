@@ -16,6 +16,10 @@
     "followUpToday": "Heute nachfassen",
     "followUpTodayWith": "Heute bei {company} nachfassen",
     "interviewToday": "Vorstellungsgespräch heute um {time}",
-    "interviewTodayWith": "Vorstellungsgespräch heute um {time} bei {company}"
+    "interviewTodayWith": "Vorstellungsgespräch heute um {time} bei {company}",
+    "deadlineTomorrow": "Bewerbungsfrist morgen",
+    "deadlineTomorrowWith": "Bewerbungsfrist morgen: {company}",
+    "deadlineToday": "Bewerbungsfrist heute",
+    "deadlineTodayWith": "Bewerbungsfrist heute: {company}"
   }
 }

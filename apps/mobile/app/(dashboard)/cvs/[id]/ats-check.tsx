@@ -9,13 +9,14 @@ import { Button } from '../../../../src/components/ui/Button';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { Input } from '../../../../src/components/ui/Input';
 import { SkeletonCard } from '../../../../src/components/ui/Skeleton';
-import { aiCreditsExhaustedMessage, upgradeAlertButtons } from '../../../../src/config/paid-upgrades';
+import { aiCreditsExhaustedMessage, promptForError, showUpgradePrompt, upgradeAlertButtons } from '../../../../src/config/paid-upgrades';
 import { useATSCheck } from '../../../../src/hooks/useAI';
 import { useCV, useCVSections } from '../../../../src/hooks/useCVs';
 import { extractJsonObject } from '../../../../src/lib/ai-json';
 import { alertIfUnverifiedEmail } from '../../../../src/lib/email-verification';
 import { engineFailureMessage } from '../../../../src/lib/engine-errors';
-import { canUseAI } from '../../../../src/lib/entitlements';
+import { canUseAI, planForDisplay } from '../../../../src/lib/entitlements';
+import { isLegacyPlan } from '../../../../src/lib/plan-catalog';
 import { requestFailureMessage } from '../../../../src/lib/api-errors';
 import { serializeCVToText } from '../../../../src/lib/serialize-cv';
 import { useT } from '../../../../src/i18n';
@@ -95,6 +96,7 @@ export default function ATSCheckScreen() {
       return;
     }
     if (
+      isLegacyPlan(planForDisplay(user.subscription)) &&
       !canUseAI(
         user.subscription,
         user.usage?.aiCreditsUsed ?? 0,
@@ -103,8 +105,8 @@ export default function ATSCheckScreen() {
     ) {
       Alert.alert(
         t('shared.creditsExhaustedTitle'),
-        aiCreditsExhaustedMessage('summary'),
-        upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+        aiCreditsExhaustedMessage('summary', planForDisplay(user.subscription)),
+        upgradeAlertButtons(() => router.push('/(dashboard)/settings/plans')),
       );
       return;
     }
@@ -124,6 +126,11 @@ export default function ATSCheckScreen() {
       setResult(parsed);
     } catch (err: unknown) {
       if (alertIfUnverifiedEmail(err)) return;
+      const prompt = promptForError(err, planForDisplay(user.subscription), 'ai');
+      if (prompt) {
+        showUpgradePrompt(prompt, () => router.push('/(dashboard)/settings/plans'));
+        return;
+      }
       Alert.alert(t('ats.errorTitle'), engineFailureMessage(err, t('ats.error')));
     }
   };

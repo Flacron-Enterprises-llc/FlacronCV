@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Crypto from 'expo-crypto';
-import { useRouter, type Href } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CareerHeader, Pill } from '../../../../src/components/career/CareerHeader';
+import { ChargeNotice } from '../../../../src/components/career/plans/PlanBits';
 import { Button } from '../../../../src/components/ui/Button';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
@@ -14,6 +15,7 @@ import { useActionPacks, useCreateActionPack } from '../../../../src/hooks/caree
 import { useCareerAccess, useCareerOpportunities } from '../../../../src/hooks/useCareer';
 import {
   actionPackErrorMessage,
+  balanceText,
   checklistProgress,
   creditsLeft,
   fitLabel,
@@ -21,6 +23,7 @@ import {
   statusBadge,
   keyForAction,
   organizationName,
+  preselectedOpportunity,
   type KeyedAction,
 } from '../../../../src/lib/career/action-packs';
 import { careerErrorMessage, formatDay } from '../../../../src/lib/career-view';
@@ -46,6 +49,19 @@ export default function ActionPacksScreen() {
   const [selected, setSelected] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const action = useRef<KeyedAction | null>(null);
+  // Opened from a listing or an alert (?opportunityId=): that opportunity is preselected; nothing is charged until "Create pack".
+  const { opportunityId } = useLocalSearchParams<{ opportunityId?: string }>();
+  const preselected = useRef(false);
+  const oppItems = opportunities.data?.items;
+  useEffect(() => {
+    if (preselected.current || !oppItems) return;
+    const match = preselectedOpportunity(opportunityId, oppItems);
+    if (match) {
+      preselected.current = true;
+      setSelected(match);
+      setPicking(true);
+    }
+  }, [opportunityId, oppItems]);
 
   const featureOff = access.data?.enabled === true && access.data.features?.actionPacks === false;
 
@@ -154,6 +170,7 @@ export default function ActionPacksScreen() {
   }
 
   const opps = opportunities.data?.items ?? [];
+  const remaining = creditsLeft(list.data?.actionPack);
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
       <CareerHeader title={t('actionPack.title')} />
@@ -162,6 +179,13 @@ export default function ActionPacksScreen() {
         <Text className="text-stone-500 text-sm leading-5 mb-4">
           {t('actionPack.pickCost')}
         </Text>
+        <ChargeNotice
+          operation={t('pack.cost_operation')}
+          required={t('pack.cost_required', { count: 1 })}
+          balance={balanceText(remaining)}
+          noneLeft={remaining === 0 ? t('pack.cost_none_left') : null}
+          footnote={t('pack.cost_retry_free')}
+        />
         {opportunities.isLoading ? (
           <SkeletonCard />
         ) : opportunities.error ? (
@@ -210,7 +234,7 @@ export default function ActionPacksScreen() {
             </Button>
           </View>
           <View className="flex-1">
-            <Button fullWidth onPress={onCreate} loading={create.isPending} disabled={!selected}>
+            <Button fullWidth onPress={onCreate} loading={create.isPending} disabled={!selected || remaining === 0}>
               {t('actionPack.create')}
             </Button>
           </View>

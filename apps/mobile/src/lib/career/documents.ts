@@ -194,6 +194,16 @@ export function readabilityLines(issues: ReadabilityIssue[]): string[] {
   return out;
 }
 
+/**
+ * The listing a documents screen was opened for (`?opportunityId=`, e.g. from
+ * a listing's "Prepare a CV" link). Same shape check as the website's
+ * opportunityIdFromUrl; the server still checks the listing is the caller's.
+ */
+export function opportunityParam(value: string | string[] | null | undefined): string | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return typeof raw === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(raw) ? raw : null;
+}
+
 /** Lines typed on top of a version that differ from the saved text (same rule as the website's changedLines). */
 export function changedLines(version: ResumeVersion | null | undefined, edits: Record<string, string>): Array<{ factId: string; text: string }> {
   if (!version) return [];

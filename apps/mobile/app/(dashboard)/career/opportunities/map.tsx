@@ -5,6 +5,7 @@ import React, { useRef, useState } from 'react';
 import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CareerHeader } from '../../../../src/components/career/CareerHeader';
+import { FeatureState } from '../../../../src/components/career/FeatureState';
 import { Button } from '../../../../src/components/ui/Button';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
@@ -115,7 +116,7 @@ export default function OpportunityMapScreen() {
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
       <CareerHeader title={tk('areas.map.title')} subtitle={t('map.subtitle')} />
-      {content}
+      <FeatureState href="/career/opportunities/map">{content}</FeatureState>
     </SafeAreaView>
   );
 }

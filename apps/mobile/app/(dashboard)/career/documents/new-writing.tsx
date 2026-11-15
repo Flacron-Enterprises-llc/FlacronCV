@@ -1,4 +1,4 @@
-import { useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ import {
   EMPTY_WRITING_CONTEXT,
   isTargetedWritingType,
   LETTER_TEMPLATE_OPTIONS,
+  opportunityParam,
   paidFailure,
   takesWritingContext,
   WRITING_CONTEXT_LIMITS,
@@ -44,7 +45,10 @@ export default function NewCareerWritingScreen() {
   const create = useCreateWriting();
   const [type, setType] = useState<WritingType>('cover_letter');
   const [templateId, setTemplateId] = useState('classic');
-  const [opportunityId, setOpportunityId] = useState<string | null>(null);
+  // Preselected when opened for a listing (?opportunityId=); the server still checks it is the caller's.
+  const { opportunityId: rawListing } = useLocalSearchParams<{ opportunityId?: string }>();
+  const [opened] = useState(() => opportunityParam(rawListing));
+  const [opportunityId, setOpportunityId] = useState<string | null>(opened);
   const [notes, setNotes] = useState<WritingContextDraft>(EMPTY_WRITING_CONTEXT);
   const [notesError, setNotesError] = useState<string | null>(null);
   const credits = creditLine(writing.data?.documentCredit);
@@ -93,6 +97,8 @@ export default function NewCareerWritingScreen() {
 
   const failure = create.error ? paidFailure(create.error, writing.data?.documentCredit) : null;
   const listings = opportunities.data?.items ?? [];
+  // The opened listing is offered even when it is not among the saved ones loaded here.
+  const openedMissing = opened !== null && !opportunities.isLoading && !listings.some((item) => item.id === opened);
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
@@ -122,6 +128,9 @@ export default function NewCareerWritingScreen() {
           <Text className="text-stone-500 text-xs mb-3 leading-4">{t('newWriting.pickOpportunity')}</Text>
           <View className="gap-2" accessibilityRole="radiogroup">
             <Choice label={t('newWriting.none')} selected={opportunityId === null} onPress={() => setOpportunityId(null)} />
+            {openedMissing ? (
+              <Choice label={t('forListing.openedListing')} selected={opportunityId === opened} onPress={() => setOpportunityId(opened)} />
+            ) : null}
             {listings.map((item) => (
               <Choice
                 key={item.id}

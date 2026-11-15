@@ -259,3 +259,59 @@ export function deleteErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.code === 'not_found') return t('careerPlans.maintenance.errors.notFound');
   return careerErrorMessage(error, t('careerPlans.maintenance.errors.deleteFailed'));
 }
+
+// ---------------------------------------------------------------------------
+// Links to a profile fact or an evidence item (optional, chosen by the person).
+
+export interface ItemLinks {
+  factId: string;
+  evidenceId: string;
+}
+
+export const NO_LINKS: ItemLinks = { factId: '', evidenceId: '' };
+
+export function linksOf(item: { factId: string | null; evidenceId: string | null }): ItemLinks {
+  return { factId: item.factId ?? '', evidenceId: item.evidenceId ?? '' };
+}
+
+/** The body with its links; a blank choice clears the link (null). */
+export function withLinks<T extends object>(input: T, links: ItemLinks): T & { factId: string | null; evidenceId: string | null } {
+  return { ...input, factId: links.factId || null, evidenceId: links.evidenceId || null };
+}
+
+/** A short name for a profile fact in a picker (website MaintenancePanel `factLabel`). */
+export function factOptionLabel(fact: { factType: string; value: Record<string, unknown> }): string {
+  const v = fact.value;
+  const text = (key: string) => (typeof v[key] === 'string' ? (v[key] as string).trim() : '');
+  if (fact.factType === 'experience') {
+    const label = [text('position'), text('company')].filter(Boolean).join(' · ');
+    if (label) return label;
+  }
+  for (const key of ['title', 'name', 'position', 'institution', 'fullName', 'text']) if (text(key)) return text(key).slice(0, 80);
+  return fact.factType;
+}
+
+// ---------------------------------------------------------------------------
+// "I got this promotion": the only way a goal changes the profile. The person
+// either picks the experience fact whose title becomes the goal's title, or
+// names the employer of a new role (with an optional start date).
+
+export interface PromotionDraft {
+  factId: string;
+  company: string;
+  startDate: string;
+}
+
+export const EMPTY_PROMOTION: PromotionDraft = { factId: '', company: '', startDate: '' };
+
+export type PromotionInput = { experienceFactId: string } | { company: string; startDate: string | null };
+
+export function checkPromotion(draft: PromotionDraft): { ok: true; input: PromotionInput } | { ok: false; field: 'factId' | 'company' | 'startDate'; message: string } {
+  if (draft.factId) return { ok: true, input: { experienceFactId: draft.factId } };
+  const company = draft.company.trim();
+  if (!company) return { ok: false, field: 'factId', message: t('careerPlans.scope.promotion_need_role') };
+  if (company.length > MAX_SHORT) return { ok: false, field: 'company', message: t('careerPlans.maintenance.check.textTooLong', { max: MAX_SHORT }) };
+  const start = checkOptionalDate(draft.startDate);
+  if (!start.ok) return { ok: false, field: 'startDate', message: start.message };
+  return { ok: true, input: { company, startDate: start.value } };
+}

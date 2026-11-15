@@ -15,7 +15,9 @@ import {
   useCareerUsage,
   useUid,
 } from '../../../src/hooks/useCareer';
+import { useSavedOpportunities } from '../../../src/hooks/career/opportunities';
 import { api } from '../../../src/lib/api';
+import { APPLICATION_STATUSES } from '../../../../../packages/career-shared/src/applications';
 import { careerApi } from '../../../src/lib/career-api';
 import { actionLabel, actionRoute, careerOverview, unitLabel, type CareerOverview } from '../../../src/lib/career/overview';
 import { utcDateOnly } from '../../../../../packages/career-shared/src/dashboard';
@@ -72,6 +74,8 @@ export default function CareerOverviewScreen() {
   const alerts = useQuery({ queryKey: ['career', uid, 'alerts'], queryFn: () => careerApi.alerts(), enabled: alertsOn, retry: false });
   // V1's Job Tracker is the only application tracker (same as the website's overview); same key as the Jobs tab.
   const jobs = useQuery({ queryKey: ['jobs'], queryFn: () => api.get<JobApplication[]>('/jobs'), enabled: active, staleTime: 30_000 });
+  // Saved listings are optional on the overview: a failure leaves the rest usable (website rule).
+  const savedListings = useSavedOpportunities(active);
   const overview: CareerOverview | null =
     active && facts.data
       ? careerOverview({
@@ -81,6 +85,8 @@ export default function CareerOverviewScreen() {
           usage: usage.data ?? null,
           resumes: resumes.data?.items ?? [],
           today: utcDateOnly(new Date()),
+          savedListings: savedListings.data ?? [],
+          alerts: alertsOn ? (alerts.data?.items ?? []) : [],
         })
       : null;
   const partialError = active && Boolean(facts.error || resumes.error || jobs.error || usage.error);
@@ -94,6 +100,7 @@ export default function CareerOverviewScreen() {
       void facts.refetch();
       void resumes.refetch();
       void jobs.refetch();
+      void savedListings.refetch();
       if (alertsOn) void alerts.refetch();
     }
   };
@@ -210,6 +217,7 @@ function OverviewSummary({
   onOpen: (route: string) => void;
 }) {
   const t = useT('careerHub.overview');
+  const th = useT('careerHome');
   const tc = useT('common');
   if (!overview) {
     return (
@@ -278,10 +286,72 @@ function OverviewSummary({
         <Text className="text-stone-500 text-sm mt-1">
           {deadline && deadlineDay ? t('nextDeadline', { title: deadline.title, date: deadlineDay }) : t('noDeadline')}
         </Text>
+        {overview.followUp ? (
+          <Text className="text-stone-500 text-sm mt-1">{th('next_follow_up', { title: overview.followUp.title, date: day(overview.followUp.date) ?? overview.followUp.date })}</Text>
+        ) : null}
+      </SummaryCard>
+
+      <SummaryCard title={th('relevant_title')}>
+        {overview.relevant.length === 0 ? <Text className="text-stone-500 text-sm">{th('relevant_empty')}</Text> : null}
+        {overview.relevant.map((entry) => (
+          <TouchableOpacity
+            key={entry.id}
+            onPress={() => onOpen(`/(dashboard)/career/opportunities/${entry.id}`)}
+            className="min-h-[44px] justify-center py-1"
+            accessibilityRole="link"
+          >
+            <Text className="text-brand-700 font-semibold text-sm">{entry.title}</Text>
+            <Text className="text-stone-500 text-xs mt-0.5">
+              {[entry.source === 'saved' ? th('relevant_saved') : th('relevant_alert'), entry.deadline ? th('relevant_deadline', { date: day(entry.deadline.slice(0, 10)) ?? entry.deadline }) : null]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
+          </TouchableOpacity>
+        ))}
+        <Text className="text-stone-900 text-sm font-semibold mt-3">{th('deadlines_title')}</Text>
+        {overview.deadlines.length === 0 ? <Text className="text-stone-500 text-sm mt-1">{th('no_deadline')}</Text> : null}
+        {overview.deadlines.map((entry) => (
+          <TouchableOpacity
+            key={entry.key}
+            onPress={() => onOpen(entry.kind === 'listing' ? `/(dashboard)/career/opportunities/${entry.id}` : `/(dashboard)/jobs/${entry.id}`)}
+            className="min-h-[44px] justify-center py-1"
+            accessibilityRole="link"
+          >
+            <Text className="text-stone-900 text-sm">{th('next_deadline', { title: entry.title, date: day(entry.date) ?? entry.date })}</Text>
+            <Text className="text-stone-500 text-xs mt-0.5">{entry.kind === 'listing' ? th('deadline_kind_listing') : th('deadline_kind_application')}</Text>
+          </TouchableOpacity>
+        ))}
+        <View className="flex-row flex-wrap mt-1">
+          <TouchableOpacity onPress={() => onOpen('/(dashboard)/career/alerts')} className="min-h-[44px] justify-center me-4" accessibilityRole="link">
+            <Text className="text-brand-600 font-semibold text-sm">{th('open_alerts')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => onOpen('/(dashboard)/career/reminders')} className="min-h-[44px] justify-center" accessibilityRole="link">
+            <Text className="text-brand-600 font-semibold text-sm">{th('open_reminders')}</Text>
+          </TouchableOpacity>
+        </View>
+      </SummaryCard>
+
+      <SummaryCard title={th('stages_title')}>
+        <View className="flex-row flex-wrap">
+          {APPLICATION_STATUSES.map((status) => (
+            <View key={status} className="bg-stone-100 rounded-full px-3 py-1 me-2 mb-2">
+              <Text className="text-stone-700 text-xs">{`${th(`status_${status}`)}: ${overview.stages[status]}`}</Text>
+            </View>
+          ))}
+        </View>
       </SummaryCard>
 
       <SummaryCard title={t('interviewTitle')}>
         <Text className="text-stone-900 text-sm">{t('interviewRemaining', { count: overview.interviewsLeft })}</Text>
+        <TouchableOpacity
+          onPress={() =>
+            onOpen(overview.practiceOpportunityId ? `/(dashboard)/career/interviews?opportunityId=${encodeURIComponent(overview.practiceOpportunityId)}` : '/(dashboard)/career/interviews')
+          }
+          className="min-h-[44px] justify-center"
+          accessibilityRole="link"
+        >
+          <Text className="text-brand-600 font-semibold text-sm">{th('practice')}</Text>
+        </TouchableOpacity>
       </SummaryCard>
 
       {overview.units.length > 0 ? (

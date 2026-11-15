@@ -14,7 +14,10 @@ export type ReminderEntry = { id: string; at: string };
 export type JobReminderSlots = {
   followUp?: ReminderEntry;
   interview?: ReminderEntry;
+  /** The application deadline (V1 `deadline`), never confused with the follow-up date. */
+  deadline?: ReminderEntry;
 };
+const SLOT_KINDS = ['followUp', 'interview', 'deadline'] as const;
 export type JobReminderMap = Record<string, JobReminderSlots>;
 
 export type ReminderJob = {
@@ -23,6 +26,7 @@ export type ReminderJob = {
   company: string;
   followUpDate?: string | null;
   interviewDate?: string | null;
+  deadline?: string | null;
 };
 
 type SyncOpts = {
@@ -106,6 +110,26 @@ export function interviewTriggerAt(value: unknown, now: Date): Date | null {
       ? new Date(interviewAt.getTime() - 60 * 60 * 1000)
       : localDate(parts.y, parts.m, parts.d, 9, 0);
   return isPast(trigger, now) ? null : trigger;
+}
+
+/**
+ * The application deadline: 09:00 local the day before, so there is still time
+ * to apply; when that has passed, 09:00 on the day itself. Null once both have
+ * passed or without a valid YYYY-MM-DD deadline.
+ */
+export function deadlineTriggerAt(value: unknown, now: Date): { at: Date; sameDay: boolean } | null {
+  const parts = parseDateOnlyParts(value);
+  if (!parts) return null;
+  const dayBefore = localDate(parts.y, parts.m, parts.d - 1, 9, 0);
+  if (!isPast(dayBefore, now)) return { at: dayBefore, sameDay: false };
+  const sameDay = localDate(parts.y, parts.m, parts.d, 9, 0);
+  return isPast(sameDay, now) ? null : { at: sameDay, sameDay: true };
+}
+
+export function deadlineReminderBody(company: string, sameDay: boolean): string {
+  const trimmed = company.trim();
+  if (sameDay) return trimmed ? t('reminders.job.deadlineTodayWith', { company: trimmed }) : t('reminders.job.deadlineToday');
+  return trimmed ? t('reminders.job.deadlineTomorrowWith', { company: trimmed }) : t('reminders.job.deadlineTomorrow');
 }
 
 /**
@@ -206,7 +230,7 @@ async function upsertSlot(
     if (current?.id) await cancelIdentifier(current.id);
     if (map[job.id]) {
       delete map[job.id][kind];
-      if (!map[job.id].followUp && !map[job.id].interview) delete map[job.id];
+      if (SLOT_KINDS.every((slot) => !map[job.id][slot])) delete map[job.id];
       await saveMap(map);
     }
     return;
@@ -236,6 +260,8 @@ export async function syncJobReminder(job: ReminderJob, opts?: SyncOpts): Promis
       interviewTriggerAt(job.interviewDate, now),
       interviewBody,
     );
+    const deadline = deadlineTriggerAt(job.deadline, now);
+    await upsertSlot(job, 'deadline', deadline?.at ?? null, deadline ? deadlineReminderBody(job.company, deadline.sameDay) : '');
   } catch {
     // Never block save / list fetch.
   }
@@ -246,8 +272,10 @@ export async function cancelJobReminders(jobId: string): Promise<void> {
     const map = await loadMap();
     const slots = map[jobId];
     if (!slots) return;
-    if (slots.followUp?.id) await cancelIdentifier(slots.followUp.id);
-    if (slots.interview?.id) await cancelIdentifier(slots.interview.id);
+    for (const slot of SLOT_KINDS) {
+      const id = slots[slot]?.id;
+      if (id) await cancelIdentifier(id);
+    }
     delete map[jobId];
     await saveMap(map);
   } catch {
@@ -259,8 +287,10 @@ export async function cancelAllJobReminders(): Promise<void> {
   try {
     const map = await loadMap();
     for (const slots of Object.values(map)) {
-      if (slots.followUp?.id) await cancelIdentifier(slots.followUp.id);
-      if (slots.interview?.id) await cancelIdentifier(slots.interview.id);
+      for (const slot of SLOT_KINDS) {
+        const id = slots[slot]?.id;
+        if (id) await cancelIdentifier(id);
+      }
     }
     await saveMap({});
   } catch {

@@ -183,7 +183,10 @@
     "noSavedOpps": "Noch keine gespeicherten Stellen. Speichere oder füge zuerst eine unter Gespeicherte Stellen ein.",
     "tailorToA11y": "An {title} anpassen",
     "expired": "Abgelaufen",
-    "open": "Offen"
+    "open": "Offen",
+    "tailorListingTitle": "Anpassen an: {title}",
+    "tailorListingNote": "Sie haben diesen Lebenslauf für eine Stelle geöffnet. Das Anpassen erstellt eine neue Version aus Ihren bestätigten Angaben und verbraucht ein Dokumentguthaben; Sie werden vorher gefragt.",
+    "tailorListingButton": "An diese Stelle anpassen"
   },
   "letter": {
     "textFailed": "Es wurde nichts geändert. Dein Text ist noch da; versuche es erneut.",
@@ -193,5 +196,13 @@
     "textA11y": "Text des Anschreibens",
     "noCreditsNote": "Speichern und Exportieren verbrauchen keine Karriere-Credits.",
     "typedSaved": "Dein getippter Text wird zusammen mit dem neuen Layout gespeichert."
+  },
+  "forListing": {
+    "title": "Vorbereitung für: {title}",
+    "openedListing": "Die geöffnete Stellenanzeige",
+    "body": "Öffnen Sie unten einen Lebenslauf, um ihn an diese Stelle anzupassen, oder schreiben Sie ein Anschreiben dafür. Anpassen und Schreiben verbrauchen je ein Dokumentguthaben; Sie werden vorher gefragt.",
+    "write": "Anschreiben für diese Stelle verfassen",
+    "clear": "Nicht für diese Stelle",
+    "clearA11y": "Keine Dokumente mehr für diese Stelle vorbereiten"
   }
 }

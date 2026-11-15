@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Crypto from 'expo-crypto';
-import { useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +27,7 @@ import {
   type InterviewTarget,
 } from '../../../../src/lib/career/interviews';
 import { formatDay } from '../../../../src/lib/career-view';
+import { opportunityParam } from '../../../../src/lib/career/documents';
 import { colors } from '../../../../src/theme/colors';
 import { useT } from '../../../../src/i18n';
 import { RTL_FLIP } from '../../../../src/i18n/native';
@@ -46,7 +47,10 @@ export default function InterviewsScreen() {
   const list = useInterviews();
   const opportunities = useCareerOpportunities();
   const create = useCreateInterview();
-  const [opportunityId, setOpportunityId] = useState<string | null>(null);
+  const params = useLocalSearchParams<{ opportunityId?: string }>();
+  // A listing opened from elsewhere (?opportunityId=) is preselected, even before the saved list loads.
+  const [fromParam] = useState<string | null>(() => opportunityParam(params.opportunityId));
+  const [opportunityId, setOpportunityId] = useState<string | null>(fromParam);
   const [targetKind, setTargetKind] = useState<InterviewTarget['kind']>('listing');
   const [role, setRole] = useState('');
   const [stage, setStage] = useState<InterviewStage>('behavioral');
@@ -61,7 +65,7 @@ export default function InterviewsScreen() {
   const openings = opportunities.data?.items ?? [];
   const selected = openings.find((o) => o.id === opportunityId) ?? null;
 
-  const target: InterviewTarget = targetKind === 'listing' ? { kind: 'listing', opportunityId: selected?.id ?? null } : { kind: 'role', role };
+  const target: InterviewTarget = targetKind === 'listing' ? { kind: 'listing', opportunityId: selected?.id ?? (opportunityId !== null && opportunityId === fromParam ? fromParam : null) } : { kind: 'role', role };
   const prepared = startInterviewInput(target, stage, questionCount);
 
   const start = () => {
@@ -149,7 +153,11 @@ export default function InterviewsScreen() {
               icon="mic-outline"
               title={t('list.voiceTitle')}
               body={t('list.voiceBody')}
-              onPress={() => router.push('/(dashboard)/career/interviews/voice' as Href)}
+              onPress={() =>
+                router.push(
+                  (opportunityId ? `/(dashboard)/career/interviews/voice?opportunityId=${encodeURIComponent(opportunityId)}` : '/(dashboard)/career/interviews/voice') as Href,
+                )
+              }
             />
           ) : null}
         </View>
@@ -188,6 +196,9 @@ export default function InterviewsScreen() {
               );
             })}
           </View>
+          {targetKind === 'listing' && fromParam !== null && opportunityId === fromParam && !selected ? (
+            <Text className="text-stone-700 text-sm mb-3 leading-5">{t('voice.forListing')}</Text>
+          ) : null}
           {targetKind === 'role' ? (
             <Input
               label={t('list.roleLabel')}
@@ -265,9 +276,10 @@ export default function InterviewsScreen() {
           </Button>
         </View>
 
-        <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mt-6 mb-2" accessibilityRole="header">
+        <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mt-6 mb-1" accessibilityRole="header">
           {t('list.yourSessions')}
         </Text>
+        {sessions.length > 0 ? <Text className="text-stone-500 text-xs mb-2 leading-4">{t('list.sessionPickerHint')}</Text> : null}
         {sessions.length === 0 ? (
           <View className="bg-white border border-stone-100 rounded-2xl p-4">
             <Text className="font-semibold text-stone-800">{t('list.emptyTitle')}</Text>

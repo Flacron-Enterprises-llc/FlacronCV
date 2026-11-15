@@ -34,13 +34,19 @@ export interface ServiceRow {
   bookable: false;
 }
 
+/** The one provider the career service ships is described in every language (website ServicesPanel). */
+const KNOWN_PROVIDER = 'review-not-open';
+
 /** Every row is shown as not bookable, whatever the payload says, until booking opens server-side and in the app. */
 export function serviceRows(list: HumanServiceList | undefined): ServiceRow[] {
-  return (list?.items ?? []).map((item) => ({
-    id: item.id,
-    name: item.name,
-    scope: item.scope,
-    note: item.note || SERVICES_COPY.closedBody,
-    bookable: false,
-  }));
+  return (list?.items ?? []).map((item) => {
+    const known = item.id === KNOWN_PROVIDER;
+    return {
+      id: item.id,
+      name: known ? t('careerBusiness.scope.servicesReviewName') : item.name,
+      scope: known ? t('careerBusiness.scope.servicesReviewScope') : item.scope,
+      note: known ? t('careerBusiness.scope.servicesNote') : item.note || SERVICES_COPY.closedBody,
+      bookable: false,
+    };
+  });
 }

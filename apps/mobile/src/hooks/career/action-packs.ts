@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ActionPack, ActionPackList } from '../../../../../packages/career-api-client/src/types';
+import type { ActionPack, ActionPackEdit, ActionPackList } from '../../../../../packages/career-api-client/src/types';
 import { careerApi } from '../../lib/career-api';
 import { replacePack, sortPacks, withChecklistItem } from '../../lib/career/action-packs';
 import { useEntitled, useUid } from '../useCareer';
@@ -91,6 +91,39 @@ export function useRetryActionPackLetter(packId: string | undefined) {
       // A final failure removes the pack server-side and returns its credit.
       void queryClient.invalidateQueries({ queryKey: listKey(uid) });
       void queryClient.invalidateQueries({ queryKey: ['career', uid, 'usage'] });
+    },
+  });
+}
+
+function useWritePack() {
+  const queryClient = useQueryClient();
+  const uid = useUid();
+  return (pack: ActionPack) => {
+    queryClient.setQueryData(packKey(uid, pack.id), pack);
+    queryClient.setQueryData<ActionPackList>(listKey(uid), (current) => (current ? { ...current, items: replacePack(current.items, pack) } : current));
+  };
+}
+
+/** Saves the person's own edit of one component (free). */
+export function useUpdateActionPack(packId: string | undefined) {
+  const write = useWritePack();
+  return useMutation({
+    mutationFn: (edit: ActionPackEdit) => careerApi.updateActionPack(packId as string, edit),
+    onSuccess: (pack) => write(pack),
+  });
+}
+
+/** Copies the tailored résumé and letter into Documents (free; again replaces the copies). */
+export function useSaveActionPackDocuments(packId: string | undefined) {
+  const write = useWritePack();
+  const queryClient = useQueryClient();
+  const uid = useUid();
+  return useMutation({
+    mutationFn: () => careerApi.saveActionPackDocuments(packId as string),
+    onSuccess: (result) => {
+      write(result.actionPack);
+      void queryClient.invalidateQueries({ queryKey: ['career', uid, 'resumes'] });
+      void queryClient.invalidateQueries({ queryKey: ['career', uid, 'writing'] });
     },
   });
 }

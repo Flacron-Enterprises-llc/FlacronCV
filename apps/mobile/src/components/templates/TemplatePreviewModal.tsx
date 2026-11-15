@@ -44,6 +44,7 @@ export function TemplatePreviewModal({
   closeLabel,
 }: TemplatePreviewModalProps) {
   const t = useT('templates');
+  const tPlans = useT('plans');
   const [imageState, setImageState] = useState<'loading' | 'ready' | 'error'>('loading');
   const uri = template ? template.previewImages?.[0] || template.thumbnailURL : undefined;
 
@@ -112,9 +113,7 @@ export function TemplatePreviewModal({
           </View>
           <Text className="text-sm text-stone-500 mt-1">
             {locked
-              ? PAID_UPGRADES_ENABLED
-                ? t('preview.lockedUpgrade', { tier })
-                : lockedMessage ?? t('preview.lockedShort', { tier })
+              ? lockedMessage ?? (PAID_UPGRADES_ENABLED ? t('preview.lockedUpgrade', { tier }) : t('preview.lockedShort', { tier }))
               : t('preview.unlocked')}
           </Text>
         </View>
@@ -147,7 +146,7 @@ export function TemplatePreviewModal({
           {locked ? (
             PAID_UPGRADES_ENABLED && onUpgrade ? (
               <Button variant="primary" fullWidth onPress={onUpgrade}>
-                {t('preview.upgradeTo', { tier })}
+                {tPlans('upgrade.seePlans')}
               </Button>
             ) : null
           ) : (

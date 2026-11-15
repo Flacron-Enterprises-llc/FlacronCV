@@ -19,7 +19,8 @@
     "coverLetters": "Anschreiben",
     "downloads": "Exporte",
     "thisMonth": "Diesen Monat",
-    "usedThisMonth": "Diesen Monat genutzt"
+    "usedThisMonth": "Diesen Monat genutzt",
+    "unlimited": "Unbegrenzt"
   },
   "quickActions": {
     "title": "Schnellaktionen",
@@ -42,5 +43,28 @@
     "title": "Auf Pro upgraden",
     "body": "Schalte {cvs} Lebensläufe, {credits} Engine-Credits und mehr frei",
     "cta": "Jetzt upgraden — {price}/Monat"
+  },
+  "greeting": {
+    "named": "Willkommen zurück, {name}!",
+    "plain": "Willkommen zurück!",
+    "firstNamed": "Willkommen, {name}!",
+    "first": "Willkommen bei FlacronCV!",
+    "subtitle": "So steht dein Konto heute da."
+  },
+  "jobs": {
+    "title": "Bewerbungs-Tracker",
+    "error": "Deine Bewerbungen konnten nicht geladen werden.",
+    "empty": "Noch keine Bewerbungen erfasst. Füge die Stellen hinzu, auf die du dich bewirbst, um jede Phase an einem Ort zu haben.",
+    "open": "Bewerbungs-Tracker öffnen",
+    "status": {
+      "saved": "Gemerkt",
+      "applied": "Beworben",
+      "interviewing": "Im Gespräch",
+      "offered": "Angebot erhalten"
+    }
+  },
+  "upgradePlans": {
+    "title": "Hol mehr aus FlacronCV heraus",
+    "cta": "Tarife vergleichen"
   }
 }

@@ -20,12 +20,14 @@ import { useRegenerateParagraph } from '../../../src/hooks/useCoverLetterAI';
 import { useExportCoverLetter } from '../../../src/hooks/useExport';
 import { useCoverLetterStore } from '../../../src/store/cover-letter-store';
 import { useAuthStore } from '../../../src/store/auth-store';
-import { canAccessTemplate, canExport, canUseAI, effectivePlanForCopy } from '../../../src/lib/entitlements';
+import { canAccessTemplate, canExport, canUseAI, planForDisplay, sharedPlanLimits } from '../../../src/lib/entitlements';
 import {
   aiCreditsExhaustedMessage,
   exportLimitReachedMessage,
+  limitPrompt,
   lockedTemplateMessage,
   lockedTemplateTitle,
+  showUpgradePrompt,
   upgradeAlertButtons,
 } from '../../../src/config/paid-upgrades';
 import { colors } from '../../../src/theme/colors';
@@ -158,12 +160,12 @@ export default function CoverLetterEditorScreen() {
     confirmUnsavedLeave(() => navigation.dispatch(data.action));
   });
 
-  const goToBilling = () => router.push('/(dashboard)/settings/billing');
+  const goToBilling = () => router.push('/(dashboard)/settings/plans');
   const richLocked = hasRichFormatting(baseHtml) && !plainUnlocked;
 
   const ensureAICredits = (): boolean => {
     if (!canUseAI(user?.subscription, user?.usage?.aiCreditsUsed ?? 0, user?.usage?.aiCreditsLimit)) {
-      Alert.alert(tl('ai.creditsExhausted'), aiCreditsExhaustedMessage('coverLetter'), upgradeAlertButtons(goToBilling));
+      Alert.alert(tl('ai.creditsExhausted'), aiCreditsExhaustedMessage('coverLetter', user ? planForDisplay(user.subscription) : undefined), upgradeAlertButtons(goToBilling));
       return false;
     }
     return true;
@@ -206,7 +208,12 @@ export default function CoverLetterEditorScreen() {
     const exports = user?.usage?.exportsThisMonth ?? 0;
 
     if (!canExport(user?.subscription, exports)) {
-      Alert.alert(tl('editor.exportLimitTitle'), exportLimitReachedMessage(), upgradeAlertButtons(goToBilling));
+      Alert.alert(tl('editor.exportLimitTitle'), exportLimitReachedMessage(planForDisplay(user?.subscription)), upgradeAlertButtons(goToBilling));
+      return;
+    }
+    // DOCX starts on Starter. Only a loaded account is pre-checked; the server decides otherwise.
+    if (format === 'docx' && user && !sharedPlanLimits(user.subscription).docxExport) {
+      showUpgradePrompt(limitPrompt('docx', planForDisplay(user.subscription)), goToBilling);
       return;
     }
     // The server renders the saved letter, so pending edits go first.
@@ -350,7 +357,7 @@ export default function CoverLetterEditorScreen() {
     if (!canAccessTemplate(user?.subscription, template.tier)) {
       Alert.alert(
         lockedTemplateTitle(template.tier),
-        lockedTemplateMessage(template.name, template.tier, effectivePlanForCopy(user?.subscription)),
+        lockedTemplateMessage(template.name, template.tier, planForDisplay(user?.subscription)),
         upgradeAlertButtons(() => {
           setTemplateOpen(false);
           goToBilling();

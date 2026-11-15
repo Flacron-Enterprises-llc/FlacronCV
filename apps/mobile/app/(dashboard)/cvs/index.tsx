@@ -19,7 +19,7 @@ import { useCurrentUser } from '../../../src/hooks/useUser';
 import { CV } from '../../../src/types/cv.types';
 import { toDate } from '../../../src/lib/utils';
 import { formatDate, hasKey, useT } from '../../../src/i18n';
-import { canCreateCV, effectivePlanForCopy } from '../../../src/lib/entitlements';
+import { canCreateCV, planForDisplay } from '../../../src/lib/entitlements';
 import { isLimitRejection, requestFailureMessage } from '../../../src/lib/api-errors';
 import { alertIfUnverifiedEmail } from '../../../src/lib/email-verification';
 import {
@@ -69,8 +69,8 @@ export default function CVsScreen() {
     if (typeof created === 'number' && !canCreateCV(user?.subscription, created)) {
       Alert.alert(
         t('limitTitle'),
-        cvLimitReachedMessage(effectivePlanForCopy(user?.subscription)),
-        upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+        cvLimitReachedMessage(planForDisplay(user?.subscription)),
+        upgradeAlertButtons(() => router.push('/(dashboard)/settings/plans')),
       );
       return;
     }
@@ -82,8 +82,8 @@ export default function CVsScreen() {
         if (isLimitRejection(err)) {
           Alert.alert(
             t('limitTitle'),
-            cvLimitReachedMessage(effectivePlanForCopy(user?.subscription)),
-            upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+            cvLimitReachedMessage(planForDisplay(user?.subscription)),
+            upgradeAlertButtons(() => router.push('/(dashboard)/settings/plans')),
           );
           return;
         }

@@ -5,6 +5,7 @@ import React, { useRef, useState } from 'react';
 import { RefreshControl, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CareerHeader, Pill } from '../../../../src/components/career/CareerHeader';
+import { ChargeNotice } from '../../../../src/components/career/plans/PlanBits';
 import { Button } from '../../../../src/components/ui/Button';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
@@ -19,6 +20,7 @@ import {
   buildSkillReportInput,
   clampTimeBudget,
   EMPTY_SKILL_REPORT_FORM,
+  reportBalanceText,
   reportMeta,
   skillReportErrorMessage,
   skillReportSignature,
@@ -53,6 +55,7 @@ export default function LearningScreen() {
   const dirty = open && (form.targetRole.trim() !== '' || form.targetIndustry.trim() !== '');
   useLeaveGuard(dirty);
 
+  const remaining = creditsLeft(list.data?.skillReport);
   const featureOff = access.data?.enabled === true && access.data.features?.skillReports === false;
   const set = (patch: Partial<SkillReportForm>) => {
     setForm((f) => ({ ...f, ...patch }));
@@ -169,6 +172,13 @@ export default function LearningScreen() {
         <Text className="text-stone-500 text-sm leading-5 mb-4">
           {t('learning.createCost')}
         </Text>
+        <ChargeNotice
+          operation={t('brief.charge_operation_value')}
+          required={t('brief.charge_required_value', { count: 1 })}
+          balance={reportBalanceText(remaining)}
+          noneLeft={remaining === 0 ? t('learning.errors.quota') : null}
+          footnote={t('brief.charge_contents')}
+        />
         <Input
           label={t('learning.targetRole')}
           value={form.targetRole}
@@ -236,7 +246,7 @@ export default function LearningScreen() {
             </Button>
           </View>
           <View className="flex-1">
-            <Button fullWidth onPress={onCreate} loading={create.isPending} disabled={form.targetRole.trim() === ''}>
+            <Button fullWidth onPress={onCreate} loading={create.isPending} disabled={form.targetRole.trim() === '' || remaining === 0}>
               {t('learning.create')}
             </Button>
           </View>

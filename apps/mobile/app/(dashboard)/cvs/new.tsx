@@ -18,7 +18,7 @@ import { useAuthStore } from '../../../src/store/auth-store';
 import { useCVStore } from '../../../src/store/cv-store';
 import { Template } from '../../../src/types/template.types';
 import { TemplateCategory, CVStatus, FontSize, Spacing } from '../../../src/types/enums';
-import { canAccessTemplate, canCreateCV, effectivePlanForCopy } from '../../../src/lib/entitlements';
+import { canAccessTemplate, canCreateCV, planForDisplay } from '../../../src/lib/entitlements';
 import { isLimitRejection, requestFailureMessage } from '../../../src/lib/api-errors';
 import { alertIfUnverifiedEmail } from '../../../src/lib/email-verification';
 import {
@@ -75,12 +75,12 @@ export default function NewCVScreen() {
   ]);
 
   const handleSelectTemplate = (template: Template) => {
-    const plan = effectivePlanForCopy(subscription);
+    const plan = planForDisplay(subscription);
     if (!canAccessTemplate(subscription, template.tier)) {
       Alert.alert(
         lockedTemplateTitle(template.tier),
         lockedTemplateMessage(template.name, template.tier, plan),
-        upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+        upgradeAlertButtons(() => router.push('/(dashboard)/settings/plans')),
       );
       return;
     }
@@ -106,8 +106,8 @@ export default function NewCVScreen() {
     if (!canCreateCV(subscription, user.usage.cvsCreated)) {
       Alert.alert(
         t('limitTitle'),
-        cvLimitReachedMessage(effectivePlanForCopy(subscription)),
-        upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+        cvLimitReachedMessage(planForDisplay(subscription)),
+        upgradeAlertButtons(() => router.push('/(dashboard)/settings/plans')),
       );
       return;
     }
@@ -124,7 +124,7 @@ export default function NewCVScreen() {
           lockedTemplateMessage(
             selectedTemplate.name,
             selectedTemplate.tier,
-            effectivePlanForCopy(subscription),
+            planForDisplay(subscription),
           ),
         );
         return;
@@ -158,8 +158,8 @@ export default function NewCVScreen() {
       if (isLimitRejection(err)) {
         Alert.alert(
           t('limitTitle'),
-          cvLimitReachedMessage(effectivePlanForCopy(subscription)),
-          upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+          cvLimitReachedMessage(planForDisplay(subscription)),
+          upgradeAlertButtons(() => router.push('/(dashboard)/settings/plans')),
         );
         return;
       }

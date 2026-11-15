@@ -17,7 +17,8 @@
     "applied": "Fecha de solicitud",
     "company": "Empresa (A–Z)",
     "position": "Puesto (A–Z)",
-    "status": "Estado"
+    "status": "Estado",
+    "deadline": "Fecha límite (más próxima)"
   },
   "list": {
     "title": "Seguimiento de empleos",
@@ -147,5 +148,73 @@
     "rejected": "No seleccionado",
     "withdrawn": "Me retiré",
     "no_response": "Sin respuesta"
+  },
+  "workspace": {
+    "outcome_label": "Cómo terminó",
+    "outcome_none": "Aún sin decidir",
+    "outcome_help": "Se guarda como indicado por ti. Nunca se completa automáticamente.",
+    "refreeze": "Usar la versión actual",
+    "refrozen": "Versión actual guardada con esta candidatura",
+    "show_letter": "Mostrar la carta",
+    "hide_letter": "Ocultar la carta",
+    "letter_truncated": "(La carta era demasiado larga para guardarla completa; se muestra el comienzo.)",
+    "frozen_help": "Los cambios posteriores en tu CV o carta no alteran lo registrado aquí.",
+    "description_from_opportunity": "Guardada desde la oferta.",
+    "description_pasted": "Pegada por ti.",
+    "description_ph": "Pega la descripción del puesto para conservarla aunque se retire la oferta.",
+    "answer": {
+      "question_n": "Pregunta {n}",
+      "question_ph": "Pregunta del formulario",
+      "answer_n": "Respuesta {n}",
+      "answer_ph": "Tu respuesta",
+      "remove": "Quitar la pregunta {n}",
+      "add": "Añadir pregunta"
+    },
+    "drafts": {
+      "referral_request": {
+        "button": "Redactar solicitud de referencia",
+        "title": "Borrador de solicitud de referencia",
+        "intro": "Crea un borrador pidiendo a un contacto que te recomiende para {position} en {company}."
+      },
+      "thank_you": {
+        "button": "Redactar nota de agradecimiento",
+        "title": "Borrador de agradecimiento",
+        "intro": "Crea un borrador de agradecimiento por tu entrevista para {position} en {company}."
+      },
+      "uses_allowance": "Usa un borrador de IA de tu plan. Tú lo revisas y lo envías; no se envía nada por ti.",
+      "no_opportunity": "Esta candidatura no está vinculada a una oferta guardada, así que el borrador usa solo la empresa, el puesto y el contacto que indicaste aquí. Revísalo antes de enviarlo.",
+      "problem": {
+        "quota": "No te quedan borradores de IA en este periodo.",
+        "upgrade": "Tu plan no incluye este borrador.",
+        "unavailable": "La redacción con IA no está disponible ahora. No se ha cobrado nada.",
+        "unsupported": "Este tipo de borrador aún no está disponible.",
+        "missing": "No se encontró la oferta vinculada.",
+        "failed": "No se pudo crear el borrador. Inténtalo de nuevo.",
+        "missing_target": "Añade primero la empresa o el puesto a esta candidatura para que el borrador sepa a quién va dirigido. No se ha cobrado nada."
+      },
+      "see_plans": "Ver planes",
+      "retry": "Reintentar",
+      "create": "Crear borrador",
+      "review_before_sending": "Revisa y edita este borrador antes de enviarlo.",
+      "draft_label": "Texto del borrador",
+      "copy": "Copiar",
+      "copied": "Borrador copiado",
+      "copy_failed": "No se pudo copiar. Selecciona el texto y cópialo manualmente.",
+      "edit_in_documents": "Editar en Documentos",
+      "share": "Compartir borrador"
+    },
+    "section": {
+      "documents": "Documentos utilizados",
+      "description": "Descripción del puesto",
+      "form_answers": "Respuestas del formulario",
+      "outcome": "Resultado"
+    },
+    "calendar": {
+      "follow_up": {
+        "button": "Añadir el seguimiento al calendario",
+        "summary": "Seguimiento: {position} en {company}",
+        "description": "Haz seguimiento de tu candidatura para {position} en {company}."
+      }
+    }
   }
 }

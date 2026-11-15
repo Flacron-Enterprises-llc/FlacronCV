@@ -3,6 +3,7 @@ import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
 import { t } from '../../i18n';
 import { deadlineCalendarFile, interviewCalendarFile } from '../../lib/job-tracker';
+import { followUpCalendarFile } from '../../lib/job-workspace';
 import type { JobApplication } from '../../types/job.types';
 
 /**
@@ -41,4 +42,11 @@ export function shareDeadlineIcs(
   job: Pick<JobApplication, 'id' | 'company' | 'position' | 'jobUrl' | 'deadline'>,
 ): Promise<void> {
   return shareIcsFile(deadlineCalendarFile(job), t('jobs.form.addDeadlineToCalendar'));
+}
+
+/** "Add follow-up to calendar" — an all-day event on the follow-up date (website parity). */
+export function shareFollowUpIcs(
+  job: Pick<JobApplication, 'id' | 'company' | 'position' | 'jobUrl' | 'followUpDate'>,
+): Promise<void> {
+  return shareIcsFile(followUpCalendarFile(job), t('jobs.workspace.calendar.follow_up.button'));
 }

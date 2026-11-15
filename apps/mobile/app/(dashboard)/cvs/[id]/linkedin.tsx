@@ -14,7 +14,7 @@ import { useCV, useCVSections } from '../../../../src/hooks/useCVs';
 import { requestFailureMessage } from '../../../../src/lib/api-errors';
 import { alertIfUnverifiedEmail } from '../../../../src/lib/email-verification';
 import { engineFailureMessage } from '../../../../src/lib/engine-errors';
-import { canUseAI } from '../../../../src/lib/entitlements';
+import { canUseAI, planForDisplay } from '../../../../src/lib/entitlements';
 import {
   LINKEDIN_TARGET_ROLE_MAX,
   type LinkedInResult,
@@ -91,8 +91,8 @@ export default function LinkedInScreen() {
     if (!canUseAI(user.subscription, user.usage?.aiCreditsUsed ?? 0, user.usage?.aiCreditsLimit)) {
       Alert.alert(
         t('shared.creditsExhaustedTitle'),
-        aiCreditsExhaustedMessage('summary'),
-        upgradeAlertButtons(() => router.push('/(dashboard)/settings/billing')),
+        aiCreditsExhaustedMessage('summary', planForDisplay(user.subscription)),
+        upgradeAlertButtons(() => router.push('/(dashboard)/settings/plans')),
       );
       return;
     }

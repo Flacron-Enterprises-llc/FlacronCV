@@ -3,17 +3,20 @@ import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CareerHeader, Pill } from '../../../src/components/career/CareerHeader';
+import { Choice, Note } from '../../../src/components/career/plans/PlanBits';
 import { Button } from '../../../src/components/ui/Button';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { Input } from '../../../src/components/ui/Input';
 import { SkeletonCard } from '../../../src/components/ui/Skeleton';
-import { useMaintenance, useMaintenanceActions } from '../../../src/hooks/career/maintenance';
-import { useCareerAccess } from '../../../src/hooks/useCareer';
+import { useEvidenceList } from '../../../src/hooks/career/evidence';
+import { useConfirmPromotion, useMaintenance, useMaintenanceActions } from '../../../src/hooks/career/maintenance';
+import { useCareerAccess, useCareerFacts } from '../../../src/hooks/useCareer';
 import { useLeaveGuard } from '../../../src/hooks/useLeaveGuard';
 import {
   achievementDraft,
   checkAchievement,
+  checkPromotion,
   checkCredentialDraft,
   checkGoal,
   credentialDraft,
@@ -22,24 +25,32 @@ import {
   EMPTY_ACHIEVEMENT,
   EMPTY_CREDENTIAL,
   EMPTY_GOAL,
+  EMPTY_PROMOTION,
   errorField,
+  factOptionLabel,
   formatExpiry,
   goalDraft,
   goalStatusLabel,
   isBlankDraft,
   linkLabels,
+  linksOf,
   maintenanceErrorMessage,
   MAX_DETAILS,
   MAX_SHORT,
   MAX_TITLE,
+  NO_LINKS,
   reminderText,
+  withLinks,
   type AchievementDraft,
   type CredentialDraft,
   type GoalDraft,
+  type ItemLinks,
+  type PromotionDraft,
 } from '../../../src/lib/career/maintenance';
 import { careerErrorMessage } from '../../../src/lib/career-view';
 import { colors } from '../../../src/theme/colors';
 import { useT } from '../../../src/i18n';
+import type { MaintenancePromotionGoal } from '../../../../../packages/career-api-client/src/types';
 
 type Section = 'achievement' | 'goal' | 'credential';
 type Errors = Record<string, string | undefined>;
@@ -63,9 +74,10 @@ const dateOnly = (text: string) => text.replace(/[^0-9-]/g, '');
  * Career maintenance, as on the website (career/maintenance): achievements,
  * promotion goals and credentials, each editable and removable, plus the
  * reminder list the server derives from credential expiry and review dates
- * (90 days ahead). All free. A promotion goal is not a confirmed fact;
- * confirming a promotion (which changes the profile) and linking entries to
- * facts or evidence stay on the website for now. Impossible dates are refused.
+ * (90 days ahead). All free. A promotion goal is not a confirmed fact: only
+ * the explicit "I got this promotion" confirmation changes the profile.
+ * Achievements and credentials can be linked to a profile fact or an evidence
+ * item. Impossible dates are refused.
  */
 export default function CareerMaintenanceScreen() {
   const t = useT('careerPlans');
@@ -78,8 +90,42 @@ export default function CareerMaintenanceScreen() {
   const [credential, setCredential] = useState<Editing<CredentialDraft>>({ id: null, draft: EMPTY_CREDENTIAL });
   const [errors, setErrors] = useState<Record<Section, Errors>>({ achievement: {}, goal: {}, credential: {} });
   const [notice, setNotice] = useState<Notice>(null);
+  const [achLinks, setAchLinks] = useState<ItemLinks>(NO_LINKS);
+  const [credLinks, setCredLinks] = useState<ItemLinks>(NO_LINKS);
+  // "I got this promotion": the goal being confirmed and how the profile changes.
+  const [confirming, setConfirming] = useState<MaintenancePromotionGoal | null>(null);
+  const [promotion, setPromotion] = useState<PromotionDraft>(EMPTY_PROMOTION);
+  const [promotionError, setPromotionError] = useState<string | null>(null);
+  const confirmPromotion = useConfirmPromotion();
+  const facts = useCareerFacts();
+  const evidence = useEvidenceList();
+  const ts = useT('careerPlans.scope');
+  const factOptions = [{ value: '', label: ts('scenario_no_link') }, ...(facts.data?.items ?? []).map((f) => ({ value: f.id, label: factOptionLabel(f as never) }))];
+  const evidenceOptions = [{ value: '', label: ts('scenario_no_link') }, ...(evidence.data?.items ?? []).map((e) => ({ value: e.id, label: e.title }))];
+  const experienceOptions = [
+    { value: '', label: t('promotion.newRole') },
+    ...(facts.data?.items ?? []).filter((f) => f.factType === 'experience').map((f) => ({ value: f.id, label: factOptionLabel(f as never) })),
+  ];
 
-  const busy = Object.values(actions).some((m) => m.isPending);
+  const onConfirmPromotion = () => {
+    if (!confirming) return;
+    const check = checkPromotion(promotion);
+    if (!check.ok) return setPromotionError(check.message);
+    setPromotionError(null);
+    confirmPromotion.mutate(
+      { id: confirming.id, body: check.input },
+      {
+        onSuccess: () => {
+          setConfirming(null);
+          setPromotion(EMPTY_PROMOTION);
+          setNotice({ section: 'goal', tone: 'success', text: ts('promotion_confirmed') });
+        },
+        onError: (error) => setPromotionError(maintenanceErrorMessage(error)),
+      },
+    );
+  };
+
+  const busy = Object.values(actions).some((m) => m.isPending) || confirmPromotion.isPending;
   useLeaveGuard(
     achievement.id !== null || goal.id !== null || credential.id !== null ||
       !isBlankDraft(achievement.draft) || !isBlankDraft(goal.draft) || !isBlankDraft(credential.draft),
@@ -118,10 +164,14 @@ export default function CareerMaintenanceScreen() {
     setNotice(null);
     const check = checkAchievement(achievement.draft);
     if (!check.ok) return setSectionErrors('achievement', check.errors);
-    const reset = () => setAchievement({ id: null, draft: EMPTY_ACHIEVEMENT });
+    const reset = () => {
+      setAchievement({ id: null, draft: EMPTY_ACHIEVEMENT });
+      setAchLinks(NO_LINKS);
+    };
     const done = succeed('achievement', achievement.id ? t('maintenance.changesSaved') : t('maintenance.achievementSaved'), reset);
-    if (achievement.id) actions.updateAchievement.mutate({ id: achievement.id, patch: check.input }, { onSuccess: done, onError: fail('achievement') });
-    else actions.addAchievement.mutate(check.input, { onSuccess: done, onError: fail('achievement') });
+    const input = withLinks(check.input, achLinks);
+    if (achievement.id) actions.updateAchievement.mutate({ id: achievement.id, patch: input }, { onSuccess: done, onError: fail('achievement') });
+    else actions.addAchievement.mutate(input, { onSuccess: done, onError: fail('achievement') });
   };
 
   const onSaveGoal = () => {
@@ -138,10 +188,14 @@ export default function CareerMaintenanceScreen() {
     setNotice(null);
     const check = checkCredentialDraft(credential.draft);
     if (!check.ok) return setSectionErrors('credential', check.errors);
-    const reset = () => setCredential({ id: null, draft: EMPTY_CREDENTIAL });
+    const reset = () => {
+      setCredential({ id: null, draft: EMPTY_CREDENTIAL });
+      setCredLinks(NO_LINKS);
+    };
     const done = succeed('credential', credential.id ? t('maintenance.changesSaved') : t('maintenance.credentialSaved'), reset);
-    if (credential.id) actions.updateCredential.mutate({ id: credential.id, patch: check.input }, { onSuccess: done, onError: fail('credential') });
-    else actions.addCredential.mutate(check.input, { onSuccess: done, onError: fail('credential') });
+    const input = withLinks(check.input, credLinks);
+    if (credential.id) actions.updateCredential.mutate({ id: credential.id, patch: input }, { onSuccess: done, onError: fail('credential') });
+    else actions.addCredential.mutate(input, { onSuccess: done, onError: fail('credential') });
   };
 
   const onDropGoal = (id: string) => {
@@ -207,6 +261,7 @@ export default function CareerMaintenanceScreen() {
                 setNotice(null);
                 setSectionErrors('achievement', {});
                 setAchievement({ id: a.id, draft: achievementDraft(a) });
+                setAchLinks(linksOf(a));
               }}
               onDelete={() =>
                 confirmDelete('achievement', t('maintenance.deleteAchievementTitle'), t('maintenance.deleteBody', { name: a.title }), (opts) =>
@@ -259,12 +314,14 @@ export default function CareerMaintenanceScreen() {
             error={errors.achievement.achievedOn}
             editable={!busy}
           />
+          <Choice label={ts('link_fact')} value={achLinks.factId} options={factOptions} onChange={(factId) => setAchLinks((l) => ({ ...l, factId }))} disabled={busy} />
+          <Choice label={ts('link_evidence')} value={achLinks.evidenceId} options={evidenceOptions} onChange={(evidenceId) => setAchLinks((l) => ({ ...l, evidenceId }))} disabled={busy} />
           <FormButtons
             saveLabel={achievement.id ? t('maintenance.saveChanges') : t('maintenance.addAchievement')}
             onSave={onSaveAchievement}
             loading={actions.addAchievement.isPending || actions.updateAchievement.isPending}
             disabled={busy || achievement.draft.title.trim() === ''}
-            onCancel={achievement.id ? () => { setAchievement({ id: null, draft: EMPTY_ACHIEVEMENT }); setSectionErrors('achievement', {}); } : undefined}
+            onCancel={achievement.id ? () => { setAchievement({ id: null, draft: EMPTY_ACHIEVEMENT }); setAchLinks(NO_LINKS); setSectionErrors('achievement', {}); } : undefined}
           />
           {errors.achievement.form ? <NoticeText tone="error" text={errors.achievement.form} /> : null}
           {sectionNotice('achievement')}
@@ -286,9 +343,20 @@ export default function CareerMaintenanceScreen() {
                 setSectionErrors('goal', {});
                 setGoal({ id: g.id, draft: goalDraft(g) });
               }}
-              extra={
+              extras={
                 g.status === 'open'
-                  ? { label: t('maintenance.goalDrop'), onPress: () => onDropGoal(g.id) }
+                  ? [
+                      {
+                        label: ts('promotion_got_it'),
+                        onPress: () => {
+                          setNotice(null);
+                          setPromotionError(null);
+                          setPromotion(EMPTY_PROMOTION);
+                          setConfirming(g);
+                        },
+                      },
+                      { label: t('maintenance.goalDrop'), onPress: () => onDropGoal(g.id) },
+                    ]
                   : undefined
               }
               onDelete={() =>
@@ -304,8 +372,54 @@ export default function CareerMaintenanceScreen() {
               }
             />
           ))}
-          {data.promotionGoals.some((g) => g.status === 'open') ? (
-            <Text className="text-stone-400 text-xs mt-2">{t('maintenance.confirmOnWebsite')}</Text>
+          {confirming ? (
+            <View className="bg-brand-50 border border-brand-100 rounded-xl p-3 mt-3">
+              <Text className="text-base font-bold text-stone-900" accessibilityRole="header">
+                {ts('promotion_confirm_title')}
+              </Text>
+              <Text className="text-sm text-stone-600 mt-1 mb-3 leading-5">{ts('promotion_confirm_body', { title: confirming.desiredTitle })}</Text>
+              <Choice
+                label={ts('promotion_update_role')}
+                value={promotion.factId}
+                options={experienceOptions}
+                onChange={(factId) => {
+                  setPromotion((p) => ({ ...p, factId }));
+                  setPromotionError(null);
+                }}
+                disabled={confirmPromotion.isPending}
+              />
+              {promotion.factId ? null : (
+                <>
+                  <Input
+                    label={ts('promotion_company')}
+                    value={promotion.company}
+                    onChangeText={(company) => {
+                      setPromotion((p) => ({ ...p, company }));
+                      setPromotionError(null);
+                    }}
+                    maxLength={MAX_SHORT}
+                    editable={!confirmPromotion.isPending}
+                  />
+                  <Input
+                    label={ts('promotion_start')}
+                    value={promotion.startDate}
+                    onChangeText={(text) => setPromotion((p) => ({ ...p, startDate: dateOnly(text) }))}
+                    placeholder={t('maintenance.datePlaceholder')}
+                    {...dateInputProps}
+                    editable={!confirmPromotion.isPending}
+                  />
+                </>
+              )}
+              {promotionError ? <Note tone="error" text={promotionError} /> : null}
+              <View className="gap-2">
+                <Button onPress={onConfirmPromotion} loading={confirmPromotion.isPending} fullWidth>
+                  {ts('promotion_confirm_go')}
+                </Button>
+                <Button variant="outline" onPress={() => setConfirming(null)} disabled={confirmPromotion.isPending} fullWidth>
+                  {tc('cancel')}
+                </Button>
+              </View>
+            </View>
           ) : null}
           <FormHeading text={goal.id ? t('maintenance.editGoal') : t('maintenance.goal')} />
           <Input
@@ -358,6 +472,7 @@ export default function CareerMaintenanceScreen() {
                 setNotice(null);
                 setSectionErrors('credential', {});
                 setCredential({ id: c.id, draft: credentialDraft(c) });
+                setCredLinks(linksOf(c));
               }}
               onDelete={() =>
                 confirmDelete('credential', t('maintenance.deleteCredentialTitle'), t('maintenance.deleteCredentialBody', { name: c.name }), (opts) =>
@@ -433,16 +548,19 @@ export default function CareerMaintenanceScreen() {
             error={errors.credential.region}
             editable={!busy}
           />
+          <Choice label={ts('link_fact')} value={credLinks.factId} options={factOptions} onChange={(factId) => setCredLinks((l) => ({ ...l, factId }))} disabled={busy} />
+          <Choice label={ts('link_evidence')} value={credLinks.evidenceId} options={evidenceOptions} onChange={(evidenceId) => setCredLinks((l) => ({ ...l, evidenceId }))} disabled={busy} />
           <FormButtons
             saveLabel={credential.id ? t('maintenance.saveChanges') : t('maintenance.saveCredential')}
             onSave={onSaveCredential}
             loading={actions.addCredential.isPending || actions.updateCredential.isPending}
             disabled={busy || credential.draft.name.trim() === '' || credential.draft.expiresOn.trim() === ''}
-            onCancel={credential.id ? () => { setCredential({ id: null, draft: EMPTY_CREDENTIAL }); setSectionErrors('credential', {}); } : undefined}
+            onCancel={credential.id ? () => { setCredential({ id: null, draft: EMPTY_CREDENTIAL }); setCredLinks(NO_LINKS); setSectionErrors('credential', {}); } : undefined}
           />
           {errors.credential.form ? <NoticeText tone="error" text={errors.credential.form} /> : null}
           {sectionNotice('credential')}
         </Card>
+        <Text className="text-stone-500 text-xs leading-4">{ts('maintenance_free_note')}</Text>
       </ScrollView>
     );
   }
@@ -476,7 +594,7 @@ function ItemRow({
   disabled,
   onEdit,
   onDelete,
-  extra,
+  extras,
 }: {
   title: string;
   lines: string[];
@@ -485,7 +603,7 @@ function ItemRow({
   disabled: boolean;
   onEdit?: () => void;
   onDelete: () => void;
-  extra?: { label: string; onPress: () => void };
+  extras?: { label: string; onPress: () => void }[];
 }) {
   const t = useT('careerPlans');
   const tc = useT('common');
@@ -501,11 +619,11 @@ function ItemRow({
         </Text>
       ))}
       <View className="flex-row flex-wrap justify-end gap-2 mt-1">
-        {extra ? (
-          <Button size="sm" variant="ghost" className="min-h-[44px]" onPress={extra.onPress} disabled={disabled} accessibilityLabel={`${extra.label}: ${title}`}>
+        {(extras ?? []).map((extra) => (
+          <Button key={extra.label} size="sm" variant="ghost" className="min-h-[44px]" onPress={extra.onPress} disabled={disabled} accessibilityLabel={`${extra.label}: ${title}`}>
             {extra.label}
           </Button>
-        ) : null}
+        ))}
         {onEdit ? (
           <Button size="sm" variant="outline" className="min-h-[44px]" onPress={onEdit} disabled={disabled || editing} accessibilityLabel={t('maintenance.editA11y', { name: title })}>
             {t('maintenance.edit')}

@@ -31,6 +31,7 @@ import {
   type FactType,
 } from '../../../../src/lib/career/profile';
 import { careerErrorMessage, formatDay } from '../../../../src/lib/career-view';
+import { achievementNeedsNumber } from '../../../../src/lib/career/facts-assist';
 import { hasKey, useT } from '../../../../src/i18n';
 import { colors } from '../../../../src/theme/colors';
 import { fieldErrors } from '../../../../../../packages/career-api-client/src/client';
@@ -214,7 +215,7 @@ export default function CareerFactScreen() {
                 </View>
               );
             } else if (spec.kind === 'ref') {
-              const options: Array<{ id: string; title: string }> = [
+              const options: { id: string; title: string }[] = [
                 { id: '', title: t('fact.noLinkedRole') },
                 ...experiences.map((role) => ({ id: role.id, title: factTitle('experience', role.value) })),
               ];
@@ -264,6 +265,11 @@ export default function CareerFactScreen() {
               <View key={field}>
                 {control}
                 {uncertain ? <Text className="text-warning text-xs -mt-2 mb-4">{uncertainNote(uncertain.reason, uncertain.raw)}</Text> : null}
+                {type === 'achievement' && field === 'metric' && achievementNeedsNumber(String(current.statement ?? ''), String(current.metric ?? '')) ? (
+                  <Text className="text-stone-600 text-sm -mt-2 mb-4 leading-5" accessibilityRole="text" accessibilityLiveRegion="polite">
+                    {t('web.achievement_prompt')}
+                  </Text>
+                ) : null}
               </View>
             );
           })}

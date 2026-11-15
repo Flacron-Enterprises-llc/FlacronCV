@@ -16,6 +16,10 @@
     "followUpToday": "آج فالو اپ",
     "followUpTodayWith": "آج {company} کے ساتھ فالو اپ",
     "interviewToday": "آج {time} بجے انٹرویو",
-    "interviewTodayWith": "آج {time} بجے {company} کے ساتھ انٹرویو"
+    "interviewTodayWith": "آج {time} بجے {company} کے ساتھ انٹرویو",
+    "deadlineTomorrow": "درخواست کی آخری تاریخ کل ہے",
+    "deadlineTomorrowWith": "درخواست کی آخری تاریخ کل ہے: {company}",
+    "deadlineToday": "درخواست کی آخری تاریخ آج ہے",
+    "deadlineTodayWith": "درخواست کی آخری تاریخ آج ہے: {company}"
   }
 }

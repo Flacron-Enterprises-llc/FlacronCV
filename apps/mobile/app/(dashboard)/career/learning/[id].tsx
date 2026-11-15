@@ -5,7 +5,9 @@ import React, { useState } from 'react';
 import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CareerHeader, Pill } from '../../../../src/components/career/CareerHeader';
+import { ProjectBriefCard } from '../../../../src/components/career/plans/ProjectBriefCard';
 import { Button } from '../../../../src/components/ui/Button';
+import { Input } from '../../../../src/components/ui/Input';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../../src/components/ui/Skeleton';
@@ -13,6 +15,7 @@ import { useConvertMilestone, useSkillReport, useToggleMilestone } from '../../.
 import { useCareerAccess } from '../../../../src/hooks/useCareer';
 import {
   evidenceErrorMessage,
+  evidenceResultMessage,
   gapBadge,
   hasEssentialCredential,
   isOpenableUrl,
@@ -20,6 +23,7 @@ import {
   milestoneDone,
   milestoneEffort,
   milestoneEvidenceId,
+  OWNERSHIP_MAX,
   planCostLine,
   progressErrorMessage,
   reportMeta,
@@ -29,8 +33,10 @@ import { colors } from '../../../../src/theme/colors';
 import { useT } from '../../../../src/i18n';
 
 /**
- * One learning plan, as on the website: progress, skill gaps, milestones
- * (ticking is free), resources, and the optional project brief with rubrics.
+ * One learning plan, as on the website: progress, skill gaps (essential vs
+ * preferred), transferable skills, bridge roles, milestones
+ * (ticking is free) with cost dates and prerequisites, resources, and the
+ * project brief (AI-assisted marker, ownership statement, rubric self-check).
  * A ticked milestone can be added to the evidence vault as a self-reported
  * project item, once (the server remembers it). An unknown course cost is
  * shown as unknown and never counted as free.
@@ -45,28 +51,31 @@ export default function LearningPlanScreen() {
   const toggle = useToggleMilestone(id);
   const convert = useConvertMilestone(id);
   const [converting, setConverting] = useState<string | null>(null);
-  const [justAdded, setJustAdded] = useState(false);
+  const [justAdded, setJustAdded] = useState<string | null>(null);
+  // The milestone whose "add to vault" form is open, and the person's own words for it (optional, never written for them).
+  const [ownershipFor, setOwnershipFor] = useState<string | null>(null);
+  const [statement, setStatement] = useState('');
 
   const onToggle = (milestoneId: string, completed: boolean) => {
     toggle.mutate({ milestoneId, completed }, { onError: (error) => Alert.alert(t('notUpdated'), progressErrorMessage(error)) });
   };
 
-  const onConvert = (milestoneId: string, title: string) => {
+  const onConvert = (milestoneId: string) => {
     if (converting) return;
-    Alert.alert(t('learning.addConfirmTitle'), t('learning.addConfirmBody', { title }), [
-      { text: tc('cancel'), style: 'cancel' },
+    setConverting(milestoneId);
+    const ownershipStatement = statement.trim() || undefined;
+    convert.mutate(
+      { milestoneId, ownershipStatement },
       {
-        text: t('learning.add'),
-        onPress: () => {
-          setConverting(milestoneId);
-          convert.mutate(milestoneId, {
-            onSuccess: () => setJustAdded(true),
-            onError: (error) => Alert.alert(t('learning.notAdded'), evidenceErrorMessage(error)),
-            onSettled: () => setConverting(null),
-          });
+        onSuccess: (result) => {
+          setJustAdded(evidenceResultMessage(result.created));
+          setOwnershipFor(null);
+          setStatement('');
         },
+        onError: (error) => Alert.alert(t('learning.notAdded'), evidenceErrorMessage(error)),
+        onSettled: () => setConverting(null),
       },
-    ]);
+    );
   };
 
   const openResource = (url: string) => {
@@ -95,7 +104,7 @@ export default function LearningPlanScreen() {
       >
         {justAdded ? (
           <View className="bg-success-bg rounded-xl p-3 mb-4 flex-row items-center" accessibilityLiveRegion="polite">
-            <Text className="flex-1 text-success text-sm me-2">{t('learning.addedBanner')}</Text>
+            <Text className="flex-1 text-success text-sm me-2">{justAdded}</Text>
             <TouchableOpacity
               onPress={() => router.push('/(dashboard)/career/evidence' as Href)}
               className="min-h-[44px] justify-center px-2"
@@ -221,8 +230,43 @@ export default function LearningPlanScreen() {
                   <View className="mt-2 ms-8">
                     {isAdded ? (
                       <Text className="text-success text-xs font-semibold py-2">{t('learning.added')}</Text>
+                    ) : ownershipFor === m.id ? (
+                      <View>
+                        <Text className="text-xs text-stone-600 mb-1">{t('learning.addConfirmBody', { title: m.title })}</Text>
+                        <Input
+                          label={t('brief.milestone_ownership_label')}
+                          value={statement}
+                          onChangeText={setStatement}
+                          maxLength={OWNERSHIP_MAX}
+                          multiline
+                          textAlignVertical="top"
+                          style={{ minHeight: 60 }}
+                          hint={t('brief.milestone_ownership_hint')}
+                          editable={converting === null}
+                        />
+                        <View className="flex-row gap-2">
+                          <View className="flex-1">
+                            <Button variant="outline" size="sm" fullWidth onPress={() => setOwnershipFor(null)} disabled={converting !== null}>
+                              {tc('cancel')}
+                            </Button>
+                          </View>
+                          <View className="flex-1">
+                            <Button size="sm" fullWidth onPress={() => onConvert(m.id)} loading={converting === m.id} disabled={converting !== null}>
+                              {t('brief.confirm_add_to_vault')}
+                            </Button>
+                          </View>
+                        </View>
+                      </View>
                     ) : (
-                      <Button variant="outline" size="sm" onPress={() => onConvert(m.id, m.title)} loading={converting === m.id} disabled={converting !== null}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onPress={() => {
+                          setOwnershipFor(m.id);
+                          setStatement('');
+                        }}
+                        disabled={converting !== null}
+                      >
                         {t('learning.addToEvidence')}
                       </Button>
                     )}
@@ -233,34 +277,7 @@ export default function LearningPlanScreen() {
           })}
         </Card>
 
-        {r.projectBrief ? (
-          <Card>
-            <Text className="text-base font-bold text-stone-900">{r.projectBrief.title}</Text>
-            <Text className="text-sm text-stone-700 mt-1 leading-5">{r.projectBrief.summary}</Text>
-            <Text className="text-xs text-stone-400 mt-1">{t('learning.estimatedEffort', { hours: r.projectBrief.estimatedHours })}</Text>
-            {r.projectBrief.tools && r.projectBrief.tools.length > 0 ? (
-              <Text className="text-xs text-stone-500 mt-1">{`${t('learning.tools')}: ${r.projectBrief.tools.join(', ')}`}</Text>
-            ) : null}
-            <SectionLabel>{t('learning.requirements')}</SectionLabel>
-            {r.projectBrief.requirements.map((req, i) => (
-              <BulletText key={i} text={req} />
-            ))}
-            <SectionLabel>{t('learning.deliverables')}</SectionLabel>
-            {r.projectBrief.deliverables.map((del, i) => (
-              <BulletText key={i} text={del} />
-            ))}
-            <SectionLabel>{t('learning.rubrics')}</SectionLabel>
-            {r.projectBrief.rubrics.map((rubric) => (
-              <View key={rubric.id} className="border-t border-stone-100 py-2 flex-row">
-                <View className="flex-1 me-2">
-                  <Text className="text-sm font-semibold text-stone-900">{rubric.name}</Text>
-                  <Text className="text-xs text-stone-500 mt-0.5 leading-4">{rubric.description}</Text>
-                </View>
-                <Text className="text-sm font-bold text-brand-700">{`${rubric.weight}%`}</Text>
-              </View>
-            ))}
-          </Card>
-        ) : null}
+        {r.projectBrief ? <ProjectBriefCard report={r} /> : null}
       </ScrollView>
     );
   }
@@ -279,13 +296,4 @@ function Card({ children }: { children: React.ReactNode }) {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <Text className="text-xs font-semibold text-stone-500 uppercase tracking-wide mt-4 mb-1.5">{children}</Text>;
-}
-
-function BulletText({ text }: { text: string }) {
-  return (
-    <View className="flex-row items-start mb-1">
-      <Text className="text-stone-400 text-sm w-4">•</Text>
-      <Text className="flex-1 text-stone-700 text-sm leading-5">{text}</Text>
-    </View>
-  );
 }

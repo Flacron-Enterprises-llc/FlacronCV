@@ -233,3 +233,13 @@ describe('interviewCalendarFile', () => {
     ).toBe('interview-interview.ics');
   });
 });
+
+describe('deadline sort', () => {
+  it('puts the soonest application deadline first and entries without one last', async () => {
+    const { filterAndSortJobs, jobSortLabel } = await import('./job-tracker');
+    const make = (id: string, deadline: string | null) => ({ id, company: 'A', position: 'B', status: 'applied', archived: false, deadline }) as never;
+    const sorted = filterAndSortJobs([make('none', null), make('late', '2026-12-20'), make('soon', '2026-12-01')], { status: 'all', search: '', sort: 'deadline' });
+    expect(sorted.map((job: { id: string }) => job.id)).toEqual(['soon', 'late', 'none']);
+    expect(jobSortLabel('deadline')).toBe('Deadline (soonest)');
+  });
+});

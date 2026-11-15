@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React from 'react';
 import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,8 +8,8 @@ import { Button } from '../../../../src/components/ui/Button';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { SkeletonCard } from '../../../../src/components/ui/Skeleton';
-import { useCareerAccess, useCareerResumes, useCareerWritingList } from '../../../../src/hooks/useCareer';
-import { creditLine, letterTemplateName, resumeTemplateName, writingTypeLabel } from '../../../../src/lib/career/documents';
+import { useCareerAccess, useCareerOpportunities, useCareerResumes, useCareerWritingList } from '../../../../src/hooks/useCareer';
+import { creditLine, letterTemplateName, opportunityParam, resumeTemplateName, writingTypeLabel } from '../../../../src/lib/career/documents';
 import { careerErrorMessage, formatDay } from '../../../../src/lib/career-view';
 import { useT } from '../../../../src/i18n';
 import { RTL_FLIP } from '../../../../src/i18n/native';
@@ -35,8 +35,33 @@ export default function CareerDocumentsScreen() {
     void resumes.refetch();
     void writing.refetch();
   };
-  const newResume = () => router.push('/(dashboard)/career/documents/new-resume' as Href);
-  const newWriting = () => router.push('/(dashboard)/career/documents/new-writing' as Href);
+  // Opened for a listing (?opportunityId=, e.g. a listing's "Prepare a CV"): every route below carries it.
+  const { opportunityId: rawListing } = useLocalSearchParams<{ opportunityId?: string }>();
+  const forListing = opportunityParam(rawListing);
+  const opportunities = useCareerOpportunities();
+  const listingTitle = forListing
+    ? (opportunities.data?.items.find((item) => item.id === forListing)?.title ?? t('forListing.openedListing'))
+    : null;
+  const query = forListing ? `?opportunityId=${encodeURIComponent(forListing)}` : '';
+  const newResume = () => router.push(`/(dashboard)/career/documents/new-resume${query}` as Href);
+  const newWriting = () => router.push(`/(dashboard)/career/documents/new-writing${query}` as Href);
+  const listingBanner =
+    forListing && listingTitle ? (
+      <View className="bg-brand-50 border border-brand-100 rounded-2xl p-4 mb-4" accessibilityLiveRegion="polite">
+        <Text className="font-semibold text-stone-900" accessibilityRole="header">
+          {t('forListing.title', { title: listingTitle })}
+        </Text>
+        <Text className="text-stone-600 text-sm mt-1 leading-5">{t('forListing.body')}</Text>
+        <View className="flex-row flex-wrap gap-2 mt-3">
+          <Button size="sm" variant="outline" onPress={newWriting}>
+            {t('forListing.write')}
+          </Button>
+          <Button size="sm" variant="ghost" onPress={() => router.setParams({ opportunityId: undefined })} accessibilityLabel={t('forListing.clearA11y')}>
+            {t('forListing.clear')}
+          </Button>
+        </View>
+      </View>
+    ) : null;
 
   let content: React.ReactNode;
   if (access.data && !access.data.enabled) {
@@ -57,6 +82,7 @@ export default function CareerDocumentsScreen() {
     content =
       resumeItems.length + writingItems.length === 0 ? (
         <View className="flex-1">
+          {listingBanner ? <View className="px-5 pt-5">{listingBanner}</View> : null}
           <EmptyState
             icon="document-text-outline"
             title={t('list.emptyTitle')}
@@ -75,6 +101,7 @@ export default function CareerDocumentsScreen() {
           contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
           refreshControl={<RefreshControl refreshing={resumes.isRefetching || writing.isRefetching} onRefresh={refetch} tintColor={colors.brand[600]} />}
         >
+          {listingBanner}
           <Text className="text-stone-500 text-sm mb-4 leading-5">
             {[t('list.intro'), credits].filter(Boolean).join(' ')}
           </Text>
@@ -97,7 +124,7 @@ export default function CareerDocumentsScreen() {
               title={r.title}
               meta={`${r.language.toUpperCase()} · ${resumeTemplateName(r.templateId)} · ${t('list.created', { date: formatDay(r.createdAt) ?? '' })}`}
               disabled={!r.currentVersionId}
-              onPress={() => router.push(`/(dashboard)/career/documents/resume/${r.id}` as Href)}
+              onPress={() => router.push(`/(dashboard)/career/documents/resume/${r.id}${query}` as Href)}
             />
           ))}
           {writingItems.length > 0 ? <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mt-4 mb-3">{t('list.lettersAndTexts')}</Text> : null}

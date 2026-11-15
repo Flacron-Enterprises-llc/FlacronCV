@@ -22,6 +22,7 @@ import { useT } from '../../../src/i18n';
  */
 export default function CareerRecruitingScreen() {
   const t = useT('careerModes');
+  const tb = useT('careerBusiness');
   const access = useCareerAccess();
   const current = useRecruitingOptIn();
   const save = useSetRecruitingOptIn();
@@ -96,6 +97,17 @@ export default function CareerRecruitingScreen() {
               {RECRUITING_COPY.save}
             </Button>
           </View>
+        </View>
+        <View
+          className="bg-white rounded-2xl border border-stone-100 p-5 mt-4"
+          accessible
+          accessibilityLabel={`${tb('scope.comingSoon')}. ${tb('scope.employerHeading')}. ${tb('scope.employerSoonBody')}`}
+        >
+          <View className="flex-row items-center flex-wrap gap-2">
+            <Pill label={tb('scope.comingSoon')} />
+            <Text className="font-bold text-stone-900 text-base flex-1">{tb('scope.employerHeading')}</Text>
+          </View>
+          <Text className="text-stone-500 text-sm mt-2 leading-5">{tb('scope.employerSoonBody')}</Text>
         </View>
         <View className="bg-white rounded-2xl border border-stone-100 p-5 mt-4">
           <Text className="font-bold text-stone-900 text-base">{t('recruiting.countTitle')}</Text>

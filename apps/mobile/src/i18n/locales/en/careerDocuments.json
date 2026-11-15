@@ -183,7 +183,10 @@
     "noSavedOpps": "No saved opportunities yet. Save or paste one under Saved opportunities first.",
     "tailorToA11y": "Tailor to {title}",
     "expired": "Expired",
-    "open": "Open"
+    "open": "Open",
+    "tailorListingTitle": "Tailor to {title}",
+    "tailorListingNote": "You opened this CV for a listing. Tailoring makes a new version from your confirmed facts and uses one document credit; you are asked first.",
+    "tailorListingButton": "Tailor to this listing"
   },
   "letter": {
     "textFailed": "Nothing was changed. Your text is still here; try again.",
@@ -193,5 +196,13 @@
     "textA11y": "Letter text",
     "noCreditsNote": "Saving and exporting use no career credits.",
     "typedSaved": "Your typed text is saved together with the new layout."
+  },
+  "forListing": {
+    "title": "Preparing for: {title}",
+    "openedListing": "The listing you opened",
+    "body": "Open a CV below to tailor it to this listing, or write a letter for it. Tailoring and writing each use one document credit, and you are asked first.",
+    "write": "Write a letter for this listing",
+    "clear": "Not for this listing",
+    "clearA11y": "Stop preparing documents for this listing"
   }
 }

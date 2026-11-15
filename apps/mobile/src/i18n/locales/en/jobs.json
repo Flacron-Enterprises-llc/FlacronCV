@@ -17,7 +17,8 @@
     "applied": "Date applied",
     "company": "Company (A–Z)",
     "position": "Position (A–Z)",
-    "status": "Status"
+    "status": "Status",
+    "deadline": "Deadline (soonest)"
   },
   "list": {
     "title": "Job Tracker",
@@ -147,5 +148,73 @@
     "rejected": "Not selected",
     "withdrawn": "Withdrew",
     "no_response": "No response"
+  },
+  "workspace": {
+    "outcome_label": "How it ended",
+    "outcome_none": "Not decided yet",
+    "outcome_help": "Recorded as reported by you. It is never filled in automatically.",
+    "refreeze": "Use current version",
+    "refrozen": "Saved the current version with this application",
+    "show_letter": "Show letter",
+    "hide_letter": "Hide letter",
+    "letter_truncated": "(The letter was too long to keep in full; the start is shown.)",
+    "frozen_help": "Later edits to your CV or letter don’t change what is recorded here.",
+    "description_from_opportunity": "Saved from the opportunity listing.",
+    "description_pasted": "Pasted by you.",
+    "description_ph": "Paste the job description so you keep it even if the posting is removed.",
+    "answer": {
+      "question_n": "Question {n}",
+      "question_ph": "Question from the application form",
+      "answer_n": "Answer {n}",
+      "answer_ph": "Your answer",
+      "remove": "Remove question {n}",
+      "add": "Add question"
+    },
+    "drafts": {
+      "referral_request": {
+        "button": "Draft referral request",
+        "title": "Referral request draft",
+        "intro": "Create a draft asking a contact to refer you for {position} at {company}."
+      },
+      "thank_you": {
+        "button": "Draft thank-you note",
+        "title": "Thank-you note draft",
+        "intro": "Create a thank-you draft for your interview for {position} at {company}."
+      },
+      "uses_allowance": "This uses one AI draft from your plan allowance. You review and send it yourself; nothing is sent for you.",
+      "no_opportunity": "This application isn’t linked to a saved opportunity, so the draft uses only the company, role and contact you entered here. Check it before sending.",
+      "problem": {
+        "quota": "You have no AI drafts left this period.",
+        "upgrade": "Your plan doesn’t include this draft.",
+        "unavailable": "AI drafting isn’t connected right now. Nothing was charged.",
+        "unsupported": "This kind of draft isn’t available yet.",
+        "missing": "The linked opportunity could not be found.",
+        "failed": "The draft couldn’t be created. Please try again.",
+        "missing_target": "Add the company or the role to this application first, so the draft knows who it is for. Nothing was charged."
+      },
+      "see_plans": "See plans",
+      "retry": "Try again",
+      "create": "Create draft",
+      "review_before_sending": "Review and edit this draft before you send it.",
+      "draft_label": "Draft text",
+      "copy": "Copy",
+      "copied": "Draft copied",
+      "copy_failed": "Couldn’t copy. Select the text and copy it manually.",
+      "edit_in_documents": "Edit in Documents",
+      "share": "Share draft"
+    },
+    "section": {
+      "documents": "Documents used",
+      "description": "Job description",
+      "form_answers": "Application form answers",
+      "outcome": "Outcome"
+    },
+    "calendar": {
+      "follow_up": {
+        "button": "Add follow-up to calendar",
+        "summary": "Follow up: {position} at {company}",
+        "description": "Follow up on your application for {position} at {company}."
+      }
+    }
   }
 }
