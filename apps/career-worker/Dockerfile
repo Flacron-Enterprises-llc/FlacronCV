@@ -20,5 +20,9 @@ RUN cp -r apps/career-worker/dist /app/dist
 FROM node:20-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
+# AWS RDS requires TLS; pg verifies the server certificate (sslmode=verify-full),
+# so trust the official RDS certificate bundle.
+ADD https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /etc/ssl/rds-global-bundle.pem
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/rds-global-bundle.pem
 COPY --from=build /app ./
 CMD ["node", "dist/main.js"]

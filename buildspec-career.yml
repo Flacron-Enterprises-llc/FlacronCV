@@ -1,0 +1,47 @@
+version: 0.2
+
+# Career service images (career API, its one-off migration task, the worker).
+# CodeBuild project: flacroncv-career-build. Pushes to the private ECR repos
+# flacroncv-career-api and flacroncv-career-worker. No secrets are used or
+# baked in: DATABASE_URL and provider keys reach the containers at run time
+# from Secrets Manager (see .dockerignore).
+
+env:
+  variables:
+    AWS_DEFAULT_REGION: us-east-1
+    AWS_ACCOUNT_ID: "482881544977"
+    DOCKER_BUILDKIT: "1"
+
+phases:
+  pre_build:
+    commands:
+      - ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
+      - IMAGE_TAG="$(echo "${CODEBUILD_RESOLVED_SOURCE_VERSION}" | cut -c 1-12)"
+      - test -n "${IMAGE_TAG}" || IMAGE_TAG="${CAREER_IMAGE_TAG:-manual-$(date +%Y%m%d%H%M%S)}"
+      - echo "Image tag ${IMAGE_TAG}"
+      - aws ecr get-login-password --region "${AWS_DEFAULT_REGION}" | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
+
+  build:
+    commands:
+      - docker build --platform linux/amd64 --file apps/career-api/Dockerfile --tag "${ECR_REGISTRY}/flacroncv-career-api:${IMAGE_TAG}" .
+      - docker build --platform linux/amd64 --file apps/career-api/Dockerfile --target migrate --tag "${ECR_REGISTRY}/flacroncv-career-api:migrate-${IMAGE_TAG}" .
+      - docker build --platform linux/amd64 --file apps/career-worker/Dockerfile --tag "${ECR_REGISTRY}/flacroncv-career-worker:${IMAGE_TAG}" .
+
+  post_build:
+    commands:
+      - |
+        if [ "${CODEBUILD_BUILD_SUCCEEDING}" = "1" ]; then
+          docker push "${ECR_REGISTRY}/flacroncv-career-api:${IMAGE_TAG}"
+          docker push "${ECR_REGISTRY}/flacroncv-career-api:migrate-${IMAGE_TAG}"
+          docker push "${ECR_REGISTRY}/flacroncv-career-worker:${IMAGE_TAG}"
+          printf '[{"name":"flacroncv-career-api","imageUri":"%s"}]' "${ECR_REGISTRY}/flacroncv-career-api:${IMAGE_TAG}" > imagedefinitions-career-api.json
+          printf '[{"name":"flacroncv-career-worker","imageUri":"%s"}]' "${ECR_REGISTRY}/flacroncv-career-worker:${IMAGE_TAG}" > imagedefinitions-career-worker.json
+        else
+          echo "Docker build failed; skipping ECR push."
+          exit 1
+        fi
+
+artifacts:
+  files:
+    - imagedefinitions-career-api.json
+    - imagedefinitions-career-worker.json

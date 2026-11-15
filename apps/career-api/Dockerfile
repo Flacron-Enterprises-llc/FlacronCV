@@ -20,9 +20,24 @@ RUN pnpm --filter career-api build
 RUN pnpm --filter career-api deploy --prod /app
 RUN cp -r apps/career-api/dist /app/dist
 
+# One-off migration image (docker build --target migrate). Runs as an ECS task
+# that receives DATABASE_URL from Secrets Manager, so nobody handles the
+# database password. Migrations never run when the API starts.
+FROM build AS migrate
+WORKDIR /repo
+# AWS RDS requires TLS; pg verifies the server certificate (sslmode=verify-full),
+# so trust the official RDS certificate bundle.
+ADD https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /etc/ssl/rds-global-bundle.pem
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/rds-global-bundle.pem
+CMD ["pnpm", "--filter", "career-api", "migrate"]
+
 FROM node:20-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
+# AWS RDS requires TLS; pg verifies the server certificate (sslmode=verify-full),
+# so trust the official RDS certificate bundle.
+ADD https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /etc/ssl/rds-global-bundle.pem
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/rds-global-bundle.pem
 COPY --from=build /app ./
 EXPOSE 4101
 CMD ["node", "dist/main.js"]
