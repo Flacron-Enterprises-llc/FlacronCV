@@ -185,6 +185,7 @@ export const CAREER_AREAS: CareerArea[] = [
   { key: 'portfolios', get title() { return t('career.areas.portfolios.title'); }, get body() { return t('career.areas.portfolios.body'); }, where: 'app', route: '/(dashboard)/career/portfolios', feature: 'portfolioPages' },
   { key: 'interviews', get title() { return t('career.areas.interviews.title'); }, get body() { return t('career.areas.interviews.body'); }, where: 'app', route: '/(dashboard)/career/interviews', feature: 'textInterviewSessions' },
   { key: 'voice', get title() { return t('career.areas.voice.title'); }, get body() { return t('career.areas.voice.body'); }, where: 'app', route: '/(dashboard)/career/interviews/voice', feature: 'voiceMinutes' },
+  { key: 'coach', get title() { return t('careerCoach.area.title'); }, get body() { return t('careerCoach.area.body'); }, where: 'app', route: '/(dashboard)/career/coach', feature: 'coachingResponses' },
   { key: 'action-packs', get title() { return t('career.areas.actionPacks.title'); }, get body() { return t('career.areas.actionPacks.body'); }, where: 'app', route: '/(dashboard)/career/action-pack', feature: 'actionPacks' },
   { key: 'learning', get title() { return t('career.areas.learning.title'); }, get body() { return t('career.areas.learning.body'); }, where: 'app', route: '/(dashboard)/career/learning', feature: 'skillReports' },
   { key: 'maintenance', get title() { return t('career.areas.maintenance.title'); }, get body() { return t('career.areas.maintenance.body'); }, where: 'app', route: '/(dashboard)/career/maintenance' },

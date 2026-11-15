@@ -12,6 +12,7 @@ import { AdminScreen } from './admin/AdminScreen';
 import { AlertsScreen } from './alerts/AlertsScreen';
 import { RelocationModesScreen } from './career-modes/RelocationModesScreen';
 import { CareerDataScreen } from './CareerDataScreen';
+import { CoachScreen } from './coach/CoachScreen';
 import { DashboardScreen } from './dashboard/DashboardScreen';
 import { EvidenceScreen } from './evidence/EvidenceScreen';
 import { InterviewsScreen } from './interviews/InterviewsScreen';
@@ -144,6 +145,15 @@ export function CareerInterviewsRoute() {
   return (
     <CareerGate>
       <InterviewsScreen {...props} locale={uiLocale} opportunityId={opportunityId} />
+    </CareerGate>
+  );
+}
+
+export function CareerCoachRoute() {
+  const { uiLocale, ...props } = useScreenProps();
+  return (
+    <CareerGate>
+      <CoachScreen {...props} locale={uiLocale} />
     </CareerGate>
   );
 }

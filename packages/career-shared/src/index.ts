@@ -543,3 +543,18 @@ export {
 export type { AlertTier, RelevanceThreshold, ReminderKind, SavedSearchFilterKey } from './alerts';
 export { formatIssues, FORMAT_ISSUE_CODES, LONG_LINE_CHARS } from './readability';
 export type { FormatIssue, FormatIssueCode } from './readability';
+export {
+  cleanCoachReply,
+  coachTitle,
+  isCoachLocale,
+  normalizeCoachQuestion,
+  COACH_HISTORY_MESSAGES,
+  COACH_LOCALES,
+  MAX_COACH_QUESTION,
+  MAX_COACH_REPLY,
+  MAX_COACH_THREADS,
+  MAX_COACH_TITLE,
+  MAX_COACH_TURNS,
+  MIN_COACH_QUESTION,
+} from './coaching';
+export type { CoachLocale } from './coaching';

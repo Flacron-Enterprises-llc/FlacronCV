@@ -57,6 +57,8 @@ export function personalDataFixture(db: TestDatabase, clock: TestClock) {
     const interview = await seed('interview_sessions', { ...own, opportunity_id: shared.opportunityId, opportunity_revision_id: shared.revisionId, stage: 'recruiter', title: `Screen ${m}`, questions: '[]' });
     await seed('interview_answers', { session_id: interview.id, question_index: 1, answer: `Answer ${m}` });
     await seed('star_stories', { ...own, situation: `Situation ${m}`, task: 't', action: 'a', result: 'r' });
+    const coach = await seed('coaching_threads', { ...own, opportunity_id: paste.opportunityId, title: `Coach ${m}` });
+    await seed('coaching_messages', { thread_id: coach.id, position: 1, role: 'user', content: `Question ${m}` });
     await seed('match_results', { ...own, profile_version: 1, opportunity_id: shared.opportunityId, opportunity_revision_id: shared.revisionId, resume_version_id: version.id, fit: 'partial', overlap: 0.5, reasons: JSON.stringify([m]), gaps: '[]', unknowns: '[]' });
     const location = await seed('location_profiles', { ...own, place: `Montréal ${m}`, radius_miles: 25 });
     await seed('saved_searches', { ...own, filters: JSON.stringify({ q: `analyst ${m}` }), location_profile_id: location.id, schedule: 'daily' });

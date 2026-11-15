@@ -196,6 +196,31 @@ describe('AlertService', () => {
     expect(found.items.length).toBeGreaterThan(0);
   });
 
+  it('charges a Business-sponsored candidate’s scheduled alert to the Business pool, not their own Free account', async () => {
+    const org = await person('alert-biz-owner');
+    const cand = await person('alert-biz-cand');
+    await db.pool.query(`UPDATE billing_accounts SET plan_id = 'business', status = 'active' WHERE id = $1`, [org.billingAccountId]);
+    const orgAccount = await readAccount(db.pool, org.billingAccountId);
+    await openBalances(db.pool, orgAccount, await new CatalogStore().get(db.pool, orgAccount.catalog_version), { regrant: true });
+    const user = await db.pool.query<{ id: string }>(`SELECT id FROM users WHERE auth_user_id = $1`, [cand.authUserId]);
+    await db.pool.query(
+      `INSERT INTO business_candidates (workspace_id, email, consent, member_user_id, status, accepted_at)
+       VALUES ($1, 'alert-biz-cand@example.test', true, $2, 'active', now())`,
+      [org.workspaceId, user.rows[0]!.id],
+    );
+    await alerts.createSearch(cand, { q: 'Treasury' });
+    await db.pool.query(`UPDATE saved_searches SET paused = true WHERE candidate_auth_user_id <> $1`, [cand.authUserId]);
+    await opportunities.ingest(null, [listing('lever', 'lv-treasury', 'Treasury analyst role.')]);
+
+    const run = await alerts.runDue();
+    expect(run.surfaced).toBe(1);
+    expect(await units(cand)).toEqual([]);
+    expect(await units(org)).toEqual(['alert_item:committed']);
+    // The alert itself stays the candidate's.
+    const items = await db.pool.query(`SELECT workspace_id FROM alert_items WHERE recipient_auth_user_id = $1`, [cand.authUserId]);
+    expect(items.rows).toEqual([{ workspace_id: cand.workspaceId }]);
+  });
+
   it("one person's failure does not stop the run for everyone after them", async () => {
     await alerts.createSearch(await person('alert-broken'), { q: 'SQL' });
     await alerts.createSearch(await person('alert-fine'), { q: 'SQL' });

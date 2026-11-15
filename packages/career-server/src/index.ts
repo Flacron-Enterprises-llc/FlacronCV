@@ -95,6 +95,9 @@ export type {
 export { InterviewService } from './interviews/interview.service';
 export type { InterviewList, InterviewSessionView, StarStoryView, TextInterviewBalance } from './interviews/interview.service';
 export { INTERVIEW_TEMPLATE } from './interviews/interview-compose';
+export { CoachingService } from './coaching/coaching.service';
+export type { AskCoachInput, CoachBalance, CoachList, CoachMessageView, CoachThreadSummaryView, CoachThreadView } from './coaching/coaching.service';
+export { COACH_TEMPLATE } from './coaching/coaching-compose';
 export { ApplicationService } from './applications/application.service';
 export type { ApplicationSnapshot, ApplicationView, ReminderView } from './applications/application.service';
 export { OpportunityService } from './opportunities/opportunity.service';

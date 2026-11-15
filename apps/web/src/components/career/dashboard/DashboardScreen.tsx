@@ -147,6 +147,8 @@ export function DashboardScreen({
   const stages = stageCounts(cards);
   const interview = usage?.units.find((unit) => unit.unit === 'text_interview');
   const interviewRemaining = interview ? interview.includedRemaining + interview.packRemaining : 0;
+  const coaching = usage?.units.find((unit) => unit.unit === 'coaching_response');
+  const coachingRemaining = coaching ? coaching.includedRemaining + coaching.packRemaining : 0;
   const practice = applications.find((item) => item.status === 'interviewing');
   const practiceHref = practice?.opportunityId
     ? `/${locale}/career/interviews?opportunityId=${encodeURIComponent(practice.opportunityId)}`
@@ -246,6 +248,12 @@ export function DashboardScreen({
           <h2 className="text-lg font-semibold text-career-ink">{t('interview_title')}</h2>
           <p className="mt-2 text-sm text-career-ink">{t('interview_remaining', { count: interviewRemaining })}</p>
           <a className="mt-3 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text" href={practiceHref}>{t('practice')}</a>
+        </Card>
+        <Card>
+          <h2 className="text-lg font-semibold text-career-ink">{t('coach_title')}</h2>
+          <p className="mt-2 text-sm text-career-muted">{t('coach_body')}</p>
+          <p className="mt-1 text-sm text-career-ink">{t('coach_remaining', { count: coachingRemaining })}</p>
+          <a className="mt-3 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text" href={`/${locale}/career/coach`}>{t('open_coach')}</a>
         </Card>
         <Card>
           <h2 className="text-lg font-semibold text-career-ink">{t('usage_title')}</h2>

@@ -354,6 +354,8 @@ function OverviewSummary({
         </TouchableOpacity>
       </SummaryCard>
 
+      <CoachCard left={overview.coachingLeft} onOpen={onOpen} />
+
       {overview.units.length > 0 ? (
         <SummaryCard title={t('usageTitle')}>
           {overview.units.map((unit) => (
@@ -367,6 +369,19 @@ function OverviewSummary({
         </SummaryCard>
       ) : null}
     </>
+  );
+}
+
+/** The career coach entry: replies left and a link to the conversations. */
+function CoachCard({ left, onOpen }: { left: number; onOpen: (route: string) => void }) {
+  const t = useT('careerCoach');
+  return (
+    <SummaryCard title={t('title')}>
+      <Text className="text-stone-900 text-sm">{t('homeLeft', { count: left })}</Text>
+      <TouchableOpacity onPress={() => onOpen('/(dashboard)/career/coach')} className="min-h-[44px] justify-center" accessibilityRole="link">
+        <Text className="text-brand-600 font-semibold text-sm">{t('homeOpen')}</Text>
+      </TouchableOpacity>
+    </SummaryCard>
   );
 }
 

@@ -39,6 +39,7 @@ export const CAREER_SECTIONS = [
     links: [
       ['/career/interviews', 'interviews'],
       ['/career/interviews/voice', 'voice'],
+      ['/career/coach', 'coach'],
       ['/career/learning', 'learning'],
       ['/career/relocation', 'relocation'],
       ['/career/scenarios', 'scenarios'],
@@ -69,6 +70,7 @@ export const LINK_FEATURE: Partial<Record<CareerHref, string>> = {
   '/career/forms': 'assistedForms',
   '/career/learning-loop': 'applicationAnalytics',
   '/career/interviews/voice': 'voiceMinutes',
+  '/career/coach': 'coachingResponses',
   '/career/learning': 'skillReports',
   '/career/scenarios': 'scenarioReports',
   '/career/business': 'staffSeats',
@@ -83,6 +85,7 @@ export const LINK_ALLOWANCE: Partial<Record<CareerHref, keyof PlanAllowances>> =
   '/career/forms': 'assistedForms',
   '/career/learning-loop': 'applicationAnalytics',
   '/career/interviews/voice': 'voiceMinutes',
+  '/career/coach': 'coachingResponses',
   '/career/learning': 'skillReports',
   '/career/scenarios': 'scenarioReports',
   '/career/business': 'staffSeats',

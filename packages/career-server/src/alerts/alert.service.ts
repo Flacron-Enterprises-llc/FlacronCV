@@ -68,6 +68,7 @@ import { matchListingOf, recentOpenListingsForCandidate } from '../opportunities
 import type { ListingRecord } from '../opportunities/opportunity.service';
 import { livePersonCondition, personKey } from '../privacy/live-person';
 import type { ProfileOwner } from '../profile/career-profile.service';
+import { businessSponsorFor, sponsoredSpender } from '../remaining/business-sponsor';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -882,11 +883,14 @@ export class AlertService {
       if (seen.has(row.recipient_auth_user_id)) continue;
       seen.add(row.recipient_auth_user_id);
       try {
-        const did = await this.digestPerson({
-          authUserId: row.recipient_auth_user_id,
-          workspaceId: row.workspace_id,
-          billingAccountId: row.billing_account_id,
-        });
+        const [person] = await this.sponsored([
+          {
+            authUserId: row.recipient_auth_user_id,
+            workspaceId: row.workspace_id,
+            billingAccountId: row.billing_account_id,
+          },
+        ]);
+        const did = await this.digestPerson(person!);
         if (did) sent += 1;
       } catch {
         failed += 1;
@@ -1575,11 +1579,22 @@ export class AlertService {
          JOIN billing_accounts b ON b.workspace_id = people.workspace_id
         ORDER BY people.auth_user_id, b.id`,
     );
-    return rows.rows.map((row) => ({
-      authUserId: row.auth_user_id,
-      workspaceId: row.workspace_id,
-      billingAccountId: row.billing_account_id,
-    }));
+    // A Business-sponsored candidate spends from the Business pool, exactly as
+    // their own requests do (the API guard applies the same sponsor), so the
+    // scheduled pass never charges their own Free account.
+    return this.sponsored(
+      rows.rows.map((row) => ({
+        authUserId: row.auth_user_id,
+        workspaceId: row.workspace_id,
+        billingAccountId: row.billing_account_id,
+      })),
+    );
+  }
+
+  private async sponsored(people: Person[]): Promise<Person[]> {
+    const out: Person[] = [];
+    for (const person of people) out.push(sponsoredSpender(person, await businessSponsorFor(this.pool, person.authUserId)));
+    return out;
   }
 
   private async touchMatched(person: Person): Promise<void> {

@@ -477,6 +477,7 @@ export const PERSONAL_COLUMNS: ReadonlyArray<readonly [string, string]> = [
   ['applications', 'candidate_auth_user_id'],
   ['interview_sessions', 'candidate_auth_user_id'],
   ['star_stories', 'candidate_auth_user_id'],
+  ['coaching_threads', 'candidate_auth_user_id'],
   ['match_results', 'candidate_auth_user_id'],
   ['action_packs', 'candidate_auth_user_id'],
   ['skill_gap_reports', 'candidate_auth_user_id'],
@@ -569,6 +570,8 @@ async function erasePersonalData(db: Db, owner: Principal, options: { removeUser
   await run(`DELETE FROM interview_answers WHERE session_id IN (SELECT id FROM interview_sessions WHERE candidate_auth_user_id = $1)`);
   await run(`DELETE FROM interview_sessions WHERE candidate_auth_user_id = $1`);
   await run(`DELETE FROM star_stories WHERE candidate_auth_user_id = $1`);
+  // coaching_messages follow by ON DELETE CASCADE.
+  await run(`DELETE FROM coaching_threads WHERE candidate_auth_user_id = $1`);
   await run(`DELETE FROM match_results WHERE candidate_auth_user_id = $1`);
   await run(`DELETE FROM action_packs WHERE candidate_auth_user_id = $1`);
   await run(`DELETE FROM skill_gap_reports WHERE candidate_auth_user_id = $1`);

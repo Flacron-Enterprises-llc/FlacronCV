@@ -37,6 +37,7 @@ export const CAREER_SECTIONS = [
   {
     key: 'growth',
     links: [
+      ['/career/coach', 'coach'],
       ['/career/interviews', 'interviews'],
       ['/career/interviews/voice', 'voice'],
       ['/career/learning', 'learning'],
@@ -70,6 +71,7 @@ export const LINK_FEATURE: Record<string, string> = {
   '/career/action-pack': 'actionPacks',
   '/career/forms': 'assistedForms',
   '/career/learning-loop': 'applicationAnalytics',
+  '/career/coach': 'coachingResponses',
   '/career/interviews/voice': 'voiceMinutes',
   '/career/learning': 'skillReports',
   '/career/scenarios': 'scenarioReports',
@@ -84,6 +86,7 @@ export const LINK_ALLOWANCE: Record<string, keyof PlanAllowances> = {
   '/career/action-pack': 'actionPacks',
   '/career/forms': 'assistedForms',
   '/career/learning-loop': 'applicationAnalytics',
+  '/career/coach': 'coachingResponses',
   '/career/interviews/voice': 'voiceMinutes',
   '/career/learning': 'skillReports',
   '/career/scenarios': 'scenarioReports',

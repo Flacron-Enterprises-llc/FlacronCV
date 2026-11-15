@@ -216,7 +216,8 @@
     "data": "Données de carrière",
     "plans": "Forfaits carrière",
     "stateSoon": "Bientôt",
-    "statePlan": "Hors de votre forfait"
+    "statePlan": "Hors de votre forfait",
+    "coach": "Coach carrière"
   },
   "mobile": {
     "shareLink": "Partager le lien",

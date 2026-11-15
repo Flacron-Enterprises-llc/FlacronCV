@@ -47,6 +47,10 @@ import type {
   InterviewSession,
   InterviewStage,
   PaidInterview,
+  AskCoachInput,
+  CoachList,
+  CoachThread,
+  PaidCoachReply,
   StarStory,
   StarStoryInput,
   StartInterviewInput,
@@ -407,6 +411,11 @@ export function createApiClient(options: ApiClientOptions) {
       request<InterviewSession>('POST', `/interviews/text/${id(sessionId)}/answers`, { body: { answer } }),
     challengeInterview: (sessionId: string, answerId: string, note: string) =>
       request<InterviewSession>('POST', `/interviews/text/${id(sessionId)}/challenges`, { body: { answerId, note } }),
+    coachThreads: () => request<CoachList>('GET', '/coaching'),
+    coachThread: (threadId: string) => request<CoachThread>('GET', `/coaching/${id(threadId)}`),
+    askCoach: (input: AskCoachInput, idempotencyKey: string) =>
+      request<PaidCoachReply>('POST', '/coaching', { body: input, idempotencyKey }),
+    deleteCoachThread: (threadId: string) => request<{ deleted: true }>('DELETE', `/coaching/${id(threadId)}`),
     starStories: () => request<{ items: StarStory[] }>('GET', '/star-stories'),
     createStarStory: (input: StarStoryInput) => request<StarStory>('POST', '/star-stories', { body: input }),
     updateStarStory: (storyId: string, input: StarStoryInput) =>

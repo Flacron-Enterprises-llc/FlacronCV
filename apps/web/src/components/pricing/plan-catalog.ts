@@ -120,7 +120,6 @@ const CORE_ROWS: ReadonlySet<ComparisonRow> = new Set<ComparisonRow>([
 export const FEATURE_STATE: Partial<Record<ComparisonRow, FeatureState>> = {
   voiceMinutes: 'provider_dependent',
   mapSessions: 'provider_dependent',
-  coachingResponses: 'coming_soon',
   assistedForms: 'coming_soon',
 };
 

@@ -3,6 +3,14 @@ export type { ApiClient, ApiClientOptions, FetchLike } from './client';
 export { CareerErasureNeedsFreshSignIn, eraseCareerDataBeforeAccountDeletion } from './account-deletion';
 export type { CareerErasure } from './account-deletion';
 export type {
+  AskCoachInput,
+  CoachBalance,
+  CoachList,
+  CoachLocale,
+  CoachMessage,
+  CoachThread,
+  CoachThreadSummary,
+  PaidCoachReply,
   AiJob,
   DocumentCredit,
   ErrorBody,

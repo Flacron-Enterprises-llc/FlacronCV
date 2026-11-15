@@ -31,6 +31,12 @@ import fr_careerBusiness from './locales/fr/careerBusiness.json';
 import de_careerBusiness from './locales/de/careerBusiness.json';
 import ar_careerBusiness from './locales/ar/careerBusiness.json';
 import ur_careerBusiness from './locales/ur/careerBusiness.json';
+import en_careerCoach from './locales/en/careerCoach.json';
+import es_careerCoach from './locales/es/careerCoach.json';
+import fr_careerCoach from './locales/fr/careerCoach.json';
+import de_careerCoach from './locales/de/careerCoach.json';
+import ar_careerCoach from './locales/ar/careerCoach.json';
+import ur_careerCoach from './locales/ur/careerCoach.json';
 import en_careerDocuments from './locales/en/careerDocuments.json';
 import es_careerDocuments from './locales/es/careerDocuments.json';
 import fr_careerDocuments from './locales/fr/careerDocuments.json';
@@ -225,6 +231,7 @@ export const MESSAGES = {
     "career": en_career,
     "careerAlerts": en_careerAlerts,
     "careerBusiness": en_careerBusiness,
+    "careerCoach": en_careerCoach,
     "careerDocuments": en_careerDocuments,
     "careerEvidence": en_careerEvidence,
     "careerHome": en_careerHome,
@@ -263,6 +270,7 @@ export const MESSAGES = {
     "career": es_career,
     "careerAlerts": es_careerAlerts,
     "careerBusiness": es_careerBusiness,
+    "careerCoach": es_careerCoach,
     "careerDocuments": es_careerDocuments,
     "careerEvidence": es_careerEvidence,
     "careerHome": es_careerHome,
@@ -301,6 +309,7 @@ export const MESSAGES = {
     "career": fr_career,
     "careerAlerts": fr_careerAlerts,
     "careerBusiness": fr_careerBusiness,
+    "careerCoach": fr_careerCoach,
     "careerDocuments": fr_careerDocuments,
     "careerEvidence": fr_careerEvidence,
     "careerHome": fr_careerHome,
@@ -339,6 +348,7 @@ export const MESSAGES = {
     "career": de_career,
     "careerAlerts": de_careerAlerts,
     "careerBusiness": de_careerBusiness,
+    "careerCoach": de_careerCoach,
     "careerDocuments": de_careerDocuments,
     "careerEvidence": de_careerEvidence,
     "careerHome": de_careerHome,
@@ -377,6 +387,7 @@ export const MESSAGES = {
     "career": ar_career,
     "careerAlerts": ar_careerAlerts,
     "careerBusiness": ar_careerBusiness,
+    "careerCoach": ar_careerCoach,
     "careerDocuments": ar_careerDocuments,
     "careerEvidence": ar_careerEvidence,
     "careerHome": ar_careerHome,
@@ -415,6 +426,7 @@ export const MESSAGES = {
     "career": ur_career,
     "careerAlerts": ur_careerAlerts,
     "careerBusiness": ur_careerBusiness,
+    "careerCoach": ur_careerCoach,
     "careerDocuments": ur_careerDocuments,
     "careerEvidence": ur_careerEvidence,
     "careerHome": ur_careerHome,

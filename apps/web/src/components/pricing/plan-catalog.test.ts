@@ -32,7 +32,7 @@ describe('plan catalog', () => {
   it('marks unbuilt and provider-dependent features honestly', () => {
     expect(featureState('voiceMinutes', true)).toBe('provider_dependent');
     expect(featureState('mapSessions', true)).toBe('provider_dependent');
-    expect(featureState('coachingResponses', true)).toBe('coming_soon');
+    expect(featureState('coachingResponses', true)).toBe('available');
     expect(featureState('assistedForms', true)).toBe('coming_soon');
     expect(featureState('documentCredits', true)).toBe('available');
     // Advanced alert intelligence and push/Telegram delivery, per plan.

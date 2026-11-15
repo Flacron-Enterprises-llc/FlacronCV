@@ -50,6 +50,8 @@ export const EXPORT_SECTIONS: Readonly<Record<string, string>> = {
   interview_sessions: 'practice.interviews',
   interview_answers: 'practice.interviews[].answers',
   star_stories: 'practice.starStories',
+  coaching_threads: 'practice.coaching',
+  coaching_messages: 'practice.coaching[].messages',
   voice_interview_sessions: 'practice.voiceSessions',
   voice_audio_records: 'practice.voiceSessions[].recordings',
   recording_consents: 'practice.recordingConsents',
@@ -315,6 +317,16 @@ export async function personalExport(db: Db, owner: Principal, options: ExportOp
   const stories = await rows(
     `SELECT fact_ids, situation, task, action, result, created_at FROM star_stories WHERE candidate_auth_user_id = $1 ORDER BY created_at, id`,
   );
+  const coachingThreads = await rows(
+    `SELECT id, opportunity_id, title, created_at, updated_at FROM coaching_threads WHERE candidate_auth_user_id = $1 ORDER BY created_at, id`,
+  );
+  const coachingMessages = groupBy(
+    await rows(
+      `SELECT m.thread_id, m.position, m.role, m.content, m.created_at FROM coaching_messages m
+         JOIN coaching_threads t ON t.id = m.thread_id WHERE t.candidate_auth_user_id = $1 ORDER BY m.thread_id, m.position`,
+    ),
+    'thread_id',
+  );
   const voiceSessions = await rows(
     `SELECT id, kind, opportunity_id, stage, title, prompt, fact_text, guidance, summary, created_at, updated_at
        FROM voice_interview_sessions WHERE candidate_auth_user_id = $1 ORDER BY created_at, id`,
@@ -441,6 +453,7 @@ export async function personalExport(db: Db, owner: Principal, options: ExportOp
       starStories: stories,
       voiceSessions: voiceSessions.map((s) => ({ ...s, recordings: recordings.get(String(s.id)) ?? [] })),
       recordingConsents: consents,
+      coaching: coachingThreads.map((t) => ({ ...t, messages: coachingMessages.get(String(t.id)) ?? [] })),
     },
     career,
     workspace,

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { AccountPrivacyService, ActionEngineService, AdminService, AlertService, ApplicationService, BillingPageService, CareerModesService, CareerProfileService, EvidenceService, IdentityService, InterviewService, MatchService, MeteringService, OpportunityService, OpportunityTrustService, PortfolioService, RemainingService, ResumeStudioService, SkillsLearningService, VoiceInterviewService, WritingService } from '@flacroncv/career-server';
+import { AccountPrivacyService, ActionEngineService, AdminService, AlertService, ApplicationService, BillingPageService, CareerModesService, CareerProfileService, CoachingService, EvidenceService, IdentityService, InterviewService, MatchService, MeteringService, OpportunityService, OpportunityTrustService, PortfolioService, RemainingService, ResumeStudioService, SkillsLearningService, VoiceInterviewService, WritingService } from '@flacroncv/career-server';
 import { aiProviders, TEXT_MODEL } from './ai/ai.providers';
 import { AuthGuard } from './auth/auth.guard';
 import { authProviders } from './auth/auth.providers';
@@ -18,6 +18,7 @@ import { AlertsController, alertProviders } from './alerts/alerts.controller';
 // V1 integration: V1's Jobs tracker is the only application tracker, so ApplicationsController is not mounted.
 import { applicationProviders } from './applications/applications.controller';
 import { InterviewsController, interviewProviders } from './interviews/interviews.controller';
+import { CoachingController, coachingProviders } from './coaching/coaching.controller';
 import { MatchingController, matchProviders } from './matching/matching.controller';
 import { OpportunitiesController, opportunityProviders } from './opportunities/opportunities.controller';
 import { AdminController, adminProviders } from './admin/admin.controller';
@@ -55,7 +56,7 @@ import { CareerAccessService } from './integration/career-access.service';
  */
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true })],
-  controllers: [HealthController, AccessController, UsageController, ReservationsController, SessionController, AiJobsController, ProfileController, ResumesController, WritingController, OpportunitiesController, MatchingController, AlertsController, InterviewsController, EvidenceController, ActionEngineController, LearningController, CareerModesController, PortfoliosController, VoiceController, RemainingController, PrivacyController, AdminController],
+  controllers: [HealthController, AccessController, UsageController, ReservationsController, SessionController, AiJobsController, ProfileController, ResumesController, WritingController, OpportunitiesController, MatchingController, AlertsController, InterviewsController, CoachingController, EvidenceController, ActionEngineController, LearningController, CareerModesController, PortfoliosController, VoiceController, RemainingController, PrivacyController, AdminController],
   providers: [
     DatabaseService,
     ...integrationProviders,
@@ -75,6 +76,7 @@ import { CareerAccessService } from './integration/career-access.service';
     ...alertProviders,
     ...applicationProviders,
     ...interviewProviders,
+    ...coachingProviders,
     ...evidenceProviders,
     ...actionEngineProviders,
     ...learningProviders,
@@ -87,6 +89,6 @@ import { CareerAccessService } from './integration/career-access.service';
     ...adminProviders,
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
-  exports: [DatabaseService, CareerAccessService, MeteringService, IdentityService, CareerProfileService, ResumeStudioService, WritingService, OpportunityService, OpportunityTrustService, MatchService, AlertService, ApplicationService, InterviewService, EvidenceService, ActionEngineService, SkillsLearningService, CareerModesService, PortfolioService, VoiceInterviewService, RemainingService, BillingPageService, AccountPrivacyService, AdminService, TEXT_MODEL, GEOCODER],
+  exports: [DatabaseService, CareerAccessService, MeteringService, IdentityService, CareerProfileService, ResumeStudioService, WritingService, OpportunityService, OpportunityTrustService, MatchService, AlertService, ApplicationService, InterviewService, CoachingService, EvidenceService, ActionEngineService, SkillsLearningService, CareerModesService, PortfolioService, VoiceInterviewService, RemainingService, BillingPageService, AccountPrivacyService, AdminService, TEXT_MODEL, GEOCODER],
 })
 export class AppModule {}

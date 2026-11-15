@@ -216,7 +216,8 @@
     "data": "Karrieredaten",
     "plans": "Karrieretarife",
     "stateSoon": "Demnächst",
-    "statePlan": "Nicht in Ihrem Tarif"
+    "statePlan": "Nicht in Ihrem Tarif",
+    "coach": "Karriere-Coach"
   },
   "mobile": {
     "shareLink": "Link teilen",

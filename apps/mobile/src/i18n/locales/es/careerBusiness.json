@@ -216,7 +216,8 @@
     "data": "Datos profesionales",
     "plans": "Planes profesionales",
     "stateSoon": "Próximamente",
-    "statePlan": "No incluido en tu plan"
+    "statePlan": "No incluido en tu plan",
+    "coach": "Coach profesional"
   },
   "mobile": {
     "shareLink": "Compartir enlace",

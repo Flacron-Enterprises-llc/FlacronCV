@@ -123,6 +123,8 @@ export interface CareerOverview {
   saved: number;
   /** Text interview sessions left (included + packs); website `interview_remaining`. */
   interviewsLeft: number;
+  /** Coaching replies left (included + packs) for the career coach. */
+  coachingLeft: number;
   units: { unit: string; remaining: number }[];
   recent: Pick<Resume, 'id' | 'title' | 'createdAt'> | null;
 }
@@ -154,6 +156,7 @@ export function careerOverview(input: {
     practiceOpportunityId: applications.find((item) => item.status === 'interviewing' && item.opportunityId)?.opportunityId ?? null,
     saved: savedApplicationCount(applications),
     interviewsLeft: units.find((unit) => unit.unit === 'text_interview')?.remaining ?? 0,
+    coachingLeft: units.find((unit) => unit.unit === 'coaching_response')?.remaining ?? 0,
     units,
     recent: recent ? { id: recent.id, title: recent.title, createdAt: recent.createdAt } : null,
   };

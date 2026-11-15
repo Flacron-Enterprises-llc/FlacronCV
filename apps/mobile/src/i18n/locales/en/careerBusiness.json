@@ -216,7 +216,8 @@
     "data": "Career data",
     "plans": "Career plans",
     "stateSoon": "Coming soon",
-    "statePlan": "Not in your plan"
+    "statePlan": "Not in your plan",
+    "coach": "Career coach"
   },
   "mobile": {
     "shareLink": "Share link",

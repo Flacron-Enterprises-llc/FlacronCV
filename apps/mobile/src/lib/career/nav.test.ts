@@ -12,6 +12,7 @@ const allOn = {
   skillReports: true,
   scenarioReports: true,
   staffSeats: true,
+  coachingResponses: true,
 };
 
 describe('career area states (website CareerNav)', () => {
@@ -32,6 +33,9 @@ describe('career area states (website CareerNav)', () => {
     expect(linkState('/career/business', { features: allOn, careerPlan: 'career_pro' })).toBe('plan');
     expect(linkState('/career/business', { features: allOn, careerPlan: 'business' })).toBe('available');
     expect(linkState('/career/evidence', { features: allOn, careerPlan: 'free' })).toBe('available');
+    // Every plan includes coaching replies (Free 5 a month); the switch alone decides.
+    expect(linkState('/career/coach', { features: allOn, careerPlan: 'free' })).toBe('available');
+    expect(linkState('/career/coach', { features: {}, careerPlan: 'career_pro' })).toBe('soon');
   });
 
   it('never refuses an unknown plan or an area without an allowance', () => {
@@ -49,7 +53,7 @@ describe('career area states (website CareerNav)', () => {
   it('lists every area with a translated label and state badge', () => {
     const rows = careerLinkRows({ features: allOn, careerPlan: 'starter' });
     expect(rows.map((row) => row.key)).toEqual(CAREER_SECTIONS.map((section) => section.key));
-    expect(rows.flatMap((row) => row.links)).toHaveLength(22);
+    expect(rows.flatMap((row) => row.links)).toHaveLength(23);
     for (const row of rows.flatMap((section) => section.links)) expect(linkLabel(row.key)).not.toContain('careerBusiness');
     expect(linkLabel('groupTeams')).toBe('More');
     expect(stateLabel('soon')).toBe('Coming soon');

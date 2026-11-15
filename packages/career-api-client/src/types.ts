@@ -726,6 +726,61 @@ export interface PaidInterview {
   replayed: boolean;
 }
 
+/** Career coach (spec §26): each assistant reply spends one coaching_response. */
+export type CoachLocale = 'en' | 'fr' | 'de' | 'es' | 'ar' | 'ur';
+
+export interface CoachMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+}
+
+export interface CoachThreadSummary {
+  id: string;
+  title: string;
+  opportunityId: string | null;
+  messageCount: number;
+  updatedAt: string;
+}
+
+export interface CoachThread extends CoachThreadSummary {
+  messages: CoachMessage[];
+}
+
+export interface CoachBalance {
+  includedRemaining: number;
+  packRemaining: number;
+  renewalDate: string | null;
+}
+
+export interface CoachList {
+  items: CoachThreadSummary[];
+  coaching: CoachBalance;
+}
+
+export interface AskCoachInput {
+  question: string;
+  /** Continue this thread; omit to start a new one. */
+  threadId?: string;
+  /** Only on a new thread: a saved listing the conversation is about. */
+  opportunityId?: string;
+  locale?: CoachLocale;
+}
+
+export interface PaidCoachReply {
+  thread: CoachThread;
+  usage: {
+    unit: string;
+    includedRemaining: number;
+    packRemaining: number;
+    renewalDate: string;
+    ledgerState: string;
+  };
+  jobId: string;
+  replayed: boolean;
+}
+
 export interface VoiceRecording {
   id: string;
   durationSeconds: number;
