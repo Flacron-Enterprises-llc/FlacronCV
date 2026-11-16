@@ -76,7 +76,8 @@ Create FlacronCV's own portal configuration (only FlacronCV prices; no mid-perio
 
 ## 7. Rollback
 
-- Code: redeploy the previous ECS task definition / Amplify build (no data migration is involved; new Firestore fields are additive: `checkout_coordination`, `billing_disputes`, `subscription.stripeStateAt`).
+- Code: redeploy the previous ECS task definition / Amplify build (no data migration is involved; new Firestore data is additive: collections `checkout_coordination`, `billing_disputes`, `billing_conflicts`, `stripe_subscription_tombstones`; user fields `subscription.stripeStateAt`, `subscription.stripeStateSubId`, `usage.lastResetInvoiceId`; event-claim field `claimToken`). An older build ignores them.
+- `billing_conflicts` rows (duplicate subscriptions flagged `manual_review`, failed schedule releases) need a support owner after launch.
 - Selling: unset the `STRIPE_PRICE_*` variables → plans show "Coming soon", packs "Not on sale"; existing subscriptions keep renewing.
 - Webhook: the two new events are harmless to an older build (acknowledged, not applied).
 - Never delete or archive Stripe objects as a rollback step; never touch other applications' objects.

@@ -1,6 +1,7 @@
 import type Stripe from 'stripe';
 import { APP_ID_METADATA_KEY } from '../../config/stripe-app';
 import type { LedgerCustomer } from './billing-ledger';
+import type { CustomerKeyReservation } from './checkout-coordination';
 
 /**
  * Whether a stored Stripe customer id may be used by THIS application on the
@@ -44,6 +45,72 @@ interface Log {
 export function appIdOf(obj: { metadata?: Stripe.Metadata | null } | null | undefined): string | null {
   const value = obj?.metadata?.[APP_ID_METADATA_KEY];
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+/** Stripe refused a replayed idempotency key (different parameters, or a key still in use). */
+export function isIdempotencyError(err: unknown): boolean {
+  const e = err as { type?: string; code?: string } | null;
+  return e?.type === 'StripeIdempotencyError' || e?.type === 'idempotency_error' || e?.code === 'idempotency_key_in_use';
+}
+
+/** The per-user idempotency-key store (CheckoutCoordinator implements it). */
+export interface CustomerKeyStore {
+  reserveCustomerKey(
+    uid: string,
+    params: { email: string | null; name: string | null },
+    opts?: { forceFresh?: boolean },
+  ): Promise<CustomerKeyReservation>;
+  clearCustomerKey(uid: string, key: string): Promise<void>;
+}
+
+/**
+ * THE way a FlacronCV Stripe customer is created — by plan checkout and by
+ * career/pack checkout alike — so concurrent first purchases converge on ONE
+ * customer: both reserve the same per-user idempotency key (with the same
+ * snapshotted parameters) and Stripe returns the same customer for it.
+ *
+ * Recovery: an idempotency error (key replayed with other parameters / in
+ * use) or a replayed customer that is no longer usable (deleted, or not
+ * ours) is retried once with a FRESH key. The caller saves the id on the user
+ * and then calls `keys.clearCustomerKey(uid, key)`.
+ */
+export async function createAppCustomerOnce(
+  stripe: StripeCustomersClient,
+  keys: CustomerKeyStore,
+  ctx: { appId: string; userId: string; email?: string | null; name?: string | null; log: Log },
+): Promise<{ customer: Stripe.Customer; key: string }> {
+  const params = { email: ctx.email ?? null, name: ctx.name ?? null };
+  for (const forceFresh of [false, true]) {
+    const reservation = await keys.reserveCustomerKey(ctx.userId, params, { forceFresh });
+    let customer: Stripe.Customer;
+    try {
+      customer = await stripe.customers.create(
+        {
+          email: reservation.email ?? undefined,
+          name: reservation.name ?? undefined,
+          metadata: appMetadata(ctx.appId, ctx.userId),
+        },
+        { idempotencyKey: reservation.key },
+      );
+    } catch (err) {
+      if (!forceFresh && isIdempotencyError(err)) {
+        ctx.log.warn(`Customer idempotency key for ${ctx.userId} was refused by Stripe — retrying with a fresh key.`);
+        continue;
+      }
+      throw err;
+    }
+    if (reservation.reused && !forceFresh) {
+      // A replay returns the customer as it was CREATED; make sure it still
+      // exists and is ours before putting it on a checkout.
+      const verdict = await verifyStoredCustomer(stripe, customer.id, ctx.appId);
+      if (verdict.kind !== 'owned' && verdict.kind !== 'legacy') {
+        ctx.log.warn(`Replayed customer ${customer.id} for ${ctx.userId} is not usable (${verdict.kind}) — creating a fresh one.`);
+        continue;
+      }
+    }
+    return { customer, key: reservation.key };
+  }
+  throw new Error(`Could not create a Stripe customer for ${ctx.userId}`);
 }
 
 export function isMissingResource(err: unknown): boolean {
@@ -144,6 +211,8 @@ export async function resolveCheckoutCustomer(
     storedCustomerId: string | null | undefined;
     ledger?: CustomerLedgerSink | null;
     saveCustomerId: (customerId: string) => Promise<void>;
+    /** The shared per-user key store, so this path and plan checkout create ONE customer. */
+    keys: CustomerKeyStore;
     log: Log;
   },
 ): Promise<string> {
@@ -165,12 +234,9 @@ export async function resolveCheckoutCustomer(
     case 'none':
       break;
   }
-  const customer = await stripe.customers.create({
-    email: ctx.email ?? undefined,
-    name: ctx.name ?? undefined,
-    metadata: appMetadata(ctx.appId, ctx.userId),
-  });
+  const { customer, key } = await createAppCustomerOnce(stripe, ctx.keys, ctx);
   await ctx.saveCustomerId(customer.id);
+  await ctx.keys.clearCustomerKey(ctx.userId, key);
   await recordCustomer(ctx.ledger, ctx.appId, customer, ctx.userId, ctx.email, ctx.log);
   return customer.id;
 }

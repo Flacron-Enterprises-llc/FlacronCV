@@ -262,12 +262,16 @@ describe('Stripe app isolation (Flacron Stripe standard)', () => {
       const e = event('evt_dup', 'customer.subscription.updated', sub({ status: 'past_due' }));
       expect(await service.handleWebhookEvent(e)).toBe('applied');
       expect(await service.handleWebhookEvent(e)).toBe('duplicate');
-      expect(usersService.updateSubscription).toHaveBeenCalledTimes(1);
+      // The handler ran exactly once (one Stripe re-read), and its write landed.
+      expect((service as any).stripe.subscriptions.retrieve).toHaveBeenCalledTimes(1);
+      expect(((await firestore.collection('users').doc('u1').get()).data() as any).subscription.status).toBe(
+        SubscriptionStatus.PAST_DUE,
+      );
     });
 
     it('releases the claim when processing fails, so Stripe’s retry is applied', async () => {
       const e = event('evt_retry', 'customer.subscription.updated', sub({ status: 'past_due' }));
-      usersService.updateSubscription.mockRejectedValueOnce(new Error('firestore down'));
+      jest.spyOn(ledger, 'upsertSubscription').mockRejectedValueOnce(new Error('firestore down'));
 
       await expect(service.handleWebhookEvent(e)).rejects.toThrow('firestore down');
       expect((await firestore.collection('payment_events').doc('evt_retry').get()).exists).toBe(false);
@@ -371,6 +375,8 @@ describe('Stripe app isolation (Flacron Stripe standard)', () => {
       // A failed renewal of the user's CURRENT subscription.
       await seedUser(firestore, 'u1', { plan: SubscriptionPlan.PRO, stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_1' });
       (service as any).stripe = {
+        // payment_failed re-reads the subscription: Stripe has it past_due.
+        subscriptions: { retrieve: jest.fn(async () => sub({ status: 'past_due' })) },
         paymentIntents: {
           retrieve: jest.fn(async () =>
             paymentIntent({
@@ -404,11 +410,9 @@ describe('Stripe app isolation (Flacron Stripe standard)', () => {
           failure_message: 'Your card was declined.',
         }),
       ]);
-      expect(usersService.updateSubscription).toHaveBeenCalledWith('u1', { status: SubscriptionStatus.PAST_DUE });
-      expect(usersService.updateSubscription).not.toHaveBeenCalledWith(
-        'u1',
-        expect.objectContaining({ status: SubscriptionStatus.ACTIVE }),
-      );
+      const stored = ((await firestore.collection('users').doc('u1').get()).data() as any).subscription;
+      expect(stored.status).toBe(SubscriptionStatus.PAST_DUE);
+      expect(stored.status).not.toBe(SubscriptionStatus.ACTIVE);
       const report = await ledger.revenueReport(APP_ID, false);
       expect(report.failed_payments).toBe(1);
       expect(report.totals.find((t) => t.currency === 'usd')?.gross_revenue ?? 0).toBe(0);

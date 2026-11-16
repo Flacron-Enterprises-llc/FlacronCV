@@ -13,6 +13,7 @@ import { BillingLedgerService, EventOutcome } from './billing-ledger.service';
 import { LedgerPayment, LedgerSubscription, ledgerPaymentStatus } from './billing-ledger';
 import { CareerBillingService } from './career-billing.service';
 import { CheckoutClient, isLegacyMobileCheckoutPlan } from './legacy-mobile-checkout';
+import { createAppCustomerOnce } from './customer-ownership';
 import {
   CHECKOUT_SESSION_TTL_SECONDS,
   CheckoutCoordinator,
@@ -46,6 +47,15 @@ type HandlerDecision = string | null | void;
 
 /** Subscription conflicts (duplicate live subscriptions) and what was done about them. */
 export const BILLING_CONFLICTS_COLLECTION = 'billing_conflicts';
+
+/** One row per Stripe subscription seen deleted: refuses every later positive write for it. */
+export const SUBSCRIPTION_TOMBSTONES_COLLECTION = 'stripe_subscription_tombstones';
+
+/** A user-document patch (dotted fields) plus other documents, written in one transaction. */
+interface StateWrite {
+  user?: Record<string, unknown>;
+  docs?: Array<{ collection: string; id: string; data: Record<string, unknown>; merge?: boolean }>;
+}
 
 /** Stripe statuses of an unpaid renewal: the paid period must not be extended. */
 const UNPAID_STRIPE_STATUSES: ReadonlySet<string> = new Set(['past_due', 'unpaid', 'incomplete']);
@@ -539,18 +549,19 @@ export class PaymentService {
     if (!customerId) {
       // The key survives a crash between this call and the Firestore write
       // below, so the retry gets the SAME customer rather than an orphan.
-      const idempotencyKey = await this.checkoutCoordinator.reserveCustomerKey(lease);
-      const customer = await this.stripe.customers.create(
-        {
-          email: user.email,
-          name: user.displayName,
-          metadata: this.appMetadata(userId),
-        },
-        { idempotencyKey },
-      );
+      // The same per-user key store as career/pack checkout
+      // (customer-ownership.ts), so concurrent first purchases on both paths
+      // get ONE customer.
+      const { customer, key } = await createAppCustomerOnce(this.stripe, this.checkoutCoordinator, {
+        appId: this.appId,
+        userId,
+        email: user.email ?? null,
+        name: user.displayName ?? null,
+        log: this.logger,
+      });
       customerId = customer.id;
       await this.usersService.updateSubscription(userId, { stripeCustomerId: customerId });
-      await this.checkoutCoordinator.clearCustomerKey(lease);
+      await this.checkoutCoordinator.clearCustomerKey(userId, key);
       await this.recordCustomer(customer, userId, user.email);
     }
 
@@ -829,66 +840,34 @@ export class PaymentService {
 
     // Never overwrite a DIFFERENT live subscription of ours: the duplicate is
     // resolved by the checkout webhook (handleCheckoutCompleted).
-    {
-      const user = await this.usersService.findByIdOrThrow(userId);
-      const current = user.subscription?.stripeSubscriptionId;
-      if (current && current !== subscription.id && (await this.isLiveOwnSubscription(current))) {
-        this.logger.warn(`verifySession for user ${userId}: ${subscription.id} conflicts with live ${current} — not applied`);
-        return {
-          plan: resolveEffectivePlan(user.subscription),
-          status: user.subscription?.status ?? SubscriptionStatus.ACTIVE,
-        };
-      }
+    const user = await this.usersService.findByIdOrThrow(userId);
+    const current = user.subscription?.stripeSubscriptionId ?? null;
+    const unchanged = {
+      plan: resolveEffectivePlan(user.subscription),
+      status: user.subscription?.status ?? SubscriptionStatus.ACTIVE,
+    };
+    if (current && current !== subscription.id && (await this.isLiveOwnSubscription(current))) {
+      this.logger.warn(`verifySession for user ${userId}: ${subscription.id} conflicts with live ${current} — not applied`);
+      return unchanged;
     }
 
     const plan = this.determinePlan(subscription.items.data[0].price.id);
-    const limits = PLAN_CONFIGS[plan].limits;
-    const now = new Date();
-    const trial = this.extractTrial(subscription);
     const status = this.mapStripeStatus(subscription.status);
+    const customerId = stripeId(session.customer as string | { id: string } | null) ?? stripeId(subscription.customer);
 
-    const db = this.firebaseAdmin.firestore;
-    const batch = db.batch();
-
-    batch.update(db.collection('users').doc(userId), {
-      'subscription.plan': plan,
-      'subscription.status': status,
-      'subscription.stripeSubscriptionId': subscription.id,
-      'subscription.stripeCustomerId': session.customer as string,
-      'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
-      ...this.periodStartField(plan, subscription),
-      'subscription.trialStart': trial.trialStart,
-      'subscription.trialEnd': trial.trialEnd,
-      'subscription.cancelAtPeriodEnd': false,
-      ...(trial.trialStart ? { 'subscription.hasUsedTrial': true } : {}),
-      'usage.aiCreditsLimit': limits.aiCredits,
-      updatedAt: now,
-    });
-
-    batch.set(db.collection('subscriptions').doc(subscription.id), {
-      id: subscription.id,
-      applicationId: this.appId,
-      livemode: this.objectLivemode(subscription),
+    // Same guarded, transactional write as the checkout webhook: it re-checks
+    // the user's current subscription and refuses a subscription already
+    // recorded as deleted.
+    const gate = await this.applySubscriptionState(
       userId,
-      stripeCustomerId: session.customer as string,
-      plan,
-      priceId: subscription.items.data[0].price.id,
-      interval: subscription.items.data[0].price.recurring?.interval || 'month',
-      amount: subscription.items.data[0].price.unit_amount || 0,
-      currency: subscription.currency,
-      status,
-      currentPeriodStart: new Date(subscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-      cancelAt: null,
-      canceledAt: null,
-      trialStart: trial.trialStart,
-      trialEnd: trial.trialEnd,
-      cancelAtPeriodEnd: false,
-      createdAt: now,
-      updatedAt: now,
-    }, { merge: true });
-
-    await batch.commit();
+      subscription.id,
+      { mode: 'checkout', replaceable: current },
+      () => this.checkoutStateWrite(userId, subscription, customerId, true),
+    );
+    if (!gate.apply) {
+      this.logger.warn(`verifySession for user ${userId}: ${subscription.id} not applied (${gate.reason})`);
+      return unchanged;
+    }
     await this.refreshUsageWindow(userId, plan);
     await this.ledger.upsertSubscription(this.toLedgerSubscription(subscription, userId));
     this.logger.log(`Session verified and plan applied for user ${userId}: ${plan} (${status})`);
@@ -1116,9 +1095,6 @@ export class PaymentService {
       };
     }
 
-    // An upgrade supersedes a pending scheduled downgrade: release the schedule
-    // first so it cannot move the subscription back at renewal.
-    if (scheduleId) await this.stripe.subscriptionSchedules.release(scheduleId);
     const now = Math.floor(Date.now() / 1000);
     // A preview older than an hour (or from the future) is not honoured.
     const prorationDate =
@@ -1147,6 +1123,8 @@ export class PaymentService {
     await this.handleSubscriptionUpdated(updated, { fresh: true });
     const plan = this.determinePlan(updated.items.data[0].price.id);
     if (pending) {
+      // A scheduled downgrade is KEPT: the upgrade has not happened (and may
+      // never be paid), so the user's earlier choice still stands.
       this.logger.warn(`Plan upgrade for user ${userId} → ${ctx.target} is pending payment; plan unchanged (${plan})`);
       return {
         plan,
@@ -1155,6 +1133,29 @@ export class PaymentService {
         effectiveAt: null,
         paymentPending: true,
       };
+    }
+    // The upgrade really applied: it supersedes a scheduled downgrade, which
+    // is released now so it cannot move the subscription back at renewal.
+    // (Released only now — releasing before a payment that then failed lost
+    // the user's downgrade.) A failed release is flagged for manual review.
+    if (scheduleId) {
+      try {
+        await this.stripe.subscriptionSchedules.release(scheduleId);
+      } catch (err) {
+        this.logger.error(`Could not release schedule ${scheduleId} after upgrade for ${userId}: ${(err as Error).message}`);
+        await this.firebaseAdmin.firestore.collection(BILLING_CONFLICTS_COLLECTION).doc(`schedule_${scheduleId}`).set(
+          {
+            type: 'schedule_release_failed',
+            applicationId: this.appId,
+            userId,
+            subscriptionId: ctx.subscription.id,
+            scheduleId,
+            action: 'manual_review',
+            createdAt: new Date(),
+          },
+          { merge: true },
+        );
+      }
     }
     try {
       // Informational only — webhooks resolve the plan from the price id.
@@ -1244,7 +1245,7 @@ export class PaymentService {
    * the error surfaces as a 4xx/5xx, so Stripe's retry runs it again.
    */
   async handleWebhookEvent(event: Stripe.Event): Promise<EventOutcome | 'duplicate'> {
-    const claim = await this.ledger.claimEvent(event);
+    const { claim, token } = await this.ledger.claimEventWithToken(event);
     if (claim === 'duplicate') {
       this.logger.log(`Event ${event.id} already processed, skipping`);
       return 'duplicate';
@@ -1287,15 +1288,16 @@ export class PaymentService {
         }
       }
 
-      await this.ledger.completeEvent(event.id, outcome, {
-        applicationId,
-        expectedApplicationId: this.appId,
-        objectId,
-      });
-      if (decision) await this.recordDecision(event.id, decision);
+      const completed = await this.ledger.completeEvent(
+        event.id,
+        outcome,
+        { applicationId, expectedApplicationId: this.appId, objectId },
+        token,
+      );
+      if (decision && completed) await this.recordDecision(event.id, decision);
       return outcome;
     } catch (err) {
-      await this.ledger.releaseEvent(event.id);
+      await this.ledger.releaseEvent(event.id, token);
       throw err;
     }
   }
@@ -1640,6 +1642,7 @@ export class PaymentService {
       stripe_invoice_id: ctx.invoiceId ?? stripeId(paymentIntent.invoice) ?? null,
       stripe_subscription_id: ctx.subscriptionId ?? null,
       amount: status === 'succeeded' ? paymentIntent.amount_received ?? paymentIntent.amount : paymentIntent.amount,
+      // Ignored on an existing row: the refund side owns it.
       amount_refunded: existing?.amount_refunded ?? 0,
       currency: paymentIntent.currency ?? 'usd',
       status,
@@ -1647,7 +1650,7 @@ export class PaymentService {
       created_at: fromUnix(paymentIntent.created) ?? now,
       updated_at: now,
     };
-    await this.ledger.upsertPayment(row);
+    await this.ledger.upsertPaymentPreservingRefunds(row);
   }
 
   private async recordRefund(refund: Stripe.Refund): Promise<void> {
@@ -1667,24 +1670,30 @@ export class PaymentService {
     });
   }
 
-  // ─── Subscription event gate ────────────────────────────────────────────────
+  // ─── Subscription state: gate + guarded write, in ONE transaction ───────────
 
   /**
-   * Whether a subscription event may change this user's entitlement — decided
-   * and the user's Stripe state clock advanced in ONE Firestore transaction.
+   * Decide whether a subscription event may change this user's entitlement
+   * AND perform that change in the same Firestore transaction, so no
+   * concurrent event can slip between the check and the write.
    *
-   * - Stale: an event created before the last applied one (`stripeStateAt`)
-   *   is ignored. Stripe does not deliver in order; a late
-   *   `updated(active)` must not undo a later `deleted`.
-   * - Other subscription: only the user's CURRENT subscription
-   *   (`stripeSubscriptionId`) may change the plan. Deleting, failing or
-   *   refunding an old subscription never touches a user on a newer one.
-   * - No current subscription: `adopt` mode accepts a LIVE subscription
-   *   stamped with our app_id for this user (heals a lost checkout webhook);
-   *   `checkout` mode also replaces a stored one the caller verified is no
-   *   longer live. Otherwise nothing is applied.
+   * - Current subscription only: an event for any other subscription changes
+   *   nothing. With no current subscription, `adopt` accepts a LIVE
+   *   subscription stamped with our app_id for this user (heals a lost
+   *   checkout webhook); `checkout` also replaces a stored subscription the
+   *   caller verified is no longer live. Adoption writes
+   *   `stripeSubscriptionId` inside this transaction.
+   * - Deleted subscriptions: once `customer.subscription.deleted` has been
+   *   seen, a tombstone (`stripe_subscription_tombstones/{id}`) refuses every
+   *   later positive write for it, whatever order events arrive in.
+   * - Ordering (`staleCheck`): only for handlers that act on the event
+   *   PAYLOAD (payment_failed, paused). The clock is kept per subscription
+   *   (`stripeStateAt` + `stripeStateSubId`), so events of another subscription
+   *   or another type never make a legitimate update look stale. Handlers that
+   *   re-read Stripe (checkout, invoice.paid, updated) apply Stripe's current
+   *   state and are not stale-checked.
    */
-  private async gateSubscriptionEvent(
+  private async applySubscriptionState(
     userId: string,
     subscriptionId: string | null | undefined,
     opts: {
@@ -1692,20 +1701,31 @@ export class PaymentService {
       mode: 'current' | 'adopt' | 'checkout';
       subscription?: Stripe.Subscription | null;
       replaceable?: string | null;
+      staleCheck?: boolean;
+      /** The deleted handler itself: the tombstone is its own. */
+      ignoreTombstone?: boolean;
     },
+    write?: (adopted: boolean) => StateWrite,
   ): Promise<{ apply: true; adopted: boolean } | { apply: false; reason: string }> {
     if (!subscriptionId) return { apply: false, reason: 'no_subscription_on_event' };
     const db = this.firebaseAdmin.firestore;
     const ref: FirebaseFirestore.DocumentReference = db.collection('users').doc(userId);
+    const tombstoneRef: FirebaseFirestore.DocumentReference = db
+      .collection(SUBSCRIPTION_TOMBSTONES_COLLECTION)
+      .doc(subscriptionId);
     return db.runTransaction(async (tx: FirebaseFirestore.Transaction) => {
       const snap = await tx.get(ref);
+      const tombstone = await tx.get(tombstoneRef);
       if (!snap.exists) return { apply: false as const, reason: 'user_not_found' };
+      if (tombstone.exists && !opts.ignoreTombstone) return { apply: false as const, reason: 'subscription_ended' };
       const stored = ((snap.data() as { subscription?: Record<string, unknown> }).subscription ?? {}) as {
         stripeSubscriptionId?: string | null;
         stripeStateAt?: number | null;
+        stripeStateSubId?: string | null;
       };
       const stateAt = typeof stored.stripeStateAt === 'number' ? stored.stripeStateAt : null;
-      if (opts.created !== undefined && stateAt !== null && opts.created < stateAt) {
+      const sameClock = stored.stripeStateSubId === subscriptionId;
+      if (opts.staleCheck && opts.created !== undefined && sameClock && stateAt !== null && opts.created < stateAt) {
         return { apply: false as const, reason: 'stale_event' };
       }
       const current = stored.stripeSubscriptionId ?? null;
@@ -1727,8 +1747,19 @@ export class PaymentService {
         }
         adopted = true;
       }
+
+      const planned = write?.(adopted) ?? {};
+      const patch: Record<string, unknown> = { ...(planned.user ?? {}) };
+      if (adopted) patch['subscription.stripeSubscriptionId'] = subscriptionId;
       if (opts.created !== undefined) {
-        tx.update(ref, { 'subscription.stripeStateAt': opts.created });
+        patch['subscription.stripeStateAt'] = sameClock && stateAt !== null ? Math.max(stateAt, opts.created) : opts.created;
+        patch['subscription.stripeStateSubId'] = subscriptionId;
+      }
+      if (Object.keys(patch).length > 0) tx.update(ref, { ...patch, updatedAt: new Date() });
+      for (const doc of planned.docs ?? []) {
+        const docRef = db.collection(doc.collection).doc(doc.id);
+        if (doc.merge) tx.set(docRef, doc.data, { merge: true });
+        else tx.set(docRef, doc.data);
       }
       return { apply: true as const, adopted };
     });
@@ -1747,6 +1778,72 @@ export class PaymentService {
     }
   }
 
+  /** Whether the user document exists (a deleted account's events are acknowledged, not retried). */
+  private async userExists(userId: string): Promise<boolean> {
+    const snap = await this.firebaseAdmin.firestore.collection('users').doc(userId).get();
+    return snap.exists;
+  }
+
+  /** The user + `subscriptions` writes for a completed checkout (webhook and verifySession). */
+  private checkoutStateWrite(
+    userId: string,
+    subscription: Stripe.Subscription,
+    customerId: string | null,
+    mergeRecord: boolean,
+  ): StateWrite {
+    const plan = this.determinePlan(subscription.items.data[0].price.id);
+    const limits = PLAN_CONFIGS[plan].limits;
+    const trial = this.extractTrial(subscription);
+    const status = this.mapStripeStatus(subscription.status);
+    const now = new Date();
+    return {
+      user: {
+        'subscription.plan': plan,
+        'subscription.status': status,
+        'subscription.stripeSubscriptionId': subscription.id,
+        // The customer the subscription bills: renewals are matched by it.
+        ...(customerId ? { 'subscription.stripeCustomerId': customerId } : {}),
+        'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
+        ...this.periodStartField(plan, subscription),
+        'subscription.trialStart': trial.trialStart,
+        'subscription.trialEnd': trial.trialEnd,
+        'subscription.cancelAtPeriodEnd': false,
+        // Trial consumption comes from OUR retrieved subscription only.
+        ...(trial.trialStart ? { 'subscription.hasUsedTrial': true } : {}),
+        'usage.aiCreditsLimit': limits.aiCredits,
+      },
+      docs: [
+        {
+          collection: 'subscriptions',
+          id: subscription.id,
+          merge: mergeRecord,
+          data: {
+            id: subscription.id,
+            applicationId: this.appId,
+            livemode: this.objectLivemode(subscription),
+            userId,
+            stripeCustomerId: customerId,
+            plan,
+            priceId: subscription.items.data[0].price.id,
+            interval: subscription.items.data[0].price.recurring?.interval || 'month',
+            amount: subscription.items.data[0].price.unit_amount || 0,
+            currency: subscription.currency,
+            status,
+            currentPeriodStart: new Date(subscription.current_period_start * 1000),
+            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+            cancelAt: null,
+            canceledAt: null,
+            trialStart: trial.trialStart,
+            trialEnd: trial.trialEnd,
+            cancelAtPeriodEnd: false,
+            createdAt: now,
+            updatedAt: now,
+          },
+        },
+      ],
+    };
+  }
+
   private async handleCheckoutCompleted(
     session: Stripe.Checkout.Session,
     at: { created?: number } = {},
@@ -1763,6 +1860,8 @@ export class PaymentService {
     }
     await this.recordSubscription(subscription, userId);
     if (!userId) return 'no_user';
+    // A deleted account: acknowledge (recorded), never retry for days.
+    if (!(await this.userExists(userId))) return 'user_not_found';
     if (await this.skipStripeEntitlementWrite(userId)) return 'store_purchase_in_period';
 
     // A different LIVE subscription of ours is already the user's: never
@@ -1775,66 +1874,17 @@ export class PaymentService {
       }
     }
 
-    const gate = await this.gateSubscriptionEvent(userId, subscription.id, {
-      created: at.created,
-      mode: 'checkout',
-      subscription,
-      replaceable: current,
-    });
+    const customerId = stripeId(session.customer as string | { id: string } | null) ?? stripeId(subscription.customer);
+    const gate = await this.applySubscriptionState(
+      userId,
+      subscription.id,
+      { created: at.created, mode: 'checkout', subscription, replaceable: current },
+      () => this.checkoutStateWrite(userId, subscription, customerId, false),
+    );
     if (!gate.apply) return gate.reason;
 
     const plan = this.determinePlan(subscription.items.data[0].price.id);
-    const limits = PLAN_CONFIGS[plan].limits;
-    const trial = this.extractTrial(subscription);
     const status = this.mapStripeStatus(subscription.status);
-
-    const db = this.firebaseAdmin.firestore;
-    const userRef = db.collection('users').doc(userId);
-    const subscriptionRef = db.collection('subscriptions').doc(subscription.id);
-    const now = new Date();
-
-    // Atomic batch: user plan update + subscription record creation
-    const batch = db.batch();
-
-    batch.update(userRef, {
-      'subscription.plan': plan,
-      'subscription.status': status,
-      'subscription.stripeSubscriptionId': subscription.id,
-      'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
-      ...this.periodStartField(plan, subscription),
-      'subscription.trialStart': trial.trialStart,
-      'subscription.trialEnd': trial.trialEnd,
-      'subscription.cancelAtPeriodEnd': false,
-      // Trial consumption comes from OUR retrieved subscription only.
-      ...(trial.trialStart ? { 'subscription.hasUsedTrial': true } : {}),
-      'usage.aiCreditsLimit': limits.aiCredits,
-      updatedAt: now,
-    });
-
-    batch.set(subscriptionRef, {
-      id: subscription.id,
-      applicationId: this.appId,
-      livemode: this.objectLivemode(subscription),
-      userId,
-      stripeCustomerId: session.customer as string,
-      plan,
-      priceId: subscription.items.data[0].price.id,
-      interval: subscription.items.data[0].price.recurring?.interval || 'month',
-      amount: subscription.items.data[0].price.unit_amount || 0,
-      currency: subscription.currency,
-      status,
-      currentPeriodStart: new Date(subscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-      cancelAt: null,
-      canceledAt: null,
-      trialStart: trial.trialStart,
-      trialEnd: trial.trialEnd,
-      cancelAtPeriodEnd: false,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    await batch.commit();
     await this.refreshUsageWindow(userId, plan);
     this.logger.log(`Subscription created for user ${userId}: ${plan} (${status})`);
     await this.audit.logSystemAction(AuditAction.SUBSCRIPTION_ACTIVATED, 'subscription', userId, {
@@ -1940,23 +1990,42 @@ export class PaymentService {
     if (!userId) return 'no_user';
     if (await this.skipStripeEntitlementWrite(userId)) return 'store_purchase_in_period';
 
-    const gate = await this.gateSubscriptionEvent(userId, sub.id, { created: at.created, mode: 'adopt', subscription: sub });
-    if (!gate.apply) return gate.reason;
-
     const plan = this.determinePlan(sub.items.data[0].price.id);
     const limits = PLAN_CONFIGS[plan].limits;
-    const adopt = gate.adopted ? { stripeSubscriptionId: sub.id } : {};
+    // Stripe's status, mapped — not a blanket ACTIVE: the $0 invoice that
+    // starts a trial is "paid" while the subscription is `trialing`.
+    const status = this.mapStripeStatus(sub.status);
+    const trial = this.extractTrial(sub);
+
+    const gate = await this.applySubscriptionState(
+      userId,
+      sub.id,
+      { created: at.created, mode: 'adopt', subscription: sub },
+      (adopted) => ({
+        user: {
+          'subscription.status': status,
+          'subscription.currentPeriodEnd': new Date(sub.current_period_end * 1000),
+          ...this.periodStartField(plan, sub),
+          // Adopting (the checkout webhook was lost or is late): the plan and
+          // trial come with it, or the user would be ACTIVE on FREE.
+          ...(adopted
+            ? {
+                'subscription.plan': plan,
+                'subscription.trialStart': trial.trialStart,
+                'subscription.trialEnd': trial.trialEnd,
+                'subscription.cancelAtPeriodEnd': !!sub.cancel_at_period_end,
+                ...(stripeId(sub.customer) ? { 'subscription.stripeCustomerId': stripeId(sub.customer) } : {}),
+              }
+            : {}),
+          ...(trial.trialStart ? { 'subscription.hasUsedTrial': true } : {}),
+        },
+      }),
+    );
+    if (!gate.apply) return gate.reason;
 
     if (!isCurrentPaidPlan(plan)) {
       // LEGACY plans (and an unrecognised price): unchanged — every paid
       // invoice resets the counters.
-      await this.usersService.updateSubscription(userId, {
-        status: SubscriptionStatus.ACTIVE,
-        currentPeriodEnd: new Date(sub.current_period_end * 1000),
-        ...this.periodStartPatch(plan, sub),
-        ...adopt,
-      });
-
       // Reset monthly usage — once per invoice. A replay of the same invoice
       // (a resent or duplicated delivery under another event id) must not
       // wipe the credits used since the first reset.
@@ -1975,18 +2044,12 @@ export class PaymentService {
       // Current plans renew on the monthly anniversary of the billing period
       // (also for annual plans), not on every invoice: a proration invoice for
       // a mid-period plan change must not hand out a fresh allowance.
-      await this.usersService.updateSubscription(userId, {
-        status: SubscriptionStatus.ACTIVE,
-        currentPeriodEnd: new Date(sub.current_period_end * 1000),
-        currentPeriodStart: new Date(sub.current_period_start * 1000),
-        ...adopt,
-      });
       await this.usersService.updateUsage(userId, { aiCreditsLimit: limits.aiCredits });
       await this.refreshUsageWindow(userId, plan);
     }
 
     await this.syncSubscriptionRecord(sub.id, {
-      status: SubscriptionStatus.ACTIVE,
+      status,
       plan,
       currentPeriodStart: new Date(sub.current_period_start * 1000),
       currentPeriodEnd: new Date(sub.current_period_end * 1000),
@@ -2003,6 +2066,12 @@ export class PaymentService {
     return usage?.lastResetInvoiceId === invoiceId;
   }
 
+  /**
+   * `invoice.payment_failed`. The subscription is RE-READ and its own status
+   * written: a declined upgrade proration (`pending_if_incomplete`) fails an
+   * invoice while the subscription stays `active` on the old plan, and that
+   * must not put the user in PAST_DUE.
+   */
   private async handlePaymentFailed(invoice: Stripe.Invoice, at: { created?: number } = {}): Promise<HandlerDecision> {
     const userId = await this.findUserByCustomerId(invoice.customer as string);
     // Recorded as a failed payment — counted, never summed as revenue.
@@ -2010,15 +2079,29 @@ export class PaymentService {
     if (!userId) return 'no_user';
     if (await this.skipStripeEntitlementWrite(userId)) return 'store_purchase_in_period';
     const subscriptionId = invoiceSubscriptionId(invoice);
-    const gate = await this.gateSubscriptionEvent(userId, subscriptionId, { created: at.created, mode: 'current' });
+    if (!subscriptionId) return 'no_subscription_on_event';
+    let subscription: Stripe.Subscription;
+    try {
+      subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
+    } catch (err) {
+      if (PaymentService.isMissingResource(err)) return 'subscription_missing';
+      throw err;
+    }
+    const owner = PaymentService.appIdOf(subscription);
+    if (owner && owner !== this.appId) return 'subscription_app_mismatch';
+    const status = this.mapStripeStatus(subscription.status);
+
+    const gate = await this.applySubscriptionState(
+      userId,
+      subscriptionId,
+      { created: at.created, mode: 'current', staleCheck: true },
+      () => ({ user: { 'subscription.status': status } }),
+    );
     if (!gate.apply) return gate.reason;
-    await this.usersService.updateSubscription(userId, { status: SubscriptionStatus.PAST_DUE });
-    await this.syncSubscriptionRecord(subscriptionId, {
-      status: SubscriptionStatus.PAST_DUE,
-    });
-    this.logger.warn(`Payment failed for user ${userId}`);
+    await this.syncSubscriptionRecord(subscriptionId, { status }, subscription);
+    this.logger.warn(`Payment failed for user ${userId} (subscription now ${subscription.status})`);
     await this.audit.logSystemAction(AuditAction.PAYMENT_FAILED, 'subscription', userId, {
-      metadata: { invoiceId: invoice.id, amountDue: invoice.amount_due },
+      metadata: { invoiceId: invoice.id, amountDue: invoice.amount_due, billingReason: invoice.billing_reason ?? null },
     });
     return null;
   }
@@ -2051,13 +2134,6 @@ export class PaymentService {
     if (!userId) return 'no_user';
     if (await this.skipStripeEntitlementWrite(userId)) return 'store_purchase_in_period';
 
-    const gate = await this.gateSubscriptionEvent(userId, subscription.id, {
-      created: at.created,
-      mode: 'adopt',
-      subscription,
-    });
-    if (!gate.apply) return gate.reason;
-
     const plan = this.determinePlan(subscription.items.data[0].price.id);
     // An unpaid renewal: Stripe has already advanced current_period_end to
     // the period nobody paid for. Writing it would extend paid access (the
@@ -2069,27 +2145,30 @@ export class PaymentService {
     // has six. A bare cast persisted the raw string for the two with no enum
     // member — `incomplete_expired` and `paused` — and entitlements are decided
     // by `ACCESS_ENDING_STATUSES.includes(status)`, which neither string is in.
-    // The stored plan was then returned unconditionally and forever, with no
-    // period-end grace: an `incomplete` subscription that expired unpaid after
-    // 23h left the user on permanent PRO, for free, with no revocation path.
-    // The sibling handlers (handleCheckoutCompleted, handleInvoicePaid) already
-    // map; this one was the outlier.
     // The plan comes from the PRICE id (env map + legacy ids), never from
     // metadata, so a portal upgrade/downgrade lands on the plan actually billed.
-    await this.usersService.updateSubscription(userId, {
-      plan,
-      status: this.mapStripeStatus(subscription.status),
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
-      ...(unpaidRenewal
-        ? {}
-        : {
-            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-            ...this.periodStartPatch(plan, subscription),
-          }),
-      ...(gate.adopted ? { stripeSubscriptionId: subscription.id } : {}),
-      // Verified: OUR retrieved subscription started a trial.
-      ...(subscription.trial_start ? { hasUsedTrial: true } : {}),
-    });
+    const gate = await this.applySubscriptionState(
+      userId,
+      subscription.id,
+      { created: at.created, mode: 'adopt', subscription },
+      () => ({
+        user: {
+          'subscription.plan': plan,
+          'subscription.status': this.mapStripeStatus(subscription.status),
+          'subscription.cancelAtPeriodEnd': subscription.cancel_at_period_end,
+          ...(unpaidRenewal
+            ? {}
+            : {
+                'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
+                ...this.periodStartField(plan, subscription),
+              }),
+          // Verified: OUR retrieved subscription started a trial.
+          ...(subscription.trial_start ? { 'subscription.hasUsedTrial': true } : {}),
+        },
+      }),
+    );
+    if (!gate.apply) return gate.reason;
+
     if (isCurrentPaidPlan(plan) && !unpaidRenewal) {
       await this.usersService.updateUsage(userId, { aiCreditsLimit: PLAN_CONFIGS[plan].limits.aiCredits });
       await this.refreshUsageWindow(userId, plan);
@@ -2124,14 +2203,34 @@ export class PaymentService {
     subscription: Stripe.Subscription,
     at: { created?: number } = {},
   ): Promise<HandlerDecision> {
+    // Deletion is final in Stripe. Record it FIRST, whoever it belongs to now:
+    // every later positive write for this subscription is refused, in any
+    // event order (applySubscriptionState reads the tombstone transactionally).
+    if (subscription.id) {
+      await this.firebaseAdmin.firestore.collection(SUBSCRIPTION_TOMBSTONES_COLLECTION).doc(subscription.id).set(
+        {
+          subscriptionId: subscription.id,
+          customerId: stripeId(subscription.customer),
+          applicationId: this.appId,
+          livemode: this.objectLivemode(subscription),
+          deletedAt: new Date(),
+        },
+        { merge: true },
+      );
+    }
     const userId = await this.findUserByCustomerId(subscription.customer as string);
     await this.recordSubscription(subscription, userId);
     if (!userId) return 'no_user';
     if (await this.skipStripeEntitlementWrite(userId)) return 'store_purchase_in_period';
 
     // Only the CURRENT subscription's deletion downgrades: deleting an old
-    // subscription must not take away a newer one.
-    const gate = await this.gateSubscriptionEvent(userId, subscription.id, { created: at.created, mode: 'current' });
+    // subscription must not take away a newer one. Not stale-checked: a
+    // deletion is terminal, so a late one is still true.
+    const gate = await this.applySubscriptionState(userId, subscription.id, {
+      created: at.created,
+      mode: 'current',
+      ignoreTombstone: true,
+    });
     if (!gate.apply) return gate.reason;
 
     await this.applyDeletedSubscriptionWrite(
@@ -2255,15 +2354,17 @@ export class PaymentService {
 
     const paymentIntentId = stripeId(charge.payment_intent);
     if (!paymentIntentId) return;
-    const existing = await this.ledger.getPayment(paymentIntentId);
-    if (existing) {
-      await this.ledger.upsertPayment({ ...existing, amount_refunded: charge.amount_refunded ?? 0, updated_at: new Date() });
-      return;
-    }
-    // Paid before the ledger existed: record the payment from the charge so
-    // the refund has something to net against.
+    // The refunded total comes from the FRESH refund list just read, never
+    // from the event's charge snapshot: an older charge.refunded delivered
+    // late would otherwise lower it. Failed/canceled refunds return nothing.
+    const refundedTotal = (refunds.data ?? [])
+      .filter((r) => r.status !== 'failed' && r.status !== 'canceled')
+      .reduce((sum, r) => sum + (r.amount ?? 0), 0);
+    // Only amount_refunded is written on an existing row; a payment made
+    // before the ledger existed is recorded from the charge so the refund has
+    // something to net against.
     const now = new Date();
-    await this.ledger.upsertPayment({
+    await this.ledger.setPaymentRefundTotal(paymentIntentId, refundedTotal, {
       application_id: this.appId,
       livemode: this.objectLivemode(charge),
       stripe_payment_id: paymentIntentId,
@@ -2273,7 +2374,7 @@ export class PaymentService {
       stripe_invoice_id: stripeId(charge.invoice),
       stripe_subscription_id: null,
       amount: charge.amount_captured ?? charge.amount,
-      amount_refunded: charge.amount_refunded ?? 0,
+      amount_refunded: refundedTotal,
       currency: charge.currency ?? 'usd',
       status: charge.status === 'succeeded' ? 'succeeded' : ledgerPaymentStatus(charge.status),
       failure_message: charge.failure_message ?? null,
@@ -2335,7 +2436,7 @@ export class PaymentService {
     const userId = await this.findUserByCustomerId(subscription.customer as string);
     await this.recordSubscription(subscription, userId);
     if (!userId) return 'no_user';
-    const gate = await this.gateSubscriptionEvent(userId, subscription.id, { created: at.created, mode: 'current' });
+    const gate = await this.applySubscriptionState(userId, subscription.id, { created: at.created, mode: 'current', staleCheck: true });
     if (!gate.apply) return gate.reason;
     return this.revokeToFree(userId, 'subscription paused', subscription.id);
   }

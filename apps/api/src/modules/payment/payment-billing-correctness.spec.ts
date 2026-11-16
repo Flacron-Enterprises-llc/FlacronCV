@@ -3,7 +3,8 @@ import { PaymentService } from './payment.service';
 import { BillingLedgerService } from './billing-ledger.service';
 import { InMemoryFirestore } from '../firebase/in-memory-firestore';
 import { PLAN_CONFIGS, SubscriptionPlan, SubscriptionStatus, TRIAL_PERIOD_DAYS } from '@flacroncv/shared-types';
-import { CHECKOUT_COORDINATION_COLLECTION, CHECKOUT_SESSION_TTL_SECONDS } from './checkout-coordination';
+import { CHECKOUT_COORDINATION_COLLECTION, CHECKOUT_SESSION_TTL_SECONDS, CheckoutCoordinator } from './checkout-coordination';
+import { resolveCheckoutCustomer } from './customer-ownership';
 
 /**
  * Billing correctness on the shared Flacron Stripe account: event ordering,
@@ -193,7 +194,8 @@ describe('PaymentService billing correctness', () => {
 
       await service.handleWebhookEvent(event('evt_late', 'customer.subscription.updated', sub({ status: 'active' }), 100));
       expect((await userDoc()).subscription.plan).toBe(SubscriptionPlan.FREE);
-      expect(await decision('evt_late')).toBe('stale_event');
+      // Refused by the deletion tombstone, whatever Stripe answers and in any order.
+      expect(await decision('evt_late')).toBe('subscription_ended');
     });
 
     it('a replayed updated(active) for a canceled subscription is re-read from Stripe and grants nothing', async () => {
@@ -203,7 +205,7 @@ describe('PaymentService billing correctness', () => {
       await service.handleWebhookEvent(event('evt_replay', 'customer.subscription.updated', sub({ status: 'active' }), 999));
       expect(fake.stripe.subscriptions.retrieve).toHaveBeenCalledWith('sub_1');
       expect((await userDoc()).subscription.plan).toBe(SubscriptionPlan.FREE);
-      expect(await decision('evt_replay')).toBe('no_current_subscription');
+      expect(await decision('evt_replay')).toBe('subscription_ended');
     });
 
     it('deleting an OLD subscription does not downgrade a user on a newer one', async () => {
@@ -803,10 +805,396 @@ describe('PaymentService billing correctness', () => {
 
   it('lifecycle merges into `subscriptions` carry applicationId and livemode', async () => {
     await seedUser(firestore, 'u1', { plan: SubscriptionPlan.PROFESSIONAL, stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_1' });
+    fake.subscriptions.set('sub_1', sub({ status: 'past_due' }));
     await service.handleWebhookEvent(
       event('evt_pf', 'invoice.payment_failed', { id: 'in_f', customer: 'cus_1', subscription: 'sub_1', subscription_details: { metadata: OURS } }),
     );
     const record = (await firestore.collection('subscriptions').doc('sub_1').get()).data() as any;
     expect(record).toMatchObject({ status: SubscriptionStatus.PAST_DUE, applicationId: APP_ID, livemode: false });
+  });
+  // ─── Review round 2 ──────────────────────────────────────────────────────────
+
+  describe('ordering is per subscription and only for payload-driven handlers (R1)', () => {
+    it('(A) invoice.paid processed before checkout.completed: the adopt path writes the plan, checkout still applies', async () => {
+      await seedUser(firestore, 'u1', { stripeCustomerId: 'cus_1' });
+      fake.subscriptions.set('sub_1', sub({ metadata: { ...OURS, internal_user_id: 'u1' } }));
+      await service.handleWebhookEvent(
+        event('evt_paid_first', 'invoice.paid', { id: 'in_1', customer: 'cus_1', subscription: 'sub_1', subscription_details: { metadata: OURS } }, 200),
+      );
+      expect((await userDoc()).subscription).toMatchObject({
+        plan: SubscriptionPlan.PROFESSIONAL,
+        status: SubscriptionStatus.ACTIVE,
+        stripeSubscriptionId: 'sub_1',
+      });
+      await service.handleWebhookEvent(
+        event('evt_ck_late', 'checkout.session.completed', { id: 'cs_1', subscription: 'sub_1', customer: 'cus_1', metadata: { ...OURS, firebaseUid: 'u1' } }, 100),
+      );
+      expect(await decision('evt_ck_late')).toBeUndefined();
+      expect((await userDoc()).subscription.plan).toBe(SubscriptionPlan.PROFESSIONAL);
+    });
+
+    it('(B) a dunning event on the OLD subscription does not make the new checkout stale', async () => {
+      await seedUser(firestore, 'u1', { plan: SubscriptionPlan.STARTER, stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_old' });
+      fake.subscriptions.set('sub_old', sub({ id: 'sub_old', status: 'past_due' }));
+      await service.handleWebhookEvent(
+        event('evt_dun', 'invoice.payment_failed', { id: 'in_o', customer: 'cus_1', subscription: 'sub_old', subscription_details: { metadata: OURS } }, 300),
+      );
+      fake.subscriptions.set('sub_old', sub({ id: 'sub_old', status: 'canceled' }));
+      fake.subscriptions.set('sub_new', sub({ id: 'sub_new' }));
+      await service.handleWebhookEvent(
+        event('evt_ck_new', 'checkout.session.completed', { id: 'cs_n', subscription: 'sub_new', customer: 'cus_1', metadata: { ...OURS, firebaseUid: 'u1' } }, 200),
+      );
+      expect((await userDoc()).subscription).toMatchObject({ stripeSubscriptionId: 'sub_new', plan: SubscriptionPlan.PROFESSIONAL });
+    });
+
+    it('(C) a newer subscription.updated does not make a retried renewal invoice.paid skip its usage reset', async () => {
+      await seedUser(firestore, 'u1', { plan: SubscriptionPlan.PRO, stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_1' });
+      const legacy = sub({ items: { data: [{ price: { id: PRO_PRICE, recurring: { interval: 'month' } } }] } });
+      fake.subscriptions.set('sub_1', legacy);
+      await firestore.collection('users').doc('u1').update({ 'usage.aiCreditsUsed': 40 });
+      await service.handleWebhookEvent(event('evt_upd_new', 'customer.subscription.updated', legacy, 300));
+      await service.handleWebhookEvent(
+        event('evt_renew_retry', 'invoice.paid', { id: 'in_renew', customer: 'cus_1', subscription: 'sub_1', subscription_details: { metadata: OURS } }, 200),
+      );
+      expect((await userDoc()).usage.aiCreditsUsed).toBe(0);
+    });
+
+    it('a payload-driven payment_failed older than the last applied event of the SAME subscription is still skipped', async () => {
+      await seedUser(firestore, 'u1', { plan: SubscriptionPlan.PROFESSIONAL, stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_1' });
+      fake.subscriptions.set('sub_1', sub());
+      await service.handleWebhookEvent(event('evt_u300', 'customer.subscription.updated', sub(), 300));
+      fake.subscriptions.set('sub_1', sub({ status: 'past_due' }));
+      await service.handleWebhookEvent(
+        event('evt_pf_old', 'invoice.payment_failed', { id: 'in_x', customer: 'cus_1', subscription: 'sub_1', subscription_details: { metadata: OURS } }, 100),
+      );
+      expect(await decision('evt_pf_old')).toBe('stale_event');
+      expect((await userDoc()).subscription.status).toBe(SubscriptionStatus.ACTIVE);
+    });
+  });
+
+  describe('deletion is final, in any order (R2)', () => {
+    it('invoice.paid adoption after the subscription was deleted is refused (tombstone)', async () => {
+      await seedUser(firestore, 'u1', { stripeCustomerId: 'cus_1' });
+      // deleted(S) arrives while the user has no current subscription: nothing to downgrade...
+      await service.handleWebhookEvent(event('evt_del_s', 'customer.subscription.deleted', sub({ status: 'canceled' })));
+      expect(await decision('evt_del_s')).toBe('no_current_subscription');
+      // ...then a renewal invoice.paid whose Stripe read was (racily) still live.
+      fake.subscriptions.set('sub_1', sub({ status: 'active', metadata: { ...OURS, internal_user_id: 'u1' } }));
+      await service.handleWebhookEvent(
+        event('evt_paid_s', 'invoice.paid', { id: 'in_s', customer: 'cus_1', subscription: 'sub_1', subscription_details: { metadata: OURS } }),
+      );
+      expect(await decision('evt_paid_s')).toBe('subscription_ended');
+      expect((await userDoc()).subscription).toMatchObject({ plan: SubscriptionPlan.FREE });
+      expect((await userDoc()).subscription.stripeSubscriptionId ?? null).toBeNull();
+    });
+
+    it('adoption is written inside the gate transaction (a deletion right after sees it as current)', async () => {
+      await seedUser(firestore, 'u1', { stripeCustomerId: 'cus_1' });
+      fake.subscriptions.set('sub_1', sub({ metadata: { ...OURS, internal_user_id: 'u1' } }));
+      await service.handleWebhookEvent(
+        event('evt_adopt_tx', 'invoice.paid', { id: 'in_a', customer: 'cus_1', subscription: 'sub_1', subscription_details: { metadata: OURS } }),
+      );
+      await service.handleWebhookEvent(event('evt_del_after', 'customer.subscription.deleted', sub({ status: 'canceled' })));
+      expect(await decision('evt_del_after')).toBeUndefined();
+      expect((await userDoc()).subscription).toMatchObject({ plan: SubscriptionPlan.FREE, stripeSubscriptionId: null });
+    });
+  });
+
+  describe('one customer across plan and career checkout (R3, R4)', () => {
+    /** customers.create that honours idempotency keys the way Stripe does. */
+    const idempotentCreate = () => {
+      const byKey = new Map<string, { params: string; customer: any }>();
+      let n = 0;
+      return jest.fn(async (params: any, opts: any) => {
+        await new Promise((r) => setTimeout(r, 5));
+        const seen = byKey.get(opts.idempotencyKey);
+        if (seen) {
+          if (seen.params !== JSON.stringify(params)) {
+            throw Object.assign(new Error('Keys for idempotent requests can only be used with the same parameters'), {
+              type: 'StripeIdempotencyError',
+            });
+          }
+          return seen.customer;
+        }
+        const customer = { id: `cus_${String.fromCharCode(65 + n++)}`, created: 1_700_000_000, livemode: false, metadata: { ...OURS } };
+        byKey.set(opts.idempotencyKey, { params: JSON.stringify(params), customer });
+        return customer;
+      });
+    };
+
+    it('a concurrent plan checkout and career/pack checkout create ONE Stripe customer', async () => {
+      await seedUser(firestore, 'u1');
+      fake.stripe.customers.create = idempotentCreate();
+      const keys = new CheckoutCoordinator(() => firestore as any);
+      const [, careerCustomer] = await Promise.all([
+        service.createCheckoutSession('u1', { plan: SubscriptionPlan.STARTER }, 'http://ok', 'http://cancel'),
+        resolveCheckoutCustomer(fake.stripe as any, {
+          appId: APP_ID,
+          userId: 'u1',
+          email: 'u1@example.com',
+          name: 'Test',
+          storedCustomerId: null,
+          saveCustomerId: (id) => users.updateSubscription('u1', { stripeCustomerId: id }),
+          keys,
+          log: { warn: () => undefined },
+        }),
+      ]);
+      const results = await Promise.all(fake.stripe.customers.create.mock.results.map((r: any) => r.value));
+      expect([...new Set(results.map((c: any) => c.id))]).toEqual(['cus_A']);
+      expect(careerCustomer).toBe('cus_A');
+      expect((await userDoc()).subscription.stripeCustomerId).toBe('cus_A');
+      expect((fake.stripe.checkout.sessions.create.mock.calls[0] as any[])[0].customer).toBe('cus_A');
+    });
+
+    it('checkout.session.completed stores the customer the subscription bills, so renewals find the user', async () => {
+      await seedUser(firestore, 'u1', { stripeCustomerId: 'cus_B' });
+      fake.subscriptions.set('sub_1', sub({ customer: 'cus_A' }));
+      await service.handleWebhookEvent(
+        event('evt_ck_a', 'checkout.session.completed', { id: 'cs_a', subscription: 'sub_1', customer: 'cus_A', metadata: { ...OURS, firebaseUid: 'u1' } }),
+      );
+      expect((await userDoc()).subscription.stripeCustomerId).toBe('cus_A');
+      fake.subscriptions.set('sub_1', sub({ customer: 'cus_A', current_period_end: 1_705_200_000 }));
+      await service.handleWebhookEvent(
+        event('evt_renew_a', 'invoice.paid', { id: 'in_a', customer: 'cus_A', subscription: 'sub_1', subscription_details: { metadata: OURS } }),
+      );
+      expect(await decision('evt_renew_a')).toBeUndefined();
+      expect(new Date((await userDoc()).subscription.currentPeriodEnd)).toEqual(new Date(1_705_200_000 * 1000));
+    });
+
+    it('a reused customer key is resent with its ORIGINAL parameters even after the profile changed', async () => {
+      await seedUser(firestore, 'u1');
+      fake.stripe.customers.create = idempotentCreate();
+      users.updateSubscription.mockRejectedValueOnce(new Error('firestore down')); // crash after create
+      await expect(service.createCheckoutSession('u1', { plan: SubscriptionPlan.STARTER }, 'http://ok', 'http://cancel')).rejects.toThrow(
+        'firestore down',
+      );
+      await firestore.collection('users').doc('u1').update({ email: 'changed@example.com', displayName: 'New Name' });
+      await service.createCheckoutSession('u1', { plan: SubscriptionPlan.STARTER }, 'http://ok', 'http://cancel');
+      const calls = fake.stripe.customers.create.mock.calls as any[];
+      expect(calls.map((c) => c[1].idempotencyKey)).toEqual(['flacroncv-customer-u1-1', 'flacroncv-customer-u1-1']);
+      expect(calls[1][0]).toEqual(calls[0][0]);
+      expect((await userDoc()).subscription.stripeCustomerId).toBe('cus_A');
+    });
+
+    it('an idempotency error from Stripe is recovered with a fresh key', async () => {
+      await seedUser(firestore, 'u1');
+      const create = idempotentCreate();
+      fake.stripe.customers.create = jest.fn(async (params: any, opts: any) => {
+        if (opts.idempotencyKey.endsWith('-1')) {
+          throw Object.assign(new Error('idempotency key in use'), { type: 'StripeIdempotencyError' });
+        }
+        return create(params, opts);
+      });
+      await service.createCheckoutSession('u1', { plan: SubscriptionPlan.STARTER }, 'http://ok', 'http://cancel');
+      expect((fake.stripe.customers.create.mock.calls as any[]).map((c) => c[1].idempotencyKey)).toEqual([
+        'flacroncv-customer-u1-1',
+        'flacroncv-customer-u1-2',
+      ]);
+      expect((await userDoc()).subscription.stripeCustomerId).toBe('cus_A');
+    });
+
+    it('a key older than Stripe’s 24h retention is never replayed', async () => {
+      await seedUser(firestore, 'u1');
+      await firestore.collection(CHECKOUT_COORDINATION_COLLECTION).doc('u1').set({
+        uid: 'u1',
+        customerKeySeq: 4,
+        pendingCustomerKey: 'flacroncv-customer-u1-4',
+        pendingCustomerKeyAt: Date.now() - 25 * 60 * 60 * 1000,
+        pendingCustomerEmail: 'old@example.com',
+        pendingCustomerName: 'Old',
+      });
+      await service.createCheckoutSession('u1', { plan: SubscriptionPlan.STARTER }, 'http://ok', 'http://cancel');
+      const [params, opts] = fake.stripe.customers.create.mock.calls[0] as any[];
+      expect(opts.idempotencyKey).toBe('flacroncv-customer-u1-5');
+      expect(params.email).toBe('u1@example.com');
+    });
+
+    it('a replayed customer that was deleted since is replaced with a fresh one', async () => {
+      await seedUser(firestore, 'u1');
+      await firestore.collection(CHECKOUT_COORDINATION_COLLECTION).doc('u1').set({
+        uid: 'u1',
+        customerKeySeq: 1,
+        pendingCustomerKey: 'flacroncv-customer-u1-1',
+        pendingCustomerKeyAt: Date.now() - 60_000,
+        pendingCustomerEmail: 'u1@example.com',
+        pendingCustomerName: 'Test',
+      });
+      fake.stripe.customers.create.mockImplementation(async (_p: any, opts: any) => ({
+        id: opts.idempotencyKey.endsWith('-1') ? 'cus_gone' : 'cus_fresh',
+        created: 1,
+        livemode: false,
+        metadata: { ...OURS },
+      }));
+      fake.stripe.customers.retrieve.mockImplementation(async (id: string) =>
+        id === 'cus_gone' ? ({ id, deleted: true } as any) : ({ id, metadata: { ...OURS } } as any),
+      );
+      await service.createCheckoutSession('u1', { plan: SubscriptionPlan.STARTER }, 'http://ok', 'http://cancel');
+      expect((await userDoc()).subscription.stripeCustomerId).toBe('cus_fresh');
+    });
+  });
+
+  describe('payment_failed writes the subscription’s real status (R5)', () => {
+    it('a declined upgrade proration (subscription still active) does not mark the user PAST_DUE', async () => {
+      await seedUser(firestore, 'u1', { plan: SubscriptionPlan.STARTER, status: SubscriptionStatus.ACTIVE, stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_1' });
+      fake.subscriptions.set('sub_1', sub({ status: 'active' }));
+      await service.handleWebhookEvent(
+        event('evt_upg_fail', 'invoice.payment_failed', {
+          id: 'in_upg',
+          customer: 'cus_1',
+          subscription: 'sub_1',
+          billing_reason: 'subscription_update',
+          subscription_details: { metadata: OURS },
+        }),
+      );
+      expect((await userDoc()).subscription.status).toBe(SubscriptionStatus.ACTIVE);
+    });
+  });
+
+  describe('scheduled downgrade survives an unpaid upgrade (R6)', () => {
+    beforeEach(async () => {
+      await seedUser(firestore, 'u1', {
+        plan: SubscriptionPlan.STARTER,
+        stripeCustomerId: 'cus_1',
+        stripeSubscriptionId: 'sub_1',
+        currentPeriodEnd: new Date(Date.now() + 20 * 86400000),
+      });
+      fake.subscriptions.set(
+        'sub_1',
+        sub({ schedule: 'sched_down', items: { data: [{ id: 'si_1', price: { id: 'price_starter_m', recurring: { interval: 'month' } } }] } }),
+      );
+    });
+
+    it('a pending (unpaid) upgrade keeps the scheduled downgrade', async () => {
+      fake.stripe.subscriptions.update.mockImplementation(async () =>
+        sub({
+          schedule: 'sched_down',
+          items: { data: [{ id: 'si_1', price: { id: 'price_starter_m', recurring: { interval: 'month' } } }] },
+          pending_update: { subscription_items: [] },
+        }),
+      );
+      await service.changePlan('u1', { plan: SubscriptionPlan.PROFESSIONAL });
+      expect(fake.stripe.subscriptionSchedules.release).not.toHaveBeenCalled();
+    });
+
+    it('a paid upgrade releases the schedule only after the change applied', async () => {
+      fake.stripe.subscriptions.update.mockImplementation(async (_id: string, params: any) =>
+        sub({ items: { data: [{ id: 'si_1', price: { id: params.items?.[0]?.price ?? 'price_prof_m', recurring: { interval: 'month' } } }] } }),
+      );
+      await service.changePlan('u1', { plan: SubscriptionPlan.PROFESSIONAL });
+      expect(fake.stripe.subscriptionSchedules.release).toHaveBeenCalledWith('sched_down');
+      expect(fake.stripe.subscriptions.update.mock.invocationCallOrder[0]).toBeLessThan(
+        fake.stripe.subscriptionSchedules.release.mock.invocationCallOrder[0],
+      );
+    });
+  });
+
+  describe('event claims are owned (R7)', () => {
+    it('after a stale takeover, the original worker can neither complete nor release the new claim', async () => {
+      const ledger = new BillingLedgerService({ firestore } as any);
+      const evt = { id: 'evt_owned', type: 'invoice.paid', livemode: false };
+      const first = await ledger.claimEventWithToken(evt);
+      await firestore.collection('payment_events').doc('evt_owned').set(
+        { claimedAt: new Date(Date.now() - 60 * 60 * 1000) },
+        { merge: true },
+      );
+      const second = await ledger.claimEventWithToken(evt);
+      expect(second.claim).toBe('claimed');
+      expect(second.token).not.toBe(first.token);
+
+      const details = { applicationId: APP_ID, expectedApplicationId: APP_ID };
+      expect(await ledger.completeEvent('evt_owned', 'applied', details, first.token)).toBe(false);
+      await ledger.releaseEvent('evt_owned', first.token);
+      const row = (await firestore.collection('payment_events').doc('evt_owned').get()).data() as any;
+      expect(row).toMatchObject({ status: 'processing', claimToken: second.token });
+
+      expect(await ledger.completeEvent('evt_owned', 'applied', details, second.token)).toBe(true);
+      expect(((await firestore.collection('payment_events').doc('evt_owned').get()).data() as any).status).toBe('processed');
+    });
+  });
+
+  describe('refunded totals (R8)', () => {
+    const payment = (amountRefunded: number) => ({
+      application_id: APP_ID,
+      livemode: false,
+      stripe_payment_id: 'pi_1',
+      customer_id: 'cus_1',
+      internal_user_id: 'u1',
+      stripe_charge_id: 'ch_1',
+      stripe_invoice_id: 'in_1',
+      stripe_subscription_id: 'sub_1',
+      amount: 10000,
+      amount_refunded: amountRefunded,
+      currency: 'usd',
+      status: 'succeeded' as const,
+      failure_message: null,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    it('a late charge.refunded snapshot cannot lower the refunded total (fresh refund list wins)', async () => {
+      await seedUser(firestore, 'u1', { plan: SubscriptionPlan.FREE, stripeCustomerId: 'cus_1' });
+      const ledger = new BillingLedgerService({ firestore } as any);
+      await ledger.upsertPayment(payment(5000));
+      fake.stripe.refunds.list.mockResolvedValue({
+        data: [
+          { id: 're_1', amount: 3000, currency: 'usd', status: 'succeeded', payment_intent: 'pi_1', charge: 'ch_1', created: 1 },
+          { id: 're_2', amount: 2000, currency: 'usd', status: 'succeeded', payment_intent: 'pi_1', charge: 'ch_1', created: 2 },
+          { id: 're_3', amount: 999, currency: 'usd', status: 'failed', payment_intent: 'pi_1', charge: 'ch_1', created: 3 },
+        ],
+      } as any);
+      await service.handleWebhookEvent(
+        event('evt_old_refund', 'charge.refunded', {
+          id: 'ch_1',
+          payment_intent: 'pi_1',
+          customer: 'cus_1',
+          refunded: false,
+          amount: 10000,
+          amount_refunded: 3000, // the OLD snapshot
+          currency: 'usd',
+          livemode: false,
+          metadata: OURS,
+        }),
+      );
+      expect((await ledger.getPayment('pi_1'))?.amount_refunded).toBe(5000);
+    });
+
+    it('a payment upsert never rewrites amount_refunded on an existing row', async () => {
+      const ledger = new BillingLedgerService({ firestore } as any);
+      await ledger.upsertPayment(payment(5000));
+      await ledger.upsertPaymentPreservingRefunds(payment(0));
+      await ledger.recordPaymentIntent({
+        paymentIntentId: 'pi_1',
+        applicationId: APP_ID,
+        livemode: false,
+        amount: 10000,
+        currency: 'usd',
+        stripeStatus: 'succeeded',
+        customerId: 'cus_1',
+        internalUserId: 'u1',
+        chargeId: 'ch_1',
+      });
+      expect((await ledger.getPayment('pi_1'))?.amount_refunded).toBe(5000);
+    });
+  });
+
+  describe('deleted accounts (R9) and the trial invoice status', () => {
+    it('a checkout for a deleted user is acknowledged with user_not_found, not retried', async () => {
+      fake.subscriptions.set('sub_1', sub());
+      const outcome = await service.handleWebhookEvent(
+        event('evt_gone', 'checkout.session.completed', { id: 'cs_g', subscription: 'sub_1', customer: 'cus_1', metadata: { ...OURS, firebaseUid: 'ghost' } }),
+      );
+      expect(outcome).toBe('applied');
+      expect(await decision('evt_gone')).toBe('user_not_found');
+      expect(((await firestore.collection('payment_events').doc('evt_gone').get()).data() as any).status).toBe('processed');
+    });
+
+    it('the $0 trial-start invoice.paid records TRIALING, not ACTIVE', async () => {
+      await seedUser(firestore, 'u1', { plan: SubscriptionPlan.PROFESSIONAL, stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_1' });
+      fake.subscriptions.set('sub_1', sub({ status: 'trialing', trial_start: 1_700_000_000 }));
+      await service.handleWebhookEvent(
+        event('evt_trial_inv', 'invoice.paid', { id: 'in_t', customer: 'cus_1', subscription: 'sub_1', amount_paid: 0, subscription_details: { metadata: OURS } }),
+      );
+      expect((await userDoc()).subscription.status).toBe(SubscriptionStatus.TRIALING);
+    });
   });
 });

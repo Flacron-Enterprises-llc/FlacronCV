@@ -257,10 +257,10 @@ describe('PaymentService — five-plan catalog', () => {
       // subscription.updated re-reads the subscription from Stripe.
       (service as any).stripe = { subscriptions: { retrieve: jest.fn().mockResolvedValue(upgraded) } };
       await service.handleWebhookEvent(event('customer.subscription.updated', upgraded));
-      expect(users.updateSubscription).toHaveBeenCalledWith('u1', expect.objectContaining({
-        plan: SubscriptionPlan.PROFESSIONAL,
-        currentPeriodStart: new Date(1_700_000_000 * 1000),
-      }));
+      // Entitlement writes are transactional: assert the stored state.
+      const stored = ((await firestore.collection('users').doc('u1').get()).data() as any).subscription;
+      expect(stored.plan).toBe(SubscriptionPlan.PROFESSIONAL);
+      expect(new Date(stored.currentPeriodStart)).toEqual(new Date(1_700_000_000 * 1000));
       expect(users.updateUsage).toHaveBeenCalledWith('u1', { aiCreditsLimit: 60 });
       expect(users.rolloverUsageIfDue).toHaveBeenCalledWith('u1');
     });
@@ -269,7 +269,7 @@ describe('PaymentService — five-plan catalog', () => {
       const legacy = fakeSub(PLAN_CONFIGS[SubscriptionPlan.PRO].stripePriceIdMonthly);
       (service as any).stripe = { subscriptions: { retrieve: jest.fn().mockResolvedValue(legacy) } };
       await service.handleWebhookEvent(event('customer.subscription.updated', legacy));
-      expect(users.updateSubscription).toHaveBeenCalledWith('u1', expect.objectContaining({ plan: SubscriptionPlan.PRO }));
+      expect(((await firestore.collection('users').doc('u1').get()).data() as any).subscription.plan).toBe(SubscriptionPlan.PRO);
       expect(users.updateUsage).not.toHaveBeenCalled();
       expect(users.rolloverUsageIfDue).not.toHaveBeenCalled();
     });
@@ -287,10 +287,9 @@ describe('PaymentService — five-plan catalog', () => {
       await service.handleWebhookEvent(event('invoice.paid', { subscription: 'sub_test', customer: 'cus_1', subscription_details: { metadata: OUR_METADATA } }));
       expect(users.updateUsage).toHaveBeenCalledWith('u1', { aiCreditsLimit: 60 });
       expect(users.updateUsage).not.toHaveBeenCalledWith('u1', expect.objectContaining({ aiCreditsUsed: 0 }));
-      expect(users.updateSubscription).toHaveBeenCalledWith('u1', expect.objectContaining({
-        status: SubscriptionStatus.ACTIVE,
-        currentPeriodStart: new Date(1_700_000_000 * 1000),
-      }));
+      const stored = ((await firestore.collection('users').doc('u1').get()).data() as any).subscription;
+      expect(stored.status).toBe(SubscriptionStatus.ACTIVE);
+      expect(new Date(stored.currentPeriodStart)).toEqual(new Date(1_700_000_000 * 1000));
     });
 
     it('checkout.session.completed for Business writes the plan, its credit limit and the period start', async () => {
@@ -380,7 +379,7 @@ describe('PaymentService — five-plan catalog', () => {
         items: [{ id: 'si_1', price: 'price_prof_y' }],
         proration_behavior: 'always_invoice',
       }));
-      expect(users.updateSubscription).toHaveBeenCalledWith('u1', expect.objectContaining({ plan: SubscriptionPlan.PROFESSIONAL }));
+      expect(((await firestore.collection('users').doc('u1').get()).data() as any).subscription.plan).toBe(SubscriptionPlan.PROFESSIONAL);
     });
 
     it('schedules a downgrade for the period end: no proration, the plan and V1 counters stay as paid', async () => {
@@ -404,6 +403,7 @@ describe('PaymentService — five-plan catalog', () => {
       expect(params.phases[0]).toMatchObject({ items: [{ price: 'price_prof_m', quantity: 1 }], end_date: 1_702_600_000 });
       expect(params.phases[1]).toMatchObject({ items: [{ price: 'price_starter_m', quantity: 1 }], iterations: 1 });
       expect(users.updateSubscription).not.toHaveBeenCalledWith('u1', expect.objectContaining({ plan: SubscriptionPlan.STARTER }));
+      expect(((await firestore.collection('users').doc('u1').get()).data() as any).subscription.plan).not.toBe(SubscriptionPlan.STARTER);
     });
 
     it('an upgrade releases a pending scheduled downgrade and switches now', async () => {

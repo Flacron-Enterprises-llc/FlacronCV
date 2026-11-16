@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import type { DocumentReference, Query, Transaction } from 'firebase-admin/firestore';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import {
@@ -106,17 +107,31 @@ export class BillingLedgerService {
    * `processedAt` — those are duplicates.
    */
   async claimEvent(event: { id: string; type: string; livemode?: boolean }): Promise<EventClaim> {
+    return (await this.claimEventWithToken(event)).claim;
+  }
+
+  /**
+   * {@link claimEvent}, also returning the claim's owner token. Pass it to
+   * {@link completeEvent} / {@link releaseEvent}: after a stale takeover the
+   * original (slow, not dead) worker's token no longer matches, so it cannot
+   * complete or delete the NEW claimant's row.
+   */
+  async claimEventWithToken(
+    event: { id: string; type: string; livemode?: boolean },
+  ): Promise<{ claim: EventClaim; token: string | null }> {
     const ref = this.db.collection(STRIPE_EVENTS_COLLECTION).doc(event.id);
+    const token = randomUUID();
     const claim = {
       provider: 'stripe',
       type: event.type,
       livemode: event.livemode ?? null,
       status: 'processing',
       claimedAt: new Date(),
+      claimToken: token,
     };
     try {
       await ref.create(claim);
-      return 'claimed';
+      return { claim: 'claimed', token };
     } catch (err) {
       if (!isAlreadyExists(err)) throw err;
     }
@@ -124,7 +139,7 @@ export class BillingLedgerService {
     // Read-decide-write in ONE transaction: two retries that both find the
     // same stale claim (or a just-released row) cannot both take it over —
     // Firestore aborts and re-runs the loser, which then sees the fresh claim.
-    return this.db.runTransaction(async (tx: Transaction): Promise<EventClaim> => {
+    const result = await this.db.runTransaction(async (tx: Transaction): Promise<EventClaim> => {
       const snap = await tx.get(ref as DocumentReference);
       const existing = snap.data() as { status?: string; claimedAt?: unknown } | undefined;
       if (!existing) {
@@ -142,6 +157,7 @@ export class BillingLedgerService {
       }
       return 'duplicate';
     });
+    return { claim: result, token: result === 'claimed' ? token : null };
   }
 
   /** Mark a claimed event done. The row is kept: it is the record that it was processed. */
@@ -149,24 +165,50 @@ export class BillingLedgerService {
     eventId: string,
     outcome: EventOutcome,
     details: { applicationId: string | null; expectedApplicationId: string; objectId?: string | null },
-  ): Promise<void> {
-    await this.db.collection(STRIPE_EVENTS_COLLECTION).doc(eventId).set(
-      {
-        status: 'processed',
-        outcome,
-        application_id: details.applicationId,
-        expected_application_id: details.expectedApplicationId,
-        object_id: details.objectId ?? null,
-        processedAt: new Date(),
-      },
-      { merge: true },
-    );
+    claimToken?: string | null,
+  ): Promise<boolean> {
+    const ref = this.db.collection(STRIPE_EVENTS_COLLECTION).doc(eventId) as DocumentReference;
+    const done = {
+      status: 'processed',
+      outcome,
+      application_id: details.applicationId,
+      expected_application_id: details.expectedApplicationId,
+      object_id: details.objectId ?? null,
+      processedAt: new Date(),
+    };
+    if (!claimToken) {
+      await ref.set(done, { merge: true });
+      return true;
+    }
+    return this.db.runTransaction(async (tx: Transaction) => {
+      const snap = await tx.get(ref);
+      const row = snap.data() as { claimToken?: string } | undefined;
+      if (row?.claimToken !== claimToken) {
+        this.logger.warn(`Not completing Stripe event ${eventId}: the claim was taken over by another worker`);
+        return false;
+      }
+      tx.set(ref, done, { merge: true });
+      return true;
+    });
   }
 
-  /** Drop a claim after a failure so Stripe's retry runs the event again. */
-  async releaseEvent(eventId: string): Promise<void> {
+  /** Drop a claim after a failure so Stripe's retry runs the event again. Only the claim's owner may. */
+  async releaseEvent(eventId: string, claimToken?: string | null): Promise<void> {
     try {
-      await this.db.collection(STRIPE_EVENTS_COLLECTION).doc(eventId).delete();
+      const ref = this.db.collection(STRIPE_EVENTS_COLLECTION).doc(eventId) as DocumentReference;
+      if (!claimToken) {
+        await ref.delete();
+        return;
+      }
+      await this.db.runTransaction(async (tx: Transaction) => {
+        const snap = await tx.get(ref);
+        const row = snap.data() as { claimToken?: string } | undefined;
+        if (row?.claimToken !== claimToken) {
+          this.logger.warn(`Not releasing Stripe event ${eventId}: the claim belongs to another worker`);
+          return;
+        }
+        tx.delete(ref);
+      });
     } catch (err) {
       // The claim goes stale and is taken over by a later retry instead.
       this.logger.error(`Could not release claim on Stripe event ${eventId}: ${(err as Error).message}`);
@@ -200,6 +242,53 @@ export class BillingLedgerService {
 
   upsertPayment(row: LedgerPayment) {
     return this.upsert('payments', row);
+  }
+
+  /**
+   * Write a payment row WITHOUT touching `amount_refunded` on an existing row.
+   * The refund side is owned by {@link setPaymentRefundTotal}; a payment upsert
+   * that copied the value it read earlier could lower a refund recorded
+   * concurrently. Create-or-merge in one transaction.
+   */
+  async upsertPaymentPreservingRefunds(row: LedgerPayment): Promise<void> {
+    if (!row.stripe_payment_id) return;
+    if (!row.application_id) {
+      throw new Error(`Refusing to store payments row ${row.stripe_payment_id} without application_id`);
+    }
+    const ref = this.db.collection(LEDGER_COLLECTIONS.payments).doc(row.stripe_payment_id) as DocumentReference;
+    await this.db.runTransaction(async (tx: Transaction) => {
+      const snap = await tx.get(ref);
+      if (snap.exists) {
+        const { amount_refunded: _ignored, created_at: _created, ...rest } = row;
+        void _ignored;
+        void _created;
+        tx.set(ref, rest, { merge: true });
+      } else {
+        tx.set(ref, { ...row, amount_refunded: row.amount_refunded ?? 0 });
+      }
+    });
+  }
+
+  /**
+   * Set a payment's refunded total from a FRESH Stripe refund list (never an
+   * event snapshot, which can arrive out of order). Only that field (and
+   * updated_at) is written on an existing row; `createIfMissing` is stored for
+   * a payment made before the ledger existed. One transaction.
+   */
+  async setPaymentRefundTotal(paymentIntentId: string, amountRefunded: number, createIfMissing: LedgerPayment): Promise<void> {
+    if (!paymentIntentId) return;
+    if (!createIfMissing.application_id) {
+      throw new Error(`Refusing to store payments row ${paymentIntentId} without application_id`);
+    }
+    const ref = this.db.collection(LEDGER_COLLECTIONS.payments).doc(paymentIntentId) as DocumentReference;
+    await this.db.runTransaction(async (tx: Transaction) => {
+      const snap = await tx.get(ref);
+      if (snap.exists) {
+        tx.set(ref, { amount_refunded: amountRefunded, updated_at: new Date() }, { merge: true });
+      } else {
+        tx.set(ref, { ...createIfMissing, amount_refunded: amountRefunded });
+      }
+    });
   }
 
   upsertRefund(row: LedgerRefund) {
@@ -297,7 +386,8 @@ export class BillingLedgerService {
   }): Promise<void> {
     const existing = await this.getPayment(input.paymentIntentId);
     const now = new Date();
-    await this.upsertPayment({
+    // amount_refunded is never rewritten here (see upsertPaymentPreservingRefunds).
+    await this.upsertPaymentPreservingRefunds({
       application_id: input.applicationId,
       livemode: input.livemode,
       stripe_payment_id: input.paymentIntentId,

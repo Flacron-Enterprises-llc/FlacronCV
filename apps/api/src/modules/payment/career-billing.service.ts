@@ -39,6 +39,7 @@ import {
 import { currentCaller } from '../career-metering/caller-context';
 import { BillingLedgerService } from './billing-ledger.service';
 import { appIdOf, resolveCheckoutCustomer } from './customer-ownership';
+import { CheckoutCoordinator, DbLike } from './checkout-coordination';
 
 /**
  * The career tools (former V2 features) inside V1's own Stripe billing.
@@ -179,6 +180,7 @@ export class CareerBillingService {
   private readonly availability: AvailabilitySource;
   /** The shared billing ledger: pack payments, disputes and created customers are recorded there. */
   private readonly ledger: BillingLedgerService;
+  private readonly customerKeys: CheckoutCoordinator;
 
   constructor(
     private readonly configService: ConfigService,
@@ -189,6 +191,8 @@ export class CareerBillingService {
     @Optional() ledger?: BillingLedgerService,
   ) {
     this.ledger = ledger ?? new BillingLedgerService(firebaseAdmin);
+    // Same per-user customer key store as plan checkout (PaymentService).
+    this.customerKeys = new CheckoutCoordinator(() => this.firebaseAdmin.firestore as unknown as DbLike);
     this.availability = availability ?? new CareerAccessAvailabilitySource(process.env.CAREER_API_URL);
     const secretKey = this.configService.get<string>('stripe.secretKey');
     this.stripe = stripe ?? (secretKey ? new Stripe(secretKey, { apiVersion: '2024-04-10' as never }) : null);
@@ -813,6 +817,7 @@ export class CareerBillingService {
       saveCustomerId: async (customerId) => {
         await this.usersService.updateSubscription(userId, { stripeCustomerId: customerId });
       },
+      keys: this.customerKeys,
       log: this.logger,
     });
   }

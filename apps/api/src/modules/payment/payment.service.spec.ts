@@ -775,10 +775,8 @@ describe('PaymentService', () => {
         data: { object: { subscription: 'sub_r', customer: 'cus_r' } },
       } as any);
 
-      expect(usersService.updateSubscription).toHaveBeenCalledWith(
-        'u-renew',
-        expect.objectContaining({ status: SubscriptionStatus.ACTIVE }),
-      );
+      // Entitlement writes happen inside the guarded transaction: assert the stored state.
+      expect(((await firestore.collection('users').doc('u-renew').get()).data() as any).subscription).toEqual(expect.objectContaining({ status: SubscriptionStatus.ACTIVE }));
       expect(usersService.updateUsage).toHaveBeenCalledWith(
         'u-renew',
         expect.objectContaining({ aiCreditsUsed: 0, exportsThisMonth: 0 }),
@@ -790,13 +788,18 @@ describe('PaymentService', () => {
         subscription: { plan: SubscriptionPlan.PRO, status: SubscriptionStatus.ACTIVE, stripeCustomerId: 'cus_f', stripeSubscriptionId: 'sub_f' },
       });
 
+      // payment_failed re-reads the subscription and writes ITS status.
+      (service as any).stripe = {
+        subscriptions: { retrieve: jest.fn().mockResolvedValue(fakeSub(PRO_PRICE, { id: 'sub_f', status: 'past_due' })) },
+      };
+
       await service.handleWebhookEvent({
         id: 'evt_fail',
         type: 'invoice.payment_failed',
         data: { object: { customer: 'cus_f', subscription: 'sub_f', subscription_details: { metadata: OUR_METADATA } } },
       } as any);
 
-      expect(usersService.updateSubscription).toHaveBeenCalledWith('u-fail', { status: SubscriptionStatus.PAST_DUE });
+      expect(((await firestore.collection('users').doc('u-fail').get()).data() as any).subscription.status).toBe(SubscriptionStatus.PAST_DUE);
     });
 
     it('applies an upgrade on customer.subscription.updated (PRO → ENTERPRISE)', async () => {
@@ -821,10 +824,7 @@ describe('PaymentService', () => {
         },
       } as any);
 
-      expect(usersService.updateSubscription).toHaveBeenCalledWith(
-        'u-up',
-        expect.objectContaining({ plan: SubscriptionPlan.ENTERPRISE, status: 'active' }),
-      );
+      expect(((await firestore.collection('users').doc('u-up').get()).data() as any).subscription).toEqual(expect.objectContaining({ plan: SubscriptionPlan.ENTERPRISE, status: 'active' }));
     });
 
     /**
@@ -866,7 +866,7 @@ describe('PaymentService', () => {
           },
         } as any);
 
-        const written = usersService.updateSubscription.mock.calls.at(-1)[1];
+        const written = ((await firestore.collection('users').doc('u-unmapped').get()).data() as any).subscription;
 
         // Must be a member of our enum — never Stripe's raw vocabulary.
         expect(Object.values(SubscriptionStatus)).toContain(written.status);
@@ -897,10 +897,7 @@ describe('PaymentService', () => {
         },
       } as any);
 
-      expect(usersService.updateSubscription).toHaveBeenCalledWith(
-        'u-down',
-        expect.objectContaining({ plan: SubscriptionPlan.PRO }),
-      );
+      expect(((await firestore.collection('users').doc('u-down').get()).data() as any).subscription).toEqual(expect.objectContaining({ plan: SubscriptionPlan.PRO }));
     });
 
     it('downgrades to free on customer.subscription.deleted (cancellation)', async () => {

@@ -55,6 +55,13 @@ export interface CheckoutCoordinationRecord {
   offersTrial: boolean;
   /** Idempotency key of a customers.create whose result is not saved yet. */
   pendingCustomerKey: string | null;
+  /** When that key was minted (epoch ms). Stripe forgets keys after 24h. */
+  pendingCustomerKeyAt: number | null;
+  /** The create parameters snapshotted WITH the key: a reuse must resend them unchanged. */
+  pendingCustomerEmail: string | null;
+  pendingCustomerName: string | null;
+  /** Counter behind customer keys; bumped every time a fresh key is minted. */
+  customerKeySeq: number;
   updatedAt: Date;
 }
 
@@ -84,8 +91,23 @@ export function sessionIdempotencyKey(lease: Pick<CheckoutLease, 'uid' | 'genera
   return `flacroncv-checkout-${lease.uid}-${lease.generation}`;
 }
 
-export function customerIdempotencyKey(uid: string, generation: number): string {
-  return `flacroncv-customer-${uid}-${generation}`;
+export function customerIdempotencyKey(uid: string, seq: number): string {
+  return `flacroncv-customer-${uid}-${seq}`;
+}
+
+/**
+ * A reused key is only honoured while Stripe still remembers it (24h); one
+ * hour of margin so a key is never replayed right at the edge.
+ */
+export const CUSTOMER_KEY_MAX_AGE_MS = 23 * 60 * 60 * 1000;
+
+/** An idempotency key for customers.create, with the parameters it must be sent with. */
+export interface CustomerKeyReservation {
+  key: string;
+  email: string | null;
+  name: string | null;
+  /** True when the key was minted by an earlier (possibly crashed or concurrent) request. */
+  reused: boolean;
 }
 
 export class CheckoutCoordinator {
@@ -124,7 +146,6 @@ export class CheckoutCoordinator {
           sessionId: rec.sessionId ?? null,
           sessionExpiresAt: rec.sessionExpiresAt ?? null,
           offersTrial: !!rec.offersTrial,
-          pendingCustomerKey: rec.pendingCustomerKey ?? null,
           updatedAt: new Date(now),
         },
         { merge: true },
@@ -144,26 +165,71 @@ export class CheckoutCoordinator {
   }
 
   /**
-   * The idempotency key for creating this user's Stripe customer. A key left
-   * by a request that died before saving the customer is REUSED, so Stripe
-   * returns that same customer rather than creating a second one.
+   * The idempotency key for creating this user's Stripe customer — shared by
+   * EVERY customer-creating path (plan checkout and career/pack checkout), so
+   * two concurrent first purchases get the SAME customer from Stripe.
+   *
+   * A key left by a request that died before saving the customer (or minted
+   * by a concurrent one) is REUSED together with the parameters it was minted
+   * with: Stripe rejects a key replayed with different parameters
+   * (idempotency_error), so a changed email/name must not change the request.
+   * A key older than {@link CUSTOMER_KEY_MAX_AGE_MS}, or `forceFresh` (after
+   * an idempotency error or an unusable replayed customer), mints a new one.
    */
-  async reserveCustomerKey(lease: CheckoutLease): Promise<string> {
-    const ref = this.ref(lease.uid);
+  async reserveCustomerKey(
+    uid: string,
+    params: { email: string | null; name: string | null },
+    opts: { forceFresh?: boolean } = {},
+  ): Promise<CustomerKeyReservation> {
+    const ref = this.ref(uid);
     return this.db().runTransaction(async (tx) => {
       const rec = CheckoutCoordinator.read(await tx.get(ref));
-      if (rec.pendingCustomerKey) return rec.pendingCustomerKey;
-      const key = customerIdempotencyKey(lease.uid, lease.generation);
-      tx.set(ref, { pendingCustomerKey: key, updatedAt: new Date(this.now()) }, { merge: true });
-      return key;
+      const now = this.now();
+      const fresh =
+        !!rec.pendingCustomerKey &&
+        typeof rec.pendingCustomerKeyAt === 'number' &&
+        now - rec.pendingCustomerKeyAt < CUSTOMER_KEY_MAX_AGE_MS;
+      if (fresh && !opts.forceFresh) {
+        return {
+          key: rec.pendingCustomerKey!,
+          email: rec.pendingCustomerEmail ?? null,
+          name: rec.pendingCustomerName ?? null,
+          reused: true,
+        };
+      }
+      const seq = (typeof rec.customerKeySeq === 'number' ? rec.customerKeySeq : 0) + 1;
+      const key = customerIdempotencyKey(uid, seq);
+      tx.set(
+        ref,
+        {
+          uid,
+          customerKeySeq: seq,
+          pendingCustomerKey: key,
+          pendingCustomerKeyAt: now,
+          pendingCustomerEmail: params.email ?? null,
+          pendingCustomerName: params.name ?? null,
+          updatedAt: new Date(now),
+        },
+        { merge: true },
+      );
+      return { key, email: params.email ?? null, name: params.name ?? null, reused: false };
     });
   }
 
-  /** The customer id is saved: the next missing-customer case needs a fresh key. */
-  async clearCustomerKey(lease: CheckoutLease): Promise<void> {
-    const ref = this.ref(lease.uid);
+  /**
+   * The customer id is saved: the next missing-customer case needs a fresh
+   * key. Only clears the key this caller used, never a newer one.
+   */
+  async clearCustomerKey(uid: string, key: string): Promise<void> {
+    const ref = this.ref(uid);
     await this.db().runTransaction(async (tx) => {
-      tx.set(ref, { pendingCustomerKey: null, updatedAt: new Date(this.now()) }, { merge: true });
+      const rec = CheckoutCoordinator.read(await tx.get(ref));
+      if (rec.pendingCustomerKey !== key) return;
+      tx.set(
+        ref,
+        { pendingCustomerKey: null, pendingCustomerKeyAt: null, pendingCustomerEmail: null, pendingCustomerName: null, updatedAt: new Date(this.now()) },
+        { merge: true },
+      );
     });
   }
 
