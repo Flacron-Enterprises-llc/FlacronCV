@@ -131,6 +131,25 @@ describe('CRMSubscriptionsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it('stamps applicationId and livemode on the canceled subscriptions record', async () => {
+      const cfg: Record<string, string> = { 'stripe.secretKey': 'rk_test_dummy', 'stripe.appId': 'flacron-cv' };
+      const svc = new CRMSubscriptionsService(
+        makeFirebaseAdmin(firestore),
+        { get: jest.fn((k: string) => cfg[k]) } as any,
+        makeAudit(),
+      );
+      const cancel = jest.fn().mockResolvedValue({ id: 'sub-c', status: 'canceled', livemode: false });
+      (svc as any).stripe = { subscriptions: { cancel } };
+      await seedUser(firestore);
+      await seedSub(firestore, makeSubDoc('sub-c'));
+
+      await svc.cancelSubscription('sub-c', 'actor', 'actor@example.com');
+
+      expect(cancel).toHaveBeenCalledWith('sub-c');
+      const doc = (await firestore.collection('subscriptions').doc('sub-c').get()).data() as any;
+      expect(doc).toMatchObject({ status: 'canceled', applicationId: 'flacron-cv', livemode: false });
+    });
+
     it('throws NotFoundException for unknown subscription', async () => {
       await expect(
         service.cancelSubscription('nonexistent', 'actor', 'actor@example.com'),

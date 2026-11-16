@@ -373,6 +373,7 @@ describe('PaymentService', () => {
       // ...and the session must be opened against the new id, not the dead one.
       expect(stripe.checkout.sessions.create).toHaveBeenCalledWith(
         expect.objectContaining({ customer: 'cus_Fresh' }),
+        expect.objectContaining({ idempotencyKey: expect.any(String) }),
       );
     });
 
@@ -515,12 +516,14 @@ describe('PaymentService', () => {
       (service as any).stripe = {
         subscriptions: { cancel: jest.fn().mockResolvedValue({}) },
         refunds: { list: jest.fn().mockResolvedValue({ data: [] }) },
+        // charge → invoice → subscription: the refunded charge paid the CURRENT subscription.
+        invoices: { retrieve: jest.fn().mockResolvedValue({ id: 'in_refund', subscription: 'sub_refund' }) },
       };
 
       await service.handleWebhookEvent({
         id: 'evt_refund',
         type: 'charge.refunded',
-        data: { object: { refunded: true, customer: 'cus_refund', metadata: OUR_METADATA } },
+        data: { object: { id: 'ch_refund', refunded: true, customer: 'cus_refund', invoice: 'in_refund', metadata: OUR_METADATA } },
       } as any);
 
       // Stripe subscription cancelled + user downgraded to free.
@@ -556,7 +559,10 @@ describe('PaymentService', () => {
       });
       (service as any).stripe = {
         subscriptions: { cancel: jest.fn().mockResolvedValue({}) },
-        charges: { retrieve: jest.fn().mockResolvedValue({ customer: 'cus_dispute', metadata: OUR_METADATA }) },
+        charges: {
+          retrieve: jest.fn().mockResolvedValue({ id: 'ch_1', customer: 'cus_dispute', invoice: 'in_d', metadata: OUR_METADATA }),
+        },
+        invoices: { retrieve: jest.fn().mockResolvedValue({ id: 'in_d', subscription: 'sub_dispute' }) },
       };
 
       await service.handleWebhookEvent({
@@ -674,6 +680,17 @@ describe('PaymentService', () => {
       ...overrides,
     });
 
+    /** subscription.updated re-reads the subscription from Stripe: echo the event's object back. */
+    const echoRetrieve = () => {
+      const original = service.handleWebhookEvent.bind(service);
+      let last: any;
+      jest.spyOn(service, 'handleWebhookEvent').mockImplementation(async (e: any) => {
+        last = e.data.object;
+        return original(e);
+      });
+      (service as any).stripe = { subscriptions: { retrieve: jest.fn(async () => last) } };
+    };
+
     it('activates a plan on checkout.session.completed (writes user + subscription record)', async () => {
       await seedUser(firestore, 'u-checkout', {
         subscription: { plan: SubscriptionPlan.FREE, status: SubscriptionStatus.ACTIVE, stripeCustomerId: 'cus_ck' },
@@ -770,13 +787,13 @@ describe('PaymentService', () => {
 
     it('marks the account past_due on invoice.payment_failed', async () => {
       await seedUser(firestore, 'u-fail', {
-        subscription: { plan: SubscriptionPlan.PRO, status: SubscriptionStatus.ACTIVE, stripeCustomerId: 'cus_f' },
+        subscription: { plan: SubscriptionPlan.PRO, status: SubscriptionStatus.ACTIVE, stripeCustomerId: 'cus_f', stripeSubscriptionId: 'sub_f' },
       });
 
       await service.handleWebhookEvent({
         id: 'evt_fail',
         type: 'invoice.payment_failed',
-        data: { object: { customer: 'cus_f', subscription_details: { metadata: OUR_METADATA } } },
+        data: { object: { customer: 'cus_f', subscription: 'sub_f', subscription_details: { metadata: OUR_METADATA } } },
       } as any);
 
       expect(usersService.updateSubscription).toHaveBeenCalledWith('u-fail', { status: SubscriptionStatus.PAST_DUE });
@@ -784,14 +801,16 @@ describe('PaymentService', () => {
 
     it('applies an upgrade on customer.subscription.updated (PRO → ENTERPRISE)', async () => {
       await seedUser(firestore, 'u-up', {
-        subscription: { plan: SubscriptionPlan.PRO, status: SubscriptionStatus.ACTIVE, stripeCustomerId: 'cus_u' },
+        subscription: { plan: SubscriptionPlan.PRO, status: SubscriptionStatus.ACTIVE, stripeCustomerId: 'cus_u', stripeSubscriptionId: 'sub_u' },
       });
+      echoRetrieve();
 
       await service.handleWebhookEvent({
         id: 'evt_up',
         type: 'customer.subscription.updated',
         data: {
           object: {
+            id: 'sub_u',
             customer: 'cus_u',
             status: 'active',
             metadata: OUR_METADATA,
@@ -827,14 +846,16 @@ describe('PaymentService', () => {
       'maps the unmapped Stripe status %s to a revoking status, never the raw string',
       async (stripeStatus) => {
         await seedUser(firestore, 'u-unmapped', {
-          subscription: { plan: SubscriptionPlan.PRO, status: SubscriptionStatus.ACTIVE, stripeCustomerId: 'cus_x' },
+          subscription: { plan: SubscriptionPlan.PRO, status: SubscriptionStatus.ACTIVE, stripeCustomerId: 'cus_x', stripeSubscriptionId: 'sub_x' },
         });
+        echoRetrieve();
 
         await service.handleWebhookEvent({
           id: `evt_${stripeStatus}`,
           type: 'customer.subscription.updated',
           data: {
             object: {
+              id: 'sub_x',
               customer: 'cus_x',
               status: stripeStatus,
               metadata: OUR_METADATA,
@@ -856,14 +877,16 @@ describe('PaymentService', () => {
 
     it('applies a downgrade on customer.subscription.updated (ENTERPRISE → PRO)', async () => {
       await seedUser(firestore, 'u-down', {
-        subscription: { plan: SubscriptionPlan.ENTERPRISE, status: SubscriptionStatus.ACTIVE, stripeCustomerId: 'cus_d' },
+        subscription: { plan: SubscriptionPlan.ENTERPRISE, status: SubscriptionStatus.ACTIVE, stripeCustomerId: 'cus_d', stripeSubscriptionId: 'sub_d' },
       });
+      echoRetrieve();
 
       await service.handleWebhookEvent({
         id: 'evt_down',
         type: 'customer.subscription.updated',
         data: {
           object: {
+            id: 'sub_d',
             customer: 'cus_d',
             status: 'active',
             metadata: OUR_METADATA,
@@ -893,7 +916,7 @@ describe('PaymentService', () => {
       await service.handleWebhookEvent({
         id: 'evt_del',
         type: 'customer.subscription.deleted',
-        data: { object: { customer: 'cus_x2', metadata: OUR_METADATA } },
+        data: { object: { id: 'sub_x2', customer: 'cus_x2', metadata: OUR_METADATA } },
       } as any);
 
       expect(usersService.updateSubscription).toHaveBeenCalledWith(
@@ -925,7 +948,7 @@ describe('PaymentService', () => {
       await service.handleWebhookEvent({
         id: 'evt_del_iap',
         type: 'customer.subscription.deleted',
-        data: { object: { customer: 'cus_iap', metadata: OUR_METADATA } },
+        data: { object: { id: 'sub_lapsed', customer: 'cus_iap', metadata: OUR_METADATA } },
       } as any);
 
       expect(usersService.updateSubscription).not.toHaveBeenCalled();
@@ -954,6 +977,7 @@ describe('PaymentService', () => {
 
       expect(create).toHaveBeenCalledWith(
         expect.objectContaining({ subscription_data: expect.not.objectContaining({ trial_period_days: expect.anything() }) }),
+        expect.objectContaining({ idempotencyKey: expect.any(String) }),
       );
     });
 
@@ -974,6 +998,7 @@ describe('PaymentService', () => {
       // Fail closed — an outage must not become a free-trial dispenser.
       expect(create).toHaveBeenCalledWith(
         expect.objectContaining({ subscription_data: expect.not.objectContaining({ trial_period_days: expect.anything() }) }),
+        expect.objectContaining({ idempotencyKey: expect.any(String) }),
       );
     });
 
@@ -1032,6 +1057,7 @@ describe('PaymentService', () => {
 
       expect(create).toHaveBeenCalledWith(
         expect.objectContaining({ subscription_data: expect.not.objectContaining({ trial_period_days: expect.anything() }) }),
+        expect.objectContaining({ idempotencyKey: expect.any(String) }),
       );
     });
   });
@@ -1191,8 +1217,11 @@ describe('PaymentService', () => {
         expect.objectContaining({
           subscription_data: expect.objectContaining({ trial_period_days: TRIAL_PERIOD_DAYS }),
         }),
+        expect.objectContaining({ idempotencyKey: expect.any(String) }),
       );
-      expect(usersService.updateSubscription).toHaveBeenCalledWith(
+      // Opening Checkout no longer consumes the trial: it is recorded only once
+      // OUR Stripe subscription actually starts one (webhook / verifySession).
+      expect(usersService.updateSubscription).not.toHaveBeenCalledWith(
         'u-trial',
         expect.objectContaining({ hasUsedTrial: true }),
       );

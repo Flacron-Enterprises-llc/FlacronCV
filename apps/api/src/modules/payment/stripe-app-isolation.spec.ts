@@ -118,6 +118,7 @@ describe('Stripe app isolation (Flacron Stripe standard)', () => {
 
       expect(stripe.customers.create).toHaveBeenCalledWith(
         expect.objectContaining({ metadata: expect.objectContaining({ app_id: APP_ID, internal_user_id: 'u1' }) }),
+        expect.objectContaining({ idempotencyKey: expect.any(String) }),
       );
       const params = stripe.checkout.sessions.create.mock.calls[0][0];
       expect(params.client_reference_id).toBe('u1');
@@ -218,8 +219,9 @@ describe('Stripe app isolation (Flacron Stripe standard)', () => {
     });
 
     it('does not assume an unstamped object is ours', async () => {
+      // Untagged, and NOT a subscription FlacronCV's Firestore pairs with this customer.
       const outcome = await service.handleWebhookEvent(
-        event('evt_bare', 'customer.subscription.deleted', sub({ metadata: {} })),
+        event('evt_bare', 'customer.subscription.deleted', sub({ id: 'sub_unknown', metadata: {} })),
       );
       expect(outcome).toBe('unattributed');
       expect(usersService.updateSubscription).not.toHaveBeenCalled();
@@ -252,6 +254,8 @@ describe('Stripe app isolation (Flacron Stripe standard)', () => {
   describe('idempotency', () => {
     beforeEach(async () => {
       await seedUser(firestore, 'u1', { plan: SubscriptionPlan.PRO, stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_1' });
+      // subscription.updated re-reads the subscription; Stripe's state is past_due.
+      (service as any).stripe = { subscriptions: { retrieve: jest.fn(async () => sub({ status: 'past_due' })) } };
     });
 
     it('processes a redelivered event once', async () => {
@@ -364,6 +368,8 @@ describe('Stripe app isolation (Flacron Stripe standard)', () => {
     });
 
     it('records a declined payment as failed, does not grant paid access, and keeps its app_id', async () => {
+      // A failed renewal of the user's CURRENT subscription.
+      await seedUser(firestore, 'u1', { plan: SubscriptionPlan.PRO, stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_1' });
       (service as any).stripe = {
         paymentIntents: {
           retrieve: jest.fn(async () =>

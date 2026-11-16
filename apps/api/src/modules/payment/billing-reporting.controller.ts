@@ -16,6 +16,27 @@ const LIST_LIMIT = 500;
  * Every endpoint is scoped by `application_id` — FlacronCV's own id by
  * default, `all` for the company-wide view — and by mode, so sandbox rows
  * never appear beside live ones. Admin-only.
+ *
+ * CONTRACT for the central dashboard (pull API):
+ *   GET /admin/billing/revenue?application_id=<id|all>&livemode=<true|false>
+ *     Always pass both params explicitly (defaults are this app's id and the
+ *     Stripe key's mode). Money is integer minor units per `totals[].currency`,
+ *     never converted or summed across currencies. Per currency:
+ *       gross_revenue     = succeeded payments (refunds/disputes never lower it)
+ *       refunds           = succeeded refunds
+ *       net_after_refunds = gross_revenue - refunds
+ *       disputed          = every dispute (open, won, lost): exposure
+ *       disputes_open     = undecided disputes (funds withheld)
+ *       disputes_lost     = lost disputes
+ *       net_revenue       = net_after_refunds - disputes_lost
+ *       mrr / arr         = active + past_due subscriptions (trials excluded)
+ *     `fees_included` is always false: Stripe processing/dispute fees are not
+ *     in this ledger, so no figure here is net proceeds or a payout.
+ *     `by_application[]` splits the same totals per application_id.
+ *   GET /admin/billing/{payments,refunds,disputes,invoices,subscriptions,customers}
+ *     Same params; raw ledger rows (snake_case), newest first, at most 500 in
+ *     `data`, full row count in `count`. Rows are keyed by their Stripe id, so
+ *     a consumer that upserts by that id never double counts.
  */
 @ApiTags('billing-reporting')
 @Controller('admin/billing')
@@ -75,6 +96,11 @@ export class BillingReportingController {
   @Get('refunds')
   listRefunds(@Query('application_id') applicationId?: string, @Query('livemode') livemode?: string) {
     return this.rows('refunds', applicationId, livemode);
+  }
+
+  @Get('disputes')
+  listDisputes(@Query('application_id') applicationId?: string, @Query('livemode') livemode?: string) {
+    return this.rows('disputes', applicationId, livemode);
   }
 
   @Get('invoices')

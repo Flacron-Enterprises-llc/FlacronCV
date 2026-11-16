@@ -13,10 +13,19 @@ import { BillingLedgerService, EventOutcome } from './billing-ledger.service';
 import { LedgerPayment, LedgerSubscription, ledgerPaymentStatus } from './billing-ledger';
 import { CareerBillingService } from './career-billing.service';
 import { CheckoutClient, isLegacyMobileCheckoutPlan } from './legacy-mobile-checkout';
+import {
+  CHECKOUT_SESSION_TTL_SECONDS,
+  CheckoutCoordinator,
+  CheckoutInProgressError,
+  CheckoutLease,
+  DbLike,
+  sessionIdempotencyKey,
+} from './checkout-coordination';
 
 /** The Stripe events this API acts on. Anything else is acknowledged and ignored. */
 const HANDLED_STRIPE_EVENTS: ReadonlySet<string> = new Set([
   'checkout.session.completed',
+  'checkout.session.expired',
   'invoice.paid',
   'invoice.payment_failed',
   'customer.subscription.updated',
@@ -25,7 +34,33 @@ const HANDLED_STRIPE_EVENTS: ReadonlySet<string> = new Set([
   'charge.refunded',
   'charge.refund.updated',
   'charge.dispute.created',
+  'charge.dispute.closed',
 ]);
+
+/**
+ * Why an attributed event changed no entitlement. Recorded on the event row
+ * (`payment_events/{id}.entitlement_decision`) so a skipped event can be
+ * explained later. Fixed codes only — never an email, a name or an id.
+ */
+type HandlerDecision = string | null | void;
+
+/** Subscription conflicts (duplicate live subscriptions) and what was done about them. */
+export const BILLING_CONFLICTS_COLLECTION = 'billing_conflicts';
+
+/** Stripe statuses of an unpaid renewal: the paid period must not be extended. */
+const UNPAID_STRIPE_STATUSES: ReadonlySet<string> = new Set(['past_due', 'unpaid', 'incomplete']);
+
+/** The subscription an invoice belongs to (pre-2025 field, then the `parent` shape). */
+function invoiceSubscriptionId(invoice: Stripe.Invoice | null | undefined): string | null {
+  if (!invoice) return null;
+  return (
+    stripeId(invoice.subscription as string | { id: string } | null | undefined) ??
+    stripeId(
+      (invoice as unknown as { parent?: { subscription_details?: { subscription?: string | { id: string } | null } } })
+        .parent?.subscription_details?.subscription ?? null,
+    )
+  );
+}
 
 /** Thrown when another delivery of the same event is mid-flight; Stripe retries. */
 export class StripeEventInProgressError extends Error {}
@@ -46,6 +81,8 @@ export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
   private stripe!: Stripe;
   private readonly ledger: BillingLedgerService;
+  /** Durable per-user Checkout lock/record (checkout_coordination/{uid}). */
+  private readonly checkoutCoordinator: CheckoutCoordinator;
 
   /** This application's id on the shared Flacron Stripe account. */
   readonly appId: string;
@@ -73,6 +110,7 @@ export class PaymentService {
       this.stripe = new Stripe(secretKey, { apiVersion: '2024-04-10' as any });
     }
     this.ledger = ledger ?? new BillingLedgerService(firebaseAdmin);
+    this.checkoutCoordinator = new CheckoutCoordinator(() => this.firebaseAdmin.firestore as unknown as DbLike);
     this.appId = this.configService.get<string>('stripe.appId') || DEFAULT_APP_ID;
     const mode = stripeKeyMode(secretKey);
     this.livemode = mode === null ? null : mode === 'live';
@@ -432,6 +470,65 @@ export class PaymentService {
     // one whose subscription history that check reads.
     await this.assertPriceIsOurs(priceId);
 
+    // One checkout creation per user at a time, across every API instance
+    // (checkout-coordination.ts). A concurrent second request gets a 409
+    // instead of a second session; a lease left by a crashed request expires.
+    let lease: CheckoutLease;
+    try {
+      lease = await this.checkoutCoordinator.acquire(userId);
+    } catch (err) {
+      if (err instanceof CheckoutInProgressError) {
+        throw new ConflictException({
+          code: 'CHECKOUT_IN_PROGRESS',
+          message: 'A checkout is already being prepared. Please try again in a moment.',
+        });
+      }
+      throw err;
+    }
+
+    let committed = false;
+    try {
+      const result = await this.createCheckoutUnderLease(lease, {
+        userId,
+        user,
+        priceId,
+        interval,
+        plan: selection.plan,
+        requested,
+        legacyMobileCheckout,
+        expectTrial,
+        successUrl: resolvedSuccessUrl,
+        cancelUrl: resolvedCancelUrl,
+      });
+      committed = true;
+      return result;
+    } finally {
+      if (!committed) await this.checkoutCoordinator.release(lease);
+    }
+  }
+
+  /**
+   * The Stripe half of {@link createCheckoutSession}, run while holding the
+   * per-user checkout lease.
+   */
+  private async createCheckoutUnderLease(
+    lease: CheckoutLease,
+    ctx: {
+      userId: string;
+      user: { email?: string; displayName?: string; subscription?: { stripeCustomerId?: string | null; stripeSubscriptionId?: string | null; hasUsedTrial?: boolean } };
+      priceId: string;
+      interval: BillingInterval;
+      plan: SubscriptionPlan;
+      requested: SubscriptionPlan | null | undefined;
+      legacyMobileCheckout: boolean;
+      expectTrial?: boolean;
+      successUrl: string;
+      cancelUrl: string;
+    },
+  ): Promise<{ sessionId: string; url: string | null }> {
+    const { userId, user, priceId, interval, legacyMobileCheckout, requested, expectTrial } = ctx;
+    const selection = { plan: ctx.plan };
+
     const existingCustomer = await this.liveCustomer(user.subscription?.stripeCustomerId);
     let customerId = existingCustomer?.id ?? null;
     if (existingCustomer && !PaymentService.appIdOf(existingCustomer)) {
@@ -440,15 +537,28 @@ export class PaymentService {
       await this.stampCustomer(existingCustomer, userId, user.email);
     }
     if (!customerId) {
-      const customer = await this.stripe.customers.create({
-        email: user.email,
-        name: user.displayName,
-        metadata: this.appMetadata(userId),
-      });
+      // The key survives a crash between this call and the Firestore write
+      // below, so the retry gets the SAME customer rather than an orphan.
+      const idempotencyKey = await this.checkoutCoordinator.reserveCustomerKey(lease);
+      const customer = await this.stripe.customers.create(
+        {
+          email: user.email,
+          name: user.displayName,
+          metadata: this.appMetadata(userId),
+        },
+        { idempotencyKey },
+      );
       customerId = customer.id;
       await this.usersService.updateSubscription(userId, { stripeCustomerId: customerId });
+      await this.checkoutCoordinator.clearCustomerKey(lease);
       await this.recordCustomer(customer, userId, user.email);
     }
+
+    // Before a replacement session exists, settle the previous one against
+    // Stripe: a completed one makes its subscription authoritative (409), an
+    // open one is expired first — so at most one session (and so at most one
+    // trial-offering session) is ever open for this user.
+    await this.settlePreviousCheckout(lease, userId, customerId);
 
     // Trial is Pro-only. Enterprise is a paid plan from the first charge —
     // attaching trial_period_days here was giving Enterprise the same 7 free
@@ -494,28 +604,138 @@ export class PaymentService {
     // The same metadata on the session AND the subscription it creates, so
     // every later invoice, payment and webhook can be attributed to FlacronCV.
     const metadata = this.appMetadata(userId, { plan: selection.plan, interval });
+    const expiresAt = Math.floor(Date.now() / 1000) + CHECKOUT_SESSION_TTL_SECONDS;
 
-    const session = await this.stripe.checkout.sessions.create({
-      customer: customerId,
-      client_reference_id: userId,
-      payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
-      mode: 'subscription',
-      success_url: resolvedSuccessUrl,
-      cancel_url: resolvedCancelUrl,
-      allow_promotion_codes: true,
-      metadata,
-      subscription_data: {
+    const session = await this.stripe.checkout.sessions.create(
+      {
+        customer: customerId,
+        client_reference_id: userId,
+        payment_method_types: ['card'],
+        line_items: [{ price: priceId, quantity: 1 }],
+        mode: 'subscription',
+        success_url: ctx.successUrl,
+        cancel_url: ctx.cancelUrl,
+        allow_promotion_codes: true,
+        // Short-lived: an abandoned session stops being completable (and
+        // `checkout.session.expired` clears the record) after ~30 minutes.
+        expires_at: expiresAt,
         metadata,
-        ...(isFirstTimeSubscriber ? { trial_period_days: trialDays } : {}),
+        subscription_data: {
+          metadata,
+          ...(isFirstTimeSubscriber ? { trial_period_days: trialDays } : {}),
+        },
       },
-    });
+      { idempotencyKey: sessionIdempotencyKey(lease) },
+    );
 
-    if (isFirstTimeSubscriber) {
-      await this.usersService.updateSubscription(userId, { hasUsedTrial: true });
+    // Opening (or abandoning) Checkout no longer consumes trial eligibility:
+    // `hasUsedTrial` is set only from a verified Stripe subscription that
+    // actually started a trial (checkout webhook, subscription.updated,
+    // verifySession). What stops a second concurrent trial is the
+    // coordination record: this session is now the only open one.
+    const recorded = await this.checkoutCoordinator.commit(lease, {
+      sessionId: session.id,
+      sessionExpiresAt: session.expires_at ?? expiresAt,
+      offersTrial: isFirstTimeSubscriber,
+    });
+    if (!recorded) {
+      // Our lease expired and another request took over: that request owns
+      // the user's checkout now. Never leave a second usable session behind.
+      await this.expireSessionQuietly(session.id);
+      throw new ConflictException({
+        code: 'CHECKOUT_IN_PROGRESS',
+        message: 'A checkout is already being prepared. Please try again in a moment.',
+      });
     }
 
     return { sessionId: session.id, url: session.url };
+  }
+
+  private async expireSessionQuietly(sessionId: string): Promise<void> {
+    try {
+      await this.stripe.checkout.sessions.expire(sessionId);
+    } catch (err) {
+      this.logger.warn(`Could not expire superseded checkout session ${sessionId}: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * Resolve the user's previously recorded Checkout Session against Stripe
+   * before a replacement is created.
+   *
+   * - `complete`: its subscription is authoritative. Live → 409
+   *   ALREADY_SUBSCRIBED (the webhook may simply not have landed yet); a trial
+   *   it started is recorded, so no second trial is offered.
+   * - `open`: expired first; only then may a replacement exist. If expiring
+   *   fails because the user completed it meanwhile, it is re-read and treated
+   *   as complete. Any other failure aborts the request (no replacement).
+   * - `expired` / missing: nothing to do.
+   *
+   * After a takeover of a crashed request's lease, the session that request
+   * may have created without recording is found by listing the customer's
+   * open sessions, and expired the same way.
+   */
+  private async settlePreviousCheckout(lease: CheckoutLease, userId: string, customerId: string): Promise<void> {
+    if (lease.previous.sessionId) {
+      await this.settleSession(userId, lease.previous.sessionId);
+    }
+    if (lease.takeover) {
+      const open = await this.stripe.checkout.sessions.list({ customer: customerId, status: 'open', limit: 20 });
+      for (const candidate of open.data ?? []) {
+        if (candidate.id === lease.previous.sessionId) continue;
+        if (PaymentService.appIdOf(candidate) !== this.appId) continue;
+        const owner = candidate.metadata?.internal_user_id || candidate.metadata?.firebaseUid;
+        if (owner !== userId) continue;
+        await this.settleSession(userId, candidate.id);
+      }
+    }
+  }
+
+  private async settleSession(userId: string, sessionId: string): Promise<void> {
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await this.stripe.checkout.sessions.retrieve(sessionId);
+    } catch (err) {
+      if (PaymentService.isMissingResource(err)) return;
+      throw err;
+    }
+    if (session.status === 'open') {
+      try {
+        await this.stripe.checkout.sessions.expire(sessionId);
+        return;
+      } catch (err) {
+        session = await this.stripe.checkout.sessions.retrieve(sessionId);
+        if (session.status === 'expired') return;
+        if (session.status !== 'complete') throw err;
+      }
+    }
+    if (session.status === 'complete') {
+      await this.assertCompletedCheckoutNotLive(userId, session);
+    }
+  }
+
+  private async assertCompletedCheckoutNotLive(userId: string, session: Stripe.Checkout.Session): Promise<void> {
+    const subscriptionId = stripeId(session.subscription as string | { id: string } | null);
+    if (!subscriptionId) return;
+    let subscription: Stripe.Subscription;
+    try {
+      subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
+    } catch (err) {
+      if (PaymentService.isMissingResource(err)) return;
+      throw err;
+    }
+    const owner = PaymentService.appIdOf(subscription);
+    if (owner && owner !== this.appId) return;
+    if (subscription.trial_start) {
+      // Verified: OUR subscription really started a trial.
+      await this.usersService.updateSubscription(userId, { hasUsedTrial: true });
+    }
+    if (PaymentService.LIVE_STRIPE_STATUSES.has(subscription.status)) {
+      throw new ConflictException({
+        code: 'ALREADY_SUBSCRIBED',
+        message: 'Your previous checkout already completed. Your subscription is being activated.',
+      });
+    }
   }
 
   /**
@@ -579,6 +799,19 @@ export class PaymentService {
     // chargeback, or a cancellation, undoing every revocation path in this
     // service. Authorise against the subscription's CURRENT state, never
     // against the frozen record of a payment that has since been reversed.
+    // The subscription must be ours too: a session cannot vouch for a
+    // subscription stamped for another application (or one that disagrees
+    // with the session's own app_id).
+    const subscriptionApp = PaymentService.appIdOf(subscription);
+    if (subscriptionApp && subscriptionApp !== this.appId) {
+      this.logger.warn(`Rejected session ${sessionId}: subscription ${subscription.id} has app_id ${subscriptionApp}`);
+      throw new BadRequestException('Session does not belong to this application');
+    }
+    const subscriptionUser = subscription.metadata?.internal_user_id || subscription.metadata?.firebaseUid;
+    if (subscriptionUser && subscriptionUser !== userId) {
+      throw new BadRequestException('Session does not belong to this user');
+    }
+
     if (!PaymentService.LIVE_STRIPE_STATUSES.has(subscription.status)) {
       this.logger.warn(
         `Rejected replay of session ${sessionId} for user ${userId}: subscription ${subscription.id} is '${subscription.status}'`,
@@ -592,6 +825,20 @@ export class PaymentService {
         plan: resolveEffectivePlan(user.subscription),
         status: user.subscription?.status ?? SubscriptionStatus.ACTIVE,
       };
+    }
+
+    // Never overwrite a DIFFERENT live subscription of ours: the duplicate is
+    // resolved by the checkout webhook (handleCheckoutCompleted).
+    {
+      const user = await this.usersService.findByIdOrThrow(userId);
+      const current = user.subscription?.stripeSubscriptionId;
+      if (current && current !== subscription.id && (await this.isLiveOwnSubscription(current))) {
+        this.logger.warn(`verifySession for user ${userId}: ${subscription.id} conflicts with live ${current} — not applied`);
+        return {
+          plan: resolveEffectivePlan(user.subscription),
+          status: user.subscription?.status ?? SubscriptionStatus.ACTIVE,
+        };
+      }
     }
 
     const plan = this.determinePlan(subscription.items.data[0].price.id);
@@ -621,6 +868,7 @@ export class PaymentService {
     batch.set(db.collection('subscriptions').doc(subscription.id), {
       id: subscription.id,
       applicationId: this.appId,
+      livemode: this.objectLivemode(subscription),
       userId,
       stripeCustomerId: session.customer as string,
       plan,
@@ -842,7 +1090,10 @@ export class PaymentService {
       const schedule = scheduleId
         ? { id: scheduleId }
         : await this.stripe.subscriptionSchedules.create({ from_subscription: ctx.subscription.id });
+      // `from_subscription` admits no other create parameters, so the schedule
+      // is stamped with our app_id on the update that always follows.
       await this.stripe.subscriptionSchedules.update(schedule.id, {
+        metadata: this.appMetadata(userId),
         end_behavior: 'release',
         proration_behavior: 'none',
         phases: [
@@ -877,15 +1128,40 @@ export class PaymentService {
       now - selection.prorationDate < 3600
         ? Math.floor(selection.prorationDate)
         : now;
+    // `pending_if_incomplete`: Stripe applies the new price only once the
+    // proration invoice is PAID. The default (`allow_incomplete`) switched the
+    // subscription to the higher plan even when that invoice failed, granting
+    // the upgrade unpaid. With a failed/pending payment Stripe returns the
+    // subscription unchanged plus `pending_update`, so the plan written below
+    // (from the price actually on the subscription) stays the old one, and
+    // the upgrade arrives through the webhook once paid. Stripe accepts only
+    // item/proration parameters with this behaviour, so metadata is updated
+    // separately, after the change has really been applied.
     const updated = await this.stripe.subscriptions.update(ctx.subscription.id, {
       items: [{ id: ctx.item.id, price: ctx.priceId }],
       proration_behavior: 'always_invoice',
       proration_date: prorationDate,
-      // Informational only — webhooks resolve the plan from the price id.
-      metadata,
+      payment_behavior: 'pending_if_incomplete',
     });
-    await this.handleSubscriptionUpdated(updated);
+    const pending = !!(updated as Stripe.Subscription & { pending_update?: unknown }).pending_update;
+    await this.handleSubscriptionUpdated(updated, { fresh: true });
     const plan = this.determinePlan(updated.items.data[0].price.id);
+    if (pending) {
+      this.logger.warn(`Plan upgrade for user ${userId} → ${ctx.target} is pending payment; plan unchanged (${plan})`);
+      return {
+        plan,
+        status: this.mapStripeStatus(updated.status),
+        scheduledPlan: ctx.target,
+        effectiveAt: null,
+        paymentPending: true,
+      };
+    }
+    try {
+      // Informational only — webhooks resolve the plan from the price id.
+      await this.stripe.subscriptions.update(ctx.subscription.id, { metadata });
+    } catch (err) {
+      this.logger.warn(`Could not update metadata on ${ctx.subscription.id}: ${(err as Error).message}`);
+    }
     this.logger.log(`Plan changed for user ${userId}: → ${plan} (${ctx.interval})`);
     return { plan, status: this.mapStripeStatus(updated.status), scheduledPlan: null, effectiveAt: new Date(now * 1000).toISOString() };
   }
@@ -898,22 +1174,56 @@ export class PaymentService {
     // knows about has nothing to show. Creating a replacement here would open
     // an empty portal; report it as the 400 the user can act on instead of
     // letting Stripe's "No such customer" escape as a 500.
-    const customerId = await this.liveCustomerId(user.subscription?.stripeCustomerId);
-    if (!customerId) {
+    // liveCustomer already refuses a customer stamped for another app.
+    const customer = await this.liveCustomer(user.subscription?.stripeCustomerId);
+    if (!customer) {
       // `code` lets the web show this in the user's language.
       throw new BadRequestException({
         code: 'NO_SUBSCRIPTION',
         message: 'No active subscription found. Please subscribe to a plan first.',
       });
     }
+    const customerId = customer.id;
 
-    // FlacronCV's own portal configuration: the account default is shared by
-    // every Flacron app and would offer their plans as upgrade options.
+    // FlacronCV's own portal configuration is REQUIRED. Without it Stripe uses
+    // the account default, which is shared by every Flacron app and would
+    // offer their plans as upgrade options. Refuse rather than fall back.
     const configuration = this.configService.get<string>('stripe.portalConfigurationId');
+    if (!configuration) {
+      this.logger.error('Billing portal refused: STRIPE_PORTAL_CONFIGURATION_ID is not configured');
+      throw new ServiceUnavailableException({
+        code: 'PORTAL_NOT_CONFIGURED',
+        message: 'The billing portal is not available right now. Please contact support.',
+      });
+    }
+
+    // A pre-standard customer (no app_id) is the user's own stored id: claim it.
+    if (!PaymentService.appIdOf(customer)) {
+      await this.stampCustomer(customer, userId, user.email);
+    }
+
+    // The portal shows EVERY subscription on the customer. If another Flacron
+    // application has a subscription on this customer, opening it would let
+    // the user manage (or cancel) that app's billing from FlacronCV — so the
+    // portal is refused and support handles it. Untagged subscriptions are
+    // treated as FlacronCV's own pre-standard ones (the customer is ours).
+    const subscriptions = await this.stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 });
+    const foreign = (subscriptions.data ?? []).some((s) => {
+      const owner = PaymentService.appIdOf(s);
+      return !!owner && owner !== this.appId;
+    });
+    if (foreign) {
+      this.logger.warn(`Billing portal refused for user ${userId}: customer has another application's subscription`);
+      throw new ConflictException({
+        code: 'PORTAL_SHARED_CUSTOMER',
+        message: 'Your billing cannot be managed here. Please contact support.',
+      });
+    }
+
     const session = await this.stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: returnUrl,
-      ...(configuration ? { configuration } : {}),
+      configuration,
     });
 
     return { url: session.url };
@@ -947,6 +1257,7 @@ export class PaymentService {
     try {
       let outcome: EventOutcome;
       let applicationId: string | null = null;
+      let decision: HandlerDecision = null;
 
       if (typeof event.livemode === 'boolean' && this.livemode !== null && event.livemode !== this.livemode) {
         outcome = 'mode_mismatch';
@@ -960,7 +1271,7 @@ export class PaymentService {
       } else {
         applicationId = await this.attributeEvent(event);
         if (applicationId === this.appId) {
-          await this.dispatch(event);
+          decision = await this.dispatch(event);
           outcome = 'applied';
         } else if (applicationId) {
           outcome = 'app_mismatch';
@@ -981,6 +1292,7 @@ export class PaymentService {
         expectedApplicationId: this.appId,
         objectId,
       });
+      if (decision) await this.recordDecision(event.id, decision);
       return outcome;
     } catch (err) {
       await this.ledger.releaseEvent(event.id);
@@ -988,7 +1300,7 @@ export class PaymentService {
     }
   }
 
-  private async dispatch(event: Stripe.Event): Promise<void> {
+  private async dispatch(event: Stripe.Event): Promise<HandlerDecision> {
     // A career subscription shares the V1 customer. Its events must never reach the
     // V1 handlers: a career refund or failure would otherwise revoke the V1 plan.
     if (this.careerBilling && (await this.careerBilling.isCareerEvent(event))) {
@@ -1000,38 +1312,52 @@ export class PaymentService {
         await this.recordChargeRefunds(event.data.object as Stripe.Charge);
       } else if (event.type === 'charge.refund.updated') {
         await this.recordRefund(event.data.object as Stripe.Refund);
+      } else if (event.type === 'charge.dispute.created' || event.type === 'charge.dispute.closed') {
+        await this.recordDispute(event.data.object as Stripe.Dispute);
       }
       await this.careerBilling.apply(event);
-      return;
+      return null;
     }
+    const at = { created: typeof event.created === 'number' ? event.created : undefined };
     switch (event.type) {
       case 'checkout.session.completed':
-        await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
-        break;
+        return this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session, at);
+      case 'checkout.session.expired':
+        return this.handleCheckoutExpired(event.data.object as Stripe.Checkout.Session);
       case 'invoice.paid':
-        await this.handleInvoicePaid(event.data.object as Stripe.Invoice);
-        break;
+        return this.handleInvoicePaid(event.data.object as Stripe.Invoice, at);
       case 'invoice.payment_failed':
-        await this.handlePaymentFailed(event.data.object as Stripe.Invoice);
-        break;
+        return this.handlePaymentFailed(event.data.object as Stripe.Invoice, at);
       case 'customer.subscription.updated':
-        await this.handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
-        break;
+        return this.handleSubscriptionUpdated(event.data.object as Stripe.Subscription, at);
       case 'customer.subscription.deleted':
-        await this.handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
-        break;
+        return this.handleSubscriptionDeleted(event.data.object as Stripe.Subscription, at);
       case 'charge.refunded':
-        await this.handleChargeRefunded(event.data.object as Stripe.Charge);
-        break;
+        return this.handleChargeRefunded(event.data.object as Stripe.Charge);
       case 'charge.refund.updated':
         await this.recordRefund(event.data.object as Stripe.Refund);
-        break;
+        return null;
       case 'charge.dispute.created':
-        await this.handleDisputeCreated(event.data.object as Stripe.Dispute);
-        break;
+        return this.handleDisputeCreated(event.data.object as Stripe.Dispute);
+      case 'charge.dispute.closed':
+        // Status update only. A won dispute does not restore a revoked plan.
+        await this.recordDispute(event.data.object as Stripe.Dispute);
+        return null;
       case 'customer.subscription.paused':
-        await this.handleSubscriptionPaused(event.data.object as Stripe.Subscription);
-        break;
+        return this.handleSubscriptionPaused(event.data.object as Stripe.Subscription, at);
+    }
+    return null;
+  }
+
+  /** Best-effort: the event's outcome is already recorded; this only explains a no-op. */
+  private async recordDecision(eventId: string, decision: string): Promise<void> {
+    try {
+      await this.firebaseAdmin.firestore
+        .collection('payment_events')
+        .doc(eventId)
+        .set({ entitlement_decision: decision }, { merge: true });
+    } catch (err) {
+      this.logger.warn(`Could not record decision for event ${eventId}: ${(err as Error).message}`);
     }
   }
 
@@ -1049,11 +1375,17 @@ export class PaymentService {
     const obj = event.data.object as unknown;
     switch (event.type) {
       case 'checkout.session.completed':
+      case 'checkout.session.expired':
         return PaymentService.appIdOf(obj as Stripe.Checkout.Session);
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted':
-      case 'customer.subscription.paused':
-        return PaymentService.appIdOf(obj as Stripe.Subscription);
+      case 'customer.subscription.paused': {
+        const subscription = obj as Stripe.Subscription;
+        return (
+          PaymentService.appIdOf(subscription) ??
+          (await this.verifiedLegacyAttribution(subscription.id, stripeId(subscription.customer)))
+        );
+      }
       case 'invoice.paid':
       case 'invoice.payment_failed':
         return this.invoiceAppId(obj as Stripe.Invoice);
@@ -1061,7 +1393,8 @@ export class PaymentService {
         return this.chargeAppId(obj as Stripe.Charge);
       case 'charge.refund.updated':
         return this.refundAppId(obj as Stripe.Refund);
-      case 'charge.dispute.created': {
+      case 'charge.dispute.created':
+      case 'charge.dispute.closed': {
         const chargeId = stripeId((obj as Stripe.Dispute).charge);
         if (!chargeId) return null;
         return this.chargeAppId(await this.stripe.charges.retrieve(chargeId));
@@ -1080,9 +1413,35 @@ export class PaymentService {
       ) ??
       PaymentService.appIdOf(invoice);
     if (fromInvoice) return fromInvoice;
-    const subscriptionId = stripeId(invoice.subscription);
+    const subscriptionId = invoiceSubscriptionId(invoice);
     if (!subscriptionId) return null;
-    return PaymentService.appIdOf(await this.stripe.subscriptions.retrieve(subscriptionId));
+    const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
+    return (
+      PaymentService.appIdOf(subscription) ??
+      (await this.verifiedLegacyAttribution(subscriptionId, stripeId(invoice.customer) ?? stripeId(subscription.customer)))
+    );
+  }
+
+  /**
+   * The VERIFIED mapping for untagged (pre-app_id-standard) subscription and
+   * invoice events: FlacronCV's own Firestore must already pair this exact
+   * subscription id with this exact customer id on ONE user. Both ids come
+   * from our own writes, so a match proves the object is FlacronCV's. Nothing
+   * else untagged is ever accepted — not a customer alone, never an email.
+   */
+  private async verifiedLegacyAttribution(
+    subscriptionId: string | null | undefined,
+    customerId: string | null | undefined,
+  ): Promise<string | null> {
+    if (!subscriptionId || !customerId) return null;
+    const snapshot = await this.firebaseAdmin.firestore
+      .collection('users')
+      .where('subscription.stripeSubscriptionId', '==', subscriptionId)
+      .limit(2)
+      .get();
+    if (snapshot.size !== 1) return null;
+    const stored = (snapshot.docs[0].data() as { subscription?: { stripeCustomerId?: string | null } }).subscription;
+    return stored?.stripeCustomerId === customerId ? this.appId : null;
   }
 
   private async paymentIntentAppId(paymentIntentId: string | null): Promise<string | null> {
@@ -1308,14 +1667,121 @@ export class PaymentService {
     });
   }
 
-  private async handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  // ─── Subscription event gate ────────────────────────────────────────────────
+
+  /**
+   * Whether a subscription event may change this user's entitlement — decided
+   * and the user's Stripe state clock advanced in ONE Firestore transaction.
+   *
+   * - Stale: an event created before the last applied one (`stripeStateAt`)
+   *   is ignored. Stripe does not deliver in order; a late
+   *   `updated(active)` must not undo a later `deleted`.
+   * - Other subscription: only the user's CURRENT subscription
+   *   (`stripeSubscriptionId`) may change the plan. Deleting, failing or
+   *   refunding an old subscription never touches a user on a newer one.
+   * - No current subscription: `adopt` mode accepts a LIVE subscription
+   *   stamped with our app_id for this user (heals a lost checkout webhook);
+   *   `checkout` mode also replaces a stored one the caller verified is no
+   *   longer live. Otherwise nothing is applied.
+   */
+  private async gateSubscriptionEvent(
+    userId: string,
+    subscriptionId: string | null | undefined,
+    opts: {
+      created?: number;
+      mode: 'current' | 'adopt' | 'checkout';
+      subscription?: Stripe.Subscription | null;
+      replaceable?: string | null;
+    },
+  ): Promise<{ apply: true; adopted: boolean } | { apply: false; reason: string }> {
+    if (!subscriptionId) return { apply: false, reason: 'no_subscription_on_event' };
+    const db = this.firebaseAdmin.firestore;
+    const ref: FirebaseFirestore.DocumentReference = db.collection('users').doc(userId);
+    return db.runTransaction(async (tx: FirebaseFirestore.Transaction) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return { apply: false as const, reason: 'user_not_found' };
+      const stored = ((snap.data() as { subscription?: Record<string, unknown> }).subscription ?? {}) as {
+        stripeSubscriptionId?: string | null;
+        stripeStateAt?: number | null;
+      };
+      const stateAt = typeof stored.stripeStateAt === 'number' ? stored.stripeStateAt : null;
+      if (opts.created !== undefined && stateAt !== null && opts.created < stateAt) {
+        return { apply: false as const, reason: 'stale_event' };
+      }
+      const current = stored.stripeSubscriptionId ?? null;
+      let adopted = false;
+      if (current && current !== subscriptionId) {
+        if (!(opts.mode === 'checkout' && opts.replaceable === current)) {
+          return { apply: false as const, reason: 'not_current_subscription' };
+        }
+        adopted = true;
+      } else if (!current) {
+        if (opts.mode === 'current') return { apply: false as const, reason: 'no_current_subscription' };
+        if (opts.mode === 'adopt') {
+          const s = opts.subscription;
+          const owner = s ? PaymentService.appIdOf(s) : null;
+          const metaUser = s?.metadata?.internal_user_id || s?.metadata?.firebaseUid;
+          if (!s || owner !== this.appId || !PaymentService.LIVE_STRIPE_STATUSES.has(s.status) || (metaUser && metaUser !== userId)) {
+            return { apply: false as const, reason: 'no_current_subscription' };
+          }
+        }
+        adopted = true;
+      }
+      if (opts.created !== undefined) {
+        tx.update(ref, { 'subscription.stripeStateAt': opts.created });
+      }
+      return { apply: true as const, adopted };
+    });
+  }
+
+  /** Whether `subscriptionId` is a live (active/trialing) subscription that is not another app's. */
+  private async isLiveOwnSubscription(subscriptionId: string): Promise<boolean> {
+    try {
+      const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
+      const owner = PaymentService.appIdOf(subscription);
+      if (owner && owner !== this.appId) return false;
+      return PaymentService.LIVE_STRIPE_STATUSES.has(subscription.status);
+    } catch (err) {
+      if (PaymentService.isMissingResource(err)) return false;
+      throw err;
+    }
+  }
+
+  private async handleCheckoutCompleted(
+    session: Stripe.Checkout.Session,
+    at: { created?: number } = {},
+  ): Promise<HandlerDecision> {
     const userId = session.metadata?.firebaseUid || session.metadata?.internal_user_id || session.client_reference_id;
-    if (!session.subscription) return;
+    if (!session.subscription) return 'no_subscription_on_event';
 
     const subscription = await this.stripe.subscriptions.retrieve(stripeId(session.subscription)!);
+    const owner = PaymentService.appIdOf(subscription);
+    if (owner && owner !== this.appId) {
+      // The session is ours but the subscription it points at is not: conflicting ownership.
+      this.logger.warn(`Checkout ${session.id}: subscription ${subscription.id} is stamped ${owner} — not applied`);
+      return 'subscription_app_mismatch';
+    }
     await this.recordSubscription(subscription, userId);
-    if (!userId) return;
-    if (await this.skipStripeEntitlementWrite(userId)) return;
+    if (!userId) return 'no_user';
+    if (await this.skipStripeEntitlementWrite(userId)) return 'store_purchase_in_period';
+
+    // A different LIVE subscription of ours is already the user's: never
+    // overwrite it (that would orphan a paying subscription).
+    const user = await this.usersService.findByIdOrThrow(userId);
+    const current = user.subscription?.stripeSubscriptionId ?? null;
+    if (current && current !== subscription.id) {
+      if (await this.isLiveOwnSubscription(current)) {
+        return this.resolveDuplicateSubscription(userId, current, subscription);
+      }
+    }
+
+    const gate = await this.gateSubscriptionEvent(userId, subscription.id, {
+      created: at.created,
+      mode: 'checkout',
+      subscription,
+      replaceable: current,
+    });
+    if (!gate.apply) return gate.reason;
 
     const plan = this.determinePlan(subscription.items.data[0].price.id);
     const limits = PLAN_CONFIGS[plan].limits;
@@ -1339,6 +1805,8 @@ export class PaymentService {
       'subscription.trialStart': trial.trialStart,
       'subscription.trialEnd': trial.trialEnd,
       'subscription.cancelAtPeriodEnd': false,
+      // Trial consumption comes from OUR retrieved subscription only.
+      ...(trial.trialStart ? { 'subscription.hasUsedTrial': true } : {}),
       'usage.aiCreditsLimit': limits.aiCredits,
       updatedAt: now,
     });
@@ -1346,6 +1814,7 @@ export class PaymentService {
     batch.set(subscriptionRef, {
       id: subscription.id,
       applicationId: this.appId,
+      livemode: this.objectLivemode(subscription),
       userId,
       stripeCustomerId: session.customer as string,
       plan,
@@ -1378,20 +1847,105 @@ export class PaymentService {
         trialing: status === SubscriptionStatus.TRIALING,
       },
     });
+    return null;
   }
 
-  private async handleInvoicePaid(invoice: Stripe.Invoice) {
+  /**
+   * A checkout completed while the user already has a different LIVE
+   * FlacronCV subscription (two checkouts raced, or a second browser tab).
+   *
+   * Decision (documented policy):
+   * - The existing subscription stays authoritative; the user doc is not touched.
+   * - The NEW subscription is cancelled automatically only when it is
+   *   provably ours (app_id) AND nothing was charged for it (trialing, or its
+   *   latest invoice has amount_paid 0). Cancelling it then costs the customer
+   *   nothing and needs no refund.
+   * - Otherwise (money was taken, or ownership is unproven) it is left
+   *   running and flagged `manual_review`: refunding or cancelling a paid
+   *   subscription is a support decision, not an automatic one.
+   * Either way a `billing_conflicts/{newSubscriptionId}` row records it (ids
+   * only), and the event row gets the decision code.
+   */
+  private async resolveDuplicateSubscription(
+    userId: string,
+    existingSubscriptionId: string,
+    duplicate: Stripe.Subscription,
+  ): Promise<string> {
+    const ours = PaymentService.appIdOf(duplicate) === this.appId;
+    let unpaid = duplicate.status === 'trialing';
+    if (!unpaid && ours) {
+      const invoiceId = stripeId(duplicate.latest_invoice as string | { id: string } | null);
+      if (invoiceId) {
+        const invoice = await this.stripe.invoices.retrieve(invoiceId);
+        unpaid = (invoice.amount_paid ?? 0) === 0;
+      }
+    }
+
+    let action: 'canceled_duplicate' | 'manual_review' = 'manual_review';
+    if (ours && unpaid) {
+      try {
+        await this.stripe.subscriptions.cancel(duplicate.id, { prorate: false, invoice_now: false });
+        action = 'canceled_duplicate';
+      } catch (err) {
+        this.logger.error(`Could not cancel duplicate subscription ${duplicate.id}: ${(err as Error).message}`);
+      }
+    }
+
+    const now = new Date();
+    await this.firebaseAdmin.firestore.collection(BILLING_CONFLICTS_COLLECTION).doc(duplicate.id).set(
+      {
+        type: 'duplicate_subscription',
+        applicationId: this.appId,
+        livemode: this.objectLivemode(duplicate),
+        userId,
+        existingSubscriptionId,
+        duplicateSubscriptionId: duplicate.id,
+        duplicateStatus: duplicate.status,
+        action,
+        createdAt: now,
+        updatedAt: now,
+      },
+      { merge: true },
+    );
+    this.logger.warn(
+      `Duplicate subscription ${duplicate.id} for user ${userId} (current ${existingSubscriptionId}): ${action}`,
+    );
+    await this.audit.logSystemAction(AuditAction.SUBSCRIPTION_CHANGED, 'subscription', userId, {
+      metadata: { conflict: 'duplicate_subscription', action, existingSubscriptionId, duplicateSubscriptionId: duplicate.id },
+    });
+    return `duplicate_subscription_${action}`;
+  }
+
+  /**
+   * `checkout.session.expired`: forget the user's pending session — but ONLY
+   * if it is the one currently recorded, so an old superseded session expiring
+   * late never clears a newer pending one. Nothing else changes: an expired
+   * session never consumed trial eligibility.
+   */
+  private async handleCheckoutExpired(session: Stripe.Checkout.Session): Promise<HandlerDecision> {
+    const userId = session.metadata?.internal_user_id || session.metadata?.firebaseUid || session.client_reference_id;
+    if (!userId || !session.id) return 'no_user';
+    const cleared = await this.checkoutCoordinator.clearIfCurrent(userId, session.id);
+    return cleared ? null : 'not_current_checkout_session';
+  }
+
+  private async handleInvoicePaid(invoice: Stripe.Invoice, at: { created?: number } = {}): Promise<HandlerDecision> {
     const userId = await this.findUserByCustomerId(invoice.customer as string);
     // The money is recorded whether or not a user still maps to the customer.
     await this.recordInvoice(invoice, userId);
-    if (!invoice.subscription) return;
-    const sub = await this.stripe.subscriptions.retrieve(invoice.subscription as string);
+    const subscriptionId = invoiceSubscriptionId(invoice);
+    if (!subscriptionId) return 'no_subscription_on_event';
+    const sub = await this.stripe.subscriptions.retrieve(subscriptionId);
     await this.recordSubscription(sub, userId);
-    if (!userId) return;
-    if (await this.skipStripeEntitlementWrite(userId)) return;
+    if (!userId) return 'no_user';
+    if (await this.skipStripeEntitlementWrite(userId)) return 'store_purchase_in_period';
+
+    const gate = await this.gateSubscriptionEvent(userId, sub.id, { created: at.created, mode: 'adopt', subscription: sub });
+    if (!gate.apply) return gate.reason;
 
     const plan = this.determinePlan(sub.items.data[0].price.id);
     const limits = PLAN_CONFIGS[plan].limits;
+    const adopt = gate.adopted ? { stripeSubscriptionId: sub.id } : {};
 
     if (!isCurrentPaidPlan(plan)) {
       // LEGACY plans (and an unrecognised price): unchanged — every paid
@@ -1400,15 +1954,23 @@ export class PaymentService {
         status: SubscriptionStatus.ACTIVE,
         currentPeriodEnd: new Date(sub.current_period_end * 1000),
         ...this.periodStartPatch(plan, sub),
+        ...adopt,
       });
 
-      // Reset monthly usage
-      await this.usersService.updateUsage(userId, {
-        aiCreditsUsed: 0,
-        exportsThisMonth: 0,
-        aiCreditsLimit: limits.aiCredits,
-        lastExportReset: new Date(),
-      });
+      // Reset monthly usage — once per invoice. A replay of the same invoice
+      // (a resent or duplicated delivery under another event id) must not
+      // wipe the credits used since the first reset.
+      if (await this.usageAlreadyResetFor(userId, invoice.id)) {
+        await this.usersService.updateUsage(userId, { aiCreditsLimit: limits.aiCredits });
+      } else {
+        await this.usersService.updateUsage(userId, {
+          aiCreditsUsed: 0,
+          exportsThisMonth: 0,
+          aiCreditsLimit: limits.aiCredits,
+          lastExportReset: new Date(),
+          ...(invoice.id ? { lastResetInvoiceId: invoice.id } : {}),
+        } as Parameters<UsersService['updateUsage']>[1]);
+      }
     } else {
       // Current plans renew on the monthly anniversary of the billing period
       // (also for annual plans), not on every invoice: a proration invoice for
@@ -1417,6 +1979,7 @@ export class PaymentService {
         status: SubscriptionStatus.ACTIVE,
         currentPeriodEnd: new Date(sub.current_period_end * 1000),
         currentPeriodStart: new Date(sub.current_period_start * 1000),
+        ...adopt,
       });
       await this.usersService.updateUsage(userId, { aiCreditsLimit: limits.aiCredits });
       await this.refreshUsageWindow(userId, plan);
@@ -1428,32 +1991,80 @@ export class PaymentService {
       currentPeriodStart: new Date(sub.current_period_start * 1000),
       currentPeriodEnd: new Date(sub.current_period_end * 1000),
       cancelAtPeriodEnd: sub.cancel_at_period_end,
-    });
+    }, sub);
+    return null;
   }
 
-  private async handlePaymentFailed(invoice: Stripe.Invoice) {
+  /** Whether the legacy monthly reset already ran for this invoice. */
+  private async usageAlreadyResetFor(userId: string, invoiceId: string | null | undefined): Promise<boolean> {
+    if (!invoiceId) return false;
+    const snap = await this.firebaseAdmin.firestore.collection('users').doc(userId).get();
+    const usage = (snap.data() as { usage?: { lastResetInvoiceId?: string } } | undefined)?.usage;
+    return usage?.lastResetInvoiceId === invoiceId;
+  }
+
+  private async handlePaymentFailed(invoice: Stripe.Invoice, at: { created?: number } = {}): Promise<HandlerDecision> {
     const userId = await this.findUserByCustomerId(invoice.customer as string);
     // Recorded as a failed payment — counted, never summed as revenue.
     await this.recordInvoice(invoice, userId);
-    if (!userId) return;
-    if (await this.skipStripeEntitlementWrite(userId)) return;
+    if (!userId) return 'no_user';
+    if (await this.skipStripeEntitlementWrite(userId)) return 'store_purchase_in_period';
+    const subscriptionId = invoiceSubscriptionId(invoice);
+    const gate = await this.gateSubscriptionEvent(userId, subscriptionId, { created: at.created, mode: 'current' });
+    if (!gate.apply) return gate.reason;
     await this.usersService.updateSubscription(userId, { status: SubscriptionStatus.PAST_DUE });
-    await this.syncSubscriptionRecord(invoice.subscription as string, {
+    await this.syncSubscriptionRecord(subscriptionId, {
       status: SubscriptionStatus.PAST_DUE,
     });
     this.logger.warn(`Payment failed for user ${userId}`);
     await this.audit.logSystemAction(AuditAction.PAYMENT_FAILED, 'subscription', userId, {
       metadata: { invoiceId: invoice.id, amountDue: invoice.amount_due },
     });
+    return null;
   }
 
-  private async handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-    const userId = await this.findUserByCustomerId(subscription.customer as string);
+  /**
+   * `customer.subscription.updated`, and the in-app plan change.
+   *
+   * The payload is not trusted: the subscription is RE-RETRIEVED from Stripe
+   * (`fresh` skips that only for a subscription this request just got back
+   * from Stripe), so a late or replayed event applies Stripe's current state
+   * rather than an old snapshot.
+   */
+  private async handleSubscriptionUpdated(
+    payload: Stripe.Subscription,
+    at: { created?: number; fresh?: boolean } = {},
+  ): Promise<HandlerDecision> {
+    let subscription = payload;
+    if (!at.fresh) {
+      try {
+        subscription = await this.stripe.subscriptions.retrieve(payload.id);
+      } catch (err) {
+        if (PaymentService.isMissingResource(err)) return 'subscription_missing';
+        throw err;
+      }
+      const owner = PaymentService.appIdOf(subscription);
+      if (owner && owner !== this.appId) return 'subscription_app_mismatch';
+    }
+    const userId = await this.findUserByCustomerId(stripeId(subscription.customer) as string);
     await this.recordSubscription(subscription, userId);
-    if (!userId) return;
-    if (await this.skipStripeEntitlementWrite(userId)) return;
+    if (!userId) return 'no_user';
+    if (await this.skipStripeEntitlementWrite(userId)) return 'store_purchase_in_period';
+
+    const gate = await this.gateSubscriptionEvent(userId, subscription.id, {
+      created: at.created,
+      mode: 'adopt',
+      subscription,
+    });
+    if (!gate.apply) return gate.reason;
 
     const plan = this.determinePlan(subscription.items.data[0].price.id);
+    // An unpaid renewal: Stripe has already advanced current_period_end to
+    // the period nobody paid for. Writing it would extend paid access (the
+    // grace rule grants access until currentPeriodEnd) and refresh credits
+    // for free. The period and the allowance advance on invoice.paid instead;
+    // the grace policy itself (resolveEffectivePlan) is unchanged.
+    const unpaidRenewal = UNPAID_STRIPE_STATUSES.has(subscription.status);
     // Map, never cast. Stripe has EIGHT subscription statuses; SubscriptionStatus
     // has six. A bare cast persisted the raw string for the two with no enum
     // member — `incomplete_expired` and `paused` — and entitlements are decided
@@ -1469,10 +2080,17 @@ export class PaymentService {
       plan,
       status: this.mapStripeStatus(subscription.status),
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-      ...this.periodStartPatch(plan, subscription),
+      ...(unpaidRenewal
+        ? {}
+        : {
+            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+            ...this.periodStartPatch(plan, subscription),
+          }),
+      ...(gate.adopted ? { stripeSubscriptionId: subscription.id } : {}),
+      // Verified: OUR retrieved subscription started a trial.
+      ...(subscription.trial_start ? { hasUsedTrial: true } : {}),
     });
-    if (isCurrentPaidPlan(plan)) {
+    if (isCurrentPaidPlan(plan) && !unpaidRenewal) {
       await this.usersService.updateUsage(userId, { aiCreditsLimit: PLAN_CONFIGS[plan].limits.aiCredits });
       await this.refreshUsageWindow(userId, plan);
     }
@@ -1481,11 +2099,15 @@ export class PaymentService {
       plan,
       status: subscription.status,
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
-      currentPeriodStart: new Date(subscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      ...(unpaidRenewal
+        ? {}
+        : {
+            currentPeriodStart: new Date(subscription.current_period_start * 1000),
+            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+          }),
       cancelAt: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : null,
       canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
-    });
+    }, subscription);
 
     await this.audit.logSystemAction(AuditAction.SUBSCRIPTION_CHANGED, 'subscription', userId, {
       metadata: {
@@ -1495,18 +2117,29 @@ export class PaymentService {
         stripeSubscriptionId: subscription.id,
       },
     });
+    return null;
   }
 
-  private async handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  private async handleSubscriptionDeleted(
+    subscription: Stripe.Subscription,
+    at: { created?: number } = {},
+  ): Promise<HandlerDecision> {
     const userId = await this.findUserByCustomerId(subscription.customer as string);
     await this.recordSubscription(subscription, userId);
-    if (!userId) return;
+    if (!userId) return 'no_user';
+    if (await this.skipStripeEntitlementWrite(userId)) return 'store_purchase_in_period';
+
+    // Only the CURRENT subscription's deletion downgrades: deleting an old
+    // subscription must not take away a newer one.
+    const gate = await this.gateSubscriptionEvent(userId, subscription.id, { created: at.created, mode: 'current' });
+    if (!gate.apply) return gate.reason;
 
     await this.applyDeletedSubscriptionWrite(
       userId,
       subscription.id,
       subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : new Date(),
     );
+    return null;
   }
 
   /**
@@ -1574,13 +2207,41 @@ export class PaymentService {
     }
   }
 
-  private async handleChargeRefunded(charge: Stripe.Charge) {
+  private async handleChargeRefunded(charge: Stripe.Charge): Promise<HandlerDecision> {
     await this.recordChargeRefunds(charge);
     // Only a FULL refund revokes access; ignore partial refunds.
-    if (!charge.refunded) return;
-    const userId = await this.findUserByCustomerId(charge.customer as string);
-    if (!userId) return;
-    await this.revokeToFree(userId, 'refund');
+    if (!charge.refunded) return 'partial_refund';
+    return this.revokeForCharge(charge, stripeId(charge.customer), 'refund');
+  }
+
+  /**
+   * The subscription a charge paid for: charge → invoice → subscription.
+   * Null for a charge that is not a subscription invoice payment (a pack /
+   * top-up purchase — those are handled by the career path).
+   */
+  private async subscriptionOfCharge(charge: Stripe.Charge): Promise<string | null> {
+    const invoiceRef = charge.invoice as string | Stripe.Invoice | null | undefined;
+    if (!invoiceRef) return null;
+    const invoice = typeof invoiceRef === 'string' ? await this.stripe.invoices.retrieve(invoiceRef) : invoiceRef;
+    return invoiceSubscriptionId(invoice);
+  }
+
+  /**
+   * Revoke for a reversed charge (full refund, dispute) — but only when that
+   * charge paid for the user's CURRENT subscription. Refunding an invoice of
+   * an old, already-replaced subscription must not cancel the newer one.
+   */
+  private async revokeForCharge(
+    charge: Stripe.Charge,
+    customerId: string | null,
+    reason: string,
+  ): Promise<HandlerDecision> {
+    if (!customerId) return 'no_customer';
+    const userId = await this.findUserByCustomerId(customerId);
+    if (!userId) return 'no_user';
+    const subscriptionId = await this.subscriptionOfCharge(charge);
+    if (!subscriptionId) return 'charge_not_for_subscription';
+    return this.revokeToFree(userId, reason, subscriptionId);
   }
 
   /**
@@ -1621,35 +2282,64 @@ export class PaymentService {
     });
   }
 
-  private async handleDisputeCreated(dispute: Stripe.Dispute) {
-    // A dispute (chargeback) means the customer pulled the funds → revoke.
-    let customerId = (dispute as { customer?: string }).customer;
-    if (!customerId && dispute.charge) {
-      try {
-        const charge = await this.stripe.charges.retrieve(dispute.charge as string);
-        customerId = charge.customer as string;
-      } catch (err) {
-        this.logger.warn(`Could not resolve customer for dispute ${dispute.id}: ${(err as Error).message}`);
-      }
-    }
-    if (!customerId) return;
-    const userId = await this.findUserByCustomerId(customerId);
-    if (!userId) return;
-    await this.revokeToFree(userId, 'dispute');
-  }
-
-  private async handleSubscriptionPaused(subscription: Stripe.Subscription) {
-    const userId = await this.findUserByCustomerId(subscription.customer as string);
-    await this.recordSubscription(subscription, userId);
-    if (!userId) return;
-    await this.revokeToFree(userId, 'subscription paused');
+  private async handleDisputeCreated(dispute: Stripe.Dispute): Promise<HandlerDecision> {
+    // Ownership was resolved by attributeEvent before dispatch: record first.
+    const charge = await this.recordDispute(dispute);
+    // A dispute (chargeback) means the customer pulled the funds → revoke,
+    // but only if the disputed charge paid for the CURRENT subscription.
+    if (!charge) return 'charge_unresolved';
+    const customerId = (dispute as { customer?: string }).customer ?? stripeId(charge.customer);
+    return this.revokeForCharge(charge, customerId, 'dispute');
   }
 
   /**
-   * Immediately revoke paid access and downgrade to free. Also cancels the live
-   * Stripe subscription (best-effort) so billing stops and a later invoice.paid
-   * cannot silently re-upgrade the user.
+   * Idempotent upsert into the dispute ledger (`charge.dispute.created` and
+   * `.closed`). Returns the disputed charge, or null if it cannot be read.
    */
+  private async recordDispute(dispute: Stripe.Dispute): Promise<Stripe.Charge | null> {
+    const chargeRef = dispute.charge as string | Stripe.Charge | null | undefined;
+    let charge: Stripe.Charge | null = null;
+    if (chargeRef && typeof chargeRef !== 'string') {
+      charge = chargeRef;
+    } else if (chargeRef) {
+      try {
+        charge = await this.stripe.charges.retrieve(chargeRef);
+      } catch (err) {
+        this.logger.warn(`Could not resolve charge for dispute ${dispute.id}: ${(err as Error).message}`);
+      }
+    }
+    const chargeId = stripeId(chargeRef as string | { id: string } | null | undefined);
+    if (dispute.id && chargeId) {
+      await this.ledger.recordDispute({
+        id: dispute.id,
+        chargeId,
+        paymentIntentId:
+          stripeId(dispute.payment_intent as string | { id: string } | null | undefined) ??
+          stripeId(charge?.payment_intent as string | { id: string } | null | undefined),
+        amount: dispute.amount ?? charge?.amount ?? 0,
+        currency: dispute.currency ?? charge?.currency ?? 'usd',
+        status: dispute.status ?? 'needs_response',
+        reason: dispute.reason ?? null,
+        created: typeof dispute.created === 'number' ? dispute.created : Math.floor(Date.now() / 1000),
+        applicationId: this.appId,
+        livemode: this.objectLivemode(dispute as unknown as { livemode?: boolean }),
+      });
+    }
+    return charge;
+  }
+
+  private async handleSubscriptionPaused(
+    subscription: Stripe.Subscription,
+    at: { created?: number } = {},
+  ): Promise<HandlerDecision> {
+    const userId = await this.findUserByCustomerId(subscription.customer as string);
+    await this.recordSubscription(subscription, userId);
+    if (!userId) return 'no_user';
+    const gate = await this.gateSubscriptionEvent(userId, subscription.id, { created: at.created, mode: 'current' });
+    if (!gate.apply) return gate.reason;
+    return this.revokeToFree(userId, 'subscription paused', subscription.id);
+  }
+
   /**
    * Stop billing this user and downgrade them, for a reason originating OUTSIDE
    * Stripe — today, account deletion.
@@ -1663,9 +2353,21 @@ export class PaymentService {
     await this.revokeToFree(userId, reason);
   }
 
-  private async revokeToFree(userId: string, reason: string) {
+  /**
+   * Immediately revoke paid access and downgrade to free. Also cancels the live
+   * Stripe subscription (best-effort) so billing stops and a later invoice.paid
+   * cannot silently re-upgrade the user.
+   *
+   * `expectedSubscriptionId` (refund, dispute, pause): act only if that is
+   * still the user's current subscription.
+   */
+  private async revokeToFree(userId: string, reason: string, expectedSubscriptionId?: string): Promise<HandlerDecision> {
     const user = await this.usersService.findByIdOrThrow(userId);
     const subId = user.subscription?.stripeSubscriptionId;
+    if (expectedSubscriptionId !== undefined && subId !== expectedSubscriptionId) {
+      this.logger.log(`Not revoking user ${userId} (${reason}): ${expectedSubscriptionId} is not their current subscription`);
+      return 'not_current_subscription';
+    }
     if (subId) {
       try {
         await this.stripe.subscriptions.cancel(subId);
@@ -1678,7 +2380,7 @@ export class PaymentService {
       this.logger.warn(
         `Stripe billing stopped for user ${userId} (reason: ${reason}) — store purchase kept`,
       );
-      return;
+      return 'store_purchase_in_period';
     }
 
     await this.usersService.updateSubscription(userId, {
@@ -1699,6 +2401,7 @@ export class PaymentService {
     await this.audit.logSystemAction(AuditAction.SUBSCRIPTION_REVOKED, 'subscription', userId, {
       metadata: { reason, stripeSubscriptionId: subId ?? null },
     });
+    return null;
   }
 
   /** Trial window from a Stripe subscription (null when not trialing). */
@@ -1782,13 +2485,19 @@ export class PaymentService {
   private async syncSubscriptionRecord(
     subscriptionId: string | null | undefined,
     data: Record<string, unknown>,
+    source?: { livemode?: boolean } | null,
   ): Promise<void> {
     if (!subscriptionId) return;
     try {
+      // applicationId + livemode on every write, so a record first created by
+      // a lifecycle merge (no checkout-time snapshot) is still attributable.
       await this.firebaseAdmin.firestore
         .collection('subscriptions')
         .doc(subscriptionId)
-        .set({ ...data, updatedAt: new Date() }, { merge: true });
+        .set(
+          { ...data, applicationId: this.appId, livemode: this.objectLivemode(source), updatedAt: new Date() },
+          { merge: true },
+        );
     } catch (err) {
       this.logger.warn(
         `Failed to sync subscription record ${subscriptionId}: ${(err as Error).message}`,

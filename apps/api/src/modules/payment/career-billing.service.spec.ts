@@ -223,7 +223,14 @@ describe('career webhooks through V1 PaymentService', () => {
 
   it('an abandoned or expired checkout grants nothing', async () => {
     const expired = { id: 'cs_x', subscription: null, metadata: { ...APP, product: 'career', firebaseUid: 'u1' } };
-    expect(await payments.handleWebhookEvent(event('evt_exp', 'checkout.session.expired', expired, t0))).toBe('ignored');
+    // checkout.session.expired is now a handled V1 event (it clears the V1
+    // checkout coordination record), so an app_id-stamped career session is
+    // 'applied' rather than 'ignored' — but it matches no V1 pending session,
+    // so it clears nothing and grants nothing (asserted below).
+    expect(await payments.handleWebhookEvent(event('evt_exp', 'checkout.session.expired', expired, t0))).toBe('applied');
+    expect(
+      ((await firestore.collection('payment_events').doc('evt_exp').get()).data() as any).entitlement_decision,
+    ).toBe('not_current_checkout_session');
     const completedWithoutSubscription = { ...expired, id: 'cs_y' };
     await payments.handleWebhookEvent(event('evt_nosub', 'checkout.session.completed', completedWithoutSubscription, t0));
     expect((await user()).careerSubscription).toBeUndefined();

@@ -4,6 +4,7 @@ import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { CRMAuditService } from './crm-audit.service';
 import { CRMSubscriptionRecord, CRMSubscriptionListParams } from '@flacroncv/shared-types';
 import Stripe from 'stripe';
+import { DEFAULT_APP_ID, stripeKeyMode } from '../../config/stripe-app';
 
 @Injectable()
 export class CRMSubscriptionsService {
@@ -11,6 +12,9 @@ export class CRMSubscriptionsService {
   private readonly subCol = 'subscriptions';
   private readonly userCol = 'users';
   private stripe!: Stripe;
+  /** FlacronCV's id on the shared Stripe account; stamped on every subscriptions write. */
+  private readonly appId: string;
+  private readonly livemode: boolean;
 
   constructor(
     private firebase: FirebaseAdminService,
@@ -21,6 +25,8 @@ export class CRMSubscriptionsService {
     if (secretKey) {
       this.stripe = new Stripe(secretKey, { apiVersion: '2024-04-10' as any });
     }
+    this.appId = this.config.get<string>('stripe.appId') || DEFAULT_APP_ID;
+    this.livemode = stripeKeyMode(secretKey) === 'live';
   }
 
   async listSubscriptions(params: CRMSubscriptionListParams): Promise<{
@@ -133,7 +139,7 @@ export class CRMSubscriptionsService {
       throw new BadRequestException('Stripe is not configured on this server');
     }
 
-    await this.stripe.subscriptions.cancel(subscriptionId);
+    const canceled = await this.stripe.subscriptions.cancel(subscriptionId);
     this.logger.log(`Admin canceled subscription ${subscriptionId} for user ${sub.userId}`);
 
     // Reflect the cancellation on the local record immediately so the row this
@@ -145,6 +151,9 @@ export class CRMSubscriptionsService {
         status: 'canceled',
         canceledAt: new Date(),
         cancelAtPeriodEnd: false,
+        // Attributable on the shared Stripe account, like every other subscriptions write.
+        applicationId: this.appId,
+        livemode: typeof canceled?.livemode === 'boolean' ? canceled.livemode : this.livemode,
         updatedAt: new Date(),
       },
       { merge: true },

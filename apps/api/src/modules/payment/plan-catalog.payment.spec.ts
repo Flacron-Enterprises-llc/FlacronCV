@@ -251,9 +251,12 @@ describe('PaymentService — five-plan catalog', () => {
 
     it('portal upgrade Starter → Professional resolves the plan from the new price and stores the period start', async () => {
       await firestore.collection('users').doc('u1').update({ 'subscription.plan': SubscriptionPlan.STARTER });
-      await service.handleWebhookEvent(event('customer.subscription.updated', fakeSub('price_prof_m', {
+      const upgraded = fakeSub('price_prof_m', {
         metadata: { ...OUR_METADATA, plan: 'business' }, // metadata is ignored
-      })));
+      });
+      // subscription.updated re-reads the subscription from Stripe.
+      (service as any).stripe = { subscriptions: { retrieve: jest.fn().mockResolvedValue(upgraded) } };
+      await service.handleWebhookEvent(event('customer.subscription.updated', upgraded));
       expect(users.updateSubscription).toHaveBeenCalledWith('u1', expect.objectContaining({
         plan: SubscriptionPlan.PROFESSIONAL,
         currentPeriodStart: new Date(1_700_000_000 * 1000),
@@ -263,8 +266,9 @@ describe('PaymentService — five-plan catalog', () => {
     });
 
     it('LEGACY Pro subscription.updated keeps its plan and touches no usage counters', async () => {
-      await service.handleWebhookEvent(event('customer.subscription.updated',
-        fakeSub(PLAN_CONFIGS[SubscriptionPlan.PRO].stripePriceIdMonthly)));
+      const legacy = fakeSub(PLAN_CONFIGS[SubscriptionPlan.PRO].stripePriceIdMonthly);
+      (service as any).stripe = { subscriptions: { retrieve: jest.fn().mockResolvedValue(legacy) } };
+      await service.handleWebhookEvent(event('customer.subscription.updated', legacy));
       expect(users.updateSubscription).toHaveBeenCalledWith('u1', expect.objectContaining({ plan: SubscriptionPlan.PRO }));
       expect(users.updateUsage).not.toHaveBeenCalled();
       expect(users.rolloverUsageIfDue).not.toHaveBeenCalled();
@@ -305,7 +309,11 @@ describe('PaymentService — five-plan catalog', () => {
     });
 
     it('cancellation (subscription.deleted) returns a current-plan customer to Free', async () => {
-      await firestore.collection('users').doc('u1').update({ 'subscription.plan': SubscriptionPlan.PROFESSIONAL });
+      // Only the user's CURRENT subscription's deletion downgrades.
+      await firestore.collection('users').doc('u1').update({
+        'subscription.plan': SubscriptionPlan.PROFESSIONAL,
+        'subscription.stripeSubscriptionId': 'sub_test',
+      });
       await service.handleWebhookEvent(event('customer.subscription.deleted', fakeSub('price_prof_m')));
       expect(users.updateSubscription).toHaveBeenCalledWith('u1', expect.objectContaining({
         plan: SubscriptionPlan.FREE,

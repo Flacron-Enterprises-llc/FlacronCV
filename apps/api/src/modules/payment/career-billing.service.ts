@@ -37,6 +37,8 @@ import {
   addonAvailability,
 } from './purchase-availability';
 import { currentCaller } from '../career-metering/caller-context';
+import { BillingLedgerService } from './billing-ledger.service';
+import { appIdOf, resolveCheckoutCustomer } from './customer-ownership';
 
 /**
  * The career tools (former V2 features) inside V1's own Stripe billing.
@@ -147,6 +149,22 @@ export interface CareerAddonOffer {
   unavailableProvider: PurchaseProvider | null;
 }
 
+/**
+ * The career plan a V1 user document gives: the mapped V1 plan, or a live
+ * legacy add-on if higher. Shared by checkout and the automatic top-up.
+ */
+export function careerPlanOfUser(user: unknown): CareerPlanId {
+  const data = (user ?? {}) as { subscription?: unknown; careerSubscription?: Partial<CareerSubscriptionState> };
+  const mapped = careerPlanForV1(resolveEffectivePlan(data.subscription as never));
+  const addon = data.careerSubscription;
+  const end = addon?.currentPeriodEnd ? new Date(addon.currentPeriodEnd as unknown as string) : null;
+  const withinPeriod = !!end && !Number.isNaN(end.getTime()) && end.getTime() > Date.now();
+  const live =
+    !!addon?.plan &&
+    ((addon.status === 'active' || addon.status === 'trialing') ? end === null || withinPeriod : (addon.status === 'past_due' || addon.status === 'canceled') && withinPeriod);
+  return higherCareerPlan(mapped, live ? (addon!.plan as CareerPlanId) : null);
+}
+
 @Injectable()
 export class CareerBillingService {
   private readonly logger = new Logger(CareerBillingService.name);
@@ -159,6 +177,8 @@ export class CareerBillingService {
   private readonly addonPrices: Map<string, string>;
   /** Whether a pack's feature is built, switched on and has its providers. Fails closed. */
   private readonly availability: AvailabilitySource;
+  /** The shared billing ledger: pack payments, disputes and created customers are recorded there. */
+  private readonly ledger: BillingLedgerService;
 
   constructor(
     private readonly configService: ConfigService,
@@ -166,7 +186,9 @@ export class CareerBillingService {
     private readonly usersService: UsersService,
     @Optional() stripe?: Stripe,
     @Optional() @Inject(PURCHASE_AVAILABILITY_SOURCE) availability?: AvailabilitySource,
+    @Optional() ledger?: BillingLedgerService,
   ) {
+    this.ledger = ledger ?? new BillingLedgerService(firebaseAdmin);
     this.availability = availability ?? new CareerAccessAvailabilitySource(process.env.CAREER_API_URL);
     const secretKey = this.configService.get<string>('stripe.secretKey');
     this.stripe = stripe ?? (secretKey ? new Stripe(secretKey, { apiVersion: '2024-04-10' as never }) : null);
@@ -370,15 +392,7 @@ export class CareerBillingService {
 
   /** The career plan a V1 customer has now: the mapped V1 plan, or a live legacy add-on if higher. */
   careerPlanOf(user: unknown): CareerPlanId {
-    const data = user as { subscription?: unknown; careerSubscription?: Partial<CareerSubscriptionState> };
-    const mapped = careerPlanForV1(resolveEffectivePlan(data.subscription as never));
-    const addon = data.careerSubscription;
-    const end = addon?.currentPeriodEnd ? new Date(addon.currentPeriodEnd as unknown as string) : null;
-    const withinPeriod = !!end && !Number.isNaN(end.getTime()) && end.getTime() > Date.now();
-    const live =
-      !!addon?.plan &&
-      ((addon.status === 'active' || addon.status === 'trialing') ? end === null || withinPeriod : (addon.status === 'past_due' || addon.status === 'canceled') && withinPeriod);
-    return higherCareerPlan(mapped, live ? (addon!.plan as CareerPlanId) : null);
+    return careerPlanOfUser(user);
   }
 
   /** True when this Stripe event concerns a career subscription, pack or capacity add-on. Decided before V1's handlers run. */
@@ -396,6 +410,7 @@ export class CareerBillingService {
         return this.invoiceIsCareer(obj as unknown as Stripe.Invoice);
       case 'charge.refunded':
       case 'charge.dispute.created':
+      case 'charge.dispute.closed':
       case 'charge.refund.updated': {
         const charge = await this.chargeOf(event);
         if (!charge) return false;
@@ -447,7 +462,11 @@ export class CareerBillingService {
       }
       case 'charge.refunded': {
         const charge = obj as Stripe.Charge;
-        // V1's own rule: only a FULL refund ends access; a partial refund changes nothing.
+        // POLICY (intentional): only a FULL refund ends access. A PARTIAL refund
+        // of a pack revokes nothing (no units are taken back pro rata), and a
+        // partial refund of a capacity/add-on invoice leaves the subscription
+        // running. The refund itself is still recorded in billing_refunds by
+        // the shared ledger and nets against the recorded pack payment.
         if (!charge.refunded || !this.stripe) return;
         const packRef = await this.packPurchaseRefOf(charge);
         if (packRef) {
@@ -473,9 +492,21 @@ export class CareerBillingService {
       case 'charge.dispute.created': {
         // A disputed pack: its unused units are revoked (section 11). Plan
         // disputes are recorded by the shared ledger with no entitlement change.
+        await this.recordDispute(obj as Stripe.Dispute);
         const charge = await this.chargeOf(event);
         const packRef = charge ? await this.packPurchaseRefOf(charge) : null;
         if (packRef) await this.markPack(packRef, 'disputed', event.created);
+        return;
+      }
+      case 'charge.dispute.closed': {
+        // Won: the pack is paid again. Lost (or warning_closed): it stays
+        // revoked. See restorePack for what the career sync does with it.
+        const dispute = obj as Stripe.Dispute;
+        await this.recordDispute(dispute);
+        if (dispute.status !== 'won') return;
+        const charge = await this.chargeOf(event);
+        const packRef = charge ? await this.packPurchaseRefOf(charge) : null;
+        if (packRef) await this.restorePack(packRef, event.created);
         return;
       }
       default:
@@ -621,6 +652,82 @@ export class CareerBillingService {
       paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id ?? null,
       autoTopup: false,
     });
+    await this.recordPackPayment(session, userId);
+  }
+
+  /**
+   * The pack's money in billing_payments, keyed by its PaymentIntent id, so a
+   * redelivered completion (or the refund path, which updates the same row)
+   * never counts it twice. Only a PaymentIntent verifiably ours is recorded:
+   * app_id on the PaymentIntent (set via payment_intent_data) or, if Stripe
+   * left it untagged, on the Checkout Session; never another app's.
+   *
+   * If the PaymentIntent cannot be read, the payment is still recorded from
+   * the session's own verified facts (a `paid` payment-mode session means its
+   * PaymentIntent succeeded for `amount_total`), keyed by the same id, so the
+   * revenue is never lost and a later read overwrites the same row. A ledger
+   * write failure propagates, so the webhook claim is released and Stripe retries.
+   */
+  private async recordPackPayment(session: Stripe.Checkout.Session, userId: string): Promise<void> {
+    const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id;
+    if (!paymentIntentId || !this.stripe) {
+      this.logger.warn(`Pack checkout ${session.id} has no PaymentIntent; payment not recorded in the ledger`);
+      return;
+    }
+    let intent: Stripe.PaymentIntent;
+    try {
+      intent = await this.stripe.paymentIntents.retrieve(paymentIntentId);
+    } catch (err) {
+      this.logger.warn(`Pack PaymentIntent ${paymentIntentId} could not be read (${(err as Error).message}); recording from the session`);
+      if (appIdOf(session) !== this.appId) return;
+      await this.ledger.recordPaymentIntent({
+        paymentIntentId,
+        applicationId: this.appId,
+        livemode: !!session.livemode,
+        amount: session.amount_total ?? 0,
+        currency: session.currency ?? 'usd',
+        stripeStatus: 'succeeded',
+        customerId: typeof session.customer === 'string' ? session.customer : session.customer?.id ?? null,
+        internalUserId: userId,
+        chargeId: null,
+      });
+      return;
+    }
+    const owner = appIdOf(intent) ?? appIdOf(session);
+    if (owner !== this.appId) {
+      this.logger.warn(`Pack PaymentIntent ${paymentIntentId} is stamped ${owner ?? 'nothing'}, not ${this.appId}; not recorded`);
+      return;
+    }
+    await this.ledger.recordPaymentIntent({
+      paymentIntentId: intent.id,
+      applicationId: owner,
+      livemode: typeof intent.livemode === 'boolean' ? intent.livemode : !!session.livemode,
+      amount: intent.status === 'succeeded' ? intent.amount_received ?? intent.amount : intent.amount,
+      currency: intent.currency ?? session.currency ?? 'usd',
+      stripeStatus: intent.status,
+      customerId: typeof intent.customer === 'string' ? intent.customer : intent.customer?.id ?? null,
+      internalUserId: userId,
+      chargeId: typeof intent.latest_charge === 'string' ? intent.latest_charge : intent.latest_charge?.id ?? null,
+      failureMessage: intent.last_payment_error?.message ?? null,
+    });
+  }
+
+  /** A career dispute in billing_disputes (idempotent; the ledger keeps the newest status). */
+  private async recordDispute(dispute: Stripe.Dispute): Promise<void> {
+    if (!dispute?.id) return;
+    await this.ledger.recordDispute({
+      id: dispute.id,
+      chargeId: typeof dispute.charge === 'string' ? dispute.charge : dispute.charge?.id ?? '',
+      paymentIntentId: typeof dispute.payment_intent === 'string' ? dispute.payment_intent : dispute.payment_intent?.id ?? null,
+      amount: dispute.amount,
+      currency: dispute.currency,
+      status: dispute.status,
+      reason: dispute.reason ?? null,
+      created: dispute.created,
+      // Career events reach apply() only after the webhook verified the app id.
+      applicationId: this.appId,
+      livemode: !!dispute.livemode,
+    });
   }
 
   /** Writes a paid pack record once (create-if-absent). Shared with the automatic top-up. */
@@ -649,6 +756,27 @@ export class CareerBillingService {
     });
   }
 
+  /**
+   * A dispute closed as WON: the pack is `paid` again. Idempotent: only a
+   * `disputed` record moves (a refunded one never comes back), and a replay
+   * finds it already paid. On the career side the sync grants a `paid` pack
+   * once per purchaseRef (grantPaidPack is a no-op for a known purchase): if
+   * the sync had not yet revoked the units they simply stay; if it had, this
+   * record stops further revocation, but re-crediting already revoked units
+   * needs a reinstate path in packages/career-server (not in this API).
+   */
+  private async restorePack(purchaseRef: string, eventCreated: number): Promise<void> {
+    const db = this.firebaseAdmin.firestore;
+    const ref = db.collection(PACK_PURCHASES).doc(purchaseRef) as DocumentReference;
+    await db.runTransaction(async (tx: Transaction) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return;
+      const current = snap.data() as { status?: string };
+      if (current.status !== 'disputed') return;
+      tx.update(ref, { status: 'paid', endedAt: null, disputeWonAt: new Date(eventCreated * 1000), updatedAt: new Date() });
+    });
+  }
+
   /** The pack record a charge paid for (by PaymentIntent), or null. */
   private async packPurchaseRefOf(charge: Stripe.Charge): Promise<string | null> {
     const pi = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id;
@@ -668,15 +796,25 @@ export class CareerBillingService {
     return this.stripe.charges.retrieve(chargeId);
   }
 
+  /**
+   * One customer identity: reuse V1's Stripe customer only when it still
+   * exists and is FlacronCV's (an untagged legacy one is claimed), otherwise
+   * create a FlacronCV customer the way V1 does and record it in
+   * billing_customers. Another app's customer is never reused.
+   */
   private async customerFor(userId: string, user: { email?: string; displayName?: string; subscription?: { stripeCustomerId?: string | null } }): Promise<string> {
-    // One customer identity: reuse V1's Stripe customer, or create it the way V1 does.
-    let customerId = user.subscription?.stripeCustomerId ?? null;
-    if (!customerId) {
-      const customer = await this.stripe!.customers.create({ email: user.email, name: user.displayName, metadata: this.metadata(userId) });
-      customerId = customer.id;
-      await this.usersService.updateSubscription(userId, { stripeCustomerId: customerId });
-    }
-    return customerId;
+    return resolveCheckoutCustomer(this.stripe!, {
+      appId: this.appId,
+      userId,
+      email: user.email ?? null,
+      name: user.displayName ?? null,
+      storedCustomerId: user.subscription?.stripeCustomerId ?? null,
+      ledger: this.ledger,
+      saveCustomerId: async (customerId) => {
+        await this.usersService.updateSubscription(userId, { stripeCustomerId: customerId });
+      },
+      log: this.logger,
+    });
   }
 
   private metadata(userId: string, extra: Metadata = {}): Metadata {
