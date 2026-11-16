@@ -85,6 +85,12 @@ export function knownCodeMessage(
       return t('billing.errors.addonNotOnSale');
     case 'ADDON_UNAVAILABLE':
       return t('billing.errors.addonUnavailable');
+    case 'CHECKOUT_IN_PROGRESS':
+      return t('billing.errors.checkoutInProgress');
+    case 'PORTAL_NOT_CONFIGURED':
+      return t('billing.errors.portalNotConfigured');
+    case 'PORTAL_SHARED_CUSTOMER':
+      return t('billing.errors.portalSharedCustomer');
     case 'UPGRADE_REQUIRED': {
       const plan = details?.minimumPlan;
       return typeof plan === 'string' && PLAN_IDS.has(plan)

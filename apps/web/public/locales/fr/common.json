@@ -955,7 +955,10 @@
       "usageMeterUnavailable": "Nous n’avons pas pu vérifier votre quota, rien n’a donc été lancé ni décompté. Réessayez dans un instant.",
       "analysesExhausted": "Les analyses de CV de ce mois sont épuisées. Elles se renouvellent à votre date de facturation, ou changez d’offre pour en avoir plus.",
       "cvLimitReached": "Vous avez atteint la limite de CV de votre offre. Changez d’offre pour en créer davantage.",
-      "addonUnavailable": "Ce module ne peut pas encore être acheté, car la fonctionnalité concernée n'est pas disponible. Aucun montant n'a été débité."
+      "addonUnavailable": "Ce module ne peut pas encore être acheté, car la fonctionnalité concernée n'est pas disponible. Aucun montant n'a été débité.",
+      "checkoutInProgress": "Un paiement est déjà en cours d'ouverture pour votre compte. Patientez un instant puis réessayez.",
+      "portalNotConfigured": "La gestion de la facturation n'est pas disponible pour le moment. Contactez l'assistance pour modifier ou résilier votre abonnement.",
+      "portalSharedCustomer": "Nous ne pouvons pas ouvrir automatiquement la gestion de la facturation pour ce compte. Contactez l'assistance et nous vous aiderons à modifier ou résilier votre abonnement."
     },
     "storage_grace": "Vous stockez {excess} de plus que ce que votre offre inclut. Ces fichiers restent disponibles jusqu’au {date} ; supprimez-en ou changez d’offre d’ici là."
   },
@@ -5594,7 +5597,8 @@
       "confirm_pay": "Confirmer et payer {amount}",
       "confirm_change": "Confirmer le changement d’offre",
       "changed": "Votre offre est maintenant {plan}.",
-      "preview_at_period_end": "Votre offre change le {date}. Rien n'est facturé maintenant ; vous gardez votre offre actuelle jusque-là."
+      "preview_at_period_end": "Votre offre change le {date}. Rien n'est facturé maintenant ; vous gardez votre offre actuelle jusque-là.",
+      "payment_pending": "Votre passage à {plan} s'appliquera dès que le paiement de la différence sera validé. Votre offre actuelle reste active d'ici là."
     },
     "usage_units": {
       "cvs": "CV",

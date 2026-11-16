@@ -19,7 +19,7 @@ vi.mock('@/lib/api', () => ({
   },
   api: { get: (...args: unknown[]) => get(...args), post: (...args: unknown[]) => post(...args) },
 }));
-vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 vi.mock('@/i18n/routing', () => ({
   Link: ({ href, children, ...rest }: { href: string; children: ReactNode }) => (
     <a href={href} {...rest}>
@@ -122,6 +122,24 @@ describe('Settings → Billing: change plan', () => {
     await waitFor(() => expect(props.onPlanChanged).toHaveBeenCalledWith('career_pro'));
     expect(post).toHaveBeenLastCalledWith('/payments/change-plan', { plan: 'career_pro', interval: 'monthly', prorationDate: 1763100000 });
     expect(props.onPortal).not.toHaveBeenCalled();
+  });
+
+  it('an upgrade waiting for its payment is announced as pending, not as switched', async () => {
+    const { toast } = await import('sonner');
+    post.mockImplementation((endpoint: string) =>
+      Promise.resolve(
+        endpoint === '/payments/change-plan/preview'
+          ? { toPlan: 'career_pro', currency: 'usd', prorationAmount: 1500, amountDue: 1500, prorationDate: 1763100000, currentPeriodEnd: '2026-12-01T00:00:00.000Z' }
+          : { plan: 'professional', status: 'active', paymentPending: true },
+      ),
+    );
+    const { props } = panel({ currentPlan: 'professional', hasPaidStripeSubscription: true, onPlanChanged: vi.fn() });
+    fireEvent.click(await screen.findByRole('button', { name: 'Upgrade to Career Pro' }));
+    await screen.findByTestId('plan-change-preview');
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm and pay $15.00' }));
+    await waitFor(() => expect(props.onPlanChanged).toHaveBeenCalledWith('professional'));
+    expect(toast.info).toHaveBeenCalledWith(expect.stringMatching(/Career Pro will apply as soon as the payment/));
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it('labels a downgrade credit and translates a refused switch', async () => {

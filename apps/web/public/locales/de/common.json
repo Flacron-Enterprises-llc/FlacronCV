@@ -955,7 +955,10 @@
       "usageMeterUnavailable": "Dein Kontingent konnte gerade nicht geprüft werden, daher wurde nichts ausgeführt oder verbraucht. Versuche es gleich noch einmal.",
       "analysesExhausted": "Die Lebenslauf-Analysen dieses Monats sind aufgebraucht. Sie erneuern sich zu deinem Abrechnungsdatum, oder du führst ein Upgrade durch.",
       "cvLimitReached": "Du hast das Lebenslauf-Limit deines Tarifs erreicht. Führe ein Upgrade durch, um weitere zu erstellen.",
-      "addonUnavailable": "Dieses Zusatzpaket kann noch nicht gekauft werden, weil die zugehörige Funktion nicht verfügbar ist. Es wurde nichts berechnet."
+      "addonUnavailable": "Dieses Zusatzpaket kann noch nicht gekauft werden, weil die zugehörige Funktion nicht verfügbar ist. Es wurde nichts berechnet.",
+      "checkoutInProgress": "Für Ihr Konto wird bereits ein Bezahlvorgang geöffnet. Warten Sie einen Moment und versuchen Sie es erneut.",
+      "portalNotConfigured": "Die Abrechnungsverwaltung ist gerade nicht verfügbar. Wenden Sie sich an den Support, um Ihr Abo zu ändern oder zu kündigen.",
+      "portalSharedCustomer": "Für dieses Konto können wir die Abrechnungsverwaltung nicht automatisch öffnen. Wenden Sie sich an den Support, wir helfen Ihnen beim Ändern oder Kündigen Ihres Abos."
     },
     "storage_grace": "Du speicherst {excess} mehr, als dein Tarif enthält. Diese Dateien bleiben bis {date} verfügbar; lösche vorher einige Dateien oder führe ein Upgrade durch."
   },
@@ -5594,7 +5597,8 @@
       "confirm_pay": "Bestätigen und {amount} bezahlen",
       "confirm_change": "Tarifwechsel bestätigen",
       "changed": "Dein Tarif ist jetzt {plan}.",
-      "preview_at_period_end": "Ihr Tarif ändert sich am {date}. Jetzt wird nichts berechnet; bis dahin behalten Sie Ihren aktuellen Tarif."
+      "preview_at_period_end": "Ihr Tarif ändert sich am {date}. Jetzt wird nichts berechnet; bis dahin behalten Sie Ihren aktuellen Tarif.",
+      "payment_pending": "Ihr Wechsel zu {plan} wird wirksam, sobald die Zahlung der Differenz eingegangen ist. Bis dahin bleibt Ihr aktueller Tarif bestehen."
     },
     "usage_units": {
       "cvs": "Lebensläufe",

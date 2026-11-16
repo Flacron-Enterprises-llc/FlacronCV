@@ -132,12 +132,20 @@ export function ChangePlanPanel({
   });
   const change = useMutation({
     mutationFn: (input: { plan: PlanId; interval: BillingInterval; prorationDate: number }) =>
-      api.post<{ plan: string; status: string }>(PLAN_CHANGE_ENDPOINT, {
+      api.post<{ plan: string; status: string; paymentPending?: boolean }>(PLAN_CHANGE_ENDPOINT, {
         plan: input.plan,
         interval: apiInterval(input.interval),
         prorationDate: input.prorationDate,
       }),
     onSuccess: (result, input) => {
+      // An upgrade waits for its prorated payment (Stripe pending_if_incomplete): the plan
+      // has NOT changed yet. Say so instead of announcing a switch that may never happen.
+      if (result?.paymentPending) {
+        toast.info(t('payment_pending', { plan: fmt.planName(input.plan) }));
+        setSelected(null);
+        onPlanChanged?.(currentPlan);
+        return;
+      }
       const plan = isPricingPlan(result?.plan) ? result.plan : input.plan;
       toast.success(t('changed', { plan: fmt.planName(plan) }));
       setSelected(null);

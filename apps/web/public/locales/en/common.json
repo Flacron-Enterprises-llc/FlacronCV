@@ -955,7 +955,10 @@
       "usageMeterUnavailable": "We couldn't check your allowance just now, so nothing ran and nothing was used. Try again in a moment.",
       "analysesExhausted": "This month's CV analyses are used up. They renew on your billing date, or you can upgrade for more.",
       "cvLimitReached": "You've reached your plan's CV limit. Upgrade your plan to create more.",
-      "addonUnavailable": "This add-on can't be bought yet because the feature it's for isn't available. Nothing was charged."
+      "addonUnavailable": "This add-on can't be bought yet because the feature it's for isn't available. Nothing was charged.",
+      "checkoutInProgress": "A checkout is already being opened for your account. Wait a moment and try again.",
+      "portalNotConfigured": "Billing management isn't available right now. Contact support to change or cancel your subscription.",
+      "portalSharedCustomer": "We can't open billing management for this account automatically. Contact support and we'll help you change or cancel your subscription."
     },
     "storage_grace": "You are storing {excess} more than your plan includes. Those files stay available until {date}; remove some files or upgrade your plan before then."
   },
@@ -5594,7 +5597,8 @@
       "confirm_pay": "Confirm and pay {amount}",
       "confirm_change": "Confirm plan change",
       "changed": "Your plan is now {plan}.",
-      "preview_at_period_end": "Your plan changes on {date}. Nothing is charged now; you keep your current plan until then."
+      "preview_at_period_end": "Your plan changes on {date}. Nothing is charged now; you keep your current plan until then.",
+      "payment_pending": "Your switch to {plan} will apply as soon as the payment for the difference goes through. Your current plan stays until then."
     },
     "usage_units": {
       "cvs": "CVs",
