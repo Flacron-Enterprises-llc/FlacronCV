@@ -44,7 +44,7 @@ Store it in AWS Secrets Manager as the API's `STRIPE_SECRET_KEY`; never in Git, 
 
 ## 3. Test-mode journeys (G2) — local, isolated
 
-Run with `C:\Users\win 11\FlacronCV-integration-local\start-v1-api-stripe-test.ps1` (refuses sk_/live keys, non-emulator Firebase, wrong APP_ID, bad prices) and `stripe listen --forward-to localhost:4100/api/v1/webhooks/stripe` (its whsec_ is a LOCAL secret, never the production one). Fictional users only.
+Run with the local launcher `start-v1-api-stripe-test.ps1` (local review tooling kept outside the repository; refuses sk_/live keys, non-emulator Firebase, wrong APP_ID, bad prices) and `stripe listen --forward-to localhost:4100/api/v1/webhooks/stripe` (its whsec_ is a LOCAL secret, never the production one). Fictional users only.
 
 - Starter monthly checkout → plan active, one month of credits.
 - Professional annual (trial on, card `4242…`) → trialing; abandon a second checkout → trial not consumed; complete → recorded once.
