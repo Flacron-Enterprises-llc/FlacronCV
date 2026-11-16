@@ -37,6 +37,18 @@ function isPlain(value: unknown): boolean {
   );
 }
 
+/**
+ * Removes credential-shaped text before anything reaches the logs. Stripe's own
+ * errors echo a masked key ("rk_test_****ABCD"); even masked fragments, webhook
+ * secrets and bearer tokens are dropped entirely.
+ */
+export function redactSecrets(text: string): string {
+  return text
+    .replace(/\b(?:sk|rk|pk)_(?:test|live)_[A-Za-z0-9*]+/g, '[redacted-stripe-key]')
+    .replace(/\bwhsec_[A-Za-z0-9*]+/g, '[redacted-webhook-secret]')
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, 'Bearer [redacted]');
+}
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -66,13 +78,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     } else if (exception instanceof Error) {
       // Log the real message internally but never expose raw internal errors to clients
-      this.logger.error(`Internal error details: ${exception.message}`);
+      this.logger.error(`Internal error details: ${redactSecrets(exception.message)}`);
       message = 'Internal server error';
     }
 
     this.logger.error(
-      `${request.method} ${request.url} - ${status}: ${message}`,
-      exception instanceof Error ? exception.stack : undefined,
+      redactSecrets(`${request.method} ${request.url} - ${status}: ${message}`),
+      exception instanceof Error && exception.stack ? redactSecrets(exception.stack) : undefined,
     );
 
     response.status(status).json({

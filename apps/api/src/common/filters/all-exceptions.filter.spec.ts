@@ -1,5 +1,5 @@
 import { ArgumentsHost, HttpException, HttpStatus, ServiceUnavailableException } from '@nestjs/common';
-import { AllExceptionsFilter } from './all-exceptions.filter';
+import { AllExceptionsFilter, redactSecrets } from './all-exceptions.filter';
 
 function mockHost(url = '/api/v1/ai/cover-letter') {
   const json = jest.fn();
@@ -15,6 +15,24 @@ function mockHost(url = '/api/v1/ai/cover-letter') {
 
 describe('AllExceptionsFilter', () => {
   const filter = new AllExceptionsFilter();
+
+  it('never logs Stripe keys (even masked), webhook secrets or bearer tokens', () => {
+    const errorSpy = jest.spyOn((filter as unknown as { logger: { error: (...a: unknown[]) => void } }).logger, 'error').mockImplementation(() => undefined);
+    const { host, json } = mockHost('/api/v1/career-billing/capacity/checkout');
+    const err = new Error('Invalid API Key provided: rk_test_*****************LKEY; sig whsec_abc123; Bearer eyJhbGciOi.x.y');
+    filter.catch(err, host);
+    const logged = errorSpy.mock.calls.flat().map(String).join(' ');
+    expect(logged).not.toMatch(/rk_test_|whsec_|eyJhbGciOi/);
+    expect(logged).toContain('[redacted-stripe-key]');
+    // The client never sees internal details either.
+    expect(json).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 500, message: 'Internal server error' }));
+    errorSpy.mockRestore();
+  });
+
+  it('redactSecrets covers live/test, secret/restricted/publishable keys', () => {
+    expect(redactSecrets('a sk_live_ABC b rk_test_XYZ c pk_test_Q d')).toBe('a [redacted-stripe-key] b [redacted-stripe-key] c [redacted-stripe-key] d');
+    expect(redactSecrets('no secrets here')).toBe('no secrets here');
+  });
 
   it('forwards AI refund codes on the 503 body', () => {
     const { host, json, status } = mockHost();
