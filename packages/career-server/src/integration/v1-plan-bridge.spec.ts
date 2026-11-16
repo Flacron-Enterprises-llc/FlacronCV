@@ -1,5 +1,5 @@
-import { DEFAULT_CAREER_PLAN_MAP, decideCareerAccess, isV1Plan, parseCareerPlanMap, V1_PLANS } from './v1-plan-bridge';
-import type { V1AccountSnapshot } from './v1-plan-bridge';
+import { DEFAULT_CAREER_PLAN_MAP, decideCareerAccess, isV1Plan, liveCapacity, parseCareerPlanMap, V1_PLANS } from './v1-plan-bridge';
+import type { V1AccountSnapshot, V1CapacitySubscription } from './v1-plan-bridge';
 
 /** Pure plan-map rules (five-plan contract, 2026-11-14). No database. */
 describe('V1 → career plan map', () => {
@@ -68,5 +68,56 @@ describe('V1 → career plan map', () => {
       enabled: false,
       reason: 'plan_not_mapped',
     });
+  });
+});
+
+/** Which recurring capacity add-ons count now (same paid-period rule as a plan). */
+describe('liveCapacity', () => {
+  const now = new Date('2026-10-15T12:00:00Z');
+  const inPeriod = new Date('2026-11-01T00:00:00Z');
+  const ended = new Date('2026-10-01T00:00:00Z');
+  const sub = (status: string, currentPeriodEnd: Date | null, addonId = 'saved_search_5'): V1CapacitySubscription => ({
+    addonId,
+    quantity: 2,
+    status,
+    currentPeriodEnd,
+  });
+  const live = (s: V1CapacitySubscription) => liveCapacity([s], now).length === 1;
+
+  it('counts an active or trialing add-on inside its period, or with no period end recorded', () => {
+    expect(liveCapacity([sub('active', inPeriod)], now)).toEqual([{ addonId: 'saved_search_5', quantity: 2 }]);
+    expect(live(sub('trialing', inPeriod))).toBe(true);
+    expect(live(sub('active', null))).toBe(true);
+    expect(live(sub('active', ended))).toBe(false);
+  });
+
+  it('keeps a past_due add-on until its paid period ends, then drops it', () => {
+    expect(live(sub('past_due', inPeriod))).toBe(true);
+    expect(live(sub('past_due', ended))).toBe(false);
+    expect(live(sub('past_due', null))).toBe(false);
+    // The period end itself is no longer inside the period.
+    expect(liveCapacity([sub('past_due', now)], now)).toEqual([]);
+  });
+
+  it('keeps a canceled add-on only until its period ends', () => {
+    expect(live(sub('canceled', inPeriod))).toBe(true);
+    expect(live(sub('canceled', ended))).toBe(false);
+    expect(live(sub('canceled', null))).toBe(false);
+  });
+
+  it('never counts incomplete, incomplete_expired, unpaid or an unknown status', () => {
+    for (const status of ['incomplete', 'incomplete_expired', 'unpaid', 'paused', 'weird']) {
+      expect([status, live(sub(status, inPeriod))]).toEqual([status, false]);
+      expect([status, live(sub(status, null))]).toEqual([status, false]);
+    }
+  });
+
+  it('filters a mixed list in order and accepts a missing list', () => {
+    const out = liveCapacity(
+      [sub('active', inPeriod, 'a'), sub('incomplete', inPeriod, 'b'), sub('past_due', inPeriod, 'c'), sub('canceled', ended, 'd')],
+      now,
+    );
+    expect(out.map((g) => g.addonId)).toEqual(['a', 'c']);
+    expect(liveCapacity(undefined, now)).toEqual([]);
   });
 });

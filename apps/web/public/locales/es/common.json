@@ -2747,7 +2747,7 @@
       "quota_title": "No te quedan elementos de alerta",
       "quota_body": "Las nuevas alertas esperarán hasta que se renueve el saldo. La búsqueda sigue funcionando.",
       "upgrade_title": "Ese canal no está en este plan",
-      "upgrade_body": "Tu plan incluye el correo semanal. Las notificaciones push, Telegram y el correo inmediato requieren un plan superior.",
+      "upgrade_body": "Tu plan incluye el correo semanal. Las notificaciones push, Telegram y el correo inmediato requieren un plan superior y, además, un servicio de envío conectado.",
       "reason_saved_search": "Esta oferta coincide con una búsqueda guardada.",
       "reason_followed_company": "Esta oferta es de una empresa que sigues.",
       "reason_material_update": "La oferta cambió. Esta actualización usó una alerta.",
@@ -5156,7 +5156,7 @@
     "teaser_body": "Opcional y facturado además de tu plan de FlacronCV: ofertas afines, práctica de entrevistas, informes de habilidades, portafolios y más.",
     "teaser_link": "Ver planes profesionales",
     "positioning": {
-      "starter": "Crea un CV y descubre oportunidades",
+      "starter": "Crear un CV y seguir tus candidaturas",
       "professional": "Prepara candidaturas más sólidas",
       "career_pro": "Práctica avanzada y planificación profesional",
       "business": "Acompaña a candidatos en un espacio compartido"
@@ -5265,7 +5265,7 @@
     "current_plan": "Plan actual",
     "positioning": {
       "free": "Explorar la plataforma",
-      "starter": "Crear un CV y descubrir oportunidades",
+      "starter": "Crear un CV y seguir tus candidaturas",
       "professional": "Preparar candidaturas más sólidas",
       "career_pro": "Práctica avanzada y planificación profesional",
       "business": "Acompañar a candidatos en un espacio compartido"
@@ -5293,7 +5293,7 @@
       "provider_dependent": "Requiere un servicio conectado"
     },
     "state_coming_soon_desc": "La asignación está prevista en el plan; la función aún no está disponible.",
-    "state_provider_desc": "Ya desarrollada; funciona en cuanto se conecta su servicio externo (voz, mapas o notificaciones push).",
+    "state_provider_desc": "Ya desarrollada; funciona en cuanto se conecta su servicio externo (voz, mapas, notificaciones push u ofertas de empleo en directo). Mientras no haya ofertas en directo conectadas, las alertas solo cubren las ofertas que añadas tú.",
     "compare_title": "Comparar planes",
     "compare_intro": "Las filas de uso se renuevan cada mes. Las de capacidad cuentan elementos guardados o activos. Una función marcada como «Próximamente» no se cobra hasta su lanzamiento.",
     "usage_vs_capacity": "Las asignaciones de uso cuentan operaciones completadas cada mes. Los límites de capacidad cuentan los elementos que conservas a la vez; tras bajar de plan, los elementos existentes siguen visibles y solo se bloquean los nuevos.",
@@ -5674,7 +5674,8 @@
       "provider_speech": "Pendiente de la transcripción de voz",
       "provider_objectStorage": "Pendiente del almacenamiento de archivos",
       "provider_mapTiles": "Pendiente del servicio de mapas",
-      "provider_jobFeeds": "Pendiente de ofertas de empleo en directo"
+      "provider_jobFeeds": "Pendiente de ofertas de empleo en directo",
+      "unknown_addon": "No disponible"
     }
   }
 }

@@ -130,6 +130,61 @@ export async function revokePaidPack(
   return { revokedNow };
 }
 
+/**
+ * A dispute (chargeback) the merchant WON: V1 sets the purchase back to
+ * `paid`. The sync revoked the unused units when the dispute opened; this
+ * gives exactly those units back, once. Only a pack revoked for a chargeback
+ * qualifies (a refunded pack never comes back), and only before its original
+ * twelve-month expiry (the date does not move). After the reinstatement the
+ * pack is no longer `revoked`, so a repeated sync changes nothing; a later
+ * new dispute revokes it again as usual. Returns the units restored, or null
+ * when nothing applied.
+ */
+export async function reinstateDisputedPack(
+  db: Db,
+  account: AccountRow,
+  purchaseRef: string,
+  now: Date,
+): Promise<{ restored: number } | null> {
+  const found = await db.query<{
+    pack_id: string;
+    purchase_id: string;
+    unit: string;
+    addon_id: string;
+    revoked_units: number;
+  }>(
+    `SELECT p.id AS pack_id, pu.id AS purchase_id, p.unit, p.addon_id, p.revoked_units
+       FROM purchases pu JOIN packs p ON p.purchase_id = pu.id
+      WHERE pu.billing_account_id = $1 AND pu.provider = 'stripe' AND pu.provider_payment_id = $2
+        AND p.status = 'revoked' AND p.revoke_reason = 'chargeback' AND p.expires_at > $3
+      FOR UPDATE OF p`,
+    [account.id, purchaseRef, now],
+  );
+  const row = found.rows[0];
+  if (!row) return null;
+  await db.query(
+    `UPDATE packs
+        SET remaining_units = revoked_units, revoked_units = 0,
+            status = CASE WHEN revoked_units > 0 THEN 'active' ELSE 'exhausted' END,
+            revoked_at = NULL, revoke_reason = NULL
+      WHERE id = $1 AND status = 'revoked'`,
+    [row.pack_id],
+  );
+  // The money stayed with the merchant: the purchase is no longer refunded.
+  await db.query(`UPDATE purchases SET refunded_cents = NULL, refunded_at = NULL WHERE id = $1`, [row.purchase_id]);
+  if (row.revoked_units > 0) {
+    await recordAdjustment(db, account.id, {
+      kind: 'pack_granted',
+      unit: row.unit,
+      quantity: row.revoked_units,
+      reason: 'dispute_won',
+      sourceRef: purchaseRef,
+      detail: { packId: row.pack_id, addonId: row.addon_id },
+    });
+  }
+  return { restored: row.revoked_units };
+}
+
 export type AdjustmentKind =
   | 'upgrade_difference'
   | 'plan_regrant'

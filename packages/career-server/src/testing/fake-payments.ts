@@ -14,6 +14,7 @@ import type {
 import { PaymentsService } from '../billing/payments/payments.service';
 import type { DeliveryOutcome } from '../billing/payments/processor';
 import { ProviderSkus } from '../billing/payments/skus';
+import type { ProviderReadiness } from '../integration/provider-readiness';
 import { stripeSignatureHeader } from '../billing/payments/stripe';
 import { BillingFixture, createBillingFixture } from './billing-fixture';
 
@@ -238,6 +239,8 @@ export interface PaymentsFixture extends BillingFixture {
   stripe: FakeStripeGateway;
   googlePlay: FakeGooglePlay;
   skus: Record<PurchaseChannel, ProviderSkus>;
+  /** Provider readiness the pack checkout reads; tests may flip entries. */
+  readiness: ProviderReadiness;
   /** Signs the event with the test secret at the clock's time and delivers it. */
   deliverStripe(event: { id: string }): Promise<DeliveryOutcome>;
   deliverApple(notification: AppleNotification): Promise<DeliveryOutcome>;
@@ -249,10 +252,12 @@ export async function createPaymentsFixture(label: string, startIso: string): Pr
   const skus = testSkus();
   const stripe = new FakeStripeGateway(skus.stripe);
   const googlePlay = new FakeGooglePlay();
+  // AI and storage ready, as in a configured deployment; speech, map tiles and job feeds have no live adapter.
+  const readiness: ProviderReadiness = { ai: true, objectStorage: true, speech: false, mapTiles: false, jobFeeds: false };
   const payments = new PaymentsService(
     base.db.pool,
     { stripe, apple: new FakeAppleVerifier(), googlePush: new FakeGooglePush(), googlePlay },
-    { stripeWebhookSecret: TEST_STRIPE_WEBHOOK_SECRET, skus, currentCatalogVersion: CATALOG_VERSION },
+    { stripeWebhookSecret: TEST_STRIPE_WEBHOOK_SECRET, skus, currentCatalogVersion: CATALOG_VERSION, providerReadiness: readiness },
     base.clock,
   );
   return {
@@ -261,6 +266,7 @@ export async function createPaymentsFixture(label: string, startIso: string): Pr
     stripe,
     googlePlay,
     skus,
+    readiness,
     deliverStripe(event) {
       const rawBody = JSON.stringify(event);
       return payments.stripeWebhook(rawBody, stripeSignatureHeader(rawBody, TEST_STRIPE_WEBHOOK_SECRET, base.clock.now()));

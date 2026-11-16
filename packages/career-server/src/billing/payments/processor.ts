@@ -155,6 +155,11 @@ async function applySubscriptionState(
     if (e.status === 'ended' || e.status === 'incomplete') {
       return { outcome: 'ignored', detail: 'unknown_subscription', accountId: null };
     }
+    // A subscription we never saw paid must not start paid access: the
+    // `active` (or `trialing`) event after the payment activates it.
+    if (e.status === 'past_due') {
+      return { outcome: 'ignored', detail: 'unpaid_subscription', accountId: null };
+    }
     const account = await lockAccount(db, accountRef(e.accountId));
     if (isStale(account, e)) return { outcome: 'ignored', detail: 'stale', accountId: account.id };
     await activate(db, provider, account, e.sku, e, ctx);
@@ -233,7 +238,12 @@ async function reconcileV2(
     return;
   }
 
-  if (planRank(snapshot, sku.planId) > planRank(snapshot, v2PlanOf(snapshot, account))) {
+  // An unpaid invoice (past_due, or unpaid/incomplete) grants no upgrade and
+  // no new period: the provider already moved its dates to the unpaid period.
+  // The paid period and its allowance stay; the `active` event after the
+  // payment applies both.
+  const unpaid = e.status === 'past_due' || e.status === 'incomplete';
+  if (!unpaid && planRank(snapshot, sku.planId) > planRank(snapshot, v2PlanOf(snapshot, account))) {
     await advanceAllowancePeriod(db, account, snapshot, ctx.now);
     await upgradePlan(db, account, sku.planId, snapshot);
     if (sku.interval !== account.interval) {
@@ -249,7 +259,7 @@ async function reconcileV2(
   // subscription renews into wins when the provider reports it.
   const next = e.nextSku?.kind === 'plan' ? e.nextSku : sku;
   await scheduleChange(db, account, next.planId, next.interval);
-  await renewPaidPeriod(db, account, { start: e.periodStart, end: e.periodEnd }, snapshot, ctx.now);
+  if (!unpaid) await renewPaidPeriod(db, account, { start: e.periodStart, end: e.periodEnd }, snapshot, ctx.now);
   await updateProviderState(db, account, providerState(e));
 }
 

@@ -8,7 +8,7 @@ import { CatalogStore, includedUnitsFor, isV2Plan, planRank } from './catalog';
 import type { CatalogSnapshot } from './catalog';
 import type { Db } from './db';
 import { isBillingError } from './errors';
-import { grantPaidPack, recordAdjustment, revokePaidPack } from './pack-purchases';
+import { grantPaidPack, recordAdjustment, reinstateDisputedPack, revokePaidPack } from './pack-purchases';
 import { periodContaining } from './periods';
 
 /** Spec section 11: excess storage after a downgrade or cancellation is kept this long before any deletion. */
@@ -63,6 +63,23 @@ export interface V1SyncResult {
  * old plan a moment before V1's webhook landed).
  */
 const RENEWAL_DOWNGRADE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * V1 Stripe statuses whose latest invoice is not paid. Stripe moves the
+ * subscription period forward when it creates the renewal invoice, so V1's
+ * `periodStart`/`periodEnd` already show the next month before anyone paid
+ * for it. While V1 reports one of these, the career account keeps the
+ * allowance of the period that was paid (nothing is revoked; `past_due`
+ * stays spendable, the existing grace) but opens no new month and applies no
+ * upgrade. Once V1 reports the invoice paid (`active`), the next sync renews
+ * once, to the month containing now.
+ */
+export const DELINQUENT_V1_STATUSES: readonly string[] = ['past_due', 'unpaid', 'incomplete', 'incomplete_expired', 'paused'];
+
+export function isDelinquentV1Status(status: string | null | undefined): boolean {
+  return typeof status === 'string' && DELINQUENT_V1_STATUSES.includes(status);
+}
+
 function downgradeArrivedWithRenewal(
   account: { allowance_period_start: Date },
   billing: V1SyncInput['billing'],
@@ -86,11 +103,21 @@ export async function syncV1Plan(
 ): Promise<V1SyncResult> {
   const account = await lockAccount(db, billingAccountId);
   const snapshot = await catalogs.get(db, account.catalog_version || catalogVersion);
-  const renewed = await renewAllowance(db, account, snapshot, now);
+  // An unpaid renewal grants no new paid month. Free still renews on the
+  // account anniversary, whatever an old subscription reports.
+  const delinquent = isDelinquentV1Status(input.billing?.status);
+  const renewed = delinquent && account.plan_id !== 'free' ? false : await renewAllowance(db, account, snapshot, now);
   const target = input.careerPlan;
   let changed = false;
 
-  if (account.plan_id !== target) {
+  const upgradeTarget =
+    target !== 'free' &&
+    (account.plan_id === 'free' || !isV2Plan(snapshot, account.plan_id) || planRank(snapshot, target) > planRank(snapshot, account.plan_id));
+  if (account.plan_id !== target && delinquent && upgradeTarget) {
+    // Not paid (a failed renewal, or a first invoice that never went
+    // through): no upgrade units. The current plan and period stay; the
+    // upgrade applies on the first sync after V1 reports the invoice paid.
+  } else if (account.plan_id !== target) {
     const from = account.plan_id;
     const scheduleInstead =
       isV2Plan(snapshot, from) &&
@@ -148,18 +175,27 @@ export async function syncV1Plan(
 
   const trialing = input.billing?.status === 'trialing' && account.plan_id !== 'free' && input.billing.periodEnd;
   const paidEnd = input.billing?.periodEnd ?? null;
+  // While unpaid, the paid period does not follow V1 to its new (unpaid)
+  // period end, so neither this sync nor the metering/worker renewal
+  // (`advanceAllowancePeriod`, bounded by `period_end`) opens a new month.
+  // `past_due` keeps spending what was already paid (SPENDABLE_STATUSES).
+  const holdPaidPeriod = delinquent && account.plan_id !== 'free';
   await db.query(
     `UPDATE billing_accounts
         SET plan_source = 'v1_mapping', v1_plan = $2, v1_plan_synced_at = $3,
-            status = CASE WHEN $4::timestamptz IS NOT NULL THEN 'trialing' ELSE 'active' END,
+            status = CASE WHEN $6::boolean THEN 'past_due' WHEN $4::timestamptz IS NOT NULL THEN 'trialing' ELSE 'active' END,
             trial_end = $4::timestamptz,
-            period_start = CASE WHEN plan_id = 'free' THEN NULL ELSE allowance_period_start END,
+            period_start = CASE
+              WHEN plan_id = 'free' THEN NULL
+              WHEN $6::boolean THEN COALESCE(period_start, allowance_period_start)
+              ELSE allowance_period_start END,
             period_end = CASE
               WHEN plan_id = 'free' THEN NULL
+              WHEN $6::boolean THEN COALESCE(period_end, allowance_period_end)
               WHEN $5::timestamptz IS NOT NULL AND $5::timestamptz > allowance_period_start THEN $5::timestamptz
               ELSE allowance_period_end END
       WHERE id = $1`,
-    [account.id, input.v1Plan, now, trialing ? input.billing?.periodEnd : null, paidEnd],
+    [account.id, input.v1Plan, now, trialing ? input.billing?.periodEnd : null, paidEnd, holdPaidPeriod],
   );
   return { changed, renewed, scheduledPlan: account.scheduled_plan_id };
 }
@@ -330,7 +366,9 @@ async function syncPacks(
   for (const purchase of purchases) {
     try {
       if (purchase.status === 'paid') {
-        await grantPaidPack(db, account, purchase, snapshot);
+        const granted = await grantPaidPack(db, account, purchase, snapshot);
+        // Already recorded: a pack revoked for a dispute that was won comes back once.
+        if (!granted) await reinstateDisputedPack(db, account, purchase.purchaseRef, now);
       } else {
         // Granted earlier and now refunded or disputed: revoke the unused units.
         // Never granted (refunded before the first sync): there is nothing to revoke.

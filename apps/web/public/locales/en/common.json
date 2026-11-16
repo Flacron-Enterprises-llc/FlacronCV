@@ -2747,7 +2747,7 @@
       "quota_title": "No alert items left",
       "quota_body": "New alerts wait until the balance renews. Search still works.",
       "upgrade_title": "That channel is not on this plan",
-      "upgrade_body": "Your plan includes the weekly email. Push, Telegram and immediate mail need a higher plan.",
+      "upgrade_body": "Your plan includes the weekly email. Push, Telegram and immediate mail need a higher plan, and each also needs its delivery provider to be connected.",
       "reason_saved_search": "This listing matches a saved search.",
       "reason_followed_company": "This listing is from a company you follow.",
       "reason_material_update": "The listing changed. This update used one alert.",
@@ -5156,7 +5156,7 @@
     "teaser_body": "Optional and billed in addition to your FlacronCV plan: job matching, interview practice, skill reports, portfolios and more.",
     "teaser_link": "See career plans",
     "positioning": {
-      "starter": "Build a CV and discover opportunities",
+      "starter": "Build a CV and track your applications",
       "professional": "Prepare stronger applications",
       "career_pro": "Advanced practice and career planning",
       "business": "Support candidates in a shared workspace"
@@ -5265,7 +5265,7 @@
     "current_plan": "Current plan",
     "positioning": {
       "free": "Explore the platform",
-      "starter": "Build a CV and discover opportunities",
+      "starter": "Build a CV and track your applications",
       "professional": "Prepare stronger applications",
       "career_pro": "Advanced practice and career planning",
       "business": "Support candidates in a shared workspace"
@@ -5293,7 +5293,7 @@
       "provider_dependent": "Needs a connected provider"
     },
     "state_coming_soon_desc": "Allowance is reserved in the plan; the feature is not released yet.",
-    "state_provider_desc": "Built, and works once its outside service (speech, maps or push messaging) is connected.",
+    "state_provider_desc": "Built, and works once its outside service is connected (speech, maps, push messaging or live job listings). Until live job listings are connected, alerts only cover listings you add yourself.",
     "compare_title": "Compare plans",
     "compare_intro": "Usage rows renew monthly. Capacity rows are saved or active items. A feature marked \"Coming soon\" is not charged for until it is released.",
     "usage_vs_capacity": "Usage allowances count completed operations each month. Capacity limits count items you keep at once; after a downgrade existing items stay readable, only new ones are blocked.",
@@ -5674,7 +5674,8 @@
       "provider_speech": "Waiting for voice transcription",
       "provider_objectStorage": "Waiting for file storage",
       "provider_mapTiles": "Waiting for the map service",
-      "provider_jobFeeds": "Waiting for live job listings"
+      "provider_jobFeeds": "Waiting for live job listings",
+      "unknown_addon": "Not available"
     }
   }
 }

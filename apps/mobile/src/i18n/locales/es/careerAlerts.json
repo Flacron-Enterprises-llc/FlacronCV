@@ -164,7 +164,7 @@
     "quota_title": "No te quedan elementos de alerta",
     "quota_body": "Las nuevas alertas esperarán hasta que se renueve el saldo. La búsqueda sigue funcionando.",
     "upgrade_title": "Ese canal no está en este plan",
-    "upgrade_body": "Tu plan incluye el correo semanal. Las notificaciones push, Telegram y el correo inmediato requieren un plan superior.",
+    "upgrade_body": "Tu plan incluye el correo semanal. Las notificaciones push, Telegram y el correo inmediato requieren un plan superior y, además, un servicio de envío conectado.",
     "reason_saved_search": "Esta oferta coincide con una búsqueda guardada.",
     "reason_followed_company": "Esta oferta es de una empresa que sigues.",
     "reason_material_update": "La oferta cambió. Esta actualización usó una alerta.",

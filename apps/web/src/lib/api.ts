@@ -218,11 +218,13 @@ export const api = {
   get: <T>(endpoint: string, opts?: { timeoutMs?: number }) =>
     request<T>(endpoint, { timeoutMs: opts?.timeoutMs }),
 
-  post: <T>(endpoint: string, body?: unknown, opts?: { timeoutMs?: number }) =>
+  /** `opts.headers` adds request headers (e.g. a caller-chosen `Idempotency-Key`, already CORS-allowed). */
+  post: <T>(endpoint: string, body?: unknown, opts?: { timeoutMs?: number; headers?: Record<string, string> }) =>
     request<T>(endpoint, {
       method: 'POST',
       body: body ? JSON.stringify(body) : undefined,
       timeoutMs: opts?.timeoutMs,
+      ...(opts?.headers ? { headers: opts.headers } : {}),
     }),
 
   put: <T>(endpoint: string, body?: unknown, opts?: { timeoutMs?: number }) =>

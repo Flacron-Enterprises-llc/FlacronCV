@@ -11,7 +11,7 @@
   "currentPlan": "Aktueller Tarif",
   "positioning": {
     "free": "Die Plattform kennenlernen",
-    "starter": "Lebenslauf erstellen und Chancen entdecken",
+    "starter": "Lebenslauf erstellen und Bewerbungen verfolgen",
     "professional": "Stärkere Bewerbungen vorbereiten",
     "career_pro": "Fortgeschrittenes Training und Karriereplanung",
     "business": "Kandidaten in einem gemeinsamen Arbeitsbereich begleiten"
@@ -65,7 +65,7 @@
   },
   "stateLegend": "Funktionsstatus",
   "stateComingSoonDesc": "Das Kontingent ist im Tarif vorgesehen; die Funktion ist noch nicht freigegeben.",
-  "stateProviderDesc": "Fertig entwickelt; funktioniert, sobald der externe Dienst (Sprache, Karten oder Push-Nachrichten) angebunden ist.",
+  "stateProviderDesc": "Fertig entwickelt; funktioniert, sobald der externe Dienst angebunden ist (Sprache, Karten, Push-Nachrichten oder Live-Stellenangebote). Bis Live-Stellenangebote angebunden sind, beziehen sich Benachrichtigungen nur auf Stellen, die du selbst hinzufügst.",
   "compareTitle": "Tarife vergleichen",
   "compareIntro": "Nutzungszeilen erneuern sich monatlich. Kapazitätszeilen zählen gespeicherte oder aktive Elemente. Eine Funktion mit „Demnächst verfügbar“ wird erst nach der Freigabe berechnet.",
   "usageVsCapacity": "Nutzungskontingente zählen abgeschlossene Vorgänge pro Monat. Kapazitätsgrenzen zählen gleichzeitig gespeicherte Elemente; nach einem Downgrade bleiben vorhandene Elemente lesbar, nur neue werden blockiert.",

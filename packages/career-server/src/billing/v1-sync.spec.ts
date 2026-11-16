@@ -244,6 +244,67 @@ describe('syncing a career account from V1', () => {
     expect((await adjustments(account.id, 'pack_revoked')).map((a) => a.quantity)).toEqual([-7]);
   });
 
+  it('a pack dispute that is won restores the revoked unused units exactly once; a refund never comes back', async () => {
+    const account = await freshAccount();
+    const pack = { purchaseRef: `pi_${randomUUID()}`, addonId: 'document_s', purchasedAt: new Date('2026-10-02T00:00:00Z'), amountCents: 499, currency: 'usd', status: 'paid' as const };
+    const facts = (status: 'paid' | 'refunded' | 'disputed') =>
+      paidFacts('2026-10-01T08:00:00Z', '2026-11-01T08:00:00Z', { packPurchases: [{ ...pack, status }] });
+    const packRow = async () =>
+      (
+        await f.db.pool.query<{ remaining_units: number; revoked_units: number; status: string; revoke_reason: string | null }>(
+          `SELECT remaining_units, revoked_units, status, revoke_reason FROM packs WHERE billing_account_id = $1`,
+          [account.id],
+        )
+      ).rows;
+    await sync(account.id, 'starter', facts('paid'));
+    await f.spend(account.id, 'document_credit', 23); // 20 included, then 3 from the pack
+
+    await sync(account.id, 'starter', facts('disputed'));
+    expect(await packRow()).toEqual([{ remaining_units: 0, revoked_units: 7, status: 'revoked', revoke_reason: 'chargeback' }]);
+
+    // Won: V1 reports the purchase paid again.
+    await sync(account.id, 'starter', facts('paid'));
+    expect(await packRow()).toEqual([{ remaining_units: 7, revoked_units: 0, status: 'active', revoke_reason: null }]);
+    // A replayed sync restores nothing more.
+    await sync(account.id, 'starter', facts('paid'));
+    await sync(account.id, 'starter', facts('paid'));
+    expect(await packRow()).toEqual([{ remaining_units: 7, revoked_units: 0, status: 'active', revoke_reason: null }]);
+    const granted = await f.db.pool.query<{ quantity: number; reason: string | null }>(
+      `SELECT quantity, reason FROM billing_adjustments WHERE billing_account_id = $1 AND kind = 'pack_granted' ORDER BY created_at, id`,
+      [account.id],
+    );
+    expect(granted.rows).toEqual([
+      { quantity: 10, reason: null },
+      { quantity: 7, reason: 'dispute_won' },
+    ]);
+    const purchase = await f.db.pool.query(`SELECT refunded_cents, refunded_at FROM purchases WHERE provider_payment_id = $1`, [pack.purchaseRef]);
+    expect(purchase.rows[0]).toEqual({ refunded_cents: null, refunded_at: null });
+
+    // A refunded pack is never reinstated, even if a later sync says paid.
+    const refunded = await freshAccount();
+    const other = { ...pack, purchaseRef: `pi_${randomUUID()}` };
+    const withPack = (status: 'paid' | 'refunded') =>
+      paidFacts('2026-10-01T08:00:00Z', '2026-11-01T08:00:00Z', { packPurchases: [{ ...other, status }] });
+    await sync(refunded.id, 'starter', withPack('paid'));
+    await sync(refunded.id, 'starter', withPack('refunded'));
+    await sync(refunded.id, 'starter', withPack('paid'));
+    const refundedRow = await f.db.pool.query(`SELECT remaining_units, status FROM packs WHERE billing_account_id = $1`, [refunded.id]);
+    expect(refundedRow.rows).toEqual([{ remaining_units: 0, status: 'revoked' }]);
+  });
+
+  it('a dispute won after the pack expired restores nothing', async () => {
+    const account = await freshAccount();
+    const pack = { purchaseRef: `pi_${randomUUID()}`, addonId: 'document_s', purchasedAt: new Date('2025-10-20T00:00:00Z'), amountCents: 499, currency: 'usd', status: 'paid' as const };
+    const facts = (status: 'paid' | 'disputed') =>
+      paidFacts('2026-10-01T08:00:00Z', '2026-11-01T08:00:00Z', { packPurchases: [{ ...pack, status }] });
+    await sync(account.id, 'starter', facts('paid')); // expires 2026-10-20
+    await sync(account.id, 'starter', facts('disputed'));
+    f.clock.set('2026-10-25T00:00:00Z');
+    await sync(account.id, 'starter', facts('paid'));
+    const row = await f.db.pool.query(`SELECT remaining_units, revoked_units, status FROM packs WHERE billing_account_id = $1`, [account.id]);
+    expect(row.rows).toEqual([{ remaining_units: 0, revoked_units: 10, status: 'revoked' }]);
+  });
+
   it('capacity add-ons raise only their count cap, never on Free, and lapse with their subscription', async () => {
     const account = await freshAccount();
     const live = { addonId: 'saved_search_5', quantity: 2, status: 'active', currentPeriodEnd: new Date('2026-11-01T00:00:00Z') };
@@ -272,5 +333,86 @@ describe('syncing a career account from V1', () => {
     expect(row.status).toBe('trialing');
     expect(row.trial_end?.toISOString()).toBe('2026-10-11T08:00:00.000Z');
     expect((await balance(account.id)).granted).toBe(60);
+  });
+
+  describe('an unpaid V1 invoice (past_due, unpaid, incomplete)', () => {
+    async function periodsOf(accountId: string) {
+      const res = await f.db.pool.query<{ start: Date }>(
+        `SELECT DISTINCT allowance_period_start AS start FROM usage_balances
+          WHERE billing_account_id = $1 AND unit = 'document_credit' AND candidate_auth_user_id IS NULL ORDER BY 1`,
+        [accountId],
+      );
+      // Paid months only (the Free account it started as has its own period).
+      return res.rows.map((r) => r.start.toISOString()).filter((start) => start >= '2026-10-01');
+    }
+
+    it('a past_due renewal opens no new month and keeps what was paid; paying it renews exactly once', async () => {
+      const account = await freshAccount();
+      await sync(account.id, 'professional', paidFacts('2026-10-01T08:00:00Z', '2026-11-01T08:00:00Z'));
+      await f.spend(account.id, 'document_credit', 7);
+
+      // Stripe rolled the period and the renewal invoice failed.
+      f.clock.set('2026-11-02T00:00:00Z');
+      const unpaid = paidFacts('2026-11-01T08:00:00Z', '2026-12-01T08:00:00Z', { status: 'past_due' });
+      const held = await sync(account.id, 'professional', unpaid);
+      expect(held.renewed).toBe(false);
+      let b = await balance(account.id);
+      expect(b.account.allowance_period_start.toISOString()).toBe('2026-10-01T08:00:00.000Z');
+      expect(b.granted).toBe(60);
+      expect(b.remaining).toBe(53); // the paid month is not revoked
+      expect(b.account.status).toBe('past_due');
+      expect(b.account.period_end?.toISOString()).toBe('2026-11-01T08:00:00.000Z'); // not the unpaid period end
+      // The worker renewal is bounded by the paid period too.
+      await f.billing.renewDueAccounts();
+      // unpaid and incomplete hold the same way.
+      for (const status of ['unpaid', 'incomplete']) {
+        expect((await sync(account.id, 'professional', { ...unpaid, status })).renewed).toBe(false);
+      }
+      expect(await periodsOf(account.id)).toEqual(['2026-10-01T08:00:00.000Z']);
+
+      // The invoice is paid: one renewal, to the month containing now.
+      f.clock.set('2026-11-03T00:00:00Z');
+      const paid = paidFacts('2026-11-01T08:00:00Z', '2026-12-01T08:00:00Z');
+      expect((await sync(account.id, 'professional', paid)).renewed).toBe(true);
+      expect((await sync(account.id, 'professional', paid)).renewed).toBe(false);
+      await f.billing.renewDueAccounts();
+      b = await balance(account.id);
+      expect(b.account.allowance_period_start.toISOString()).toBe('2026-11-01T08:00:00.000Z');
+      expect(b.account.status).toBe('active');
+      expect(b.account.period_end?.toISOString()).toBe('2026-12-01T08:00:00.000Z');
+      expect(b.granted).toBe(60);
+      expect(b.remaining).toBe(60);
+      expect(await periodsOf(account.id)).toEqual(['2026-10-01T08:00:00.000Z', '2026-11-01T08:00:00.000Z']);
+    });
+
+    it('an upgrade reported while past_due adds no upgrade units until the invoice is paid', async () => {
+      const account = await freshAccount();
+      const facts = paidFacts('2026-10-01T08:00:00Z', '2026-11-01T08:00:00Z');
+      await sync(account.id, 'starter', facts);
+      await f.spend(account.id, 'document_credit', 5);
+      const upsBefore = (await adjustments(account.id, 'upgrade_difference')).length;
+
+      const result = await sync(account.id, 'professional', { ...facts, status: 'past_due' });
+      expect(result.changed).toBe(false);
+      let b = await balance(account.id);
+      expect(b.account.plan_id).toBe('starter');
+      expect(b.granted).toBe(20);
+      expect(b.remaining).toBe(15);
+      expect((await adjustments(account.id, 'upgrade_difference')).length).toBe(upsBefore);
+
+      await sync(account.id, 'professional', facts);
+      b = await balance(account.id);
+      expect(b.account.plan_id).toBe('professional');
+      expect(b.remaining).toBe(55);
+    });
+
+    it('a first-seen past_due paid plan does not activate paid access on a Free account', async () => {
+      const account = await freshAccount();
+      await sync(account.id, 'starter', paidFacts('2026-10-01T08:00:00Z', '2026-11-01T08:00:00Z', { status: 'incomplete' }));
+      const b = await balance(account.id);
+      expect(b.account.plan_id).toBe('free');
+      expect(b.account.status).toBe('active');
+      expect(b.granted).toBe(3);
+    });
   });
 });

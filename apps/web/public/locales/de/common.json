@@ -2747,7 +2747,7 @@
       "quota_title": "Keine Benachrichtigungen mehr übrig",
       "quota_body": "Neue Benachrichtigungen warten, bis sich das Guthaben erneuert. Die Suche funktioniert weiterhin.",
       "upgrade_title": "Dieser Kanal ist in diesem Tarif nicht enthalten",
-      "upgrade_body": "Dein Tarif enthält die wöchentliche E-Mail. Push, Telegram und sofortige E-Mails erfordern einen höheren Tarif.",
+      "upgrade_body": "Dein Tarif enthält die wöchentliche E-Mail. Push, Telegram und sofortige E-Mails erfordern einen höheren Tarif und zusätzlich einen angebundenen Versanddienst.",
       "reason_saved_search": "Diese Anzeige passt zu einer gespeicherten Suche.",
       "reason_followed_company": "Diese Anzeige stammt von einem Unternehmen, dem du folgst.",
       "reason_material_update": "Die Anzeige hat sich geändert. Diese Aktualisierung hat eine Benachrichtigung verbraucht.",
@@ -5156,7 +5156,7 @@
     "teaser_body": "Optional und zusätzlich zu deinem FlacronCV-Tarif abgerechnet: passende Stellen, Interviewtraining, Kompetenzberichte, Portfolios und mehr.",
     "teaser_link": "Karrieretarife ansehen",
     "positioning": {
-      "starter": "Lebenslauf erstellen und Chancen entdecken",
+      "starter": "Lebenslauf erstellen und Bewerbungen verfolgen",
       "professional": "Stärkere Bewerbungen vorbereiten",
       "career_pro": "Fortgeschrittenes Training und Karriereplanung",
       "business": "Kandidaten in einem gemeinsamen Arbeitsbereich begleiten"
@@ -5265,7 +5265,7 @@
     "current_plan": "Aktueller Tarif",
     "positioning": {
       "free": "Die Plattform kennenlernen",
-      "starter": "Lebenslauf erstellen und Chancen entdecken",
+      "starter": "Lebenslauf erstellen und Bewerbungen verfolgen",
       "professional": "Stärkere Bewerbungen vorbereiten",
       "career_pro": "Fortgeschrittenes Training und Karriereplanung",
       "business": "Kandidaten in einem gemeinsamen Arbeitsbereich begleiten"
@@ -5293,7 +5293,7 @@
       "provider_dependent": "Benötigt angebundenen Dienst"
     },
     "state_coming_soon_desc": "Das Kontingent ist im Tarif vorgesehen; die Funktion ist noch nicht freigegeben.",
-    "state_provider_desc": "Fertig entwickelt; funktioniert, sobald der externe Dienst (Sprache, Karten oder Push-Nachrichten) angebunden ist.",
+    "state_provider_desc": "Fertig entwickelt; funktioniert, sobald der externe Dienst angebunden ist (Sprache, Karten, Push-Nachrichten oder Live-Stellenangebote). Bis Live-Stellenangebote angebunden sind, beziehen sich Benachrichtigungen nur auf Stellen, die du selbst hinzufügst.",
     "compare_title": "Tarife vergleichen",
     "compare_intro": "Nutzungszeilen erneuern sich monatlich. Kapazitätszeilen zählen gespeicherte oder aktive Elemente. Eine Funktion mit „Demnächst verfügbar“ wird erst nach der Freigabe berechnet.",
     "usage_vs_capacity": "Nutzungskontingente zählen abgeschlossene Vorgänge pro Monat. Kapazitätsgrenzen zählen gleichzeitig gespeicherte Elemente; nach einem Downgrade bleiben vorhandene Elemente lesbar, nur neue werden blockiert.",
@@ -5674,7 +5674,8 @@
       "provider_speech": "Wartet auf die Sprachtranskription",
       "provider_objectStorage": "Wartet auf den Dateispeicher",
       "provider_mapTiles": "Wartet auf den Kartendienst",
-      "provider_jobFeeds": "Wartet auf aktuelle Stellenangebote"
+      "provider_jobFeeds": "Wartet auf aktuelle Stellenangebote",
+      "unknown_addon": "Nicht verfügbar"
     }
   }
 }

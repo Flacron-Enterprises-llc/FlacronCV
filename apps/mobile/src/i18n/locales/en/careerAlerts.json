@@ -164,7 +164,7 @@
     "quota_title": "No alert items left",
     "quota_body": "New alerts wait until the balance renews. Search still works.",
     "upgrade_title": "That channel is not on this plan",
-    "upgrade_body": "Your plan includes the weekly email. Push, Telegram and immediate mail need a higher plan.",
+    "upgrade_body": "Your plan includes the weekly email. Push, Telegram and immediate mail need a higher plan, and each also needs its delivery provider to be connected.",
     "reason_saved_search": "This listing matches a saved search.",
     "reason_followed_company": "This listing is from a company you follow.",
     "reason_material_update": "The listing changed. This update used one alert.",

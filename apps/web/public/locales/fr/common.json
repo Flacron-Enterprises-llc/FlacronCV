@@ -2747,7 +2747,7 @@
       "quota_title": "Plus d'éléments d'alerte",
       "quota_body": "Les nouvelles alertes attendent le renouvellement. La recherche fonctionne toujours.",
       "upgrade_title": "Ce canal n'est pas dans cette offre",
-      "upgrade_body": "Votre forfait inclut l’e-mail hebdomadaire. Le push, Telegram et l’envoi immédiat nécessitent un forfait supérieur.",
+      "upgrade_body": "Votre forfait inclut l’e-mail hebdomadaire. Le push, Telegram et l’envoi immédiat nécessitent un forfait supérieur, ainsi qu’un service d’envoi connecté pour chacun.",
       "reason_saved_search": "Cette annonce correspond à une recherche enregistrée.",
       "reason_followed_company": "Cette annonce vient d'une entreprise que vous suivez.",
       "reason_material_update": "L'annonce a changé. Cette mise à jour a utilisé une alerte.",
@@ -5156,7 +5156,7 @@
     "teaser_body": "Facultatif et facturé en plus de votre forfait FlacronCV : offres adaptées, entraînement aux entretiens, rapports de compétences, portfolios et plus encore.",
     "teaser_link": "Voir les forfaits carrière",
     "positioning": {
-      "starter": "Rédiger un CV et trouver des offres",
+      "starter": "Créer un CV et suivre vos candidatures",
       "professional": "Préparer des candidatures plus solides",
       "career_pro": "Entraînement avancé et planification de carrière",
       "business": "Accompagner des candidats dans un espace partagé"
@@ -5265,7 +5265,7 @@
     "current_plan": "Formule actuelle",
     "positioning": {
       "free": "Découvrir la plateforme",
-      "starter": "Créer un CV et découvrir des opportunités",
+      "starter": "Créer un CV et suivre vos candidatures",
       "professional": "Préparer des candidatures plus solides",
       "career_pro": "Entraînement avancé et plan de carrière",
       "business": "Accompagner des candidats dans un espace partagé"
@@ -5293,7 +5293,7 @@
       "provider_dependent": "Nécessite un service connecté"
     },
     "state_coming_soon_desc": "Le quota est prévu dans la formule ; la fonctionnalité n’est pas encore disponible.",
-    "state_provider_desc": "Développée, elle fonctionne dès que son service externe (voix, cartes ou notifications push) est connecté.",
+    "state_provider_desc": "Développée, elle fonctionne dès que son service externe est connecté (voix, cartes, notifications push ou offres d’emploi en direct). Tant que les offres en direct ne sont pas connectées, les alertes ne portent que sur les offres que vous ajoutez vous-même.",
     "compare_title": "Comparer les formules",
     "compare_intro": "Les lignes d’utilisation se renouvellent chaque mois. Les lignes de capacité correspondent aux éléments enregistrés ou actifs. Une fonctionnalité marquée « Bientôt disponible » n’est pas facturée avant sa sortie.",
     "usage_vs_capacity": "Les quotas d’utilisation comptent les opérations terminées chaque mois. Les limites de capacité comptent les éléments conservés en même temps ; après un passage à une formule inférieure, les éléments existants restent lisibles, seules les nouvelles créations sont bloquées.",
@@ -5674,7 +5674,8 @@
       "provider_speech": "En attente de la transcription vocale",
       "provider_objectStorage": "En attente du stockage de fichiers",
       "provider_mapTiles": "En attente du service de cartes",
-      "provider_jobFeeds": "En attente des offres d'emploi en direct"
+      "provider_jobFeeds": "En attente des offres d'emploi en direct",
+      "unknown_addon": "Non disponible"
     }
   }
 }

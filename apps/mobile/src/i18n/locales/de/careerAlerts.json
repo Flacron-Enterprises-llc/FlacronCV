@@ -164,7 +164,7 @@
     "quota_title": "Keine Benachrichtigungen mehr übrig",
     "quota_body": "Neue Benachrichtigungen warten, bis sich das Guthaben erneuert. Die Suche funktioniert weiterhin.",
     "upgrade_title": "Dieser Kanal ist in diesem Tarif nicht enthalten",
-    "upgrade_body": "Dein Tarif enthält die wöchentliche E-Mail. Push, Telegram und sofortige E-Mails erfordern einen höheren Tarif.",
+    "upgrade_body": "Dein Tarif enthält die wöchentliche E-Mail. Push, Telegram und sofortige E-Mails erfordern einen höheren Tarif und zusätzlich einen angebundenen Versanddienst.",
     "reason_saved_search": "Diese Anzeige passt zu einer gespeicherten Suche.",
     "reason_followed_company": "Diese Anzeige stammt von einem Unternehmen, dem du folgst.",
     "reason_material_update": "Die Anzeige hat sich geändert. Diese Aktualisierung hat eine Benachrichtigung verbraucht.",

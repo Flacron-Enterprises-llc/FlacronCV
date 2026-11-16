@@ -3,6 +3,8 @@ import type { Pool } from 'pg';
 import type { Clock } from '../billing.service';
 import { CatalogStore } from '../catalog';
 import { BillingError } from '../errors';
+import { providerReadiness } from '../../integration/provider-readiness';
+import type { ProviderReadiness } from '../../integration/provider-readiness';
 import { AppleNotificationVerifier, appleDelivery, appleSignedPayload } from './apple';
 import {
   CheckoutDeps,
@@ -34,6 +36,11 @@ export interface PaymentsConfig {
   currentCatalogVersion: string;
   /** `metadata[app_id]` V2 writes on Stripe objects; objects tagged for another app are ignored. Default `flacroncv-v2`. */
   stripeAppId?: string;
+  /**
+   * Provider readiness for pack sales. Defaults to `providerReadiness(process.env)`,
+   * read on each checkout. Tests pass their own.
+   */
+  providerReadiness?: ProviderReadiness;
 }
 
 const systemClock: Clock = { now: () => new Date() };
@@ -118,6 +125,7 @@ export class PaymentsService {
       currentCatalogVersion: this.config.currentCatalogVersion,
       skus: this.config.skus,
       stripe: this.providers.stripe,
+      readiness: this.config.providerReadiness ?? providerReadiness(),
     };
   }
 }

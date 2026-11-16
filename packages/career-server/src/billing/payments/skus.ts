@@ -1,6 +1,8 @@
 import { PLAN_ORDER } from '@flacroncv/career-shared';
 import type { BillingInterval, PlanId, PurchaseChannel } from '@flacroncv/career-shared';
+import type { ProviderReadiness } from '../../integration/provider-readiness';
 import { CatalogSnapshot, isV2Plan } from '../catalog';
+import { staticAddonAvailability } from '../purchase-availability';
 
 export type LegacyPlan = 'pro' | 'enterprise' | 'career_accelerator';
 
@@ -52,13 +54,18 @@ export class ProviderSkus {
    * refused: V2 billing is independent and never recognises a V1
    * subscription. Only the tests of the dormant legacy-row code pass
    * `allowV1Prices`.
+   *
+   * With `readiness`, a store (Apple/Google) pack product whose feature is not
+   * built or whose provider is not ready is refused too: the store sells the
+   * product without asking this server, so the map is where it is stopped.
+   * (Stripe packs are checked per checkout, operator switch included.)
    */
   static parse(
     provider: PurchaseChannel,
     variable: string,
     json: string | undefined,
     snapshot: CatalogSnapshot,
-    options: { allowV1Prices?: boolean } = {},
+    options: { allowV1Prices?: boolean; readiness?: ProviderReadiness } = {},
   ) {
     const raw = json?.trim() ?? '';
     if (raw.length === 0) return ProviderSkus.empty(provider);
@@ -82,7 +89,7 @@ export class ProviderSkus {
       if (sku.kind === 'legacy' && !options.allowV1Prices) {
         throw new Error(`${variable}: ${key} is a FlacronCV V1 price; V2 billing does not recognise V1 subscriptions`);
       }
-      const problem = unsellable(sku, provider, snapshot);
+      const problem = unsellable(sku, provider, snapshot) ?? unavailableInStore(sku, provider, options.readiness);
       if (problem) throw new Error(`${variable}: ${key} ${problem}`);
       if (skusByRef.has(ref)) throw new Error(`${variable}: ${key} reuses an id already mapped to another SKU`);
       refsByKey.set(skuKey(sku), ref);
@@ -116,6 +123,13 @@ export function parseSkuKey(key: string): Sku | null {
     return { kind: 'pack', addonId: parts[1] };
   }
   return null;
+}
+
+function unavailableInStore(sku: Sku, provider: PurchaseChannel, readiness: ProviderReadiness | undefined): string | null {
+  if (!readiness || provider === 'stripe' || sku.kind !== 'pack') return null;
+  const availability = staticAddonAvailability(sku.addonId, readiness);
+  if (availability.available) return null;
+  return `is not available for sale (${availability.reason}${availability.provider ? `:${availability.provider}` : ''})`;
 }
 
 function unsellable(sku: Sku, provider: PurchaseChannel, snapshot: CatalogSnapshot): string | null {

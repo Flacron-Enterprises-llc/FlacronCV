@@ -5,6 +5,8 @@ import { allowanceDeltas, CatalogSnapshot, CatalogStore, isV2Plan, planRank } fr
 import { withTransaction } from '../db';
 import { BillingError } from '../errors';
 import { fingerprintRequest } from '../fingerprint';
+import type { ProviderReadiness } from '../../integration/provider-readiness';
+import { packAvailability } from '../purchase-availability';
 import { ProviderSkus, Sku, skuKey } from './skus';
 
 export interface StripeCheckoutRequest {
@@ -55,6 +57,8 @@ export interface CheckoutDeps {
   currentCatalogVersion: string;
   skus: Record<PurchaseChannel, ProviderSkus>;
   stripe: StripeGateway;
+  /** Which outside providers are ready. A pack whose provider is missing is not sold. */
+  readiness: ProviderReadiness;
 }
 
 /** API_CONTRACT checkout body. There is no price id field; nothing the client sends picks a price. */
@@ -132,6 +136,16 @@ export async function createPackCheckout(
   }
   if (!SPENDABLE_STATUSES.includes(account.status)) {
     throw new BillingError('billing_inactive', { status: account.status });
+  }
+  // A configured price never makes a pack purchasable on its own: the feature
+  // must be built, switched on, and have its providers ready.
+  const availability = await packAvailability(deps.pool, snapshot, addon.id, deps.readiness);
+  if (!availability.available) {
+    throw new BillingError('not_purchasable', {
+      addonId: addon.id,
+      reason: availability.reason,
+      ...(availability.provider ? { provider: availability.provider } : {}),
+    });
   }
   const sku: Sku = { kind: 'pack', addonId: addon.id };
   const priceRef = deps.skus.stripe.refFor(sku);

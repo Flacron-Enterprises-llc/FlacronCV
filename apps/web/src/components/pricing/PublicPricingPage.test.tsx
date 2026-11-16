@@ -63,6 +63,16 @@ describe('public /pricing', () => {
     expect(within(card('free')).getByText('$0')).toBeTruthy();
   });
 
+  it('marks saved searches on every card as needing a connected provider (licensed job feeds are not live)', () => {
+    renderPricing(<PublicPricingPage api={fakeApi} />);
+    for (const id of ['free', 'starter', 'professional', 'career_pro', 'business']) {
+      const label = within(card(id)).getByText('Saved searches');
+      expect(within(label).getByText('Needs a connected provider')).toBeTruthy();
+    }
+    // The comparison legend says what that means for alerts.
+    expect(screen.getAllByText(/alerts only cover listings you add yourself/).length).toBeGreaterThan(0);
+  });
+
   it('annual shows the upfront charge and the monthly equivalent, and says allowances renew monthly', () => {
     renderPricing(<PublicPricingPage api={fakeApi} />);
     fireEvent.click(screen.getAllByRole('radio', { name: 'Annual (2 months free)' })[0]);

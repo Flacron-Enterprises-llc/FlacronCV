@@ -83,6 +83,17 @@ describe('api lib', () => {
     expect((opts as RequestInit).body).toBe(JSON.stringify({ name: 'Test' }));
   });
 
+  it('POST passes caller headers such as an Idempotency-Key', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockReturnValue(makeFetchResponse({ data: { url: 'x' } }));
+
+    await api.post('/items', { name: 'Test' }, { headers: { 'Idempotency-Key': 'key-1' } });
+
+    const [, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const headers = (opts as RequestInit).headers as Record<string, string>;
+    expect(headers['Idempotency-Key']).toBe('key-1');
+    expect(headers['Content-Type']).toBe('application/json');
+  });
+
   it('throws Error with server message on non-ok response', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockReturnValue(
       makeFetchResponse({ message: 'Not found' }, false),

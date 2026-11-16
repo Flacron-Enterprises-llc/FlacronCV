@@ -52,6 +52,27 @@ describe('provider SKU maps', () => {
     expect(() => ProviderSkus.parse('stripe', 'STRIPE_PRICES', TEST_SKU_JSON.stripe, snapshot)).toThrow(/V1 price/);
   });
 
+  it('with provider readiness, refuses store pack products whose feature is unbuilt or whose provider is missing', () => {
+    const none = { ai: false, objectStorage: false, speech: false, mapTiles: false, jobFeeds: false };
+    for (const provider of ['apple', 'google'] as const) {
+      const pack = (addonId: string) => JSON.stringify({ [`pack:${addonId}`]: `store.${addonId}` });
+      expect(() => ProviderSkus.parse(provider, 'X_PRODUCTS', pack('document_s'), snapshot, { readiness: none })).toThrow(
+        'X_PRODUCTS: pack:document_s is not available for sale (provider_missing:ai)',
+      );
+      expect(() => ProviderSkus.parse(provider, 'X_PRODUCTS', pack('voice_s'), snapshot, { readiness: { ...none, ai: true } })).toThrow(
+        '(provider_missing:speech)',
+      );
+      expect(() => ProviderSkus.parse(provider, 'X_PRODUCTS', pack('alert_s'), snapshot, { readiness: { ...none, ai: true } })).toThrow(
+        '(provider_missing:jobFeeds)',
+      );
+      const ok = ProviderSkus.parse(provider, 'X_PRODUCTS', pack('document_s'), snapshot, { readiness: { ...none, ai: true } });
+      expect(ok.skuFor('store.document_s')).toEqual({ kind: 'pack', addonId: 'document_s' });
+    }
+    // Stripe packs are checked per checkout (operator switch included), not when the map loads.
+    const stripe = ProviderSkus.parse('stripe', 'STRIPE_PRICES', '{"pack:voice_s":"price_voice"}', snapshot, { readiness: none });
+    expect(stripe.skuFor('price_voice')).toEqual({ kind: 'pack', addonId: 'voice_s' });
+  });
+
   it('is empty when the variable is not set', () => {
     const empty = ProviderSkus.parse('stripe', 'STRIPE_PRICES', undefined, snapshot);
     expect(empty.refFor({ kind: 'plan', planId: 'starter', interval: 'monthly' })).toBeNull();

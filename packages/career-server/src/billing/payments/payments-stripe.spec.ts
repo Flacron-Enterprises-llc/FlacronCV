@@ -217,6 +217,44 @@ describe('Stripe checkout, webhooks, and plan changes', () => {
     });
   });
 
+  describe('pack availability', () => {
+    it('refuses a pack whose provider is missing, whose feature is not ready, or whose switch is off, before any session', async () => {
+      const { accountId } = await subscribed('career_pro');
+      const sessions = f.stripe.sessions.length;
+
+      // Alerts need a licensed job feed; none is live.
+      const alert = await errorOf(f.payments.createPackCheckout(accountId, { addonId: 'alert_s', idempotencyKey: 'av-1' }));
+      expect(alert.code).toBe('not_purchasable');
+      expect(alert.details).toMatchObject({ addonId: 'alert_s', reason: 'provider_missing', provider: 'jobFeeds' });
+
+      // No AI provider: AI packs are not sold.
+      f.readiness.ai = false;
+      try {
+        const doc = await errorOf(f.payments.createPackCheckout(accountId, { addonId: 'document_s', idempotencyKey: 'av-2' }));
+        expect(doc.details).toMatchObject({ addonId: 'document_s', reason: 'provider_missing', provider: 'ai' });
+      } finally {
+        f.readiness.ai = true;
+      }
+
+      // The operator switch is off.
+      await f.db.pool.query(
+        `INSERT INTO feature_flags (feature, enabled) VALUES ('documentCredits', false)
+           ON CONFLICT (feature) DO UPDATE SET enabled = false`,
+      );
+      try {
+        const off = await errorOf(f.payments.createPackCheckout(accountId, { addonId: 'document_s', idempotencyKey: 'av-3' }));
+        expect(off.details).toMatchObject({ addonId: 'document_s', reason: 'feature_off' });
+      } finally {
+        await f.db.pool.query(`DELETE FROM feature_flags WHERE feature = 'documentCredits'`);
+      }
+      expect(f.stripe.sessions.length).toBe(sessions);
+
+      // Built, on, and its provider ready: sold.
+      await f.payments.createPackCheckout(accountId, { addonId: 'document_s', idempotencyKey: 'av-4' });
+      expect(f.stripe.sessions.length).toBe(sessions + 1);
+    });
+  });
+
   describe('webhooks', () => {
     it('activates once; a replayed event changes nothing', async () => {
       const account = await f.freeAccount({ anchor: '2026-09-01T00:00:00Z' });
@@ -592,6 +630,68 @@ describe('Stripe checkout, webhooks, and plan changes', () => {
       expect(await f.deliverStripe(olderUpdate)).toMatchObject({ outcome: 'ignored', detail: 'stale' });
       const row = await f.db.pool.query(`SELECT plan_id FROM billing_accounts WHERE id = $1`, [accountId]);
       expect(row.rows[0].plan_id).toBe('free');
+    });
+  });
+  describe('unpaid subscription states', () => {
+    it('a first-seen past_due subscription does not start paid access', async () => {
+      const account = await f.freeAccount();
+      const outcome = await f.deliverStripe(
+        subscriptionEvent('customer.subscription.created', {
+          id: `sub_${randomUUID()}`,
+          planId: 'professional',
+          status: 'past_due',
+          start: '2026-10-01T00:00:00Z',
+          end: '2026-11-01T00:00:00Z',
+          accountId: account.id,
+        }),
+      );
+      expect(outcome).toMatchObject({ outcome: 'ignored', detail: 'unpaid_subscription' });
+      const row = await f.db.pool.query(`SELECT plan_id, status FROM billing_accounts WHERE id = $1`, [account.id]);
+      expect(row.rows[0]).toEqual({ plan_id: 'free', status: 'active' });
+    });
+
+    it('a past_due renewal opens no new month and applies no upgrade; the paid update renews once', async () => {
+      const { accountId, subscriptionId } = await subscribed('starter');
+      await f.spend(accountId, 'document_credit', 5);
+      f.clock.set('2026-11-01T00:05:00Z');
+      const unpaid = { id: subscriptionId, start: '2026-11-01T00:00:00Z', end: '2026-12-01T00:00:00Z', status: 'past_due' };
+      expect((await f.deliverStripe(subscriptionEvent('customer.subscription.updated', { ...unpaid, planId: 'professional' }))).outcome).toBe('applied');
+      const held = await f.db.pool.query(`SELECT plan_id, status, period_end FROM billing_accounts WHERE id = $1`, [accountId]);
+      expect(held.rows[0]).toMatchObject({ plan_id: 'starter', status: 'past_due' });
+      expect(held.rows[0].period_end.toISOString()).toBe('2026-11-01T00:00:00.000Z');
+      expect(await f.billing.unitBalance(accountId, 'document_credit')).toMatchObject({
+        allowancePeriodStart: new Date('2026-10-01T00:00:00Z'),
+      });
+
+      f.clock.set('2026-11-02T00:00:00Z');
+      const paid = subscriptionEvent('customer.subscription.updated', { ...unpaid, planId: 'starter', status: 'active' });
+      expect((await f.deliverStripe(paid)).outcome).toBe('applied');
+      expect(await f.billing.unitBalance(accountId, 'document_credit')).toMatchObject({
+        includedRemaining: 20,
+        allowancePeriodStart: new Date('2026-11-01T00:00:00Z'),
+      });
+      const periods = await f.db.pool.query(
+        `SELECT DISTINCT allowance_period_start FROM usage_balances WHERE billing_account_id = $1 AND allowance_period_start >= $2`,
+        [accountId, new Date('2026-10-01T00:00:00Z')],
+      );
+      expect(periods.rows).toHaveLength(2);
+    });
+
+    it('maps Stripe unpaid to a status that cannot spend', async () => {
+      const { accountId, subscriptionId } = await subscribed('starter');
+      await f.deliverStripe(
+        subscriptionEvent('customer.subscription.updated', {
+          id: subscriptionId,
+          planId: 'starter',
+          status: 'unpaid',
+          start: '2026-10-01T00:00:00Z',
+          end: '2026-11-01T00:00:00Z',
+        }),
+      );
+      const row = await f.db.pool.query(`SELECT status FROM billing_accounts WHERE id = $1`, [accountId]);
+      expect(row.rows[0].status).toBe('incomplete');
+      const error = await errorOf(reserveOne(accountId, 'document_credit'));
+      expect(error.code).toBe('billing_inactive');
     });
   });
 });

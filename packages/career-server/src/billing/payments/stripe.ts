@@ -58,7 +58,8 @@ const SUBSCRIPTION_STATUS: Record<string, ProviderStatus> = {
   active: 'active',
   trialing: 'trialing',
   past_due: 'past_due',
-  unpaid: 'past_due',
+  // Stripe gave up retrying the invoice: no spendable grace (`past_due` is spendable).
+  unpaid: 'incomplete',
   incomplete: 'incomplete',
   paused: 'incomplete',
   canceled: 'ended',

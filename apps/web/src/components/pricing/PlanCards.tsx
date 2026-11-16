@@ -138,7 +138,11 @@ export function PlanCards({
                 badge={<FeatureStateBadge state={cellState('alertIntelligence', id, careerOn)} />}
                 stacked
               />
-              <Fact label={tFeatures('saved_searches')} value={fmt.cell('savedSearches', id)} />
+              <Fact
+                label={tFeatures('saved_searches')}
+                value={fmt.cell('savedSearches', id)}
+                badge={<FeatureStateBadge state={cellState('savedSearches', id, careerOn)} />}
+              />
               <Fact label={tFeatures('location_profiles')} value={fmt.cell('locationProfiles', id)} />
               <div>
                 <dt className="text-stone-500 dark:text-stone-400">{tFeatures('interview')}</dt>
@@ -222,7 +226,10 @@ function Fact({
   }
   return (
     <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-      <dt className="min-w-0 text-stone-500 dark:text-stone-400">{label}</dt>
+      <dt className="min-w-0 text-stone-500 dark:text-stone-400">
+        {label}
+        {badge}
+      </dt>
       <dd className="ms-auto shrink-0 font-semibold tabular-nums text-stone-900 dark:text-white">{value}</dd>
     </div>
   );

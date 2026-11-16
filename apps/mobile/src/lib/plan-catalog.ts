@@ -204,17 +204,26 @@ const CORE_ROWS: ReadonlySet<ComparisonRow> = new Set<ComparisonRow>([
   'removeExportBranding',
 ]);
 
-/** Same map as the website: flip an entry when a feature ships. */
+/**
+ * Same map as the website (plan-catalog-parity.test.ts compares them): flip an
+ * entry when a feature ships. The career coach is built and shown like the
+ * other AI features. Alert items, saved searches, the matching schedule and
+ * alert delivery match licensed job-feed listings, which are not live yet.
+ */
 export const FEATURE_STATE: Partial<Record<ComparisonRow, FeatureState>> = {
   voiceMinutes: 'provider_dependent',
   mapSessions: 'provider_dependent',
-  coachingResponses: 'coming_soon',
+  // Licensed job feeds (not live): listing alerts, saved searches and their schedule/delivery.
+  alertItems: 'provider_dependent',
+  savedSearches: 'provider_dependent',
+  matchingSchedule: 'provider_dependent',
+  alertDelivery: 'provider_dependent',
   assistedForms: 'coming_soon',
 };
 
 const LEVEL_STATE: Partial<Record<ComparisonRow, Partial<Record<string, FeatureState>>>> = {
   alertIntelligence: { advanced: 'coming_soon', organization: 'coming_soon' },
-  alertDelivery: { immediate_optional: 'provider_dependent' },
+  // alertDelivery: the whole row is provider_dependent (feeds; push/Telegram/immediate mail need their own provider too).
 };
 
 /** Whole-row state. Career rows read "coming soon" while the career tools are switched off. */

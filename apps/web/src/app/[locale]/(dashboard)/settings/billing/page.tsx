@@ -31,8 +31,6 @@ import {
 import { isLegacyPlan, isPricingPlan, equivalentPlan } from '@/components/pricing/plan-catalog';
 import { addonById } from '@flacroncv/career-shared';
 import {
-  CAPACITY_CHECKOUT_ENDPOINT,
-  PACK_CHECKOUT_ENDPOINT,
   PLAN_AVAILABILITY_QUERY_KEY,
   anyAddonOnSale,
   usePlanAvailability,
@@ -43,6 +41,7 @@ import { PlanComparison } from '@/components/pricing/PlanComparison';
 import { ChangePlanPanel } from '@/components/pricing/billing/ChangePlanPanel';
 import { AllowanceTable, PackBalances, UsageWarningsBanner } from '@/components/pricing/billing/AllowancePanel';
 import { SpendingCapCard } from '@/components/pricing/billing/SpendingCapCard';
+import { AddonReturnBanner, useAddonCheckout, useAddonReturnRefresh } from '@/components/pricing/billing/addon-checkout';
 import {
   activePacks,
   careerAllowanceRows,
@@ -79,14 +78,13 @@ export default function BillingPage(): React.JSX.Element | null {
   const [syncSuccess, setSyncSuccess] = useState(false);
   const [syncFailed, setSyncFailed] = useState(false);
   const [verifying, setVerifying] = useState(searchParams.get('success') === 'true');
-  const [buyingAddon, setBuyingAddon] = useState<string | null>(null);
-  // An add-on is bought only after its own review (price, billing, expiry): spec §11 explicit consent.
-  const [reviewAddon, setReviewAddon] = useState<string | null>(null);
   // Stripe sends the user back with ?canceled=true when they leave checkout.
   const checkoutCanceled = searchParams.get('canceled') === 'true';
   // Add-on checkouts return with ?pack= or ?addon= (server-chosen URLs). The
   // pack itself is granted by the webhook, so "success" only says payment went through.
   const addonReturn = searchParams.get('pack') ?? searchParams.get('addon');
+  // The webhook grants the pack shortly after the return: refetch the balances for ~10 s.
+  useAddonReturnRefresh(addonReturn);
 
   // Stripe puts ?success=true on the return URL even when payment did not
   // complete. Only a successful verify-session with a paid plan may show the
@@ -255,31 +253,11 @@ export default function BillingPage(): React.JSX.Element | null {
     },
   });
 
-  async function buyAddon(addonId: string) {
-    if (buyingAddon) return;
-    const addon = addonById(addonId);
-    if (!addon) return;
-    setBuyingAddon(addonId);
-    try {
-      // The server re-checks the plan, the Stripe price and that this amount is what it will charge.
-      const data =
-        addon.billing === 'monthly'
-          ? await api.post<{ url: string }>(CAPACITY_CHECKOUT_ENDPOINT, {
-              addonId,
-              quantity: 1,
-              expectedAmountCents: addon.priceCents,
-              confirmed: true,
-              // Stripe returns to /{locale}/settings/billing in the visitor's language.
-              locale,
-            })
-          : await api.post<{ url: string }>(PACK_CHECKOUT_ENDPOINT, {
-              addonId,
-              expectedAmountCents: addon.priceCents,
-              confirmed: true,
-              locale,
-            });
-      window.location.href = data.url;
-    } catch (error) {
+  // An add-on is bought only after its own review (price, billing, expiry): spec §11 explicit consent.
+  // One Idempotency-Key per review; repeated clicks while the request runs send nothing.
+  const { reviewAddon, buyingAddon, openReview, cancelReview, confirm: buyAddon } = useAddonCheckout({
+    locale,
+    onError: (addon, error) => {
       // The API names the minimum plan when it can; the catalog knows it either way.
       const upgrade = error instanceof ApiError && error.code === 'UPGRADE_REQUIRED' && typeof error.details?.minimumPlan !== 'string';
       toast.error(
@@ -288,9 +266,8 @@ export default function BillingPage(): React.JSX.Element | null {
           : formatApiError(error, tCatalog('addon_checkout_error')),
       );
       void queryClient.invalidateQueries({ queryKey: PLAN_AVAILABILITY_QUERY_KEY });
-      setBuyingAddon(null);
-    }
-  }
+    },
+  });
 
   const getStatusBadge = () => {
     const status = user?.subscription?.status || 'active';
@@ -372,17 +349,7 @@ export default function BillingPage(): React.JSX.Element | null {
         </div>
       )}
 
-      {addonReturn === 'success' || addonReturn === 'canceled' ? (
-        <div
-          role="status"
-          className="flex items-center gap-3 rounded-xl border border-stone-200 bg-white px-5 py-4 dark:border-stone-700 dark:bg-stone-900"
-        >
-          <Info className="h-5 w-5 shrink-0 text-stone-500 dark:text-stone-400" aria-hidden />
-          <p className="text-sm text-stone-700 dark:text-stone-300">
-            {tCatalog(addonReturn === 'success' ? 'addon_return_success' : 'addon_return_canceled')}
-          </p>
-        </div>
-      ) : null}
+      <AddonReturnBanner addonReturn={addonReturn} />
 
       <UsageWarningsBanner warnings={warnings} renewal={allowanceRenewal} canBuyPacks={packsOnSale} />
 
@@ -504,7 +471,7 @@ export default function BillingPage(): React.JSX.Element | null {
       {packsOnSale ? (
         <>
           <Card>
-            <AddonCatalog includeAddons onBuy={isFreePlan ? undefined : (id) => setReviewAddon(id)} buying={buyingAddon} />
+            <AddonCatalog includeAddons onBuy={isFreePlan ? undefined : openReview} buying={buyingAddon} />
             {reviewAddon && addonById(reviewAddon) ? (
               <AddonReview
                 name={tCatalog(`addons.${reviewAddon}`)}
@@ -514,7 +481,7 @@ export default function BillingPage(): React.JSX.Element | null {
                 expiryMonths={addonById(reviewAddon)!.expiresAfterMonths ?? null}
                 busy={buyingAddon === reviewAddon}
                 onConfirm={() => void buyAddon(reviewAddon)}
-                onCancel={() => setReviewAddon(null)}
+                onCancel={cancelReview}
               />
             ) : null}
             {isFreePlan ? <p className="mt-3 text-sm text-stone-600 dark:text-stone-400">{tCatalog('addons_free_note')}</p> : null}

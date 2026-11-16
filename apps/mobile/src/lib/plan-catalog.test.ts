@@ -107,7 +107,12 @@ describe('plan catalog (five plans)', () => {
 
   it('marks feature states (coming soon / provider dependent) as the website does', () => {
     expect(featureState('voiceMinutes', true)).toBe('provider_dependent');
-    expect(featureState('coachingResponses', true)).toBe('coming_soon');
+    // The career coach is built (needs the AI service, like every AI feature, shown as available).
+    expect(featureState('coachingResponses', true)).toBe('available');
+    // Licensed job feeds are not live: these rows need a connected provider on every plan.
+    for (const row of ['alertItems', 'savedSearches', 'matchingSchedule', 'alertDelivery'] as const) {
+      for (const plan of PRICING_PLANS) expect([row, plan, cellState(row, plan, true)]).toEqual([row, plan, 'provider_dependent']);
+    }
     expect(featureState('documentCredits', false)).toBe('available');
     expect(featureState('alertItems', false)).toBe('coming_soon');
     expect(cellState('alertIntelligence', 'business', true)).toBe('coming_soon');
@@ -119,6 +124,7 @@ describe('plan catalog (five plans)', () => {
     expect(facts[0]).toEqual({ label: 'Document credits', value: String(ALLOWANCES.professional.documentCredits), state: 'available' });
     expect(facts.some((f) => f.label === 'Voice interview minutes / month' && f.state === 'provider_dependent')).toBe(true);
     expect(cardFacts('free', true).some((f) => f.label.startsWith('Voice'))).toBe(false);
+    expect(facts.find((f) => f.label === 'Saved searches')?.state).toBe('provider_dependent');
     const benefits = planBenefits('starter');
     expect(benefits[0]).toBe(`${ALLOWANCES.starter.documentCredits} document credits a month`);
     expect(benefits).toContain('DOCX (Word) export');

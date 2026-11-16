@@ -38,8 +38,22 @@ describe('plan catalog', () => {
     // Advanced alert intelligence and push/Telegram delivery, per plan.
     expect(cellState('alertIntelligence', 'professional', true)).toBe('available');
     expect(cellState('alertIntelligence', 'career_pro', true)).toBe('coming_soon');
-    expect(cellState('alertDelivery', 'starter', true)).toBe('available');
+    // Alert delivery matches licensed job-feed listings (none live yet): every level waits for the provider,
+    // and push/Telegram/immediate mail need their own provider on top.
+    expect(cellState('alertDelivery', 'starter', true)).toBe('provider_dependent');
     expect(cellState('alertDelivery', 'professional', true)).toBe('provider_dependent');
+  });
+
+  it('marks the rows that need licensed job feeds as provider-dependent on every plan', () => {
+    for (const row of ['alertItems', 'savedSearches', 'matchingSchedule', 'alertDelivery'] as const) {
+      expect([row, featureState(row, true)]).toEqual([row, 'provider_dependent']);
+      for (const plan of PRICING_PLANS) expect([row, plan, cellState(row, plan, true)]).toEqual([row, plan, 'provider_dependent']);
+      // Switched off, they read as coming soon like every career row.
+      expect(featureState(row, false)).toBe('coming_soon');
+    }
+    // Rows that do not depend on feeds stay available.
+    expect(featureState('trackedApplications', true)).toBe('available');
+    expect(featureState('locationProfiles', true)).toBe('available');
   });
 
   it('reads career rows as coming soon while the career tools are switched off, CV rows stay available', () => {
