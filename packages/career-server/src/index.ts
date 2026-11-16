@@ -203,4 +203,6 @@ export type {
   V1ReminderInput,
 } from './alerts/alert.service';
 export { businessSponsorFor, sponsoredSpender, pooledCandidate } from './remaining/business-sponsor';
+export { providerReadiness } from './integration/provider-readiness';
+export type { ProviderReadiness } from './integration/provider-readiness';
 export type { BusinessSponsor } from './remaining/business-sponsor';

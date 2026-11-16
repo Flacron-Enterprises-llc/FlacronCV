@@ -954,7 +954,8 @@
       "careerAddonRetired": "Les outils de carrière sont désormais inclus dans toutes les offres : il n’y a plus d’option carrière séparée. Choisissez ou changez plutôt d’offre.",
       "usageMeterUnavailable": "Nous n’avons pas pu vérifier votre quota, rien n’a donc été lancé ni décompté. Réessayez dans un instant.",
       "analysesExhausted": "Les analyses de CV de ce mois sont épuisées. Elles se renouvellent à votre date de facturation, ou changez d’offre pour en avoir plus.",
-      "cvLimitReached": "Vous avez atteint la limite de CV de votre offre. Changez d’offre pour en créer davantage."
+      "cvLimitReached": "Vous avez atteint la limite de CV de votre offre. Changez d’offre pour en créer davantage.",
+      "addonUnavailable": "Ce module ne peut pas encore être acheté, car la fonctionnalité concernée n'est pas disponible. Aucun montant n'a été débité."
     },
     "storage_grace": "Vous stockez {excess} de plus que ce que votre offre inclut. Ces fichiers restent disponibles jusqu’au {date} ; supprimez-en ou changez d’offre d’ici là."
   },
@@ -5663,6 +5664,17 @@
       "taxes": "Prix hors taxes ; le paiement affiche le montant final.",
       "continue": "Continuer vers le paiement sécurisé",
       "cancel": "Pas maintenant"
+    },
+    "unavailable": {
+      "not_built": "Pas encore disponible",
+      "feature_off": "Fonctionnalité pas encore activée",
+      "service_unavailable": "Temporairement indisponible",
+      "provider": "En attente d'un service connecté",
+      "provider_ai": "En attente du service d'IA",
+      "provider_speech": "En attente de la transcription vocale",
+      "provider_objectStorage": "En attente du stockage de fichiers",
+      "provider_mapTiles": "En attente du service de cartes",
+      "provider_jobFeeds": "En attente des offres d'emploi en direct"
     }
   }
 }

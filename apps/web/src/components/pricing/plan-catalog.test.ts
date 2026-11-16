@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/api', () => ({ api: { get: vi.fn() } }));
-import { normalizePlansResponse, planOnSale, addonOnSale, NOTHING_ON_SALE, anyAddonOnSale } from './plan-availability';
+import { normalizePlansResponse, planOnSale, addonOnSale, addonBlock, addonBlockKey, NOTHING_ON_SALE, anyAddonOnSale } from './plan-availability';
 import { COMPARISON_ROWS, PRICING_PLANS, cellState, equivalentPlan, featureState, isLegacyPlan, nextPlanUp } from './plan-catalog';
 
 describe('plan catalog', () => {
@@ -66,7 +66,7 @@ describe('plan availability adapter (GET /plans)', () => {
         { id: 'business', configured: true },
         { id: 'pro', configured: true },
       ],
-      packs: [{ id: 'document_s', configured: true }, { id: 'nonsense', configured: true }, { id: 'voice_s', onSale: false }],
+      packs: [{ id: 'document_s', configured: true, available: true }, { id: 'nonsense', configured: true, available: true }, { id: 'voice_s', onSale: false }],
     });
     expect(a.catalogVersion).toBe('2026-10-10');
     expect(a.plans.starter).toEqual({ monthly: true, annual: false });
@@ -109,13 +109,27 @@ describe('GET /plans as the V1 API sends it', () => {
     const { fetchPlanAvailability } = await import('./plan-availability');
     get.mockImplementation(async (path: string) => {
       if (path === '/plans') throw new Error('down');
-      return { addons: [{ id: 'document_s', onSale: true, allowed: true }, { id: 'voice_s', onSale: false }] };
+      return {
+        addons: [
+          { id: 'document_s', onSale: true, allowed: true, available: true, unavailableReason: null },
+          // Priced, but the server says the feature cannot be bought: never on sale, and the reason comes through.
+          { id: 'voice_s', onSale: true, allowed: true, available: false, unavailableReason: 'provider_missing', unavailableProvider: 'speech' },
+          { id: 'assisted_form_25', onSale: true, available: false, unavailableReason: 'not_built', unavailableProvider: null },
+          // An older server without the availability field: closed.
+          { id: 'map_200', onSale: true },
+        ],
+      };
     });
     const a = await fetchPlanAvailability(true);
     expect(a.source).toBe('unavailable');
     expect(planOnSale(a, 'starter', 'monthly')).toBe(false);
     expect(addonOnSale(a, 'document_s')).toBe(true);
     expect(addonOnSale(a, 'voice_s')).toBe(false);
+    expect(addonBlock(a, 'voice_s')).toEqual({ reason: 'provider_missing', provider: 'speech' });
+    expect(addonBlockKey(addonBlock(a, 'voice_s')!)).toBe('unavailable.provider_speech');
+    expect(addonBlockKey(addonBlock(a, 'assisted_form_25')!)).toBe('unavailable.not_built');
+    expect(addonOnSale(a, 'map_200')).toBe(false);
+    expect(addonBlock(a, 'document_s')).toBeNull();
     get.mockReset();
     get.mockResolvedValue({ plans: [] });
     expect(anyAddonOnSale(await fetchPlanAvailability(false))).toBe(false);

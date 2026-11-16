@@ -1,7 +1,7 @@
 import { Controller, Get, Inject } from '@nestjs/common';
 import { CATALOG_VERSION, FEATURE_PHASE } from '@flacroncv/career-shared';
 import type { FeatureId } from '@flacroncv/career-shared';
-import { isFeatureEnabled } from '@flacroncv/career-server';
+import { isFeatureEnabled, providerReadiness } from '@flacroncv/career-server';
 import type { CareerAccess, CatalogSnapshot } from '@flacroncv/career-server';
 import { AccessOnly, CurrentCareerAccess } from '../auth/auth.guard';
 import { DatabaseService } from '../database/database.service';
@@ -14,7 +14,11 @@ import { DatabaseService } from '../database/database.service';
 export class AccessController {
   constructor(@Inject(DatabaseService) private readonly database: DatabaseService) {}
 
-  /** Creates no career rows. `features` lists the operator switches (feature_flags, else catalog phase). */
+  /**
+   * Creates no career rows. `features` lists the operator switches (feature_flags, else catalog phase).
+   * `providers` says which outside providers are configured (booleans only), so V1 sells a pack only
+   * when its feature can actually run.
+   */
   @AccessOnly()
   @Get('access')
   async access(@CurrentCareerAccess() access: CareerAccess) {
@@ -25,9 +29,10 @@ export class AccessController {
         features[feature] = await isFeatureEnabled(this.database.connectionPool, snapshot, feature);
       }
     }
+    const providers = providerReadiness(process.env);
     return access.enabled
-      ? { enabled: true, v1Plan: access.v1Plan, careerPlan: access.careerPlan, source: access.source, features }
-      : { enabled: false, v1Plan: access.v1Plan, reason: access.reason, features };
+      ? { enabled: true, v1Plan: access.v1Plan, careerPlan: access.careerPlan, source: access.source, features, providers }
+      : { enabled: false, v1Plan: access.v1Plan, reason: access.reason, features, providers };
   }
 
   private async snapshot(): Promise<CatalogSnapshot> {

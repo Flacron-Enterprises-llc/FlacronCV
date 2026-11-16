@@ -954,7 +954,8 @@
       "careerAddonRetired": "Las herramientas profesionales ya se incluyen en todos los planes, así que no hay un complemento aparte. Elige o cambia tu plan.",
       "usageMeterUnavailable": "No pudimos comprobar tu asignación, así que no se ejecutó ni se consumió nada. Inténtalo de nuevo en un momento.",
       "analysesExhausted": "Has agotado los análisis de CV de este mes. Se renuevan en tu fecha de facturación, o puedes mejorar tu plan para tener más.",
-      "cvLimitReached": "Has alcanzado el límite de CV de tu plan. Mejora tu plan para crear más."
+      "cvLimitReached": "Has alcanzado el límite de CV de tu plan. Mejora tu plan para crear más.",
+      "addonUnavailable": "Este complemento aún no se puede comprar porque la función a la que corresponde no está disponible. No se ha cobrado nada."
     },
     "storage_grace": "Estás guardando {excess} más de lo que incluye tu plan. Esos archivos siguen disponibles hasta el {date}; elimina algunos o mejora tu plan antes de esa fecha."
   },
@@ -5663,6 +5664,17 @@
       "taxes": "Precios sin impuestos; el pago muestra el importe final.",
       "continue": "Continuar al pago seguro",
       "cancel": "Ahora no"
+    },
+    "unavailable": {
+      "not_built": "Aún no disponible",
+      "feature_off": "Función aún no activada",
+      "service_unavailable": "No disponible temporalmente",
+      "provider": "Pendiente de un servicio conectado",
+      "provider_ai": "Pendiente del servicio de IA",
+      "provider_speech": "Pendiente de la transcripción de voz",
+      "provider_objectStorage": "Pendiente del almacenamiento de archivos",
+      "provider_mapTiles": "Pendiente del servicio de mapas",
+      "provider_jobFeeds": "Pendiente de ofertas de empleo en directo"
     }
   }
 }

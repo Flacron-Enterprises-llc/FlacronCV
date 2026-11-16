@@ -21,9 +21,24 @@ export interface PlanAvailability {
   /** Catalog version the server sells from, when it says. */
   catalogVersion: string | null;
   plans: Record<PlanId, Record<BillingInterval, boolean>>;
-  /** Add-on id → on sale. Missing ids are not on sale. */
+  /** Add-on id → on sale (price configured AND the server says the feature can be bought). Missing ids are not on sale. */
   addons: Record<string, boolean>;
+  /**
+   * Add-on id → why the server will not sell it now (feature not built, switched off,
+   * provider not connected, service unreachable). Only for add-ons the server reported.
+   */
+  addonBlocks: Record<string, AddonBlock>;
 }
+
+export type AddonBlockReason = 'not_built' | 'feature_off' | 'service_unavailable' | 'provider_missing';
+export type AddonBlockProvider = 'ai' | 'speech' | 'objectStorage' | 'mapTiles' | 'jobFeeds';
+export interface AddonBlock {
+  reason: AddonBlockReason;
+  provider: AddonBlockProvider | null;
+}
+
+const BLOCK_REASONS: readonly string[] = ['not_built', 'feature_off', 'service_unavailable', 'provider_missing'];
+const BLOCK_PROVIDERS: readonly string[] = ['ai', 'speech', 'objectStorage', 'mapTiles', 'jobFeeds'];
 
 export const PLANS_ENDPOINT = '/plans';
 /** Signed-in only: which add-ons have a Stripe price (`addons[].onSale`). */
@@ -44,6 +59,7 @@ export const NOTHING_ON_SALE: PlanAvailability = {
   catalogVersion: null,
   plans: closedPlans(),
   addons: {},
+  addonBlocks: {},
 };
 
 type Json = Record<string, unknown>;
@@ -93,11 +109,19 @@ export function normalizePlansResponse(raw: unknown): PlanAvailability {
   }
 
   const addons: Record<string, boolean> = {};
+  const addonBlocks: Record<string, AddonBlock> = {};
   const addonList = Array.isArray(body.addons) ? body.addons : Array.isArray(body.packs) ? body.packs : [];
   const known = new Set(ADDONS.map((addon) => addon.id));
   for (const entry of addonList) {
     if (!isObject(entry) || typeof entry.id !== 'string' || !known.has(entry.id)) continue;
-    addons[entry.id] = flag(entry.configured) || flag(entry.onSale);
+    // The server's purchase-availability decision is required: a price alone never puts a pack on sale.
+    addons[entry.id] = (flag(entry.configured) || flag(entry.onSale)) && flag(entry.available);
+    if (entry.available === false && typeof entry.unavailableReason === 'string' && BLOCK_REASONS.includes(entry.unavailableReason)) {
+      const provider = typeof entry.unavailableProvider === 'string' && BLOCK_PROVIDERS.includes(entry.unavailableProvider)
+        ? (entry.unavailableProvider as AddonBlockProvider)
+        : null;
+      addonBlocks[entry.id] = { reason: entry.unavailableReason as AddonBlockReason, provider };
+    }
   }
 
   return {
@@ -105,7 +129,20 @@ export function normalizePlansResponse(raw: unknown): PlanAvailability {
     catalogVersion: typeof body.catalogVersion === 'string' ? body.catalogVersion : null,
     plans,
     addons,
+    addonBlocks,
   };
+}
+
+/** Translation key (under plan_catalog) for why the server will not sell an add-on now. */
+export function addonBlockKey(block: AddonBlock): string {
+  if (block.reason === 'provider_missing' && block.provider) return `unavailable.provider_${block.provider}`;
+  if (block.reason === 'provider_missing') return 'unavailable.provider';
+  return `unavailable.${block.reason}`;
+}
+
+/** Why an add-on cannot be bought now, when the server said so. */
+export function addonBlock(availability: PlanAvailability, addonId: string): AddonBlock | null {
+  return availability.addonBlocks?.[addonId] ?? null;
 }
 
 export function planOnSale(availability: PlanAvailability, planId: PlanId, interval: BillingInterval): boolean {
@@ -131,8 +168,12 @@ export async function fetchPlanAvailability(includeAddons = false): Promise<Plan
     includeAddons ? api.get<unknown>(ADDON_STATUS_ENDPOINT) : Promise.resolve(null),
   ]);
   const base = plans.status === 'fulfilled' ? normalizePlansResponse(plans.value) : { ...NOTHING_ON_SALE, plans: closedPlans() };
-  const addons = status.status === 'fulfilled' && status.value ? normalizePlansResponse({ addons: (status.value as Json).addons }).addons : {};
-  return { ...base, addons: { ...base.addons, ...addons } };
+  const fromStatus = status.status === 'fulfilled' && status.value ? normalizePlansResponse({ addons: (status.value as Json).addons }) : null;
+  return {
+    ...base,
+    addons: { ...base.addons, ...(fromStatus?.addons ?? {}) },
+    addonBlocks: { ...base.addonBlocks, ...(fromStatus?.addonBlocks ?? {}) },
+  };
 }
 
 /**

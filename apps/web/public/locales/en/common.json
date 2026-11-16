@@ -954,7 +954,8 @@
       "careerAddonRetired": "Career tools are now included in every plan, so there is no separate career add-on to buy. Choose or change your plan instead.",
       "usageMeterUnavailable": "We couldn't check your allowance just now, so nothing ran and nothing was used. Try again in a moment.",
       "analysesExhausted": "This month's CV analyses are used up. They renew on your billing date, or you can upgrade for more.",
-      "cvLimitReached": "You've reached your plan's CV limit. Upgrade your plan to create more."
+      "cvLimitReached": "You've reached your plan's CV limit. Upgrade your plan to create more.",
+      "addonUnavailable": "This add-on can't be bought yet because the feature it's for isn't available. Nothing was charged."
     },
     "storage_grace": "You are storing {excess} more than your plan includes. Those files stay available until {date}; remove some files or upgrade your plan before then."
   },
@@ -5663,6 +5664,17 @@
       "taxes": "Prices exclude taxes; checkout shows the final amount.",
       "continue": "Continue to secure checkout",
       "cancel": "Not now"
+    },
+    "unavailable": {
+      "not_built": "Not available yet",
+      "feature_off": "Feature not switched on yet",
+      "service_unavailable": "Temporarily unavailable",
+      "provider": "Waiting for a connected service",
+      "provider_ai": "Waiting for the AI service",
+      "provider_speech": "Waiting for voice transcription",
+      "provider_objectStorage": "Waiting for file storage",
+      "provider_mapTiles": "Waiting for the map service",
+      "provider_jobFeeds": "Waiting for live job listings"
     }
   }
 }

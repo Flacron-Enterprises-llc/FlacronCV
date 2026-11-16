@@ -6,6 +6,14 @@ import { CareerTopUpCharger } from '../career-metering/career-top-up';
 import { CAREER_ADDONS, addonAllowedFor, addonPriceEnvName, careerPlanForV1, readAddonPrices } from './career-addons';
 import { CAPACITY_SUBSCRIPTIONS, CareerBillingService, PACK_PURCHASES } from './career-billing.service';
 import { billingReturnUrls } from './career-billing.controller';
+import { ADDON_REQUIREMENTS, AvailabilitySource, PURCHASE_PROVIDERS } from './purchase-availability';
+
+/** Every feature switched on and every provider ready, so these tests exercise the other checks. */
+function allAvailable(): AvailabilitySource {
+  const features = Object.fromEntries(Object.values(ADDON_REQUIREMENTS).map((r) => [r.feature, true]));
+  const providers = Object.fromEntries(PURCHASE_PROVIDERS.map((p) => [p, true]));
+  return { forCaller: async () => ({ features, providers }) };
+}
 
 /**
  * Packs and capacity add-ons sold through V1's Stripe (spec sections 9-11),
@@ -32,9 +40,9 @@ function users(firestore: InMemoryFirestore) {
 
 function stripeMock() {
   const prices: Record<string, any> = {
-    [PACK_PRICE]: { id: PACK_PRICE, active: true, currency: 'usd', unit_amount: 499, recurring: null },
-    [ACTION_PRICE]: { id: ACTION_PRICE, active: true, currency: 'usd', unit_amount: 799, recurring: null },
-    [SEARCH_PRICE]: { id: SEARCH_PRICE, active: true, currency: 'usd', unit_amount: 299, recurring: { interval: 'month' } },
+    [PACK_PRICE]: { id: PACK_PRICE, active: true, livemode: false, metadata: APP, currency: 'usd', unit_amount: 499, recurring: null },
+    [ACTION_PRICE]: { id: ACTION_PRICE, active: true, livemode: false, metadata: APP, currency: 'usd', unit_amount: 799, recurring: null },
+    [SEARCH_PRICE]: { id: SEARCH_PRICE, active: true, livemode: false, metadata: APP, currency: 'usd', unit_amount: 299, recurring: { interval: 'month' } },
   };
   const subs = new Map<string, any>();
   return {
@@ -128,7 +136,7 @@ describe('career add-on catalog in V1', () => {
 describe('pack and capacity checkout', () => {
   let firestore: InMemoryFirestore;
   let stripe: ReturnType<typeof stripeMock>;
-  const make = () => new CareerBillingService(config(), { firestore } as any, users(firestore), stripe as any);
+  const make = () => new CareerBillingService(config(), { firestore } as any, users(firestore), stripe as any, allAvailable());
   const urls = { success: 's', cancel: 'c' };
 
   beforeEach(() => {
@@ -195,7 +203,7 @@ describe('career webhooks for packs, capacity and price-derived plans', () => {
     stripe = stripeMock();
     configurePrices(true);
     await seedUser(firestore, SubscriptionPlan.STARTER);
-    svc = new CareerBillingService(config(), { firestore } as any, users(firestore), stripe as any);
+    svc = new CareerBillingService(config(), { firestore } as any, users(firestore), stripe as any, allAvailable());
   });
 
   const paidSession = { id: 'cs_pack', payment_status: 'paid', amount_total: 499, currency: 'usd', payment_intent: 'pi_pack', metadata: { ...APP, product: 'career_pack', addonId: 'action_l', firebaseUid: 'u1' } };

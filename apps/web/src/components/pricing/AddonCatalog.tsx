@@ -5,7 +5,7 @@ import type { Addon } from '@flacroncv/career-shared';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { catalogAddons } from './estimate-model';
-import { addonOnSale, usePlanAvailability } from './plan-availability';
+import { addonBlock, addonBlockKey, addonOnSale, usePlanAvailability } from './plan-availability';
 import { usePlanFormat } from './plan-format';
 
 const GROUPS = [
@@ -68,6 +68,7 @@ export function AddonCatalog({
             <ul className="mt-2 divide-y divide-stone-200 rounded-xl border border-stone-200 bg-white dark:divide-stone-700 dark:border-stone-700 dark:bg-stone-900">
               {items.map((addon) => {
                 const onSale = addonOnSale(availability, addon.id);
+                const block = onSale ? null : addonBlock(availability, addon.id);
                 const priceText =
                   addon.billing === 'monthly'
                     ? `${fmt.usd(addon.priceCents)}${t('per_month')}`
@@ -99,6 +100,8 @@ export function AddonCatalog({
                         </Button>
                       ) : onSale && addon.firmPrice ? (
                         <Badge variant="success">{t('on_sale')}</Badge>
+                      ) : block ? (
+                        <Badge variant="warning">{t(addonBlockKey(block))}</Badge>
                       ) : (
                         <Badge variant="warning">{t('not_on_sale')}</Badge>
                       )}

@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   GoneException,
+  Inject,
   Injectable,
   Logger,
   Optional,
@@ -26,6 +27,16 @@ import {
   higherCareerPlan,
   readAddonPrices,
 } from './career-addons';
+import {
+  AvailabilityContext,
+  AvailabilitySource,
+  CareerAccessAvailabilitySource,
+  PURCHASE_AVAILABILITY_SOURCE,
+  PurchaseBlockReason,
+  PurchaseProvider,
+  addonAvailability,
+} from './purchase-availability';
+import { currentCaller } from '../career-metering/caller-context';
 
 /**
  * The career tools (former V2 features) inside V1's own Stripe billing.
@@ -126,6 +137,14 @@ export interface CareerAddonOffer {
   onSale: boolean;
   /** The person's plan may buy it now (Free upgrades first). */
   allowed: boolean;
+  /**
+   * The feature is built, switched on and has its providers (purchase-availability.ts).
+   * The same decision the server applies at checkout; the web only explains it.
+   */
+  available: boolean;
+  unavailableReason: PurchaseBlockReason | null;
+  /** The missing provider when unavailableReason is provider_missing. */
+  unavailableProvider: PurchaseProvider | null;
 }
 
 @Injectable()
@@ -138,13 +157,17 @@ export class CareerBillingService {
   private readonly prices: Map<string, string>;
   /** Pack and capacity prices (`addonId` → price id). */
   private readonly addonPrices: Map<string, string>;
+  /** Whether a pack's feature is built, switched on and has its providers. Fails closed. */
+  private readonly availability: AvailabilitySource;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly firebaseAdmin: FirebaseAdminService,
     private readonly usersService: UsersService,
     @Optional() stripe?: Stripe,
+    @Optional() @Inject(PURCHASE_AVAILABILITY_SOURCE) availability?: AvailabilitySource,
   ) {
+    this.availability = availability ?? new CareerAccessAvailabilitySource(process.env.CAREER_API_URL);
     const secretKey = this.configService.get<string>('stripe.secretKey');
     this.stripe = stripe ?? (secretKey ? new Stripe(secretKey, { apiVersion: '2024-04-10' as never }) : null);
     this.appId = this.configService.get<string>('stripe.appId') || DEFAULT_APP_ID;
@@ -178,13 +201,20 @@ export class CareerBillingService {
             source: state.source ?? null,
           }
         : null,
-      addons: this.offers(careerPlan),
+      addons: this.offers(careerPlan, await this.availabilityContext()),
     };
   }
 
-  /** The add-on catalog for this person's plan. */
-  offers(plan: CareerPlanId): CareerAddonOffer[] {
-    return CAREER_ADDONS.map((addon) => ({
+  /** The career service's view for the current caller (their own ID token), or null: fail closed. */
+  private async availabilityContext(): Promise<AvailabilityContext | null> {
+    return this.availability.forCaller(currentCaller()?.idToken ?? null);
+  }
+
+  /** The add-on catalog for this person's plan. `ctx` null = the career service could not be asked (nothing on sale). */
+  offers(plan: CareerPlanId, ctx: AvailabilityContext | null): CareerAddonOffer[] {
+    return CAREER_ADDONS.map((addon) => {
+      const availability = addonAvailability(addon.id, ctx);
+      return {
       id: addon.id,
       kind: addon.kind,
       unit: addon.unit,
@@ -194,7 +224,11 @@ export class CareerBillingService {
       minPlan: addon.minPlan,
       onSale: !!this.stripe && this.addonPrices.has(addon.id),
       allowed: addonAllowedFor(plan, addon.id).ok,
-    }));
+      available: availability.available,
+      unavailableReason: availability.available ? null : availability.reason,
+      unavailableProvider: availability.available ? null : availability.provider ?? null,
+      };
+    });
   }
 
   /**
@@ -296,12 +330,30 @@ export class CareerBillingService {
     if (!priceId || !this.stripe) {
       throw new ServiceUnavailableException({ code: 'ADDON_NOT_ON_SALE', message: 'This add-on is not on sale yet.' });
     }
+    // A configured price never makes an unavailable feature purchasable. Checked
+    // before anything else touches Stripe (no customer, no session, no grant).
+    const availability = addonAvailability(addon.id, await this.availabilityContext());
+    if (!availability.available) {
+      throw new ServiceUnavailableException({
+        code: 'ADDON_UNAVAILABLE',
+        reason: availability.reason,
+        ...(availability.provider ? { provider: availability.provider } : {}),
+        message: 'This add-on cannot be bought yet.',
+      });
+    }
     const user = await this.usersService.findByIdOrThrow(userId);
     const allowed = addonAllowedFor(this.careerPlanOf(user), addon.id);
     if (!allowed.ok) {
       throw new ForbiddenException({ code: allowed.reason, minimumPlan: allowed.minimumPlan, message: 'Upgrade your plan to buy this add-on.' });
     }
     const price = await this.stripe.prices.retrieve(priceId);
+    // Same ownership rule as plan checkout (PaymentService.assertPriceIsOurs):
+    // only this application's price, in this key's mode.
+    const keyMode = /^(?:sk|rk)_(live|test)_/.exec(this.configService.get<string>('stripe.secretKey') ?? '')?.[1] ?? null;
+    if (price.metadata?.[APP_ID_METADATA_KEY] !== this.appId || (keyMode !== null && price.livemode !== (keyMode === 'live'))) {
+      this.logger.error(`Refusing add-on price ${priceId}: app_id=${price.metadata?.[APP_ID_METADATA_KEY] ?? 'none'} livemode=${price.livemode}`);
+      throw new ServiceUnavailableException({ code: 'ADDON_NOT_ON_SALE', message: 'This add-on is not on sale yet.' });
+    }
     const recurring = price.recurring?.interval ?? null;
     const shapeOk = addon.billing === 'one_time' ? recurring === null : recurring === 'month';
     if (

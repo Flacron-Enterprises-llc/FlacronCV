@@ -83,6 +83,8 @@ export function knownCodeMessage(
       return t('billing.trial_not_eligible');
     case 'ADDON_NOT_ON_SALE':
       return t('billing.errors.addonNotOnSale');
+    case 'ADDON_UNAVAILABLE':
+      return t('billing.errors.addonUnavailable');
     case 'UPGRADE_REQUIRED': {
       const plan = details?.minimumPlan;
       return typeof plan === 'string' && PLAN_IDS.has(plan)

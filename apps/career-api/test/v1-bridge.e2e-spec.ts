@@ -93,6 +93,10 @@ describe('V1 plan bridge', () => {
     const access = await http().get('/api/career/v1/access').set('Authorization', bearer('pro-cy'));
     expect(access.body).toMatchObject({ enabled: true, v1Plan: 'pro', careerPlan: 'professional' });
     expect(access.body.features.documentCredits).toBe(true);
+    // Provider readiness for V1's purchase-availability check: booleans only, unbuilt adapters never ready.
+    expect(access.body.providers).toMatchObject({ speech: false, mapTiles: false, jobFeeds: false });
+    expect(typeof access.body.providers.ai).toBe('boolean');
+    expect(typeof access.body.providers.objectStorage).toBe('boolean');
     const row = await t.db.pool.query(`SELECT plan_source, v1_plan, provider FROM billing_accounts WHERE auth_user_id = 'pro-cy'`);
     expect(row.rows[0]).toEqual({ plan_source: 'v1_mapping', v1_plan: 'pro', provider: null });
   });

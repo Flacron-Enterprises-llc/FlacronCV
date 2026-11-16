@@ -954,7 +954,8 @@
       "careerAddonRetired": "Die Karrieretools sind jetzt in jedem Tarif enthalten, ein separates Karriere-Zusatzpaket gibt es nicht mehr. Wähle oder ändere stattdessen deinen Tarif.",
       "usageMeterUnavailable": "Dein Kontingent konnte gerade nicht geprüft werden, daher wurde nichts ausgeführt oder verbraucht. Versuche es gleich noch einmal.",
       "analysesExhausted": "Die Lebenslauf-Analysen dieses Monats sind aufgebraucht. Sie erneuern sich zu deinem Abrechnungsdatum, oder du führst ein Upgrade durch.",
-      "cvLimitReached": "Du hast das Lebenslauf-Limit deines Tarifs erreicht. Führe ein Upgrade durch, um weitere zu erstellen."
+      "cvLimitReached": "Du hast das Lebenslauf-Limit deines Tarifs erreicht. Führe ein Upgrade durch, um weitere zu erstellen.",
+      "addonUnavailable": "Dieses Zusatzpaket kann noch nicht gekauft werden, weil die zugehörige Funktion nicht verfügbar ist. Es wurde nichts berechnet."
     },
     "storage_grace": "Du speicherst {excess} mehr, als dein Tarif enthält. Diese Dateien bleiben bis {date} verfügbar; lösche vorher einige Dateien oder führe ein Upgrade durch."
   },
@@ -5663,6 +5664,17 @@
       "taxes": "Preise zzgl. Steuern; die Kasse zeigt den Endbetrag.",
       "continue": "Weiter zur sicheren Kasse",
       "cancel": "Nicht jetzt"
+    },
+    "unavailable": {
+      "not_built": "Noch nicht verfügbar",
+      "feature_off": "Funktion noch nicht aktiviert",
+      "service_unavailable": "Vorübergehend nicht verfügbar",
+      "provider": "Wartet auf einen verbundenen Dienst",
+      "provider_ai": "Wartet auf den KI-Dienst",
+      "provider_speech": "Wartet auf die Sprachtranskription",
+      "provider_objectStorage": "Wartet auf den Dateispeicher",
+      "provider_mapTiles": "Wartet auf den Kartendienst",
+      "provider_jobFeeds": "Wartet auf aktuelle Stellenangebote"
     }
   }
 }
