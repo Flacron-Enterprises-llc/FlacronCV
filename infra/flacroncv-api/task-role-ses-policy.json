@@ -1,0 +1,8 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    { "Sid": "SendAsFlacronCVSenderOnly", "Effect": "Allow", "Action": ["ses:SendEmail", "ses:SendRawEmail"],
+      "Resource": "<SES identity ARN of FlacronCV's sender, e.g. arn:aws:ses:us-east-1:482881544977:identity/<domain>>",
+      "Condition": { "StringEquals": { "ses:FromAddress": "<SES_FROM_EMAIL value>" } } }
+  ]
+}
