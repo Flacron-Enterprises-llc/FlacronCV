@@ -8,11 +8,15 @@
  *   npx ts-node --transpile-only scripts/stripe-provision-catalog.ts --account=acct_…           # dry run
  *   npx ts-node --transpile-only scripts/stripe-provision-catalog.ts --account=acct_… --apply   # create
  *
+ * Or with a separate, temporary provisioning key instead of the CLI login:
+ *   … --account=acct_… --key-file=<file with STRIPE_PROVISIONING_KEY=rk_test_…> --anchor-product=prod_… [--apply]
+ *
  * Prints the env lines the API expects (STRIPE_PRICE_<PLAN>_<MONTHLY|ANNUAL>,
  * STRIPE_PRICE_PACK_<ID>[_RECURRING]); price ids are not secrets.
  * Legacy plans are handled by scripts/stripe-sync-catalog.mjs, not here.
  */
 import { execFileSync } from 'child_process';
+import { readFileSync } from 'fs';
 import {
   CatalogTransport,
   StripePriceLike,
@@ -72,7 +76,7 @@ function listAll(path: string): any[] {
   throw new Error(`Too many pages listing ${path}`);
 }
 
-const transport: CatalogTransport = {
+const cliTransport: CatalogTransport = {
   mode: 'test',
   async accountId() {
     return cli(['get', '/v1/account']).id;
@@ -90,6 +94,102 @@ const transport: CatalogTransport = {
     return cli(['post', '/v1/prices', '--confirm', '-i', idempotencyKey, ...dataArgs(params)]);
   },
 };
+
+/**
+ * Key transport (--key-file=PATH): a SEPARATE, temporary restricted TEST key used only for
+ * provisioning (Products: Write, Prices: Write), never the application's key. The file holds
+ * STRIPE_PROVISIONING_KEY=rk_test_…; the key is never printed.
+ *
+ * Account identity: GET /v1/account when the key may read it; otherwise --anchor-product=prod_…
+ * names an object the operator confirmed in the Dashboard of --account (test mode). The key must
+ * read exactly that object (test mode, tagged app_id=flacron-cv) before anything is written.
+ */
+function keyTransport(keyFile: string, anchorProduct: string | undefined): CatalogTransport {
+  const text = readFileSync(keyFile, 'utf8');
+  const key = (/^\s*STRIPE_PROVISIONING_KEY\s*=\s*(\S*)/m.exec(text)?.[1] ?? '').trim();
+  if (!/^rk_test_[A-Za-z0-9]+$/.test(key)) {
+    throw new Error('STRIPE_PROVISIONING_KEY must be a restricted TEST key (rk_test_…). sk_ and live keys are refused.');
+  }
+  const headers = (extra: Record<string, string> = {}) => ({
+    Authorization: `Bearer ${key}`,
+    'Stripe-Version': '2024-04-10',
+    ...extra,
+  });
+  const form = (params: Record<string, unknown>, prefix = '', out = new URLSearchParams()) => {
+    for (const [k, v] of Object.entries(params)) {
+      if (v === undefined || v === null) continue;
+      const name = prefix ? `${prefix}[${k}]` : k;
+      if (typeof v === 'object') form(v as Record<string, unknown>, name, out);
+      else out.append(name, String(v));
+    }
+    return out;
+  };
+  const call = async (method: 'GET' | 'POST', path: string, params?: Record<string, unknown>, idempotencyKey?: string) => {
+    const body = params ? form(params) : undefined;
+    const url = `https://api.stripe.com${path}${method === 'GET' && body ? `?${body}` : ''}`;
+    const res = await fetch(url, {
+      method,
+      headers: headers({
+        ...(method === 'POST' ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
+        ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
+      }),
+      body: method === 'POST' ? body : undefined,
+    });
+    const json: any = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const e = json?.error;
+      const err = new Error(`Stripe ${res.status}: ${e?.type ?? 'error'}${e?.code ? ` (${e.code})` : ''}`);
+      (err as Error & { status?: number }).status = res.status;
+      throw err;
+    }
+    return json;
+  };
+  const listAllKey = async (path: string) => {
+    const items: any[] = [];
+    let after: string | null = null;
+    for (let page = 0; page < 100; page++) {
+      const json = await call('GET', path, { limit: 100, ...(after ? { starting_after: after } : {}) });
+      items.push(...json.data);
+      if (!json.has_more) return items;
+      after = json.data[json.data.length - 1].id;
+    }
+    throw new Error(`Too many pages listing ${path}`);
+  };
+  return {
+    mode: 'test',
+    async accountId() {
+      try {
+        return (await call('GET', '/v1/account')).id;
+      } catch (error) {
+        if ((error as { status?: number }).status !== 403 || !anchorProduct) throw error;
+        const p = await call('GET', `/v1/products/${anchorProduct}`);
+        if (p.livemode !== false || p.metadata?.app_id !== 'flacron-cv') {
+          throw new Error(`Anchor ${anchorProduct} is not a FlacronCV test-mode product.`);
+        }
+        // The operator confirmed this object belongs to --account; this key reads it.
+        return expectedAccount;
+      }
+    },
+    listProducts: () => listAllKey('/v1/products'),
+    listPrices: () => listAllKey('/v1/prices'),
+    createProduct: (params, idempotencyKey) => call('POST', '/v1/products', params, idempotencyKey),
+    createPrice: (params, idempotencyKey) => call('POST', '/v1/prices', params, idempotencyKey),
+  };
+}
+
+if (args['anchor-product'] && !/^prod_[A-Za-z0-9]+$/.test(args['anchor-product'])) {
+  console.error('--anchor-product must be a Stripe product id (prod_…).');
+  process.exit(1);
+}
+let transport: CatalogTransport;
+try {
+  transport = args['key-file'] ? keyTransport(args['key-file'], args['anchor-product']) : cliTransport;
+} catch (error) {
+  // Never echo the file's contents; only the reason.
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`Refusing: ${/ENOENT/.test(message) ? 'key file not found' : message}`);
+  process.exit(1);
+}
 
 const money = (c: number) => `$${(c / 100).toFixed(2)}`;
 
