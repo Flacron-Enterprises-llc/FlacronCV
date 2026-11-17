@@ -2107,6 +2107,23 @@ export class PaymentService {
   }
 
   /**
+   * Whether the subscription's latest invoice is settled: paid, or nothing was
+   * due ($0 trial or credit). A draft/open renewal invoice means the new period
+   * is not paid yet. Fails closed (unsettled) if the invoice cannot be read.
+   */
+  private async latestInvoiceSettled(subscription: Stripe.Subscription): Promise<boolean> {
+    const latest = subscription.latest_invoice;
+    if (!latest) return true;
+    try {
+      const invoice = typeof latest === 'string' ? await this.stripe.invoices.retrieve(latest) : latest;
+      return invoice.status === 'paid' || invoice.amount_due === 0;
+    } catch (err) {
+      this.logger.warn(`Could not read latest invoice of ${subscription.id}: ${(err as Error).message}`);
+      return false;
+    }
+  }
+
+  /**
    * `customer.subscription.updated`, and the in-app plan change.
    *
    * The payload is not trusted: the subscription is RE-RETRIEVED from Stripe
@@ -2140,7 +2157,12 @@ export class PaymentService {
     // grace rule grants access until currentPeriodEnd) and refresh credits
     // for free. The period and the allowance advance on invoice.paid instead;
     // the grace policy itself (resolveEffectivePlan) is unchanged.
-    const unpaidRenewal = UNPAID_STRIPE_STATUSES.has(subscription.status);
+    // Found in a real test-clock renewal: Stripe moves the subscription into the
+    // new period while it is still `active` and only drafts/charges the renewal
+    // invoice afterwards, so the status alone cannot tell an unpaid renewal. The
+    // period also waits until the subscription's latest invoice is settled.
+    const unpaidRenewal =
+      UNPAID_STRIPE_STATUSES.has(subscription.status) || !(await this.latestInvoiceSettled(subscription));
     // Map, never cast. Stripe has EIGHT subscription statuses; SubscriptionStatus
     // has six. A bare cast persisted the raw string for the two with no enum
     // member — `incomplete_expired` and `paused` — and entitlements are decided

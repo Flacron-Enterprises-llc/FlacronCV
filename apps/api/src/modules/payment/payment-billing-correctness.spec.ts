@@ -282,6 +282,38 @@ describe('PaymentService billing correctness', () => {
       expect(new Date(doc.subscription.currentPeriodEnd)).toEqual(new Date(1_705_200_000 * 1000));
       expect(users.rolloverUsageIfDue).toHaveBeenCalledTimes(1);
     });
+
+    // Found in a REAL Stripe test-clock renewal: Stripe enters the new period while the
+    // subscription is still `active`, with the renewal invoice only drafted/open.
+    it('an active subscription whose renewal invoice is not paid yet keeps the paid period end and credits', async () => {
+      const paidEnd = new Date(1_702_600_000 * 1000);
+      await seedUser(firestore, 'u1', {
+        plan: SubscriptionPlan.PROFESSIONAL,
+        stripeCustomerId: 'cus_1',
+        stripeSubscriptionId: 'sub_1',
+        currentPeriodEnd: paidEnd,
+      });
+      const renewed = { current_period_start: 1_702_600_000, current_period_end: 1_705_200_000 };
+      const invoices = new Map<string, Record<string, unknown>>([
+        ['in_draft', { id: 'in_draft', status: 'draft', amount_due: 3899 }],
+      ]);
+      (fake as unknown as { invoices: { retrieve: jest.Mock } }).invoices = { retrieve: jest.fn(async (id: string) => invoices.get(id)) } as never;
+      (service as unknown as { stripe: { invoices: unknown } }).stripe.invoices = (fake as unknown as { invoices: unknown }).invoices;
+      fake.subscriptions.set('sub_1', sub({ status: 'active', latest_invoice: 'in_draft', ...renewed }));
+
+      await service.handleWebhookEvent(event('evt_roll', 'customer.subscription.updated', sub({ status: 'active', latest_invoice: 'in_draft', ...renewed }), 10));
+      let doc = await userDoc();
+      expect(doc.subscription.status).toBe(SubscriptionStatus.ACTIVE);
+      expect(new Date(doc.subscription.currentPeriodEnd)).toEqual(paidEnd);
+      expect(users.rolloverUsageIfDue).not.toHaveBeenCalled();
+
+      // The renewal is paid: the period advances once.
+      invoices.set('in_draft', { id: 'in_draft', status: 'paid', amount_due: 3899 });
+      await service.handleWebhookEvent(event('evt_roll2', 'customer.subscription.updated', sub({ status: 'active', latest_invoice: 'in_draft', ...renewed }), 20));
+      doc = await userDoc();
+      expect(new Date(doc.subscription.currentPeriodEnd)).toEqual(new Date(1_705_200_000 * 1000));
+      expect(users.rolloverUsageIfDue).toHaveBeenCalledTimes(1);
+    });
   });
 
   // ─── h1. Upgrades apply only once paid ───────────────────────────────────────
