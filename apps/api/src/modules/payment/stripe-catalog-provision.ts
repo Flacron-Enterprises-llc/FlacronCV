@@ -16,7 +16,9 @@
  * - Any conflict stops the whole run before the first write.
  * - Writes carry deterministic idempotency keys, and a re-run finds what an
  *   interrupted run created, so interruptions never duplicate objects.
- * - Live mode is refused outright; the account id must match the expected one.
+ * - Test mode by default. Live mode needs a live transport AND allowLive, and
+ *   provisions only the four plans; every object read or created must be in
+ *   the expected mode, and the account id must match the expected one.
  *
  * Legacy plans (Pro, Career Accelerator, Enterprise) are out of scope and
  * untouched (scripts/stripe-sync-catalog.mjs still owns them). Free has no
@@ -265,20 +267,39 @@ function priceMatches(p: StripePriceLike, want: DesiredPrice, productId: string)
 }
 
 /** Read-only: compare Stripe with the desired catalog. Never writes. */
+export interface CatalogOptions {
+  /** Live mode needs this explicit opt-in in addition to a live transport. */
+  allowLive?: boolean;
+}
+
+/** Live mode provisions only the four paid plans: no pack is on sale without the career service. */
+export function livePlanCatalog(): DesiredProduct[] {
+  return desiredCatalog().filter((d) => d.idField === 'fcv_plan');
+}
+
+function assertMode(transport: CatalogTransport, options: CatalogOptions): boolean {
+  if (transport.mode === 'live' && !options.allowLive) {
+    throw new Error('Refusing: live mode needs the explicit live confirmation.');
+  }
+  if (transport.mode !== 'live' && transport.mode !== 'test') throw new Error('Refusing: unknown Stripe mode.');
+  return transport.mode === 'live';
+}
+
 export async function planCatalog(
   transport: CatalogTransport,
   expectedAccountId: string,
   desired: DesiredProduct[] = desiredCatalog(),
+  options: CatalogOptions = {},
 ): Promise<CatalogPlan> {
-  if (transport.mode !== 'test') throw new Error('Refusing: this provisioning step runs in Stripe TEST mode only.');
+  const live = assertMode(transport, options);
   const accountId = await transport.accountId();
   if (!expectedAccountId || accountId !== expectedAccountId) {
     throw new Error(`Refusing: connected account ${accountId} is not the expected account ${expectedAccountId || '(none given)'}.`);
   }
   const products = await transport.listProducts();
   const prices = await transport.listPrices();
-  if ([...products, ...prices].some((o) => o.livemode)) {
-    throw new Error('Refusing: Stripe returned live-mode objects; this step runs in TEST mode only.');
+  if ([...products, ...prices].some((o) => o.livemode !== live)) {
+    throw new Error(`Refusing: Stripe returned ${live ? 'test' : 'live'}-mode objects; this run is ${live ? 'LIVE' : 'TEST'} mode.`);
   }
 
   const conflicts: string[] = [];
@@ -381,8 +402,10 @@ export async function applyCatalog(
   transport: CatalogTransport,
   expectedAccountId: string,
   desired: DesiredProduct[] = desiredCatalog(),
+  options: CatalogOptions = {},
 ): Promise<ApplyResult> {
-  const plan = await planCatalog(transport, expectedAccountId, desired);
+  const plan = await planCatalog(transport, expectedAccountId, desired, options);
+  const live = transport.mode === 'live';
   if (plan.conflicts.length > 0) {
     throw new Error(`Refusing to write: ${plan.conflicts.length} conflict(s).\n- ${plan.conflicts.join('\n- ')}`);
   }
@@ -396,7 +419,7 @@ export async function applyCatalog(
       if (a.key !== d.key) continue;
       if (a.kind === 'create_product') {
         const product = await transport.createProduct(d.create, a.idempotencyKey);
-        if (product.livemode) throw new Error('Refusing: Stripe created a live-mode object.');
+        if (product.livemode !== live) throw new Error('Refusing: Stripe created an object in the wrong mode.');
         productIds.set(d.key, product.id);
         created.products += 1;
       }
@@ -412,7 +435,7 @@ export async function applyCatalog(
       const productId = productIds.get(d.key);
       if (!productId) throw new Error(`Internal: no product for ${d.key}`);
       const price = await transport.createPrice({ ...want.create, product: productId }, a.idempotencyKey);
-      if (price.livemode) throw new Error('Refusing: Stripe created a live-mode object.');
+      if (price.livemode !== live) throw new Error('Refusing: Stripe created an object in the wrong mode.');
       created.prices += 1;
       env.push([want.envName, price.id]);
     }

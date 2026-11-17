@@ -39,7 +39,11 @@ const fail = (msg) => { throw new Stop(msg); };
 // ---- key: restricted, live -----------------------------------------------------------------------
 if (!args['key-file']) fail('pass --key-file=PATH (file with STRIPE_LIVE_READONLY_KEY=rk_live_…)');
 let key = '';
-try { key = (/^\s*STRIPE_LIVE_READONLY_KEY\s*=\s*(\S*)/m.exec(readFileSync(args['key-file'], 'utf8'))?.[1] ?? '').trim(); } catch { fail('key file not found'); }
+// STRIPE_LIVE_READONLY_KEY, or the temporary setup key (STRIPE_PROVISIONING_KEY): this script only sends GETs.
+try {
+  const text = readFileSync(args['key-file'], 'utf8');
+  key = (/^\s*(?:STRIPE_LIVE_READONLY_KEY|STRIPE_PROVISIONING_KEY)\s*=\s*(\S*)/m.exec(text)?.[1] ?? '').trim();
+} catch { fail('key file not found'); }
 if (/^sk_/.test(key)) fail('this is an UNRESTRICTED secret key. Use a restricted read-only key (rk_live_…).');
 if (/^rk_test_/.test(key)) fail('this is a TEST key. This script verifies LIVE billing (rk_live_…).');
 if (!/^rk_live_[A-Za-z0-9]+$/.test(key)) fail('STRIPE_LIVE_READONLY_KEY must be a restricted live key (rk_live_…).');

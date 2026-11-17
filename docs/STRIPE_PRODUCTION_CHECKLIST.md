@@ -42,7 +42,17 @@ Confirmed during local test-mode work (17 Nov 2026, Flacron Enterprises LLC):
 
 ## 2. Live catalog (after G1, G5)
 
-1. `npx ts-node --transpile-only apps/api/scripts/stripe-provision-catalog.ts --account=<live acct>` is **test-mode only by design**; a live run needs a reviewed live variant (same code, explicit `--live` confirmation, owner present). Do not hand-create prices.
+1. Live run, after `verify-live-billing.mjs` reports ACCOUNT VERIFIED. Use a separate restricted **provisioning** key: Products, Prices, Webhook Endpoints and Customer portal set to Write, everything else None. Store it in a private file outside Git, and delete the key afterwards. Dry run first; add `--apply` only after reviewing the output. Do not hand-create prices.
+   ```
+   npx ts-node --transpile-only apps/api/scripts/stripe-provision-catalog.ts --live \
+     --account=<acct> --confirm-live=<acct> --key-file=<file with STRIPE_PROVISIONING_KEY=rk_live_…> \
+     --legacy-prices=<the four STRIPE_PRO_/ENTERPRISE_ ids from the running task definition> \
+     --webhook-events --portal --env-out=<private file>
+   ```
+   Live mode provisions only the 4 plans × 2 prices: no pack is on sale without the career service.
+   - It refuses the run unless the four legacy prices and FlacronCV's endpoint are in the account Stripe states.
+   - It only creates FlacronCV-tagged objects, adds missing handled events to FlacronCV's endpoint (keeping existing ones), and creates a new non-default portal configuration with no plan changes.
+   - It fingerprints every non-FlacronCV product and price before and after, then reads everything back.
 2. Read back every product/price; record the 8 plan + approved pack price IDs.
 3. Set `STRIPE_PRICE_<PLAN>_<MONTHLY|ANNUAL>` and only the `STRIPE_PRICE_PACK_*` of packs whose feature passes the availability rules **with live providers** (unset = not on sale; the server also refuses unavailable packs).
 4. Keep the four legacy price variables (`STRIPE_PRO_*`, `STRIPE_ENTERPRISE_*`) — the API refuses to boot live without them.

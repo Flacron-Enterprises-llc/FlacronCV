@@ -25,7 +25,7 @@ import {
 import { USD_ONLY_CHECKOUT } from './checkout-currency';
 
 /** The Stripe events this API acts on. Anything else is acknowledged and ignored. */
-const HANDLED_STRIPE_EVENTS: ReadonlySet<string> = new Set([
+export const HANDLED_STRIPE_EVENTS: ReadonlySet<string> = new Set([
   'checkout.session.completed',
   'checkout.session.expired',
   'invoice.paid',

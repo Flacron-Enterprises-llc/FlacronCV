@@ -5,6 +5,7 @@ import {
   applyCatalog,
   desiredCatalog,
   envLines,
+  livePlanCatalog,
   planCatalog,
 } from './stripe-catalog-provision';
 
@@ -137,13 +138,57 @@ describe('stripe-catalog-provision', () => {
   it('refuses the wrong account and live mode before reading or writing anything else', async () => {
     await expect(planCatalog(new FakeStripe('test', 'acct_someone_else'), ACCOUNT)).rejects.toThrow(/not the expected account/);
     await expect(planCatalog(new FakeStripe('test'), '')).rejects.toThrow(/not the expected account/);
-    const live = new FakeStripe('live');
-    await expect(applyCatalog(live, ACCOUNT)).rejects.toThrow(/TEST mode only/);
+    const live = new FakeStripe('live', ACCOUNT, true);
+    await expect(applyCatalog(live, ACCOUNT)).rejects.toThrow(/explicit live confirmation/);
     expect(live.writes).toBe(0);
     const liveObjects = new FakeStripe('test');
     liveObjects.products.push({ id: 'prod_live', name: 'x', active: true, livemode: true, metadata: null });
     await expect(applyCatalog(liveObjects, ACCOUNT)).rejects.toThrow(/live-mode objects/);
     expect(liveObjects.writes).toBe(0);
+  });
+
+  describe('live mode', () => {
+    const legacy = (): [StripeProductLike, StripePriceLike] => [
+      { id: 'prod_legacy_pro', name: 'FlacronCV - Pro', active: true, livemode: true, metadata: { app_id: 'flacron-cv', fcv_plan: 'pro' } },
+      {
+        id: 'price_legacy_pro_m', product: 'prod_legacy_pro', active: true, livemode: true, currency: 'usd', unit_amount: 2999,
+        type: 'recurring', recurring: { interval: 'month', interval_count: 1 }, lookup_key: 'fcv_pro_monthly', metadata: { app_id: 'flacron-cv', fcv_plan: 'pro' },
+      },
+    ];
+
+    it('provisions only the 4 plans x 2 prices, leaves legacy and other-app objects alone, and is idempotent', async () => {
+      const stripe = new FakeStripe('live', ACCOUNT, true);
+      const [lp, lpr] = legacy();
+      stripe.products.push(lp, { id: 'prod_other', name: 'Other', active: true, livemode: true, metadata: { app_id: 'other-app' } });
+      stripe.prices.push(lpr);
+      const before = JSON.stringify([stripe.products, stripe.prices]);
+      const plan = await planCatalog(stripe, ACCOUNT, livePlanCatalog(), { allowLive: true });
+      expect(plan.conflicts).toEqual([]);
+      expect(counts(plan)).toEqual({ create_product: 4, create_price: 8 });
+      const applied = await applyCatalog(stripe, ACCOUNT, livePlanCatalog(), { allowLive: true });
+      expect(applied.created).toEqual({ products: 4, prices: 8 });
+      expect(applied.env.map(([n]) => n)).toEqual([
+        'STRIPE_PRICE_STARTER_MONTHLY', 'STRIPE_PRICE_STARTER_ANNUAL', 'STRIPE_PRICE_PROFESSIONAL_MONTHLY', 'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
+        'STRIPE_PRICE_CAREER_PRO_MONTHLY', 'STRIPE_PRICE_CAREER_PRO_ANNUAL', 'STRIPE_PRICE_BUSINESS_MONTHLY', 'STRIPE_PRICE_BUSINESS_ANNUAL',
+      ]);
+      // Legacy and other-app objects are byte-for-byte unchanged.
+      expect(JSON.stringify([stripe.products.slice(0, 2), stripe.prices.slice(0, 1)])).toBe(
+        JSON.stringify([JSON.parse(before)[0], JSON.parse(before)[1]]),
+      );
+      const writes = stripe.writes;
+      const again = await applyCatalog(stripe, ACCOUNT, livePlanCatalog(), { allowLive: true });
+      expect(again.created).toEqual({ products: 0, prices: 0 });
+      expect(stripe.writes).toBe(writes);
+    });
+
+    it('refuses test-mode objects in a live run and a live object created by a test run', async () => {
+      const stripe = new FakeStripe('live', ACCOUNT, true);
+      stripe.prices.push({ ...legacy()[1], livemode: false });
+      await expect(planCatalog(stripe, ACCOUNT, livePlanCatalog(), { allowLive: true })).rejects.toThrow(/test-mode objects/);
+      const mismatched = new FakeStripe('test', ACCOUNT, true); // Stripe would answer with live objects
+      await expect(applyCatalog(mismatched, ACCOUNT, livePlanCatalog())).rejects.toThrow(/wrong mode/);
+      expect(mismatched.writes).toBe(1);
+    });
   });
 
   it('never touches untagged or other-app objects, even with FlacronCV-like names or identifiers', async () => {
