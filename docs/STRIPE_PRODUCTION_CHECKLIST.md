@@ -35,6 +35,11 @@ Stripe states write implies read; exact Dashboard labels were not all confirmed 
 
 Store it in AWS Secrets Manager as the API's `STRIPE_SECRET_KEY`; never in Git, chat or tickets.
 
+Confirmed during local test-mode work (17 Nov 2026, Flacron Enterprises LLC):
+- Stripe's own refusals name the internal permission, e.g. `customer_write` ("Customers Write") for customer creation at checkout. A refused call surfaces as a 500 in the API log (redacted) — check the key's permissions first.
+- Editing a restricted key in the Dashboard more than once silently dropped previously granted permissions twice. After every save, re-open the key and confirm the full list.
+- The application key never needs Balance, Webhook endpoints, Test clocks, Refunds: Write or Debugging tools. Local testing used separate keys: a listener key (`stripecli_session_write`, "Debugging tools: Write") and a test-tools key (test clocks, refunds of test payments, a FlacronCV-only portal configuration). Neither belongs in production.
+
 ## 2. Live catalog (after G1, G5)
 
 1. `npx ts-node --transpile-only apps/api/scripts/stripe-provision-catalog.ts --account=<live acct>` is **test-mode only by design**; a live run needs a reviewed live variant (same code, explicit `--live` confirmation, owner present). Do not hand-create prices.
