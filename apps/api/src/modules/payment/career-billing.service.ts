@@ -40,6 +40,7 @@ import { currentCaller } from '../career-metering/caller-context';
 import { BillingLedgerService } from './billing-ledger.service';
 import { appIdOf, resolveCheckoutCustomer } from './customer-ownership';
 import { CheckoutCoordinator, DbLike } from './checkout-coordination';
+import { USD_ONLY_CHECKOUT } from './checkout-currency';
 
 /**
  * The career tools (former V2 features) inside V1's own Stripe billing.
@@ -293,6 +294,7 @@ export class CareerBillingService {
         customer: customerId,
         client_reference_id: userId,
         payment_method_types: ['card'],
+        ...USD_ONLY_CHECKOUT,
         line_items: [{ price: priceId, quantity: 1 }],
         mode: 'payment',
         success_url: urls.success,
@@ -338,6 +340,7 @@ export class CareerBillingService {
         customer: customerId,
         client_reference_id: userId,
         payment_method_types: ['card'],
+        ...USD_ONLY_CHECKOUT,
         line_items: [{ price: priceId, quantity: input.quantity }],
         mode: 'subscription',
         success_url: urls.success,

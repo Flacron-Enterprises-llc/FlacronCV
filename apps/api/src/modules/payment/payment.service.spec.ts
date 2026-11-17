@@ -372,7 +372,8 @@ describe('PaymentService', () => {
       expect(usersService.updateSubscription).toHaveBeenCalledWith('uid-stale', { stripeCustomerId: 'cus_Fresh' });
       // ...and the session must be opened against the new id, not the dead one.
       expect(stripe.checkout.sessions.create).toHaveBeenCalledWith(
-        expect.objectContaining({ customer: 'cus_Fresh' }),
+        // USD only: the shared account's Adaptive Pricing is switched off per session.
+        expect.objectContaining({ customer: 'cus_Fresh', adaptive_pricing: { enabled: false } }),
         expect.objectContaining({ idempotencyKey: expect.any(String) }),
       );
     });

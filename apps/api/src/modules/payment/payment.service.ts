@@ -22,6 +22,7 @@ import {
   DbLike,
   sessionIdempotencyKey,
 } from './checkout-coordination';
+import { USD_ONLY_CHECKOUT } from './checkout-currency';
 
 /** The Stripe events this API acts on. Anything else is acknowledged and ignored. */
 const HANDLED_STRIPE_EVENTS: ReadonlySet<string> = new Set([
@@ -622,6 +623,7 @@ export class PaymentService {
         customer: customerId,
         client_reference_id: userId,
         payment_method_types: ['card'],
+        ...USD_ONLY_CHECKOUT,
         line_items: [{ price: priceId, quantity: 1 }],
         mode: 'subscription',
         success_url: ctx.successUrl,

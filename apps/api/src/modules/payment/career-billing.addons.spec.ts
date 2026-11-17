@@ -177,7 +177,7 @@ describe('pack and capacity checkout', () => {
     const result = await make().createPackCheckout('u1', { addonId: 'document_s', expectedAmountCents: 499, idempotencyKey: 'k' }, urls);
     expect(result.sessionId).toBe('cs_new');
     const [params, options] = stripe.checkout.sessions.create.mock.calls[0] as any[];
-    expect(params).toMatchObject({ mode: 'payment', customer: 'cus_shared', line_items: [{ price: PACK_PRICE, quantity: 1 }] });
+    expect(params).toMatchObject({ mode: 'payment', customer: 'cus_shared', line_items: [{ price: PACK_PRICE, quantity: 1 }], adaptive_pricing: { enabled: false } });
     expect(params.metadata).toMatchObject({ product: 'career_pack', addonId: 'document_s', firebaseUid: 'u1', ...APP });
     expect(params.payment_intent_data.metadata).toMatchObject({ product: 'career_pack' });
     expect(options).toEqual({ idempotencyKey: 'career-pack:u1:k' });
@@ -188,7 +188,7 @@ describe('pack and capacity checkout', () => {
     await expect(make().createCapacityCheckout('u1', { addonId: 'saved_search_5', quantity: 2, expectedAmountCents: 299 }, urls)).rejects.toBeInstanceOf(ConflictException);
     await make().createCapacityCheckout('u1', { addonId: 'saved_search_5', quantity: 2, expectedAmountCents: 598 }, urls);
     const [params] = stripe.checkout.sessions.create.mock.calls[0] as any[];
-    expect(params).toMatchObject({ mode: 'subscription', line_items: [{ price: SEARCH_PRICE, quantity: 2 }] });
+    expect(params).toMatchObject({ mode: 'subscription', line_items: [{ price: SEARCH_PRICE, quantity: 2 }], adaptive_pricing: { enabled: false } });
     expect(params.subscription_data.metadata).toMatchObject({ product: 'career_capacity', addonId: 'saved_search_5' });
     await firestore.collection(CAPACITY_SUBSCRIPTIONS).doc('sub_cap').set({ uid: 'u1', addonId: 'saved_search_5', status: 'active' });
     const again = await make().createCapacityCheckout('u1', { addonId: 'saved_search_5', quantity: 1, expectedAmountCents: 299 }, urls).catch((e: unknown) => e);
