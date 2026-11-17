@@ -56,9 +56,22 @@ This prints the image, the price ids (not secrets), and only the **names** of ot
 cd apps/api
 gcloud auth application-default login            # only for the Firestore sample
 node scripts/verify-live-billing.mjs --key-file=PATH\stripe-live-readonly.env \
-  --prices=<the four ids from 4a> --firestore
+  --prices=<the four ids from 4a> --expected-account=<acct_… from your Dashboard URL> --firestore
 ```
-The script: refuses unrestricted, test or writable keys; prints the account id **as stated by Stripe**, the endpoint URL and enabled events (and which events the new code still needs), each legacy price with its subscriber counts by status, and for three sampled subscribers only shortened ids and whether they are found in this account.
+The script sends **only GET requests** to Stripe and reads only three Stripe-id fields from Firestore. It refuses unrestricted, test, and Balance-readable keys, and prints:
+- the account id **as stated by Stripe**;
+- the endpoint URL and enabled events, plus which events the new code still needs;
+- each legacy price with its subscriber counts by status;
+- for three sampled subscribers, only shortened ids and whether they are found in this account.
+
+It ends with **ACCOUNT VERIFIED** only if all of these agree:
+- Stripe's statement of the key's account;
+- the Dashboard account id;
+- the webhook endpoint;
+- the deployed prices;
+- the customers and subscriptions stored by the live API.
+
+Otherwise it ends with **STOP** (or **INCOMPLETE** if a check was skipped). The script cannot test write permissions without writing, so confirm in the Dashboard that every permission on the key is Read or None.
 
 ## 5. What happens after
 The results decide the account. If any check points to a second Stripe account, everything stops for a separate, approved plan; existing subscribers are never moved, cancelled or re-priced. Only after verification: review of the live catalog variant, the live FlacronCV key, webhook events and portal configuration (see `docs/STRIPE_DEPLOYMENT_REVIEW.md`). The Professional trial stays exactly as implemented.
