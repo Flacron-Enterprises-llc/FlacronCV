@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { RedactingLogger } from './common/logging/redacting-logger';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { CORS_ALLOWED_HEADERS } from './cors-allowed-headers';
@@ -46,6 +47,8 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
+    // Every log line is scrubbed of Stripe keys, webhook secrets and bearer tokens.
+    logger: new RedactingLogger(),
   });
 
   // Behind Render's proxy the client IP arrives in X-Forwarded-For. Without

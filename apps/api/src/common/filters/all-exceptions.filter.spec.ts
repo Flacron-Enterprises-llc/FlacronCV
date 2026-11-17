@@ -32,6 +32,9 @@ describe('AllExceptionsFilter', () => {
   it('redactSecrets covers live/test, secret/restricted/publishable keys', () => {
     expect(redactSecrets('a sk_live_ABC b rk_test_XYZ c pk_test_Q d')).toBe('a [redacted-stripe-key] b [redacted-stripe-key] c [redacted-stripe-key] d');
     expect(redactSecrets('no secrets here')).toBe('no secrets here');
+    // Stripe's permission errors mask with dots ("rk_test_...B2DP"); found in a real test-mode run.
+    expect(redactSecrets("The provided key 'rk_test_...B2DP' does not have")).toBe("The provided key '[redacted-stripe-key]' does not have");
+    expect(redactSecrets('key rk_test_****ABCD.')).not.toMatch(/ABCD/);
   });
 
   it('forwards AI refund codes on the 503 body', () => {

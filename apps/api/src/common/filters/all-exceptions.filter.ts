@@ -44,8 +44,9 @@ function isPlain(value: unknown): boolean {
  */
 export function redactSecrets(text: string): string {
   return text
-    .replace(/\b(?:sk|rk|pk)_(?:test|live)_[A-Za-z0-9*]+/g, '[redacted-stripe-key]')
-    .replace(/\bwhsec_[A-Za-z0-9*]+/g, '[redacted-webhook-secret]')
+    // Stripe masks keys as "rk_test_****ABCD" or "rk_test_...ABCD": dots and stars are part of it.
+    .replace(/\b(?:sk|rk|pk)_(?:test|live)_[A-Za-z0-9*.]+/g, '[redacted-stripe-key]')
+    .replace(/\bwhsec_[A-Za-z0-9*.]+/g, '[redacted-webhook-secret]')
     .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, 'Bearer [redacted]');
 }
 
