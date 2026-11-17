@@ -143,10 +143,13 @@ if (args.firestore === 'true') {
     const sub = await stripe(`/v1/subscriptions/${s.stripeSubscriptionId}`);
     const subCustomer = typeof sub.body?.customer === 'string' ? sub.body.customer : sub.body?.customer?.id;
     const price = sub.body?.items?.data?.[0]?.price?.id;
-    const cOk = c.status === 200 && !c.body.deleted && c.body.livemode === true;
+    // 403 = the key may not read customers (unknown), 404 = not in this account. A live subscription of this
+    // account that names the stored customer also proves that customer is in this account.
+    const cUnchecked = c.status === 403;
+    const cOk = (c.status === 200 && !c.body.deleted && c.body.livemode === true) || cUnchecked;
     const sOk = sub.status === 200 && sub.body.livemode === true && subCustomer === s.stripeCustomerId;
     if (cOk && sOk) found++;
-    console.log(`   plan=${s.plan} customer ${short(s.stripeCustomerId)}: ${cOk ? 'found here (live)' : c.status === 200 && c.body.deleted ? 'deleted' : `NOT in this account (${c.status})`}; ` +
+    console.log(`   plan=${s.plan} customer ${short(s.stripeCustomerId)}: ${cUnchecked ? 'not readable by this key (proved via its subscription)' : c.status === 200 && !c.body.deleted && c.body.livemode ? 'found here (live)' : c.status === 200 && c.body.deleted ? 'deleted' : `NOT in this account (${c.status})`}; ` +
       `subscription ${short(s.stripeSubscriptionId)}: ${sub.status === 200 ? `status=${sub.body.status} same customer=${subCustomer === s.stripeCustomerId ? 'yes' : 'NO'} app_id=${sub.body.metadata?.app_id ?? 'none'} on a deployed legacy price=${priceIds.includes(price) ? 'yes' : 'NO'}` : `NOT in this account (${sub.status})`}`);
   }
   note('E. live API\'s stored customers/subscriptions exist here', sample.length ? found === sample.length : false, `${found}/${sample.length}`);
