@@ -6,7 +6,7 @@ import type { Clock } from '../billing/billing.service';
 import { CatalogStore, publishCatalog } from '../billing/catalog';
 import { BillingError } from '../billing/errors';
 import type { Principal } from '../identity/identity.service';
-import { sesSettings } from '../mail/ses-mailer';
+import { sesRoleAvailable, sesSettings } from '../mail/ses-mailer';
 
 /** Fallback when nothing is bound. Health never pings a vendor. */
 export const PROVIDER_HEALTH = [
@@ -42,7 +42,7 @@ export function providerHealthFromEnv(env: NodeJS.ProcessEnv = process.env): Arr
         ? 'configured'
         : 'unconfigured';
   const ses = sesSettings(env);
-  const hasSes = ses.accessKeyId.length > 0 && ses.secretAccessKey.length > 0 && ses.fromEmail.length > 0;
+  const hasSes = ((ses.accessKeyId.length > 0 && ses.secretAccessKey.length > 0) || sesRoleAvailable(env)) && ses.fromEmail.length > 0;
   const delivery = env.MAIL_DELIVERY?.trim().toLowerCase() ?? '';
   const email =
     delivery === 'sandbox' && hasSes
