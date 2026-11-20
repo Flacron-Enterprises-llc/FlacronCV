@@ -329,7 +329,7 @@ export default function SettingsScreen() {
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
-        <View className="bg-white px-5 pt-6 pb-6 border-b border-stone-100">
+        <View className="bg-surface px-5 pt-6 pb-6 border-b border-stone-100">
             <TouchableOpacity
               onPress={() => router.push('/(dashboard)/settings/profile')}
               className="flex-row items-center"
@@ -365,7 +365,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* Usage Stats */}
-        <View className="bg-white mx-4 my-4 rounded-2xl border border-stone-100 p-4">
+        <View className="bg-surface mx-4 my-4 rounded-2xl border border-stone-100 p-4">
           <Text className="font-bold text-stone-800 mb-3">{t('usage.title')}</Text>
           {usageFailed ? (
             <ErrorState
@@ -399,7 +399,7 @@ export default function SettingsScreen() {
           )}
         </View>
 
-        <View className="bg-white mx-4 mb-4 rounded-2xl border border-stone-100 px-4 py-3 flex-row items-center">
+        <View className="bg-surface mx-4 mb-4 rounded-2xl border border-stone-100 px-4 py-3 flex-row items-center">
           <View className="w-8 h-8 rounded-xl bg-stone-100 items-center justify-center me-3">
             <Ionicons name="notifications-outline" size={18} color={colors.stone[500]} />
           </View>
@@ -419,7 +419,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* Email preferences — website Settings > Preferences */}
-        <View className="bg-white mx-4 mb-4 rounded-2xl border border-stone-100 overflow-hidden">
+        <View className="bg-surface mx-4 mb-4 rounded-2xl border border-stone-100 overflow-hidden">
           {EMAIL_PREFERENCE_KEYS.map((key, index) => (
             <View
               key={key}
@@ -449,7 +449,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* Language — website Settings > Preferences > Language */}
-        <View className="bg-white mx-4 mb-4 rounded-2xl border border-stone-100 overflow-hidden">
+        <View className="bg-surface mx-4 mb-4 rounded-2xl border border-stone-100 overflow-hidden">
           <TouchableOpacity
             onPress={() => setLanguageOpen(true)}
             disabled={languageBusy}
@@ -478,7 +478,7 @@ export default function SettingsScreen() {
             <Text className="text-xs font-semibold text-stone-400 uppercase tracking-wide px-1 mb-2">
               {section.title}
             </Text>
-            <View className="bg-white rounded-2xl border border-stone-100 overflow-hidden">
+            <View className="bg-surface rounded-2xl border border-stone-100 overflow-hidden">
               {section.items.map((item, index) => (
                 <TouchableOpacity
                   key={item.label}

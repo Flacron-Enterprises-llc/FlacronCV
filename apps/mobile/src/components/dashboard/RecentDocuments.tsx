@@ -54,7 +54,7 @@ export function RecentDocuments({
     return (
       <View className="gap-3">
         {[1, 2, 3].map((i) => (
-          <View key={i} className="bg-white rounded-xl border border-stone-100 p-4 h-16" />
+          <View key={i} className="bg-surface rounded-xl border border-stone-100 p-4 h-16" />
         ))}
       </View>
     );
@@ -84,7 +84,7 @@ export function RecentDocuments({
                 : `/(dashboard)/cover-letters/${doc.id}`,
             )
           }
-          className="bg-white rounded-xl border border-stone-100 p-4 flex-row items-center active:bg-stone-50"
+          className="bg-surface rounded-xl border border-stone-100 p-4 flex-row items-center active:bg-stone-50"
         >
           <View
             className="w-10 h-10 rounded-xl items-center justify-center me-3 bg-brand-50"

@@ -6,7 +6,7 @@ import { colors } from '../../../theme/colors';
 
 export function Section({ title, help, children }: { title: string; help?: string; children: React.ReactNode }) {
   return (
-    <View className="bg-white rounded-2xl border border-stone-100 p-4 mb-4">
+    <View className="bg-surface rounded-2xl border border-stone-100 p-4 mb-4">
       <Text className="text-base font-bold text-stone-900" accessibilityRole="header">
         {title}
       </Text>
@@ -72,7 +72,7 @@ export function ChipPicker<T extends string>({
               key={option.value || '_none'}
               onPress={() => onChange(option.value)}
               disabled={disabled}
-              className={`rounded-full px-3 min-h-[44px] justify-center border ${selected ? 'bg-brand-600 border-brand-600' : 'bg-white border-stone-200'} ${disabled ? 'opacity-50' : ''}`}
+              className={`rounded-full px-3 min-h-[44px] justify-center border ${selected ? 'bg-brand-600 border-brand-600' : 'bg-surface border-stone-200'} ${disabled ? 'opacity-50' : ''}`}
               accessibilityRole="radio"
               accessibilityState={{ selected, disabled }}
               accessibilityLabel={option.label}

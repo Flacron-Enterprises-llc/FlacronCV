@@ -170,7 +170,7 @@ function Row({
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled}
-      className="bg-white border border-stone-100 rounded-2xl p-4 mb-3 flex-row items-center min-h-[56px]"
+      className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3 flex-row items-center min-h-[56px]"
       accessibilityRole="button"
       accessibilityState={{ disabled: Boolean(disabled) }}
       activeOpacity={0.8}

@@ -89,7 +89,7 @@ export default function AccountDataScreen() {
       <CareerHeader title={t('title')} />
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
-          <View className="bg-white rounded-2xl border border-stone-100 p-5">
+          <View className="bg-surface rounded-2xl border border-stone-100 p-5">
             <Text className="font-bold text-stone-900 text-base">{t('downloadTitle')}</Text>
             <Text className="text-stone-500 text-sm mt-1 leading-5">
               {[t('downloadBody'), CAREER_ENABLED ? t('downloadCareerNote') : null].filter(Boolean).join(' ')}
@@ -101,7 +101,7 @@ export default function AccountDataScreen() {
             </View>
           </View>
 
-          <View className="bg-white rounded-2xl border border-red-100 p-5 mt-4">
+          <View className="bg-surface rounded-2xl border border-red-100 p-5 mt-4">
             <Text className="font-bold text-red-700 text-base">{t('deleteTitle')}</Text>
             <Text className="text-stone-600 text-sm mt-1 leading-5">
               {[t('deleteBody'), CAREER_ENABLED ? t('deleteCareerNote') : null, t('deleteStoreNote')].filter(Boolean).join(' ')}

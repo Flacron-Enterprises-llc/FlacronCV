@@ -173,7 +173,7 @@ export default function NewCVScreen() {
   if (step === 'template') {
     return (
       <SafeAreaView className="flex-1 bg-stone-50">
-        <View className="px-5 pt-4 pb-4 bg-white border-b border-stone-100">
+        <View className="px-5 pt-4 pb-4 bg-surface border-b border-stone-100">
           <View className="flex-row items-center">
             <TouchableOpacity onPress={() => router.back()} className="me-3" accessibilityRole="button" accessibilityLabel={t('new.back')}>
               <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
@@ -213,7 +213,7 @@ export default function NewCVScreen() {
         )}
 
         {selectedTemplateId && (
-          <View className="px-5 py-4 bg-white border-t border-stone-100">
+          <View className="px-5 py-4 bg-surface border-t border-stone-100">
             <Button variant="primary" fullWidth size="lg" onPress={() => setStep('title')}>
               {t('new.continue')}
             </Button>
@@ -224,7 +224,7 @@ export default function NewCVScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-surface">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"

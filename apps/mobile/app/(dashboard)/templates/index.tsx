@@ -70,13 +70,13 @@ export default function TemplatesScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top']}>
-      <View className="px-5 pt-4 pb-3 bg-white border-b border-stone-100">
+      <View className="px-5 pt-4 pb-3 bg-surface border-b border-stone-100">
         <Text className="text-xl font-black text-stone-900">{t('title')}</Text>
         <Text className="text-stone-400 text-sm mt-0.5">{t('subtitle')}</Text>
       </View>
 
       {/* Filter Tabs */}
-      <View className="flex-row px-5 py-3 bg-white gap-2 border-b border-stone-100">
+      <View className="flex-row px-5 py-3 bg-surface gap-2 border-b border-stone-100">
         {(['all', 'free', 'pro'] as FilterTab[]).map((tab) => (
           <TouchableOpacity
             key={tab}

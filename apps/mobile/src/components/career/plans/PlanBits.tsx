@@ -81,7 +81,7 @@ export function Choice({
       <TouchableOpacity
         onPress={() => setOpen((o) => !o)}
         disabled={disabled}
-        className={`border border-stone-200 rounded-xl px-4 min-h-[48px] flex-row items-center bg-white ${disabled ? 'opacity-50' : ''}`}
+        className={`border border-stone-200 rounded-xl px-4 min-h-[48px] flex-row items-center bg-surface ${disabled ? 'opacity-50' : ''}`}
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${current?.label ?? ''}`}
         accessibilityState={{ expanded: open, disabled }}
@@ -92,7 +92,7 @@ export function Choice({
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.stone[500]} />
       </TouchableOpacity>
       {open ? (
-        <View className="border border-stone-200 rounded-xl mt-1 bg-white overflow-hidden" accessibilityRole="radiogroup">
+        <View className="border border-stone-200 rounded-xl mt-1 bg-surface overflow-hidden" accessibilityRole="radiogroup">
           {options.map((option) => {
             const selected = option.value === value;
             return (

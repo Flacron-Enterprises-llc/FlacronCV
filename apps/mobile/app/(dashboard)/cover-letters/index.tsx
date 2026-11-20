@@ -102,7 +102,7 @@ export default function CoverLettersScreen() {
     return (
       <TouchableOpacity
         onPress={() => router.push(`/(dashboard)/cover-letters/${item.id}`)}
-        className="bg-white border border-stone-100 rounded-2xl p-4 mb-3 shadow-sm"
+        className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3 shadow-sm"
         activeOpacity={0.8}
       >
         <View className="flex-row items-start justify-between">
@@ -176,7 +176,7 @@ export default function CoverLettersScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top']}>
-      <View className="px-5 pt-4 pb-4 bg-white border-b border-stone-100">
+      <View className="px-5 pt-4 pb-4 bg-surface border-b border-stone-100">
         <View className="flex-row items-center justify-between">
           <Text className="text-xl font-black text-stone-900">{t('list.title')}</Text>
           <TouchableOpacity onPress={() => router.push('/(dashboard)/cover-letters/new')} className="flex-row items-center bg-brand-600 px-4 py-2 rounded-xl">

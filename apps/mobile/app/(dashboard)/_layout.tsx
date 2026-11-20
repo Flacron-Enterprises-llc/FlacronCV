@@ -6,6 +6,7 @@ import { MaintenanceGate } from '../../src/components/app/MaintenanceGate';
 import { AppTour, AppTourProvider } from '../../src/components/tour/AppTour';
 import { useAuthStore } from '../../src/store/auth-store';
 import { colors } from '../../src/theme/colors';
+import { usePalette } from '../../src/theme/palette';
 import { useT } from '../../src/i18n';
 
 const TAB_ROOTS = new Set(['index', 'cvs', 'cover-letters', 'templates', 'settings']);
@@ -25,6 +26,7 @@ export default function DashboardLayout() {
   const { firebaseUser, isInitialized, legalGate } = useAuthStore();
   const segments = useSegments();
   const hideTabBar = hideTabBarOnNested(segments);
+  const palette = usePalette();
 
   if (isInitialized && (!firebaseUser || legalGate)) {
     return <Redirect href="/(auth)/login" />;
@@ -39,12 +41,13 @@ export default function DashboardLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.brand[600],
-        tabBarInactiveTintColor: colors.stone[400],
+        tabBarInactiveTintColor: palette.muted,
+        sceneStyle: { backgroundColor: palette.page },
         tabBarStyle: hideTabBar
           ? { display: 'none' }
           : {
-              backgroundColor: colors.white,
-              borderTopColor: colors.stone[100],
+              backgroundColor: palette.surface,
+              borderTopColor: palette.border,
             },
         tabBarLabelStyle: {
           fontSize: 10,

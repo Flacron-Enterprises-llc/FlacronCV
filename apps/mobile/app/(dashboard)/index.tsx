@@ -139,7 +139,7 @@ export default function DashboardScreen() {
         }
       >
         {/* Header */}
-        <View className="px-5 pt-4 pb-6 bg-white border-b border-stone-100">
+        <View className="px-5 pt-4 pb-6 bg-surface border-b border-stone-100">
           <View className="flex-row items-center justify-between">
             <View className="flex-1">
               <Text className="text-xl font-bold text-stone-900" numberOfLines={2} accessibilityRole="header">
@@ -179,7 +179,7 @@ export default function DashboardScreen() {
             <View className="flex-row gap-2">
               <TouchableOpacity
                 onPress={() => void resendVerificationEmail()}
-                className="flex-1 rounded-xl bg-white border border-stone-200 py-2.5 items-center"
+                className="flex-1 rounded-xl bg-surface border border-stone-200 py-2.5 items-center"
               >
                 <Text className="text-stone-800 font-semibold text-sm">{t('verifyEmail.resend')}</Text>
               </TouchableOpacity>
@@ -210,8 +210,8 @@ export default function DashboardScreen() {
             />
           ) : usageLoading || !usage ? (
             <View className="flex-row gap-3 mb-6">
-              <View className="flex-1 bg-white rounded-2xl border border-stone-100 p-4 h-28" />
-              <View className="flex-1 bg-white rounded-2xl border border-stone-100 p-4 h-28" />
+              <View className="flex-1 bg-surface rounded-2xl border border-stone-100 p-4 h-28" />
+              <View className="flex-1 bg-surface rounded-2xl border border-stone-100 p-4 h-28" />
             </View>
           ) : (
             <>
@@ -275,7 +275,7 @@ export default function DashboardScreen() {
           </View>
           <TouchableOpacity
             onPress={() => router.push('./jobs')}
-            className="mt-3 bg-white rounded-2xl border border-stone-100 p-4 flex-row items-center"
+            className="mt-3 bg-surface rounded-2xl border border-stone-100 p-4 flex-row items-center"
             activeOpacity={0.8}
           >
             <View className="w-10 h-10 rounded-xl bg-brand-50 items-center justify-center me-3">
@@ -290,7 +290,7 @@ export default function DashboardScreen() {
           {CAREER_ENABLED ? (
             <TouchableOpacity
               onPress={() => router.push('/(dashboard)/career')}
-              className="mt-3 bg-white rounded-2xl border border-stone-100 p-4 flex-row items-center"
+              className="mt-3 bg-surface rounded-2xl border border-stone-100 p-4 flex-row items-center"
               activeOpacity={0.8}
               accessibilityRole="button"
             >
@@ -332,7 +332,7 @@ export default function DashboardScreen() {
 
         {/* Job tracker summary (website RecentActivity). */}
         <View className="px-5 mb-8">
-          <View className="bg-white rounded-2xl border border-stone-100 p-4">
+          <View className="bg-surface rounded-2xl border border-stone-100 p-4">
             <View className="flex-row items-center mb-3">
               <Ionicons name="briefcase-outline" size={18} color={colors.stone[400]} />
               <Text className="font-bold text-stone-900 ms-2" accessibilityRole="header">{t('jobs.title')}</Text>
@@ -377,7 +377,7 @@ export default function DashboardScreen() {
               <View className="flex-row items-center justify-between">
                 <View className="flex-1">
                   <Text className="text-white font-bold text-lg">{t('upgradePlans.title')}</Text>
-                  <Text className="text-brand-100 text-sm mt-1">{tPlans('planIncludes', { plan: planName('starter') })}</Text>
+                  <Text className="text-orange-100 text-sm mt-1">{tPlans('planIncludes', { plan: planName('starter') })}</Text>
                   {planBenefits('starter').slice(0, 4).map((benefit) => (
                     <Text key={benefit} className="text-white text-sm mt-0.5">{'\u2022 '}{benefit}</Text>
                   ))}
@@ -386,7 +386,7 @@ export default function DashboardScreen() {
               </View>
               <TouchableOpacity
                 onPress={() => router.push('/(dashboard)/settings/plans')}
-                className="bg-white mt-4 rounded-xl min-h-[44px] items-center justify-center"
+                className="bg-surface mt-4 rounded-xl min-h-[44px] items-center justify-center"
                 accessibilityRole="button"
               >
                 <Text className="text-brand-600 font-bold">{t('upgradePlans.cta')}</Text>

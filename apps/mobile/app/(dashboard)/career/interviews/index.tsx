@@ -162,7 +162,7 @@ export default function InterviewsScreen() {
           ) : null}
         </View>
 
-        <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-5">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4 mt-5">
           <Text className="font-bold text-stone-900 text-base" accessibilityRole="header">
             {sessions.length > 0 ? t('list.startAnother') : t('list.start')}
           </Text>
@@ -189,7 +189,7 @@ export default function InterviewsScreen() {
                   accessibilityRole="radio"
                   accessibilityState={{ selected: on, checked: on }}
                   accessibilityLabel={label}
-                  className={`min-h-[44px] px-4 justify-center rounded-full border ${on ? 'bg-brand-600 border-brand-600' : 'bg-white border-stone-200'}`}
+                  className={`min-h-[44px] px-4 justify-center rounded-full border ${on ? 'bg-brand-600 border-brand-600' : 'bg-surface border-stone-200'}`}
                 >
                   <Text className={`text-sm font-semibold ${on ? 'text-white' : 'text-stone-700'}`}>{label}</Text>
                 </Pressable>
@@ -235,7 +235,7 @@ export default function InterviewsScreen() {
                   accessibilityRole="radio"
                   accessibilityState={{ selected: on, checked: on }}
                   accessibilityLabel={t('list.stageA11y', { stage: STAGE_LABEL[item] })}
-                  className={`min-h-[44px] px-4 justify-center rounded-full border ${on ? 'bg-brand-600 border-brand-600' : 'bg-white border-stone-200'}`}
+                  className={`min-h-[44px] px-4 justify-center rounded-full border ${on ? 'bg-brand-600 border-brand-600' : 'bg-surface border-stone-200'}`}
                 >
                   <Text className={`text-sm font-semibold ${on ? 'text-white' : 'text-stone-700'}`}>{STAGE_LABEL[item]}</Text>
                 </Pressable>
@@ -254,7 +254,7 @@ export default function InterviewsScreen() {
                   accessibilityRole="radio"
                   accessibilityState={{ selected: on, checked: on }}
                   accessibilityLabel={t('list.questionCountOption', { count })}
-                  className={`min-h-[44px] min-w-[44px] px-3 items-center justify-center rounded-full border ${on ? 'bg-brand-600 border-brand-600' : 'bg-white border-stone-200'}`}
+                  className={`min-h-[44px] min-w-[44px] px-3 items-center justify-center rounded-full border ${on ? 'bg-brand-600 border-brand-600' : 'bg-surface border-stone-200'}`}
                 >
                   <Text className={`text-sm font-semibold ${on ? 'text-white' : 'text-stone-700'}`}>{count}</Text>
                 </Pressable>
@@ -281,7 +281,7 @@ export default function InterviewsScreen() {
         </Text>
         {sessions.length > 0 ? <Text className="text-stone-500 text-xs mb-2 leading-4">{t('list.sessionPickerHint')}</Text> : null}
         {sessions.length === 0 ? (
-          <View className="bg-white border border-stone-100 rounded-2xl p-4">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4">
             <Text className="font-semibold text-stone-800">{t('list.emptyTitle')}</Text>
             <Text className="text-stone-500 text-sm mt-1">{t('list.emptyBody')}</Text>
           </View>
@@ -292,7 +292,7 @@ export default function InterviewsScreen() {
               onPress={() => router.push(`/(dashboard)/career/interviews/${session.id}` as Href)}
               accessibilityRole="button"
               accessibilityLabel={t('list.sessionA11y', { title: session.title, stage: STAGE_LABEL[session.stage], status: sessionStatus(session) })}
-              className="bg-white border border-stone-100 rounded-2xl p-4 mb-3 active:bg-stone-50"
+              className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3 active:bg-stone-50"
             >
               <View className="flex-row items-start justify-between">
                 <Text className="font-bold text-stone-900 flex-1 me-2">{session.title}</Text>
@@ -322,7 +322,7 @@ function LinkRow({ icon, title, body, onPress }: { icon: keyof typeof Ionicons.g
       accessibilityRole="button"
       accessibilityLabel={title}
       accessibilityHint={body}
-      className="bg-white border border-stone-100 rounded-2xl p-4 flex-row items-center active:bg-stone-50"
+      className="bg-surface border border-stone-100 rounded-2xl p-4 flex-row items-center active:bg-stone-50"
     >
       <View className="w-10 h-10 rounded-full bg-brand-100 items-center justify-center me-3">
         <Ionicons name={icon} size={20} color={colors.brand[600]} />
@@ -357,7 +357,7 @@ function OpportunityPicker({
             accessibilityRole="radio"
             accessibilityState={{ selected: on, checked: on }}
             accessibilityLabel={item.organization ? `${item.title}, ${item.organization}` : item.title}
-            className={`min-h-[44px] flex-row items-center rounded-xl border px-3 py-2.5 mb-2 ${on ? 'border-brand-400 bg-brand-50' : 'border-stone-200 bg-white'}`}
+            className={`min-h-[44px] flex-row items-center rounded-xl border px-3 py-2.5 mb-2 ${on ? 'border-brand-400 bg-brand-50' : 'border-stone-200 bg-surface'}`}
           >
             <Ionicons name={on ? 'radio-button-on' : 'radio-button-off'} size={20} color={on ? colors.brand[600] : colors.stone[400]} />
             <View className="flex-1 ms-2">

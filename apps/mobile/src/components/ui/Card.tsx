@@ -11,7 +11,7 @@ export function Card({ children, className, ...props }: CardProps) {
     <View
       {...props}
       className={[
-        'rounded-2xl bg-white border border-stone-100 shadow-sm p-4',
+        'rounded-2xl bg-surface border border-stone-100 shadow-sm p-4',
         className ?? '',
       ].join(' ')}
     >

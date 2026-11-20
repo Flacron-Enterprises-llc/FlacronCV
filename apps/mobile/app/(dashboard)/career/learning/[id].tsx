@@ -185,7 +185,7 @@ export default function LearningPlanScreen() {
             const done = milestoneDone(r, m.id);
             const isAdded = milestoneEvidenceId(r, m.id) !== null;
             return (
-              <View key={m.id} className={`border border-stone-100 rounded-xl p-3 mb-3 ${done ? 'bg-stone-50' : 'bg-white'}`}>
+              <View key={m.id} className={`border border-stone-100 rounded-xl p-3 mb-3 ${done ? 'bg-stone-50' : 'bg-surface'}`}>
                 <TouchableOpacity
                   onPress={() => onToggle(m.id, !done)}
                   className="flex-row items-start min-h-[44px]"
@@ -291,7 +291,7 @@ export default function LearningPlanScreen() {
 }
 
 function Card({ children }: { children: React.ReactNode }) {
-  return <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">{children}</View>;
+  return <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">{children}</View>;
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {

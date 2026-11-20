@@ -87,7 +87,7 @@ export function ProjectBriefCard({ report }: { report: SkillGapReport }) {
   const items = evidence.data?.items ?? [];
 
   return (
-    <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+    <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
       <View className="flex-row flex-wrap items-center gap-2">
         <Text className="flex-1 text-base font-bold text-stone-900" accessibilityRole="header">
           {brief.title}

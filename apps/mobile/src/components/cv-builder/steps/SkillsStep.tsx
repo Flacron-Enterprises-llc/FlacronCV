@@ -179,7 +179,7 @@ export function SkillsStep({ onValidChange }: SkillsStepProps) {
                     'px-3 py-2 rounded-xl border',
                     field.value === level.value
                       ? 'border-brand-600 bg-brand-50'
-                      : 'border-stone-200 bg-white',
+                      : 'border-stone-200 bg-surface',
                   ].join(' ')}
                 >
                   <Text

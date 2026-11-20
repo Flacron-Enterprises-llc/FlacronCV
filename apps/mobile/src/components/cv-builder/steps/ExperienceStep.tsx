@@ -155,7 +155,7 @@ export function ExperienceStep({ onValidChange }: ExperienceStepProps) {
           items.map((item) => (
             <View
               key={item.id}
-              className="bg-white border border-stone-100 rounded-xl p-4 mb-3 shadow-sm"
+              className="bg-surface border border-stone-100 rounded-xl p-4 mb-3 shadow-sm"
             >
               <View className="flex-row items-start justify-between">
                 <View className="flex-1">

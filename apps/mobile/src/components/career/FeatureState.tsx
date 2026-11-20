@@ -107,7 +107,7 @@ export function StateCard({
 }) {
   return (
     <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
-      <View className="bg-white rounded-2xl border border-stone-100 p-5" accessible={!children} accessibilityLabel={!children ? [badge, title, body].filter(Boolean).join('. ') : undefined}>
+      <View className="bg-surface rounded-2xl border border-stone-100 p-5" accessible={!children} accessibilityLabel={!children ? [badge, title, body].filter(Boolean).join('. ') : undefined}>
         <View className="flex-row items-center flex-wrap gap-2">
           <Ionicons name={icon} size={20} color={colors.stone[500]} />
           {badge ? (

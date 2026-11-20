@@ -218,7 +218,7 @@ export default function ScenariosScreen() {
         <Text className="text-stone-500 text-sm mb-4 leading-5">{ts('scenario_help')}</Text>
         {note ? <Note tone={note.tone} text={note.text} /> : null}
 
-        <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
           <Text className="text-base font-bold text-stone-900 mb-2" accessibilityRole="header">
             {ts('scenario_saved_heading')}
           </Text>
@@ -263,7 +263,7 @@ export default function ScenariosScreen() {
         {routes.map((route, index) => {
           const set = (patch: Partial<RouteDraft>) => change(updateRoute(routes, index, patch));
           return (
-            <View key={index} className={`bg-white border rounded-2xl p-4 mb-3 ${formError?.index === index ? 'border-red-300' : 'border-stone-100'}`}>
+            <View key={index} className={`bg-surface border rounded-2xl p-4 mb-3 ${formError?.index === index ? 'border-red-300' : 'border-stone-100'}`}>
               <View className="flex-row items-center justify-between mb-2">
                 <Text className="text-base font-bold text-stone-900" accessibilityRole="header">
                   {ts('route_n', { n: index + 1 })}
@@ -365,7 +365,7 @@ export default function ScenariosScreen() {
 function ResultTable({ result }: { result: ScenarioResult }) {
   const ts = useT('careerPlans.scope');
   return (
-    <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-5" accessibilityLiveRegion="polite">
+    <View className="bg-surface border border-stone-100 rounded-2xl p-4 mt-5" accessibilityLiveRegion="polite">
       <Text className="text-base font-bold text-stone-900 mb-1" accessibilityRole="header">
         {ts('scenario_result_title')}
       </Text>

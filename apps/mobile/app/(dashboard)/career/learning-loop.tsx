@@ -64,7 +64,7 @@ export default function CareerLearningLoopScreen() {
       >
         <Text className="text-stone-500 text-sm mb-4 leading-5">{loopIntro()}</Text>
 
-        <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3">
           <Text className="text-stone-900 text-base leading-6">{view.statement}</Text>
           {view.suggestion ? <Text className="text-stone-700 text-sm leading-5 mt-3">{view.suggestion}</Text> : null}
         </View>
@@ -76,7 +76,7 @@ export default function CareerLearningLoopScreen() {
           </View>
         ) : null}
 
-        <View className="bg-white border border-stone-100 rounded-2xl px-4 py-2 mb-3">
+        <View className="bg-surface border border-stone-100 rounded-2xl px-4 py-2 mb-3">
           {view.stats.map((stat, index) => (
             <View
               key={stat.key}

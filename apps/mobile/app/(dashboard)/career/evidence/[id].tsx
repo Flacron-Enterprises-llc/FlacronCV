@@ -266,7 +266,7 @@ export default function EvidenceItemScreen() {
             <Text className="text-stone-500 text-xs leading-4 mb-4 -mt-2">{evidenceLabelLimit(evidence.evidenceLabel)}</Text>
           ) : null}
 
-          <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
             <Input
               label={t('form.title')}
               value={current.title}
@@ -286,7 +286,7 @@ export default function EvidenceItemScreen() {
                     <TouchableOpacity
                       key={option.value}
                       onPress={() => set('evidenceType', option.value)}
-                      className={`min-h-[44px] px-4 justify-center rounded-xl border ${selected ? 'bg-brand-600 border-brand-600' : 'bg-white border-stone-200'}`}
+                      className={`min-h-[44px] px-4 justify-center rounded-xl border ${selected ? 'bg-brand-600 border-brand-600' : 'bg-surface border-stone-200'}`}
                       accessibilityRole="radio"
                       accessibilityState={{ selected, checked: selected }}
                     >
@@ -405,7 +405,7 @@ export default function EvidenceItemScreen() {
             ) : null}
           </View>
 
-          <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
             <Text className="font-bold text-stone-900 mb-1">{t('facts.title')}</Text>
             <Text className="text-stone-500 text-xs mb-2 leading-4">{t('facts.hint')}</Text>
             {facts.isLoading ? <Text className="text-stone-400 text-sm">{t('facts.loading')}</Text> : null}
@@ -447,7 +447,7 @@ export default function EvidenceItemScreen() {
           ) : null}
 
           {evidence ? (
-            <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-6">
+            <View className="bg-surface border border-stone-100 rounded-2xl p-4 mt-6">
               <Text className="font-bold text-stone-900 mb-1">{t('file.title')}</Text>
               {evidence.attachmentStored ? (
                 <>
@@ -507,7 +507,7 @@ export default function EvidenceItemScreen() {
           ) : null}
 
           {evidence && evidence.verifications?.length ? (
-            <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-6">
+            <View className="bg-surface border border-stone-100 rounded-2xl p-4 mt-6">
               <Text className="font-bold text-stone-900 mb-1">{t('history.title', { count: evidence.verifications.length })}</Text>
               <Text className="text-stone-500 text-xs mb-2 leading-4">{t('history.readOnly')}</Text>
               {verificationRows(evidence.verifications).map((row) => (

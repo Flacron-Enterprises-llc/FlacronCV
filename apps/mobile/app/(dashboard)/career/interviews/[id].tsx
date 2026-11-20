@@ -125,7 +125,7 @@ export default function InterviewSessionScreen() {
         <Text className="text-stone-500 text-xs mt-1 leading-4">{notAScore()}</Text>
 
         {next ? (
-          <View className="bg-white border border-brand-200 rounded-2xl p-4 mt-5">
+          <View className="bg-surface border border-brand-200 rounded-2xl p-4 mt-5">
             <Text className="text-xs font-semibold text-brand-700 uppercase tracking-wide">{t('session.questionOf', { number: next.index, total: progress.total })}</Text>
             <Text className="text-stone-900 text-base mt-2 leading-6" accessibilityRole="header">
               {next.prompt}
@@ -140,7 +140,7 @@ export default function InterviewSessionScreen() {
               accessibilityLabel={t('session.answerLabel')}
               placeholder={t('session.answerPlaceholder')}
               placeholderTextColor={colors.stone[400]}
-              className="bg-white border border-stone-200 rounded-xl px-3 py-2.5 text-base text-stone-900 min-h-[120px]"
+              className="bg-surface border border-stone-200 rounded-xl px-3 py-2.5 text-base text-stone-900 min-h-[120px]"
             />
             {answerError ? (
               <Text className="text-warning text-sm mt-2 leading-5" accessibilityLiveRegion="polite">
@@ -159,7 +159,7 @@ export default function InterviewSessionScreen() {
           {t('session.questions')}
         </Text>
         {pairedAnswers(data).map(({ question, answer: given }) => (
-          <View key={question.index} className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
+          <View key={question.index} className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3">
             <Text className="text-xs text-stone-400">{t('session.questionN', { number: question.index })}</Text>
             <Text className="text-stone-900 font-semibold mt-1 leading-5">{question.prompt}</Text>
             {given ? (
@@ -218,7 +218,7 @@ export default function InterviewSessionScreen() {
           accessibilityLabel={t('session.noteLabel')}
           placeholder={t('session.notePlaceholder')}
           placeholderTextColor={colors.stone[400]}
-          className="bg-white border border-stone-200 rounded-xl px-3 py-2.5 text-base text-stone-900 min-h-[100px]"
+          className="bg-surface border border-stone-200 rounded-xl px-3 py-2.5 text-base text-stone-900 min-h-[100px]"
         />
         {noteError ? <Text className="text-warning text-sm mt-2 leading-5">{noteError}</Text> : null}
         <Button className="mt-4" fullWidth onPress={saveChallenge} loading={challenge.isPending}>
@@ -260,7 +260,7 @@ function SessionReportCard({ session }: { session: InterviewSession }) {
       <Text key={item} className="text-stone-700 text-sm leading-5 mt-0.5">{`• ${item}`}</Text>
     ));
   return (
-    <View className="bg-white border border-success-bg rounded-2xl p-4 mt-5">
+    <View className="bg-surface border border-success-bg rounded-2xl p-4 mt-5">
       <Text className="font-bold text-stone-900" accessibilityRole="header">
         {t('session.reportTitle')}
       </Text>

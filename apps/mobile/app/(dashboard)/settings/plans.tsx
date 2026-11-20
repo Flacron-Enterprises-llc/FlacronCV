@@ -90,7 +90,7 @@ export default function PlansScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
+      <View className="flex-row items-center px-5 pt-4 pb-3 bg-surface border-b border-stone-100">
         <TouchableOpacity
           onPress={() => router.back()}
           className="me-3 h-11 w-11 -ms-2 items-center justify-center"
@@ -111,7 +111,7 @@ export default function PlansScreen() {
         <Text className="text-stone-600 text-sm leading-5">{t('lede')}</Text>
 
         {user && owner !== 'none' ? (
-          <View className="mt-4 bg-white rounded-2xl border border-stone-100 p-4">
+          <View className="mt-4 bg-surface rounded-2xl border border-stone-100 p-4">
             <Text className="text-stone-900 font-semibold">{t('currentPlan')}: {planName(current)}</Text>
             {isLegacyPlan(current) ? (
               <Text className="text-stone-600 text-sm mt-1 leading-5">{t('legacyNote', { tier: planName(equivalentPlan(current)) })}</Text>

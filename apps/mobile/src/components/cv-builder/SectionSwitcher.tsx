@@ -38,7 +38,7 @@ export function SectionSwitcher({ sections, selected, onSelect }: SectionSwitche
                 accessibilityLabel={t('sections.editA11y', { title: s.title })}
                 className={[
                   'px-4 rounded-full border justify-center',
-                  active ? 'border-brand-500 bg-brand-50' : 'border-stone-200 bg-white',
+                  active ? 'border-brand-500 bg-brand-50' : 'border-stone-200 bg-surface',
                 ].join(' ')}
                 style={{ minHeight: 44 }}
               >

@@ -147,7 +147,7 @@ export function ProjectsStep({ onValidChange }: ProjectsStepProps) {
           </View>
         ) : (
           items.map((item) => (
-            <View key={item.id} className="bg-white border border-stone-100 rounded-xl p-4 mb-3">
+            <View key={item.id} className="bg-surface border border-stone-100 rounded-xl p-4 mb-3">
               <View className="flex-row items-start justify-between">
                 <View className="flex-1">
                   <Text className="font-bold text-stone-900">{item.name}</Text>

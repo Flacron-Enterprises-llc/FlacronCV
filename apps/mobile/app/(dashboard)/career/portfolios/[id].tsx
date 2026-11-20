@@ -212,7 +212,7 @@ export default function PortfolioScreen() {
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
           {saved && pill ? (
-            <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+            <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
               <View className="flex-row items-center justify-between mb-2">
                 <Pill label={pill.label} tone={pill.tone} />
                 <Text className="text-stone-500 text-xs">{visits ?? t('editor.visitsHidden')}</Text>
@@ -249,7 +249,7 @@ export default function PortfolioScreen() {
                     {qr.isLoading ? (
                       <ActivityIndicator color={colors.brand[600]} />
                     ) : qr.data ? (
-                      <View className="bg-white p-2 rounded-xl border border-stone-100">
+                      <View className="bg-surface p-2 rounded-xl border border-stone-100">
                         <SvgXml xml={qr.data.svg} width={200} height={200} />
                       </View>
                     ) : (
@@ -305,7 +305,7 @@ export default function PortfolioScreen() {
             </Text>
           ) : null}
 
-          <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
             <Input
               label={t('editor.titleLabel')}
               value={current.title}
@@ -353,7 +353,7 @@ export default function PortfolioScreen() {
           </View>
 
           {!isNew ? (
-            <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+            <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
               <Text className="font-bold text-stone-900 mb-1">{t('editor.workTitle')}</Text>
               <Text className="text-stone-500 text-xs mb-2 leading-5">{t('editor.workHint')}</Text>
               {evidence.isLoading ? <ActivityIndicator color={colors.brand[600]} /> : null}
@@ -400,7 +400,7 @@ export default function PortfolioScreen() {
           ) : null}
 
           {!isNew ? (
-            <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+            <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
               <Text className="font-bold text-stone-900 mb-1">{t('editor.sectionsTitle')}</Text>
               <Text className="text-stone-500 text-xs mb-2 leading-5">{t('editor.sectionsHint')}</Text>
               {PORTFOLIO_SECTION_KEYS.map((key) => (

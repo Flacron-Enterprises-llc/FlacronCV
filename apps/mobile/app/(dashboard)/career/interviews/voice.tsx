@@ -292,7 +292,7 @@ export default function VoicePracticeScreen() {
         ) : null}
 
         {/* Consent: ticking gives it, unticking withdraws it, never mid-recording. */}
-        <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-4">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4 mt-4">
           <Pressable
             onPress={toggleConsent}
             disabled={busy || live}
@@ -319,7 +319,7 @@ export default function VoicePracticeScreen() {
                   accessibilityRole="radio"
                   accessibilityState={{ selected: on, disabled: locked }}
                   accessibilityLabel={t('list.stageA11y', { stage: STAGE_LABEL[value] })}
-                  className={`min-h-[44px] px-3 rounded-xl border justify-center ${on ? 'border-brand-400 bg-brand-50' : 'border-stone-200 bg-white'}`}
+                  className={`min-h-[44px] px-3 rounded-xl border justify-center ${on ? 'border-brand-400 bg-brand-50' : 'border-stone-200 bg-surface'}`}
                 >
                   <Text className={`text-sm ${on ? 'text-brand-700 font-semibold' : 'text-stone-700'}`}>{STAGE_LABEL[value]}</Text>
                 </Pressable>
@@ -354,7 +354,7 @@ export default function VoicePracticeScreen() {
         </View>
 
         {session ? (
-          <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-4">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4 mt-4">
             <View className="flex-row items-start justify-between">
               <Text className="font-bold text-stone-900 flex-1 me-2">
                 {session.stage ? `${session.title} · ${STAGE_LABEL[session.stage]}` : session.title}
@@ -414,7 +414,7 @@ export default function VoicePracticeScreen() {
                   accessibilityLabel={recording.transcriptSource === 'pending' ? t('voice.typeTranscript') : t('voice.savedTranscript')}
                   placeholder={t('voice.transcriptPlaceholder')}
                   placeholderTextColor={colors.stone[400]}
-                  className={`bg-white border rounded-xl px-3 py-2.5 text-base text-stone-900 min-h-[100px] ${correctionDirty ? 'border-brand-400' : 'border-stone-200'}`}
+                  className={`bg-surface border rounded-xl px-3 py-2.5 text-base text-stone-900 min-h-[100px] ${correctionDirty ? 'border-brand-400' : 'border-stone-200'}`}
                 />
                 <Text className="text-stone-500 text-xs mt-1 leading-4">{t(transcriptHelpKey(recording.transcriptSource))}</Text>
                 <Button className="mt-3" fullWidth variant="outline" onPress={saveCorrection} loading={correct.isPending} disabled={!correctionDirty || busy}>
@@ -441,7 +441,7 @@ export default function VoicePracticeScreen() {
             ) : null}
           </View>
         ) : (
-          <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-4">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4 mt-4">
             <Text className="font-semibold text-stone-800">{t('voice.emptyTitle')}</Text>
             <Text className="text-stone-500 text-sm mt-1 leading-5">{t('voice.emptyBody')}</Text>
           </View>
@@ -464,7 +464,7 @@ export default function VoicePracticeScreen() {
                   accessibilityRole="button"
                   accessibilityState={{ selected: on, disabled: busy || locked }}
                   accessibilityLabel={`${KIND_LABEL[item.kind]}: ${item.title}, ${state}`}
-                  className={`min-h-[44px] rounded-2xl border p-3 mb-2 ${on ? 'border-brand-400 bg-brand-50' : 'border-stone-100 bg-white'}`}
+                  className={`min-h-[44px] rounded-2xl border p-3 mb-2 ${on ? 'border-brand-400 bg-brand-50' : 'border-stone-100 bg-surface'}`}
                 >
                   <Text className="text-stone-900 text-sm font-semibold">
                     {`${KIND_LABEL[item.kind]} · ${item.title}${item.stage ? ` · ${STAGE_LABEL[item.stage]}` : ''}`}
@@ -476,7 +476,7 @@ export default function VoicePracticeScreen() {
           </>
         ) : null}
 
-        <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-4">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4 mt-4">
           <Text className="font-bold text-stone-900 mb-3" accessibilityRole="header">
             {t('voice.negotiationTitle')}
           </Text>

@@ -146,7 +146,7 @@ export default function CareerProfileScreen() {
             </Text>
             {items.length > 0 ? <Text className="text-stone-700 text-sm font-semibold mb-4 leading-5">{countsLine(items)}</Text> : <View className="mb-4" />}
 
-            <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
+            <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3">
               <View className="flex-row items-center mb-1">
                 <Ionicons name="document-text-outline" size={18} color={colors.stone[500]} />
                 <Text className="font-bold text-stone-900 ms-2">{t('import.title')}</Text>
@@ -179,7 +179,7 @@ export default function CareerProfileScreen() {
         }
         ListFooterComponent={
           <View>
-          <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-2">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4 mt-2">
             <Text className="font-bold text-stone-900 mb-1">{t('screen.prefsTitle')}</Text>
             {profile.isLoading ? (
               <Text className="text-stone-500 text-sm">{tc('loading')}</Text>
@@ -227,7 +227,7 @@ export default function CareerProfileScreen() {
           const confirmed = item.confirmation === 'confirmed';
           const uncertain = Object.keys(item.uncertain ?? {}).length > 0;
           return (
-            <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
+            <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3">
               <TouchableOpacity onPress={() => openFact(item.id)} accessibilityRole="button" accessibilityLabel={t('screen.editA11y', { title })} accessibilityHint={t('screen.editHint')}>
                 <View className="flex-row items-center justify-between mb-1">
                   <Text className="text-xs font-semibold text-stone-500 uppercase tracking-wide">{FACT_TYPE_LABEL[item.factType] ?? item.factType}</Text>
@@ -287,7 +287,7 @@ export default function CareerProfileScreen() {
           <TouchableOpacity
             key={type}
             onPress={() => addFact(type)}
-            className="flex-row items-center justify-between min-h-[48px] px-4 mb-2 rounded-xl border border-stone-200 bg-white"
+            className="flex-row items-center justify-between min-h-[48px] px-4 mb-2 rounded-xl border border-stone-200 bg-surface"
             accessibilityRole="button"
             accessibilityLabel={t('chooser.addA11y', { type: typeLabel(type) })}
           >
@@ -450,7 +450,7 @@ function ImportSheet({
         placeholderTextColor={colors.stone[400]}
         accessibilityLabel={t('import.textA11y')}
         editable={!run.isPending && !reading}
-        className={`bg-white border ${inputError ? 'border-red-400' : 'border-stone-200'} rounded-xl px-3 py-3 text-base text-stone-900 min-h-[220px]`}
+        className={`bg-surface border ${inputError ? 'border-red-400' : 'border-stone-200'} rounded-xl px-3 py-3 text-base text-stone-900 min-h-[220px]`}
       />
       {inputError ? (
         <Text className="mt-1 text-xs text-red-500" accessibilityRole="alert">
@@ -471,7 +471,7 @@ function ImportSheet({
 /** Website profile cards "Sharing and portfolio" and "Career mode": both are part of this version. */
 function LinkCard({ title, body, link, onPress }: { title: string; body: string; link: string; onPress: () => void }) {
   return (
-    <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-3">
+    <View className="bg-surface border border-stone-100 rounded-2xl p-4 mt-3">
       <Text className="font-bold text-stone-900 mb-1" accessibilityRole="header">
         {title}
       </Text>
@@ -488,7 +488,7 @@ function Chip({ label, selected, onPress, radio = false }: { label: string; sele
   return (
     <TouchableOpacity
       onPress={onPress}
-      className={`px-4 min-h-[44px] justify-center rounded-full border ${selected ? 'border-brand-600 bg-brand-50' : 'border-stone-200 bg-white'}`}
+      className={`px-4 min-h-[44px] justify-center rounded-full border ${selected ? 'border-brand-600 bg-brand-50' : 'border-stone-200 bg-surface'}`}
       accessibilityRole={radio ? 'radio' : 'checkbox'}
       accessibilityState={radio ? { selected, checked: selected } : { checked: selected }}
     >

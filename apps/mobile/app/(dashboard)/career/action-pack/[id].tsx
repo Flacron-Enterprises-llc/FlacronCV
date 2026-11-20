@@ -430,7 +430,7 @@ export default function ActionPackScreen() {
 }
 
 function Card({ children }: { children: React.ReactNode }) {
-  return <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">{children}</View>;
+  return <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">{children}</View>;
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {

@@ -225,7 +225,7 @@ export default function CareerResumeScreen() {
           <Text className="text-stone-500 text-xs">{t('resume.versionLanguage', { number: version.versionNumber, language: resume.data.language.toUpperCase() })}</Text>
         </View>
 
-        <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
           <TouchableOpacity
             onPress={() => setPicker('template')}
             disabled={busy}
@@ -298,7 +298,7 @@ export default function CareerResumeScreen() {
           </View>
         ) : null}
 
-        <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-5">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-5">
           <Text className="font-semibold text-stone-900">{t('resume.newVersionHeading')}</Text>
           <Text className="text-stone-500 text-xs mt-0.5 mb-3 leading-4">{[t('resume.newVersionNote'), creditLine(credit)].filter(Boolean).join(' ')}</Text>
           <View className="flex-row gap-3">
@@ -336,7 +336,7 @@ export default function CareerResumeScreen() {
           ) : null}
         </View>
 
-        <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-5">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-5">
           <Text className="font-semibold text-stone-900">{th('title')}</Text>
           <Text className="text-stone-500 text-xs mt-0.5 mb-3 leading-4">{th('body')}</Text>
           <View className="self-start">
@@ -369,7 +369,7 @@ export default function CareerResumeScreen() {
                     multiline
                     editable={!version.document}
                     accessibilityLabel={t('resume.lineA11y', { section: FACT_TYPE_LABEL[section.factType] ?? section.factType })}
-                    className={`bg-white border rounded-xl px-3 py-2.5 text-base text-stone-900 ${value !== line.text ? 'border-brand-400' : 'border-stone-200'}`}
+                    className={`bg-surface border rounded-xl px-3 py-2.5 text-base text-stone-900 ${value !== line.text ? 'border-brand-400' : 'border-stone-200'}`}
                     placeholderTextColor={colors.stone[400]}
                   />
                   {line.uncertain ? <Text className="text-warning text-xs mt-1">{t('resume.markedUncertain')}</Text> : null}
@@ -379,7 +379,7 @@ export default function CareerResumeScreen() {
           </View>
         ))}
 
-        <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
           <Text className="font-semibold text-stone-900 mb-2">{t('resume.versions')}</Text>
           {versions.isLoading ? <Text className="text-stone-500 text-sm">{tc('loading')}</Text> : null}
           {versions.error ? <Text className="text-stone-500 text-sm">{careerErrorMessage(versions.error, t('resume.versionsFailed'))}</Text> : null}
@@ -405,7 +405,7 @@ export default function CareerResumeScreen() {
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {content}
         {version ? (
-          <View className="absolute bottom-0 start-0 end-0 bg-white border-t border-stone-100 px-5 py-3">
+          <View className="absolute bottom-0 start-0 end-0 bg-surface border-t border-stone-100 px-5 py-3">
             {dirty ? (
               <View className="flex-row gap-3">
                 <View className="flex-1">

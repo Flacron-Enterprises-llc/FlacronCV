@@ -111,7 +111,7 @@ export default function LearningScreen() {
         <Text className="text-stone-500 text-sm mb-4 leading-5">
           {t('learning.intro')}
         </Text>
-        <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4 flex-row items-center">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4 flex-row items-center">
           <View className="flex-1 me-3">
             <Text className="text-stone-500 text-xs font-semibold uppercase tracking-wide">{t('learning.credits')}</Text>
             <Text className="text-2xl font-black text-stone-900 mt-0.5">{credits ?? '—'}</Text>
@@ -135,7 +135,7 @@ export default function LearningScreen() {
               <TouchableOpacity
                 key={report.id}
                 onPress={() => router.push(`/(dashboard)/career/learning/${report.id}` as Href)}
-                className="bg-white border border-stone-100 rounded-2xl p-4 mb-3 flex-row items-center min-h-[56px]"
+                className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3 flex-row items-center min-h-[56px]"
                 accessibilityRole="button"
                 accessibilityLabel={t('learning.itemA11y', { role: report.targetRole, percent: report.progress.percent })}
                 activeOpacity={0.8}
@@ -261,7 +261,7 @@ function StepButton({ icon, label, disabled, onPress }: { icon: 'add' | 'remove'
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled}
-      className={`h-11 w-11 rounded-xl border border-stone-200 bg-white items-center justify-center ${disabled ? 'opacity-40' : ''}`}
+      className={`h-11 w-11 rounded-xl border border-stone-200 bg-surface items-center justify-center ${disabled ? 'opacity-40' : ''}`}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled }}

@@ -47,7 +47,7 @@ export default function CareerRemindersScreen() {
   } else if (reminders.error || !reminders.data) {
     content = (
       <View className="p-5">
-        <View className="bg-white border border-stone-100 rounded-2xl p-4">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4">
           <Text className="text-stone-700 text-sm">{t('reminders_error')}</Text>
           <Button variant="outline" size="sm" className="mt-3 self-start" onPress={() => void reminders.refetch()}>
             {tc('retry')}
@@ -70,7 +70,7 @@ export default function CareerRemindersScreen() {
           </View>
         ) : null}
         {list.upcoming.length === 0 ? (
-          <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3">
             <Text className="text-stone-500 text-sm">{t('reminders_empty')}</Text>
           </View>
         ) : (
@@ -132,7 +132,7 @@ function ReminderRow({
   const route = reminderRoute(reminder.link);
   const title = <Text className={`text-sm ${route ? 'text-brand-700 font-semibold' : 'text-stone-900 font-semibold'}`}>{reminder.title}</Text>;
   return (
-    <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
+    <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3">
       <View className="flex-row items-start">
         <View className="flex-1 me-2">
           {route ? (

@@ -121,7 +121,7 @@ export default function CVEditorScreen() {
   // first spun forever and never reached ErrorState.
   if (loadError) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1 bg-surface" edges={['top', 'bottom']}>
         <ErrorState message={t('editor.loadError')} onRetry={() => router.back()} />
       </SafeAreaView>
     );
@@ -129,7 +129,7 @@ export default function CVEditorScreen() {
 
   if (cvLoading || sectionsLoading || hydratedId !== id) {
     return (
-      <SafeAreaView className="flex-1 bg-white items-center justify-center">
+      <SafeAreaView className="flex-1 bg-surface items-center justify-center">
         <ActivityIndicator size="large" color={colors.brand[600]} />
         <Text className="text-stone-500 mt-3">{t('editor.loading')}</Text>
       </SafeAreaView>
@@ -139,7 +139,7 @@ export default function CVEditorScreen() {
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
       {/* Top Bar */}
-      <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-stone-100">
+      <View className="flex-row items-center justify-between px-4 py-3 bg-surface border-b border-stone-100">
         <TouchableOpacity onPress={() => router.back()} className="flex-row items-center">
           <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
         </TouchableOpacity>

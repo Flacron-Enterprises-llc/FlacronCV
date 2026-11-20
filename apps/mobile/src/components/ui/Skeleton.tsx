@@ -42,7 +42,7 @@ export function Skeleton({ width, height = 16, rounded = false, className, style
 
 export function SkeletonCard() {
   return (
-    <View className="bg-white rounded-2xl border border-stone-100 p-4 mb-3">
+    <View className="bg-surface rounded-2xl border border-stone-100 p-4 mb-3">
       <Skeleton height={20} width="60%" className="mb-2" />
       <Skeleton height={14} width="80%" className="mb-1" />
       <Skeleton height={14} width="50%" />

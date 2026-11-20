@@ -192,7 +192,7 @@ export default function StarStoriesScreen() {
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={stories.isRefetching} onRefresh={() => void stories.refetch()} tintColor={colors.brand[600]} />}
       >
-        <View className="bg-white border border-stone-100 rounded-2xl p-4">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4">
           <Text className="font-bold text-stone-900 text-base" accessibilityRole="header">
             {editing ? t('stories.editingTitle') : t('stories.newTitle')}
           </Text>
@@ -216,7 +216,7 @@ export default function StarStoriesScreen() {
                 textAlignVertical="top"
                 accessibilityLabel={STORY_FIELD_LABEL[field]}
                 placeholderTextColor={colors.stone[400]}
-                className={`bg-white border rounded-xl px-3 py-2.5 text-base text-stone-900 min-h-[72px] ${errors[field] ? 'border-red-400' : 'border-stone-200'}`}
+                className={`bg-surface border rounded-xl px-3 py-2.5 text-base text-stone-900 min-h-[72px] ${errors[field] ? 'border-red-400' : 'border-stone-200'}`}
               />
               {errors[field] ? <Text className="mt-1 text-xs text-red-500">{errors[field]}</Text> : null}
             </View>
@@ -239,7 +239,7 @@ export default function StarStoriesScreen() {
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: on }}
                   accessibilityLabel={`${FACT_TYPE_LABEL[fact.factType] ?? fact.factType}: ${summary.title}`}
-                  className={`min-h-[44px] flex-row items-center rounded-xl border px-3 py-2 mb-2 ${on ? 'border-brand-400 bg-brand-50' : 'border-stone-200 bg-white'}`}
+                  className={`min-h-[44px] flex-row items-center rounded-xl border px-3 py-2 mb-2 ${on ? 'border-brand-400 bg-brand-50' : 'border-stone-200 bg-surface'}`}
                 >
                   <Ionicons name={on ? 'checkbox' : 'square-outline'} size={20} color={on ? colors.brand[600] : colors.stone[400]} />
                   <View className="flex-1 ms-2">
@@ -275,13 +275,13 @@ export default function StarStoriesScreen() {
           </View>
         ) : null}
         {stories.data.items.length === 0 ? (
-          <View className="bg-white border border-stone-100 rounded-2xl p-4">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4">
             <Text className="font-semibold text-stone-800">{t('stories.emptyTitle')}</Text>
             <Text className="text-stone-500 text-sm mt-1">{t('stories.emptyBody')}</Text>
           </View>
         ) : (
           stories.data.items.map((story) => (
-            <View key={story.id} className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
+            <View key={story.id} className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3">
               {STORY_FIELDS.map((field) => (
                 <View key={field} className="mb-2">
                   <Text className="text-xs font-semibold text-stone-500 uppercase tracking-wide">{STORY_FIELD_LABEL[field]}</Text>

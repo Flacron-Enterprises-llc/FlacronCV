@@ -183,7 +183,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-surface">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
@@ -213,7 +213,7 @@ export default function RegisterScreen() {
 
           {/* Form Card */}
           <View className="px-6 -mt-4">
-            <View className="bg-white rounded-3xl border border-stone-100 shadow-sm p-6">
+            <View className="bg-surface rounded-3xl border border-stone-100 shadow-sm p-6">
               {/* Google Sign-Up — only rendered when the platform client ID is configured */}
               {isGoogleSignInAvailable() && (
                 <>

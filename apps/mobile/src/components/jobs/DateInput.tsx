@@ -66,7 +66,7 @@ export function DateInput({
               <Pressable
                 key={days}
                 onPress={() => onChange(day)}
-                className={`min-h-[44px] px-3 me-2 mt-1 rounded-full border items-center justify-center ${value === day ? 'bg-brand-50 border-brand-500' : 'bg-white border-stone-200'}`}
+                className={`min-h-[44px] px-3 me-2 mt-1 rounded-full border items-center justify-center ${value === day ? 'bg-brand-50 border-brand-500' : 'bg-surface border-stone-200'}`}
                 accessibilityRole="button"
                 accessibilityLabel={`${label}: ${text}`}
                 hitSlop={4}

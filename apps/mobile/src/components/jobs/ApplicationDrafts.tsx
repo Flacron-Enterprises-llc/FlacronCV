@@ -130,7 +130,7 @@ function DraftButtons({ job, types }: { job: JobApplication; types: ApplicationD
               multiline
               scrollEnabled
               accessibilityLabel={t('draft_label')}
-              className="bg-white border border-stone-200 rounded-xl px-3 py-2.5 text-sm text-stone-900 min-h-[180px] max-h-[320px]"
+              className="bg-surface border border-stone-200 rounded-xl px-3 py-2.5 text-sm text-stone-900 min-h-[180px] max-h-[320px]"
               textAlignVertical="top"
             />
             <View className="gap-2 mt-3">

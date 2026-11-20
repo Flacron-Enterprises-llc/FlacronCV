@@ -41,7 +41,7 @@ export function FeatureStateBadge({ state }: { state: FeatureState }) {
 export function IntervalToggle({ value, onChange }: { value: BillingInterval; onChange: (next: BillingInterval) => void }) {
   const t = useT('plans');
   return (
-    <View className="bg-white rounded-2xl border border-stone-100 p-1 flex-row" accessibilityRole="tablist" accessibilityLabel={t('intervalLabel')}>
+    <View className="bg-surface rounded-2xl border border-stone-100 p-1 flex-row" accessibilityRole="tablist" accessibilityLabel={t('intervalLabel')}>
       {(['monthly', 'annual'] as const).map((interval) => {
         const selected = value === interval;
         return (
@@ -92,7 +92,7 @@ export function PlanCard({
   const name = planName(plan);
   return (
     <View
-      className={`rounded-2xl p-5 mb-4 bg-white ${recommended ? 'border-2 border-brand-500' : isCurrent ? 'border-2 border-success' : 'border border-stone-200'}`}
+      className={`rounded-2xl p-5 mb-4 bg-surface ${recommended ? 'border-2 border-brand-500' : isCurrent ? 'border-2 border-success' : 'border border-stone-200'}`}
       accessibilityLabel={name}
     >
       <View className="flex-row items-center flex-wrap gap-2">
@@ -196,7 +196,7 @@ export function PlanComparisonList({
   const t = useT('plans');
   const [shown, setShown] = useState<PlanId>(initialPlan ?? RECOMMENDED_PLAN);
   return (
-    <View className="bg-white rounded-2xl border border-stone-100 p-4">
+    <View className="bg-surface rounded-2xl border border-stone-100 p-4">
       <Text className="font-bold text-stone-900 text-lg" accessibilityRole="header">
         {t('compareTitle')}
       </Text>
@@ -208,7 +208,7 @@ export function PlanComparisonList({
             <TouchableOpacity
               key={plan}
               onPress={() => setShown(plan)}
-              className={`rounded-full px-4 min-h-[44px] items-center justify-center border ${selected ? 'bg-brand-600 border-brand-600' : 'bg-white border-stone-200'}`}
+              className={`rounded-full px-4 min-h-[44px] items-center justify-center border ${selected ? 'bg-brand-600 border-brand-600' : 'bg-surface border-stone-200'}`}
               accessibilityRole="tab"
               accessibilityState={{ selected }}
             >
@@ -268,7 +268,7 @@ export function PlanDefinitions() {
   const t = useT('plans');
   const [open, setOpen] = useState(false);
   return (
-    <View className="bg-white rounded-2xl border border-stone-100 p-4">
+    <View className="bg-surface rounded-2xl border border-stone-100 p-4">
       <TouchableOpacity
         onPress={() => setOpen((v) => !v)}
         className="flex-row items-center justify-between min-h-[44px]"

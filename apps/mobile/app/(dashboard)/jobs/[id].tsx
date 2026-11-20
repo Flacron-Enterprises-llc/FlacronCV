@@ -37,7 +37,7 @@ export default function EditJobScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-surface" edges={['top', 'bottom']}>
       <JobForm mode="edit" jobId={id} initialJob={job} />
     </SafeAreaView>
   );

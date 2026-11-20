@@ -124,7 +124,7 @@ export default function JobsScreen() {
     const progress = checklistProgress(item);
     const names = { position: item.position, company: item.company };
     return (
-      <View className="bg-white border border-stone-100 rounded-2xl mb-3 overflow-hidden">
+      <View className="bg-surface border border-stone-100 rounded-2xl mb-3 overflow-hidden">
         <TouchableOpacity
           onPress={() => router.push(`./${item.id}`)}
           className="p-4 pb-1"
@@ -217,7 +217,7 @@ export default function JobsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <View className="px-5 pt-4 pb-3 bg-white border-b border-stone-100">
+      <View className="px-5 pt-4 pb-3 bg-surface border-b border-stone-100">
         <View className="flex-row items-center justify-between mb-3">
           <View className="flex-row items-center flex-1 me-3">
             <TouchableOpacity
@@ -250,7 +250,7 @@ export default function JobsScreen() {
         <View className="flex-row mt-3 gap-2">
           <TouchableOpacity
             onPress={() => setSortOpen(true)}
-            className="flex-1 flex-row items-center justify-between bg-white border border-stone-200 rounded-xl px-3 min-h-[44px]"
+            className="flex-1 flex-row items-center justify-between bg-surface border border-stone-200 rounded-xl px-3 min-h-[44px]"
             accessibilityRole="button"
             accessibilityLabel={t('list.sortByLabel', { label: sortLabel })}
           >
@@ -305,7 +305,7 @@ export default function JobsScreen() {
                 onPress={() => setFilter(value)}
                 className={[
                   'flex-row items-center px-3 py-1.5 rounded-full border',
-                  selected ? 'bg-brand-600 border-brand-600' : 'bg-white border-stone-200',
+                  selected ? 'bg-brand-600 border-brand-600' : 'bg-surface border-stone-200',
                 ].join(' ')}
                 accessibilityRole="button"
                 accessibilityLabel={`${label}, ${count}`}

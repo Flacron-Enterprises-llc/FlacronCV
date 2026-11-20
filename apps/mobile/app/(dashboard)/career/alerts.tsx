@@ -147,7 +147,7 @@ export default function CareerAlertsScreen() {
         <Text className="text-stone-500 text-sm mb-4 leading-5">{tier.text}</Text>
         <Pressable
           onPress={() => router.push('/(dashboard)/career/reminders' as Href)}
-          className="bg-white border border-stone-100 rounded-2xl p-4 mb-4 flex-row items-center min-h-[56px]"
+          className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4 flex-row items-center min-h-[56px]"
           accessibilityRole="link"
         >
           <Ionicons name="alarm-outline" size={20} color={colors.stone[500]} />
@@ -158,7 +158,7 @@ export default function CareerAlertsScreen() {
           <Ionicons name="chevron-forward" size={18} color={colors.stone[400]} style={RTL_FLIP} />
         </Pressable>
 
-        <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4 flex-row items-center">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4 flex-row items-center">
           <Ionicons name="notifications-outline" size={20} color={colors.stone[500]} />
           <Text className="flex-1 ms-3 text-stone-700 text-sm">
             {balance.remaining === 0
@@ -186,7 +186,7 @@ export default function CareerAlertsScreen() {
           </View>
         ) : null}
         {list.data.items.length === 0 ? (
-          <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3">
             <Text className="font-bold text-stone-900">{t('screen.emptyTitle')}</Text>
             <Text className="text-stone-500 text-sm mt-1 leading-5">
               {t('screen.emptyBody')}
@@ -231,7 +231,7 @@ function SectionTitle({ title, hint }: { title: string; hint?: string }) {
 }
 
 function Card({ children }: { children: React.ReactNode }) {
-  return <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">{children}</View>;
+  return <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3">{children}</View>;
 }
 
 function Note({ text, tone = 'info' }: { text: string | null; tone?: 'info' | 'error' }) {
@@ -251,7 +251,7 @@ function Chip({ label, selected, onPress, disabled }: { label: string; selected:
       accessibilityRole="radio"
       accessibilityState={{ selected, disabled }}
       className={`min-h-[44px] px-3 me-2 mb-2 rounded-full border items-center justify-center ${
-        selected ? 'bg-brand-50 border-brand-500' : 'bg-white border-stone-200'
+        selected ? 'bg-brand-50 border-brand-500' : 'bg-surface border-stone-200'
       } ${disabled ? 'opacity-50' : ''}`}
     >
       <Text className={`text-sm ${selected ? 'text-brand-700 font-semibold' : 'text-stone-700'}`}>{label}</Text>
@@ -307,7 +307,7 @@ function AlertCard({ item }: { item: AlertItem }) {
     router.push(route as Href);
   };
   return (
-    <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
+    <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3">
       <View className="flex-row items-start">
         <Pressable onPress={() => open(listing)} className="flex-1 me-2 min-h-[44px]" accessibilityRole="link" accessibilityLabel={t('screen.openA11y', { name: [item.title, item.organization].filter(Boolean).join(', ') })}>
           <Text className="font-bold text-brand-700">{item.title}</Text>

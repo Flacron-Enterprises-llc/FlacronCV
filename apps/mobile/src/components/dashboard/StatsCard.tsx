@@ -12,7 +12,7 @@ interface StatsCardProps {
 
 export function StatsCard({ label, value, icon, subtitle }: StatsCardProps) {
   return (
-    <View className="flex-1 bg-white rounded-2xl border border-stone-100 p-4 shadow-sm">
+    <View className="flex-1 bg-surface rounded-2xl border border-stone-100 p-4 shadow-sm">
       <View
         className="mb-3 h-10 w-10 items-center justify-center rounded-xl"
         style={{ backgroundColor: colors.brand[50] }}

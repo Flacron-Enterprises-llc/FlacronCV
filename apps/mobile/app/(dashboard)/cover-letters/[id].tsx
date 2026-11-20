@@ -381,7 +381,7 @@ export default function CoverLetterEditorScreen() {
 
   if (error) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1 bg-surface" edges={['top', 'bottom']}>
         <View className="flex-row items-center px-4 py-3 border-b border-stone-100">
           <TouchableOpacity onPress={() => router.back()} className="me-3" accessibilityRole="button" accessibilityLabel={tc('back')}>
             <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
@@ -398,7 +398,7 @@ export default function CoverLetterEditorScreen() {
 
   if (isLoading || hydratedId !== id || !coverLetter) {
     return (
-      <SafeAreaView className="flex-1 bg-white items-center justify-center">
+      <SafeAreaView className="flex-1 bg-surface items-center justify-center">
         <ActivityIndicator size="large" color={colors.brand[600]} />
       </SafeAreaView>
     );
@@ -411,7 +411,7 @@ export default function CoverLetterEditorScreen() {
   const paragraphs = rewriteOpen && !paragraphDraft ? splitParagraphs(coverLetter.content) : [];
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-surface" edges={['top', 'bottom']}>
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-stone-100">
         <TouchableOpacity
           onPress={() => router.back()}

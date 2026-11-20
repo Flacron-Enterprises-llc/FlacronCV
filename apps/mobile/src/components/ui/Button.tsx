@@ -22,7 +22,7 @@ interface ButtonProps extends PressableProps {
 }
 
 const variantClasses: Record<Variant, string> = {
-  primary: 'bg-brand-600 active:bg-brand-700',
+  primary: 'bg-brand-600 active:bg-[#c2410c]',
   secondary: 'bg-stone-800 active:bg-stone-700',
   outline: 'border border-stone-300 bg-transparent active:bg-stone-50',
   ghost: 'bg-transparent active:bg-stone-100',

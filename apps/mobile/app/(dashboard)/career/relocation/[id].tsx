@@ -164,7 +164,7 @@ export default function CareerLocationEditorScreen() {
               <Text className="text-sm text-red-700">{error}</Text>
             </View>
           ) : null}
-          <View className="bg-white border border-stone-100 rounded-2xl p-4">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4">
             <Input
               label={t('editor.placeLabel')}
               value={current.place}
@@ -335,7 +335,7 @@ function Choices<T extends string>({
             <TouchableOpacity
               key={option.value}
               onPress={() => onChange(option.value)}
-              className={`min-h-[44px] px-3 justify-center rounded-xl border ${selected ? 'bg-brand-50 border-brand-600' : 'bg-white border-stone-200'}`}
+              className={`min-h-[44px] px-3 justify-center rounded-xl border ${selected ? 'bg-brand-50 border-brand-600' : 'bg-surface border-stone-200'}`}
               accessibilityRole="radio"
               accessibilityState={{ selected, checked: selected }}
               accessibilityLabel={option.label}

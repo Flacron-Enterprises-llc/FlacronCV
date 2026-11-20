@@ -98,7 +98,7 @@ function Chip({ label, selected, onPress, locked, hint, accessibilityLabel }: Ch
 }
 
 function Card({ children }: { children: React.ReactNode }) {
-  return <View className="bg-white rounded-2xl border border-stone-100 p-4 mb-4">{children}</View>;
+  return <View className="bg-surface rounded-2xl border border-stone-100 p-4 mb-4">{children}</View>;
 }
 
 export default function CVDesignScreen() {
@@ -215,7 +215,7 @@ export default function CVDesignScreen() {
   };
 
   const header = (
-    <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
+    <View className="flex-row items-center px-5 pt-4 pb-3 bg-surface border-b border-stone-100">
       <TouchableOpacity
         onPress={() => router.back()}
         className="me-3 w-11 h-11 items-center justify-center -ms-3"

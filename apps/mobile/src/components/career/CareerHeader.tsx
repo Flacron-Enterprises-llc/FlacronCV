@@ -11,7 +11,7 @@ export function CareerHeader({ title, subtitle, right }: { title: string; subtit
   const router = useRouter();
   const t = useT('career');
   return (
-    <View className="px-5 pt-4 pb-3 bg-white border-b border-stone-100">
+    <View className="px-5 pt-4 pb-3 bg-surface border-b border-stone-100">
       <View className="flex-row items-center">
         <TouchableOpacity
           onPress={() => router.back()}

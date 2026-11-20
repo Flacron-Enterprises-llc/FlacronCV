@@ -102,7 +102,7 @@ export function ArrangeSectionsStep({ onValidChange }: { onValidChange: (v: bool
               <View
                 key={section.id}
                 className={[
-                  'bg-white border rounded-2xl p-3 mb-3',
+                  'bg-surface border rounded-2xl p-3 mb-3',
                   section.isVisible ? 'border-stone-100' : 'border-dashed border-stone-300',
                 ].join(' ')}
               >

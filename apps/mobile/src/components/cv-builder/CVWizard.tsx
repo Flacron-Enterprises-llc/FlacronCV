@@ -191,7 +191,7 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
   return (
     <View className="flex-1 bg-stone-50">
       {/* Progress Header */}
-      <View className="px-5 pt-4 pb-3 bg-white border-b border-stone-100">
+      <View className="px-5 pt-4 pb-3 bg-surface border-b border-stone-100">
         <TouchableOpacity
           onPress={() => setStepPickerOpen(true)}
           accessibilityRole="button"
@@ -219,7 +219,7 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
       </View>
 
       {/* Step indicator dots */}
-      <View className="flex-row justify-center gap-1.5 py-3 bg-white border-b border-stone-100">
+      <View className="flex-row justify-center gap-1.5 py-3 bg-surface border-b border-stone-100">
         {STEPS.map((step, index) => (
           <View
             key={step.id}
@@ -268,7 +268,7 @@ export function CVWizard({ cvId, onFinish }: CVWizardProps) {
       </Modal>
 
       {/* Navigation Buttons */}
-      <View className="flex-row gap-3 px-5 py-4 bg-white border-t border-stone-100">
+      <View className="flex-row gap-3 px-5 py-4 bg-surface border-t border-stone-100">
         {currentStep > 0 && (
           <TouchableOpacity
             onPress={handleBack}

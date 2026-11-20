@@ -50,7 +50,7 @@ export default function CareerServicesScreen() {
         ListHeaderComponent={
           <>
             <View
-              className="bg-white border border-stone-100 rounded-2xl p-4 mb-4"
+              className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4"
               accessible
               accessibilityLabel={`${tb('scope.comingSoon')}. ${tb('scope.servicesSoonTitle')}. ${tb('scope.servicesSoonBody')}`}
             >
@@ -65,7 +65,7 @@ export default function CareerServicesScreen() {
         }
         ListEmptyComponent={<EmptyState icon="people-outline" title={SERVICES_COPY.empty} />}
         renderItem={({ item }) => (
-          <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3">
             <View className="flex-row items-start justify-between">
               <View className="flex-1 me-2">
                 <Text className="font-bold text-stone-900">{item.name}</Text>

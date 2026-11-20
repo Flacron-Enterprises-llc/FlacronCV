@@ -63,7 +63,7 @@ export function AppTour() {
         }}
       >
         <View
-          className="bg-white rounded-2xl border border-stone-200 flex-row items-center ps-4 pe-1 py-1"
+          className="bg-surface rounded-2xl border border-stone-200 flex-row items-center ps-4 pe-1 py-1"
           style={{ elevation: 6, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
         >
           <View className="flex-1 py-2" accessible accessibilityLabel={t('minimizedLabel', { progress, title })}>
@@ -107,7 +107,7 @@ export function AppTour() {
         <View
           accessibilityViewIsModal
           accessibilityLabel={t('dialogLabel')}
-          className="bg-white rounded-t-3xl px-5 pt-3"
+          className="bg-surface rounded-t-3xl px-5 pt-3"
           style={{ paddingBottom: insets.bottom + 16, maxHeight: windowHeight * 0.85 }}
         >
           <View className="items-center pb-3">

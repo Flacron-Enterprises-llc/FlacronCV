@@ -104,7 +104,7 @@ export default function NewCareerWritingScreen() {
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
       <CareerHeader title={tk('shared.writeLetterOrText')} subtitle={t('newWriting.subtitle')} />
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
-        <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
           <Text className="text-sm font-semibold text-stone-700 mb-2">{t('newWriting.whatToWrite')}</Text>
           <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup">
             {WRITING_TYPE_OPTIONS.map((option) => (
@@ -113,7 +113,7 @@ export default function NewCareerWritingScreen() {
           </View>
         </View>
         {type === 'cover_letter' ? (
-          <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
             <Text className="text-sm font-semibold text-stone-700 mb-1">{t('newWriting.letterLayout')}</Text>
             <Text className="text-stone-500 text-xs mb-3 leading-4">{t('newWriting.letterLayoutNote')}</Text>
             <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup">
@@ -123,7 +123,7 @@ export default function NewCareerWritingScreen() {
             </View>
           </View>
         ) : null}
-        <View className="bg-white border border-stone-100 rounded-2xl p-4">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4">
           <Text className="text-sm font-semibold text-stone-700 mb-1">{t('newWriting.forOpportunity')}</Text>
           <Text className="text-stone-500 text-xs mb-3 leading-4">{t('newWriting.pickOpportunity')}</Text>
           <View className="gap-2" accessibilityRole="radiogroup">
@@ -144,7 +144,7 @@ export default function NewCareerWritingScreen() {
           {opportunities.error ? <Text className="text-stone-500 text-xs mt-2">{t('newWriting.oppsFailed')}</Text> : null}
         </View>
         {takesWritingContext(type) ? (
-          <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-4">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4 mt-4">
             <Text className="text-sm font-semibold text-stone-700 mb-1">{t('newWriting.notesTitle')}</Text>
             <Text className="text-stone-500 text-xs mb-3 leading-4">
               {isTargetedWritingType(type) && opportunityId === null ? t('newWriting.notesNeeded') : t('newWriting.notesHelp')}
@@ -186,7 +186,7 @@ export default function NewCareerWritingScreen() {
           </View>
         ) : null}
       </ScrollView>
-      <View className="absolute bottom-0 start-0 end-0 bg-white border-t border-stone-100 px-5 py-3">
+      <View className="absolute bottom-0 start-0 end-0 bg-surface border-t border-stone-100 px-5 py-3">
         <Button fullWidth onPress={onWrite} loading={create.isPending} disabled={notConnected}>
           {t('newWriting.writeFromFacts')}
         </Button>
@@ -202,7 +202,7 @@ function Choice({ label, selected, accent, onPress }: { label: string; selected:
       accessibilityRole="radio"
       accessibilityState={{ selected, checked: selected }}
       accessibilityLabel={label}
-      className={`min-h-[44px] px-3 py-2 rounded-xl border flex-row items-center ${selected ? 'border-brand-500 bg-brand-50' : 'border-stone-200 bg-white'}`}
+      className={`min-h-[44px] px-3 py-2 rounded-xl border flex-row items-center ${selected ? 'border-brand-500 bg-brand-50' : 'border-stone-200 bg-surface'}`}
       activeOpacity={0.8}
     >
       {accent ? <View style={{ backgroundColor: accent }} className="w-3 h-3 rounded-full me-2" /> : null}

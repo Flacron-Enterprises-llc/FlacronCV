@@ -114,7 +114,7 @@ export default function ActionPacksScreen() {
         <Text className="text-stone-500 text-sm mb-4 leading-5">
           {t('actionPack.intro')}
         </Text>
-        <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4 flex-row items-center">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4 flex-row items-center">
           <View className="flex-1 me-3">
             <Text className="text-stone-500 text-xs font-semibold uppercase tracking-wide">{t('actionPack.credits')}</Text>
             <Text className="text-2xl font-black text-stone-900 mt-0.5">{credits ?? '—'}</Text>
@@ -135,7 +135,7 @@ export default function ActionPacksScreen() {
                 <TouchableOpacity
                   key={pack.id}
                   onPress={() => router.push(`/(dashboard)/career/action-pack/${pack.id}` as Href)}
-                  className="bg-white border border-stone-100 rounded-2xl p-4 mb-3 flex-row items-center min-h-[56px]"
+                  className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3 flex-row items-center min-h-[56px]"
                   accessibilityRole="button"
                   accessibilityLabel={t('actionPack.itemA11y', {
                     title: pack.vacancySnapshot.title,
@@ -201,7 +201,7 @@ export default function ActionPacksScreen() {
                   key={opp.id}
                   onPress={() => setSelected(opp.id)}
                   disabled={create.isPending}
-                  className={`border rounded-2xl p-4 mb-2 flex-row items-center min-h-[56px] ${isSelected ? 'border-brand-500 bg-brand-50' : 'border-stone-200 bg-white'}`}
+                  className={`border rounded-2xl p-4 mb-2 flex-row items-center min-h-[56px] ${isSelected ? 'border-brand-500 bg-brand-50' : 'border-stone-200 bg-surface'}`}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: isSelected, checked: isSelected, disabled: create.isPending }}
                   accessibilityLabel={`${opp.title}, ${organizationName(opp.organization)}`}

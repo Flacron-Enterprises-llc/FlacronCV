@@ -82,7 +82,7 @@ export default function EvidenceListScreen() {
           return (
             <TouchableOpacity
               onPress={() => router.push(`/(dashboard)/career/evidence/${encodeURIComponent(item.id)}` as Href)}
-              className="bg-white border border-stone-100 rounded-2xl p-4 mb-3"
+              className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3"
               accessibilityRole="button"
               accessibilityLabel={`${item.title}, ${evidenceTypeLabel(item.evidenceType)}, ${label.text.toLowerCase()}`}
               accessibilityHint={t('list.itemHint')}

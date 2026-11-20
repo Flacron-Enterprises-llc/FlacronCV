@@ -164,7 +164,7 @@ export default function ATSCheckScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
+      <View className="flex-row items-center px-5 pt-4 pb-3 bg-surface border-b border-stone-100">
         <TouchableOpacity onPress={() => router.back()} className="me-3" accessibilityLabel={t('shared.goBack')}>
           <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
         </TouchableOpacity>
@@ -213,7 +213,7 @@ export default function ATSCheckScreen() {
           </>
         ) : (
           <>
-            <View className="items-center rounded-2xl border border-stone-100 bg-white py-6 mb-5">
+            <View className="items-center rounded-2xl border border-stone-100 bg-surface py-6 mb-5">
               <Text className="text-4xl font-black" style={{ color: scoreTint(result.score) }}>
                 {result.score}
                 <Text className="text-xl font-bold text-stone-400">/100</Text>

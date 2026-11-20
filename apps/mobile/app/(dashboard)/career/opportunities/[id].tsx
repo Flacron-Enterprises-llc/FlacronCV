@@ -152,7 +152,7 @@ function ListingCard({ item, stale }: { item: OpportunityDetail; stale: boolean 
           {source ? <SourceLink url={source} /> : null}
         </View>
       ) : null}
-      <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+      <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
         <View className="flex-row items-start justify-between">
           <Text className="text-stone-500 text-sm flex-1 me-2">{item.organization ?? notStated()}</Text>
           <Pill label={item.label === 'expired' ? tk('shared.expiredPill') : tk('shared.openPill')} tone={item.label === 'expired' ? 'default' : 'success'} />
@@ -211,7 +211,7 @@ function TrustCard({ item, trust }: { item: OpportunityDetail; trust: ReturnType
   };
 
   return (
-    <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+    <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
       <Text className="font-bold text-stone-900 text-base" accessibilityRole="header">
         {t('trust.title')}
       </Text>
@@ -264,7 +264,7 @@ function TrustCard({ item, trust }: { item: OpportunityDetail; trust: ReturnType
               <TouchableOpacity
                 key={option.value}
                 onPress={() => setReason(option.value)}
-                className={`flex-row items-center min-h-[44px] px-3 mb-2 rounded-xl border ${selected ? 'border-brand-500 bg-brand-50' : 'border-stone-200 bg-white'}`}
+                className={`flex-row items-center min-h-[44px] px-3 mb-2 rounded-xl border ${selected ? 'border-brand-500 bg-brand-50' : 'border-stone-200 bg-surface'}`}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: selected }}
                 accessibilityLabel={option.label}
@@ -283,7 +283,7 @@ function TrustCard({ item, trust }: { item: OpportunityDetail; trust: ReturnType
           maxLength={REPORT_NOTES_MAX}
           textAlignVertical="top"
           accessibilityLabel={t('report.notes')}
-          className="bg-white border border-stone-200 rounded-xl px-3 py-2.5 text-base text-stone-900 min-h-[96px]"
+          className="bg-surface border border-stone-200 rounded-xl px-3 py-2.5 text-base text-stone-900 min-h-[96px]"
           placeholderTextColor={colors.stone[400]}
         />
         <Text className="text-stone-400 text-xs mt-1 mb-3">{t('report.hint')}</Text>
@@ -326,7 +326,7 @@ function CompareCard({ item }: { item: OpportunityDetail }) {
 
   if (!feature.on) {
     return (
-      <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+      <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
         <Text className="font-bold text-stone-900 text-base">{t('compare.title')}</Text>
         <Text className="text-stone-500 text-sm mt-1">{t('compare.notInPlan')}</Text>
       </View>
@@ -369,7 +369,7 @@ function CompareCard({ item }: { item: OpportunityDetail }) {
   };
 
   return (
-    <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+    <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
       <Text className="font-bold text-stone-900 text-base" accessibilityRole="header">
         {t('compare.title')}
       </Text>
@@ -391,7 +391,7 @@ function CompareCard({ item }: { item: OpportunityDetail }) {
                 key={choice.versionId}
                 onPress={() => setVersionId(choice.versionId)}
                 disabled={create.isPending}
-                className={`flex-row items-center min-h-[44px] px-3 mb-2 rounded-xl border ${on ? 'border-brand-500 bg-brand-50' : 'border-stone-200 bg-white'}`}
+                className={`flex-row items-center min-h-[44px] px-3 mb-2 rounded-xl border ${on ? 'border-brand-500 bg-brand-50' : 'border-stone-200 bg-surface'}`}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: on, disabled: create.isPending }}
                 accessibilityLabel={`${choice.title}, ${choice.language}`}
@@ -520,7 +520,7 @@ function ActionsCard({ item }: { item: OpportunityDetail }) {
   };
 
   return (
-    <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+    <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
       <Text className="font-bold text-stone-900 text-base mb-3" accessibilityRole="header">
         {to('actions_title')}
       </Text>

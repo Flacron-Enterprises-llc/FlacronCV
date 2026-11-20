@@ -83,7 +83,7 @@ export default function CareerPlansScreen() {
                 key={plan}
                 onPress={() => setPicked(plan)}
                 className={`flex-row items-center rounded-full px-4 min-h-[44px] border ${
-                  selected ? 'bg-brand-600 border-brand-600' : isMine ? 'bg-brand-50 border-brand-500' : 'bg-white border-stone-200'
+                  selected ? 'bg-brand-600 border-brand-600' : isMine ? 'bg-brand-50 border-brand-500' : 'bg-surface border-stone-200'
                 }`}
                 accessibilityRole="tab"
                 accessibilityState={{ selected }}
@@ -98,7 +98,7 @@ export default function CareerPlansScreen() {
           })}
         </View>
 
-        <View className={`bg-white rounded-2xl p-5 mt-4 ${mine ? 'border-2 border-brand-500' : 'border border-stone-100'}`}>
+        <View className={`bg-surface rounded-2xl p-5 mt-4 ${mine ? 'border-2 border-brand-500' : 'border border-stone-100'}`}>
           <View className="flex-row items-center flex-wrap gap-2">
             <Text className="text-lg font-black text-stone-900 me-1" accessibilityRole="header">
               {careerPlanName(shown)}
@@ -154,7 +154,7 @@ function AreaStates({ access }: { access: CareerAccessView }) {
       </Text>
       <Text className="text-stone-500 text-sm mt-1 leading-5">{t('mobile.areasHelp')}</Text>
       {careerLinkRows(access).map((section) => (
-        <View key={section.key} className="bg-white rounded-2xl border border-stone-100 mt-3 overflow-hidden">
+        <View key={section.key} className="bg-surface rounded-2xl border border-stone-100 mt-3 overflow-hidden">
           <Text className="text-xs font-semibold uppercase tracking-wide text-stone-500 px-4 pt-3 pb-1">{linkLabel(`group${section.key[0].toUpperCase()}${section.key.slice(1)}`)}</Text>
           {section.links.map((link) => {
             const badge = stateLabel(link.state);

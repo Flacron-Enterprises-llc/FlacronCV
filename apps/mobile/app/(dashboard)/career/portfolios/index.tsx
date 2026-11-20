@@ -99,7 +99,7 @@ export default function PortfolioListScreen() {
           return (
             <TouchableOpacity
               onPress={() => router.push(`/(dashboard)/career/portfolios/${encodeURIComponent(item.id)}` as Href)}
-              className="bg-white border border-stone-100 rounded-2xl p-4 mb-3"
+              className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3"
               accessibilityRole="button"
               accessibilityLabel={`${item.title}, ${pill.label.toLowerCase()}${visits ? `, ${visits}` : ''}`}
               accessibilityHint={t('list.openHint')}

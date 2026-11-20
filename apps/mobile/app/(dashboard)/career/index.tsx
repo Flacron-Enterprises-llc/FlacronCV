@@ -112,7 +112,7 @@ export default function CareerOverviewScreen() {
         contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.brand[600]} />}
       >
-        <View className="bg-white rounded-2xl border border-stone-100 p-5" accessible accessibilityLabel={`${copy.title}. ${copy.body}`}>
+        <View className="bg-surface rounded-2xl border border-stone-100 p-5" accessible accessibilityLabel={`${copy.title}. ${copy.body}`}>
           <View className="flex-row items-center justify-between">
             <Text className="text-lg font-black text-stone-900 flex-1 me-2">{copy.title}</Text>
             {copy.badge ? <Pill label={copy.badge} tone={copy.badgeKind === 'test' ? 'warning' : copy.badgeKind === 'ending' ? 'warning' : 'success'} /> : null}
@@ -128,7 +128,7 @@ export default function CareerOverviewScreen() {
         </View>
 
         {active ? (
-          <View className="bg-white rounded-2xl border border-stone-100 p-5 mt-4">
+          <View className="bg-surface rounded-2xl border border-stone-100 p-5 mt-4">
             <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide">{t('overview.credits')}</Text>
             {credits ? (
               <>
@@ -188,7 +188,7 @@ function AreaRow({ area, enabled, onOpen }: { area: CareerArea; enabled: boolean
     return (
       <TouchableOpacity
         onPress={() => onOpen(area.route as string)}
-        className="bg-white rounded-2xl border border-stone-100 p-4 mb-3 flex-row items-center min-h-[56px]"
+        className="bg-surface rounded-2xl border border-stone-100 p-4 mb-3 flex-row items-center min-h-[56px]"
         accessibilityRole="button"
         activeOpacity={0.8}
       >
@@ -221,7 +221,7 @@ function OverviewSummary({
   const tc = useT('common');
   if (!overview) {
     return (
-      <View className="bg-white rounded-2xl border border-stone-100 p-5 mt-4">
+      <View className="bg-surface rounded-2xl border border-stone-100 p-5 mt-4">
         <Text className="text-stone-500 text-sm">{loading ? tc('loading') : t('loadError')}</Text>
       </View>
     );
@@ -242,9 +242,9 @@ function OverviewSummary({
         activeOpacity={0.85}
       >
         <View className="flex-1 me-3">
-          <Text className="text-brand-100 text-xs font-semibold uppercase tracking-wide">{t('nextTitle')}</Text>
+          <Text className="text-orange-100 text-xs font-semibold uppercase tracking-wide">{t('nextTitle')}</Text>
           <Text className="text-white text-lg font-black mt-1">{label}</Text>
-          <Text className="text-brand-100 text-xs mt-1 leading-4">{t('nextBody')}</Text>
+          <Text className="text-orange-100 text-xs mt-1 leading-4">{t('nextBody')}</Text>
         </View>
         <Ionicons name="arrow-forward" size={22} color="#ffffff" style={RTL_FLIP} />
       </TouchableOpacity>
@@ -260,7 +260,7 @@ function OverviewSummary({
       {recent ? (
         <TouchableOpacity
           onPress={() => onOpen(`/(dashboard)/career/documents/resume/${recent.id}`)}
-          className="bg-white rounded-2xl border border-stone-100 p-4 mb-3 flex-row items-center min-h-[56px]"
+          className="bg-surface rounded-2xl border border-stone-100 p-4 mb-3 flex-row items-center min-h-[56px]"
           accessibilityRole="button"
           accessibilityLabel={t('openDraftA11y', { title: recent.title })}
           activeOpacity={0.8}
@@ -387,7 +387,7 @@ function CoachCard({ left, onOpen }: { left: number; onOpen: (route: string) => 
 
 function SummaryCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <View className="bg-white rounded-2xl border border-stone-100 p-4 mb-3">
+    <View className="bg-surface rounded-2xl border border-stone-100 p-4 mb-3">
       <Text className="font-bold text-stone-900 mb-1.5" accessibilityRole="header">
         {title}
       </Text>
@@ -402,7 +402,7 @@ function PlansLink({ onOpen }: { onOpen: () => void }) {
   return (
     <TouchableOpacity
       onPress={onOpen}
-      className="bg-white rounded-2xl border border-stone-100 p-4 mt-3 flex-row items-center min-h-[56px]"
+      className="bg-surface rounded-2xl border border-stone-100 p-4 mt-3 flex-row items-center min-h-[56px]"
       accessibilityRole="link"
       activeOpacity={0.8}
     >

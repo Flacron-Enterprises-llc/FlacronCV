@@ -166,7 +166,7 @@ function Conversation({ threadId, initialOpportunityId }: { threadId: string | n
 
         {shown.length === 0 ? (
           <View>
-            <View className="bg-white border border-stone-100 rounded-2xl p-4">
+            <View className="bg-surface border border-stone-100 rounded-2xl p-4">
               <Text className="font-bold text-stone-900" accessibilityRole="header">
                 {t('emptyThreadTitle')}
               </Text>
@@ -186,7 +186,7 @@ function Conversation({ threadId, initialOpportunityId }: { threadId: string | n
                         accessibilityRole="radio"
                         accessibilityState={{ selected: on, checked: on }}
                         accessibilityLabel={item.title}
-                        className={`min-h-[44px] max-w-[240px] px-4 justify-center rounded-full border ${on ? 'bg-brand-600 border-brand-600' : 'bg-white border-stone-200'}`}
+                        className={`min-h-[44px] max-w-[240px] px-4 justify-center rounded-full border ${on ? 'bg-brand-600 border-brand-600' : 'bg-surface border-stone-200'}`}
                       >
                         <Text numberOfLines={1} className={`text-sm font-semibold ${on ? 'text-white' : 'text-stone-700'}`}>
                           {item.title}
@@ -205,7 +205,7 @@ function Conversation({ threadId, initialOpportunityId }: { threadId: string | n
                 onPress={() => setText(question)}
                 accessibilityRole="button"
                 accessibilityHint={t('starterHint')}
-                className="bg-white border border-stone-200 rounded-xl px-4 py-3 mb-2 min-h-[44px] justify-center"
+                className="bg-surface border border-stone-200 rounded-xl px-4 py-3 mb-2 min-h-[44px] justify-center"
               >
                 <Text className="text-stone-800 text-sm leading-5">{question}</Text>
               </TouchableOpacity>
@@ -216,14 +216,14 @@ function Conversation({ threadId, initialOpportunityId }: { threadId: string | n
         )}
 
         {ask.isPending ? (
-          <View className="self-start flex-row items-center bg-white border border-stone-100 rounded-2xl px-4 py-3 mt-1" accessibilityLiveRegion="polite">
+          <View className="self-start flex-row items-center bg-surface border border-stone-100 rounded-2xl px-4 py-3 mt-1" accessibilityLiveRegion="polite">
             <ActivityIndicator size="small" color={colors.brand[600]} />
             <Text className="text-stone-500 text-sm ms-2">{t('thinking')}</Text>
           </View>
         ) : null}
       </ScrollView>
 
-      <View className="bg-white border-t border-stone-100 px-4 pt-3 pb-2">
+      <View className="bg-surface border-t border-stone-100 px-4 pt-3 pb-2">
         {error ? (
           <View className="bg-warning-bg rounded-xl p-3 mb-2" accessibilityLiveRegion="polite">
             <Text className="text-warning text-sm leading-5">{error}</Text>
@@ -276,7 +276,7 @@ function Bubble({ message }: { message: CoachMessage }) {
   const blocks = messageBlocks(message.content);
   return (
     <View
-      className={`max-w-[88%] rounded-2xl px-4 py-3 mb-2 ${mine ? 'self-end bg-brand-600' : 'self-start bg-white border border-stone-100'}`}
+      className={`max-w-[88%] rounded-2xl px-4 py-3 mb-2 ${mine ? 'self-end bg-brand-600' : 'self-start bg-surface border border-stone-100'}`}
       accessible
       accessibilityLabel={`${mine ? t('you') : t('coach')}: ${message.content}`}
     >

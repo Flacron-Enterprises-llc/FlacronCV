@@ -196,7 +196,7 @@ export default function CareerFactScreen() {
           </Text>
         )}
         {missing ? <Text className="text-warning text-sm mb-3">{missing}</Text> : null}
-        <View className="bg-white border border-stone-100 rounded-2xl p-4">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4">
           {factFields(type).map(({ field, spec, label }) => {
             const uncertain = fact?.uncertain[field];
             const error = errors[field];
@@ -228,7 +228,7 @@ export default function CareerFactScreen() {
                       <TouchableOpacity
                         key={option.id || 'none'}
                         onPress={() => setField(field, option.id)}
-                        className={`flex-row items-center min-h-[44px] px-3 mb-2 rounded-xl border ${selected ? 'border-brand-600 bg-brand-50' : 'border-stone-200 bg-white'}`}
+                        className={`flex-row items-center min-h-[44px] px-3 mb-2 rounded-xl border ${selected ? 'border-brand-600 bg-brand-50' : 'border-stone-200 bg-surface'}`}
                         accessibilityRole="radio"
                         accessibilityState={{ selected, checked: selected }}
                       >
@@ -291,7 +291,7 @@ export default function CareerFactScreen() {
               </View>
             </View>
             {showHistory ? (
-              <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-3">
+              <View className="bg-surface border border-stone-100 rounded-2xl p-4 mt-3">
                 {revisions.isLoading ? (
                   <ActivityIndicator color={colors.brand[600]} />
                 ) : revisions.error ? (
@@ -331,7 +331,7 @@ export default function CareerFactScreen() {
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {content}
         {ready ? (
-          <View className="absolute bottom-0 start-0 end-0 bg-white border-t border-stone-100 px-5 py-3 flex-row gap-3">
+          <View className="absolute bottom-0 start-0 end-0 bg-surface border-t border-stone-100 px-5 py-3 flex-row gap-3">
             <View className="flex-1">
               <Button
                 variant="outline"

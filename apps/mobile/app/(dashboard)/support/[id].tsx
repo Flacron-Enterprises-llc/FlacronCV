@@ -93,7 +93,7 @@ export default function TicketDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-white items-center justify-center" edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1 bg-surface items-center justify-center" edges={['top', 'bottom']}>
         <ActivityIndicator size="large" color={colors.brand[600]} />
       </SafeAreaView>
     );
@@ -101,7 +101,7 @@ export default function TicketDetailScreen() {
 
   if (isError || !ticket) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1 bg-surface" edges={['top', 'bottom']}>
         <View className="flex-row items-center px-4 py-3 border-b border-stone-100">
           <TouchableOpacity
             onPress={() => router.back()}
@@ -124,7 +124,7 @@ export default function TicketDetailScreen() {
   const isClosed = ticket.status === TicketStatus.CLOSED;
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-surface" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-4 py-3 border-b border-stone-100">
         <TouchableOpacity
           onPress={() => router.back()}

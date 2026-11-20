@@ -29,7 +29,7 @@ export const Input = forwardRef<TextInput, InputProps>(
         )}
         <View
           className={[
-            'flex-row items-center rounded-xl border bg-white px-3',
+            'flex-row items-center rounded-xl border bg-surface px-3',
             error ? 'border-red-400' : 'border-stone-200',
           ].join(' ')}
         >

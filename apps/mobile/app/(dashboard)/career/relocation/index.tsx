@@ -130,7 +130,7 @@ export default function CareerRelocationScreen() {
               <TouchableOpacity
                 key={key}
                 onPress={() => switchTab(key)}
-                className={`flex-1 min-h-[44px] items-center justify-center rounded-lg ${selected ? 'bg-white' : ''}`}
+                className={`flex-1 min-h-[44px] items-center justify-center rounded-lg ${selected ? 'bg-surface' : ''}`}
                 accessibilityRole="tab"
                 accessibilityState={{ selected }}
                 accessibilityLabel={label}
@@ -253,7 +253,7 @@ function LocationsTab() {
 
   function renderLocation(location: LocationProfile) {
     return (
-      <View key={location.id} className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
+      <View key={location.id} className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3">
         <View className="flex-row items-start justify-between">
           <Text className="font-bold text-stone-900 flex-1 me-2">{location.place}</Text>
           <Pill label={locationBadge(location)} tone={locationKind(location) === 'future' ? 'brand' : 'default'} />
@@ -370,7 +370,7 @@ function SpecialistTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => v
                 key={option.id}
                 onPress={() => setSelected(toggleMode(modes, option.id))}
                 disabled={disabled}
-                className={`bg-white rounded-2xl p-4 mb-3 border ${isSelected ? 'border-brand-600' : 'border-stone-100'} ${disabled ? 'opacity-50' : ''}`}
+                className={`bg-surface rounded-2xl p-4 mb-3 border ${isSelected ? 'border-brand-600' : 'border-stone-100'} ${disabled ? 'opacity-50' : ''}`}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: isSelected, disabled }}
                 accessibilityLabel={`${option.name}. ${option.description}`}
@@ -394,7 +394,7 @@ function SpecialistTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => v
           })}
         </View>
 
-        <View className="bg-white rounded-2xl border border-stone-100 p-4 mt-1">
+        <View className="bg-surface rounded-2xl border border-stone-100 p-4 mt-1">
           <Text className="font-bold text-stone-900">{t('specialist.checklistHeading')}</Text>
           {checklist.length === 0 ? (
             <Text className="text-stone-500 text-xs mt-1 leading-4">{t('specialist.noneSelected')}</Text>
@@ -422,7 +422,7 @@ function SpecialistTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => v
           ) : null}
         </View>
 
-        <View className="bg-white rounded-2xl border border-stone-100 p-4 mt-3">
+        <View className="bg-surface rounded-2xl border border-stone-100 p-4 mt-3">
           <Text className="font-bold text-stone-900">{t('specialist.guidelinesTitle')}</Text>
           <View className="mt-3">
             <Input

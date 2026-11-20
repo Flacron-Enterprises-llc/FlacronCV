@@ -74,7 +74,7 @@ export default function CareerRecruitingScreen() {
             <Text className={`text-sm ${note.tone === 'success' ? 'text-success' : 'text-red-700'}`}>{note.text}</Text>
           </View>
         ) : null}
-        <View className="bg-white rounded-2xl border border-stone-100 p-5">
+        <View className="bg-surface rounded-2xl border border-stone-100 p-5">
           <View className="flex-row items-center justify-between">
             <Text className="font-bold text-stone-900 text-base">{t('recruiting.discoverableTitle')}</Text>
             {saved !== null ? <Pill label={saved ? t('recruiting.optedIn') : t('recruiting.notOptedIn')} tone={saved ? 'success' : 'default'} /> : null}
@@ -99,7 +99,7 @@ export default function CareerRecruitingScreen() {
           </View>
         </View>
         <View
-          className="bg-white rounded-2xl border border-stone-100 p-5 mt-4"
+          className="bg-surface rounded-2xl border border-stone-100 p-5 mt-4"
           accessible
           accessibilityLabel={`${tb('scope.comingSoon')}. ${tb('scope.employerHeading')}. ${tb('scope.employerSoonBody')}`}
         >
@@ -109,7 +109,7 @@ export default function CareerRecruitingScreen() {
           </View>
           <Text className="text-stone-500 text-sm mt-2 leading-5">{tb('scope.employerSoonBody')}</Text>
         </View>
-        <View className="bg-white rounded-2xl border border-stone-100 p-5 mt-4">
+        <View className="bg-surface rounded-2xl border border-stone-100 p-5 mt-4">
           <Text className="font-bold text-stone-900 text-base">{t('recruiting.countTitle')}</Text>
           <Text className="text-stone-500 text-sm mt-1 leading-5">{t('recruiting.countHelp')}</Text>
           {count.data !== undefined && count.data !== null ? (

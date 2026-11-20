@@ -151,7 +151,7 @@ export function LanguagesStep({ onValidChange }: { onValidChange: (v: boolean) =
                   'px-3 py-2 rounded-xl border',
                   field.value === level
                     ? 'border-brand-600 bg-brand-50'
-                    : 'border-stone-200 bg-white',
+                    : 'border-stone-200 bg-surface',
                 ].join(' ')}
               >
                 <Text className={field.value === level ? 'text-brand-700 font-semibold' : 'text-stone-600'}>

@@ -46,7 +46,7 @@ import { RTL_FLIP } from '../../../src/i18n/native';
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+    <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
       <Text className="font-bold text-stone-900 mb-1">{title}</Text>
       {description ? <Text className="text-stone-500 text-sm mb-3">{description}</Text> : <View className="h-2" />}
       {children}
@@ -62,7 +62,7 @@ function Chip({ label, selected, onPress, icon }: { label: string; selected: boo
       accessibilityState={{ checked: selected }}
       className={[
         'flex-row items-center px-4 rounded-xl border min-h-11',
-        selected ? 'border-brand-600 bg-brand-50' : 'border-stone-200 bg-white',
+        selected ? 'border-brand-600 bg-brand-50' : 'border-stone-200 bg-surface',
       ].join(' ')}
     >
       {icon ? (
@@ -267,7 +267,7 @@ export default function NewCoverLetterScreen() {
   return (
     <SafeAreaView className="flex-1 bg-stone-50">
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
-        <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
+        <View className="flex-row items-center px-5 pt-4 pb-3 bg-surface border-b border-stone-100">
           <TouchableOpacity
             onPress={() => router.back()}
             accessibilityRole="button"
@@ -345,7 +345,7 @@ export default function NewCoverLetterScreen() {
               maxLength={COVER_LETTER_MAX.jobDescription}
               accessibilityLabel={t('create.jobDescriptionLabel')}
               textAlignVertical="top"
-              className="border border-stone-200 rounded-xl bg-white p-3 text-base text-stone-900 min-h-28"
+              className="border border-stone-200 rounded-xl bg-surface p-3 text-base text-stone-900 min-h-28"
             />
             <Text className="text-xs text-stone-500 mt-1.5">
               {t('create.jobDescriptionHint')}
@@ -373,7 +373,7 @@ export default function NewCoverLetterScreen() {
                       accessibilityState={{ checked: selected }}
                       className={[
                         'flex-row items-center px-3 min-h-11 rounded-xl border mb-2',
-                        selected ? 'border-brand-600 bg-brand-50' : 'border-stone-200 bg-white',
+                        selected ? 'border-brand-600 bg-brand-50' : 'border-stone-200 bg-surface',
                       ].join(' ')}
                     >
                       <Ionicons
@@ -443,7 +443,7 @@ export default function NewCoverLetterScreen() {
           )}
 
           {showReview && (
-            <View className="bg-white border border-brand-200 rounded-2xl p-4 mb-4">
+            <View className="bg-surface border border-brand-200 rounded-2xl p-4 mb-4">
               <Text className="font-bold text-stone-900">{t('create.reviewTitle')}</Text>
               <Text className="text-sm text-stone-500 mt-1 mb-3">
                 {t('create.reviewHint')}

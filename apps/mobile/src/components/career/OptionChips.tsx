@@ -39,7 +39,7 @@ export function OptionChips({
               accessibilityState={{ checked: selected, disabled }}
               accessibilityLabel={option.label}
               className={`min-h-[44px] flex-row items-center px-3 me-2 mb-2 rounded-full border ${
-                selected ? 'bg-brand-50 border-brand-500' : 'bg-white border-stone-200'
+                selected ? 'bg-brand-50 border-brand-500' : 'bg-surface border-stone-200'
               } ${disabled ? 'opacity-50' : ''}`}
             >
               {selected ? <Ionicons name="checkmark" size={14} color={colors.brand[700]} style={{ marginEnd: 4 }} /> : null}

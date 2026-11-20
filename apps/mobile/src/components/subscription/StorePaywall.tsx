@@ -243,7 +243,7 @@ export function StorePaywall({
       <TouchableOpacity
         onPress={() => void handleRestore()}
         disabled={restoring || !!busySku}
-        className="mt-1 border border-stone-200 rounded-xl min-h-[48px] items-center justify-center bg-white"
+        className="mt-1 border border-stone-200 rounded-xl min-h-[48px] items-center justify-center bg-surface"
         accessibilityRole="button"
         accessibilityState={{ disabled: restoring || !!busySku, busy: restoring }}
       >

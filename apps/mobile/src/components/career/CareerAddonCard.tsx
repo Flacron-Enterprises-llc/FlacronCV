@@ -36,7 +36,7 @@ export function CareerAddonCard() {
       <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">{t('addon.heading')}</Text>
       <TouchableOpacity
         onPress={() => router.push('/(dashboard)/career')}
-        className="bg-white rounded-2xl border border-stone-100 p-4 flex-row items-center"
+        className="bg-surface rounded-2xl border border-stone-100 p-4 flex-row items-center"
         accessibilityRole="button"
         activeOpacity={0.8}
       >
@@ -53,7 +53,7 @@ export function CareerAddonCard() {
       {/* What each career plan includes: information only, no price unless switched on, never a way to buy. */}
       <TouchableOpacity
         onPress={() => router.push('/(dashboard)/career/plans')}
-        className="bg-white rounded-2xl border border-stone-100 p-4 mt-3 flex-row items-center min-h-[48px]"
+        className="bg-surface rounded-2xl border border-stone-100 p-4 mt-3 flex-row items-center min-h-[48px]"
         accessibilityRole="link"
         activeOpacity={0.8}
       >

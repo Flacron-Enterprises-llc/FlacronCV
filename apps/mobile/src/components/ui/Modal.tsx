@@ -52,7 +52,7 @@ export function Modal({ visible, onClose, title, children, size = 'md', closeDis
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <Pressable
-            className="bg-white rounded-t-3xl overflow-hidden"
+            className="bg-surface rounded-t-3xl overflow-hidden"
             style={{ height: sheetHeight, paddingBottom: insets.bottom }}
             onPress={() => {}}
           >

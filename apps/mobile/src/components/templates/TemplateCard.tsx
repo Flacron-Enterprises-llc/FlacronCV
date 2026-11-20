@@ -107,7 +107,7 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
         {/* Lock Overlay */}
         {isLocked && (
           <View className="absolute inset-0 bg-black/40 items-center justify-center">
-            <View className="bg-white/90 rounded-full p-3">
+            <View className="bg-surface/90 rounded-full p-3">
               <Ionicons name="lock-closed" size={24} color={colors.chrome} />
             </View>
           </View>
@@ -122,7 +122,7 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
       </View>
 
       {/* Template Info */}
-      <View className="p-3 bg-white">
+      <View className="p-3 bg-surface">
         <View className="flex-row items-center justify-between">
           <Text className="font-bold text-stone-800">{template.name}</Text>
           {template.isFeatured && (
@@ -153,7 +153,7 @@ export function TemplateCard({ template, isSelected, isLocked, onSelect, onPrevi
           accessibilityRole="button"
           accessibilityLabel={t('card.preview', { name: template.name })}
           style={{ position: 'absolute', top: THUMB_HEIGHT - 44 - 8, end: 8 }}
-          className="w-11 h-11 rounded-full bg-white/95 items-center justify-center"
+          className="w-11 h-11 rounded-full bg-surface/95 items-center justify-center"
         >
           <Ionicons name="eye-outline" size={20} color={colors.stone[700]} />
         </Pressable>

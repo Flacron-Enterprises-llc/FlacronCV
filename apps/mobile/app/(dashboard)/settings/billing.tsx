@@ -156,7 +156,7 @@ export default function BillingScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
+      <View className="flex-row items-center px-5 pt-4 pb-3 bg-surface border-b border-stone-100">
         <TouchableOpacity
           onPress={() => router.back()}
           className="me-3 h-11 w-11 -ms-2 items-center justify-center"
@@ -176,7 +176,7 @@ export default function BillingScreen() {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refresh} tintColor={colors.brand[600]} />}
       >
         {accountFailed ? (
-          <View className="mx-4 my-4 bg-white rounded-2xl border border-stone-100">
+          <View className="mx-4 my-4 bg-surface rounded-2xl border border-stone-100">
             <ErrorState
               message={userError && axios.isAxiosError(userError) && !userError.response ? tc('noConnection') : (userSyncError ?? ts('usage.loadError'))}
               onRetry={refresh}
@@ -204,7 +204,7 @@ export default function BillingScreen() {
             ) : null}
 
             {/* Current plan */}
-            <View className="mx-4 mt-4 bg-white rounded-2xl border border-stone-100 p-4">
+            <View className="mx-4 mt-4 bg-surface rounded-2xl border border-stone-100 p-4">
               <View className="flex-row items-center flex-wrap gap-2">
                 <Ionicons name="ribbon-outline" size={20} color={colors.brand[600]} />
                 <Text className="text-lg font-bold text-stone-900 me-1 shrink" accessibilityRole="header">
@@ -332,7 +332,7 @@ function AllowanceList({ rows, title, loading }: { rows: readonly AllowanceRow[]
   const value = (v: number | null, unknown: 'unlimited' | 'unknown') =>
     v === null ? (unknown === 'unlimited' ? t('unlimited') : '—') : formatNumber(v);
   return (
-    <View className="mx-4 mt-4 bg-white rounded-2xl border border-stone-100 p-4">
+    <View className="mx-4 mt-4 bg-surface rounded-2xl border border-stone-100 p-4">
       <Text className="font-bold text-stone-900 text-lg" accessibilityRole="header">
         {title}
       </Text>
@@ -404,7 +404,7 @@ function PackList({ packs }: { packs: ReturnType<typeof activePacks> }) {
   const t = useT('plans');
   if (packs.length === 0) return null;
   return (
-    <View className="mx-4 mt-4 bg-white rounded-2xl border border-stone-100 p-4">
+    <View className="mx-4 mt-4 bg-surface rounded-2xl border border-stone-100 p-4">
       <Text className="font-bold text-stone-900 text-lg" accessibilityRole="header">
         {t('packsTitle')}
       </Text>
@@ -442,7 +442,7 @@ function BillingHistory({ storeBilled }: { storeBilled: boolean }) {
   const { data: invoices, isLoading, isError, refetch, isRefetching } = useInvoices();
 
   return (
-    <View className="mx-4 mt-4 mb-4 bg-white rounded-2xl border border-stone-100 p-4">
+    <View className="mx-4 mt-4 mb-4 bg-surface rounded-2xl border border-stone-100 p-4">
       <View className="flex-row items-center mb-1">
         <Ionicons name="receipt-outline" size={18} color={colors.stone[400]} />
         <Text className="font-bold text-stone-800 ms-2" accessibilityRole="header">

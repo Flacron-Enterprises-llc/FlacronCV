@@ -456,7 +456,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       className="flex-1"
     >
-      <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
+      <View className="flex-row items-center px-5 pt-4 pb-3 bg-surface border-b border-stone-100">
         <TouchableOpacity
           onPress={() => router.back()}
           className="me-3"
@@ -511,7 +511,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
                 onPress={() => setValue('status', status, { shouldDirty: true })}
                 className={[
                   'px-3 py-2 rounded-xl border',
-                  selected ? 'bg-brand-600 border-brand-600' : 'bg-white border-stone-200',
+                  selected ? 'bg-brand-600 border-brand-600' : 'bg-surface border-stone-200',
                 ].join(' ')}
               >
                 <Text className={selected ? 'text-white font-semibold text-sm' : 'text-stone-700 text-sm'}>
@@ -626,7 +626,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
         <Text className="text-sm font-medium text-stone-700 mb-1.5">{t('form.cvUsed')}</Text>
         <TouchableOpacity
           onPress={() => setPicker('cv')}
-          className="bg-white border border-stone-200 rounded-xl px-3 py-3 mb-4"
+          className="bg-surface border border-stone-200 rounded-xl px-3 py-3 mb-4"
         >
           <Text className={selectedCv ? 'text-stone-900 text-base' : 'text-stone-400 text-base'}>
             {selectedCv?.title ?? t('form.none')}
@@ -636,7 +636,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
         <Text className="text-sm font-medium text-stone-700 mb-1.5">{t('form.letterUsed')}</Text>
         <TouchableOpacity
           onPress={() => setPicker('letter')}
-          className="bg-white border border-stone-200 rounded-xl px-3 py-3 mb-4"
+          className="bg-surface border border-stone-200 rounded-xl px-3 py-3 mb-4"
         >
           <Text className={selectedLetter ? 'text-stone-900 text-base' : 'text-stone-400 text-base'}>
             {selectedLetter?.title ?? t('form.none')}
@@ -730,7 +730,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
             );
           const rowErrors = errors.contacts?.[index];
           return (
-            <View key={contact.id ?? `new-${index}`} className="bg-white border border-stone-200 rounded-xl p-3 mb-3">
+            <View key={contact.id ?? `new-${index}`} className="bg-surface border border-stone-200 rounded-xl p-3 mb-3">
               <View className="flex-row items-center justify-between mb-2">
                 <Text className="text-sm font-semibold text-stone-700">{t('form.contactN', { n })}</Text>
                 <TouchableOpacity
@@ -866,7 +866,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
               { shouldDirty: true },
             );
           return (
-            <View key={row.id ?? `new-answer-${index}`} className="bg-white border border-stone-200 rounded-xl p-3 mb-3">
+            <View key={row.id ?? `new-answer-${index}`} className="bg-surface border border-stone-200 rounded-xl p-3 mb-3">
               <View className="flex-row items-center justify-between mb-1">
                 <Text className="text-sm font-semibold text-stone-700">{t('workspace.answer.question_n', { n })}</Text>
                 <TouchableOpacity
@@ -921,7 +921,7 @@ export function JobForm({ mode, jobId, initialJob }: JobFormProps) {
                   <TouchableOpacity
                     key={outcome || 'none'}
                     onPress={() => setValue('outcome', outcome, { shouldDirty: true })}
-                    className={`min-h-[44px] justify-center px-3 me-2 mb-2 rounded-xl border ${selected ? 'bg-brand-600 border-brand-600' : 'bg-white border-stone-200'}`}
+                    className={`min-h-[44px] justify-center px-3 me-2 mb-2 rounded-xl border ${selected ? 'bg-brand-600 border-brand-600' : 'bg-surface border-stone-200'}`}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: selected }}
                   >

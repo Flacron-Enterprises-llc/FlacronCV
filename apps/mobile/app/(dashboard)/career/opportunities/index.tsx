@@ -227,7 +227,7 @@ function ListingCard({ item, onOpen, onToggleSave, saving }: { item: Opportunity
   const t = useT('careerOpportunities');
   const saved = item.saved === true;
   return (
-    <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
+    <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3">
       <View className="flex-row items-start">
         <Pressable onPress={onOpen} className="flex-1 me-2 min-h-[44px]" accessibilityRole="link" accessibilityLabel={item.title}>
           <Text className="font-bold text-stone-900 text-base">{item.title}</Text>
@@ -423,7 +423,7 @@ function PasteModal({ visible, onClose, onCreated }: { visible: boolean; onClose
         accessibilityLabel={t('paste_label')}
         placeholder={t('paste_placeholder')}
         placeholderTextColor={colors.stone[400]}
-        className="bg-white border border-stone-200 rounded-xl px-3 py-2.5 text-base text-stone-900 min-h-[160px]"
+        className="bg-surface border border-stone-200 rounded-xl px-3 py-2.5 text-base text-stone-900 min-h-[160px]"
       />
       <Text className={`text-xs mt-1 mb-4 ${length > 0 && length < MIN_LISTING_TEXT ? 'text-warning' : 'text-stone-400'}`}>
         {t('paste_length', { count: length, min: MIN_LISTING_TEXT })}

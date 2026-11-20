@@ -3,6 +3,8 @@ import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
+import { View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   ensureRemindersChannel,
@@ -13,6 +15,7 @@ import { bootstrapI18n, useProfileLanguageSync } from '../src/i18n/native';
 import { AuthProvider } from '../src/providers/AuthProvider';
 import { QueryProvider } from '../src/providers/QueryProvider';
 import { useAuthStore } from '../src/store/auth-store';
+import { THEME_VARS, paletteFor, useScheme } from '../src/theme/palette';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -68,18 +71,23 @@ function LanguageSync() {
 }
 
 export default function RootLayout() {
+  // Light or dark from the device setting; THEME_VARS sets every colour token for the tree.
+  const scheme = useScheme();
+  const palette = paletteFor(scheme);
   useEffect(() => {
     const timer = setTimeout(() => SplashScreen.hideAsync(), 400);
     return () => clearTimeout(timer);
   }, []);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: palette.page }}>
+      <View style={[{ flex: 1 }, THEME_VARS[scheme]]}>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <QueryProvider>
         <AuthProvider>
           <LanguageSync />
           <NotificationRoutes />
-          <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+          <Stack screenOptions={{ headerShown: false, animation: 'fade', contentStyle: { backgroundColor: palette.page } }}>
             <Stack.Screen name="index" />
             <Stack.Screen
               name="onboarding"
@@ -90,6 +98,7 @@ export default function RootLayout() {
           </Stack>
         </AuthProvider>
       </QueryProvider>
+      </View>
     </GestureHandlerRootView>
   );
 }

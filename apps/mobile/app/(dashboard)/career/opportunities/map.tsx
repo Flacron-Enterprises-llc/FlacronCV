@@ -74,7 +74,7 @@ export default function OpportunityMapScreen() {
         refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} tintColor={colors.brand[600]} />}
         ListHeaderComponent={
           <View className="mb-3">
-            <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+            <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
               <View className="flex-row items-center">
                 <Ionicons name="map-outline" size={18} color={colors.stone[500]} />
                 <Text className="text-stone-700 text-sm ms-2 flex-1 leading-5">{noTiles()}</Text>
@@ -100,7 +100,7 @@ export default function OpportunityMapScreen() {
         renderItem={({ item }) => (
           <TouchableOpacity
             onPress={() => router.push(`/(dashboard)/career/opportunities/${item.id}` as Href)}
-            className="bg-white border border-stone-100 rounded-2xl p-4 mb-3 flex-row items-center"
+            className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3 flex-row items-center"
             accessibilityRole="button"
             accessibilityLabel={item.title}
           >

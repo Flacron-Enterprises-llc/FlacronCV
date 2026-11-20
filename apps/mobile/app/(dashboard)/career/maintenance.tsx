@@ -235,7 +235,7 @@ export default function CareerMaintenanceScreen() {
       >
         <Text className="text-stone-500 text-sm mb-4 leading-5">{t('maintenance.intro')}</Text>
 
-        <View className={`rounded-2xl p-4 mb-4 ${reminders.length > 0 ? 'bg-warning-bg' : 'bg-white border border-stone-100'}`} accessibilityLiveRegion="polite">
+        <View className={`rounded-2xl p-4 mb-4 ${reminders.length > 0 ? 'bg-warning-bg' : 'bg-surface border border-stone-100'}`} accessibilityLiveRegion="polite">
           <Text className={`font-bold mb-1 ${reminders.length > 0 ? 'text-warning' : 'text-stone-900'}`} accessibilityRole="header">
             {t('maintenance.remindersTitle')}
           </Text>
@@ -577,7 +577,7 @@ export default function CareerMaintenanceScreen() {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+    <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
       <Text className="text-base font-bold text-stone-900 mb-2" accessibilityRole="header">
         {title}
       </Text>

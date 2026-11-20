@@ -178,7 +178,7 @@ export default function InterviewPrepScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
+      <View className="flex-row items-center px-5 pt-4 pb-3 bg-surface border-b border-stone-100">
         <TouchableOpacity onPress={() => router.back()} className="me-3" accessibilityLabel={t('shared.goBack')}>
           <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
         </TouchableOpacity>

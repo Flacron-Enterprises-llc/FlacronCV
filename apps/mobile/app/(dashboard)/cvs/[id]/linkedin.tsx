@@ -113,7 +113,7 @@ export default function LinkedInScreen() {
   };
 
   const header = (
-    <View className="flex-row items-center px-5 pt-4 pb-3 bg-white border-b border-stone-100">
+    <View className="flex-row items-center px-5 pt-4 pb-3 bg-surface border-b border-stone-100">
       <TouchableOpacity
         onPress={() => router.back()}
         className="me-3 w-11 h-11 items-center justify-center -ms-3"
@@ -204,7 +204,7 @@ export default function LinkedInScreen() {
                   <Text className="text-sm font-semibold text-stone-800">{t('linkedin.headline')}</Text>
                   <CopyButton text={result.headline} label={t('linkedin.headline')} />
                 </View>
-                <Text selectable className="rounded-xl border border-stone-200 bg-white p-3 text-sm text-stone-700">
+                <Text selectable className="rounded-xl border border-stone-200 bg-surface p-3 text-sm text-stone-700">
                   {result.headline}
                 </Text>
               </View>
@@ -216,7 +216,7 @@ export default function LinkedInScreen() {
                   <Text className="text-sm font-semibold text-stone-800">{t('linkedin.about')}</Text>
                   <CopyButton text={result.about} label={t('linkedin.about')} />
                 </View>
-                <Text selectable className="rounded-xl border border-stone-200 bg-white p-3 text-sm text-stone-700">
+                <Text selectable className="rounded-xl border border-stone-200 bg-surface p-3 text-sm text-stone-700">
                   {result.about}
                 </Text>
               </View>

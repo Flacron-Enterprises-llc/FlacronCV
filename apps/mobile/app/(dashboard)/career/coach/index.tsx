@@ -93,7 +93,7 @@ function CoachList() {
         />
       }
     >
-      <View className="bg-white border border-stone-100 rounded-2xl p-4">
+      <View className="bg-surface border border-stone-100 rounded-2xl p-4">
         <View className="flex-row items-center">
           <View className="w-10 h-10 rounded-full bg-brand-100 items-center justify-center me-3">
             <Ionicons name="chatbubbles-outline" size={20} color={colors.brand[600]} />
@@ -137,13 +137,13 @@ function CoachList() {
         {t('conversations')}
       </Text>
       {threads.length === 0 ? (
-        <View className="bg-white border border-stone-100 rounded-2xl p-4">
+        <View className="bg-surface border border-stone-100 rounded-2xl p-4">
           <Text className="font-semibold text-stone-800">{t('emptyTitle')}</Text>
           <Text className="text-stone-500 text-sm mt-1 leading-5">{t('emptyBody')}</Text>
         </View>
       ) : (
         threads.map((thread) => (
-          <View key={thread.id} className="bg-white border border-stone-100 rounded-2xl mb-3 flex-row items-center">
+          <View key={thread.id} className="bg-surface border border-stone-100 rounded-2xl mb-3 flex-row items-center">
             <Pressable
               onPress={() => router.push(`/(dashboard)/career/coach/${thread.id}` as Href)}
               accessibilityRole="button"

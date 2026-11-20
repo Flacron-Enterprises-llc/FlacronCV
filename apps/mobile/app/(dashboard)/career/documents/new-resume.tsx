@@ -56,7 +56,7 @@ export default function NewCareerResumeScreen() {
       <CareerHeader title={tk('shared.newCareerCv')} subtitle={t('newResume.subtitle')} />
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
-          <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-4">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-4">
             <Input label={t('newResume.cvName')} value={title} onChangeText={setTitle} onBlur={() => setTouched(true)} maxLength={200} error={titleError ?? undefined} />
             <Text className="text-sm font-semibold text-stone-700 mt-2 mb-2">{t('newResume.language')}</Text>
             <View className="flex-row gap-2" accessibilityRole="radiogroup">
@@ -66,7 +66,7 @@ export default function NewCareerResumeScreen() {
             </View>
             <Text className="text-stone-500 text-xs mt-2 leading-4">{t('newResume.languageNote')}</Text>
           </View>
-          <View className="bg-white border border-stone-100 rounded-2xl p-4">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4">
             <Text className="text-sm font-semibold text-stone-700 mb-1">{tk('shared.layout')}</Text>
             <Text className="text-stone-500 text-xs mb-3 leading-4">{t('newResume.layoutNote')}</Text>
             <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup">
@@ -81,7 +81,7 @@ export default function NewCareerResumeScreen() {
             </View>
           ) : null}
         </ScrollView>
-        <View className="absolute bottom-0 start-0 end-0 bg-white border-t border-stone-100 px-5 py-3">
+        <View className="absolute bottom-0 start-0 end-0 bg-surface border-t border-stone-100 px-5 py-3">
           <Button fullWidth onPress={onCreate} loading={create.isPending}>
             {t('newResume.create')}
           </Button>
@@ -98,7 +98,7 @@ function Choice({ label, selected, accent, onPress }: { label: string; selected:
       accessibilityRole="radio"
       accessibilityState={{ selected, checked: selected }}
       accessibilityLabel={label}
-      className={`min-h-[44px] px-3 rounded-xl border flex-row items-center ${selected ? 'border-brand-500 bg-brand-50' : 'border-stone-200 bg-white'}`}
+      className={`min-h-[44px] px-3 rounded-xl border flex-row items-center ${selected ? 'border-brand-500 bg-brand-50' : 'border-stone-200 bg-surface'}`}
       activeOpacity={0.8}
     >
       {accent ? <View style={{ backgroundColor: accent }} className="w-3 h-3 rounded-full me-2" /> : null}

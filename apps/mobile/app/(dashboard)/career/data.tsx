@@ -121,7 +121,7 @@ export default function CareerDataScreen() {
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
           <Text className="text-stone-500 text-sm leading-5 mb-4">{t('intro')}</Text>
 
-          <View className="bg-white rounded-2xl border border-stone-100 p-5">
+          <View className="bg-surface rounded-2xl border border-stone-100 p-5">
             <Text className="font-bold text-stone-900 text-base">{t('export.title')}</Text>
             <Text className="text-stone-500 text-sm mt-1 leading-5">{t('export.body')}</Text>
             <View className="mt-4 self-start">
@@ -140,7 +140,7 @@ export default function CareerDataScreen() {
             ) : null}
           </View>
 
-          <View className="bg-white rounded-2xl border border-red-100 p-5 mt-4">
+          <View className="bg-surface rounded-2xl border border-red-100 p-5 mt-4">
             <Text className="font-bold text-stone-900 text-base">{th('title')}</Text>
             <Text className="text-stone-500 text-sm mt-1 mb-4 leading-5">{th('body')}</Text>
             <Input
@@ -163,7 +163,7 @@ export default function CareerDataScreen() {
 
           <TouchableOpacity
             onPress={() => router.push('/(dashboard)/settings/data' as Href)}
-            className="bg-white rounded-2xl border border-stone-100 p-5 mt-4 flex-row items-center"
+            className="bg-surface rounded-2xl border border-stone-100 p-5 mt-4 flex-row items-center"
             accessibilityRole="link"
           >
             <View className="flex-1 me-3">

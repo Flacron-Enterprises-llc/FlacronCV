@@ -4,7 +4,7 @@ import { JobForm } from '../../../src/components/jobs/JobForm';
 
 export default function NewJobScreen() {
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-surface" edges={['top', 'bottom']}>
       <JobForm mode="create" />
     </SafeAreaView>
   );

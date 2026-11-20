@@ -139,7 +139,7 @@ export default function CareerLetterScreen() {
           <Pill label={doc.data.confirmation === 'confirmed' ? tk('shared.confirmedPill') : tk('shared.draftPill')} tone={doc.data.confirmation === 'confirmed' ? 'success' : 'default'} />
         </View>
         {doc.data.type === 'cover_letter' ? (
-          <View className="bg-white border border-stone-100 rounded-2xl p-4 mb-3">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3">
             <TouchableOpacity
               onPress={() => setPicking(true)}
               disabled={layout.isPending || save.isPending}
@@ -164,13 +164,13 @@ export default function CareerLetterScreen() {
           multiline
           textAlignVertical="top"
           accessibilityLabel={t('letter.textA11y')}
-          className="bg-white border border-stone-200 rounded-xl px-3 py-3 text-base text-stone-900 min-h-[320px]"
+          className="bg-surface border border-stone-200 rounded-xl px-3 py-3 text-base text-stone-900 min-h-[320px]"
           placeholderTextColor={colors.stone[400]}
         />
         <Text className="text-stone-500 text-xs mt-3 leading-4">{t('letter.noCreditsNote')}</Text>
         {doc.data.type === 'cover_letter' ? (
           // Website: only cover letters can be copied into V1's cover-letter editor.
-          <View className="bg-white border border-stone-100 rounded-2xl p-4 mt-4">
+          <View className="bg-surface border border-stone-100 rounded-2xl p-4 mt-4">
             <Text className="font-semibold text-stone-900">{th('title')}</Text>
             <Text className="text-stone-500 text-xs mt-0.5 mb-3 leading-4">{th('body')}</Text>
             <View className="self-start">
@@ -197,7 +197,7 @@ export default function CareerLetterScreen() {
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {content}
         {doc.data ? (
-          <View className="absolute bottom-0 start-0 end-0 bg-white border-t border-stone-100 px-5 py-3">
+          <View className="absolute bottom-0 start-0 end-0 bg-surface border-t border-stone-100 px-5 py-3">
             {dirty ? (
               <View className="flex-row gap-3">
                 <View className="flex-1">

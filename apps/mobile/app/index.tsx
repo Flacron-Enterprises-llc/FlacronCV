@@ -27,7 +27,7 @@ export default function Index() {
   // Wait for both Firebase auth state and AsyncStorage check
   if (!isInitialized || !onboardingChecked) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View className="flex-1 items-center justify-center bg-surface">
         <ActivityIndicator size="large" color={colors.brand[600]} />
       </View>
     );

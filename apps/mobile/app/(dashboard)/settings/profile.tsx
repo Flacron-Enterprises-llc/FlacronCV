@@ -259,7 +259,7 @@ export default function ProfileScreen() {
 
   if (!user && isError) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-surface">
         <View className="flex-row items-center px-5 pt-4 pb-3 border-b border-stone-100">
           <TouchableOpacity onPress={() => router.back()} className="me-3" accessibilityRole="button" accessibilityLabel={tc('back')}>
             <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
@@ -273,7 +273,7 @@ export default function ProfileScreen() {
 
   if (!formReady) {
     return (
-      <SafeAreaView className="flex-1 bg-white items-center justify-center">
+      <SafeAreaView className="flex-1 bg-surface items-center justify-center">
         <ActivityIndicator size="large" color={colors.brand[600]} />
         <Text className="text-stone-500 mt-3">{t('loading')}</Text>
       </SafeAreaView>
@@ -281,7 +281,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-surface">
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
         <View className="flex-row items-center px-5 pt-4 pb-3 border-b border-stone-100">
           <TouchableOpacity onPress={() => router.back()} className="me-3" accessibilityRole="button" accessibilityLabel={tc('back')}>

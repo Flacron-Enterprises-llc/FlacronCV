@@ -36,7 +36,7 @@ export default function SupportScreen() {
     return (
       <TouchableOpacity
         onPress={() => router.push(`/(dashboard)/support/${item.id}`)}
-        className="bg-white border border-stone-100 rounded-2xl p-4 mb-3"
+        className="bg-surface border border-stone-100 rounded-2xl p-4 mb-3"
         activeOpacity={0.8}
       >
         <View className="flex-row items-start justify-between">
@@ -57,7 +57,7 @@ export default function SupportScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <View className="px-5 pt-4 pb-4 bg-white border-b border-stone-100">
+      <View className="px-5 pt-4 pb-4 bg-surface border-b border-stone-100">
         <View className="flex-row items-center justify-between">
           <View>
             <Text className="text-xl font-black text-stone-900">{t('title')}</Text>
