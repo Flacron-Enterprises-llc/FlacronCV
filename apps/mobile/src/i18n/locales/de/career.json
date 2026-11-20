@@ -8,7 +8,7 @@
   },
   "overview": {
     "title": "Karrieretools",
-    "subtitle": "Optionale Erweiterung deines FlacronCV-Tarifs",
+    "subtitle": "Jobsuche, Interviewtraining und Ihr Karriereprofil",
     "credits": "Karriere-Credits",
     "creditsLeft": "von {granted} Dokument-Credits übrig",
     "packs": "{count} zusätzlich aus Paketen",
@@ -238,5 +238,13 @@
     "notIncludedBody": "Deine Bewerbungen im Bewerbungs-Tracker bleiben unverändert.",
     "countsNote": "Die Zahlen stammen aus deinen Bewerbungen im Bewerbungs-Tracker. Vorstellungsgespräche schließen Angebote ein. Das ist keine Einstellungswahrscheinlichkeit.",
     "openTracker": "Bewerbungs-Tracker öffnen"
+  },
+  "groups": {
+    "jobSearch": "Jobsuche",
+    "interview": "Interviewvorbereitung",
+    "growth": "Karriereentwicklung",
+    "business": "Unternehmen",
+    "account": "Ihre Daten",
+    "locked": "In einem höheren Tarif enthalten"
   }
 }

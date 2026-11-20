@@ -8,7 +8,7 @@
   },
   "overview": {
     "title": "Career tools",
-    "subtitle": "Optional add-on to your FlacronCV plan",
+    "subtitle": "Job search, interview practice and your career profile",
     "credits": "Career credits",
     "creditsLeft": "of {granted} document credits left",
     "packs": "{count} extra from packs",
@@ -238,5 +238,13 @@
     "notIncludedBody": "Your applications in the Job Tracker are unchanged.",
     "countsNote": "Counts come from your applications in the Job Tracker. Interviews include offers. This is not a hiring probability.",
     "openTracker": "Open the Job Tracker"
+  },
+  "groups": {
+    "jobSearch": "Job search",
+    "interview": "Interview prep",
+    "growth": "Career growth",
+    "business": "Business",
+    "account": "Your data",
+    "locked": "Included on a higher plan"
   }
 }

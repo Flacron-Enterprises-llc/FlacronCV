@@ -8,7 +8,7 @@
   },
   "overview": {
     "title": "Herramientas profesionales",
-    "subtitle": "Complemento opcional de tu plan de FlacronCV",
+    "subtitle": "Búsqueda de empleo, práctica de entrevistas y tu perfil profesional",
     "credits": "Créditos profesionales",
     "creditsLeft": "de {granted} créditos de documento restantes",
     "packs": "{count} extra de paquetes",
@@ -238,5 +238,13 @@
     "notIncludedBody": "Tus candidaturas del seguimiento de empleos no han cambiado.",
     "countsNote": "Los recuentos salen de tus candidaturas en el seguimiento de empleos. Las entrevistas incluyen las ofertas. No es una probabilidad de contratación.",
     "openTracker": "Abrir el seguimiento de empleos"
+  },
+  "groups": {
+    "jobSearch": "Búsqueda de empleo",
+    "interview": "Preparación de entrevistas",
+    "growth": "Desarrollo profesional",
+    "business": "Empresas",
+    "account": "Tus datos",
+    "locked": "Incluido en un plan superior"
   }
 }

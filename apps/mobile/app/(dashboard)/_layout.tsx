@@ -8,8 +8,9 @@ import { useAuthStore } from '../../src/store/auth-store';
 import { colors } from '../../src/theme/colors';
 import { usePalette } from '../../src/theme/palette';
 import { useT } from '../../src/i18n';
+import { CAREER_ENABLED } from '../../src/config/career';
 
-const TAB_ROOTS = new Set(['index', 'cvs', 'cover-letters', 'templates', 'settings']);
+const TAB_ROOTS = new Set(['index', 'cvs', 'cover-letters', 'templates', 'career', 'settings']);
 
 /** Tab roots keep the bar. Pushed stack screens (wizard, editors, support, jobs, …) hide it. */
 function hideTabBarOnNested(segments: readonly string[]): boolean {
@@ -85,9 +86,22 @@ export default function DashboardLayout() {
       <Tabs.Screen
         name="templates"
         options={{
+          // With career tools on, Career takes this slot; templates stay one tap away on Home.
+          ...(CAREER_ENABLED ? { href: null } : {}),
           title: t('templates'),
           tabBarIcon: ({ color }) => (
             <Ionicons name="layers-outline" size={22} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="career"
+        options={{
+          // Career tools; the stack redirects home when the build has career off.
+          ...(CAREER_ENABLED ? {} : { href: null }),
+          title: t('career'),
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="compass-outline" size={22} color={color} />
           ),
         }}
       />
@@ -107,11 +121,6 @@ export default function DashboardLayout() {
       />
       <Tabs.Screen
         name="jobs"
-        options={{ href: null }}
-      />
-      {/* Career tools (optional add-on); the stack redirects home when the build has career off. */}
-      <Tabs.Screen
-        name="career"
         options={{ href: null }}
       />
     </Tabs>

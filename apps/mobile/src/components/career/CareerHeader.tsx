@@ -7,12 +7,13 @@ import { RTL_FLIP } from '../../i18n/native';
 import { colors } from '../../theme/colors';
 
 /** Same header geometry as the Job Tracker screens: back arrow, title, optional subtitle. */
-export function CareerHeader({ title, subtitle, right }: { title: string; subtitle?: string; right?: React.ReactNode }) {
+export function CareerHeader({ title, subtitle, right, showBack = true }: { title: string; subtitle?: string; right?: React.ReactNode; /** Off on a tab root, where there is nothing to go back to. */ showBack?: boolean }) {
   const router = useRouter();
   const t = useT('career');
   return (
     <View className="px-5 pt-4 pb-3 bg-surface border-b border-stone-100">
       <View className="flex-row items-center">
+        {showBack ? (
         <TouchableOpacity
           onPress={() => router.back()}
           className="me-3 h-11 w-11 -ms-2 items-center justify-center"
@@ -21,6 +22,7 @@ export function CareerHeader({ title, subtitle, right }: { title: string; subtit
         >
           <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
         </TouchableOpacity>
+        ) : null}
         <View className="flex-1">
           <Text className="text-xl font-black text-stone-900" accessibilityRole="header" numberOfLines={1}>
             {title}

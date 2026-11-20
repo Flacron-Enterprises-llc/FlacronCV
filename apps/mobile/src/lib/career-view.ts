@@ -3,6 +3,7 @@ import { FACT_FIELDS } from '../../../../packages/career-shared/src/facts';
 import { ApiError } from '../../../../packages/career-api-client/src/client';
 import type { CareerAccessView, UsageSummary } from '../../../../packages/career-api-client/src/types';
 import { formatDate, t } from '../i18n';
+import { linkState, type CareerHref } from './career/nav';
 
 /**
  * A label map whose values are read from the translation files at access time
@@ -202,6 +203,72 @@ export const CAREER_AREAS: CareerArea[] = [
 
 export function visibleAreas(features: Record<string, boolean> | undefined): CareerArea[] {
   return CAREER_AREAS.filter((area) => !area.feature || features?.[area.feature] === true);
+}
+
+/** The hub's sections, in order, and the areas in each (by area key). */
+export const AREA_GROUPS = [
+  { key: 'jobSearch', areas: ['opportunities', 'map', 'tracker', 'alerts', 'reminders', 'action-packs', 'outcomes', 'forms'] },
+  { key: 'interview', areas: ['interviews', 'voice', 'coach'] },
+  { key: 'growth', areas: ['profile', 'evidence', 'portfolios', 'documents', 'learning', 'relocation', 'scenarios', 'maintenance'] },
+  { key: 'business', areas: ['business', 'developer'] },
+  { key: 'account', areas: ['data'] },
+] as const;
+
+/** Area key → the website path whose state (open / plan / not yet) it shares. */
+const AREA_HREF: Partial<Record<string, CareerHref>> = {
+  profile: '/career/profile',
+  documents: '/career/documents',
+  opportunities: '/career/opportunities',
+  map: '/career/opportunities/map',
+  alerts: '/career/alerts',
+  outcomes: '/career/learning-loop',
+  evidence: '/career/evidence',
+  portfolios: '/career/portfolios',
+  interviews: '/career/interviews',
+  voice: '/career/interviews/voice',
+  coach: '/career/coach',
+  'action-packs': '/career/action-pack',
+  learning: '/career/learning',
+  maintenance: '/career/maintenance',
+  scenarios: '/career/scenarios',
+  relocation: '/career/relocation',
+  recruiting: '/career/recruiting',
+  services: '/career/services',
+  data: '/career/data',
+  business: '/career/business',
+  developer: '/career/developer',
+  forms: '/career/forms',
+};
+
+export type GroupedArea = CareerArea & { locked: boolean };
+
+/**
+ * The hub menu, grouped like the website sidebar. Areas that cannot be used
+ * yet (switch off, form helper unpublished, recruiting and human services)
+ * are left out rather than labelled; areas a higher plan unlocks stay, with a
+ * lock. Team tools only appear on plans that include them.
+ */
+export function careerAreaGroups(access: Pick<CareerAccessView, 'features' | 'careerPlan'> | null | undefined): { key: string; areas: GroupedArea[] }[] {
+  const byKey = new Map(visibleAreas(access?.features).map((area) => [area.key, area]));
+  const teams = linkState('/career/business', access) === 'available';
+  return AREA_GROUPS.map((group) => ({
+    key: group.key as string,
+    areas: group.areas.flatMap((key): GroupedArea[] => {
+      const area = byKey.get(key);
+      if (!area) return [];
+      const href = AREA_HREF[key];
+      const state = href ? linkState(href, access) : 'available';
+      if (state === 'soon') return [];
+      if (group.key === 'business' && !teams) return [];
+      // Read in the current language at render time (title/body are getters).
+      return [{ ...area, title: area.title, body: area.body, locked: state === 'plan' }];
+    }),
+  })).filter((group) => group.areas.length > 0);
+}
+
+/** Section heading for the hub. */
+export function areaGroupLabel(key: string): string {
+  return t(`career.groups.${key}`);
 }
 
 export const WHERE_LABEL: Record<CareerArea['where'], string> = {

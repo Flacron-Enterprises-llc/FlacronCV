@@ -28,9 +28,10 @@ import {
   documentCredits,
   FACT_TYPE_LABEL,
   formatDay,
-  visibleAreas,
   WHERE_LABEL,
-  type CareerArea,
+  areaGroupLabel,
+  careerAreaGroups,
+  type GroupedArea,
 } from '../../../src/lib/career-view';
 import { formatNumber, useT } from '../../../src/i18n';
 import { RTL_FLIP } from '../../../src/i18n/native';
@@ -107,7 +108,7 @@ export default function CareerOverviewScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
-      <CareerHeader title={t('overview.title')} subtitle={t('overview.subtitle')} />
+      <CareerHeader title={t('overview.title')} subtitle={t('overview.subtitle')} showBack={false} />
       <ScrollView
         contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.brand[600]} />}
@@ -126,6 +127,11 @@ export default function CareerOverviewScreen() {
             </View>
           ) : null}
         </View>
+
+        {/* The career tools, grouped like the website sidebar; closed areas are left out. */}
+        {careerAreaGroups(access.data).map((group) => (
+          <AreaGroup key={group.key} title={areaGroupLabel(group.key)} areas={group.areas} enabled={active} onOpen={(route) => router.push(route as Href)} />
+        ))}
 
         {active ? (
           <View className="bg-surface rounded-2xl border border-stone-100 p-5 mt-4">
@@ -159,45 +165,91 @@ export default function CareerOverviewScreen() {
 
         {CAREER_ENABLED ? <PlansLink onOpen={() => router.push('/(dashboard)/career/plans' as Href)} /> : null}
 
-        <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mt-6 mb-3">{t('overview.whatYouCanDo')}</Text>
-        {visibleAreas(access.data?.features).map((area) => (
-          <AreaRow key={area.key} area={area} enabled={active || area.key === 'tracker'} onOpen={(route) => router.push(route as Href)} />
-        ))}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function AreaRow({ area, enabled, onOpen }: { area: CareerArea; enabled: boolean; onOpen: (route: string) => void }) {
+/** One icon per area, so the menu scans quickly. */
+const AREA_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+  opportunities: 'search-outline',
+  map: 'map-outline',
+  tracker: 'briefcase-outline',
+  alerts: 'notifications-outline',
+  reminders: 'alarm-outline',
+  'action-packs': 'cube-outline',
+  outcomes: 'stats-chart-outline',
+  forms: 'clipboard-outline',
+  interviews: 'chatbubbles-outline',
+  voice: 'mic-outline',
+  coach: 'sparkles-outline',
+  profile: 'person-circle-outline',
+  evidence: 'folder-open-outline',
+  portfolios: 'albums-outline',
+  documents: 'document-attach-outline',
+  learning: 'school-outline',
+  relocation: 'airplane-outline',
+  scenarios: 'git-compare-outline',
+  maintenance: 'refresh-outline',
+  business: 'people-outline',
+  developer: 'key-outline',
+  data: 'server-outline',
+};
+
+function AreaGroup({ title, areas, enabled, onOpen }: { title: string; areas: GroupedArea[]; enabled: boolean; onOpen: (route: string) => void }) {
+  return (
+    <View className="mt-6">
+      <Text className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2 ms-1" accessibilityRole="header">{title}</Text>
+      <View className="bg-surface rounded-2xl border border-stone-100 overflow-hidden">
+        {areas.map((area, index) => (
+          <AreaRow key={area.key} area={area} first={index === 0} enabled={enabled || area.key === 'tracker'} onOpen={onOpen} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function AreaRow({ area, first, enabled, onOpen }: { area: GroupedArea; first: boolean; enabled: boolean; onOpen: (route: string) => void }) {
+  const t = useT('career');
   const inApp = area.where === 'app' && area.route;
+  const tappable = Boolean(inApp && enabled);
   const content = (
     <>
+      <View className={`h-10 w-10 rounded-xl items-center justify-center me-3 ${tappable ? 'bg-brand-50' : 'bg-stone-100'}`}>
+        <Ionicons name={AREA_ICON[area.key] ?? 'ellipse-outline'} size={20} color={tappable ? colors.brand[600] : colors.stone[400]} />
+      </View>
       <View className="flex-1 me-2">
-        <Text className={`font-bold ${inApp && enabled ? 'text-stone-900' : 'text-stone-700'}`}>{area.title}</Text>
-        <Text className="text-stone-500 text-sm mt-0.5 leading-5">{area.body}</Text>
+        <Text className={`font-semibold ${tappable ? 'text-stone-900' : 'text-stone-500'}`}>{area.title}</Text>
+        <Text className="text-stone-500 text-xs mt-0.5 leading-4" numberOfLines={2}>{area.locked ? t('groups.locked') : area.body}</Text>
         {area.where !== 'app' ? (
-          <View className="mt-2">
+          <View className="mt-1.5">
             <Pill label={WHERE_LABEL[area.where].toUpperCase()} tone={area.where === 'web' ? 'default' : 'warning'} />
           </View>
         ) : null}
       </View>
-      {inApp && enabled ? <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} style={RTL_FLIP} /> : null}
+      {area.locked ? (
+        <Ionicons name="lock-closed-outline" size={16} color={colors.stone[400]} />
+      ) : tappable ? (
+        <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} style={RTL_FLIP} />
+      ) : null}
     </>
   );
-  if (inApp && enabled) {
+  const rowClass = `px-4 py-3 flex-row items-center min-h-[60px] ${first ? '' : 'border-t border-stone-100'}`;
+  if (tappable) {
     return (
       <TouchableOpacity
         onPress={() => onOpen(area.route as string)}
-        className="bg-surface rounded-2xl border border-stone-100 p-4 mb-3 flex-row items-center min-h-[56px]"
+        className={rowClass}
         accessibilityRole="button"
-        activeOpacity={0.8}
+        accessibilityHint={area.locked ? t('groups.locked') : undefined}
+        activeOpacity={0.7}
       >
         {content}
       </TouchableOpacity>
     );
   }
-  // Not a control: plain information, styled flatter so it does not look tappable.
-  return <View className="bg-stone-100/60 rounded-2xl p-4 mb-3 flex-row items-center">{content}</View>;
+  // Not a control: plain information, without a chevron.
+  return <View className={rowClass}>{content}</View>;
 }
 
 /** A date-only deadline (YYYY-MM-DD) shown as a day in the current language. */

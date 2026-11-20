@@ -8,7 +8,7 @@
   },
   "overview": {
     "title": "Outils de carrière",
-    "subtitle": "Module facultatif de votre forfait FlacronCV",
+    "subtitle": "Recherche d’emploi, entraînement aux entretiens et profil de carrière",
     "credits": "Crédits carrière",
     "creditsLeft": "sur {granted} crédits de document restants",
     "packs": "{count} en plus grâce aux packs",
@@ -238,5 +238,13 @@
     "notIncludedBody": "Vos candidatures dans le suivi des candidatures sont inchangées.",
     "countsNote": "Les chiffres viennent de vos candidatures dans le suivi des candidatures. Les entretiens incluent les offres. Ce n’est pas une probabilité d’embauche.",
     "openTracker": "Ouvrir le suivi des candidatures"
+  },
+  "groups": {
+    "jobSearch": "Recherche d’emploi",
+    "interview": "Préparation aux entretiens",
+    "growth": "Évolution de carrière",
+    "business": "Entreprise",
+    "account": "Vos données",
+    "locked": "Inclus dans un forfait supérieur"
   }
 }

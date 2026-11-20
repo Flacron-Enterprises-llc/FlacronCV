@@ -10,6 +10,7 @@ import {
   describeAccess,
   documentCredits,
   visibleAreas,
+  careerAreaGroups,
   type CareerSubscriptionView,
 } from './career-view';
 
@@ -153,6 +154,30 @@ describe('visibleAreas', () => {
       expect(exists(area.route as string), `${area.key} → ${area.route}`).toBe(true);
     }
     expect(new Set(CAREER_AREAS.map((area) => area.key)).size).toBe(CAREER_AREAS.length);
+  });
+});
+
+describe('careerAreaGroups', () => {
+  const ALL_ON = { evidenceItems: true, portfolioPages: true, actionPacks: true, applicationAnalytics: true, coachingResponses: true, voiceMinutes: true, skillReports: true, scenarioReports: true, staffSeats: true, alertItems: true, textInterviewSessions: true, locationProfiles: true };
+  const keys = (groups: ReturnType<typeof careerAreaGroups>) => groups.flatMap((g) => g.areas.map((a) => a.key));
+
+  it('groups like the website and leaves out what cannot be used yet', () => {
+    const groups = careerAreaGroups({ features: ALL_ON, careerPlan: 'business' });
+    expect(groups.map((g) => g.key)).toEqual(['jobSearch', 'interview', 'growth', 'business', 'account']);
+    const list = keys(groups);
+    for (const closed of ['recruiting', 'services', 'forms', 'map']) expect(list).not.toContain(closed);
+    expect(new Set(list).size).toBe(list.length);
+  });
+
+  it('locks higher-plan areas and hides team tools outside Business', () => {
+    const groups = careerAreaGroups({ features: ALL_ON, careerPlan: 'free' });
+    expect(groups.map((g) => g.key)).not.toContain('business');
+    expect(groups.flatMap((g) => g.areas).find((a) => a.key === 'scenarios')?.locked).toBe(true);
+    expect(groups.flatMap((g) => g.areas).find((a) => a.key === 'profile')?.locked).toBe(false);
+  });
+
+  it('drops an area whose switch is off', () => {
+    expect(keys(careerAreaGroups({ features: { ...ALL_ON, evidenceItems: false }, careerPlan: 'business' }))).not.toContain('evidence');
   });
 });
 
