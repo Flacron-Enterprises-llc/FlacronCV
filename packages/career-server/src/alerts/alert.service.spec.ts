@@ -302,6 +302,37 @@ describe('AlertService', () => {
     expect((await alerts.alerts(p)).unread).toBe(0);
   });
 
+  it('links an alert to the person’s own goal only from Career Pro (advanced); Professional gets no advanced context', async () => {
+    clock.set('2026-10-17T09:00:00Z');
+    const pro = await person('alert-adv-professional');
+    const cp = await person('alert-adv-careerpro');
+    await setPlan(pro, 'professional');
+    await setPlan(cp, 'career_pro');
+    await db.pool.query(`UPDATE saved_searches SET paused = true WHERE candidate_auth_user_id NOT IN ($1, $2)`, [pro.authUserId, cp.authUserId]);
+    await db.pool.query(`DELETE FROM followed_companies WHERE candidate_auth_user_id NOT IN ($1, $2)`, [pro.authUserId, cp.authUserId]);
+    for (const p of [pro, cp]) {
+      await alerts.createSearch(p, { q: 'Staff platform engineer' });
+      await db.pool.query(
+        `INSERT INTO career_promotion_goals (workspace_id, candidate_auth_user_id, desired_title) VALUES ($1, $2, 'Staff platform engineer')`,
+        [p.workspaceId, p.authUserId],
+      );
+    }
+    await opportunities.ingest(null, [
+      { ...listing('lever', 'lv-adv-1', 'Lead the platform.'), title: 'Staff platform engineer', organization: 'Goal Co' },
+    ]);
+    await alerts.runDue();
+
+    const cpList = await alerts.alerts(cp);
+    expect(cpList.tier).toBe('advanced');
+    expect(cpList.items[0]?.reason).toMatchObject({ code: 'saved_search', tier: 'advanced' });
+    expect(cpList.items[0]?.reason.advanced).toMatchObject({ promotionGoal: 'Staff platform engineer', learningPlanId: null, actionPackId: null });
+
+    const proList = await alerts.alerts(pro);
+    expect(proList.tier).toBe('enhanced');
+    expect(proList.items[0]?.title).toBe('Staff platform engineer');
+    expect(proList.items[0]?.reason.advanced ?? null).toBeNull();
+  });
+
   it('matches a followed company by whole words and aliases with roles and places, not by substring', async () => {
     const p = await person('alert-company');
     await only(p);
