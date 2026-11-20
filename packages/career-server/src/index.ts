@@ -60,6 +60,7 @@ export type { TextModel, TextModelRequest, TextModelResponse } from './ai/text-m
 export { OpenAITextModel } from './ai/openai-text-model';
 export { createTextModel } from './ai/create-text-model';
 export { UnconfiguredSpeechTranscriber } from './ai/speech-transcriber';
+export { OpenAISpeechTranscriber, createSpeechTranscriber, speechProviderReady } from './ai/openai-speech-transcriber';
 export type { SpeechTranscribeResult, SpeechTranscriber, SpeechTranscriptionInput } from './ai/speech-transcriber';
 export { UnconfiguredMapTiles } from './maps/map-tiles';
 export type { MapTiles } from './maps/map-tiles';

@@ -6,10 +6,13 @@
  * - ai: the same rule as createTextModel (AI_PROVIDER=openai + OPENAI_API_KEY).
  * - objectStorage: s3 with a bucket, or the local-disk store used in
  *   development. `memory` (tests only) and unset are not ready.
- * - speech, mapTiles, jobFeeds: no live adapter exists in this build
- *   (UnconfiguredSpeechTranscriber; map tiles and licensed feeds are not
- *   implemented), so they are never ready, whatever the env says.
+ * - speech: the same rule as createSpeechTranscriber (SPEECH_PROVIDER=openai
+ *   + OPENAI_API_KEY).
+ * - mapTiles, jobFeeds: no live adapter exists in this build, so they are
+ *   never ready, whatever the env says.
  */
+import { speechProviderReady } from '../ai/openai-speech-transcriber';
+
 export interface ProviderReadiness {
   ai: boolean;
   objectStorage: boolean;
@@ -22,5 +25,5 @@ export function providerReadiness(env: NodeJS.ProcessEnv = process.env): Provide
   const ai = (env.AI_PROVIDER?.trim().toLowerCase() ?? '') === 'openai' && (env.OPENAI_API_KEY?.trim() ?? '').length > 0;
   const storageMode = env.OBJECT_STORAGE?.trim().toLowerCase() ?? '';
   const objectStorage = (storageMode === 's3' && (env.OBJECT_STORAGE_BUCKET?.trim() ?? '').length > 0) || storageMode === 'local';
-  return { ai, objectStorage, speech: false, mapTiles: false, jobFeeds: false };
+  return { ai, objectStorage, speech: speechProviderReady(env), mapTiles: false, jobFeeds: false };
 }

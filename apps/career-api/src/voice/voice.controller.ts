@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Headers, Inject, Param, Patch, Post, Provider, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
-import { BillingError, VoiceInterviewService } from '@flacroncv/career-server';
+import { BillingError, VoiceInterviewService, createSpeechTranscriber } from '@flacroncv/career-server';
 import type { ObjectStorage, Principal } from '@flacroncv/career-server';
 import { INTERVIEW_STAGES, TRANSCRIPTION_LANGUAGES, TRANSCRIPTION_MAX_BYTES, TRANSCRIPTION_MIME_TYPES, VOICE_UPLOAD_MAX_BYTES, voiceAudioContentType } from '@flacroncv/career-shared';
 import { CurrentPrincipal } from '../auth/auth.guard';
@@ -64,9 +64,9 @@ export const voiceProviders: Provider[] = [
   {
     provide: VoiceInterviewService,
     inject: [DatabaseService, OBJECT_STORAGE],
-    // No speech provider is connected yet: the service's default transcriber answers provider_unavailable.
+    // OpenAI speech-to-text when SPEECH_PROVIDER=openai and OPENAI_API_KEY are set; otherwise provider_unavailable.
     useFactory: (database: DatabaseService, storage: ObjectStorage) =>
-      new VoiceInterviewService(database.connectionPool, undefined, undefined, storage),
+      new VoiceInterviewService(database.connectionPool, undefined, createSpeechTranscriber(process.env), storage),
   },
 ];
 
