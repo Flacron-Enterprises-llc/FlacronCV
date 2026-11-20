@@ -12,6 +12,8 @@ const nextConfig = {
   // without touching its `.next`. Unset (every hosted build) keeps `.next`.
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   output: 'standalone',
+  // Do not advertise the framework in every response.
+  poweredByHeader: false,
   // On Next 14 this key lives under `experimental` — at the top level it is
   // rejected ("Unrecognized key(s) in object: 'outputFileTracingRoot'") and
   // silently ignored, so standalone file tracing defaulted to apps/web instead
@@ -40,6 +42,16 @@ const nextConfig = {
             key: 'Cross-Origin-Opener-Policy',
             value: 'unsafe-none',
           },
+          // Baseline hardening, the same family the API sends (helmet). HTTPS only, for a year.
+          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // No other site may frame the app (clickjacking). Same-origin frames stay
+          // allowed: the PDF export renders inside one (html2canvas).
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+          // Voice practice records with the microphone; nothing uses camera or location.
+          { key: 'Permissions-Policy', value: 'camera=(), geolocation=(), microphone=(self), browsing-topics=()' },
         ],
       },
     ];
