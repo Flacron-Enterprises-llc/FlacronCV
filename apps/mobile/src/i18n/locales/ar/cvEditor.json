@@ -18,7 +18,13 @@
     "chooseFormat": "اختر الصيغة:",
     "renameTitle": "إعادة تسمية السيرة الذاتية",
     "titleLabel": "عنوان السيرة الذاتية",
-    "titlePlaceholder": "مثال: سيرة ذاتية مهندس برمجيات 2025"
+    "titlePlaceholder": "مثال: سيرة ذاتية مهندس برمجيات 2025",
+    "preview": "معاينة",
+    "previewTitle": "معاينة السيرة الذاتية",
+    "previewNote": "تتحدّث أثناء التعديل. هكذا سيبدو ملف PDF الخاص بك.",
+    "previewError": "تعذّر تحميل المعاينة.",
+    "previewRetry": "إعادة المحاولة",
+    "previewClose": "إغلاق المعاينة"
   },
   "wizard": {
     "steps": {

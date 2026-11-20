@@ -18,7 +18,13 @@
     "chooseFormat": "فارمیٹ منتخب کریں:",
     "renameTitle": "CV کا نام تبدیل کریں",
     "titleLabel": "CV کا عنوان",
-    "titlePlaceholder": "مثلاً سافٹ ویئر انجینئر CV 2025"
+    "titlePlaceholder": "مثلاً سافٹ ویئر انجینئر CV 2025",
+    "preview": "پیش منظر",
+    "previewTitle": "سی وی کا پیش منظر",
+    "previewNote": "ترمیم کے ساتھ اپ ڈیٹ ہوتا ہے۔ آپ کی PDF ایسی نظر آئے گی۔",
+    "previewError": "پیش منظر لوڈ نہیں ہو سکا۔",
+    "previewRetry": "دوبارہ کوشش کریں",
+    "previewClose": "پیش منظر بند کریں"
   },
   "wizard": {
     "steps": {

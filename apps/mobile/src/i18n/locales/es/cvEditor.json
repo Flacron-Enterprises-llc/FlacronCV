@@ -18,7 +18,13 @@
     "chooseFormat": "Elige el formato:",
     "renameTitle": "Cambiar nombre del CV",
     "titleLabel": "Título del CV",
-    "titlePlaceholder": "p. ej. CV Ingeniero de Software 2025"
+    "titlePlaceholder": "p. ej. CV Ingeniero de Software 2025",
+    "preview": "Vista previa",
+    "previewTitle": "Vista previa del CV",
+    "previewNote": "Se actualiza mientras editas. Así se verá tu PDF.",
+    "previewError": "No se pudo cargar la vista previa.",
+    "previewRetry": "Reintentar",
+    "previewClose": "Cerrar vista previa"
   },
   "wizard": {
     "steps": {

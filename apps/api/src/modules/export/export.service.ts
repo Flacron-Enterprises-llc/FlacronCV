@@ -133,6 +133,37 @@ export function brandedPdfOptions(removeBranding: boolean): Record<string, unkno
 }
 
 /** Cadence follows the plan: Free never resets, paid numeric caps are monthly. */
+/** Upper bounds for a preview draft; anything larger is ignored and the stored value is used. */
+export const PREVIEW_MAX_SECTIONS = 60;
+export const PREVIEW_MAX_JSON = 200_000;
+
+/**
+ * Picks the renderer's inputs out of an untrusted preview body. Unknown keys
+ * are dropped; wrong types are ignored (the stored value is used instead).
+ * The renderer escapes and sanitises content exactly as for the PDF.
+ */
+export function previewDraft(input: unknown): {
+  templateId?: string;
+  styling?: Record<string, unknown>;
+  personalInfo?: Record<string, unknown>;
+  sections?: Record<string, unknown>[];
+} {
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) return {};
+  let size = 0;
+  try { size = JSON.stringify(input).length; } catch { return {}; }
+  if (size > PREVIEW_MAX_JSON) return {};
+  const body = input as Record<string, unknown>;
+  const plain = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+  const out: ReturnType<typeof previewDraft> = {};
+  if (typeof body.templateId === 'string' && /^[A-Za-z0-9_-]{1,80}$/.test(body.templateId)) out.templateId = body.templateId;
+  if (plain(body.styling)) out.styling = body.styling;
+  if (plain(body.personalInfo)) out.personalInfo = body.personalInfo;
+  if (Array.isArray(body.sections) && body.sections.length <= PREVIEW_MAX_SECTIONS && body.sections.every(plain)) {
+    out.sections = body.sections as Record<string, unknown>[];
+  }
+  return out;
+}
+
 export function exportLimitReachedMessage(
   plan: SubscriptionPlan,
   limit: number,
@@ -358,6 +389,26 @@ export class ExportService {
     } catch {
       this.logger.warn('Could not load templates directory');
     }
+  }
+
+  /**
+   * The same HTML the PDF export prints, for an in-app preview. Ownership is
+   * checked like an export; no export is reserved, counted or recorded. `draft`
+   * carries the editor's UNSAVED values so the preview follows typing; only the
+   * fields the renderer reads are taken from it (see `previewDraft`).
+   */
+  async previewCVHtml(cvId: string, userId: string, draft: unknown): Promise<{ html: string }> {
+    const cv = await this.cvService.findByIdOrThrow(cvId, userId);
+    const edits = previewDraft(draft);
+    const merged = {
+      ...cv,
+      ...(edits.templateId ? { templateId: edits.templateId } : {}),
+      styling: { ...((cv as { styling?: object }).styling ?? {}), ...(edits.styling ?? {}) },
+      personalInfo: { ...((cv as { personalInfo?: object }).personalInfo ?? {}), ...(edits.personalInfo ?? {}) },
+    };
+    const sections = edits.sections ?? (await this.cvService.getSections(cvId));
+    const photo = await this.loadCvPhoto(merged);
+    return { html: this.renderCVHTML(merged, sections, photo) };
   }
 
   async exportCVToPDF(cvId: string, userId: string): Promise<{ downloadUrl: string; expiresAt: Date }> {

@@ -18,7 +18,13 @@
     "chooseFormat": "Choisissez le format :",
     "renameTitle": "Renommer le CV",
     "titleLabel": "Titre du CV",
-    "titlePlaceholder": "ex. CV Ingénieur logiciel 2025"
+    "titlePlaceholder": "ex. CV Ingénieur logiciel 2025",
+    "preview": "Aperçu",
+    "previewTitle": "Aperçu du CV",
+    "previewNote": "Se met à jour pendant la modification. Voici à quoi ressemblera votre PDF.",
+    "previewError": "L’aperçu n’a pas pu être chargé.",
+    "previewRetry": "Réessayer",
+    "previewClose": "Fermer l’aperçu"
   },
   "wizard": {
     "steps": {

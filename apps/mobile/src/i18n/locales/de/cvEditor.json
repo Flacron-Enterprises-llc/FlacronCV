@@ -18,7 +18,13 @@
     "chooseFormat": "Format wählen:",
     "renameTitle": "Lebenslauf umbenennen",
     "titleLabel": "Lebenslauf-Titel",
-    "titlePlaceholder": "z. B. Lebenslauf Software Engineer 2025"
+    "titlePlaceholder": "z. B. Lebenslauf Software Engineer 2025",
+    "preview": "Vorschau",
+    "previewTitle": "Lebenslauf-Vorschau",
+    "previewNote": "Wird beim Bearbeiten aktualisiert. So sieht Ihr PDF aus.",
+    "previewError": "Die Vorschau konnte nicht geladen werden.",
+    "previewRetry": "Erneut versuchen",
+    "previewClose": "Vorschau schließen"
   },
   "wizard": {
     "steps": {

@@ -18,7 +18,13 @@
     "chooseFormat": "Choose format:",
     "renameTitle": "Rename CV",
     "titleLabel": "CV title",
-    "titlePlaceholder": "e.g. Software Engineer CV 2025"
+    "titlePlaceholder": "e.g. Software Engineer CV 2025",
+    "preview": "Preview",
+    "previewTitle": "CV preview",
+    "previewNote": "Updates as you edit. This is how your PDF will look.",
+    "previewError": "The preview could not be loaded.",
+    "previewRetry": "Try again",
+    "previewClose": "Close preview"
   },
   "wizard": {
     "steps": {

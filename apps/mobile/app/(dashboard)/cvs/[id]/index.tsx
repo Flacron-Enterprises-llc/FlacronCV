@@ -18,6 +18,7 @@ import { useAuthStore } from '../../../../src/store/auth-store';
 import { canExport, planForDisplay, sharedPlanLimits } from '../../../../src/lib/entitlements';
 import { exportLimitReachedMessage, limitPrompt, showUpgradePrompt, upgradeAlertButtons } from '../../../../src/config/paid-upgrades';
 import { colors } from '../../../../src/theme/colors';
+import { CVPreviewSheet } from '../../../../src/components/cv-builder/CVPreviewSheet';
 import { t as tNow, useT } from '../../../../src/i18n';
 import { RTL_FLIP } from '../../../../src/i18n/native';
 
@@ -40,6 +41,7 @@ export default function CVEditorScreen() {
   const exportCV = useExportCV();
   const updateCV = useUpdateCV(id ?? '');
   const [renameOpen, setRenameOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [renameValue, setRenameValue] = useState('');
   const [renameError, setRenameError] = useState<string | undefined>();
 
@@ -164,6 +166,14 @@ export default function CVEditorScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          onPress={() => setPreviewOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t('editor.preview')}
+          className="me-1 p-2"
+        >
+          <Ionicons name="eye-outline" size={22} color={colors.stone[700]} />
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={() => router.push('./ats-check')}
           accessibilityLabel={t('editor.atsCheck')}
           className="me-1 p-2"
@@ -234,6 +244,7 @@ export default function CVEditorScreen() {
       </Modal>
 
       {/* CV Wizard */}
+      {id ? <CVPreviewSheet cvId={id} visible={previewOpen} onClose={() => setPreviewOpen(false)} /> : null}
       <CVWizard
         cvId={id!}
         onFinish={() => router.push('/(dashboard)/cvs')}

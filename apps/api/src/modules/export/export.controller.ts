@@ -34,6 +34,12 @@ export class ExportController {
     );
   }
 
+  /** In-app CV preview (same HTML as the PDF). Unsaved editor values in the body; no export is counted. */
+  @Post('cvs/:id/preview')
+  async previewCv(@CurrentUser() user: FirebaseUser, @Param('id') id: string, @Body() draft: unknown) {
+    return this.exportService.previewCVHtml(id, user.uid, draft);
+  }
+
   @Post('cvs/:id/export/pdf')
   async exportCVPdf(@CurrentUser() user: FirebaseUser, @Param('id') id: string) {
     const result = await this.exportService.exportCVToPDF(id, user.uid);
