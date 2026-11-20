@@ -181,7 +181,7 @@ describe('DashboardScreen', () => {
     expect(screen.getAllByText(/Text interviews/).length).toBe(2);
     expect(screen.getByText('Librarian CV')).toBeTruthy();
     expect(screen.getByText('Cataloguing')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Open resume studio' }).getAttribute('href')).toBe('/en/career/documents');
+    expect(screen.getByRole('link', { name: 'Open tailored drafts' }).getAttribute('href')).toBe('/en/career/documents');
     expect(screen.getByRole('link', { name: 'Open billing' }).getAttribute('href')).toBe('/en/settings/billing');
     expect(screen.getByRole('link', { name: 'Practice' }).getAttribute('href')).toBe('/en/career/interviews');
     expect(screen.queryByText(/hiring/i)).toBeNull();
