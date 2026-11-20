@@ -115,7 +115,7 @@ describe('plan catalog (five plans)', () => {
     }
     expect(featureState('documentCredits', false)).toBe('available');
     expect(featureState('alertItems', false)).toBe('coming_soon');
-    expect(cellState('alertIntelligence', 'business', true)).toBe('coming_soon');
+    expect(cellState('alertIntelligence', 'business', true)).toBe('available');
     expect(cellState('alertIntelligence', 'free', true)).toBe('available');
   });
 

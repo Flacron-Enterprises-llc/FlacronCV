@@ -222,7 +222,7 @@ export const FEATURE_STATE: Partial<Record<ComparisonRow, FeatureState>> = {
 };
 
 const LEVEL_STATE: Partial<Record<ComparisonRow, Partial<Record<string, FeatureState>>>> = {
-  alertIntelligence: { advanced: 'coming_soon', organization: 'coming_soon' },
+  // alertIntelligence: every level is built (advanced goal/action links; Business organization queue and assignment).
   // alertDelivery: the whole row is provider_dependent (feeds; push/Telegram/immediate mail need their own provider too).
 };
 

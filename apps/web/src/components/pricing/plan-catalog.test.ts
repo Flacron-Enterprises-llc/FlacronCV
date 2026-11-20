@@ -37,7 +37,7 @@ describe('plan catalog', () => {
     expect(featureState('documentCredits', true)).toBe('available');
     // Advanced alert intelligence and push/Telegram delivery, per plan.
     expect(cellState('alertIntelligence', 'professional', true)).toBe('available');
-    expect(cellState('alertIntelligence', 'career_pro', true)).toBe('coming_soon');
+    expect(cellState('alertIntelligence', 'career_pro', true)).toBe('available');
     // Alert delivery matches licensed job-feed listings (none live yet): every level waits for the provider,
     // and push/Telegram/immediate mail need their own provider on top.
     expect(cellState('alertDelivery', 'starter', true)).toBe('provider_dependent');
