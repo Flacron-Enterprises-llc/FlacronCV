@@ -12,6 +12,8 @@ import { PLAN_CONFIGS, SubscriptionPlan, User, asSubscriptionPlan } from '@flacr
 import { fcgeUpgradeClicked } from '@/lib/fcge';
 import { TOUR_TARGETS } from '@/lib/app-tour';
 import { TEMPLATE_GALLERY_HREF, seedTemplateGalleryDraft } from '@/components/dashboard/Sidebar';
+import { useCareerAccess } from '@/components/career/CareerServices';
+import { linkState } from '@/components/career/CareerNav';
 import { isFirstVisit } from './first-visit';
 import RecentActivity from './RecentActivity';
 import {
@@ -24,6 +26,9 @@ import {
   CreditCard,
   AlertTriangle,
   RefreshCw,
+  Search,
+  MessagesSquare,
+  Compass,
 } from 'lucide-react';
 
 type Usage = User['usage'];
@@ -59,6 +64,7 @@ export default function DashboardPage(): React.JSX.Element | null {
   const tCv = useTranslations('cv_builder');
   const tPricing = useTranslations('pricing');
   const tBilling = useTranslations('billing');
+  const tNav = useTranslations('career.nav');
   const { user, degraded, refreshUser } = useAuth();
 
   const plan = (user?.subscription?.plan as SubscriptionPlan) || SubscriptionPlan.FREE;
@@ -111,9 +117,10 @@ export default function DashboardPage(): React.JSX.Element | null {
           // narrow card breaks the value instead of clipping it.
           value:
             planLimits.cvs === 'unlimited'
-              ? // Same Unlimited wording as billing.features.unlimited — count stays real.
-                `${cvsUsed} · ${tBilling('features.unlimited')}`
+              ? `${cvsUsed}`
               : `${cvsUsed} / ${planLimits.cvs}`,
+          // Same Unlimited wording as billing.features.unlimited, under the real count.
+          note: planLimits.cvs === 'unlimited' ? tBilling('features.unlimited') : null,
           bar: planLimits.cvs === 'unlimited' ? null : { used: cvsUsed, limit: planLimits.cvs as number },
           icon: FileText,
           color: 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300',
@@ -124,8 +131,9 @@ export default function DashboardPage(): React.JSX.Element | null {
           label: t('cover_letters_created'),
           value:
             planLimits.coverLetters === 'unlimited'
-              ? `${lettersUsed} · ${tBilling('features.unlimited')}`
+              ? `${lettersUsed}`
               : `${lettersUsed} / ${planLimits.coverLetters}`,
+          note: planLimits.coverLetters === 'unlimited' ? tBilling('features.unlimited') : null,
           bar:
             planLimits.coverLetters === 'unlimited'
               ? null
@@ -144,8 +152,9 @@ export default function DashboardPage(): React.JSX.Element | null {
           label: t('exports'),
           value:
             planLimits.exports === 'unlimited'
-              ? `${usage.exportsThisMonth || 0} · ${tBilling('features.unlimited')}`
+              ? `${usage.exportsThisMonth || 0}`
               : `${usage.exportsThisMonth || 0} / ${planLimits.exports}`,
+          note: planLimits.exports === 'unlimited' ? tBilling('features.unlimited') : null,
           bar:
             planLimits.exports === 'unlimited'
               ? null
@@ -161,6 +170,16 @@ export default function DashboardPage(): React.JSX.Element | null {
           color: 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300',
         },
       ]
+    : [];
+
+  // Career shortcuts, only for pages this person can open now.
+  const careerAccess = useCareerAccess();
+  const careerActions = careerAccess.data?.enabled
+    ? [
+        { href: '/career/opportunities' as const, title: tNav('opportunities'), desc: t('career_find_desc'), icon: Search },
+        { href: '/career/interviews' as const, title: tNav('interviews'), desc: t('career_interview_desc'), icon: MessagesSquare },
+        { href: '/career' as const, title: tNav('overview'), desc: t('career_overview_desc'), icon: Compass },
+      ].filter((action) => linkState(action.href, careerAccess.data) === 'available')
     : [];
 
   const quickActions = [
@@ -186,6 +205,7 @@ export default function DashboardPage(): React.JSX.Element | null {
       icon: FileText,
       color: 'bg-brand-50 text-brand-600 dark:bg-brand-950 dark:text-brand-400',
     },
+    ...careerActions.map((action) => ({ ...action, color: 'bg-[#1e3a5f]/10 text-[#1e3a5f] dark:bg-sky-950 dark:text-sky-300' })),
   ];
 
   return (
@@ -260,6 +280,7 @@ export default function DashboardPage(): React.JSX.Element | null {
                       >
                         {stat.value}
                       </p>
+                      {'note' in stat && stat.note ? <p className="mt-0.5 text-xs font-medium text-stone-500 dark:text-stone-400">{stat.note}</p> : null}
                       {stat.bar && <UsageBar used={stat.bar.used} limit={stat.bar.limit} />}
                     </div>
                   </div>

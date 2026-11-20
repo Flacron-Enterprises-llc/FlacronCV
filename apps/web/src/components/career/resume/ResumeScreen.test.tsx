@@ -56,7 +56,7 @@ describe('ResumeScreen', () => {
         <ResumeScreen api={testApi()} user={null} ready signInHref="/en/sign-in" />
       </NextIntlClientProvider>,
     );
-    expect(screen.getByRole('heading', { name: 'Resume studio' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Tailored drafts' })).toBeTruthy();
     expect(screen.getByText('Named resume versions and exports for this account.')).toBeTruthy();
     expect(screen.getByText('Sign in to see your resumes')).toBeTruthy();
   });

@@ -328,7 +328,10 @@
     "jobs_error": "No pudimos cargar tus candidaturas.",
     "jobs_empty": "Aún no sigues ninguna candidatura. Añade los puestos a los que te postulas para tener cada etapa en un solo lugar.",
     "jobs_open": "Abrir el seguimiento de candidaturas",
-    "upgrade_for_career_tools": "Mejora para herramientas profesionales"
+    "upgrade_for_career_tools": "Mejora para herramientas profesionales",
+    "career_find_desc": "Busca ofertas y guarda los puestos que valen la pena",
+    "career_interview_desc": "Practica respuestas para tu próxima entrevista",
+    "career_overview_desc": "Tu siguiente paso, plazos y progreso"
   },
   "cv_builder": {
     "title": "Creador de CV",
@@ -2457,9 +2460,9 @@
   },
   "career": {
     "actionPack": {
-      "meta_title": "Motor de oportunidad a acción",
+      "meta_title": "Kits de candidatura",
       "meta_description": "Paquete de candidatura completo: análisis de encaje, CV adaptado, carta, lista de verificación y próximos pasos.",
-      "title": "Motor de oportunidad a acción",
+      "title": "Kits de candidatura",
       "subtitle": "Convierte cualquier oportunidad en un paquete de candidatura listo para usar con un solo cargo.",
       "remaining_credits": "Créditos de paquetes de acción",
       "generate_new": "Generar paquete de acción",
@@ -2732,9 +2735,9 @@
       "business_invite_counts": "{staff} personal · {candidates} candidatos · {expired} vencidas"
     },
     "alerts": {
-      "meta_title": "Alertas",
+      "meta_title": "Alertas de empleo",
       "meta_description": "Búsquedas guardadas, horas de silencio y alertas ya mostradas. Cada elemento nuevo usa una alerta. El envío no.",
-      "title": "Alertas",
+      "title": "Alertas de empleo",
       "loading": "Cargando alertas",
       "signed_out_title": "Inicia sesión para leer las alertas",
       "signed_out_body": "Las búsquedas guardadas y las ofertas mostradas permanecen en esta cuenta.",
@@ -2895,9 +2898,9 @@
       "company_places_line": "lugares: {places}"
     },
     "career_modes": {
-      "meta_title": "Reubicación y modos profesionales especializados",
+      "meta_title": "Reubicación y modos de carrera",
       "meta_description": "Planifica destinos de reubicación, preferencias de radio, límites de desplazamiento y modos profesionales especializados.",
-      "title": "Reubicación y modos profesionales especializados",
+      "title": "Reubicación y modos de carrera",
       "subtitle": "Busca alrededor de donde estás y de adonde te mudas, y adapta las sugerencias a tu situación.",
       "tab_locations": "Perfiles de ubicación y reubicación",
       "tab_specialist": "Modos profesionales especializados",
@@ -3151,9 +3154,9 @@
       "open_tracker": "Abrir seguimiento de empleos"
     },
     "evidence": {
-      "meta_title": "Archivo de evidencias profesionales",
+      "meta_title": "Archivo de evidencias",
       "meta_description": "Respalda las habilidades que declaras con proyectos, credenciales, muestras de trabajo y referencias.",
-      "title": "Archivo de evidencias profesionales",
+      "title": "Archivo de evidencias",
       "subtitle": "Adjunta proyectos, credenciales y muestras de trabajo verificados para respaldar tus logros profesionales.",
       "add_evidence": "Añadir evidencia",
       "create_heading": "Nueva evidencia",
@@ -3383,9 +3386,9 @@
       "story_failed": "La historia no se guardó. Tu texto sigue aquí."
     },
     "learning": {
-      "meta_title": "Carencias de habilidades y planes de aprendizaje",
+      "meta_title": "Habilidades y aprendizaje",
       "meta_description": "Analiza tus carencias de habilidades, sigue itinerarios de aprendizaje a medida y genera proyectos finales verificables.",
-      "title": "Carencias de habilidades y planes de aprendizaje",
+      "title": "Habilidades y aprendizaje",
       "subtitle": "Acércate al puesto que buscas con hitos personalizados, recursos de confianza y proyectos prácticos.",
       "remaining_credits": "Créditos de informes de habilidades",
       "generate_new": "Nuevo plan de habilidades",
@@ -3511,9 +3514,9 @@
       "rubric_check_status": "Autoevaluación del {date}: {met} de {total} criterios cumplidos. No es una evaluación independiente."
     },
     "opportunities": {
-      "meta_title": "Búsqueda de empleo",
+      "meta_title": "Buscar empleos",
       "meta_description": "Busca ofertas y pega una vacante. El salario y el patrocinio que falten se muestran como no indicados.",
-      "title": "Búsqueda de empleo",
+      "title": "Buscar empleos",
       "loading": "Cargando ofertas",
       "signed_out_title": "Inicia sesión para buscar ofertas",
       "signed_out_body": "Los feeds y las vacantes que pegues permanecen en esta cuenta.",
@@ -4025,9 +4028,9 @@
       "achievement_prompt": "¿Añadir una cifra? Por ejemplo cuántos usuarios, cuánto más rápido o cuánto se ahorró. Solo si la conoces; si no, déjalo vacío. FlacronCV nunca añade una."
     },
     "resume": {
-      "meta_title": "Estudio de CV",
+      "meta_title": "Borradores a medida",
       "meta_description": "Versiones de CV con nombre. Generar una nueva versión usa un crédito de documento. Descargar un archivo existente no.",
-      "title": "Estudio de CV",
+      "title": "Borradores a medida",
       "studio_lede": "Versiones de CV con nombre y exportaciones de esta cuenta.",
       "preview": "Vista previa",
       "preview_help": "Este panel muestra las líneas actuales. La exportación usa la versión guardada.",
@@ -4187,7 +4190,7 @@
       "closed_body": "Las reservas y el pago para empleadores siguen cerrados hasta que se definan las condiciones comerciales. Esto no son comentarios generados por IA.",
       "attribution_title": "No se guardó la marca",
       "attribution_body": "La atribución debe incluir FlacronCV.",
-      "scenarios_title": "Compara hasta tres rutas",
+      "scenarios_title": "Planificador de escenarios",
       "scenarios_help": "El salario que falte se muestra como desconocido. La comparación no es una promesa de ingresos ni de empleo.",
       "scenarios_meta_title": "Planificador de escenarios",
       "scenarios_meta_description": "Compara hasta tres rutas con fuentes y certeza. Reabre y edita gratis las comparaciones guardadas.",
@@ -4250,9 +4253,9 @@
       "opt_in_saved": "Preferencia guardada.",
       "search": "Buscar personas que aceptaron participar",
       "checkout": "Pago para empleadores",
-      "developer_title": "Herramientas de la organización",
+      "developer_title": "API y marca",
       "developer_help": "Solo se crea una clave de API cuando el paquete de API está en la cuenta. La clave completa se muestra una sola vez.",
-      "developer_meta_title": "Herramientas de la organización",
+      "developer_meta_title": "API y marca",
       "developer_meta_description": "Claves de API de prueba y producción con límites, y una marca que mantiene la atribución a FlacronCV.",
       "create_key": "Crear una clave de API",
       "key_once": "Copia esta clave ahora. No se volverá a mostrar.",
@@ -4723,7 +4726,7 @@
       "label": "Herramientas profesionales",
       "overview": "Resumen profesional",
       "profile": "Perfil profesional",
-      "evidence": "Evidencias",
+      "evidence": "Archivo de evidencias",
       "portfolios": "Portafolio",
       "documents": "Borradores a medida",
       "opportunities": "Buscar empleos",
@@ -4735,10 +4738,10 @@
       "interviews": "Práctica de entrevistas",
       "voice": "Práctica por voz",
       "learning": "Habilidades y aprendizaje",
-      "relocation": "Reubicación",
+      "relocation": "Reubicación y modos de carrera",
       "scenarios": "Planificador de escenarios",
       "maintenance": "Mantenimiento",
-      "business": "Candidatos",
+      "business": "Espacio de candidatos",
       "recruiting": "Reclutamiento",
       "developer": "API y marca",
       "services": "Servicios humanos",
