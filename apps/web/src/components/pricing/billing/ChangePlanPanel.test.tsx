@@ -75,6 +75,22 @@ describe('Settings → Billing: change plan', () => {
     expect(props.onCheckout).toHaveBeenCalledWith('career_pro', 'annual', false);
   });
 
+  it('brings the checkout review into view when a plan is clicked, even the pre-selected one', async () => {
+    const scroll = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scroll;
+    try {
+      panel({ initialPlan: 'starter', initialInterval: 'monthly' });
+      await screen.findByTestId('plan-review');
+      scroll.mockClear();
+      fireEvent.click(await screen.findByRole('button', { name: 'Upgrade to Starter' }));
+      await waitFor(() => expect(scroll).toHaveBeenCalled());
+      expect(scroll.mock.contexts.some((el) => (el as Element).getAttribute('data-testid') === 'plan-review')).toBe(true);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
   it('says Coming soon with Contact us for plans without a price', async () => {
     get.mockResolvedValue({ plans: [{ id: 'starter', configured: true }] });
     panel();

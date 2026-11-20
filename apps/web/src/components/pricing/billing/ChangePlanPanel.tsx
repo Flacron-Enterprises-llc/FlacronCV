@@ -169,6 +169,13 @@ export function ChangePlanPanel({
   const select = (id: PlanId | null) => {
     change.reset();
     setSelected(id);
+    // The review (with "Continue to checkout") renders below the cards, often off screen.
+    // Bring it into view so the click visibly does something, even when re-selecting.
+    if (id && typeof window !== 'undefined') {
+      window.setTimeout(() => {
+        document.querySelector('[data-testid="plan-review"]')?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+      }, 0);
+    }
   };
 
   return (
