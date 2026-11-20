@@ -154,129 +154,163 @@ export function DashboardScreen({
     ? `/${locale}/career/interviews?opportunityId=${encodeURIComponent(practice.opportunityId)}`
     : `/${locale}/career/interviews`;
 
+  const active = applications.filter((item) => item.status !== 'rejected' && item.status !== 'withdrawn').length;
+  const href = (path: string) => `/${locale}${path}`;
+
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <div>
-        <h1 className="text-balance text-2xl font-bold text-career-ink">{t('meta_title')}</h1>
-        <p className="mt-2 max-w-2xl text-pretty text-sm text-career-muted">{t('workspace_lede')}</p>
-      </div>
-    <div data-testid="dashboard-layout" className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2">
-      <div className="flex flex-col gap-6">
-        <Card accent>
-          <h2 className="text-2xl font-semibold text-career-ink">{t('next_title')}</h2>
-          <p className="mt-2 text-sm text-career-muted">{t('next_body')}</p>
-          <a className="mt-3 inline-flex min-h-career-touch items-center rounded-md bg-career-navy px-4 text-sm font-semibold text-white dark:text-stone-950" href={actionHref(action, locale)}>
-            {actionLabel(action, t)}
-          </a>
-        </Card>
-        {resumes[0] ? (
-          <Card>
-            <h2 className="text-lg font-bold text-career-ink">{t('recent_document')}</h2>
-            <div className="mt-3 max-w-xs">
-              <DocumentPaper
-                templateId={resumes[0].templateId}
-                mode="live"
-                title={resumes[0].title}
-                lines={recentLines}
-                compact
-              />
-            </div>
-            <p className="mt-2 text-sm text-career-muted">{resumes[0].title} · {resumes[0].createdAt.slice(0, 10)}</p>
-            <a className="mt-3 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text" href={`/${locale}/career/documents`}>
-              {t('open_resume')}
-            </a>
-          </Card>
-        ) : null}
-        <Card>
-          <h2 className="text-lg font-bold text-career-ink">{t('profile_title')}</h2>
-          <p className="mt-2 text-sm text-career-ink">{t('confirmed_count', { count: counts.confirmed })}</p>
-          {counts.missingCore.length > 0 ? <p className="mt-1 text-sm text-career-muted">{t('missing_core', { sections: new Intl.ListFormat(locale, { type: 'conjunction' }).format(counts.missingCore.map((type) => factLabel(type, t))) })}</p> : null}
-          <ul className="mt-3 flex flex-col gap-2">
-            {facts.map((fact) => (
-              <li key={fact.id} className="flex items-center gap-2 text-sm text-career-ink">
-                <span>{factLabel(fact.factType, t)}</span>
-                <RecordStatus state={fact.confirmation === 'confirmed' ? 'confirmed' : 'draft'} label={fact.confirmation === 'confirmed' ? t('confirmed') : t('draft')} />
-              </li>
-            ))}
-          </ul>
-        </Card>
-        <Card>
-          <h2 className="text-lg font-semibold text-career-ink">{t('saved_title')}</h2>
-          <p className="mt-2 text-sm text-career-ink">{t('saved_count', { count: savedApplicationCount(cards) })}</p>
-          <p className="mt-1 text-sm text-career-ink">{deadline?.deadline ? t('next_deadline', { title: deadline.title, date: deadline.deadline }) : t('no_deadline')}</p>
-          {followUp ? <p className="mt-1 text-sm text-career-ink">{t('next_follow_up', { title: followUp.title, date: followUp.date })}</p> : null}
-        </Card>
-        <Card>
-          <h2 className="text-lg font-semibold text-career-ink">{t('relevant_title')}</h2>
-          {relevant.length === 0 ? (
-            <p className="mt-2 text-sm text-career-muted">{t('relevant_empty')}</p>
-          ) : (
-            <ul className="mt-2 flex flex-col gap-2">
-              {relevant.map((entry) => (
-                <li key={entry.id} className="text-sm text-career-ink">
-                  <a className="font-semibold text-career-orange-text" dir="auto" href={`/${locale}/career/opportunities/${entry.id}`}>{entry.title}</a>
-                  <span className="block text-xs text-career-muted">{entry.source === 'saved' ? t('relevant_saved') : t('relevant_alert')}{entry.deadline ? ` · ${t('relevant_deadline', { date: entry.deadline })}` : ''}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <h3 className="mt-4 text-sm font-semibold text-career-ink">{t('deadlines_title')}</h3>
-          {deadlines.length === 0 ? (
-            <p className="mt-1 text-sm text-career-muted">{t('no_deadline')}</p>
-          ) : (
-            <ul className="mt-1 flex flex-col gap-1">
-              {deadlines.map((entry) => (
-                <li key={entry.key} className="text-sm text-career-ink" dir="auto">{t('next_deadline', { title: entry.title, date: entry.date })}</li>
-              ))}
-            </ul>
-          )}
-          <a className="mt-3 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text" href={`/${locale}/career/alerts`}>{t('open_alerts')}</a>
-        </Card>
-      </div>
-      <div className="flex flex-col gap-6">
-        <Card>
+      <header>
+        <h1 className="text-balance text-2xl font-bold tracking-tight text-career-ink sm:text-3xl">{t('meta_title')}</h1>
+        <p className="mt-1.5 max-w-2xl text-pretty text-sm text-career-muted">{t('workspace_lede')}</p>
+      </header>
+
+      {/* The one suggested step, first and largest. */}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1e3a5f] via-[#1b3354] to-[#142842] p-6 text-white shadow-lg sm:p-8">
+        <div className="pointer-events-none absolute -end-16 -top-16 h-56 w-56 rounded-full bg-orange-500/20 blur-3xl" aria-hidden="true" />
+        <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-orange-200">{t('next_title')}</h2>
+        <p className="mt-2 max-w-2xl text-pretty text-sm text-white/80">{t('next_body')}</p>
+        <a
+          className="mt-5 inline-flex min-h-career-touch items-center gap-2 rounded-lg bg-white px-5 text-sm font-semibold text-[#1e3a5f] shadow-sm transition hover:bg-orange-50"
+          href={actionHref(action, locale)}
+        >
+          {actionLabel(action, t)}
+          <span aria-hidden="true" className="rtl:rotate-180">→</span>
+        </a>
+      </section>
+
+      <section aria-label={t('stats_label')} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile label={t('stat_facts')} value={counts.confirmed} href={href('/career/profile')} />
+        <StatTile label={t('stat_active')} value={active} href={href('/jobs')} />
+        <StatTile label={t('stat_deadlines')} value={deadlines.length} href={href('/career/alerts')} />
+        <StatTile label={t('stat_alerts')} value={alertCount} href={href('/career/alerts')} />
+      </section>
+
+      <Card>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-lg font-semibold text-career-ink">{t('stages_title')}</h2>
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {APPLICATION_STATUSES.map((status) => (
-              <li key={status}>
-                <Badge tone="neutral">{t(`status_${status}`)}: {stages[status]}</Badge>
-              </li>
-            ))}
-          </ul>
-        </Card>
-        <Card>
-          <h2 className="text-lg font-semibold text-career-ink">{t('interview_title')}</h2>
-          <p className="mt-2 text-sm text-career-ink">{t('interview_remaining', { count: interviewRemaining })}</p>
-          <a className="mt-3 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text" href={practiceHref}>{t('practice')}</a>
-        </Card>
-        <Card>
-          <h2 className="text-lg font-semibold text-career-ink">{t('coach_title')}</h2>
-          <p className="mt-2 text-sm text-career-muted">{t('coach_body')}</p>
-          <p className="mt-1 text-sm text-career-ink">{t('coach_remaining', { count: coachingRemaining })}</p>
-          <a className="mt-3 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text" href={`/${locale}/career/coach`}>{t('open_coach')}</a>
-        </Card>
-        <Card>
-          <h2 className="text-lg font-semibold text-career-ink">{t('usage_title')}</h2>
-          <ul className="mt-3 flex flex-col gap-2">
-            {(usage?.units ?? []).map((unit) => {
-              const remaining = unit.includedRemaining + unit.packRemaining;
-              return (
-                <li key={unit.unit} className="text-sm text-career-ink">
-                  {unitLabel(unit.unit, units)}: {remaining}
-                  {remaining === 0 ? (
-                    <>
-                      {' '}
-                      <a className="font-semibold text-career-orange-text" href={`/${locale}/settings/billing`}>{t('open_billing')}</a>
-                    </>
-                  ) : null}
+          <a className="text-sm font-semibold text-career-orange-text hover:underline" href={href('/jobs')}>{t('open_tracker')}</a>
+        </div>
+        <ol className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+          {APPLICATION_STATUSES.map((status) => (
+            <li key={status} className="rounded-lg border border-career-line bg-career-wash px-3 py-2.5">
+              <span className="block text-xl font-bold tabular-nums text-career-ink">{stages[status]}</span>
+              <span className="block truncate text-xs font-medium text-career-muted">{t(`status_${status}`)}</span>
+            </li>
+          ))}
+        </ol>
+      </Card>
+
+      <div data-testid="dashboard-layout" className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
+          <Card>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-lg font-semibold text-career-ink">{t('relevant_title')}</h2>
+              <a className="text-sm font-semibold text-career-orange-text hover:underline" href={href('/career/alerts')}>{t('open_alerts')}</a>
+            </div>
+            {relevant.length === 0 ? (
+              <p className="mt-3 text-sm text-career-muted">{t('relevant_empty')}</p>
+            ) : (
+              <ul className="mt-3 divide-y divide-career-line">
+                {relevant.map((entry) => (
+                  <li key={entry.id} className="py-3 first:pt-0 last:pb-0">
+                    <a className="font-semibold text-career-ink hover:text-career-orange-text" dir="auto" href={href(`/career/opportunities/${entry.id}`)}>{entry.title}</a>
+                    <span className="mt-0.5 block text-xs text-career-muted">{entry.source === 'saved' ? t('relevant_saved') : t('relevant_alert')}{entry.deadline ? ` · ${t('relevant_deadline', { date: entry.deadline })}` : ''}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="mt-5 rounded-lg bg-career-wash p-4">
+              <h3 className="text-sm font-semibold text-career-ink">{t('deadlines_title')}</h3>
+              {deadlines.length === 0 ? (
+                <p className="mt-1 text-sm text-career-muted">{t('no_deadline')}</p>
+              ) : (
+                <ul className="mt-1.5 flex flex-col gap-1">
+                  {deadlines.map((entry) => (
+                    <li key={entry.key} className="text-sm text-career-ink" dir="auto">{t('next_deadline', { title: entry.title, date: entry.date })}</li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-3 text-sm text-career-muted">{t('saved_count', { count: savedApplicationCount(cards) })}</p>
+              {followUp ? <p className="mt-1 text-sm text-career-ink">{t('next_follow_up', { title: followUp.title, date: followUp.date })}</p> : null}
+            </div>
+          </Card>
+
+          <Card>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-lg font-semibold text-career-ink">{t('profile_title')}</h2>
+              <a className="text-sm font-semibold text-career-orange-text hover:underline" href={href('/career/profile')}>{t('open_profile')}</a>
+            </div>
+            <p className="mt-1 text-sm text-career-ink">{t('confirmed_count', { count: counts.confirmed })}</p>
+            {counts.missingCore.length > 0 ? <p className="mt-1 text-sm text-career-muted">{t('missing_core', { sections: new Intl.ListFormat(locale, { type: 'conjunction' }).format(counts.missingCore.map((type) => factLabel(type, t))) })}</p> : null}
+            <ul className="mt-4 flex flex-wrap gap-2">
+              {facts.map((fact) => (
+                <li key={fact.id} className="inline-flex items-center gap-2 rounded-full border border-career-line px-3 py-1 text-sm text-career-ink">
+                  <span>{factLabel(fact.factType, t)}</span>
+                  <RecordStatus state={fact.confirmation === 'confirmed' ? 'confirmed' : 'draft'} label={fact.confirmation === 'confirmed' ? t('confirmed') : t('draft')} />
                 </li>
-              );
-            })}
-          </ul>
-        </Card>
+              ))}
+            </ul>
+          </Card>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-6">
+          <Card>
+            <h2 className="text-lg font-semibold text-career-ink">{t('interview_title')}</h2>
+            <p className="mt-1 text-sm text-career-muted">{t('interview_remaining', { count: interviewRemaining })}</p>
+            <a className="mt-3 inline-flex min-h-career-touch items-center rounded-lg bg-career-navy px-4 text-sm font-semibold text-white hover:bg-career-navy-hover dark:text-stone-950" href={practiceHref}>{t('practice')}</a>
+            <div className="mt-5 border-t border-career-line pt-4">
+              <h3 className="text-sm font-semibold text-career-ink">{t('coach_title')}</h3>
+              <p className="mt-1 text-sm text-career-muted">{t('coach_body')}</p>
+              <p className="mt-1 text-sm text-career-ink">{t('coach_remaining', { count: coachingRemaining })}</p>
+              <a className="mt-2 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text hover:underline" href={href('/career/coach')}>{t('open_coach')}</a>
+            </div>
+          </Card>
+
+          {resumes[0] ? (
+            <Card>
+              <h2 className="text-lg font-semibold text-career-ink">{t('recent_document')}</h2>
+              <div className="relative mt-3 max-h-56 overflow-hidden rounded-md border border-career-line">
+                <DocumentPaper templateId={resumes[0].templateId} mode="live" title={resumes[0].title} lines={recentLines} compact />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-career-surface to-transparent" aria-hidden="true" />
+              </div>
+              <p className="mt-2 truncate text-sm text-career-muted">{resumes[0].title} · {resumes[0].createdAt.slice(0, 10)}</p>
+              <a className="mt-1 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text hover:underline" href={href('/career/documents')}>
+                {t('open_resume')}
+              </a>
+            </Card>
+          ) : null}
+
+          <Card>
+            <h2 className="text-lg font-semibold text-career-ink">{t('usage_title')}</h2>
+            <ul className="mt-3 divide-y divide-career-line">
+              {(usage?.units ?? []).map((unit) => {
+                const remaining = unit.includedRemaining + unit.packRemaining;
+                return (
+                  <li key={unit.unit} className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <span className="min-w-0 text-career-muted">{unitLabel(unit.unit, units)}</span>
+                    {remaining === 0 ? (
+                      <a className="shrink-0 font-semibold text-career-orange-text hover:underline" href={href('/settings/billing')}>{t('open_billing')}</a>
+                    ) : (
+                      <span className="shrink-0 font-semibold tabular-nums text-career-ink">{remaining}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        </div>
       </div>
     </div>
-    </div>
+  );
+}
+
+/** A headline number that opens the page behind it. */
+function StatTile({ label, value, href }: { label: string; value: number; href: string }) {
+  return (
+    <a href={href} className="group rounded-xl border border-career-line bg-career-surface p-4 shadow-sm transition hover:border-career-orange hover:shadow-md">
+      <span className="block text-2xl font-bold tabular-nums text-career-ink sm:text-3xl">{value}</span>
+      <span className="mt-1 block text-sm font-medium text-career-muted group-hover:text-career-ink">{label}</span>
+    </a>
   );
 }
 

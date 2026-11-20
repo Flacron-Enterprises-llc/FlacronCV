@@ -41,7 +41,7 @@ describe('dashboard sidebar: career entry points', () => {
     access = { isSuccess: true, data: { enabled: false } };
     renderSidebar();
     expect(screen.getByRole('link', { name: 'Upgrade for career tools' }).getAttribute('href')).toBe('/settings/billing#change-plan');
-    expect(screen.queryByRole('link', { name: 'Career Tools' })).toBeNull();
+    expect(screen.queryByRole('link', { name: en.career.nav.overview })).toBeNull();
   });
 
   it('does not upsell when the account itself is missing or inactive', () => {
@@ -53,7 +53,9 @@ describe('dashboard sidebar: career entry points', () => {
   it('shows the career area instead once access is enabled', () => {
     access = { isSuccess: true, data: { enabled: true } };
     renderSidebar();
-    expect(screen.getByRole('link', { name: en.dashboard.career_tools }).getAttribute('href')).toBe('/career');
+    expect(screen.getByRole('link', { name: en.career.nav.overview }).getAttribute('href')).toBe('/career');
+    expect(screen.getByRole('link', { name: en.career.nav.opportunities }).getAttribute('href')).toBe('/career/opportunities');
+    expect(screen.getByRole('link', { name: en.career.nav.interviews }).getAttribute('href')).toBe('/career/interviews');
     expect(screen.queryByRole('link', { name: 'Upgrade for career tools' })).toBeNull();
   });
 

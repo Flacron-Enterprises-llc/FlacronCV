@@ -3,7 +3,8 @@
 import { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/routing';
-import { User, CreditCard } from 'lucide-react';
+import { User, CreditCard, Database } from 'lucide-react';
+import { useCareerAccess } from '@/components/career/CareerServices';
 import { cn } from '@/lib/utils';
 
 interface SettingsLayoutProps {
@@ -12,6 +13,8 @@ interface SettingsLayoutProps {
 
 export default function SettingsLayout({ children }: SettingsLayoutProps) {
   const t = useTranslations('settings');
+  const tNav = useTranslations('career.nav');
+  const careerAccess = useCareerAccess();
   const pathname = usePathname();
 
   const navItems = [
@@ -27,6 +30,10 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
       icon: CreditCard,
       exact: false,
     },
+    // Export and erase of career data; only for people with the career pages.
+    ...(careerAccess.data?.enabled
+      ? [{ href: '/settings/career-data' as const, label: tNav('data'), icon: Database, exact: true }]
+      : []),
   ];
 
   const isActive = (href: string, exact: boolean) => {

@@ -94,9 +94,9 @@ describe('DashboardScreen', () => {
         <DashboardScreen api={testApi()} user={null} ready signInHref="/en/sign-in" locale="en" />
       </NextIntlClientProvider>,
     );
-    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeTruthy();
-    expect(screen.getByText('Facts, applications, and remaining usage for this account.')).toBeTruthy();
-    expect(screen.getByText('Sign in to see your dashboard')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Career overview' })).toBeTruthy();
+    expect(screen.getByText('Your profile, applications, practice and remaining allowances in one place.')).toBeTruthy();
+    expect(screen.getByText('Sign in to see your career overview')).toBeTruthy();
   });
 
   it('shows an empty profile and does not spend a credit', async () => {
@@ -173,7 +173,7 @@ describe('DashboardScreen', () => {
     const action = await screen.findByRole('link', { name: /SQL analyst/ });
     expect(action.getAttribute('href')).toBe('/en/jobs');
     // In the saved card and in the upcoming deadlines list; an expired one is in neither.
-    expect(screen.getAllByText(/SQL analyst is due 2099-01-01/).length).toBe(2);
+    expect(screen.getAllByText(/SQL analyst is due 2099-01-01/).length).toBe(1);
     expect(screen.queryByText(/2020-01-01/)).toBeNull();
     expect(screen.queryByText(/2020-01-01/)).toBeNull();
     expect(screen.getByText('Draft')).toBeTruthy();

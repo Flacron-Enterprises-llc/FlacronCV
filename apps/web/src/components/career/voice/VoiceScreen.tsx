@@ -299,9 +299,6 @@ export function VoiceScreen({
         <h1 className="text-balance text-2xl font-bold text-stone-900 dark:text-white">{t('title')}</h1>
         <p className="mt-2 text-sm text-career-muted">{t('remaining', { time: clock(remaining), seconds: remaining })}</p>
         <p className="mt-1 text-sm text-career-muted">{t('not_a_score')}</p>
-        <a className="mt-2 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text" href={`/${locale}/career/interviews`}>
-          {t('text_link')}
-        </a>
       </div>
       {!planIncludesVoice || note === 'upgrade' ? <PlanUpgradeState title={t('upgrade_title')} body={t('upgrade_body')} /> : null}
       {note === 'quota' ? <QuotaExhaustedState title={t('quota_title')} body={t('quota_body')} /> : null}

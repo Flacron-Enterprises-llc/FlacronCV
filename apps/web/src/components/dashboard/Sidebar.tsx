@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/routing';
 import {
@@ -13,13 +13,34 @@ import {
   HelpCircle,
   CreditCard,
   ChevronsLeft,
+  ChevronDown,
   X,
   Compass,
   PlusCircle,
+  Lock,
+  Search,
+  Bell,
+  Package,
+  ClipboardCheck,
+  LineChart,
+  MessagesSquare,
+  Sparkles,
+  UserRound,
+  FolderCheck,
+  LayoutGrid,
+  GraduationCap,
+  Plane,
+  GitCompareArrows,
+  RefreshCcw,
+  Users,
+  KeyRound,
+  FileCheck2,
+  type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TOUR_TARGETS } from '@/lib/app-tour';
 import { isCareerEnabled, useCareerAccess } from '@/components/career/CareerServices';
+import { TEMPLATES_HREF, sidebarGroups } from '@/components/career/CareerNav';
 import { CV_NEW_DRAFT_KEY } from '@/app/[locale]/(dashboard)/cv/new/constants';
 
 /**
@@ -28,7 +49,44 @@ import { CV_NEW_DRAFT_KEY } from '@/app/[locale]/(dashboard)/cv/new/constants';
  * vanished and the user was dropped out of the app. The CV template picker is
  * the in-app gallery (with plan locks and "use this template").
  */
-export const TEMPLATE_GALLERY_HREF = '/cv/new/pick-template';
+export const TEMPLATE_GALLERY_HREF = TEMPLATES_HREF;
+
+/** One icon per destination, so the collapsed rail stays readable. */
+const ICONS: Record<string, LucideIcon> = {
+  '/cv': FileText,
+  '/cover-letters': Mail,
+  '/career/documents': FileCheck2,
+  [TEMPLATES_HREF]: Palette,
+  '/career/opportunities': Search,
+  '/jobs': Briefcase,
+  '/career/alerts': Bell,
+  '/career/action-pack': Package,
+  '/career/forms': ClipboardCheck,
+  '/career/learning-loop': LineChart,
+  '/career/interviews': MessagesSquare,
+  '/career/coach': Sparkles,
+  '/career': Compass,
+  '/career/profile': UserRound,
+  '/career/evidence': FolderCheck,
+  '/career/portfolios': LayoutGrid,
+  '/career/learning': GraduationCap,
+  '/career/relocation': Plane,
+  '/career/scenarios': GitCompareArrows,
+  '/career/maintenance': RefreshCcw,
+  '/career/business': Users,
+  '/career/developer': KeyRound,
+};
+
+const CLOSED_GROUPS_KEY = 'fcv.sidebar.closedGroups';
+
+function readClosedGroups(): string[] {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(CLOSED_GROUPS_KEY) ?? '[]');
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
 
 /**
  * The picker is step 2 of "new CV" and reads the CV title from step 1's
@@ -64,12 +122,22 @@ interface SidebarProps {
   onToggleCollapse?: () => void;
 }
 
+interface NavItem {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  tour?: string;
+  locked?: boolean;
+  onNavigate?: () => void;
+}
+
 export default function Sidebar({ open, onClose, collapsed = false, onToggleCollapse }: SidebarProps) {
   const t = useTranslations('dashboard');
+  const tNav = useTranslations('career.nav');
   const tCommon = useTranslations('common');
   const tCv = useTranslations('cv_builder');
   const pathname = usePathname();
-  // Career tools appear only when the person's V1 plan includes them (decided by
+  // Career pages appear only when the person's V1 plan includes them (decided by
   // the career service). Unmapped plans, and an unreachable service, see V1 as before.
   const careerAccess = useCareerAccess();
   // Every current plan includes the career tools, so "not enabled" only happens
@@ -84,24 +152,46 @@ export default function Sidebar({ open, onClose, collapsed = false, onToggleColl
     careerAccess.data?.enabled === false &&
     (careerAccess.data.reason ?? 'plan_not_mapped') === 'plan_not_mapped';
 
-  const navItems = [
+  const [closedGroups, setClosedGroups] = useState<string[]>([]);
+  useEffect(() => setClosedGroups(readClosedGroups()), []);
+  const toggleGroup = (key: string) => {
+    setClosedGroups((current) => {
+      const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+      try {
+        localStorage.setItem(CLOSED_GROUPS_KEY, JSON.stringify(next));
+      } catch {
+        /* the choice just is not remembered */
+      }
+      return next;
+    });
+  };
+
+  const allGroups = sidebarGroups(careerAccess.data);
+  const homeLinks = allGroups.find((group) => group.key === 'home')?.links ?? [];
+  const groups = allGroups.filter((group) => group.key !== 'home').map((group) => ({
+    key: group.key,
+    label: tNav(`group_${group.key}`),
+    items: group.links.map(
+      (link): NavItem => ({
+        href: link.href,
+        icon: ICONS[link.href] ?? Compass,
+        label: link.career ? tNav(link.key) : t(link.key),
+        locked: link.state === 'plan',
+        ...(link.href === TEMPLATES_HREF
+          ? { tour: TOUR_TARGETS.templates, onNavigate: () => seedTemplateGalleryDraft(tCv('untitled_cv')) }
+          : {}),
+      }),
+    ),
+  }));
+
+  const topItems: NavItem[] = [
     { href: '/dashboard', icon: LayoutDashboard, label: t('title') },
-    { href: '/cv', icon: FileText, label: t('my_cvs') },
-    { href: '/cover-letters', icon: Mail, label: t('my_cover_letters') },
-    { href: '/jobs', icon: Briefcase, label: t('job_tracker') },
-    ...(careerAccess.data?.enabled ? [{ href: '/career', icon: Compass, label: t('career_tools') }] : []),
+    ...homeLinks.map((link) => ({ href: link.href, icon: ICONS[link.href] ?? Compass, label: tNav(link.key) })),
     // The #change-plan anchor lands on the plan picker and keeps Billing the only highlighted item there.
     ...(offerCareerUpgrade ? [{ href: '/settings/billing#change-plan', icon: PlusCircle, label: t('upgrade_for_career_tools') }] : []),
-    {
-      href: TEMPLATE_GALLERY_HREF,
-      icon: Palette,
-      label: t('templates'),
-      tour: TOUR_TARGETS.templates,
-      onNavigate: () => seedTemplateGalleryDraft(tCv('untitled_cv')),
-    },
   ];
 
-  const bottomItems = [
+  const bottomItems: NavItem[] = [
     { href: '/settings', icon: Settings, label: t('settings') },
     { href: '/settings/billing', icon: CreditCard, label: t('billing') },
     { href: '/support', icon: HelpCircle, label: t('support') },
@@ -119,18 +209,21 @@ export default function Sidebar({ open, onClose, collapsed = false, onToggleColl
 
   // Only the most specific matching item is active, so /settings/billing
   // highlights Billing without also highlighting Settings — and the template
-  // gallery (/cv/new/pick-template) highlights Templates, not My CVs.
-  const activeHref = [...navItems, ...bottomItems]
+  // gallery (/cv/new/pick-template) highlights Templates, not My CVs. Tabbed
+  // sub-pages (voice practice, the jobs map) highlight their parent.
+  const allItems = [...topItems, ...groups.flatMap((g) => g.items), ...bottomItems];
+  const activeHref = allItems
     .filter(({ href }) => pathname === href || pathname.startsWith(href + '/'))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
-  const NavLink = ({ href, icon: Icon, label, tour, onNavigate }: {
-    href: string;
-    icon: any;
-    label: string;
-    tour?: string;
-    onNavigate?: () => void;
-  }) => (
+  // A long menu scrolls; keep the current page in view (not on every render, only on navigation).
+  useEffect(() => {
+    if (!activeHref) return;
+    const current = document.querySelector<HTMLElement>('aside nav [aria-current="page"]');
+    current?.scrollIntoView?.({ block: 'nearest' });
+  }, [activeHref]);
+
+  const NavLink = ({ href, icon: Icon, label, tour, locked, onNavigate }: NavItem) => (
     <Link
       href={href}
       onClick={() => {
@@ -140,19 +233,25 @@ export default function Sidebar({ open, onClose, collapsed = false, onToggleColl
       data-tour={tour}
       aria-current={href === activeHref ? 'page' : undefined}
       // Native tooltip is the affordance that replaces the hidden label on the rail.
-      title={collapsed ? label : undefined}
+      title={collapsed ? label : locked ? tNav('state_plan') : undefined}
       className={cn(
-        'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-        collapsed && 'lg:justify-center lg:gap-0 lg:px-0',
+        'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+        collapsed && 'lg:justify-center lg:gap-0 lg:px-0 lg:py-2.5',
         href === activeHref
           ? 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300'
           : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200',
       )}
     >
-      <Icon className="h-5 w-5 flex-shrink-0" />
+      <Icon className="h-[18px] w-[18px] flex-shrink-0" aria-hidden />
       {/* sr-only (not hidden) on the rail so screen readers still announce the
           destination — the label is only *visually* removed. */}
-      <span className={cn('truncate', collapsed && 'lg:sr-only')}>{label}</span>
+      <span className={cn('min-w-0 flex-1 truncate', collapsed && 'lg:sr-only')}>{label}</span>
+      {locked ? (
+        <>
+          <Lock className={cn('h-3.5 w-3.5 flex-shrink-0 text-stone-400 dark:text-stone-500', collapsed && 'lg:hidden')} aria-hidden />
+          <span className="sr-only">{tNav('state_plan')}</span>
+        </>
+      ) : null}
     </Link>
   );
 
@@ -208,13 +307,47 @@ export default function Sidebar({ open, onClose, collapsed = false, onToggleColl
           </button>
         </div>
 
-        <nav aria-label={tCommon('main_navigation')} className="flex-1 space-y-1 overflow-y-auto p-3">
-          {navItems.map((item) => (
-            <NavLink key={item.href} {...item} />
-          ))}
+        <nav aria-label={tCommon('main_navigation')} className="flex-1 overflow-y-auto overscroll-contain p-3">
+          <div className="space-y-0.5">
+            {topItems.map((item) => (
+              <NavLink key={item.href} {...item} />
+            ))}
+          </div>
+
+          {groups.map((group) => {
+            const holdsActive = group.items.some((item) => item.href === activeHref);
+            // The group holding the current page always stays open.
+            const isOpen = collapsed || holdsActive || !closedGroups.includes(group.key);
+            const listId = `sidebar-group-${group.key}`;
+            return (
+              <div key={group.key} className="mt-4">
+                {/* On the rail a thin rule replaces the heading. */}
+                <div className={cn('mx-3 mb-2 hidden border-t border-stone-200 dark:border-stone-700', collapsed && 'lg:block')} />
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.key)}
+                  aria-expanded={isOpen}
+                  aria-controls={listId}
+                  disabled={holdsActive}
+                  className={cn(
+                    'mb-1 flex w-full items-center justify-between rounded-md px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-stone-400 transition-colors hover:text-stone-600 disabled:cursor-default disabled:hover:text-stone-400 dark:text-stone-500 dark:hover:text-stone-300',
+                    collapsed && 'lg:hidden',
+                  )}
+                >
+                  <span>{group.label}</span>
+                  <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', !isOpen && '-rotate-90 rtl:rotate-90', holdsActive && 'opacity-0')} aria-hidden />
+                </button>
+                <div id={listId} hidden={!isOpen} className="space-y-0.5">
+                  {group.items.map((item) => (
+                    <NavLink key={item.href} {...item} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </nav>
 
-        <div className="border-t border-stone-200 p-3 dark:border-stone-700">
+        <div className="space-y-0.5 border-t border-stone-200 p-3 dark:border-stone-700">
           {bottomItems.map((item) => (
             <NavLink key={item.href} {...item} />
           ))}

@@ -48,7 +48,7 @@ export function CareerGate({ children }: { children: ReactNode }) {
               <Link className="text-brand-700 underline-offset-2 hover:underline dark:text-brand-400" href="/settings/billing">
                 {t('see_plan')}
               </Link>
-              <Link className="text-brand-700 underline-offset-2 hover:underline dark:text-brand-400" href="/career/data">
+              <Link className="text-brand-700 underline-offset-2 hover:underline dark:text-brand-400" href="/settings/career-data">
                 {t('your_data')}
               </Link>
             </div>

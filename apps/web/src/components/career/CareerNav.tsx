@@ -3,57 +3,91 @@
 import { useTranslations } from 'next-intl';
 import { ALLOWANCES } from '@flacroncv/career-shared';
 import type { PlanAllowances, PlanId } from '@flacroncv/career-shared';
+import { useSearchParams } from 'next/navigation';
 import { Link, usePathname } from '@/i18n/routing';
 import { cn } from '@/lib/utils';
 import { useCareerAccess } from './CareerServices';
 import { formExtensionAvailable } from './scope/ScopePanels';
 
+/** The in-app template gallery (kept here so the nav model has no UI imports). */
+export const TEMPLATES_HREF = '/cv/new/pick-template';
+
 /**
- * The career area's own navigation, inside V1's dashboard shell. Grouped so
- * the V1 sidebar needs one entry, not twenty.
+ * One app, one navigation: the V1 pages and the career pages share the
+ * dashboard sidebar, grouped by what the person is doing. `career` entries
+ * come from the career service and only appear when it grants access.
  */
-export const CAREER_SECTIONS = [
+export const NAV_GROUPS = [
   {
-    key: 'profile',
+    // Shown at the top, under the V1 dashboard, with no heading.
+    key: 'home',
+    links: [{ href: '/career', key: 'overview', career: true }],
+  },
+  {
+    key: 'documents',
     links: [
-      ['/career', 'overview'],
-      ['/career/profile', 'profile'],
-      ['/career/evidence', 'evidence'],
-      ['/career/portfolios', 'portfolios'],
-      ['/career/documents', 'documents'],
+      { href: '/cv', key: 'my_cvs', career: false },
+      { href: '/cover-letters', key: 'my_cover_letters', career: false },
+      { href: '/career/documents', key: 'documents', career: true },
+      { href: TEMPLATES_HREF, key: 'templates', career: false },
     ],
   },
   {
-    key: 'jobs',
+    key: 'job_search',
     links: [
-      ['/career/opportunities', 'opportunities'],
-      ['/career/opportunities/map', 'map'],
-      ['/career/alerts', 'alerts'],
-      ['/career/action-pack', 'action_pack'],
-      ['/career/forms', 'forms'],
-      ['/career/learning-loop', 'learning_loop'],
+      { href: '/career/opportunities', key: 'opportunities', career: true },
+      { href: '/jobs', key: 'job_tracker', career: false },
+      { href: '/career/alerts', key: 'alerts', career: true },
+      { href: '/career/action-pack', key: 'action_pack', career: true },
+      { href: '/career/forms', key: 'forms', career: true },
+      { href: '/career/learning-loop', key: 'learning_loop', career: true },
     ],
   },
   {
-    key: 'growth',
+    key: 'interview',
     links: [
-      ['/career/coach', 'coach'],
-      ['/career/interviews', 'interviews'],
-      ['/career/interviews/voice', 'voice'],
-      ['/career/learning', 'learning'],
-      ['/career/relocation', 'relocation'],
-      ['/career/scenarios', 'scenarios'],
-      ['/career/maintenance', 'maintenance'],
+      { href: '/career/interviews', key: 'interviews', career: true },
+      { href: '/career/coach', key: 'coach', career: true },
     ],
   },
   {
-    key: 'teams',
+    key: 'career',
     links: [
-      ['/career/business', 'business'],
-      ['/career/recruiting', 'recruiting'],
-      ['/career/developer', 'developer'],
-      ['/career/services', 'services'],
-      ['/career/data', 'data'],
+      { href: '/career/profile', key: 'profile', career: true },
+      { href: '/career/evidence', key: 'evidence', career: true },
+      { href: '/career/portfolios', key: 'portfolios', career: true },
+      { href: '/career/learning', key: 'learning', career: true },
+      { href: '/career/relocation', key: 'relocation', career: true },
+      { href: '/career/scenarios', key: 'scenarios', career: true },
+      { href: '/career/maintenance', key: 'maintenance', career: true },
+    ],
+  },
+  {
+    key: 'business',
+    links: [
+      { href: '/career/business', key: 'business', career: true },
+      { href: '/career/developer', key: 'developer', career: true },
+    ],
+  },
+] as const;
+
+/**
+ * Sub-pages reached through tabs on their parent page rather than the
+ * sidebar (voice is a mode of interview practice, the map a view of jobs).
+ */
+export const PAGE_TABS = [
+  {
+    key: 'interviews',
+    tabs: [
+      { href: '/career/interviews', key: 'tab_text' },
+      { href: '/career/interviews/voice', key: 'tab_voice' },
+    ],
+  },
+  {
+    key: 'opportunities',
+    tabs: [
+      { href: '/career/opportunities', key: 'tab_list' },
+      { href: '/career/opportunities/map', key: 'tab_map' },
     ],
   },
 ] as const;
@@ -61,8 +95,8 @@ export const CAREER_SECTIONS = [
 /**
  * Pages whose actions sit behind an operator switch (`feature_flags`, else the
  * catalog phase; see career-server `isFeatureEnabled`). `/access` reports each
- * switch; a page whose switch is off is shown as "coming soon". The career
- * API refuses the calls either way: the badge is only an honest label.
+ * switch. The career API refuses the calls either way; navigation only hides
+ * what cannot be used yet.
  */
 export const LINK_FEATURE: Record<string, string> = {
   '/career/evidence': 'evidenceItems',
@@ -76,6 +110,7 @@ export const LINK_FEATURE: Record<string, string> = {
   '/career/learning': 'skillReports',
   '/career/scenarios': 'scenarioReports',
   '/career/business': 'staffSeats',
+  '/career/developer': 'staffSeats',
 };
 
 /** The plan allowance that decides whether a page is in the caller's plan. */
@@ -91,6 +126,7 @@ export const LINK_ALLOWANCE: Record<string, keyof PlanAllowances> = {
   '/career/learning': 'skillReports',
   '/career/scenarios': 'scenarioReports',
   '/career/business': 'staffSeats',
+  '/career/developer': 'staffSeats',
 };
 
 /**
@@ -106,6 +142,8 @@ const LINK_COMING: Record<string, () => boolean> = {
 
 export type CareerLinkState = 'available' | 'soon' | 'plan';
 
+type Access = { enabled?: boolean; features?: Record<string, boolean>; careerPlan?: string } | undefined;
+
 export function linkSwitchedOn(href: string, features: Record<string, boolean> | undefined): boolean {
   const feature = LINK_FEATURE[href];
   return !feature || features?.[feature] === true;
@@ -119,73 +157,89 @@ function planIncludes(href: string, careerPlan: string | undefined): boolean {
   return true;
 }
 
-/**
- * Spec section 21: every area is listed as available, coming soon, or not in
- * the caller's plan, instead of being hidden.
- */
-export function linkState(
-  href: string,
-  access: { features?: Record<string, boolean>; careerPlan?: string } | undefined,
-): CareerLinkState {
+/** Whether a page can be used now, is not open yet, or needs a higher plan. */
+export function linkState(href: string, access: Access): CareerLinkState {
   if (LINK_COMING[href]?.() || !linkSwitchedOn(href, access?.features)) return 'soon';
   if (!planIncludes(href, access?.careerPlan)) return 'plan';
   return 'available';
 }
 
-function isActive(pathname: string, href: string): boolean {
-  if (href === '/career') return pathname === '/career';
-  // The most specific link wins: /career/opportunities/map is not also /career/opportunities.
-  const all = CAREER_SECTIONS.flatMap((section) => section.links.map(([link]) => link as string));
-  const longest = all.filter((link) => pathname === link || pathname.startsWith(`${link}/`)).sort((a, b) => b.length - a.length)[0];
-  return longest === href;
+export interface SidebarLink {
+  href: string;
+  key: string;
+  career: boolean;
+  /** `plan`: shown with a lock; the page explains the upgrade. */
+  state: 'available' | 'plan';
 }
 
-export function CareerNav() {
+/**
+ * The sidebar, for this person. Pages that are not open yet are left out
+ * rather than listed as "coming soon"; pages a higher plan unlocks stay, with
+ * a lock. Team tools only appear for plans that include them. Without career
+ * access (or while it loads) only the V1 pages are listed.
+ */
+export function sidebarGroups(access: Access): Array<{ key: string; links: SidebarLink[] }> {
+  const career = access?.enabled === true;
+  return NAV_GROUPS.map((group) => ({
+    key: group.key as string,
+    links: group.links.flatMap((link): SidebarLink[] => {
+      if (!link.career) return [{ href: link.href, key: link.key, career: false, state: 'available' }];
+      if (!career) return [];
+      const state = linkState(link.href, access);
+      if (state === 'soon') return [];
+      if (group.key === 'business' && state !== 'available') return [];
+      return [{ href: link.href, key: link.key, career: true, state }];
+    }),
+  })).filter((group) => group.links.length > 0);
+}
+
+/** The tabs a page shows: only those that can be opened (a single tab shows no bar). */
+export function pageTabs(pathname: string, access: Access): Array<{ href: string; key: string; state: 'available' | 'plan' }> | null {
+  const family = PAGE_TABS.find((entry) => entry.tabs.some((tab) => tab.href === pathname));
+  if (!family || access?.enabled !== true) return null;
+  const tabs = family.tabs.flatMap((tab) => {
+    const state = linkState(tab.href, access);
+    return state === 'soon' ? [] : [{ href: tab.href as string, key: tab.key as string, state }];
+  });
+  return tabs.length > 1 ? tabs : null;
+}
+
+/**
+ * Text / voice practice and list / map view, as a segmented control at the
+ * top of those pages. Everything else is reached from the sidebar.
+ */
+export function CareerPageTabs() {
   const t = useTranslations('career.nav');
   const pathname = usePathname();
   const access = useCareerAccess();
-  // Without access the gate explains why; a menu of closed pages would only mislead.
-  if (!access.data?.enabled) return null;
+  // Switching between text and voice keeps the listing being practised.
+  const opportunityId = useSearchParams()?.get('opportunityId');
+  const tabs = pageTabs(pathname, access.data);
+  if (!tabs) return null;
+  const query = opportunityId ? `?opportunityId=${encodeURIComponent(opportunityId)}` : '';
   return (
-    <nav aria-label={t('label')} className="mb-6 space-y-3 sm:space-y-2">
-      {CAREER_SECTIONS.map((section) => (
-        // Links wrap instead of scrolling sideways: on a phone a cut-off row
-        // hid entries mid-word with nothing to show there was more.
-        <div key={section.key} className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-start sm:gap-2">
-          <span className="shrink-0 pt-0 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400 sm:w-20 sm:pt-2.5">
-            {t(`group_${section.key}`)}
-          </span>
-          <ul className="flex min-w-0 flex-wrap gap-1">
-            {section.links.map(([href, key]) => {
-              const active = isActive(pathname, href);
-              const state = linkState(href, access.data);
-              return (
-                <li key={href}>
-                  <Link
-                    href={href}
-                    aria-current={active ? 'page' : undefined}
-                    className={cn(
-                      'inline-flex min-h-[2.25rem] items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors',
-                      active
-                        ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300'
-                        : state === 'available'
-                          ? 'text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white'
-                          : 'text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800',
-                    )}
-                  >
-                    {t(key)}
-                    {state === 'available' ? null : (
-                      <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-stone-600 dark:bg-stone-800 dark:text-stone-300">
-                        {t(state === 'soon' ? 'state_soon' : 'state_plan')}
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
+    <nav aria-label={t('label')} className="mb-6">
+      <ul className="inline-flex gap-1 rounded-xl border border-stone-200 bg-stone-100/70 p-1 dark:border-stone-700 dark:bg-stone-800/60">
+        {tabs.map((tab) => {
+          const active = tab.href === pathname;
+          return (
+            <li key={tab.href}>
+              <Link
+                href={`${tab.href}${query}`}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'inline-flex min-h-[2.25rem] items-center rounded-lg px-4 text-sm font-semibold transition-colors',
+                  active
+                    ? 'bg-white text-stone-900 shadow-sm dark:bg-stone-900 dark:text-white'
+                    : 'text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-white',
+                )}
+              >
+                {t(tab.key)}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </nav>
   );
 }

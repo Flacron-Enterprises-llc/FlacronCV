@@ -204,9 +204,6 @@ export function InterviewsScreen({
       <div>
         <PageHeader title={t('title')} description={t('not_a_score')} />
         <p className="mt-2 text-sm text-career-muted">{t('allowance', { count: remaining })}</p>
-        <a className="mt-2 inline-flex min-h-career-touch items-center text-sm font-semibold text-career-orange-text" href={`/${locale}/career/interviews/voice${opportunityId ? `?opportunityId=${encodeURIComponent(opportunityId)}` : ''}`}>
-          {t('voice_link')}
-        </a>
       </div>
       {note === 'upgrade' ? <PlanUpgradeState title={t('upgrade_title')} body={t('upgrade_body')} /> : null}
       {note === 'quota' ? <QuotaExhaustedState title={t('quota_title')} body={t('quota_body')} /> : null}
