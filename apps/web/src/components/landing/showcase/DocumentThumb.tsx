@@ -32,6 +32,30 @@ export const A4_HEIGHT = 1123;
 function ScaledA4({ children, label }: { children: ReactNode; label: string }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0);
+  // A page preview is a full A4 layout: building every one at load blocked the
+  // homepage for seconds on phones. Each is built when it nears the screen and
+  // then kept.
+  const [near, setNear] = useState(false);
+
+  useLayoutEffect(() => {
+    const frame = frameRef.current;
+    if (!frame || near) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setNear(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setNear(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '600px 0px' },
+    );
+    observer.observe(frame);
+    return () => observer.disconnect();
+  }, [near]);
 
   useLayoutEffect(() => {
     const frame = frameRef.current;
@@ -54,7 +78,7 @@ function ScaledA4({ children, label }: { children: ReactNode; label: string }) {
       className="fc-paper relative w-full overflow-hidden bg-white"
       style={{ aspectRatio: `${A4_WIDTH} / ${A4_HEIGHT}` }}
     >
-      {scale > 0 ? (
+      {near && scale > 0 ? (
         <div
           aria-hidden="true"
           className="pointer-events-none absolute start-0 top-0 select-none"

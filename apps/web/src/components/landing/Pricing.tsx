@@ -84,7 +84,8 @@ export default function Pricing({
         </div>
 
         <div className="mt-10">
-          <PlanCards interval={interval} contactSalesHref={fullPage ? '#contact-sales' : '/pricing#contact-sales'} />
+          {/* Under the page's own h1 (full pricing page) the plan names are h2; under this section's h2 they are h3. */}
+          <PlanCards interval={interval} headingLevel={intro ? 'h2' : 'h3'} contactSalesHref={fullPage ? '#contact-sales' : '/pricing#contact-sales'} />
         </div>
         <PlanTermsNote />
 
