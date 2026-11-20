@@ -211,7 +211,7 @@ const CORE_ROWS: ReadonlySet<ComparisonRow> = new Set<ComparisonRow>([
  * alert delivery match licensed job-feed listings, which are not live yet.
  */
 export const FEATURE_STATE: Partial<Record<ComparisonRow, FeatureState>> = {
-  voiceMinutes: 'provider_dependent',
+  // voiceMinutes: speech-to-text is connected (OpenAI, SPEECH_PROVIDER=openai).
   mapSessions: 'provider_dependent',
   // Licensed job feeds (not live): listing alerts, saved searches and their schedule/delivery.
   alertItems: 'provider_dependent',

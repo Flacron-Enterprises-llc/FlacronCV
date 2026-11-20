@@ -121,7 +121,7 @@ const CORE_ROWS: ReadonlySet<ComparisonRow> = new Set<ComparisonRow>([
  * reads this, so they cannot disagree.
  */
 export const FEATURE_STATE: Partial<Record<ComparisonRow, FeatureState>> = {
-  voiceMinutes: 'provider_dependent',
+  // voiceMinutes: speech-to-text is connected (OpenAI, SPEECH_PROVIDER=openai).
   mapSessions: 'provider_dependent',
   // Licensed job feeds (not live): listing alerts, saved searches and their schedule/delivery.
   alertItems: 'provider_dependent',

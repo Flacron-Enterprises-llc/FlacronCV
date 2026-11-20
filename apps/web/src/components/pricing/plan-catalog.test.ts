@@ -30,7 +30,7 @@ describe('plan catalog', () => {
   });
 
   it('marks unbuilt and provider-dependent features honestly', () => {
-    expect(featureState('voiceMinutes', true)).toBe('provider_dependent');
+    expect(featureState('voiceMinutes', true)).toBe('available');
     expect(featureState('mapSessions', true)).toBe('provider_dependent');
     expect(featureState('coachingResponses', true)).toBe('available');
     expect(featureState('assistedForms', true)).toBe('coming_soon');
