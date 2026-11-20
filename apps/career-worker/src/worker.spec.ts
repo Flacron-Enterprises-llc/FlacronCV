@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 import { join } from 'path';
 import { BillingService, buildCatalogSnapshot } from '@flacroncv/career-server';
 import { createTestDatabase, TestDatabase } from '@flacroncv/career-server/src/testing';
-import { DEFAULT_HANDLERS, alertHandlers, maintenanceHandlers, QUEUES, SCHEDULES } from './jobs';
+import { DEFAULT_HANDLERS, alertHandlers, feedHandlers, maintenanceHandlers, QUEUES, SCHEDULES } from './jobs';
 import { Worker } from './worker';
 
 const TSX_CLI = require.resolve('tsx/cli');
@@ -101,14 +101,14 @@ describe('worker', () => {
 
     const worker = new Worker(
       { databaseUrl: db.url, bossSchema: db.schema },
-      { ...DEFAULT_HANDLERS, ...maintenanceHandlers(db.pool), ...alertHandlers(db.pool) },
+      { ...DEFAULT_HANDLERS, ...maintenanceHandlers(db.pool), ...alertHandlers(db.pool), ...feedHandlers(db.pool, {}) },
       SCHEDULES,
     );
     await worker.start();
     try {
       const names = (await worker.boss.getSchedules()).map((s) => s.name).sort();
       expect(names).toEqual(
-        [QUEUES.packExpiry, QUEUES.renewals, QUEUES.releaseAbandoned, QUEUES.alertMatch, QUEUES.alertDigest, QUEUES.alertReminders].sort(),
+        [QUEUES.packExpiry, QUEUES.renewals, QUEUES.releaseAbandoned, QUEUES.alertMatch, QUEUES.alertDigest, QUEUES.alertReminders, QUEUES.feedIngest].sort(),
       );
 
       await worker.boss.send(QUEUES.renewals, {});

@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import { loadRepoEnv, redactDatabaseUrl } from '@flacroncv/career-server';
 import { readWorkerConfig, WorkerConfig } from './config';
-import { DEFAULT_HANDLERS, alertHandlers, maintenanceHandlers, SCHEDULES } from './jobs';
+import { DEFAULT_HANDLERS, alertHandlers, feedHandlers, maintenanceHandlers, SCHEDULES } from './jobs';
 import { Worker } from './worker';
 
 /**
@@ -32,7 +32,7 @@ async function main(argv: readonly string[]): Promise<number | 'running'> {
   // A drain processes what is queued now; it does not register the schedules.
   const worker = new Worker(
     config,
-    { ...DEFAULT_HANDLERS, ...maintenanceHandlers(pool), ...alertHandlers(pool) },
+    { ...DEFAULT_HANDLERS, ...maintenanceHandlers(pool), ...alertHandlers(pool), ...feedHandlers(pool) },
     draining ? {} : SCHEDULES,
   );
   await worker.start();

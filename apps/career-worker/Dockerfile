@@ -2,7 +2,7 @@
 #   docker build -f apps/career-worker/Dockerfile -t flacroncv-worker .
 # Health: node dist/main.js --check
 
-FROM node:20-bookworm-slim AS build
+FROM public.ecr.aws/docker/library/node:20-bookworm-slim AS build
 WORKDIR /repo
 RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.career.base.json ./
@@ -17,7 +17,7 @@ RUN pnpm --filter career-worker build
 RUN pnpm --filter career-worker deploy --prod /app
 RUN cp -r apps/career-worker/dist /app/dist
 
-FROM node:20-bookworm-slim
+FROM public.ecr.aws/docker/library/node:20-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
 # AWS RDS requires TLS; pg verifies the server certificate (sslmode=verify-full),

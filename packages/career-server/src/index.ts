@@ -102,6 +102,7 @@ export { COACH_TEMPLATE } from './coaching/coaching-compose';
 export { ApplicationService } from './applications/application.service';
 export type { ApplicationSnapshot, ApplicationView, ReminderView } from './applications/application.service';
 export { OpportunityService } from './opportunities/opportunity.service';
+export { FeedIngester, SEARCH_TERMS_SQL, feedConfigFromEnv, feedsConfigured } from './opportunities/feed-ingest';
 export type { OpportunityDetail, OpportunityItem } from './opportunities/opportunity.service';
 export { UnconfiguredJobFeed } from './opportunities/feeds';
 export { parseAdzuna, parseGreenhouse, parseLever, parseUsajobs } from './opportunities/normalize';

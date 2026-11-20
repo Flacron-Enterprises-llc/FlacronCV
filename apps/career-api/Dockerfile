@@ -2,7 +2,7 @@
 #   docker build -f apps/career-api/Dockerfile -t flacroncv-career-api .
 # Do not bake secrets into the image. Pass DATABASE_URL at run time.
 
-FROM node:20-bookworm-slim AS build
+FROM public.ecr.aws/docker/library/node:20-bookworm-slim AS build
 WORKDIR /repo
 RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.career.base.json ./
@@ -31,7 +31,7 @@ ADD https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /etc/ssl/r
 ENV NODE_EXTRA_CA_CERTS=/etc/ssl/rds-global-bundle.pem
 CMD ["pnpm", "--filter", "career-api", "migrate"]
 
-FROM node:20-bookworm-slim
+FROM public.ecr.aws/docker/library/node:20-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
 # AWS RDS requires TLS; pg verifies the server certificate (sslmode=verify-full),

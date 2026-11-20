@@ -1,5 +1,5 @@
 import type { Pool } from 'pg';
-import { AlertService, BillingService, MeteringService, createAlertNotifier, createGeocoder, createRecordedEmailResolver } from '@flacroncv/career-server';
+import { AlertService, BillingService, FeedIngester, MeteringService, OpportunityService, SEARCH_TERMS_SQL, createAlertNotifier, createGeocoder, createRecordedEmailResolver, feedConfigFromEnv, feedsConfigured } from '@flacroncv/career-server';
 
 export type JobHandler = (data: unknown) => Promise<void>;
 
@@ -18,6 +18,8 @@ export const QUEUES = {
   alertDigest: 'alerts-digest',
   /** In-app reminders (deadlines, certification expiry); never spends alert quota. */
   alertReminders: 'alerts-reminders',
+  /** Imports listings from configured job feeds; a no-op when none is configured. */
+  feedIngest: 'feeds-ingest',
 } as const;
 
 /** A request runs far shorter than this, so a job still running after it has no process left. */
@@ -31,6 +33,8 @@ export const SCHEDULES: Readonly<Record<string, string>> = {
   [QUEUES.alertMatch]: '15 * * * *',
   [QUEUES.alertDigest]: '30 8 * * *',
   [QUEUES.alertReminders]: '45 6 * * *',
+  // Before alert matching (minute 15), so new listings are matched in the same hour.
+  [QUEUES.feedIngest]: '5 * * * *',
 };
 
 export const DEFAULT_HANDLERS: Readonly<Record<string, JobHandler>> = {
@@ -77,6 +81,22 @@ export function alertHandlers(pool: Pool, env: NodeJS.ProcessEnv = process.env):
     [QUEUES.alertReminders]: async () => {
       const run = await alerts.runReminders();
       if (run.failed > 0) console.warn(`reminders: ${run.failed} person(s) failed; retried next run`);
+    },
+  };
+}
+
+/** Job-feed import. Configured by env only; with no source it does nothing (and fetches nothing). */
+export function feedHandlers(pool: Pool, env: NodeJS.ProcessEnv = process.env): Record<string, JobHandler> {
+  const config = feedConfigFromEnv(env);
+  if (!feedsConfigured(config)) return { [QUEUES.feedIngest]: async () => undefined };
+  const opportunities = new OpportunityService(pool);
+  const terms = async () => (await pool.query<{ term: string }>(SEARCH_TERMS_SQL)).rows.map((r) => r.term);
+  const ingester = new FeedIngester(config, opportunities, terms);
+  return {
+    [QUEUES.feedIngest]: async () => {
+      const run = await ingester.runOnce();
+      console.log(`feeds: ${run.sources} source call(s), ${run.fetched} listing(s), ${run.inserted} new, ${run.revised} revised`);
+      if (run.failedSources.length > 0) console.warn(`feeds failed: ${run.failedSources.join(', ')}; retried next run`);
     },
   };
 }
