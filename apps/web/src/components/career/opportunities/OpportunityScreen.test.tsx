@@ -50,7 +50,6 @@ describe('OpportunityScreen', () => {
     fireEvent.change(screen.getByLabelText('Search'), { target: { value: 'ledger' } });
     fireEvent.click(screen.getByRole('button', { name: 'Search listings' }));
     expect(await screen.findByText('Ledger analyst')).toBeTruthy();
-    expect(screen.getByText('Employer')).toBeTruthy();
     expect(screen.getByText('Babbage Works')).toBeTruthy();
     expect(screen.getByText('Not stated in the listing: Pay and Deadline')).toBeTruthy();
     expect(screen.queryByText('Not stated')).toBeNull();

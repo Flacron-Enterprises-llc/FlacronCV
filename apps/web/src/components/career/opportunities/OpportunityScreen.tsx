@@ -33,7 +33,8 @@ import {
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { profileLoadFailure } from '@/lib/career/profile-load';
 import { FieldCheck, FieldSelect } from './FieldSelect';
-import { ListingFacts } from './ListingFacts';
+import { ListingSummary } from './ListingFacts';
+import { Bookmark, BookmarkCheck, ChevronDown, SlidersHorizontal } from 'lucide-react';
 
 /** The search form's own state; every field empty means "no filter". */
 interface Filters {
@@ -280,9 +281,13 @@ export function OpportunityScreen({
           </div>
           <Button type="submit" disabled={pending}>{t('search')}</Button>
         </div>
-        <details className="rounded-md border border-career-line p-3">
-          <summary className="min-h-career-touch cursor-pointer text-sm font-semibold text-career-ink">{t('filters_title')}</summary>
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <details className="group rounded-lg border border-career-line bg-career-surface px-4 open:pb-4">
+          <summary className="flex min-h-career-touch cursor-pointer list-none items-center gap-2 text-sm font-semibold text-career-ink [&::-webkit-details-marker]:hidden">
+            <SlidersHorizontal className="h-4 w-4 text-career-muted" aria-hidden="true" />
+            {t('filters_title')}
+            <ChevronDown className="ms-auto h-4 w-4 text-career-muted transition-transform group-open:rotate-180" aria-hidden="true" />
+          </summary>
+          <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FieldSelect
               label={t('filter_category')}
               value={filters.category}
@@ -342,20 +347,41 @@ export function OpportunityScreen({
           <EmptyState title={t('empty_title')} body={t('empty_body')} />
         )
       ) : (
-        <ul className="grid grid-cols-1 gap-3">
+        <ul className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {items.map((item) => (
             <li key={item.id}>
-              <Card>
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <a className="min-w-0 text-lg font-semibold text-career-ink hover:underline" dir="auto" href={`/${locale}/career/opportunities/${item.id}`}>{item.title}</a>
-                  <Button type="button" variant="ghost" disabled={savingId === item.id} aria-pressed={item.saved === true} onClick={() => void toggleSave(item)}>
-                    {item.saved ? t('saved_button') : t('save_button')}
-                  </Button>
+              <article className="group relative flex h-full gap-4 rounded-xl border border-career-line bg-career-surface p-4 shadow-sm transition hover:border-career-orange/60 hover:shadow-md sm:p-5">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-career-wash text-base font-bold uppercase text-career-ink" aria-hidden="true">
+                  {(item.organization ?? item.title).trim().charAt(0) || '·'}
                 </div>
-                <ListingFacts item={item} className="mt-2" />
-                {item.label === 'expired' ? <p className="mt-1 text-sm text-career-orange-text">{t('expired')}</p> : null}
-                {item.stale ? <p className="mt-1 text-sm text-career-muted">{t('stale_short')}</p> : null}
-              </Card>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start gap-2">
+                    <a className="min-w-0 flex-1 text-base font-semibold leading-snug text-career-ink after:absolute after:inset-0 after:rounded-xl hover:text-career-orange-text" dir="auto" href={`/${locale}/career/opportunities/${item.id}`}>
+                      {item.title}
+                    </a>
+                    {item.label === 'expired' ? <span className="shrink-0 rounded-full bg-career-orange-tint px-2 py-0.5 text-xs font-semibold text-career-orange-text">{t('expired')}</span> : null}
+                    {item.stale ? <span className="shrink-0 rounded-full bg-career-wash px-2 py-0.5 text-xs font-medium text-career-muted">{t('stale_short')}</span> : null}
+                  </div>
+                  <div className="mt-1">
+                    <ListingSummary item={item} />
+                  </div>
+                </div>
+                {/* Above the card-wide link, so saving does not open the listing. */}
+                <button
+                  type="button"
+                  disabled={savingId === item.id}
+                  aria-pressed={item.saved === true}
+                  onClick={() => void toggleSave(item)}
+                  className={`relative z-10 inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-lg border px-3 text-sm font-semibold transition disabled:opacity-60 ${
+                    item.saved
+                      ? 'border-career-orange bg-career-orange-tint text-career-orange-text'
+                      : 'border-career-line text-career-ink hover:border-career-orange hover:text-career-orange-text'
+                  }`}
+                >
+                  {item.saved ? <BookmarkCheck className="h-4 w-4" aria-hidden="true" /> : <Bookmark className="h-4 w-4" aria-hidden="true" />}
+                  {item.saved ? t('saved_button') : t('save_button')}
+                </button>
+              </article>
             </li>
           ))}
         </ul>

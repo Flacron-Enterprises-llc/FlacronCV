@@ -93,3 +93,68 @@ export function ListingFacts({ item, className }: { item: OpportunityItem; class
     </div>
   );
 }
+
+/**
+ * The same facts as a compact job card line-up for result lists: employer and
+ * place under the title, the stated terms as chips, dates in small print, and
+ * one muted line for what the listing does not state (still never guessed).
+ * The detail page keeps the full labelled list.
+ */
+export function ListingSummary({ item }: { item: OpportunityItem }) {
+  const t = useTranslations('career.opportunities');
+  const locale = useLocale();
+  const fields = fieldsForCategory(item.category);
+  const pay = formatPay(item.compensation, locale);
+  const period = item.compensation.period && PERIODS.has(item.compensation.period) ? item.compensation.period : null;
+  const chips: string[] = [];
+  const missing: string[] = [];
+  if (!item.organization) missing.push(t('field_employer'));
+  if (item.locations.length === 0) missing.push(t('field_location'));
+  if (isOpportunityCategory(item.category) && item.category !== 'job') chips.push(t(`category_${item.category}`));
+  if (item.arrangement) chips.push(t(`arrangement_${item.arrangement}`));
+  if (item.remoteRestriction) chips.push(item.remoteRestriction);
+  if (fields.employment) {
+    if (pay) chips.push(period ? t(`pay_per_${period}`, { pay }) : pay);
+    else missing.push(t('field_pay'));
+    if (item.schedule) chips.push(t(`schedule_${item.schedule}`));
+    if (item.seniority) chips.push(t(`seniority_${item.seniority}`));
+    if (item.sponsorship !== 'unknown') chips.push(`${t('field_sponsorship')}: ${t(`sponsorship_${item.sponsorship}`)}`);
+  }
+  // Category-specific facts (a scholarship's funding, an event's date, …).
+  for (const field of fields.details) {
+    const value = item.details?.[field] ?? null;
+    if (value) chips.push(field === 'eventDate' ? formatDay(value, locale) : value);
+    else missing.push(t(`detail_${field}` as `detail_${ListingDetailField}`));
+  }
+  const dates = [
+    item.publishedAt ? `${t('field_published')} ${formatDay(item.publishedAt, locale)}` : null,
+    item.deadline ? `${t('field_deadline')} ${formatDay(item.deadline, locale)}` : null,
+  ].filter(Boolean);
+  if (!item.deadline) missing.push(t('field_deadline'));
+
+  return (
+    <div className="min-w-0">
+      {item.organization || item.locations.length > 0 ? (
+        <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-sm text-career-ink/80">
+          {item.organization ? <span className="font-medium" dir="auto">{item.organization}</span> : null}
+          {item.organization && item.locations.length > 0 ? <span aria-hidden="true" className="text-career-muted">·</span> : null}
+          {item.locations.length > 0 ? <span className="min-w-0 truncate" dir="auto">{item.locations.slice(0, 2).join(' · ')}</span> : null}
+        </p>
+      ) : null}
+      {chips.length > 0 ? (
+        <ul className="mt-2.5 flex flex-wrap gap-1.5">
+          {chips.map((chip) => (
+            <li key={chip} className="rounded-full border border-career-line bg-career-wash px-2.5 py-0.5 text-xs font-medium text-career-ink" dir="auto">
+              {chip}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {item.arrangement === 'remote' && !item.remoteRestriction ? <p className="mt-2 text-xs text-career-muted">{t('remote_not_worldwide')}</p> : null}
+      {dates.length > 0 ? <p className="mt-2.5 text-xs text-career-muted">{dates.join(' · ')}</p> : null}
+      {missing.length > 0 ? (
+        <p className="mt-1 text-xs text-career-muted">{t('not_stated_list', { fields: new Intl.ListFormat(locale, { type: 'conjunction' }).format(missing) })}</p>
+      ) : null}
+    </div>
+  );
+}

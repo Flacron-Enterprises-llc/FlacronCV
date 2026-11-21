@@ -123,7 +123,7 @@ describe('ActionPackScreen (CV12)', () => {
 
     expect(await screen.findByText('No action packs yet')).toBeDefined();
     expect(screen.getByText('10')).toBeDefined();
-    expect(screen.getAllByRole('button', { name: 'Generate Action Pack' })[0]).toBeDefined();
+    expect(screen.getAllByRole('button', { name: 'Generate an action pack' })[0]).toBeDefined();
   });
 
   it('renders existing action pack bundle with fit, resume, letter, checklist, and next steps', async () => {
@@ -182,7 +182,7 @@ describe('ActionPackScreen (CV12)', () => {
       createActionPack: vi.fn().mockRejectedValue(new ApiError(403, 'feature_unavailable', { code: 'feature_unavailable', feature: 'actionPacks' })),
     });
     renderScreen(api);
-    fireEvent.click((await screen.findAllByRole('button', { name: 'Generate Action Pack' }))[0]);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Generate an action pack' }))[0]);
     fireEvent.change(screen.getByLabelText(/Select Opportunity/i), { target: { value: sampleOpportunity.id } });
     fireEvent.click(screen.getByRole('button', { name: 'Run Action Engine (1 Credit)' }));
     expect(await screen.findByText(/Action packs are not open yet in this preview/)).toBeTruthy();
@@ -208,11 +208,11 @@ describe('ActionPackScreen (CV12)', () => {
     });
     renderScreen(api);
 
-    const openBtn = (await screen.findAllByRole('button', { name: 'Generate Action Pack' }))[0];
+    const openBtn = (await screen.findAllByRole('button', { name: 'Generate an action pack' }))[0];
     fireEvent.click(openBtn);
 
     expect(screen.getByText('Target an Opportunity')).toBeDefined();
-    expect(screen.getByText(/Uses 1 Action Pack credit/)).toBeDefined();
+    expect(screen.getByText(/Uses 1 action pack credit/)).toBeDefined();
 
     const select = screen.getByLabelText(/Select Opportunity/i);
     fireEvent.change(select, { target: { value: sampleOpportunity.id } });
@@ -233,7 +233,7 @@ describe('ActionPackScreen (CV12)', () => {
       opportunities: vi.fn().mockResolvedValue({ items: [sampleOpportunity], total: 1 }),
     });
     renderScreen(api);
-    fireEvent.click((await screen.findAllByRole('button', { name: 'Generate Action Pack' }))[0]);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Generate an action pack' }))[0]);
     expect(screen.getByText(/Action pack: fit, gaps, tailored résumé/)).toBeTruthy();
     expect(screen.getByText('1 action pack credit')).toBeTruthy();
     expect(screen.getByText('4 credits left')).toBeTruthy();
@@ -246,7 +246,7 @@ describe('ActionPackScreen (CV12)', () => {
       opportunities: vi.fn().mockResolvedValue({ items: [sampleOpportunity], total: 1 }),
     });
     renderScreen(api);
-    fireEvent.click((await screen.findAllByRole('button', { name: 'Generate Action Pack' }))[0]);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Generate an action pack' }))[0]);
     fireEvent.change(screen.getByLabelText(/Select Opportunity/i), { target: { value: sampleOpportunity.id } });
     expect(screen.getByText(/no action pack credits left/)).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Run Action Engine (1 Credit)' }) as HTMLButtonElement).disabled).toBe(true);

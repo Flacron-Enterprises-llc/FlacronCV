@@ -14,7 +14,8 @@ import {
 } from '@flacroncv/career-shared';
 import type { CareerPreferences, FactType, Locale } from '@flacroncv/career-shared';
 import { fieldErrors, isApiError, type ApiClient, type Fact, type FactRevision, type ImportAllowance, type Me } from '@flacroncv/career-api-client';
-import { Button, Card, EmptyState, FailedJobState, Input, LoadingState, PermissionDeniedState, ProviderUnavailableState } from '@/components/career/ui';
+import { FileUp } from 'lucide-react';
+import { Button, Card, EmptyState, FailedJobState, FilePicker, Input, LoadingState, PermissionDeniedState, ProviderUnavailableState } from '@/components/career/ui';
 import type { SignedInUser } from '@/lib/career/auth-gateway';
 import { extractResumeText, RESUME_UPLOAD_ACCEPT, ResumeExtractError, type ExtractedResume } from '@/lib/career/extract-resume';
 import { factTitle } from '@/lib/career/fact-draft';
@@ -253,32 +254,41 @@ export function ProfileScreen({
 
   const importCard = (
     <Card>
-      <h2 className="text-lg font-semibold text-career-ink">{t('import_title')}</h2>
-      <p className="mt-2 text-sm text-career-muted">{t('import_free')}</p>
+      <div className="flex items-start gap-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-career-orange-tint text-career-orange-text" aria-hidden="true">
+          <FileUp className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold text-career-ink">{t('import_title')}</h2>
+          <p className="mt-0.5 text-sm text-career-muted">{t('import_free')}</p>
+        </div>
+      </div>
       {data.allowance.remaining <= 0 ? (
         <p className="mt-2 text-sm text-career-ink" role="status">
           {t('import_limit', { limit: data.allowance.limit, date: data.allowance.resetsAt.slice(0, 10) })}
         </p>
       ) : (
-        <div className="mt-3 flex flex-col gap-3">
-          <p className="text-sm text-career-ink">{t('import_remaining', { count: data.allowance.remaining })}</p>
-          <label className="flex flex-col gap-1 text-sm font-semibold text-career-ink">
-            {t('import_file')}
-            <input
-              type="file"
+        <div className="mt-4 flex flex-col gap-3">
+          <div className="flex flex-col gap-3 rounded-lg border border-dashed border-career-line bg-career-wash p-4 sm:flex-row sm:items-end sm:justify-between">
+            <FilePicker
+              className="min-w-0 flex-1"
+              label={t('import_file')}
+              buttonLabel={t('import_choose')}
+              emptyLabel={t('import_none')}
+              fileName={file?.name ?? null}
+              hint={t('import_remaining', { count: data.allowance.remaining })}
               accept={RESUME_UPLOAD_ACCEPT}
-              className="block w-full text-sm font-normal"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
             />
-          </label>
+            <Button type="button" className="shrink-0" disabled={file === null} loading={pending} loadingLabel={t('saving')} onClick={() => void runImport()}>
+              {t('import_submit')}
+            </Button>
+          </div>
           {extractError ? (
             <p role="alert" className="text-sm text-career-danger">
               {extractError}
             </p>
           ) : null}
-          <Button type="button" disabled={file === null} loading={pending} loadingLabel={t('saving')} onClick={() => void runImport()}>
-            {t('import_submit')}
-          </Button>
         </div>
       )}
       {missingImport && missingImport.length > 0 ? (

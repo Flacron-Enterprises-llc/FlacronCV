@@ -2460,9 +2460,9 @@
   },
   "career": {
     "actionPack": {
-      "meta_title": "Kits de candidatura",
+      "meta_title": "Paquetes de acción",
       "meta_description": "Paquete de candidatura completo: análisis de encaje, CV adaptado, carta, lista de verificación y próximos pasos.",
-      "title": "Kits de candidatura",
+      "title": "Paquetes de acción",
       "subtitle": "Convierte cualquier oportunidad en un paquete de candidatura listo para usar con un solo cargo.",
       "remaining_credits": "Créditos de paquetes de acción",
       "generate_new": "Generar paquete de acción",
@@ -4025,7 +4025,9 @@
       "mode_title": "Modo de carrera",
       "mode_body": "Elige modos especializados, ubicaciones actuales y futuras y disponibilidad.",
       "mode_link": "Abrir modos de carrera",
-      "achievement_prompt": "¿Añadir una cifra? Por ejemplo cuántos usuarios, cuánto más rápido o cuánto se ahorró. Solo si la conoces; si no, déjalo vacío. FlacronCV nunca añade una."
+      "achievement_prompt": "¿Añadir una cifra? Por ejemplo cuántos usuarios, cuánto más rápido o cuánto se ahorró. Solo si la conoces; si no, déjalo vacío. FlacronCV nunca añade una.",
+      "import_choose": "Elegir archivo",
+      "import_none": "Ningún archivo seleccionado"
     },
     "resume": {
       "meta_title": "Borradores a medida",
@@ -4732,7 +4734,7 @@
       "opportunities": "Buscar empleos",
       "map": "Mapa",
       "alerts": "Alertas de empleo",
-      "action_pack": "Kits de candidatura",
+      "action_pack": "Paquetes de acción",
       "forms": "Formularios asistidos",
       "learning_loop": "Análisis de candidaturas",
       "interviews": "Práctica de entrevistas",

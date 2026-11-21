@@ -2460,9 +2460,9 @@
   },
   "career": {
     "actionPack": {
-      "meta_title": "Kits de candidature",
+      "meta_title": "Packs d'action",
       "meta_description": "Dossier de candidature complet : adéquation, CV personnalisé, lettre, liste de contrôle et étapes suivantes.",
-      "title": "Kits de candidature",
+      "title": "Packs d'action",
       "subtitle": "Transformez toute opportunité en dossier complet de candidature en un seul débit.",
       "remaining_credits": "Crédits Pack d'action",
       "generate_new": "Générer un pack d'action",
@@ -4025,7 +4025,9 @@
       "mode_title": "Mode de carrière",
       "mode_body": "Choisissez des modes spécialisés, vos lieux actuels et futurs, et votre disponibilité.",
       "mode_link": "Ouvrir les modes de carrière",
-      "achievement_prompt": "Ajouter un chiffre ? Par exemple combien d’utilisateurs, combien plus rapide, combien économisé. Seulement si vous le savez ; sinon laissez vide. FlacronCV n’en ajoute jamais."
+      "achievement_prompt": "Ajouter un chiffre ? Par exemple combien d’utilisateurs, combien plus rapide, combien économisé. Seulement si vous le savez ; sinon laissez vide. FlacronCV n’en ajoute jamais.",
+      "import_choose": "Choisir un fichier",
+      "import_none": "Aucun fichier choisi"
     },
     "resume": {
       "meta_title": "Brouillons sur mesure",
@@ -4732,7 +4734,7 @@
       "opportunities": "Trouver un emploi",
       "map": "Carte",
       "alerts": "Alertes emploi",
-      "action_pack": "Kits de candidature",
+      "action_pack": "Packs d'action",
       "forms": "Formulaires assistés",
       "learning_loop": "Analyse des candidatures",
       "interviews": "Entraînement aux entretiens",

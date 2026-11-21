@@ -2460,9 +2460,9 @@
   },
   "career": {
     "actionPack": {
-      "meta_title": "Bewerbungspakete",
+      "meta_title": "Aktionspakete",
       "meta_description": "Vollständiges Bewerbungspaket: Passungsanalyse, angepasster Lebenslauf, Anschreiben, Checkliste und nächste Schritte.",
-      "title": "Bewerbungspakete",
+      "title": "Aktionspakete",
       "subtitle": "Mach aus jedem Stellenangebot ein umsetzbares Bewerbungspaket – mit einer einzigen Abbuchung.",
       "remaining_credits": "Aktionspaket-Credits",
       "generate_new": "Aktionspaket erstellen",
@@ -4025,7 +4025,9 @@
       "mode_title": "Karrieremodus",
       "mode_body": "Wählen Sie Spezialmodi, aktuelle und künftige Orte sowie Verfügbarkeit.",
       "mode_link": "Karrieremodi öffnen",
-      "achievement_prompt": "Eine Zahl ergänzen? Zum Beispiel wie viele Nutzer, wie viel schneller oder wie viel gespart. Nur wenn Sie sie kennen; sonst leer lassen. FlacronCV fügt nie eine hinzu."
+      "achievement_prompt": "Eine Zahl ergänzen? Zum Beispiel wie viele Nutzer, wie viel schneller oder wie viel gespart. Nur wenn Sie sie kennen; sonst leer lassen. FlacronCV fügt nie eine hinzu.",
+      "import_choose": "Datei auswählen",
+      "import_none": "Keine Datei ausgewählt"
     },
     "resume": {
       "meta_title": "Maßgeschneiderte Entwürfe",
@@ -4732,7 +4734,7 @@
       "opportunities": "Jobs finden",
       "map": "Karte",
       "alerts": "Jobbenachrichtigungen",
-      "action_pack": "Bewerbungspakete",
+      "action_pack": "Aktionspakete",
       "forms": "Unterstützte Formulare",
       "learning_loop": "Bewerbungsanalyse",
       "interviews": "Interviewtraining",

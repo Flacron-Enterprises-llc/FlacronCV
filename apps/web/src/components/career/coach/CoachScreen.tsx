@@ -1,5 +1,6 @@
 'use client';
 
+import { Plus } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
@@ -247,9 +248,12 @@ export function CoachScreen({
 
       <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
         <Card className="min-w-0 self-start">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold text-career-ink">{t('threads_title')}</h2>
-            <Button type="button" variant="secondary" onClick={startNew}>{t('new_thread')}</Button>
+            <Button type="button" variant="secondary" className="gap-1.5 whitespace-nowrap px-3" onClick={startNew}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              {t('new_thread')}
+            </Button>
           </div>
           {list.items.length === 0 ? (
             <p className="mt-3 text-sm text-career-muted">{t('threads_empty')}</p>
