@@ -210,14 +210,28 @@ export default function DashboardPage(): React.JSX.Element | null {
 
   return (
     <div className="space-y-6">
-      {/* Welcome */}
-      <div data-tour={TOUR_TARGETS.welcome}>
-        <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
-          {greeting}
-        </h1>
-        <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
-          {t('overview_subtitle')}
-        </p>
+      {/* Welcome — navy brand banner (same language as the mobile app's Home) */}
+      <div
+        data-tour={TOUR_TARGETS.welcome}
+        className="relative overflow-hidden rounded-3xl bg-navy px-6 py-7 text-white shadow-lg shadow-navy/20 sm:px-8"
+      >
+        <div className="pointer-events-none absolute -end-16 -top-24 h-64 w-64 rounded-full bg-brand-500/20 blur-3xl" aria-hidden="true" />
+        <svg className="pointer-events-none absolute inset-x-0 bottom-0 h-6 w-full" viewBox="0 0 600 24" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 24C180 6 380 0 600 6V24Z" fill="#ea580c" />
+        </svg>
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{greeting}</h1>
+            <p className="mt-1.5 text-sm text-white/70 sm:text-base">{t('overview_subtitle')}</p>
+          </div>
+          <Link
+            href="/cv/new"
+            className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-brand-600 px-6 text-[15px] font-semibold text-white shadow-lg shadow-brand-900/30 transition-colors hover:bg-brand-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-navy"
+          >
+            <Plus className="h-5 w-5" aria-hidden="true" />
+            {t('create_cv')}
+          </Link>
+        </div>
       </div>
 
       {/* Account data unavailable — never present placeholder plan/usage as real */}

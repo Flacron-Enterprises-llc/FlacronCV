@@ -14,6 +14,8 @@ import { useHydrated } from '@/hooks/useHydrated';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import GoogleIcon from '@/components/shared/GoogleIcon';
+import { AuthDivider, AuthHeading, AUTH_PRIMARY_BTN, AUTH_SECONDARY_BTN } from '@/components/auth/AuthBits';
+import { Lock, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
 
@@ -106,36 +108,16 @@ function LoginForm(): React.JSX.Element {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{t('login_title')}</h1>
-      <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">{t('login_subtitle')}</p>
+      <AuthHeading title={t('login_title')} subtitle={t('login_subtitle')} />
 
-      {/* Social auth */}
-      <div className="mt-8">
-        <Button variant="secondary" onClick={handleGoogle} loading={googleLoading} disabled={googleLoading || formLoading} className="w-full">
-          <GoogleIcon />
-          {t('google')}
-        </Button>
-      </div>
-
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-stone-200 dark:border-stone-700" />
-        </div>
-        <div className="relative flex justify-center text-sm">
-          {/* Same colour as the page behind it (body is stone-950 in dark mode),
-              so the label reads as a gap in the rule, not a black box. */}
-          <span className="bg-white px-4 text-stone-500 dark:bg-stone-950 dark:text-stone-400">
-            {t('or_continue')}
-          </span>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         <Input
           id="email"
           type="email"
           autoComplete="email"
           label={t('email')}
+          icon={Mail}
+          inputSize="lg"
           value={email}
           onChange={(e) => {
             setEmail(e.target.value);
@@ -153,6 +135,8 @@ function LoginForm(): React.JSX.Element {
             type="password"
             autoComplete="current-password"
             label={t('password')}
+            icon={Lock}
+            inputSize="lg"
             value={password}
             onChange={(e) => {
               setPassword(e.target.value);
@@ -166,26 +150,33 @@ function LoginForm(): React.JSX.Element {
             // A deleted or suspended account has no self-service way back, so
             // point at the one place that can help.
             <p className="mt-1 text-xs">
-              <Link href="/contact-us" className="font-medium text-brand-600 underline underline-offset-2 hover:text-brand-700">
+              <Link href="/contact-us" className="font-medium text-brand-700 underline underline-offset-2 hover:text-brand-800 dark:text-brand-400">
                 {t('contact_support')}
               </Link>
             </p>
           )}
-          <div className="mt-1 text-end">
-            <Link href="/forgot-password" className="text-xs text-brand-600 hover:text-brand-700">
+          <div className="mt-2 text-end">
+            <Link href="/forgot-password" className="text-sm font-semibold text-brand-700 hover:text-brand-800 hover:underline dark:text-brand-400">
               {t('forgot_password')}
             </Link>
           </div>
         </div>
-        <Button type="submit" loading={formLoading} disabled={googleLoading || !hydrated} className="w-full" size="lg">
+        <Button type="submit" loading={formLoading} disabled={googleLoading || !hydrated} className={AUTH_PRIMARY_BTN} size="lg">
           {t('login_btn')}
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-stone-600 dark:text-stone-400">
+      <AuthDivider label={t('or_continue')} />
+
+      <Button variant="secondary" onClick={handleGoogle} loading={googleLoading} disabled={googleLoading || formLoading} className={AUTH_SECONDARY_BTN}>
+        <GoogleIcon />
+        {t('google_continue')}
+      </Button>
+
+      <p className="mt-8 text-center text-[15px] text-stone-600 dark:text-stone-400">
         {t('no_account')}{' '}
-        <Link href="/register" className="font-semibold text-brand-600 hover:text-brand-700">
-          {t('register_btn')}
+        <Link href="/register" className="font-bold text-brand-700 underline-offset-4 hover:underline dark:text-brand-400">
+          {t('register_free')}
         </Link>
       </p>
     </div>

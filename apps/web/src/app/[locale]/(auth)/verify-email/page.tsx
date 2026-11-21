@@ -8,6 +8,7 @@ import { useRouter } from '@/i18n/routing';
 import { toast } from 'sonner';
 import { Mail, RefreshCw, LogOut, Loader2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import { AuthHeading, AuthMedallion, AUTH_PRIMARY_BTN, AUTH_SECONDARY_BTN } from '@/components/auth/AuthBits';
 import { getPostLoginRedirect } from '@/lib/post-auth-redirect';
 import { currentUserRole } from '@/lib/current-user-role';
 import { track } from '@/lib/analytics';
@@ -115,23 +116,16 @@ export default function VerifyEmailPage(): React.JSX.Element | null {
 
   return (
     <div className="text-center">
-      {/* Icon */}
-      <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 dark:bg-brand-950">
-        <Mail className="h-8 w-8 text-brand-600" />
-      </div>
-
-      <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
-        {t('verify_title')}
-      </h1>
-
-      <p className="mt-3 text-sm text-stone-600 dark:text-stone-400">
-        {t('verify_sent_to')}
-      </p>
-      <p className="mt-1 break-all font-semibold text-stone-900 dark:text-white">
+      <AuthHeading
+        icon={<AuthMedallion><Mail className="h-9 w-9" aria-hidden="true" /></AuthMedallion>}
+        title={t('verify_title')}
+        subtitle={t('verify_sent_to')}
+      />
+      <p className="mt-2 inline-block max-w-full break-all rounded-full bg-stone-100 px-4 py-1.5 font-semibold text-navy dark:bg-stone-800 dark:text-white" dir="ltr">
         {firebaseUser?.email}
       </p>
 
-      <p className="mt-4 text-sm text-stone-500 dark:text-stone-500">
+      <p className="mt-5 text-sm leading-relaxed text-stone-600 dark:text-stone-400">
         {t('verify_desc')}
       </p>
 
@@ -139,7 +133,7 @@ export default function VerifyEmailPage(): React.JSX.Element | null {
         <Button
           onClick={handleCheckNow}
           loading={checking}
-          className="w-full"
+          className={AUTH_PRIMARY_BTN}
           size="lg"
         >
           <RefreshCw className="me-2 h-4 w-4" />
@@ -150,7 +144,7 @@ export default function VerifyEmailPage(): React.JSX.Element | null {
           variant="secondary"
           onClick={handleResend}
           loading={resending}
-          className="w-full"
+          className={AUTH_SECONDARY_BTN}
           size="lg"
         >
           {t('verify_resend_btn')}

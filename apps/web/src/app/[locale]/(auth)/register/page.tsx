@@ -15,6 +15,8 @@ import { useHydrated } from '@/hooks/useHydrated';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import GoogleIcon from '@/components/shared/GoogleIcon';
+import { AuthDivider, AuthFeatureRow, AuthHeading, AUTH_PRIMARY_BTN, AUTH_SECONDARY_BTN } from '@/components/auth/AuthBits';
+import { Lock, Mail, ShieldCheck, User } from 'lucide-react';
 import LegalAcceptanceModal, { legalDocLinks } from '@/components/auth/LegalAcceptanceModal';
 import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
@@ -152,36 +154,30 @@ function RegisterForm(): React.JSX.Element {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{t('register_title')}</h1>
-      <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">{t('register_subtitle')}</p>
+      <AuthHeading title={t('register_title')} subtitle={t('register_subtitle')} />
+      <AuthFeatureRow labels={[t('feature_build'), t('feature_jobs'), t('feature_grow')]} />
 
-      <div className="mt-8">
-        <Button variant="secondary" onClick={handleGoogle} loading={googleLoading} disabled={signupBusy} className="w-full">
-          <GoogleIcon />
-          {t('google')}
-        </Button>
-      </div>
-
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-stone-200 dark:border-stone-700" />
-        </div>
-        <div className="relative flex justify-center text-sm">
-          {/* Matches the dark page (stone-950) so the label is not a black box. */}
-          <span className="bg-white px-4 text-stone-500 dark:bg-stone-950 dark:text-stone-400">
-            {t('or_continue')}
-          </span>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input id="name" type="text" autoComplete="name" label={t('name')} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('name_placeholder')} required />
+      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+        <Input
+          id="name"
+          type="text"
+          autoComplete="name"
+          label={t('name')}
+          icon={User}
+          inputSize="lg"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={t('name_placeholder')}
+          required
+        />
         <div>
           <Input
             id="email"
             type="email"
             autoComplete="email"
             label={t('email')}
+            icon={Mail}
+            inputSize="lg"
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
@@ -197,7 +193,7 @@ function RegisterForm(): React.JSX.Element {
             // Someone who deleted their account can neither sign in nor
             // re-register with that address; support is their way forward.
             <p className="mt-1 text-xs">
-              <Link href="/contact-us" className="font-medium text-brand-600 underline underline-offset-2 hover:text-brand-700">
+              <Link href="/contact-us" className="font-medium text-brand-700 underline underline-offset-2 hover:text-brand-800 dark:text-brand-400">
                 {t('contact_support')}
               </Link>
             </p>
@@ -208,6 +204,8 @@ function RegisterForm(): React.JSX.Element {
           type="password"
           autoComplete="new-password"
           label={t('password')}
+          icon={Lock}
+          inputSize="lg"
           value={password}
           onChange={(e) => {
             setPassword(e.target.value);
@@ -218,18 +216,27 @@ function RegisterForm(): React.JSX.Element {
           hint={t('password_hint')}
           required
         />
-        <Button type="submit" loading={formLoading} disabled={googleLoading || !hydrated} className="w-full" size="lg">
+
+        <div className="flex items-start gap-3 rounded-2xl bg-brand-50 p-4 dark:bg-brand-950/40">
+          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand-600 dark:text-brand-400" aria-hidden="true" />
+          <p className="text-[13px] leading-relaxed text-stone-700 dark:text-stone-300">{t.rich('legal_signup_line', legalDocLinks())}</p>
+        </div>
+
+        <Button type="submit" loading={formLoading} disabled={googleLoading || !hydrated} className={AUTH_PRIMARY_BTN} size="lg">
           {t('register_btn')}
         </Button>
       </form>
 
-      <p className="mt-3 text-center text-xs text-stone-500 dark:text-stone-400">
-        {t.rich('legal_signup_line', legalDocLinks())}
-      </p>
+      <AuthDivider label={t('or_signup_with')} />
 
-      <p className="mt-6 text-center text-sm text-stone-600 dark:text-stone-400">
+      <Button variant="secondary" onClick={handleGoogle} loading={googleLoading} disabled={signupBusy} className={AUTH_SECONDARY_BTN}>
+        <GoogleIcon />
+        {t('google_signup')}
+      </Button>
+
+      <p className="mt-8 text-center text-[15px] text-stone-600 dark:text-stone-400">
         {t('have_account')}{' '}
-        <Link href="/login" className="font-semibold text-brand-600 hover:text-brand-700">
+        <Link href="/login" className="font-bold text-brand-700 underline-offset-4 hover:underline dark:text-brand-400">
           {t('login_btn')}
         </Link>
       </p>

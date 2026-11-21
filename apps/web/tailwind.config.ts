@@ -25,6 +25,8 @@ const config: Config = {
         // letter default (`#1e3a5f`). Header/footer in light and dark (dark
         // surfaces override via `dark:bg-chrome` / `dark:bg-chrome/70`).
         chrome: '#1e3a5f',
+        // Brand navy of the FLACRONCV wordmark (auth brand panel, mobile app headers).
+        navy: { DEFAULT: '#10294f', deep: '#0b1d3a' },
         // Career area (former V2 screens). Namespaced so no existing V1 class
         // changes meaning; the values are CSS variables set to V1's palette
         // in globals.css, for light and dark.

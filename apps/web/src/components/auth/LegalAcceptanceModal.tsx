@@ -7,7 +7,7 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 
 const LINK_CLASS =
-  'font-medium text-brand-600 underline underline-offset-2 hover:text-brand-700 dark:text-brand-400';
+  'font-semibold text-brand-700 underline underline-offset-2 hover:text-brand-800 dark:text-brand-400';
 
 const NEW_TAB = { target: '_blank' as const, rel: 'noopener noreferrer' };
 

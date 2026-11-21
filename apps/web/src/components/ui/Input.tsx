@@ -2,17 +2,22 @@
 
 import { forwardRef, InputHTMLAttributes, useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   hint?: string;
+  /** Icon before the label text (auth forms). Decorative. */
+  icon?: LucideIcon;
+  /** 'lg': taller, softer field used on the sign-in / sign-up pages. */
+  inputSize?: 'md' | 'lg';
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, hint, id, type, 'aria-describedby': ariaDescribedBy, ...props }, ref) => {
+  ({ className, label, error, hint, id, type, icon: Icon, inputSize = 'md', 'aria-describedby': ariaDescribedBy, ...props }, ref) => {
+    const large = inputSize === 'lg';
     const t = useTranslations('common');
     const [revealed, setRevealed] = useState(false);
     // Most call sites pass a label but no id, which left <label htmlFor> empty:
@@ -43,9 +48,10 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
         className={cn(
-          'input-field h-10',
+          'input-field',
+          large ? 'h-12 rounded-xl bg-stone-50 px-4 text-[15px] focus:bg-white dark:bg-stone-800/60 dark:focus:bg-stone-900' : 'h-10',
           // Reserve room for the toggle. `pe-` is logical, so it flips in RTL.
-          isPassword && 'pe-10',
+          isPassword && (large ? 'pe-12' : 'pe-10'),
           error && 'border-red-500 focus:border-red-500 focus:ring-red-500',
           className,
         )}
@@ -56,7 +62,15 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="space-y-1.5">
         {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+          <label
+            htmlFor={inputId}
+            className={cn(
+              large
+                ? 'flex items-center gap-2 text-sm font-semibold text-navy dark:text-white'
+                : 'block text-sm font-medium text-stone-700 dark:text-stone-300',
+            )}
+          >
+            {Icon ? <Icon className="h-4 w-4 shrink-0" aria-hidden="true" /> : null}
             {label}
           </label>
         )}
@@ -72,7 +86,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               aria-label={revealed ? t('hide_password') : t('show_password')}
               aria-pressed={revealed}
               title={revealed ? t('hide_password') : t('show_password')}
-              className="absolute end-2 top-1/2 -translate-y-1/2 rounded p-1 text-stone-400 transition-colors hover:text-stone-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 dark:hover:text-stone-300"
+              className={cn('absolute top-1/2', large ? 'end-3' : 'end-2', ' -translate-y-1/2 rounded p-1 text-stone-400 transition-colors hover:text-stone-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 dark:hover:text-stone-300')}
             >
               {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
