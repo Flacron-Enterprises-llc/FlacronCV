@@ -205,9 +205,9 @@ export function CareerScopeRoute({ mode }: { mode: ScopeMode }) {
 }
 
 /** Export and erase are served whatever the plan, so this page is not behind the gate. */
-export function CareerDataRoute() {
+export function CareerDataRoute({ embedded = false }: { embedded?: boolean } = {}) {
   const { uiLocale, ...props } = useScreenProps();
-  return <CareerDataScreen {...props} documentLocale={documentLocale(uiLocale)} />;
+  return <CareerDataScreen {...props} documentLocale={documentLocale(uiLocale)} embedded={embedded} />;
 }
 
 /** V1 admin area. The career service checks the operator allowlist / admin claim itself. */

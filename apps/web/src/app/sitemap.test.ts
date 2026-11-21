@@ -38,4 +38,11 @@ describe('sitemap', () => {
       });
     }
   });
+
+  it('lists the translated pricing page in every locale (the main conversion page must be discoverable)', () => {
+    const urls = sitemap().map((e) => e.url);
+    for (const locale of ['en', 'de', 'es', 'fr', 'ar', 'ur']) {
+      expect(urls).toContain(`https://www.flacroncv.com/${locale}/pricing`);
+    }
+  });
 });

@@ -26,12 +26,15 @@ export function CareerDataScreen({
   ready,
   signInHref,
   documentLocale,
+  embedded = false,
 }: {
   api: ApiClient;
   user: SignedInUser | null;
   ready: boolean;
   signInHref: string;
   documentLocale: Locale;
+  /** Inside a page that already has the h1 (Settings): the title becomes a section heading. */
+  embedded?: boolean;
 }) {
   const t = useTranslations('career.data');
   const queryClient = useQueryClient();
@@ -110,7 +113,11 @@ export function CareerDataScreen({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{t('title')}</h1>
+        {embedded ? (
+          <h2 className="text-xl font-bold text-stone-900 dark:text-white">{t('title')}</h2>
+        ) : (
+          <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{t('title')}</h1>
+        )}
         <p className="mt-2 max-w-2xl text-sm text-stone-600 dark:text-stone-300">{t('intro')}</p>
       </div>
 

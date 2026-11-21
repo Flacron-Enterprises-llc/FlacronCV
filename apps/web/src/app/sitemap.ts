@@ -19,6 +19,7 @@ import { SITE_URL, LOCALES, DEFAULT_LOCALE } from '@/lib/seo';
 const LOCALIZED_PATHS = [
   '',
   '/templates',
+  '/pricing',
   '/about-us',
   '/contact-us',
   '/privacy-policy',
