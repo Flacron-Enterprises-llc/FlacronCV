@@ -142,7 +142,12 @@ export default function CVEditorScreen() {
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top', 'bottom']}>
       {/* Top Bar */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-surface border-b border-stone-100">
-        <TouchableOpacity onPress={() => router.back()} className="flex-row items-center">
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="h-11 w-11 -ms-2 items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel={tc('back')}
+        >
           <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
         </TouchableOpacity>
 

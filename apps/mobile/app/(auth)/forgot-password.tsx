@@ -14,7 +14,7 @@ import { colors } from '../../src/theme/colors';
 
 const makeSchema = (invalidEmail: string) =>
   z.object({
-    email: z.string().email(invalidEmail),
+    email: z.string().trim().email(invalidEmail),
   });
 
 type FormData = z.infer<ReturnType<typeof makeSchema>>;
@@ -78,6 +78,7 @@ export default function ForgotPasswordScreen() {
             placeholder="you@example.com"
             keyboardType="email-address"
             autoCapitalize="none"
+            autoCorrect={false}
             autoComplete="email"
             textContentType="emailAddress"
             value={field.value}

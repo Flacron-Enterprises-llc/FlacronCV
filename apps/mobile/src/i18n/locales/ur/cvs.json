@@ -13,7 +13,9 @@
     "emptyTitle": "ابھی کوئی CV نہیں",
     "emptyDescription": "اپنا پہلا پروفیشنل CV بنائیں اور اپنی خوابوں کی نوکری حاصل کریں۔",
     "emptyAction": "اپنا پہلا CV بنائیں",
-    "loadError": "CVs لوڈ نہیں ہو سکے"
+    "loadError": "CVs لوڈ نہیں ہو سکے",
+    "duplicateA11y": "{title} کی نقل بنائیں",
+    "deleteA11y": "{title} حذف کریں"
   },
   "delete": {
     "title": "سی وی حذف کریں",

@@ -2,7 +2,7 @@
 
 import { forwardRef, InputHTMLAttributes, useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Eye, EyeOff, type LucideIcon } from 'lucide-react';
+import { ArrowBigUp, Eye, EyeOff, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -20,6 +20,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     const large = inputSize === 'lg';
     const t = useTranslations('common');
     const [revealed, setRevealed] = useState(false);
+    // Caps Lock is the usual reason a correct password "doesn't work".
+    const [capsOn, setCapsOn] = useState(false);
     // Most call sites pass a label but no id, which left <label htmlFor> empty:
     // the label was not linked to its field (clicking it did nothing, and a
     // screen reader announced an unlabelled edit box). A generated id fixes
@@ -47,6 +49,19 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         type={isPassword ? (revealed ? 'text' : 'password') : type}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
+        {...props}
+        onKeyDown={(e) => {
+          if (isPassword) setCapsOn(e.getModifierState?.('CapsLock') ?? false);
+          props.onKeyDown?.(e);
+        }}
+        onKeyUp={(e) => {
+          if (isPassword) setCapsOn(e.getModifierState?.('CapsLock') ?? false);
+          props.onKeyUp?.(e);
+        }}
+        onBlur={(e) => {
+          setCapsOn(false);
+          props.onBlur?.(e);
+        }}
         className={cn(
           'input-field',
           large ? 'h-12 rounded-xl bg-stone-50 px-4 text-[15px] focus:bg-white dark:bg-stone-800/60 dark:focus:bg-stone-900' : 'h-10',
@@ -55,7 +70,6 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           error && 'border-red-500 focus:border-red-500 focus:ring-red-500',
           className,
         )}
-        {...props}
       />
     );
 
@@ -95,7 +109,13 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           field
         )}
 
-        {error && <p id={errorId} className="text-xs text-red-500">{error}</p>}
+        {isPassword && capsOn ? (
+          <p className="flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400" role="status">
+            <ArrowBigUp className="h-3.5 w-3.5" aria-hidden="true" />
+            {t('caps_lock_on')}
+          </p>
+        ) : null}
+        {error && <p id={errorId} className="text-xs text-red-600 dark:text-red-400">{error}</p>}
         {hint && !error && <p id={hintId} className="text-xs text-stone-500">{hint}</p>}
       </div>
     );

@@ -13,7 +13,9 @@
     "emptyTitle": "Noch keine Lebensläufe",
     "emptyDescription": "Erstelle deinen ersten professionellen Lebenslauf und lande deinen Traumjob.",
     "emptyAction": "Deinen ersten Lebenslauf erstellen",
-    "loadError": "Lebensläufe konnten nicht geladen werden"
+    "loadError": "Lebensläufe konnten nicht geladen werden",
+    "duplicateA11y": "{title} duplizieren",
+    "deleteA11y": "{title} löschen"
   },
   "delete": {
     "title": "Lebenslauf löschen",

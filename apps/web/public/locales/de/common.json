@@ -290,7 +290,20 @@
     "panel_feature_jobs_title": "Jobs finden und verfolgen",
     "panel_feature_jobs_desc": "Neue Stellenangebote durchsuchen und alle Bewerbungen an einem Ort behalten.",
     "panel_feature_grow_title": "Karriere ausbauen",
-    "panel_feature_grow_desc": "Vorstellungsgespräche üben und den nächsten Schritt sicher planen."
+    "panel_feature_grow_desc": "Vorstellungsgespräche üben und den nächsten Schritt sicher planen.",
+    "strength_label": "Passwortstärke",
+    "strength_0": "Zu schwach",
+    "strength_1": "Schwach",
+    "strength_2": "Mittel",
+    "strength_3": "Gut",
+    "strength_4": "Stark",
+    "req_length": "Mindestens 8 Zeichen",
+    "req_case": "Groß- und Kleinbuchstaben",
+    "req_number": "Eine Zahl",
+    "req_symbol": "Ein Sonderzeichen",
+    "req_met": "erfüllt",
+    "password_common": "Dieses Passwort ist zu verbreitet oder leicht zu erraten. Nimm eine längere Wortfolge, die nur du kennst.",
+    "email_suggest": "Meintest du <fix>{email}</fix>?"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1649,7 +1662,10 @@
     "expand_sidebar": "Seitenleiste ausklappen",
     "show_password": "Passwort anzeigen",
     "hide_password": "Passwort verbergen",
-    "maintenance_default": "Wir führen gerade Wartungsarbeiten durch. Bitte schau in Kürze wieder vorbei."
+    "maintenance_default": "Wir führen gerade Wartungsarbeiten durch. Bitte schau in Kürze wieder vorbei.",
+    "caps_lock_on": "Feststelltaste ist aktiv",
+    "offline_banner": "Du bist offline. Änderungen werden erst gespeichert, wenn du wieder verbunden bist.",
+    "back_online": "Wieder online"
   },
   "public_templates": {
     "title": "Professionelle Vorlagen durchsuchen",
@@ -1790,7 +1806,8 @@
     "cat_business_enterprise": "Geschäftlich / Enterprise",
     "email_invalid": "Gib eine gültige E-Mail-Adresse ein, zum Beispiel name@beispiel.de.",
     "field_invalid": "Bitte überprüfe dieses Feld und versuche es erneut.",
-    "retry_button": "Erneut versuchen"
+    "retry_button": "Erneut versuchen",
+    "meta_title": "Kontakt"
   },
   "testimonials_page": {
     "title": "Erfolgsgeschichten",

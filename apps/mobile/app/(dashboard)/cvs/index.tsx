@@ -130,7 +130,10 @@ export default function CVsScreen() {
           <TouchableOpacity
             onPress={() => handleDuplicate(item)}
             disabled={duplicateCV.isPending}
-            className="p-2 rounded-xl bg-stone-50"
+            className="h-11 w-11 items-center justify-center rounded-xl bg-stone-50"
+            accessibilityRole="button"
+            accessibilityLabel={t('list.duplicateA11y', { title: item.title })}
+            accessibilityState={{ busy: duplicateCV.isPending }}
           >
             <Ionicons
               name={duplicateCV.isPending ? 'time-outline' : 'copy-outline'}
@@ -141,7 +144,10 @@ export default function CVsScreen() {
           <TouchableOpacity
             onPress={() => handleDelete(item)}
             disabled={deleteCV.isPending}
-            className="p-2 rounded-xl bg-stone-50"
+            className="h-11 w-11 items-center justify-center rounded-xl bg-stone-50"
+            accessibilityRole="button"
+            accessibilityLabel={t('list.deleteA11y', { title: item.title })}
+            accessibilityState={{ busy: deleteCV.isPending }}
           >
             <Ionicons
               name={deleteCV.isPending ? 'time-outline' : 'trash-outline'}

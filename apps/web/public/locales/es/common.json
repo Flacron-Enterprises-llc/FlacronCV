@@ -290,7 +290,20 @@
     "panel_feature_jobs_title": "Encuentra y sigue empleos",
     "panel_feature_jobs_desc": "Busca nuevas ofertas y mantén todas tus candidaturas en un solo lugar.",
     "panel_feature_grow_title": "Impulsa tu carrera",
-    "panel_feature_grow_desc": "Practica entrevistas y planifica tu siguiente paso con confianza."
+    "panel_feature_grow_desc": "Practica entrevistas y planifica tu siguiente paso con confianza.",
+    "strength_label": "Seguridad de la contraseña",
+    "strength_0": "Muy débil",
+    "strength_1": "Débil",
+    "strength_2": "Aceptable",
+    "strength_3": "Buena",
+    "strength_4": "Fuerte",
+    "req_length": "Al menos 8 caracteres",
+    "req_case": "Mayúsculas y minúsculas",
+    "req_number": "Un número",
+    "req_symbol": "Un símbolo",
+    "req_met": "cumplido",
+    "password_common": "Esta contraseña es demasiado común o fácil de adivinar. Prueba una frase más larga que solo tú conozcas.",
+    "email_suggest": "¿Quisiste decir <fix>{email}</fix>?"
   },
   "dashboard": {
     "title": "Panel",
@@ -1649,7 +1662,10 @@
     "expand_sidebar": "Expandir barra lateral",
     "show_password": "Mostrar contraseña",
     "hide_password": "Ocultar contraseña",
-    "maintenance_default": "Estamos realizando tareas de mantenimiento. Vuelve a intentarlo en unos minutos."
+    "maintenance_default": "Estamos realizando tareas de mantenimiento. Vuelve a intentarlo en unos minutos.",
+    "caps_lock_on": "Bloq Mayús está activado",
+    "offline_banner": "Estás sin conexión. Los cambios no se guardarán hasta que te vuelvas a conectar.",
+    "back_online": "Conexión restablecida"
   },
   "public_templates": {
     "title": "Explorar plantillas profesionales",
@@ -1790,7 +1806,8 @@
     "cat_other": "Otro",
     "email_invalid": "Introduce una dirección de correo válida, por ejemplo nombre@ejemplo.com.",
     "field_invalid": "Revisa este campo e inténtalo de nuevo.",
-    "retry_button": "Intentar de nuevo"
+    "retry_button": "Intentar de nuevo",
+    "meta_title": "Contacto"
   },
   "testimonials_page": {
     "title": "Casos de éxito",

@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { Alert, Pressable, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { z } from 'zod';
 import { AppleSignInButton, useAppleSignInAvailable } from '../../src/components/auth/AppleSignInButton';
 import { AuthDivider, AuthError, AuthFooterLink, AuthShell } from '../../src/components/auth/AuthShell';
@@ -19,13 +19,15 @@ import {
   recordAcceptanceAfterSignup,
 } from '../../src/lib/legal-acceptance';
 import { useAuthStore, type AppleSignInResult } from '../../src/store/auth-store';
+import { EmailSuggestion } from '../../src/components/auth/PasswordStrength';
+import { suggestEmail } from '../../src/lib/auth-quality';
 
 // Required for expo-auth-session redirect to work correctly
 WebBrowser.maybeCompleteAuthSession();
 
 const makeSchema = (messages: { email: string; password: string }) =>
   z.object({
-    email: z.string().email(messages.email),
+    email: z.string().trim().email(messages.email),
     password: z.string().min(6, messages.password),
   });
 
@@ -49,11 +51,15 @@ export default function LoginScreen() {
   const {
     control,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { email: '', password: '' },
   });
+  const watchEmail = useWatch({ control, name: 'email' });
+  const emailSuggestion = useMemo(() => suggestEmail(watchEmail ?? ''), [watchEmail]);
+  const passwordRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (legalGate) {
@@ -136,20 +142,28 @@ export default function LoginScreen() {
               placeholder="you@example.com"
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
               autoComplete="email"
               textContentType="emailAddress"
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => passwordRef.current?.focus()}
               value={field.value}
               onChangeText={field.onChange}
               error={errors.email?.message}
             />
           )}
         />
+        {!errors.email ? (
+          <EmailSuggestion suggestion={emailSuggestion} onAccept={(email) => setValue('email', email, { shouldValidate: true })} />
+        ) : null}
 
         <Controller
           control={control}
           name="password"
           render={({ field }) => (
             <Input
+              ref={passwordRef}
               variant="soft"
               labelIcon="lock-closed-outline"
               label={t('fields.password')}

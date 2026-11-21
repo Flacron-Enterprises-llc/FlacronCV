@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link, useRouter } from '@/i18n/routing';
 import { useSearchParams } from 'next/navigation';
@@ -17,6 +17,8 @@ import Input from '@/components/ui/Input';
 import GoogleIcon from '@/components/shared/GoogleIcon';
 import { AuthDivider, AuthFeatureRow, AuthHeading, AUTH_PRIMARY_BTN, AUTH_SECONDARY_BTN } from '@/components/auth/AuthBits';
 import { Lock, Mail, ShieldCheck, User } from 'lucide-react';
+import PasswordStrength, { EmailSuggestion } from '@/components/auth/PasswordStrength';
+import { passwordStrength, suggestEmail } from '@/lib/auth-quality';
 import LegalAcceptanceModal, { legalDocLinks } from '@/components/auth/LegalAcceptanceModal';
 import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
@@ -45,6 +47,9 @@ function RegisterForm(): React.JSX.Element {
   const [fieldError, setFieldError] = useState<{ field: 'email' | 'password'; key: string } | null>(null);
   // As on login: no native GET submit (password in the URL) before hydration.
   const hydrated = useHydrated();
+  // Guessable from this person's own details? (name, the part of the email before @)
+  const strength = useMemo(() => passwordStrength(password, [name, ...name.split(/s+/), email.split('@')[0] ?? '']), [password, name, email]);
+  const emailSuggestion = useMemo(() => suggestEmail(email), [email]);
 
   // Show Google auth error stored by a previous attempt (account-exists case)
   useEffect(() => {
@@ -85,8 +90,8 @@ function RegisterForm(): React.JSX.Element {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFieldError(null);
-    if (password.length < 8) {
-      setFieldError({ field: 'password', key: 'password_min' });
+    if (!strength.acceptable) {
+      setFieldError({ field: 'password', key: strength.checks.length ? 'password_common' : 'password_min' });
       return;
     }
     setPendingSignup('password');
@@ -189,6 +194,7 @@ function RegisterForm(): React.JSX.Element {
             dir="ltr"
             required
           />
+          {fieldError?.field !== 'email' ? <EmailSuggestion suggestion={emailSuggestion} onAccept={setEmail} /> : null}
           {fieldError?.key === 'errors.email_in_use' && (
             // Someone who deleted their account can neither sign in nor
             // re-register with that address; support is their way forward.
@@ -213,9 +219,11 @@ function RegisterForm(): React.JSX.Element {
           }}
           error={fieldError?.field === 'password' ? t(fieldError.key) : undefined}
           placeholder="••••••••"
-          hint={t('password_hint')}
+          hint={password ? undefined : t('password_hint')}
+          aria-describedby={password ? 'password-strength' : undefined}
           required
         />
+        {password ? <PasswordStrength strength={strength} id="password-strength" /> : null}
 
         <div className="flex items-start gap-3 rounded-2xl bg-brand-50 p-4 dark:bg-brand-950/40">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand-600 dark:text-brand-400" aria-hidden="true" />

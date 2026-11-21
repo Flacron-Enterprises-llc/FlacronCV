@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/providers/ThemeProvider';
 import { QueryProvider } from '@/providers/QueryProvider';
 import LoadingBar from '@/components/shared/LoadingBar';
 import CookieConsent from '@/components/shared/CookieConsent';
+import OfflineBanner from '@/components/shared/OfflineBanner';
 import FcgeLoader from '@/components/shared/FcgeLoader';
 import AnalyticsProvider from '@/providers/AnalyticsProvider';
 import { Toaster } from 'sonner';
@@ -111,6 +112,7 @@ export default async function LocaleLayout({
                   <LoadingBar />
                   {children}
                   <Toaster position="bottom-right" richColors />
+                  <OfflineBanner />
                   <CookieConsent />
                   {/* The only loader for the Growth Engine SDK and chat: it waits
                       for analytics consent and skips /admin and /crm. Never add

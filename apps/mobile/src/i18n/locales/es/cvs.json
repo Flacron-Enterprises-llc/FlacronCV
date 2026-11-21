@@ -13,7 +13,9 @@
     "emptyTitle": "Aún no tienes CVs",
     "emptyDescription": "Crea tu primer CV profesional y consigue el trabajo de tus sueños.",
     "emptyAction": "Crear tu primer CV",
-    "loadError": "No se pudieron cargar los CVs"
+    "loadError": "No se pudieron cargar los CVs",
+    "duplicateA11y": "Duplicar {title}",
+    "deleteA11y": "Eliminar {title}"
   },
   "delete": {
     "title": "Eliminar CV",

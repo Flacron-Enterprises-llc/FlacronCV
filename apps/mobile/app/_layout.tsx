@@ -12,6 +12,7 @@ import {
   jobIdFromNotificationResponse,
 } from '../src/lib/job-reminders';
 import { bootstrapI18n, useProfileLanguageSync } from '../src/i18n/native';
+import { OfflineBanner } from '../src/components/app/OfflineBanner';
 import { AuthProvider } from '../src/providers/AuthProvider';
 import { QueryProvider } from '../src/providers/QueryProvider';
 import { useAuthStore } from '../src/store/auth-store';
@@ -96,6 +97,7 @@ export default function RootLayout() {
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(dashboard)" />
           </Stack>
+          <OfflineBanner />
         </AuthProvider>
       </QueryProvider>
       </View>

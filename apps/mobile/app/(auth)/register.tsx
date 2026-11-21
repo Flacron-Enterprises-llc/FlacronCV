@@ -3,8 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { Alert, Text, View } from 'react-native';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { Alert, Text, TextInput, View } from 'react-native';
 import { z } from 'zod';
 import {
   AppleSignInButton,
@@ -31,6 +31,8 @@ import {
 } from '../../src/lib/legal-acceptance';
 import { getFirebaseAuth } from '../../src/lib/firebase';
 import { useAuthStore, type AppleSignInResult } from '../../src/store/auth-store';
+import { EmailSuggestion, PasswordStrengthMeter } from '../../src/components/auth/PasswordStrength';
+import { passwordStrength, suggestEmail } from '../../src/lib/auth-quality';
 import { colors } from '../../src/theme/colors';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -39,10 +41,14 @@ WebBrowser.maybeCompleteAuthSession();
 const makeSchema = (t: TFunction) =>
   z
     .object({
-      displayName: z.string().min(2, t('validation.nameMin')),
-      email: z.string().email(t('validation.email')),
+      displayName: z.string().trim().min(2, t('validation.nameMin')),
+      email: z.string().trim().email(t('validation.email')),
       password: z.string().min(8, t('validation.passwordMin8')),
       confirmPassword: z.string(),
+    })
+    .refine((d) => passwordStrength(d.password, guessableWords(d.displayName, d.email)).acceptable || d.password.length < 8, {
+      message: t('validation.passwordCommon'),
+      path: ['password'],
     })
     .refine((d) => d.password === d.confirmPassword, {
       message: t('validation.passwordsMismatch'),
@@ -50,6 +56,11 @@ const makeSchema = (t: TFunction) =>
     });
 
 type FormData = z.infer<ReturnType<typeof makeSchema>>;
+
+/** Words that would make a password guessable for this person. */
+function guessableWords(name: string, email: string): string[] {
+  return [name, ...name.split(/\s+/), email.split('@')[0] ?? ''];
+}
 
 export default function RegisterScreen() {
   const t = useT('auth');
@@ -69,11 +80,21 @@ export default function RegisterScreen() {
   const {
     control,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { displayName: '', email: '', password: '', confirmPassword: '' },
   });
+  const [watchName, watchEmail, watchPassword] = useWatch({ control, name: ['displayName', 'email', 'password'] });
+  const strength = useMemo(
+    () => passwordStrength(watchPassword ?? '', guessableWords(watchName ?? '', watchEmail ?? '')),
+    [watchName, watchEmail, watchPassword],
+  );
+  const emailSuggestion = useMemo(() => suggestEmail(watchEmail ?? ''), [watchEmail]);
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmRef = useRef<TextInput>(null);
 
   const closeLegal = () => {
     setLegalOpen(false);
@@ -220,6 +241,9 @@ export default function RegisterScreen() {
               autoCapitalize="words"
               autoComplete="name"
               textContentType="name"
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => emailRef.current?.focus()}
               value={field.value}
               onChangeText={field.onChange}
               error={errors.displayName?.message}
@@ -232,26 +256,35 @@ export default function RegisterScreen() {
           name="email"
           render={({ field }) => (
             <Input
+              ref={emailRef}
               variant="soft"
               labelIcon="mail-outline"
               label={t('fields.email')}
               placeholder="you@example.com"
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
               autoComplete="email"
               textContentType="emailAddress"
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => passwordRef.current?.focus()}
               value={field.value}
               onChangeText={field.onChange}
               error={errors.email?.message}
             />
           )}
         />
+        {!errors.email ? (
+          <EmailSuggestion suggestion={emailSuggestion} onAccept={(email) => setValue('email', email, { shouldValidate: true })} />
+        ) : null}
 
         <Controller
           control={control}
           name="password"
           render={({ field }) => (
             <Input
+              ref={passwordRef}
               variant="soft"
               labelIcon="lock-closed-outline"
               label={t('fields.password')}
@@ -259,12 +292,16 @@ export default function RegisterScreen() {
               isPassword
               autoComplete="new-password"
               textContentType="newPassword"
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => confirmRef.current?.focus()}
               value={field.value}
               onChangeText={field.onChange}
               error={errors.password?.message}
             />
           )}
         />
+        {watchPassword ? <PasswordStrengthMeter strength={strength} /> : null}
 
         <Controller
           control={control}
@@ -273,11 +310,14 @@ export default function RegisterScreen() {
             <Input
               variant="soft"
               labelIcon="lock-closed-outline"
+              ref={confirmRef}
               label={t('fields.confirmPassword')}
               placeholder={t('fields.confirmPasswordPlaceholder')}
               isPassword
               autoComplete="new-password"
               textContentType="newPassword"
+              returnKeyType="go"
+              onSubmitEditing={handleSubmit(onSubmit)}
               value={field.value}
               onChangeText={field.onChange}
               error={errors.confirmPassword?.message}

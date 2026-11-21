@@ -18,5 +18,7 @@
     "leave": "Verlassen"
   },
   "showPassword": "Passwort anzeigen",
-  "hidePassword": "Passwort verbergen"
+  "hidePassword": "Passwort verbergen",
+  "offlineBanner": "Du bist offline. Änderungen werden erst gespeichert, wenn du wieder verbunden bist.",
+  "backOnline": "Wieder online"
 }

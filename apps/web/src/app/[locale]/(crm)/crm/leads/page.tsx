@@ -53,6 +53,7 @@ const STAGE_OPTIONS = [
 
 export default function CRMLeadsPage(): React.JSX.Element | null {
   const t = useTranslations('crm');
+  const tCommon = useTranslations('common');
   const formatApiError = useApiErrorMessage();
   const queryClient = useQueryClient();
 
@@ -318,11 +319,13 @@ export default function CRMLeadsPage(): React.JSX.Element | null {
                           <Button
                             size="sm"
                             variant="ghost"
+                            aria-label={`${tCommon('delete')}: ${lead.email ?? lead.name ?? ''}`.trim()}
+                            title={tCommon('delete')}
                             onClick={() => {
                               if (confirm(t('leads_delete_confirm'))) deleteMutation.mutate(lead.id);
                             }}
                           >
-                            <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                            <Trash2 className="h-3.5 w-3.5 text-red-500" aria-hidden="true" />
                           </Button>
                         </div>
                       </td>

@@ -13,7 +13,9 @@
     "emptyTitle": "No CVs yet",
     "emptyDescription": "Create your first professional CV and land your dream job.",
     "emptyAction": "Create Your First CV",
-    "loadError": "Failed to load CVs"
+    "loadError": "Failed to load CVs",
+    "duplicateA11y": "Duplicate {title}",
+    "deleteA11y": "Delete {title}"
   },
   "delete": {
     "title": "Delete CV",

@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
+import { useT } from '../../i18n';
 
 interface ModalProps {
   visible: boolean;
@@ -24,6 +25,7 @@ interface ModalProps {
 
 export function Modal({ visible, onClose, title, children, size = 'md', closeDisabled = false }: ModalProps) {
   const insets = useSafeAreaInsets();
+  const tc = useT('common');
   const { height: windowHeight } = useWindowDimensions();
 
   // NativeWind max-h-2/3 and max-h-5/6 are not in the default scale, so they
@@ -67,7 +69,10 @@ export function Modal({ visible, onClose, title, children, size = 'md', closeDis
                 <Pressable
                   onPress={closeDisabled ? undefined : onClose}
                   disabled={closeDisabled}
-                  className="p-1"
+                  className="h-11 w-11 -me-2 items-center justify-center"
+                  accessibilityRole="button"
+                  accessibilityLabel={tc('close')}
+                  hitSlop={4}
                 >
                   <Ionicons name="close" size={22} color={colors.stone[500]} />
                 </Pressable>

@@ -290,7 +290,20 @@
     "panel_feature_jobs_title": "ابحث عن الوظائف وتابعها",
     "panel_feature_jobs_desc": "تصفّح الإعلانات الجديدة واحتفظ بكل طلباتك في مكان واحد.",
     "panel_feature_grow_title": "طوّر مسيرتك المهنية",
-    "panel_feature_grow_desc": "تدرّب على المقابلات وخطّط لخطوتك التالية بثقة."
+    "panel_feature_grow_desc": "تدرّب على المقابلات وخطّط لخطوتك التالية بثقة.",
+    "strength_label": "قوة كلمة المرور",
+    "strength_0": "ضعيفة جدًا",
+    "strength_1": "ضعيفة",
+    "strength_2": "مقبولة",
+    "strength_3": "جيدة",
+    "strength_4": "قوية",
+    "req_length": "8 أحرف على الأقل",
+    "req_case": "أحرف كبيرة وصغيرة",
+    "req_number": "رقم",
+    "req_symbol": "رمز",
+    "req_met": "مستوفى",
+    "password_common": "كلمة المرور هذه شائعة جدًا أو سهلة التخمين. جرّب عبارة أطول لا يعرفها غيرك.",
+    "email_suggest": "هل تقصد <fix>{email}</fix>؟"
   },
   "dashboard": {
     "title": "لوحة التحكم",
@@ -1649,7 +1662,10 @@
     "expand_sidebar": "توسيع الشريط الجانبي",
     "show_password": "إظهار كلمة المرور",
     "hide_password": "إخفاء كلمة المرور",
-    "maintenance_default": "نجري أعمال صيانة حاليًا. يُرجى المحاولة مرة أخرى بعد قليل."
+    "maintenance_default": "نجري أعمال صيانة حاليًا. يُرجى المحاولة مرة أخرى بعد قليل.",
+    "caps_lock_on": "مفتاح Caps Lock مفعّل",
+    "offline_banner": "أنت غير متصل. لن تُحفظ التغييرات حتى تعود للاتصال.",
+    "back_online": "تمت استعادة الاتصال"
   },
   "public_templates": {
     "title": "تصفح القوالب الاحترافية",
@@ -1790,7 +1806,8 @@
     "cat_other": "أخرى",
     "email_invalid": "أدخل عنوان بريد إلكتروني صالحًا، مثل name@example.com.",
     "field_invalid": "يرجى التحقق من هذا الحقل والمحاولة مرة أخرى.",
-    "retry_button": "حاول مرة أخرى"
+    "retry_button": "حاول مرة أخرى",
+    "meta_title": "اتصل بنا"
   },
   "testimonials_page": {
     "title": "قصص النجاح",

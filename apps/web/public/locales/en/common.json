@@ -290,7 +290,20 @@
     "panel_feature_jobs_title": "Find and track jobs",
     "panel_feature_jobs_desc": "Search new listings and keep every application in one place.",
     "panel_feature_grow_title": "Grow your career",
-    "panel_feature_grow_desc": "Practise interviews and plan your next move with confidence."
+    "panel_feature_grow_desc": "Practise interviews and plan your next move with confidence.",
+    "strength_label": "Password strength",
+    "strength_0": "Too weak",
+    "strength_1": "Weak",
+    "strength_2": "Fair",
+    "strength_3": "Good",
+    "strength_4": "Strong",
+    "req_length": "At least 8 characters",
+    "req_case": "Upper and lower case",
+    "req_number": "A number",
+    "req_symbol": "A symbol",
+    "req_met": "done",
+    "password_common": "This password is too common or easy to guess. Try a longer phrase only you would know.",
+    "email_suggest": "Did you mean <fix>{email}</fix>?"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1649,7 +1662,10 @@
     "expand_sidebar": "Expand sidebar",
     "show_password": "Show password",
     "hide_password": "Hide password",
-    "maintenance_default": "We're carrying out maintenance right now. Please check back shortly."
+    "maintenance_default": "We're carrying out maintenance right now. Please check back shortly.",
+    "caps_lock_on": "Caps Lock is on",
+    "offline_banner": "You're offline. Changes can't be saved until you reconnect.",
+    "back_online": "Back online"
   },
   "public_templates": {
     "title": "Browse Professional Templates",
@@ -1790,7 +1806,8 @@
     "cat_other": "Other",
     "email_invalid": "Enter a valid email address, such as name@example.com.",
     "field_invalid": "Please check this field and try again.",
-    "retry_button": "Try again"
+    "retry_button": "Try again",
+    "meta_title": "Contact Us"
   },
   "testimonials_page": {
     "title": "Success stories",

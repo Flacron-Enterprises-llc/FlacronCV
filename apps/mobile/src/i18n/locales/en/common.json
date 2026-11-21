@@ -18,5 +18,7 @@
     "leave": "Leave"
   },
   "showPassword": "Show password",
-  "hidePassword": "Hide password"
+  "hidePassword": "Hide password",
+  "offlineBanner": "You're offline. Changes can't be saved until you reconnect.",
+  "backOnline": "Back online"
 }

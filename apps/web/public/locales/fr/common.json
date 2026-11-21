@@ -290,7 +290,20 @@
     "panel_feature_jobs_title": "Trouvez et suivez des offres",
     "panel_feature_jobs_desc": "Consultez de nouvelles offres et gardez toutes vos candidatures au même endroit.",
     "panel_feature_grow_title": "Faites évoluer votre carrière",
-    "panel_feature_grow_desc": "Entraînez-vous aux entretiens et préparez votre prochaine étape en confiance."
+    "panel_feature_grow_desc": "Entraînez-vous aux entretiens et préparez votre prochaine étape en confiance.",
+    "strength_label": "Robustesse du mot de passe",
+    "strength_0": "Trop faible",
+    "strength_1": "Faible",
+    "strength_2": "Moyen",
+    "strength_3": "Bon",
+    "strength_4": "Fort",
+    "req_length": "Au moins 8 caractères",
+    "req_case": "Majuscules et minuscules",
+    "req_number": "Un chiffre",
+    "req_symbol": "Un symbole",
+    "req_met": "validé",
+    "password_common": "Ce mot de passe est trop courant ou facile à deviner. Essayez une phrase plus longue que vous seul connaissez.",
+    "email_suggest": "Vouliez-vous dire <fix>{email}</fix> ?"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -1649,7 +1662,10 @@
     "expand_sidebar": "Développer la barre latérale",
     "show_password": "Afficher le mot de passe",
     "hide_password": "Masquer le mot de passe",
-    "maintenance_default": "Une maintenance est en cours. Merci de revenir dans quelques instants."
+    "maintenance_default": "Une maintenance est en cours. Merci de revenir dans quelques instants.",
+    "caps_lock_on": "Verr. Maj est activé",
+    "offline_banner": "Vous êtes hors ligne. Les modifications ne seront enregistrées qu’une fois reconnecté.",
+    "back_online": "De nouveau en ligne"
   },
   "public_templates": {
     "title": "Parcourir les modèles professionnels",
@@ -1790,7 +1806,8 @@
     "cat_other": "Autre",
     "email_invalid": "Saisissez une adresse e-mail valide, par exemple nom@exemple.com.",
     "field_invalid": "Vérifiez ce champ et réessayez.",
-    "retry_button": "Réessayer"
+    "retry_button": "Réessayer",
+    "meta_title": "Contact"
   },
   "testimonials_page": {
     "title": "Témoignages de réussite",

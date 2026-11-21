@@ -13,7 +13,9 @@
     "emptyTitle": "Aucun CV pour le moment",
     "emptyDescription": "Créez votre premier CV professionnel et décrochez le poste de vos rêves.",
     "emptyAction": "Créez votre premier CV",
-    "loadError": "Impossible de charger les CV"
+    "loadError": "Impossible de charger les CV",
+    "duplicateA11y": "Dupliquer {title}",
+    "deleteA11y": "Supprimer {title}"
   },
   "delete": {
     "title": "Supprimer le CV",

@@ -88,12 +88,35 @@ describe('register legal gate (option A — modal before Auth)', () => {
     renderRegister();
     await user.type(screen.getByLabelText('Full Name'), 'Ada Lovelace');
     await user.type(screen.getByLabelText('Email Address'), 'ada@example.com');
-    await user.type(screen.getByLabelText('Password'), 'password1');
+    await user.type(screen.getByLabelText('Password'), 'Mango-Tree-42');
     await user.click(screen.getByRole('button', { name: 'Create Account' }));
 
     expect(register).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(register).not.toHaveBeenCalled();
+  });
+
+  it('stops a common password before the legal step, under the field', async () => {
+    const user = userEvent.setup();
+    renderRegister();
+    await user.type(screen.getByLabelText('Full Name'), 'Ada Lovelace');
+    await user.type(screen.getByLabelText('Email Address'), 'ada@example.com');
+    await user.type(screen.getByLabelText('Password'), 'password1');
+    // The meter already says so while typing…
+    expect(screen.getAllByText(en.auth.password_common).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: 'Create Account' }));
+    // …and submitting neither opens the legal modal nor creates an account.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(register).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Password')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('offers a one-click fix for a mistyped email provider', async () => {
+    const user = userEvent.setup();
+    renderRegister();
+    await user.type(screen.getByLabelText('Email Address'), 'ada@gmial.com');
+    await user.click(screen.getByRole('button', { name: 'ada@gmail.com' }));
+    expect(screen.getByLabelText('Email Address')).toHaveValue('ada@gmail.com');
   });
 });

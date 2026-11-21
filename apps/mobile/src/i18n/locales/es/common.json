@@ -18,5 +18,7 @@
     "leave": "Salir"
   },
   "showPassword": "Mostrar contraseña",
-  "hidePassword": "Ocultar contraseña"
+  "hidePassword": "Ocultar contraseña",
+  "offlineBanner": "Estás sin conexión. Los cambios no se guardarán hasta que te vuelvas a conectar.",
+  "backOnline": "Conexión restablecida"
 }

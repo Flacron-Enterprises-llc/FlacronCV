@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import { useAuth } from '@/providers/AuthProvider';
@@ -11,6 +11,8 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { AuthHeading, AuthMedallion, AUTH_PRIMARY_BTN } from '@/components/auth/AuthBits';
 import { KeyRound, Mail, MailCheck } from 'lucide-react';
+import { EmailSuggestion } from '@/components/auth/PasswordStrength';
+import { suggestEmail } from '@/lib/auth-quality';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
 
@@ -18,6 +20,7 @@ export default function ForgotPasswordPage(): React.JSX.Element | null {
   const t = useTranslations('auth');
   const { resetPassword } = useAuth();
   const [email, setEmail] = useState('');
+  const suggestion = useMemo(() => suggestEmail(email), [email]);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   // No native GET submit (address in the URL) before React attaches the handler.
@@ -64,6 +67,9 @@ export default function ForgotPasswordPage(): React.JSX.Element | null {
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         <Input id="email" type="email" autoComplete="email" label={t('email')} icon={Mail} inputSize="lg" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" dir="ltr" required />
+        <div className="-mt-3">
+          <EmailSuggestion suggestion={suggestion} onAccept={setEmail} />
+        </div>
         <Button type="submit" loading={loading} disabled={!hydrated} className={AUTH_PRIMARY_BTN} size="lg">
           {t('reset_btn')}
         </Button>

@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link, useRouter } from '@/i18n/routing';
 import { useSearchParams } from 'next/navigation';
@@ -16,6 +16,8 @@ import Input from '@/components/ui/Input';
 import GoogleIcon from '@/components/shared/GoogleIcon';
 import { AuthDivider, AuthHeading, AUTH_PRIMARY_BTN, AUTH_SECONDARY_BTN } from '@/components/auth/AuthBits';
 import { Lock, Mail } from 'lucide-react';
+import { EmailSuggestion } from '@/components/auth/PasswordStrength';
+import { suggestEmail } from '@/lib/auth-quality';
 import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
 
@@ -38,6 +40,7 @@ function LoginForm(): React.JSX.Element {
   // GET to /login?email=…&password=… and lose callbackUrl. Keep submit disabled
   // until the handler is attached.
   const hydrated = useHydrated();
+  const emailSuggestion = useMemo(() => suggestEmail(email), [email]);
 
   // Show Google auth error stored by a previous attempt (account-exists case)
   useEffect(() => {
@@ -129,6 +132,11 @@ function LoginForm(): React.JSX.Element {
           dir="ltr"
           required
         />
+        {fieldError?.field !== 'email' ? (
+          <div className="-mt-3">
+            <EmailSuggestion suggestion={emailSuggestion} onAccept={setEmail} />
+          </div>
+        ) : null}
         <div>
           <Input
             id="password"
