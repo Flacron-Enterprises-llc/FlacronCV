@@ -1,228 +1,132 @@
-import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Animated,
-  Dimensions,
-  FlatList,
-  Image,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Animated, FlatList, Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { BrandLogo } from '../src/components/brand/BrandLogo';
+import { BrandBottomWave, BrandTopWave } from '../src/components/brand/BrandWaves';
+import { CvIllustration } from '../src/components/brand/CvIllustration';
+import { FeatureArt } from '../src/components/brand/FeatureArt';
 import { Button } from '../src/components/ui/Button';
 import { useT } from '../src/i18n';
-import { colors } from '../src/theme/colors';
-
-const { width, height } = Dimensions.get('window');
+import { useLightStatusBar } from '../src/hooks/useLightStatusBar';
 
 const ONBOARDING_SEEN_KEY = 'flacroncv_onboarding_seen';
+
+type Slide = { id: string; title: string; subtitle: string; badge?: string; art: React.ReactNode };
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const t = useT('onboarding');
-  const slides = useMemo(
+  useLightStatusBar();
+  const { width } = useWindowDimensions();
+  const slides: Slide[] = useMemo(
     () => [
       {
-        id: '1',
+        id: 'build',
         title: t('slides.build.title'),
         subtitle: t('slides.build.subtitle'),
+        art: <CvIllustration width={250} />,
       },
       {
-        id: '2',
-        icon: '✨',
+        id: 'engine',
         title: t('slides.engine.title'),
         subtitle: t('slides.engine.subtitle'),
         badge: t('slides.engine.badge'),
+        art: (
+          <FeatureArt
+            icon="sparkles"
+            satellites={[{ icon: 'create-outline' }, { icon: 'list-outline' }, { icon: 'mail-outline' }, { icon: 'checkmark-done-outline' }]}
+          />
+        ),
       },
       {
-        id: '3',
-        icon: '🚀',
+        id: 'export',
         title: t('slides.export.title'),
         subtitle: t('slides.export.subtitle'),
         // File format names; the same in every language.
         badge: 'PDF · DOCX',
+        art: (
+          <FeatureArt
+            icon="download-outline"
+            satellites={[{ icon: 'document-text', label: 'PDF' }, { icon: 'share-outline' }, { icon: 'document', label: 'DOCX' }, { icon: 'phone-portrait-outline' }]}
+          />
+        ),
       },
     ],
     [t],
   );
-  const insets = useSafeAreaInsets();
-  const flatListRef = useRef<FlatList>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(40)).current;
-  const logoScale = useRef(new Animated.Value(0.6)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const listRef = useRef<FlatList<Slide>>(null);
+  const [index, setIndex] = useState(0);
+  const fade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(logoScale, {
-        toValue: 1,
-        tension: 60,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-      Animated.timing(logoOpacity, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 700,
-        delay: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        delay: 200,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+    Animated.timing(fade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  }, [fade]);
 
-  const markOnboardingSeen = async () => {
+  const finish = async (to: '/(auth)/register' | '/(auth)/login') => {
     await AsyncStorage.setItem(ONBOARDING_SEEN_KEY, 'true');
+    router.replace(to);
   };
 
-  const handleGetStarted = async () => {
-    await markOnboardingSeen();
-    router.replace('/(auth)/register');
-  };
-
-  const handleSignIn = async () => {
-    await markOnboardingSeen();
-    router.replace('/(auth)/login');
-  };
-
-  const handleNext = () => {
-    if (currentIndex < slides.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
-      setCurrentIndex(currentIndex + 1);
+  const next = () => {
+    if (index < slides.length - 1) {
+      listRef.current?.scrollToIndex({ index: index + 1, animated: true });
+      setIndex(index + 1);
     } else {
-      handleGetStarted();
+      void finish('/(auth)/register');
     }
   };
 
   return (
-    <View className="flex-1 bg-stone-50">
-      <StatusBar barStyle="dark-content" />
+    <View className="flex-1 bg-surface">
+      <BrandTopWave height={72} />
+      <View className="items-center">
+        <BrandLogo width={200} />
+      </View>
 
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* Top: FC mark — no coloured tile */}
-        <Animated.View
-          style={{
-            alignItems: 'center',
-            marginTop: height * 0.05,
-            opacity: logoOpacity,
-            transform: [{ scale: logoScale }],
-          }}
-        >
-          <Image
-            source={require('../assets/icon.png')}
-            style={{ width: 72, height: 72, borderRadius: 16 }}
-            resizeMode="contain"
-          />
-          <Text
-            className="mt-2.5 font-bold uppercase text-chrome"
-            style={{ fontSize: 15, letterSpacing: 2 }}
-          >
-            FlacronCV
-          </Text>
-        </Animated.View>
-
+      <Animated.View style={{ flex: 1, opacity: fade }}>
         <FlatList
-          ref={flatListRef}
+          ref={listRef}
           data={slides}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
-          scrollEnabled={true}
-          onMomentumScrollEnd={(e) => {
-            const index = Math.round(e.nativeEvent.contentOffset.x / width);
-            setCurrentIndex(index);
-          }}
           keyExtractor={(item) => item.id}
+          getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
+          onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / width))}
           renderItem={({ item }) => (
-            <View
-              style={{
-                width,
-                paddingHorizontal: 32,
-                justifyContent: 'center',
-                flex: 1,
-              }}
-            >
-              <Animated.View
-                style={{
-                  opacity: fadeAnim,
-                  transform: [{ translateY: slideAnim }],
-                }}
-              >
-                {item.badge ? (
-                  <View className="mb-6 self-start rounded-full bg-chrome px-3.5 py-1.5">
-                    <Text className="text-xs font-semibold text-white">{item.badge}</Text>
-                  </View>
-                ) : null}
-
-                {item.id === '1' ? (
-                  <View className="mb-5 h-16 w-16 items-center justify-center rounded-2xl bg-brand-50">
-                    <Ionicons
-                      name="document-text"
-                      size={32}
-                      color={colors.brand[600]}
-                    />
-                  </View>
-                ) : (
-                  <Text className="mb-5 text-5xl">{item.icon}</Text>
-                )}
-
-                <Text className="mb-4 text-3xl font-bold leading-10 text-stone-900">
-                  {item.title}
-                </Text>
-
-                <Text className="text-base leading-6 text-stone-600">{item.subtitle}</Text>
-              </Animated.View>
+            <View style={{ width }} className="flex-1 items-center justify-center px-8">
+              {item.art}
+              {item.badge ? (
+                <View className="mt-5 rounded-full bg-navy px-3.5 py-1.5">
+                  <Text className="text-xs font-semibold text-white">{item.badge}</Text>
+                </View>
+              ) : null}
+              <Text className="mt-5 text-center text-[28px] font-black leading-9 text-ink" accessibilityRole="header">
+                {item.title.replace(/\n/g, ' ')}
+              </Text>
+              <Text className="mt-3 text-center text-base leading-6 text-stone-600">{item.subtitle}</Text>
             </View>
           )}
-          style={{ flex: 1 }}
         />
+      </Animated.View>
 
-        <View style={{ paddingHorizontal: 24, paddingBottom: insets.bottom }}>
-          <View className="mb-8 flex-row items-center justify-center gap-2">
-            {slides.map((_, i) => (
-              <View
-                key={i}
-                className={[
-                  'h-2 rounded',
-                  i === currentIndex ? 'w-6 bg-brand-600' : 'w-2 bg-stone-300',
-                ].join(' ')}
-              />
-            ))}
-          </View>
-
-          <View style={{ marginBottom: 14 }}>
-            <Button variant="primary" size="lg" fullWidth onPress={handleNext}>
-              {currentIndex === slides.length - 1 ? t('getStarted') : t('continue')}
-            </Button>
-          </View>
-
-          <TouchableOpacity
-            onPress={handleSignIn}
-            activeOpacity={0.7}
-            style={{ alignItems: 'center', paddingVertical: 10 }}
-          >
-            <Text style={{ fontSize: 15, fontWeight: '500' }} className="text-stone-500">
-              {t('haveAccount')}{' '}
-              <Text className="font-bold text-stone-900">{t('signIn')}</Text>
-            </Text>
-          </TouchableOpacity>
+      <View className="px-6 pb-2">
+        <View className="mb-6 flex-row items-center justify-center gap-2" accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: slides.length, now: index + 1 }}>
+          {slides.map((s, i) => (
+            <View key={s.id} className={['h-2 rounded-full', i === index ? 'w-7 bg-brand-600' : 'w-2 bg-stone-300'].join(' ')} />
+          ))}
         </View>
-      </SafeAreaView>
+        <Button variant="primary" size="lg" pill fullWidth onPress={next}>
+          {index === slides.length - 1 ? t('getStarted') : t('continue')}
+        </Button>
+        <Pressable onPress={() => void finish('/(auth)/login')} accessibilityRole="link" className="mt-2 min-h-[48px] items-center justify-center">
+          <Text className="text-base text-stone-600">
+            {t('haveAccount')} <Text className="font-bold text-brand-700 underline">{t('signIn')}</Text>
+          </Text>
+        </Pressable>
+      </View>
+      <BrandBottomWave height={44} />
     </View>
   );
 }

@@ -16,5 +16,7 @@
     "body": "Tienes cambios sin guardar. ¿Salir de todos modos?",
     "stay": "Quedarme",
     "leave": "Salir"
-  }
+  },
+  "showPassword": "Mostrar contraseña",
+  "hidePassword": "Ocultar contraseña"
 }

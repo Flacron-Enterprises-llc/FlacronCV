@@ -1,13 +1,15 @@
 import * as Google from 'expo-auth-session/providers/google';
 import React, { forwardRef, useEffect, useImperativeHandle } from 'react';
-import { Alert, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { useT } from '../../i18n';
+import { SocialButton } from './SocialButton';
 
 interface Props {
   label: string;
   onToken: (idToken: string) => void;
   /** If set, the button does not open Google until the parent calls prompt(). */
   onPressOverride?: () => void;
+  disabled?: boolean;
 }
 
 export type GoogleSignInHandle = {
@@ -19,7 +21,7 @@ export type GoogleSignInHandle = {
  * Keeping the hook inside this component means it never runs unless the component mounts.
  */
 export const GoogleSignInButton = forwardRef<GoogleSignInHandle, Props>(
-  function GoogleSignInButton({ label, onToken, onPressOverride }, ref) {
+  function GoogleSignInButton({ label, onToken, onPressOverride, disabled }, ref) {
     const t = useT('auth');
     const tc = useT('common');
     const [, response, promptAsync] = Google.useIdTokenAuthRequest({
@@ -52,36 +54,15 @@ export const GoogleSignInButton = forwardRef<GoogleSignInHandle, Props>(
     }, [response, onToken]);
 
     return (
-      <TouchableOpacity
+      <SocialButton
+        provider="google"
+        label={label}
+        disabled={disabled}
         onPress={() => {
           if (onPressOverride) onPressOverride();
           else void promptAsync();
         }}
-        activeOpacity={0.85}
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderWidth: 1.5,
-          borderColor: '#e7e5e4',
-          borderRadius: 14,
-          paddingVertical: 14,
-          gap: 10,
-          backgroundColor: '#fff',
-        }}
-      >
-        <View
-          style={{
-            width: 22,
-            height: 22,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text style={{ fontSize: 16, fontWeight: '800', color: '#4285F4' }}>G</Text>
-        </View>
-        <Text style={{ color: '#1c1917', fontSize: 15, fontWeight: '600' }}>{label}</Text>
-      </TouchableOpacity>
+      />
     );
   },
 );

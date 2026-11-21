@@ -2,7 +2,9 @@ import {
   createUserWithEmailAndPassword,
   getAdditionalUserInfo,
   GoogleAuthProvider,
+  OAuthProvider,
   signInWithCredential,
+  type AuthCredential,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
@@ -20,6 +22,74 @@ import { secureStore } from '../lib/secure-store';
 import { requestFailureMessage } from '../lib/api-errors';
 import { t } from '../i18n';
 import { User } from '../types/user.types';
+
+/** What the native Apple sheet returns, plus the raw nonce whose hash was sent to Apple. */
+export interface AppleSignInResult {
+  identityToken: string;
+  rawNonce: string;
+  /** Apple sends the name only on the first sign-in, and only if the person shares it. */
+  fullName?: string | null;
+}
+
+type SetState = (partial: Partial<AuthState>) => void;
+
+/**
+ * Shared by Google and Apple: sign in with the provider credential, then work
+ * out whether this account still owes the legal agreement (new account, or a
+ * consent flag left on this device). With `gateNewUser`, the dashboard stays
+ * locked (legalGate) until the screen records the agreement.
+ */
+async function signInWithProvider(
+  set: SetState,
+  credential: AuthCredential,
+  opts: { gateNewUser?: boolean } | undefined,
+  afterSignIn?: (user: FirebaseUser) => Promise<void>,
+): Promise<{ isNewUser: boolean; uid: string }> {
+  set({ isLoading: true, error: null });
+  try {
+    // Block dashboard redirect until we know whether this is a new user.
+    // additionalUserInfo.isNewUser is only available AFTER signInWithCredential.
+    if (opts?.gateNewUser) set({ legalGate: true });
+
+    const result = await signInWithCredential(getFirebaseAuth(), credential);
+    const uid = result.user.uid;
+    if (afterSignIn) {
+      try {
+        await afterSignIn(result.user);
+      } catch {
+        // Profile extras (Apple name) are best-effort; the sign-in itself worked.
+      }
+    }
+    const info = getAdditionalUserInfo(result);
+    // Fallback: if additionalUserInfo is missing, treat as new so they cannot slip through.
+    const isExplicitlyExisting = info?.isNewUser === false;
+    const consentUid = await secureStore.getPendingLegalConsent();
+    const stillNeedsConsent = consentUid === uid;
+
+    if (opts?.gateNewUser && isExplicitlyExisting && !stillNeedsConsent) {
+      set({ legalGate: false });
+      return { isNewUser: false, uid };
+    }
+
+    if (!isExplicitlyExisting || stillNeedsConsent) {
+      await secureStore.setPendingLegalConsent(uid);
+    }
+
+    if (opts?.gateNewUser) {
+      set({ legalGate: true });
+      return { isNewUser: true, uid };
+    }
+
+    return { isNewUser: !isExplicitlyExisting, uid };
+  } catch (err: unknown) {
+    if (opts?.gateNewUser) set({ legalGate: false });
+    const message = getFirebaseErrorMessage(err);
+    set({ error: message });
+    throw new Error(message);
+  } finally {
+    set({ isLoading: false });
+  }
+}
 
 interface AuthState {
   firebaseUser: FirebaseUser | null;
@@ -41,6 +111,11 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: (
     idToken: string,
+    opts?: { gateNewUser?: boolean },
+  ) => Promise<{ isNewUser: boolean; uid: string }>;
+  /** Sign in with Apple (iOS). Same new-user / legal-gate contract as loginWithGoogle. */
+  loginWithApple: (
+    apple: AppleSignInResult,
     opts?: { gateNewUser?: boolean },
   ) => Promise<{ isNewUser: boolean; uid: string }>;
   register: (email: string, password: string, displayName: string) => Promise<void>;
@@ -132,46 +207,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  loginWithGoogle: async (idToken: string, opts) => {
-    set({ isLoading: true, error: null });
-    try {
-      // Block dashboard redirect until we know whether this is a new user.
-      // additionalUserInfo.isNewUser is only available AFTER signInWithCredential.
-      if (opts?.gateNewUser) set({ legalGate: true });
+  loginWithGoogle: (idToken: string, opts) =>
+    signInWithProvider(set, GoogleAuthProvider.credential(idToken), opts),
 
-      const credential = GoogleAuthProvider.credential(idToken);
-      const result = await signInWithCredential(getFirebaseAuth(), credential);
-      const uid = result.user.uid;
-      const info = getAdditionalUserInfo(result);
-      // Fallback: if additionalUserInfo is missing, treat as new so they cannot slip through.
-      const isExplicitlyExisting = info?.isNewUser === false;
-      const consentUid = await secureStore.getPendingLegalConsent();
-      const stillNeedsConsent = consentUid === uid;
-
-      if (opts?.gateNewUser && isExplicitlyExisting && !stillNeedsConsent) {
-        set({ legalGate: false });
-        return { isNewUser: false, uid };
-      }
-
-      if (!isExplicitlyExisting || stillNeedsConsent) {
-        await secureStore.setPendingLegalConsent(uid);
-      }
-
-      if (opts?.gateNewUser) {
-        set({ legalGate: true });
-        return { isNewUser: true, uid };
-      }
-
-      return { isNewUser: !isExplicitlyExisting, uid };
-    } catch (err: unknown) {
-      if (opts?.gateNewUser) set({ legalGate: false });
-      const message = getFirebaseErrorMessage(err);
-      set({ error: message });
-      throw new Error(message);
-    } finally {
-      set({ isLoading: false });
-    }
-  },
+  loginWithApple: (apple, opts) =>
+    signInWithProvider(
+      set,
+      new OAuthProvider('apple.com').credential({ idToken: apple.identityToken, rawNonce: apple.rawNonce }),
+      opts,
+      async (user) => {
+        const name = apple.fullName?.trim();
+        if (name && !user.displayName) {
+          await updateProfile(user, { displayName: name });
+          void get().syncUser();
+        }
+      },
+    ),
 
   register: async (email, password, displayName) => {
     set({ isLoading: true, error: null });

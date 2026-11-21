@@ -228,11 +228,11 @@ export default function JobsScreen() {
             >
               <Ionicons name="arrow-back" size={22} color={colors.stone[700]} style={RTL_FLIP} />
             </TouchableOpacity>
-            <Text className="text-xl font-black text-stone-900">{t('list.title')}</Text>
+            <Text className="text-xl font-black text-ink" accessibilityRole="header">{t('list.title')}</Text>
           </View>
           <TouchableOpacity
             onPress={() => router.push('./new')}
-            className="flex-row items-center bg-brand-600 px-4 py-2 rounded-xl"
+            className="flex-row items-center bg-brand-600 px-4 min-h-[42px] rounded-full"
             accessibilityRole="button"
           >
             <Ionicons name="add" size={18} color={colors.white} />

@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnnouncementBanner } from '../../src/components/app/AnnouncementBanner';
 import { PaymentIssueNotice } from '../../src/components/app/PaymentIssueNotice';
 import { RecentDocuments } from '../../src/components/dashboard/RecentDocuments';
@@ -41,6 +41,7 @@ import {
 import { colors } from '../../src/theme/colors';
 import { formatNumber, t as tNow, useT } from '../../src/i18n';
 import { RTL_FLIP } from '../../src/i18n/native';
+import { useLightStatusBar } from '../../src/hooks/useLightStatusBar';
 
 function loadFailureMessage(err: unknown): string {
   if (axios.isAxiosError(err) && !err.response) {
@@ -56,6 +57,8 @@ export default function DashboardScreen() {
   const liveUsage = useV1Usage();
   const jobs = useJobList();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  useLightStatusBar();
   const { user: authUser, syncUser, userSyncError, emailVerified } = useAuthStore();
   const {
     data: userData,
@@ -115,6 +118,8 @@ export default function DashboardScreen() {
   const aiLimit = limits ? Math.min(usage?.aiCreditsLimit ?? limits.aiCredits, limits.aiCredits) : 0;
   const ratio = (used: number, limit: number | null) =>
     limit === null ? `${formatNumber(used)} · ${t('stats.unlimited')}` : `${formatNumber(used)} / ${formatNumber(limit)}`;
+  const creditsUsed = counters?.aiCreditsUsed ?? usage?.aiCreditsUsed ?? 0;
+  const creditsShare = aiLimit > 0 ? Math.min(1, creditsUsed / aiLimit) : 0;
   const firstName = greetingName(user);
   const greeting = t(`greeting.${greetingKey(isFirstVisit(user), !!firstName)}`, { name: firstName });
   const pipeline = jobPipelineCounts(jobs.data);
@@ -126,7 +131,7 @@ export default function DashboardScreen() {
     !clPending;
 
   return (
-    <SafeAreaView className="flex-1 bg-stone-50" edges={['top']}>
+    <View className="flex-1 bg-stone-50">
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
@@ -134,37 +139,52 @@ export default function DashboardScreen() {
           <RefreshControl
             refreshing={pullRefreshing}
             onRefresh={onRefresh}
-            tintColor={colors.brand[600]}
+            tintColor={colors.white}
+            progressViewOffset={insets.top}
           />
         }
       >
-        {/* Header */}
-        <View className="px-5 pt-4 pb-6 bg-surface border-b border-stone-100">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-1">
-              <Text className="text-xl font-bold text-stone-900" numberOfLines={2} accessibilityRole="header">
+        {/* Hero — navy brand card: greeting, plan and this month's credits */}
+        <View className="bg-navy px-5 pb-7 rounded-b-[32px]" style={{ paddingTop: insets.top + 14 }}>
+          <View className="flex-row items-start justify-between">
+            <View className="flex-1 pe-3">
+              <Text className="text-[13px] font-semibold uppercase tracking-wider text-brand-300">FlacronCV</Text>
+              <Text className="mt-1 text-2xl font-black text-white" numberOfLines={2} accessibilityRole="header">
                 {user ? greeting : ts('header.userFallback')}
               </Text>
-              <Text className="text-stone-500 text-sm mt-0.5">{t('greeting.subtitle')}</Text>
+              <Text className="mt-1 text-sm text-white/70">{t('greeting.subtitle')}</Text>
             </View>
-            <View className="flex-row items-center gap-2">
-              {accountFailed ? (
-                <View className="px-3 py-1 rounded-full bg-warning-bg">
-                  <Text className="text-xs font-bold text-warning">{ts('header.unavailable')}</Text>
-                </View>
-              ) : accountLoading || !badge ? (
-                <View className="px-3 py-1 rounded-full bg-stone-100">
-                  <Text className="text-xs font-bold text-stone-400">…</Text>
-                </View>
-              ) : (
-                <View className={`px-3 py-1 rounded-full ${badge.bgClass}`}>
-                  <Text className={`text-xs font-bold ${badge.textClass}`}>
-                    {badge.label}
-                  </Text>
-                </View>
-              )}
-            </View>
+            {accountFailed ? (
+              <View className="px-3 py-1.5 rounded-full bg-warning-bg">
+                <Text className="text-xs font-bold text-warning">{ts('header.unavailable')}</Text>
+              </View>
+            ) : accountLoading || !badge ? (
+              <View className="px-3 py-1.5 rounded-full bg-white/15">
+                <Text className="text-xs font-bold text-white/70">…</Text>
+              </View>
+            ) : (
+              <View className="flex-row items-center px-3 py-1.5 rounded-full bg-brand-600">
+                <Ionicons name="diamond" size={12} color={colors.white} style={{ marginEnd: 5 }} />
+                <Text className="text-xs font-bold text-white">{badge.label}</Text>
+              </View>
+            )}
           </View>
+
+          {usage && !usageFailed ? (
+            <View className="mt-5 rounded-2xl bg-white/10 p-4">
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center">
+                  <Ionicons name="sparkles" size={16} color={colors.brand[300]} />
+                  <Text className="ms-2 text-sm font-semibold text-white">{ts('usage.credits')}</Text>
+                </View>
+                <Text className="text-sm font-bold text-white">{ratio(creditsUsed, aiLimit)}</Text>
+              </View>
+              <View className="mt-3 h-2 overflow-hidden rounded-full bg-white/15">
+                <View className="h-2 rounded-full bg-brand-500" style={{ width: `${Math.max(creditsShare * 100, creditsUsed > 0 ? 4 : 0)}%` }} />
+              </View>
+              <Text className="mt-2 text-xs text-white/60">{t('stats.usedThisMonth')}</Text>
+            </View>
+          ) : null}
         </View>
 
         {!emailVerified && (
@@ -197,7 +217,7 @@ export default function DashboardScreen() {
         <View className="px-5 pt-5">
           <PaymentIssueNotice className="mb-3" />
           <AnnouncementBanner className="mb-3" />
-          <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">
+          <Text className="text-[13px] font-bold text-stone-500 uppercase tracking-wider mb-3">
             {t('stats.title')}
           </Text>
           {usageFailed ? (
@@ -235,10 +255,10 @@ export default function DashboardScreen() {
                   subtitle={t('stats.thisMonth')}
                 />
                 <StatsCard
-                  label={ts('usage.credits')}
-                  value={ratio(counters?.aiCreditsUsed ?? usage.aiCreditsUsed, aiLimit)}
-                  icon="sparkles"
-                  subtitle={t('stats.usedThisMonth')}
+                  label={t('stats.applications')}
+                  value={jobs.data ? formatNumber(pipeline.active) : '–'}
+                  icon="briefcase"
+                  subtitle={t('stats.inTracker')}
                 />
               </View>
             </>
@@ -247,31 +267,26 @@ export default function DashboardScreen() {
 
         {/* Quick Actions — all brand-600; same geometry as before */}
         <View className="px-5 mb-6">
-          <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">
+          <Text className="text-[13px] font-bold text-stone-500 uppercase tracking-wider mb-3">
             {t('quickActions.title')}
           </Text>
           <View className="flex-row gap-3">
-            <TouchableOpacity
+            <QuickTile
+              primary
+              icon="add"
+              label={t('quickActions.newCv')}
               onPress={() => router.push('/(dashboard)/cvs/new')}
-              className="flex-1 bg-brand-600 rounded-2xl p-4 items-center"
-            >
-              <Ionicons name="add-circle" size={28} color={colors.white} />
-              <Text className="text-white font-bold mt-1.5 text-sm">{t('quickActions.newCv')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            />
+            <QuickTile
+              icon="mail-outline"
+              label={t('quickActions.coverLetter')}
               onPress={() => router.push('/(dashboard)/cover-letters/new')}
-              className="flex-1 bg-brand-600 rounded-2xl p-4 items-center"
-            >
-              <Ionicons name="mail" size={28} color={colors.white} />
-              <Text className="text-white font-bold mt-1.5 text-sm">{t('quickActions.coverLetter')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            />
+            <QuickTile
+              icon="layers-outline"
+              label={t('quickActions.templates')}
               onPress={() => router.push('/(dashboard)/templates')}
-              className="flex-1 bg-brand-600 rounded-2xl p-4 items-center"
-            >
-              <Ionicons name="layers" size={28} color={colors.white} />
-              <Text className="text-white font-bold mt-1.5 text-sm">{t('quickActions.templates')}</Text>
-            </TouchableOpacity>
+            />
           </View>
           <TouchableOpacity
             onPress={() => router.push('./jobs')}
@@ -309,7 +324,7 @@ export default function DashboardScreen() {
         {/* Recent Documents */}
         <View className="px-5 mb-8">
           <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-sm font-semibold text-stone-500 uppercase tracking-wide">
+            <Text className="text-[13px] font-bold text-stone-500 uppercase tracking-wider">
               {t('recent.title')}
             </Text>
             <TouchableOpacity onPress={() => router.push('/(dashboard)/cvs')}>
@@ -344,17 +359,21 @@ export default function DashboardScreen() {
             ) : pipeline.active === 0 ? (
               <Text className="text-stone-600 text-sm leading-5">{t('jobs.empty')}</Text>
             ) : (
-              <View className="flex-row flex-wrap gap-2">
-                {HOME_PIPELINE.map((stage) => (
-                  <View
-                    key={stage}
-                    className="bg-stone-50 rounded-xl px-3 py-2"
-                    style={{ flexBasis: '47%', flexGrow: 1 }}
-                    accessible
-                    accessibilityLabel={`${t(`jobs.status.${stage}`)}: ${pipeline.counts[stage]}`}
-                  >
-                    <Text className="text-stone-500 text-xs" numberOfLines={1}>{t(`jobs.status.${stage}`)}</Text>
-                    <Text className="text-stone-900 text-xl font-bold">{formatNumber(pipeline.counts[stage])}</Text>
+              <View className="gap-2">
+                {pairs(HOME_PIPELINE).map((row) => (
+                  <View key={row.join('-')} className="flex-row gap-2">
+                    {row.map((stage) => (
+                      <View
+                        key={stage}
+                        className="flex-1 bg-stone-50 rounded-xl px-3 py-2.5"
+                        accessible
+                        accessibilityLabel={`${t(`jobs.status.${stage}`)}: ${pipeline.counts[stage]}`}
+                      >
+                        <Text className="text-stone-500 text-xs" numberOfLines={1}>{t(`jobs.status.${stage}`)}</Text>
+                        <Text className="text-stone-900 text-xl font-bold">{formatNumber(pipeline.counts[stage])}</Text>
+                      </View>
+                    ))}
+                    {row.length === 1 ? <View className="flex-1" /> : null}
                   </View>
                 ))}
               </View>
@@ -394,7 +413,51 @@ export default function DashboardScreen() {
             </View>
           </View>
         )}
+        <View style={{ height: 8 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
+  );
+}
+
+function pairs<T>(items: readonly T[]): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
+  return rows;
+}
+
+/** Home quick action: the primary one is filled orange, the others are white cards. */
+function QuickTile({
+  icon,
+  label,
+  onPress,
+  primary = false,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  onPress: () => void;
+  primary?: boolean;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      className={[
+        'flex-1 items-center rounded-2xl px-2 py-4',
+        primary ? 'bg-brand-600' : 'bg-surface border border-stone-100',
+      ].join(' ')}
+      style={primary ? { shadowColor: colors.brand[600], shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 4 } : undefined}
+    >
+      <View className={['h-11 w-11 items-center justify-center rounded-full', primary ? 'bg-white/20' : 'bg-brand-50'].join(' ')}>
+        <Ionicons name={icon} size={22} color={primary ? colors.white : colors.brand[600]} />
+      </View>
+      <Text
+        className={['mt-2 text-center text-sm font-bold', primary ? 'text-white' : 'text-stone-900'].join(' ')}
+        numberOfLines={2}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
   );
 }

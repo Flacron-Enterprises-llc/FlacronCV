@@ -2,7 +2,7 @@
   "expo": {
     "name": "FlacronCV",
     "slug": "flacroncv-mobile",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -18,10 +18,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.flacroncv.mobile",
-      "buildNumber": "9",
+      "buildNumber": "10",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +30,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.flacroncv.mobile",
-      "versionCode": 10,
+      "versionCode": 11,
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -74,7 +75,8 @@
           "enableBackgroundRecording": false
         }
       ],
-      "./plugins/with-optional-screen-features"
+      "./plugins/with-optional-screen-features",
+      "expo-apple-authentication"
     ],
     "scheme": "flacroncv",
     "extra": {

@@ -18,6 +18,8 @@ interface ButtonProps extends PressableProps {
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
   fullWidth?: boolean;
+  /** Fully rounded (auth and onboarding call-to-action). */
+  pill?: boolean;
   children: React.ReactNode;
 }
 
@@ -56,6 +58,7 @@ export function Button({
   icon,
   iconPosition = 'left',
   fullWidth = false,
+  pill = false,
   children,
   disabled,
   className,
@@ -68,7 +71,8 @@ export function Button({
       {...props}
       disabled={isDisabled}
       className={[
-        'flex-row items-center justify-center rounded-xl',
+        'flex-row items-center justify-center',
+        pill ? 'rounded-full min-h-[54px]' : 'rounded-xl',
         variantClasses[variant],
         sizeClasses[size],
         fullWidth ? 'w-full' : '',

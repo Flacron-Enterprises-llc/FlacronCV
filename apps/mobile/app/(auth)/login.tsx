@@ -1,23 +1,15 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import {
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { z } from 'zod';
+import { AppleSignInButton, useAppleSignInAvailable } from '../../src/components/auth/AppleSignInButton';
+import { AuthDivider, AuthError, AuthFooterLink, AuthShell } from '../../src/components/auth/AuthShell';
 import { GoogleSignInButton, isGoogleSignInAvailable } from '../../src/components/auth/GoogleSignInButton';
 import { LegalAcceptanceModal } from '../../src/components/auth/LegalAcceptanceModal';
+import { CvIllustration } from '../../src/components/brand/CvIllustration';
 import { Button } from '../../src/components/ui/Button';
 import { Input } from '../../src/components/ui/Input';
 import { useT } from '../../src/i18n';
@@ -26,8 +18,7 @@ import {
   legalPostFailedTitle,
   recordAcceptanceAfterSignup,
 } from '../../src/lib/legal-acceptance';
-import { colors } from '../../src/theme/colors';
-import { useAuthStore } from '../../src/store/auth-store';
+import { useAuthStore, type AppleSignInResult } from '../../src/store/auth-store';
 
 // Required for expo-auth-session redirect to work correctly
 WebBrowser.maybeCompleteAuthSession();
@@ -42,15 +33,18 @@ type FormData = z.infer<ReturnType<typeof makeSchema>>;
 
 export default function LoginScreen() {
   const t = useT('auth');
+  const router = useRouter();
   const schema = useMemo(
     () => makeSchema({ email: t('validation.email'), password: t('validation.passwordMin6') }),
     [t],
   );
-  const { login, loginWithGoogle, logout, isLoading, error, clearError, legalGate, setLegalGate } =
+  const { login, loginWithGoogle, loginWithApple, logout, isLoading, error, clearError, legalGate, setLegalGate } =
     useAuthStore();
   const [legalOpen, setLegalOpen] = useState(false);
   const [legalChecked, setLegalChecked] = useState(false);
   const [legalAccepting, setLegalAccepting] = useState(false);
+  const googleAvailable = isGoogleSignInAvailable();
+  const appleAvailable = useAppleSignInAvailable();
 
   const {
     control,
@@ -76,11 +70,12 @@ export default function LoginScreen() {
     }
   };
 
-  const handleGoogleToken = useCallback(
-    async (token: string) => {
+  /** Google or Apple: a brand-new account must agree to the legal documents first. */
+  const handleProviderSignIn = useCallback(
+    async (signIn: () => Promise<{ isNewUser: boolean }>) => {
       clearError();
       try {
-        const { isNewUser } = await loginWithGoogle(token, { gateNewUser: true });
+        const { isNewUser } = await signIn();
         if (isNewUser) {
           setLegalChecked(false);
           setLegalOpen(true);
@@ -89,7 +84,16 @@ export default function LoginScreen() {
         // Error in store
       }
     },
-    [clearError, loginWithGoogle],
+    [clearError],
+  );
+
+  const handleGoogleToken = useCallback(
+    (token: string) => void handleProviderSignIn(() => loginWithGoogle(token, { gateNewUser: true })),
+    [handleProviderSignIn, loginWithGoogle],
+  );
+  const handleAppleResult = useCallback(
+    (result: AppleSignInResult) => void handleProviderSignIn(() => loginWithApple(result, { gateNewUser: true })),
+    [handleProviderSignIn, loginWithApple],
   );
 
   const handleLegalAccept = async () => {
@@ -112,127 +116,83 @@ export default function LoginScreen() {
     setLegalOpen(false);
     setLegalChecked(false);
     // Sign out only — do not delete the Auth user. Consent uid stays so the
-    // next Google sign-in still shows this modal (isNewUser will be false).
+    // next provider sign-in still shows this modal (isNewUser will be false).
     await logout();
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-surface">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
-        keyboardVerticalOffset={0}
-      >
-        <ScrollView
-          className="flex-1"
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 48 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header — pale brand wash into white; mark sits alone (no orange tile) */}
-          <LinearGradient
-            colors={[colors.brand[50], '#ffffff']}
-            className="px-6 pt-8 pb-10"
-          >
-            <View className="items-center mb-8">
-              <Image
-                source={require('../../assets/icon.png')}
-                style={{ width: 56, height: 56, borderRadius: 14, marginBottom: 16 }}
-                resizeMode="contain"
-              />
-              <Text className="text-xl font-bold text-stone-900">{t('login.title')}</Text>
-              <Text className="text-stone-500 mt-1">{t('login.subtitle')}</Text>
+    <>
+      <AuthShell title={t('login.title')} subtitle={t('login.subtitle')} hero={<CvIllustration width={236} />}>
+        <AuthError message={error} />
+
+        <Controller
+          control={control}
+          name="email"
+          render={({ field }) => (
+            <Input
+              variant="soft"
+              labelIcon="mail-outline"
+              label={t('fields.email')}
+              placeholder="you@example.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.email?.message}
+            />
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="password"
+          render={({ field }) => (
+            <Input
+              variant="soft"
+              labelIcon="lock-closed-outline"
+              label={t('fields.password')}
+              placeholder="••••••••"
+              isPassword
+              autoComplete="password"
+              textContentType="password"
+              value={field.value}
+              onChangeText={field.onChange}
+              onSubmitEditing={handleSubmit(onSubmit)}
+              returnKeyType="go"
+              error={errors.password?.message}
+            />
+          )}
+        />
+
+        <Link href="/(auth)/forgot-password" asChild>
+          <Pressable className="-mt-1 mb-6 min-h-[44px] justify-center self-end" accessibilityRole="link" hitSlop={6}>
+            <Text className="text-[15px] font-semibold text-brand-700">{t('login.forgotPassword')}</Text>
+          </Pressable>
+        </Link>
+
+        <Button variant="primary" size="lg" pill fullWidth loading={isLoading} onPress={handleSubmit(onSubmit)}>
+          {t('login.submit')}
+        </Button>
+
+        {/* Provider sign-in — each button only when its provider is configured for this build */}
+        {googleAvailable || appleAvailable ? (
+          <>
+            <AuthDivider label={t('login.orContinueWith')} />
+            <View className="gap-3">
+              {googleAvailable ? <GoogleSignInButton label={t('login.google')} onToken={handleGoogleToken} /> : null}
+              {appleAvailable ? <AppleSignInButton label={t('login.apple')} onResult={handleAppleResult} /> : null}
             </View>
-          </LinearGradient>
+          </>
+        ) : null}
 
-          {/* Form Card */}
-          <View className="px-6 -mt-4">
-            <View className="bg-surface rounded-3xl border border-stone-100 shadow-sm p-6">
-              {/* Error Banner */}
-              {error && (
-                <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
-                  <Text className="text-red-600 text-sm">{error}</Text>
-                </View>
-              )}
-
-              <Controller
-                control={control}
-                name="email"
-                render={({ field }) => (
-                  <Input
-                    label={t('fields.email')}
-                    placeholder="you@example.com"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={errors.email?.message}
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="password"
-                render={({ field }) => (
-                  <Input
-                    label={t('fields.password')}
-                    placeholder="••••••••"
-                    isPassword
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={errors.password?.message}
-                  />
-                )}
-              />
-
-              <Link href="/(auth)/forgot-password" asChild>
-                <TouchableOpacity className="mb-5 self-end">
-                  <Text className="text-brand-600 text-sm font-medium">
-                    {t('login.forgotPassword')}
-                  </Text>
-                </TouchableOpacity>
-              </Link>
-
-              <Button
-                variant="primary"
-                size="lg"
-                fullWidth
-                loading={isLoading}
-                onPress={handleSubmit(onSubmit)}
-              >
-                {t('login.submit')}
-              </Button>
-
-              {/* Google Sign-In — only rendered when the platform client ID is configured */}
-              {isGoogleSignInAvailable() && (
-                <>
-                  <View className="flex-row items-center my-5">
-                    <View className="flex-1 h-px bg-stone-200" />
-                    <Text className="mx-3 text-stone-400 text-sm font-medium">{t('login.orContinueWith')}</Text>
-                    <View className="flex-1 h-px bg-stone-200" />
-                  </View>
-                  <GoogleSignInButton
-                    label={t('login.google')}
-                    onToken={(token) => void handleGoogleToken(token)}
-                  />
-                </>
-              )}
-            </View>
-
-            {/* Register Link */}
-            <View className="flex-row justify-center mt-6 mb-8">
-              <Text className="text-stone-500">{`${t('login.noAccount')} `}</Text>
-              <Link href="/(auth)/register" asChild>
-                <TouchableOpacity>
-                  <Text className="text-brand-600 font-semibold">{t('login.signUp')}</Text>
-                </TouchableOpacity>
-              </Link>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        <AuthFooterLink
+          prompt={t('login.noAccount')}
+          action={t('login.signUp')}
+          onPress={() => router.push('/(auth)/register')}
+        />
+      </AuthShell>
       <LegalAcceptanceModal
         visible={legalOpen}
         checked={legalChecked}
@@ -241,6 +201,6 @@ export default function LoginScreen() {
         onCancel={() => void handleLegalCancel()}
         accepting={legalAccepting}
       />
-    </SafeAreaView>
+    </>
   );
 }

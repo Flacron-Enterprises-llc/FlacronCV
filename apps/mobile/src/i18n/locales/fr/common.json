@@ -16,5 +16,7 @@
     "body": "Vous avez des modifications non enregistrées. Quitter quand même ?",
     "stay": "Rester",
     "leave": "Quitter"
-  }
+  },
+  "showPassword": "Afficher le mot de passe",
+  "hidePassword": "Masquer le mot de passe"
 }

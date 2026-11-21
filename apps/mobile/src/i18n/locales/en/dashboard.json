@@ -20,7 +20,9 @@
     "downloads": "Downloads",
     "thisMonth": "This month",
     "usedThisMonth": "Used this month",
-    "unlimited": "Unlimited"
+    "unlimited": "Unlimited",
+    "applications": "Applications",
+    "inTracker": "In your job tracker"
   },
   "quickActions": {
     "title": "Quick Actions",

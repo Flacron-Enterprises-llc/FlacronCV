@@ -34,7 +34,8 @@ describe('theme palette', () => {
       for (const entry of readdirSync(dir)) {
         const path = join(dir, entry);
         if (statSync(path).isDirectory()) { if (entry !== 'node_modules') walk(path); continue; }
-        if (/\.tsx?$/.test(entry) && /\bbg-white\b/.test(readFileSync(path, 'utf8'))) offenders.push(path);
+        // Translucent white (bg-white/10) is an overlay on the constant navy hero, not a surface.
+        if (/\.tsx?$/.test(entry) && /\bbg-white\b(?!\/)/.test(readFileSync(path, 'utf8'))) offenders.push(path);
       }
     };
     walk(join(root, 'app'));
@@ -50,6 +51,7 @@ describe('theme palette', () => {
       ['--stone-500', '--stone-50', 3], ['--brand-700', '--surface', 4.5], ['--brand-700', '--brand-50', 4.5],
       ['--success', '--success-bg', 4.5], ['--error', '--error-bg', 4.5], ['--warning', '--warning-bg', 4.5],
       ['--success', '--surface', 3], ['--error', '--surface', 4.5], ['--warning', '--surface', 3],
+      ['--ink', '--surface', 4.5], ['--ink', '--stone-50', 4.5],
     ];
     for (const [fg, bg, min] of pairs) {
       expect(contrast(t(fg), t(bg)), `${fg} on ${bg} (${scheme})`).toBeGreaterThanOrEqual(min);

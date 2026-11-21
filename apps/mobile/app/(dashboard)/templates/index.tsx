@@ -71,7 +71,7 @@ export default function TemplatesScreen() {
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top']}>
       <View className="px-5 pt-4 pb-3 bg-surface border-b border-stone-100">
-        <Text className="text-xl font-black text-stone-900">{t('title')}</Text>
+        <Text className="text-2xl font-black text-ink" accessibilityRole="header">{t('title')}</Text>
         <Text className="text-stone-400 text-sm mt-0.5">{t('subtitle')}</Text>
       </View>
 

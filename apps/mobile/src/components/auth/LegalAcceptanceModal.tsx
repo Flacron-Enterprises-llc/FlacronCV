@@ -27,7 +27,7 @@ function DocLink({
 }) {
   return (
     <Text
-      className="font-medium text-brand-600"
+      className="font-semibold text-brand-700"
       onPress={() => void openLegalDocument(kind)}
     >
       {label}
@@ -58,7 +58,7 @@ function withDocLinks(sentence: string, t: TFunction): React.ReactNode[] {
 export function LegalSignupLine() {
   const t = useT('auth');
   return (
-    <Text className="text-xs text-stone-400 mb-5 leading-4">
+    <Text className="text-[13px] leading-5 text-stone-600">
       {withDocLinks(t('legal.signupLine'), t)}
     </Text>
   );

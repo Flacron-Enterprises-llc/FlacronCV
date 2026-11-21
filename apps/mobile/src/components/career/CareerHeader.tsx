@@ -24,7 +24,7 @@ export function CareerHeader({ title, subtitle, right, showBack = true }: { titl
         </TouchableOpacity>
         ) : null}
         <View className="flex-1">
-          <Text className="text-xl font-black text-stone-900" accessibilityRole="header" numberOfLines={1}>
+          <Text className={showBack ? "text-xl font-black text-ink" : "text-2xl font-black text-ink"} accessibilityRole="header" numberOfLines={1}>
             {title}
           </Text>
           {subtitle ? (

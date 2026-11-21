@@ -35,6 +35,8 @@ export const TOKENS: Readonly<Record<string, Readonly<Record<Scheme, string>>>> 
   '--brand-800': { light: '154 52 18', dark: '254 215 170' },
   '--brand-900': { light: '124 45 18', dark: '255 237 213' },
   '--brand-950': { light: '67 20 7', dark: '255 247 237' },
+  // Brand navy for headings (the FlacronCV wordmark ink); near-white in dark.
+  '--ink': { light: '16 41 79', dark: '250 250 249' },
   // Semantic text and tinted backgrounds.
   '--success': { light: '21 128 61', dark: '74 222 128' },
   '--success-bg': { light: '240 253 244', dark: '5 46 22' },

@@ -14,6 +14,10 @@ const hex = (name: string) => `#${TOKENS[name]![scheme].split(' ').map((n) => Nu
 
 export const colors = {
   chrome: '#1e3a5f',
+  navy: '#10294f',
+  navyDeep: '#0b1d3a',
+  /** Heading ink: brand navy on light, near-white on dark. */
+  ink: hex('--ink'),
   white: '#ffffff',
   success: { DEFAULT: hex('--success'), bg: hex('--success-bg') },
   error: { DEFAULT: hex('--error'), bg: hex('--error-bg') },

@@ -1,21 +1,17 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Link } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import {
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Alert, Text, View } from 'react-native';
 import { z } from 'zod';
+import {
+  AppleSignInButton,
+  useAppleSignInAvailable,
+  type AppleSignInHandle,
+} from '../../src/components/auth/AppleSignInButton';
+import { AuthDivider, AuthError, AuthFooterLink, AuthShell } from '../../src/components/auth/AuthShell';
 import {
   GoogleSignInButton,
   isGoogleSignInAvailable,
@@ -34,7 +30,7 @@ import {
   recordAcceptanceAfterSignup,
 } from '../../src/lib/legal-acceptance';
 import { getFirebaseAuth } from '../../src/lib/firebase';
-import { useAuthStore } from '../../src/store/auth-store';
+import { useAuthStore, type AppleSignInResult } from '../../src/store/auth-store';
 import { colors } from '../../src/theme/colors';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -58,9 +54,13 @@ type FormData = z.infer<ReturnType<typeof makeSchema>>;
 export default function RegisterScreen() {
   const t = useT('auth');
   const schema = useMemo(() => makeSchema(t), [t]);
-  const { register, loginWithGoogle, isLoading, error, clearError, setLegalGate } = useAuthStore();
+  const router = useRouter();
+  const { register, loginWithGoogle, loginWithApple, isLoading, error, clearError, setLegalGate } = useAuthStore();
   const googleRef = useRef<GoogleSignInHandle>(null);
-  const pendingSignup = useRef<'password' | 'google' | null>(null);
+  const appleRef = useRef<AppleSignInHandle>(null);
+  const pendingSignup = useRef<'password' | 'google' | 'apple' | null>(null);
+  const googleAvailable = isGoogleSignInAvailable();
+  const appleAvailable = useAppleSignInAvailable();
   const pendingForm = useRef<FormData | null>(null);
   const [legalOpen, setLegalOpen] = useState(false);
   const [legalChecked, setLegalChecked] = useState(false);
@@ -94,11 +94,12 @@ export default function RegisterScreen() {
     return false;
   };
 
-  const handleGoogleToken = useCallback(async (token: string) => {
+  /** Google or Apple after the person agreed in the modal: sign in, then record the agreement. */
+  const handleProviderSignUp = useCallback(async (signIn: () => Promise<unknown>) => {
     clearError();
     setLegalGate(true);
     try {
-      await loginWithGoogle(token);
+      await signIn();
       const ok = await recordAcceptanceAfterSignup();
       if (ok) {
         setLegalGate(false);
@@ -129,7 +130,24 @@ export default function RegisterScreen() {
         setLegalGate(false);
       }
     }
-  }, [clearError, loginWithGoogle, setLegalGate]);
+  }, [clearError, setLegalGate]);
+
+  const handleGoogleToken = useCallback(
+    (token: string) => void handleProviderSignUp(() => loginWithGoogle(token)),
+    [handleProviderSignUp, loginWithGoogle],
+  );
+  const handleAppleResult = useCallback(
+    (result: AppleSignInResult) => void handleProviderSignUp(() => loginWithApple(result)),
+    [handleProviderSignUp, loginWithApple],
+  );
+
+  /** A provider button: the legal agreement comes first, then the provider sheet. */
+  const startProviderSignUp = (method: 'google' | 'apple') => {
+    clearError();
+    pendingSignup.current = method;
+    setLegalChecked(false);
+    setLegalOpen(true);
+  };
 
   const onSubmit = (data: FormData) => {
     clearError();
@@ -179,158 +197,136 @@ export default function RegisterScreen() {
     } else if (method === 'google') {
       setLegalOpen(false);
       await googleRef.current?.prompt();
+    } else if (method === 'apple') {
+      setLegalOpen(false);
+      await appleRef.current?.prompt();
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-surface">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
-        keyboardVerticalOffset={0}
-      >
-        <ScrollView
-          className="flex-1"
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 48 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header — pale brand wash into white; mark sits alone (no orange tile) */}
-          <LinearGradient
-            colors={[colors.brand[50], '#ffffff']}
-            className="px-6 pt-8 pb-10"
-          >
-            <View className="items-center mb-8">
-              <Image
-                source={require('../../assets/icon.png')}
-                style={{ width: 56, height: 56, borderRadius: 14, marginBottom: 16 }}
-                resizeMode="contain"
-              />
-              <Text className="text-xl font-bold text-stone-900">{t('register.title')}</Text>
-              <Text className="text-stone-500 mt-1">{t('register.subtitle')}</Text>
-            </View>
-          </LinearGradient>
+    <>
+      <AuthShell title={t('register.title')} subtitle={t('register.subtitle')} hero={<FeatureRow />}>
+        <AuthError message={error} />
 
-          {/* Form Card */}
-          <View className="px-6 -mt-4">
-            <View className="bg-surface rounded-3xl border border-stone-100 shadow-sm p-6">
-              {/* Google Sign-Up — only rendered when the platform client ID is configured */}
-              {isGoogleSignInAvailable() && (
-                <>
-                  <View style={{ marginBottom: 16 }}>
-                    <GoogleSignInButton
-                      ref={googleRef}
-                      label={t('register.google')}
-                      onPressOverride={() => {
-                        clearError();
-                        pendingSignup.current = 'google';
-                        setLegalChecked(false);
-                        setLegalOpen(true);
-                      }}
-                      onToken={(token) => void handleGoogleToken(token)}
-                    />
-                  </View>
-                  <View className="flex-row items-center mb-5">
-                    <View className="flex-1 h-px bg-stone-200" />
-                    <Text className="mx-3 text-stone-400 text-sm font-medium">{t('register.orWithEmail')}</Text>
-                    <View className="flex-1 h-px bg-stone-200" />
-                  </View>
-                </>
-              )}
+        <Controller
+          control={control}
+          name="displayName"
+          render={({ field }) => (
+            <Input
+              variant="soft"
+              labelIcon="person-outline"
+              label={t('fields.fullName')}
+              placeholder={t('fields.fullNamePlaceholder')}
+              autoCapitalize="words"
+              autoComplete="name"
+              textContentType="name"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.displayName?.message}
+            />
+          )}
+        />
 
-              {/* Error Banner */}
-              {error && (
-                <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
-                  <Text className="text-red-600 text-sm">{error}</Text>
-                </View>
-              )}
+        <Controller
+          control={control}
+          name="email"
+          render={({ field }) => (
+            <Input
+              variant="soft"
+              labelIcon="mail-outline"
+              label={t('fields.email')}
+              placeholder="you@example.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.email?.message}
+            />
+          )}
+        />
 
-              <Controller
-                control={control}
-                name="displayName"
-                render={({ field }) => (
-                  <Input
-                    label={t('fields.fullName')}
-                    placeholder={t('fields.fullNamePlaceholder')}
-                    autoCapitalize="words"
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={errors.displayName?.message}
-                  />
-                )}
-              />
+        <Controller
+          control={control}
+          name="password"
+          render={({ field }) => (
+            <Input
+              variant="soft"
+              labelIcon="lock-closed-outline"
+              label={t('fields.password')}
+              placeholder={t('fields.passwordPlaceholder')}
+              isPassword
+              autoComplete="new-password"
+              textContentType="newPassword"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.password?.message}
+            />
+          )}
+        />
 
-              <Controller
-                control={control}
-                name="email"
-                render={({ field }) => (
-                  <Input
-                    label={t('fields.email')}
-                    placeholder="you@example.com"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={errors.email?.message}
-                  />
-                )}
-              />
+        <Controller
+          control={control}
+          name="confirmPassword"
+          render={({ field }) => (
+            <Input
+              variant="soft"
+              labelIcon="lock-closed-outline"
+              label={t('fields.confirmPassword')}
+              placeholder={t('fields.confirmPasswordPlaceholder')}
+              isPassword
+              autoComplete="new-password"
+              textContentType="newPassword"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.confirmPassword?.message}
+            />
+          )}
+        />
 
-              <Controller
-                control={control}
-                name="password"
-                render={({ field }) => (
-                  <Input
-                    label={t('fields.password')}
-                    placeholder={t('fields.passwordPlaceholder')}
-                    isPassword
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={errors.password?.message}
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <Input
-                    label={t('fields.confirmPassword')}
-                    placeholder={t('fields.confirmPasswordPlaceholder')}
-                    isPassword
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={errors.confirmPassword?.message}
-                  />
-                )}
-              />
-
-              <LegalSignupLine />
-
-              <Button
-                variant="primary"
-                size="lg"
-                fullWidth
-                loading={isLoading}
-                onPress={handleSubmit(onSubmit)}
-              >
-                {t('register.submit')}
-              </Button>
-            </View>
-
-            {/* Login Link */}
-            <View className="flex-row justify-center mt-6 mb-8">
-              <Text className="text-stone-500">{`${t('register.haveAccount')} `}</Text>
-              <Link href="/(auth)/login" asChild>
-                <TouchableOpacity>
-                  <Text className="text-brand-600 font-semibold">{t('register.signIn')}</Text>
-                </TouchableOpacity>
-              </Link>
-            </View>
+        <View className="mb-6 mt-1 flex-row items-start rounded-2xl bg-brand-50 p-3.5">
+          <Ionicons name="shield-checkmark" size={18} color={colors.brand[600]} style={{ marginEnd: 10, marginTop: 1 }} />
+          <View className="flex-1">
+            <LegalSignupLine />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
+
+        <Button variant="primary" size="lg" pill fullWidth loading={isLoading} onPress={handleSubmit(onSubmit)}>
+          {t('register.submit')}
+        </Button>
+
+        {/* Provider sign-up — each button only when its provider is configured for this build */}
+        {googleAvailable || appleAvailable ? (
+          <>
+            <AuthDivider label={t('register.orSignUpWith')} />
+            <View className="gap-3">
+              {googleAvailable ? (
+                <GoogleSignInButton
+                  ref={googleRef}
+                  label={t('register.google')}
+                  onPressOverride={() => startProviderSignUp('google')}
+                  onToken={handleGoogleToken}
+                />
+              ) : null}
+              {appleAvailable ? (
+                <AppleSignInButton
+                  ref={appleRef}
+                  label={t('register.apple')}
+                  onPressOverride={() => startProviderSignUp('apple')}
+                  onResult={handleAppleResult}
+                />
+              ) : null}
+            </View>
+          </>
+        ) : null}
+
+        <AuthFooterLink
+          prompt={t('register.haveAccount')}
+          action={t('register.signIn')}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(auth)/login'))}
+        />
+      </AuthShell>
       <LegalAcceptanceModal
         visible={legalOpen}
         checked={legalChecked}
@@ -339,6 +335,33 @@ export default function RegisterScreen() {
         onCancel={closeLegal}
         accepting={legalAccepting || isLoading}
       />
-    </SafeAreaView>
+    </>
+  );
+}
+
+/** Build CV · Find Jobs · Grow Career — what the account is for, at a glance. */
+function FeatureRow() {
+  const t = useT('auth');
+  const items = [
+    { icon: 'document-text-outline' as const, label: t('register.features.buildCv'), tint: 'bg-brand-50', color: colors.brand[600] },
+    { icon: 'briefcase-outline' as const, label: t('register.features.findJobs'), tint: 'bg-brand-50', color: colors.brand[600] },
+    { icon: 'school-outline' as const, label: t('register.features.growCareer'), tint: 'bg-stone-100', color: colors.ink },
+  ];
+  return (
+    <View className="flex-row items-stretch">
+      {items.map((item, i) => (
+        <View key={item.icon} className="flex-1 flex-row">
+          {i > 0 ? <View className="my-2 w-px bg-stone-200" /> : null}
+          <View className="flex-1 items-center px-1">
+            <View className={`h-14 w-14 items-center justify-center rounded-full ${item.tint}`}>
+              <Ionicons name={item.icon} size={24} color={item.color} />
+            </View>
+            <Text className="mt-2 text-center text-[15px] font-bold text-ink" numberOfLines={2}>
+              {item.label}
+            </Text>
+          </View>
+        </View>
+      ))}
+    </View>
   );
 }

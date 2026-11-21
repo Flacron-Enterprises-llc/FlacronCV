@@ -49,10 +49,12 @@ export default function DashboardLayout() {
           : {
               backgroundColor: palette.surface,
               borderTopColor: palette.border,
+              paddingTop: 6,
             },
         tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '600',
+          fontSize: 11,
+          fontWeight: '700',
+          marginTop: 2,
         },
       }}
     >
@@ -60,8 +62,8 @@ export default function DashboardLayout() {
         name="index"
         options={{
           title: t('dashboard'),
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="grid-outline" size={22} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={23} color={color} />
           ),
         }}
       />
@@ -69,8 +71,8 @@ export default function DashboardLayout() {
         name="cvs"
         options={{
           title: t('cvs'),
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="document-text-outline" size={22} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'document-text' : 'document-text-outline'} size={23} color={color} />
           ),
         }}
       />
@@ -78,8 +80,8 @@ export default function DashboardLayout() {
         name="cover-letters"
         options={{
           title: t('coverLetters'),
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="mail-outline" size={22} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'mail' : 'mail-outline'} size={23} color={color} />
           ),
         }}
       />
@@ -89,8 +91,8 @@ export default function DashboardLayout() {
           // With career tools on, Career takes this slot; templates stay one tap away on Home.
           ...(CAREER_ENABLED ? { href: null } : {}),
           title: t('templates'),
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="layers-outline" size={22} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'layers' : 'layers-outline'} size={23} color={color} />
           ),
         }}
       />
@@ -100,8 +102,8 @@ export default function DashboardLayout() {
           // Career tools; the stack redirects home when the build has career off.
           ...(CAREER_ENABLED ? {} : { href: null }),
           title: t('career'),
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="compass-outline" size={22} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'compass' : 'compass-outline'} size={23} color={color} />
           ),
         }}
       />
@@ -109,8 +111,8 @@ export default function DashboardLayout() {
         name="settings"
         options={{
           title: t('settings'),
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="settings-outline" size={22} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'settings' : 'settings-outline'} size={23} color={color} />
           ),
         }}
       />

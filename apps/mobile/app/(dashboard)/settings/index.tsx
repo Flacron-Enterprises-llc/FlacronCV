@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../src/store/auth-store';
 import { revokeAllSessions, useCurrentUser, useUpdatePreferences } from '../../../src/hooks/useUser';
@@ -46,6 +46,7 @@ import {
   changeLanguage,
   reloadForDirection,
 } from '../../../src/i18n/native';
+import { useLightStatusBar } from '../../../src/hooks/useLightStatusBar';
 
 type SettingsMenuItem = {
   icon: string;
@@ -72,6 +73,9 @@ export default function SettingsScreen() {
   const t = useT('settings');
   const tc = useT('common');
   const tPlans = useT('plans');
+  const tTabs = useT('tabs');
+  const insets = useSafeAreaInsets();
+  useLightStatusBar();
   const locale = useLocale();
   const router = useRouter();
   const replayTour = useAppTourReplay();
@@ -326,10 +330,11 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-stone-50" edges={['top']}>
+    <View className="flex-1 bg-stone-50">
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Profile Header */}
-        <View className="bg-surface px-5 pt-6 pb-6 border-b border-stone-100">
+        {/* Profile Header — navy brand hero, like Home */}
+        <View className="bg-navy px-5 pb-7 rounded-b-[32px]" style={{ paddingTop: insets.top + 18 }}>
+          <Text className="mb-4 text-2xl font-black text-white" accessibilityRole="header">{tTabs('settings')}</Text>
             <TouchableOpacity
               onPress={() => router.push('/(dashboard)/settings/profile')}
               className="flex-row items-center"
@@ -342,25 +347,25 @@ export default function SettingsScreen() {
               textClassName="text-brand-700 text-xl font-black"
             />
             <View className="ms-4 flex-1">
-              <Text className="text-lg font-black text-stone-900">{currentUser?.displayName ?? t('header.userFallback')}</Text>
-              <Text className="text-stone-500 text-sm">{currentUser?.email}</Text>
+              <Text className="text-lg font-black text-white" numberOfLines={1}>{currentUser?.displayName ?? t('header.userFallback')}</Text>
+              <Text className="text-white/70 text-sm" numberOfLines={1}>{currentUser?.email}</Text>
               <View className="flex-row items-center mt-1.5">
                 {!currentUser && (userError || userSyncError) ? (
                   <View className="bg-warning-bg px-2.5 py-0.5 rounded-full">
                     <Text className="text-warning text-xs font-bold">{t('header.unavailable')}</Text>
                   </View>
                 ) : displayPlan ? (
-                  <View className="bg-brand-100 px-2.5 py-0.5 rounded-full">
-                    <Text className="text-brand-700 text-xs font-bold">{planName(displayPlan, t)}</Text>
+                  <View className="bg-brand-600 px-2.5 py-0.5 rounded-full">
+                    <Text className="text-white text-xs font-bold">{planName(displayPlan, t)}</Text>
                   </View>
                 ) : (
-                  <View className="bg-stone-100 px-2.5 py-0.5 rounded-full">
-                    <Text className="text-stone-400 text-xs font-bold">…</Text>
+                  <View className="bg-white/15 px-2.5 py-0.5 rounded-full">
+                    <Text className="text-white/70 text-xs font-bold">…</Text>
                   </View>
                 )}
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} style={RTL_FLIP} />
+            <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" style={RTL_FLIP} />
             </TouchableOpacity>
         </View>
 
@@ -556,7 +561,7 @@ export default function SettingsScreen() {
           );
         })}
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -16,5 +16,7 @@
     "body": "You have unsaved changes. Leave anyway?",
     "stay": "Stay",
     "leave": "Leave"
-  }
+  },
+  "showPassword": "Show password",
+  "hidePassword": "Hide password"
 }

@@ -16,5 +16,7 @@
     "body": "Du hast ungespeicherte Änderungen. Trotzdem verlassen?",
     "stay": "Bleiben",
     "leave": "Verlassen"
-  }
+  },
+  "showPassword": "Passwort anzeigen",
+  "hidePassword": "Passwort verbergen"
 }

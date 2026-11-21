@@ -20,7 +20,9 @@
     "downloads": "Téléchargements",
     "thisMonth": "Ce mois-ci",
     "usedThisMonth": "Utilisés ce mois-ci",
-    "unlimited": "Illimité"
+    "unlimited": "Illimité",
+    "applications": "Candidatures",
+    "inTracker": "Dans votre suivi de candidatures"
   },
   "quickActions": {
     "title": "Actions rapides",

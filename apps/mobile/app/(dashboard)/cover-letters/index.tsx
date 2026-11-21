@@ -178,8 +178,8 @@ export default function CoverLettersScreen() {
     <SafeAreaView className="flex-1 bg-stone-50" edges={['top']}>
       <View className="px-5 pt-4 pb-4 bg-surface border-b border-stone-100">
         <View className="flex-row items-center justify-between">
-          <Text className="text-xl font-black text-stone-900">{t('list.title')}</Text>
-          <TouchableOpacity onPress={() => router.push('/(dashboard)/cover-letters/new')} className="flex-row items-center bg-brand-600 px-4 py-2 rounded-xl">
+          <Text className="text-2xl font-black text-ink" accessibilityRole="header">{t('list.title')}</Text>
+          <TouchableOpacity onPress={() => router.push('/(dashboard)/cover-letters/new')} className="flex-row items-center bg-brand-600 px-4 min-h-[42px] rounded-full">
             <Ionicons name="add" size={18} color={colors.white} />
             <Text className="text-white font-bold ms-1">{t('list.new')}</Text>
           </TouchableOpacity>

@@ -41,6 +41,9 @@ module.exports = {
           950: v('--brand-950'),
         },
         chrome: '#1e3a5f',
+        // Constant brand navy (auth header bands, hero cards); same in both appearances.
+        navy: { DEFAULT: '#10294f', deep: '#0b1d3a' },
+        ink: v('--ink'),
         success: { DEFAULT: v('--success'), bg: v('--success-bg') },
         error: { DEFAULT: v('--error'), bg: v('--error-bg') },
         warning: { DEFAULT: v('--warning'), bg: v('--warning-bg') },
@@ -59,6 +62,7 @@ module.exports = {
           '--stone-900': '28 25 23', '--stone-950': '12 10 9',
           '--brand-50': '255 247 237', '--brand-100': '255 237 213', '--brand-200': '254 215 170',
           '--brand-700': '194 65 12', '--brand-800': '154 52 18', '--brand-900': '124 45 18', '--brand-950': '67 20 7',
+          '--ink': '16 41 79',
           '--success': '21 128 61', '--success-bg': '240 253 244',
           '--error': '185 28 28', '--error-bg': '254 242 242',
           '--warning': '180 83 9', '--warning-bg': '254 243 199',

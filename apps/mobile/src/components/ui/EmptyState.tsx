@@ -12,20 +12,23 @@ interface EmptyStateProps {
   onAction?: () => void;
 }
 
+/** Nothing here yet: a branded icon medallion, a short title and explanation, and one clear next step. */
 export function EmptyState({ icon, title, description, actionLabel, onAction }: EmptyStateProps) {
   return (
     <View className="flex-1 items-center justify-center px-8 py-16">
       {icon && (
-        <View className="w-20 h-20 rounded-full bg-stone-100 items-center justify-center mb-4">
-          <Ionicons name={icon} size={36} color={colors.stone[400]} />
+        <View className="mb-5 h-24 w-24 items-center justify-center rounded-full bg-brand-50">
+          <View className="h-16 w-16 items-center justify-center rounded-full bg-brand-100">
+            <Ionicons name={icon} size={30} color={colors.brand[600]} />
+          </View>
         </View>
       )}
-      <Text className="text-xl font-bold text-stone-800 text-center mb-2">{title}</Text>
+      <Text className="mb-2 text-center text-xl font-black text-ink">{title}</Text>
       {description && (
-        <Text className="text-stone-500 text-center mb-6 leading-5">{description}</Text>
+        <Text className="mb-6 text-center leading-5 text-stone-600">{description}</Text>
       )}
       {actionLabel && onAction && (
-        <Button variant="primary" onPress={onAction}>
+        <Button variant="primary" pill onPress={onAction} className="px-7">
           {actionLabel}
         </Button>
       )}
