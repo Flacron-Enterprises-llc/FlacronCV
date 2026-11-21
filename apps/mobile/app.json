@@ -2,7 +2,7 @@
   "expo": {
     "name": "FlacronCV",
     "slug": "flacroncv-mobile",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -29,7 +29,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.flacroncv.mobile",
-      "versionCode": 9,
+      "versionCode": 10,
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -73,7 +73,8 @@
           "recordAudioAndroid": true,
           "enableBackgroundRecording": false
         }
-      ]
+      ],
+      "./plugins/with-optional-screen-features"
     ],
     "scheme": "flacroncv",
     "extra": {
