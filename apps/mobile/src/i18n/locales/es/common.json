@@ -20,5 +20,8 @@
   "showPassword": "Mostrar contraseña",
   "hidePassword": "Ocultar contraseña",
   "offlineBanner": "Estás sin conexión. Los cambios no se guardarán hasta que te vuelvas a conectar.",
-  "backOnline": "Conexión restablecida"
+  "backOnline": "Conexión restablecida",
+  "notFoundTitle": "Página no encontrada",
+  "notFoundBody": "Este enlace no lleva a ninguna parte de la app. Puede que sea antiguo o tenga un error.",
+  "notFoundHome": "Ir al inicio"
 }

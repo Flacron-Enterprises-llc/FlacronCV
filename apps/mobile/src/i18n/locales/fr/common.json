@@ -20,5 +20,8 @@
   "showPassword": "Afficher le mot de passe",
   "hidePassword": "Masquer le mot de passe",
   "offlineBanner": "Vous êtes hors ligne. Les modifications ne seront enregistrées qu’une fois reconnecté.",
-  "backOnline": "De nouveau en ligne"
+  "backOnline": "De nouveau en ligne",
+  "notFoundTitle": "Page introuvable",
+  "notFoundBody": "Ce lien ne mène nulle part dans l’application. Il est peut-être ancien ou mal saisi.",
+  "notFoundHome": "Aller à l’accueil"
 }
