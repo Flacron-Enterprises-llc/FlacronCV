@@ -225,12 +225,10 @@ function Fact({
     );
   }
   return (
-    <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-      <dt className="min-w-0 text-stone-500 dark:text-stone-400">
-        {label}
-        {badge}
-      </dt>
+    <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+      <dt className="min-w-0 text-stone-500 dark:text-stone-400">{label}</dt>
       <dd className="ms-auto shrink-0 font-semibold tabular-nums text-stone-900 dark:text-white">{value}</dd>
+      {badge ? <dd className="w-full [&>span]:ms-0">{badge}</dd> : null}
     </div>
   );
 }

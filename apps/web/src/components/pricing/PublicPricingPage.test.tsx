@@ -63,14 +63,12 @@ describe('public /pricing', () => {
     expect(within(card('free')).getByText('$0')).toBeTruthy();
   });
 
-  it('marks saved searches on every card as needing a connected provider (licensed job feeds are not live)', () => {
+  it('shows saved searches on every card without a provider badge (live job feeds are connected)', () => {
     renderPricing(<PublicPricingPage api={fakeApi} />);
     for (const id of ['free', 'starter', 'professional', 'career_pro', 'business']) {
-      const label = within(card(id)).getByText('Saved searches');
-      expect(within(label).getByText('Needs a connected provider')).toBeTruthy();
+      expect(within(card(id)).getByText('Saved searches')).toBeTruthy();
+      expect(within(card(id)).queryByText('Needs a connected provider')).toBeNull();
     }
-    // The comparison legend says what that means for alerts.
-    expect(screen.getAllByText(/alerts only cover listings you add yourself/).length).toBeGreaterThan(0);
   });
 
   it('annual shows the upfront charge and the monthly equivalent, and says allowances renew monthly', () => {

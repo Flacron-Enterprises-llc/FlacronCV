@@ -5312,7 +5312,7 @@
       "provider_dependent": "Benötigt angebundenen Dienst"
     },
     "state_coming_soon_desc": "Das Kontingent ist im Tarif vorgesehen; die Funktion ist noch nicht freigegeben.",
-    "state_provider_desc": "Fertig entwickelt; funktioniert, sobald der externe Dienst angebunden ist (Sprache, Karten, Push-Nachrichten oder Live-Stellenangebote). Bis Live-Stellenangebote angebunden sind, beziehen sich Benachrichtigungen nur auf Stellen, die du selbst hinzufügst.",
+    "state_provider_desc": "Fertig entwickelt; funktioniert, sobald der externe Dienst angebunden ist (Karten oder Push-Nachrichten).",
     "compare_title": "Tarife vergleichen",
     "compare_intro": "Nutzungszeilen erneuern sich monatlich. Kapazitätszeilen zählen gespeicherte oder aktive Elemente. Eine Funktion mit „Demnächst verfügbar“ wird erst nach der Freigabe berechnet.",
     "usage_vs_capacity": "Nutzungskontingente zählen abgeschlossene Vorgänge pro Monat. Kapazitätsgrenzen zählen gleichzeitig gespeicherte Elemente; nach einem Downgrade bleiben vorhandene Elemente lesbar, nur neue werden blockiert.",

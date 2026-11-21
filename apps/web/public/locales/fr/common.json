@@ -5312,7 +5312,7 @@
       "provider_dependent": "Nécessite un service connecté"
     },
     "state_coming_soon_desc": "Le quota est prévu dans la formule ; la fonctionnalité n’est pas encore disponible.",
-    "state_provider_desc": "Développée, elle fonctionne dès que son service externe est connecté (voix, cartes, notifications push ou offres d’emploi en direct). Tant que les offres en direct ne sont pas connectées, les alertes ne portent que sur les offres que vous ajoutez vous-même.",
+    "state_provider_desc": "Développée, elle fonctionne dès que son service externe est connecté (cartes ou notifications push).",
     "compare_title": "Comparer les formules",
     "compare_intro": "Les lignes d’utilisation se renouvellent chaque mois. Les lignes de capacité correspondent aux éléments enregistrés ou actifs. Une fonctionnalité marquée « Bientôt disponible » n’est pas facturée avant sa sortie.",
     "usage_vs_capacity": "Les quotas d’utilisation comptent les opérations terminées chaque mois. Les limites de capacité comptent les éléments conservés en même temps ; après un passage à une formule inférieure, les éléments existants restent lisibles, seules les nouvelles créations sont bloquées.",

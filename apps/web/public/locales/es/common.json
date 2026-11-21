@@ -5312,7 +5312,7 @@
       "provider_dependent": "Requiere un servicio conectado"
     },
     "state_coming_soon_desc": "La asignación está prevista en el plan; la función aún no está disponible.",
-    "state_provider_desc": "Ya desarrollada; funciona en cuanto se conecta su servicio externo (voz, mapas, notificaciones push u ofertas de empleo en directo). Mientras no haya ofertas en directo conectadas, las alertas solo cubren las ofertas que añadas tú.",
+    "state_provider_desc": "Ya desarrollada; funciona en cuanto se conecta su servicio externo (mapas o notificaciones push).",
     "compare_title": "Comparar planes",
     "compare_intro": "Las filas de uso se renuevan cada mes. Las de capacidad cuentan elementos guardados o activos. Una función marcada como «Próximamente» no se cobra hasta su lanzamiento.",
     "usage_vs_capacity": "Las asignaciones de uso cuentan operaciones completadas cada mes. Los límites de capacidad cuentan los elementos que conservas a la vez; tras bajar de plan, los elementos existentes siguen visibles y solo se bloquean los nuevos.",

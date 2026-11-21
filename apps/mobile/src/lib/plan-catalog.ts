@@ -207,16 +207,15 @@ const CORE_ROWS: ReadonlySet<ComparisonRow> = new Set<ComparisonRow>([
 /**
  * Same map as the website (plan-catalog-parity.test.ts compares them): flip an
  * entry when a feature ships. The career coach is built and shown like the
- * other AI features. Alert items, saved searches, the matching schedule and
- * alert delivery match licensed job-feed listings, which are not live yet.
+ * other AI features. Live job feeds are connected, so alert items, saved
+ * searches and the matching schedule are available; alert delivery still waits
+ * for the mailer and push/Telegram adapters.
  */
 export const FEATURE_STATE: Partial<Record<ComparisonRow, FeatureState>> = {
   // voiceMinutes: speech-to-text is connected (OpenAI, SPEECH_PROVIDER=openai).
   mapSessions: 'provider_dependent',
-  // Licensed job feeds (not live): listing alerts, saved searches and their schedule/delivery.
-  alertItems: 'provider_dependent',
-  savedSearches: 'provider_dependent',
-  matchingSchedule: 'provider_dependent',
+  // alertItems, savedSearches, matchingSchedule: live job feeds (Greenhouse/Lever) are connected.
+  // alertDelivery: in-app works; email needs the mailer and push/Telegram have no adapter yet.
   alertDelivery: 'provider_dependent',
   assistedForms: 'coming_soon',
 };

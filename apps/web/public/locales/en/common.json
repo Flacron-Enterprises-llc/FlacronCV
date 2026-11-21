@@ -5312,7 +5312,7 @@
       "provider_dependent": "Needs a connected provider"
     },
     "state_coming_soon_desc": "Allowance is reserved in the plan; the feature is not released yet.",
-    "state_provider_desc": "Built, and works once its outside service is connected (speech, maps, push messaging or live job listings). Until live job listings are connected, alerts only cover listings you add yourself.",
+    "state_provider_desc": "Built, and works once its outside service is connected (maps or push messaging).",
     "compare_title": "Compare plans",
     "compare_intro": "Usage rows renew monthly. Capacity rows are saved or active items. A feature marked \"Coming soon\" is not charged for until it is released.",
     "usage_vs_capacity": "Usage allowances count completed operations each month. Capacity limits count items you keep at once; after a downgrade existing items stay readable, only new ones are blocked.",

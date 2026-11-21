@@ -109,10 +109,12 @@ describe('plan catalog (five plans)', () => {
     expect(featureState('voiceMinutes', true)).toBe('available');
     // The career coach is built (needs the AI service, like every AI feature, shown as available).
     expect(featureState('coachingResponses', true)).toBe('available');
-    // Licensed job feeds are not live: these rows need a connected provider on every plan.
-    for (const row of ['alertItems', 'savedSearches', 'matchingSchedule', 'alertDelivery'] as const) {
-      for (const plan of PRICING_PLANS) expect([row, plan, cellState(row, plan, true)]).toEqual([row, plan, 'provider_dependent']);
+    // Live job feeds are connected: alert items, saved searches and the matching schedule are available.
+    for (const row of ['alertItems', 'savedSearches', 'matchingSchedule'] as const) {
+      for (const plan of PRICING_PLANS) expect([row, plan, cellState(row, plan, true)]).toEqual([row, plan, 'available']);
     }
+    // Delivery beyond the in-app alert centre still needs its own provider.
+    for (const plan of PRICING_PLANS) expect(cellState('alertDelivery', plan, true)).toBe('provider_dependent');
     expect(featureState('documentCredits', false)).toBe('available');
     expect(featureState('alertItems', false)).toBe('coming_soon');
     expect(cellState('alertIntelligence', 'business', true)).toBe('available');
@@ -124,7 +126,7 @@ describe('plan catalog (five plans)', () => {
     expect(facts[0]).toEqual({ label: 'Document credits', value: String(ALLOWANCES.professional.documentCredits), state: 'available' });
     expect(facts.some((f) => f.label === 'Voice interview minutes / month' && f.state === 'available')).toBe(true);
     expect(cardFacts('free', true).some((f) => f.label.startsWith('Voice'))).toBe(false);
-    expect(facts.find((f) => f.label === 'Saved searches')?.state).toBe('provider_dependent');
+    expect(facts.find((f) => f.label === 'Saved searches')?.state).toBe('available');
     const benefits = planBenefits('starter');
     expect(benefits[0]).toBe(`${ALLOWANCES.starter.documentCredits} document credits a month`);
     expect(benefits).toContain('DOCX (Word) export');

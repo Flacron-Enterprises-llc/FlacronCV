@@ -65,7 +65,7 @@
   },
   "stateLegend": "Estado de las funciones",
   "stateComingSoonDesc": "La asignación está prevista en el plan; la función aún no está disponible.",
-  "stateProviderDesc": "Ya desarrollada; funciona en cuanto se conecta su servicio externo (voz, mapas, notificaciones push u ofertas de empleo en directo). Mientras no haya ofertas en directo conectadas, las alertas solo cubren las ofertas que añadas tú.",
+  "stateProviderDesc": "Ya desarrollada; funciona en cuanto se conecta su servicio externo (mapas o notificaciones push).",
   "compareTitle": "Comparar planes",
   "compareIntro": "Las filas de uso se renuevan cada mes. Las de capacidad cuentan elementos guardados o activos. Una función marcada como «Próximamente» no se cobra hasta su lanzamiento.",
   "usageVsCapacity": "Las asignaciones de uso cuentan operaciones completadas cada mes. Los límites de capacidad cuentan los elementos que conservas a la vez; tras bajar de plan, los elementos existentes siguen visibles y solo se bloquean los nuevos.",

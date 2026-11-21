@@ -112,10 +112,9 @@ const CORE_ROWS: ReadonlySet<ComparisonRow> = new Set<ComparisonRow>([
 /**
  * The single feature-state map. A feature is "available" unless listed:
  * - provider_dependent: built, but works only once its outside provider is
- *   connected (speech transcription, map tiles, push/Telegram delivery, and
- *   licensed job feeds: alert items, saved searches, the matching schedule and
- *   alert delivery match feed listings, and no feed is live yet; alerts on
- *   listings the person adds still work).
+ *   connected (map tiles; alert delivery beyond the in-app alert centre needs
+ *   the mailer and push/Telegram adapters). Live job feeds are connected, so
+ *   alert items, saved searches and the matching schedule are available.
  * - coming_soon: allowance exists in the catalog, the feature is not built yet.
  * Flip an entry here when a feature ships; every pricing and billing surface
  * reads this, so they cannot disagree.
@@ -123,10 +122,8 @@ const CORE_ROWS: ReadonlySet<ComparisonRow> = new Set<ComparisonRow>([
 export const FEATURE_STATE: Partial<Record<ComparisonRow, FeatureState>> = {
   // voiceMinutes: speech-to-text is connected (OpenAI, SPEECH_PROVIDER=openai).
   mapSessions: 'provider_dependent',
-  // Licensed job feeds (not live): listing alerts, saved searches and their schedule/delivery.
-  alertItems: 'provider_dependent',
-  savedSearches: 'provider_dependent',
-  matchingSchedule: 'provider_dependent',
+  // alertItems, savedSearches, matchingSchedule: live job feeds (Greenhouse/Lever) are connected.
+  // alertDelivery: in-app works; email needs the mailer and push/Telegram have no adapter yet.
   alertDelivery: 'provider_dependent',
   assistedForms: 'coming_soon',
 };
