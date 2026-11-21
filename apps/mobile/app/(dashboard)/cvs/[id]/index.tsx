@@ -157,7 +157,7 @@ export default function CVEditorScreen() {
           accessibilityRole="button"
           accessibilityLabel={t('editor.titleA11y', { title: storeCV?.title ?? cv?.title ?? '' })}
           accessibilityHint={t('editor.titleHint')}
-          className="flex-1 px-3 justify-center"
+          className="flex-1 min-w-0 px-3 justify-center"
           style={{ minHeight: 44 }}
         >
           <View className="flex-row items-center justify-center">
@@ -181,6 +181,7 @@ export default function CVEditorScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => router.push('./ats-check')}
+          accessibilityRole="button"
           accessibilityLabel={t('editor.atsCheck')}
           className="me-1 p-2"
         >
@@ -188,6 +189,7 @@ export default function CVEditorScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => router.push('./interview-prep')}
+          accessibilityRole="button"
           accessibilityLabel={t('editor.interviewPrep')}
           className="me-1 p-2"
         >
@@ -216,6 +218,8 @@ export default function CVEditorScreen() {
           ])}
           className="flex-row items-center bg-brand-600 px-3 py-2 rounded-xl"
           disabled={exportCV.isPending}
+          accessibilityRole="button"
+          accessibilityState={{ busy: exportCV.isPending }}
         >
           {exportCV.isPending ? (
             <ActivityIndicator size="small" color={colors.white} />
