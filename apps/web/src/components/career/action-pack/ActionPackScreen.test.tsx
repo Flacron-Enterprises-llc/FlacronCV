@@ -134,15 +134,15 @@ describe('ActionPackScreen (CV12)', () => {
     renderScreen(api);
 
     expect(await screen.findByRole('heading', { level: 3, name: 'Lead Systems Architect' })).toBeDefined();
-    expect(screen.getAllByText('Strong Fit')[0]).toBeDefined();
+    expect(screen.getAllByText('Strong fit')[0]).toBeDefined();
     expect(screen.getAllByText('Acme Robotics')[0]).toBeDefined();
-    expect(screen.getByText(/Why You Qualify/)).toBeDefined();
+    expect(screen.getByText(/Why you qualify/)).toBeDefined();
     expect(screen.getByText('Direct Rust systems engineering match')).toBeDefined();
-    expect(screen.getByText('Preparation Checklist')).toBeDefined();
+    expect(screen.getByText('Preparation checklist')).toBeDefined();
     expect(screen.getByText('Tailor resume summary to highlight robotics')).toBeDefined();
-    expect(screen.getByText('Tailored Cover Letter')).toBeDefined();
-    expect(screen.getByText('Tailored Resume Content')).toBeDefined();
-    expect(screen.getByText('Recommended Next Steps')).toBeDefined();
+    expect(screen.getByText('Tailored cover letter')).toBeDefined();
+    expect(screen.getByText('Tailored resume content')).toBeDefined();
+    expect(screen.getByText('Recommended next steps')).toBeDefined();
   });
 
   it('toggles checklist items without extra debits', async () => {
@@ -183,8 +183,8 @@ describe('ActionPackScreen (CV12)', () => {
     });
     renderScreen(api);
     fireEvent.click((await screen.findAllByRole('button', { name: 'Generate an action pack' }))[0]);
-    fireEvent.change(screen.getByLabelText(/Select Opportunity/i), { target: { value: sampleOpportunity.id } });
-    fireEvent.click(screen.getByRole('button', { name: 'Run Action Engine (1 Credit)' }));
+    fireEvent.change(screen.getByLabelText(/Select opportunity/i), { target: { value: sampleOpportunity.id } });
+    fireEvent.click(screen.getByRole('button', { name: 'Run action engine (1 credit)' }));
     expect(await screen.findByText(/Action packs are not open yet in this preview/)).toBeTruthy();
   });
 
@@ -211,13 +211,13 @@ describe('ActionPackScreen (CV12)', () => {
     const openBtn = (await screen.findAllByRole('button', { name: 'Generate an action pack' }))[0];
     fireEvent.click(openBtn);
 
-    expect(screen.getByText('Target an Opportunity')).toBeDefined();
+    expect(screen.getByText('Target an opportunity')).toBeDefined();
     expect(screen.getByText(/Uses 1 action pack credit/)).toBeDefined();
 
-    const select = screen.getByLabelText(/Select Opportunity/i);
+    const select = screen.getByLabelText(/Select opportunity/i);
     fireEvent.change(select, { target: { value: sampleOpportunity.id } });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Run Action Engine (1 Credit)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Run action engine (1 credit)' }));
 
     expect(createActionPack).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -247,9 +247,9 @@ describe('ActionPackScreen (CV12)', () => {
     });
     renderScreen(api);
     fireEvent.click((await screen.findAllByRole('button', { name: 'Generate an action pack' }))[0]);
-    fireEvent.change(screen.getByLabelText(/Select Opportunity/i), { target: { value: sampleOpportunity.id } });
+    fireEvent.change(screen.getByLabelText(/Select opportunity/i), { target: { value: sampleOpportunity.id } });
     expect(screen.getByText(/no action pack credits left/)).toBeTruthy();
-    expect((screen.getByRole('button', { name: 'Run Action Engine (1 Credit)' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Run action engine (1 credit)' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('offers a free retry for an unfinished pack and shows the finished letter', async () => {
@@ -305,7 +305,7 @@ describe('ActionPackScreen (CV12)', () => {
       updateActionPack: update,
     });
     renderScreen(api);
-    await screen.findByText('Tailored Cover Letter');
+    await screen.findByText('Tailored cover letter');
     const editButtons = screen.getAllByRole('button', { name: 'Edit' });
     // Order on screen: fit, checklist, letter, résumé, next steps.
     fireEvent.click(editButtons[2]!);

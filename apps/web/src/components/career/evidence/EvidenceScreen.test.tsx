@@ -57,8 +57,8 @@ describe('EvidenceScreen (CV11)', () => {
     renderScreen(api);
 
     expect(await screen.findByText('No evidence items yet')).toBeDefined();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Add Evidence Item' })[0]);
-    expect(screen.getByText('New Evidence Item')).toBeDefined();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add evidence item' })[0]);
+    expect(screen.getByText('New evidence item')).toBeDefined();
   });
 
   it('renders existing items with truthful badges, linked skills, and attachments', async () => {
@@ -68,11 +68,11 @@ describe('EvidenceScreen (CV11)', () => {
     renderScreen(api);
 
     expect(await screen.findByText('Compiler Optimization Engine')).toBeDefined();
-    expect(screen.getByText('Evidence Attached')).toBeDefined();
+    expect(screen.getByText('Evidence attached')).toBeDefined();
     expect(screen.getByText('Rust')).toBeDefined();
     expect(screen.getByText('Compilers')).toBeDefined();
     expect(screen.getByText(/paper\.pdf/)).toBeDefined();
-    expect(screen.getByText('Shared in Portfolio')).toBeDefined();
+    expect(screen.getByText('Shared in portfolio')).toBeDefined();
   });
 
   it('submits a new evidence item and updates the list', async () => {
@@ -90,7 +90,7 @@ describe('EvidenceScreen (CV11)', () => {
     renderScreen(api);
 
     // Open form
-    const buttons = await screen.findAllByRole('button', { name: 'Add Evidence Item' });
+    const buttons = await screen.findAllByRole('button', { name: 'Add evidence item' });
     fireEvent.click(buttons[0]);
 
     // Fill form
@@ -105,7 +105,7 @@ describe('EvidenceScreen (CV11)', () => {
     });
 
     // Save
-    fireEvent.click(screen.getByRole('button', { name: 'Save Item' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save item' }));
 
     expect(createEvidence).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -209,7 +209,7 @@ describe('EvidenceScreen (CV11)', () => {
   it('refuses a javascript: link before sending it', async () => {
     const createEvidence = vi.fn();
     renderScreen(testApi({ evidence: vi.fn().mockResolvedValue({ items: [] }), facts: vi.fn().mockResolvedValue({ items: [], profileVersion: 0 }), createEvidence }));
-    fireEvent.click((await screen.findAllByRole('button', { name: 'Add Evidence Item' }))[0]);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Add evidence item' }))[0]);
     fireEvent.change((document.getElementById('evidence-title') as HTMLInputElement), { target: { value: 'Thing' } });
     fireEvent.change(screen.getByLabelText(messages.career.evidence.field_attachment_url), { target: { value: 'javascript:alert(1)' } });
     fireEvent.submit((document.getElementById('evidence-title') as HTMLInputElement).closest('form') as HTMLFormElement);

@@ -240,12 +240,12 @@ export function InterviewsScreen({
 
       {session ? (
         <InterviewSessionCard key={session.id} session={session} onAnswer={saveAnswer} onChallenge={challenge} onSaveAsStory={saveAsStory} />
-      ) : (
-        <EmptyState title={t('empty_title')} body={t('empty_body')} />
-      )}
+      ) : null}
 
       <Card>
         <h2 className="text-lg font-semibold text-career-ink">{session ? t('start_another') : t('start')}</h2>
+        {/* First visit: what a session gives, right where it starts (no separate empty box). */}
+        {session ? null : <p className="mt-1 text-sm text-career-muted">{t('empty_body')}</p>}
         {opportunityId ? (
           <fieldset className="mt-3">
             <legend className="text-sm font-semibold text-career-ink">{t('target_label')}</legend>

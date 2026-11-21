@@ -130,7 +130,7 @@ describe('LearningScreen (CV13)', () => {
 
     expect(await screen.findByText('No learning plans yet')).toBeDefined();
     expect(screen.getByText('5')).toBeDefined();
-    expect(screen.getAllByRole('button', { name: 'New Skill Plan' })[0]).toBeDefined();
+    expect(screen.getAllByRole('button', { name: 'New skill plan' })[0]).toBeDefined();
   });
 
   it('renders skill gap report details, milestones, resources, and capstone rubrics', async () => {
@@ -142,7 +142,7 @@ describe('LearningScreen (CV13)', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Staff Distributed Systems Engineer' })).toBeDefined();
     expect(screen.getAllByText('50%')[0]).toBeDefined();
     expect(screen.getAllByText('Distributed Consensus (Raft/Paxos)')[0]).toBeDefined();
-    expect(screen.getByText('Critical Gap')).toBeDefined();
+    expect(screen.getByText('Critical gap')).toBeDefined();
     expect(screen.getByText('1. Master Raft Consensus in Practice')).toBeDefined();
     expect(screen.getByText(/The Raft Paper/)).toBeDefined();
     expect(screen.getByText('Autonomous Fleet Consensus Engine')).toBeDefined();
@@ -189,7 +189,7 @@ describe('LearningScreen (CV13)', () => {
     });
     renderScreen(api);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Add to Evidence Vault' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add to evidence vault' }));
     // The ownership box starts empty: nothing is written for the person.
     const box = screen.getByLabelText(/In your own words/) as HTMLTextAreaElement;
     expect(box.value).toBe('');
@@ -198,7 +198,7 @@ describe('LearningScreen (CV13)', () => {
 
     expect(convertMilestoneToEvidence).toHaveBeenCalledWith('report-111', 'mile-1', 'I implemented the log.');
     expect(await screen.findByText(/Milestone successfully recorded in your Career Evidence Vault!/i)).toBeDefined();
-    expect(screen.getByText('In Evidence Vault')).toBeDefined();
+    expect(screen.getByText('In evidence vault')).toBeDefined();
   });
 
   it('explains a full vault instead of a generic failure', async () => {
@@ -208,7 +208,7 @@ describe('LearningScreen (CV13)', () => {
       convertMilestoneToEvidence,
     });
     renderScreen(api);
-    fireEvent.click(await screen.findByRole('button', { name: 'Add to Evidence Vault' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add to evidence vault' }));
     fireEvent.click(screen.getByRole('button', { name: 'Add to vault' }));
     expect(await screen.findByText(/Your Evidence Vault is full for your plan/)).toBeDefined();
   });
@@ -232,20 +232,20 @@ describe('LearningScreen (CV13)', () => {
     });
     renderScreen(api);
 
-    const openBtn = (await screen.findAllByRole('button', { name: 'New Skill Plan' }))[0];
+    const openBtn = (await screen.findAllByRole('button', { name: 'New skill plan' }))[0];
     fireEvent.click(openBtn);
 
-    expect(screen.getByText('Target a New Role')).toBeDefined();
+    expect(screen.getByText('Target a new role')).toBeDefined();
     // Charge notice: operation, credits required and remaining balance before paying.
     const notice = screen.getByTestId('learning-charge-notice');
     expect(notice.textContent).toContain('Skill gap report');
     expect(notice.textContent).toContain('1 skill report credit');
     expect(notice.textContent).toContain('5 reports');
 
-    const roleInput = screen.getByLabelText(/Target Role/i);
+    const roleInput = screen.getByLabelText(/Target role/i);
     fireEvent.change(roleInput, { target: { value: 'Staff Distributed Systems Engineer' } });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Generate Learning Plan (1 Credit)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Generate learning plan (1 credit)' }));
 
     expect(createSkillReport).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -338,10 +338,10 @@ describe('LearningScreen (CV13)', () => {
         createSkillReport,
       }),
     );
-    fireEvent.click((await screen.findAllByRole('button', { name: 'New Skill Plan' }))[0]);
-    fireEvent.change(screen.getByLabelText(/Target Role/i), { target: { value: 'Nurse' } });
+    fireEvent.click((await screen.findAllByRole('button', { name: 'New skill plan' }))[0]);
+    fireEvent.change(screen.getByLabelText(/Target role/i), { target: { value: 'Nurse' } });
     expect(screen.getByTestId('learning-charge-notice').textContent).toContain('None left');
-    expect((screen.getByRole('button', { name: 'Generate Learning Plan (1 Credit)' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Generate learning plan (1 credit)' }) as HTMLButtonElement).disabled).toBe(true);
     expect(createSkillReport).not.toHaveBeenCalled();
   });
 });

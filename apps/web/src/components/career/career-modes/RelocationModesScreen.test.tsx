@@ -87,7 +87,7 @@ describe('RelocationModesScreen (CV14)', () => {
     expect(screen.getByText(/~25 miles/)).toBeDefined();
     expect(screen.getByText('United States')).toBeDefined();
     expect(screen.getByText(/Mar 1, 2027/)).toBeDefined();
-    expect(screen.getByText(/≤ 30 min • Hybrid Preferred/)).toBeDefined();
+    expect(screen.getByText(/≤ 30 min • Hybrid preferred/)).toBeDefined();
   });
 
   it('creates a place without assuming work authorization', async () => {
