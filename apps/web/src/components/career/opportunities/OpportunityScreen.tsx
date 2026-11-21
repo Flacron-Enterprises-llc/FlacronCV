@@ -372,14 +372,14 @@ export function OpportunityScreen({
                   disabled={savingId === item.id}
                   aria-pressed={item.saved === true}
                   onClick={() => void toggleSave(item)}
-                  className={`relative z-10 inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-lg border px-3 text-sm font-semibold transition disabled:opacity-60 ${
+                  className={`relative z-10 inline-flex h-9 min-w-9 shrink-0 items-center justify-center gap-1.5 self-start rounded-lg border px-2.5 sm:px-3 text-sm font-semibold transition disabled:opacity-60 ${
                     item.saved
                       ? 'border-career-orange bg-career-orange-tint text-career-orange-text'
                       : 'border-career-line text-career-ink hover:border-career-orange hover:text-career-orange-text'
                   }`}
                 >
                   {item.saved ? <BookmarkCheck className="h-4 w-4" aria-hidden="true" /> : <Bookmark className="h-4 w-4" aria-hidden="true" />}
-                  {item.saved ? t('saved_button') : t('save_button')}
+                  <span className="sr-only sm:not-sr-only">{item.saved ? t('saved_button') : t('save_button')}</span>
                 </button>
               </article>
             </li>
