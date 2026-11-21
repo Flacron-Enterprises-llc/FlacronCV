@@ -21,6 +21,7 @@ import {
   upgradeAlertButtons,
 } from '../config/paid-upgrades';
 import { planForDisplay } from '../lib/entitlements';
+import { recordSuccessAndMaybeAskForReview } from '../lib/review-prompt';
 
 /** The signed-in account's effective plan, for limit copy (null before the account loads). */
 function currentPlan(): string | undefined {
@@ -160,10 +161,11 @@ async function downloadAndShare(
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {
     await Sharing.shareAsync(downloadResult.uri, { mimeType, dialogTitle });
-    return;
+  } else {
+    Alert.alert(t('exports.downloadCompleteTitle'), t('exports.downloadCompleteBody'));
   }
-
-  Alert.alert(t('exports.downloadCompleteTitle'), t('exports.downloadCompleteBody'));
+  // A finished export is a good moment to (rarely) ask for a store rating.
+  void recordSuccessAndMaybeAskForReview();
 }
 
 function alertDownloadError(): void {

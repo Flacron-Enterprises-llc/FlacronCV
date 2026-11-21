@@ -14,6 +14,7 @@ import { CV_TITLE_MAX, validateCvTitle } from '../../../../src/lib/cv-editor';
 import { requestFailureMessage } from '../../../../src/lib/api-errors';
 import { useExportCV } from '../../../../src/hooks/useExport';
 import { useCVStore } from '../../../../src/store/cv-store';
+import { CVStrengthBar } from '../../../../src/components/cv-builder/CVStrengthBar';
 import { useAuthStore } from '../../../../src/store/auth-store';
 import { canExport, planForDisplay, sharedPlanLimits } from '../../../../src/lib/entitlements';
 import { exportLimitReachedMessage, limitPrompt, showUpgradePrompt, upgradeAlertButtons } from '../../../../src/config/paid-upgrades';
@@ -250,6 +251,7 @@ export default function CVEditorScreen() {
 
       {/* CV Wizard */}
       {id ? <CVPreviewSheet cvId={id} visible={previewOpen} onClose={() => setPreviewOpen(false)} /> : null}
+      <CVStrengthBar />
       <CVWizard
         cvId={id!}
         onFinish={() => router.push('/(dashboard)/cvs')}

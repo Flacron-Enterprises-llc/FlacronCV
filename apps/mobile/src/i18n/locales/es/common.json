@@ -23,5 +23,7 @@
   "backOnline": "Conexión restablecida",
   "notFoundTitle": "Página no encontrada",
   "notFoundBody": "Este enlace no lleva a ninguna parte de la app. Puede que sea antiguo o tenga un error.",
-  "notFoundHome": "Ir al inicio"
+  "notFoundHome": "Ir al inicio",
+  "crashTitle": "Algo salió mal",
+  "crashBody": "Esta pantalla tuvo un problema. Tu trabajo guardado está a salvo: inténtalo de nuevo y, si se repite, contacta con soporte."
 }

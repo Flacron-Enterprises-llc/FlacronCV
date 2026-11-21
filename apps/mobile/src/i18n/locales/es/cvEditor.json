@@ -350,5 +350,31 @@
     "removeBodyEntries": "¿Eliminar «{title}» y {count, plural, one {su entrada} other {sus # entradas}} de este CV?",
     "removeBody": "¿Eliminar «{title}» de este CV?",
     "renameHeading": "Cambiar nombre de la sección"
+  },
+  "strength": {
+    "title": "Solidez del CV",
+    "band_starter": "Primeros pasos",
+    "band_good": "Buen comienzo",
+    "band_strong": "Sólido",
+    "band_complete": "Completo",
+    "note": "Comprueba que esté completo, no la calidad de la redacción.",
+    "next_steps": "Próximos pasos",
+    "points": "+{points}",
+    "toggle_show": "Ver consejos",
+    "toggle_hide": "Ocultar consejos",
+    "complete_msg": "Tu CV incluye todo lo que buscan los reclutadores.",
+    "tip_name": "Añade tu nombre completo",
+    "tip_email": "Añade tu correo electrónico",
+    "tip_phone": "Añade un teléfono",
+    "tip_location": "Añade tu ciudad o país",
+    "tip_headline": "Añade un titular (el puesto que buscas)",
+    "tip_summary": "Escribe un breve resumen profesional",
+    "tip_summary_longer": "Amplía tu resumen a 2–4 frases",
+    "tip_experience": "Añade tu experiencia laboral",
+    "tip_experience_details": "Describe lo que lograste en un puesto",
+    "tip_education": "Añade tu formación",
+    "tip_skills": "Añade tus habilidades clave",
+    "tip_skills_more": "Añade al menos 5 habilidades",
+    "tip_links": "Añade tu enlace de LinkedIn o portafolio"
   }
 }

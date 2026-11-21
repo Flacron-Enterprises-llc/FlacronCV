@@ -1,6 +1,6 @@
 import '../global.css';
 import * as Notifications from 'expo-notifications';
-import { Stack, useRouter, type Href } from 'expo-router';
+import { Stack, useRouter, type ErrorBoundaryProps, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
@@ -12,6 +12,7 @@ import {
   jobIdFromNotificationResponse,
 } from '../src/lib/job-reminders';
 import { bootstrapI18n, useProfileLanguageSync } from '../src/i18n/native';
+import { CrashScreen } from '../src/components/app/CrashScreen';
 import { OfflineBanner } from '../src/components/app/OfflineBanner';
 import { AuthProvider } from '../src/providers/AuthProvider';
 import { QueryProvider } from '../src/providers/QueryProvider';
@@ -69,6 +70,17 @@ function NotificationRoutes() {
 function LanguageSync() {
   useProfileLanguageSync(useAuthStore((s) => s.user?.preferences?.language));
   return null;
+}
+
+/**
+ * Any screen that throws lands here (expo-router renders it in place of the
+ * failed route) instead of a blank screen or a closed app.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => {
+    console.error('[screen error]', error);
+  }, [error]);
+  return <CrashScreen onRetry={() => void retry()} />;
 }
 
 export default function RootLayout() {

@@ -22,6 +22,8 @@ const NON_EN = SUPPORTED_LOCALES.filter((l) => l !== 'en');
  * language really spells the same way.
  */
 const SAME_AS_ENGLISH: Record<string, string> = {
+  // A bare number with a plus sign reads the same in every language.
+  'cvEditor.strength.points': 'number only',
   // Brands.
   'settings.profile.linkedin': 'brand',
   'settings.profile.github': 'brand',

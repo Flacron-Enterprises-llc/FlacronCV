@@ -350,5 +350,31 @@
     "removeBodyEntries": "کیا اس CV سے «{title}» اور اس {count, plural, one {کا # اندراج} other {کے # اندراجات}} ہٹانے ہیں؟",
     "removeBody": "کیا اس CV سے «{title}» ہٹانا ہے؟",
     "renameHeading": "سیکشن کا نام تبدیل کریں"
+  },
+  "strength": {
+    "title": "CV کی مضبوطی",
+    "band_starter": "آغاز",
+    "band_good": "اچھا آغاز",
+    "band_strong": "مضبوط",
+    "band_complete": "مکمل",
+    "note": "یہ مکمل ہونے کو جانچتا ہے، تحریر کے معیار کو نہیں۔",
+    "next_steps": "اگلے اقدامات",
+    "points": "+{points}",
+    "toggle_show": "تجاویز دکھائیں",
+    "toggle_hide": "تجاویز چھپائیں",
+    "complete_msg": "آپ کے CV میں وہ سب کچھ ہے جو بھرتی کرنے والے دیکھتے ہیں۔",
+    "tip_name": "اپنا پورا نام شامل کریں",
+    "tip_email": "اپنا ای میل شامل کریں",
+    "tip_phone": "فون نمبر شامل کریں",
+    "tip_location": "اپنا شہر یا ملک شامل کریں",
+    "tip_headline": "سرخی شامل کریں (مطلوبہ عہدہ)",
+    "tip_summary": "مختصر پیشہ ورانہ خلاصہ لکھیں",
+    "tip_summary_longer": "خلاصے کو 2–4 جملوں تک بڑھائیں",
+    "tip_experience": "اپنا کام کا تجربہ شامل کریں",
+    "tip_experience_details": "بتائیں کہ آپ نے کسی عہدے پر کیا حاصل کیا",
+    "tip_education": "اپنی تعلیم شامل کریں",
+    "tip_skills": "اپنی اہم مہارتیں شامل کریں",
+    "tip_skills_more": "کم از کم 5 مہارتیں شامل کریں",
+    "tip_links": "اپنا LinkedIn یا پورٹ فولیو لنک شامل کریں"
   }
 }

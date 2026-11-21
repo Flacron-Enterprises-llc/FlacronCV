@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import CVEditor from '@/components/cv-builder/CVEditor';
+import CVStrengthCard from '@/components/cv-builder/CVStrengthCard';
 import LivePreview from '@/components/cv-builder/LivePreview';
 import EditorToolbar from '@/components/cv-builder/toolbar/EditorToolbar';
 import { Loader2, AlertTriangle, Pencil, Eye } from 'lucide-react';
@@ -525,6 +526,7 @@ export default function CVBuilderPage(): React.JSX.Element | null {
           'w-full overflow-y-auto border-e border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900 lg:block lg:w-1/2',
           mobileView === 'edit' ? 'block' : 'hidden',
         )}>
+          <CVStrengthCard />
           <CVEditor />
         </div>
 

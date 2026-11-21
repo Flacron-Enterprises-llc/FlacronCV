@@ -23,5 +23,7 @@
   "backOnline": "Wieder online",
   "notFoundTitle": "Seite nicht gefunden",
   "notFoundBody": "Dieser Link führt in der App nirgendwohin. Er ist vielleicht veraltet oder falsch geschrieben.",
-  "notFoundHome": "Zur Startseite"
+  "notFoundHome": "Zur Startseite",
+  "crashTitle": "Etwas ist schiefgelaufen",
+  "crashBody": "Auf diesem Bildschirm ist ein Problem aufgetreten. Deine gespeicherte Arbeit ist sicher – versuche es erneut und wende dich an den Support, wenn es wieder passiert."
 }

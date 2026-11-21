@@ -350,5 +350,31 @@
     "removeBodyEntries": "Supprimer « {title} » et {count, plural, one {son entrée} other {ses # entrées}} de ce CV ?",
     "removeBody": "Supprimer « {title} » de ce CV ?",
     "renameHeading": "Renommer la section"
+  },
+  "strength": {
+    "title": "Solidité du CV",
+    "band_starter": "Premiers pas",
+    "band_good": "Bon début",
+    "band_strong": "Solide",
+    "band_complete": "Complet",
+    "note": "Vérifie l’exhaustivité, pas la qualité de la rédaction.",
+    "next_steps": "Prochaines étapes",
+    "points": "+{points}",
+    "toggle_show": "Voir les conseils",
+    "toggle_hide": "Masquer les conseils",
+    "complete_msg": "Votre CV contient tout ce que recherchent les recruteurs.",
+    "tip_name": "Ajoutez votre nom complet",
+    "tip_email": "Ajoutez votre adresse e-mail",
+    "tip_phone": "Ajoutez un numéro de téléphone",
+    "tip_location": "Ajoutez votre ville ou votre pays",
+    "tip_headline": "Ajoutez un titre (le poste visé)",
+    "tip_summary": "Rédigez un court résumé professionnel",
+    "tip_summary_longer": "Développez votre résumé en 2 à 4 phrases",
+    "tip_experience": "Ajoutez votre expérience",
+    "tip_experience_details": "Décrivez vos réalisations dans un poste",
+    "tip_education": "Ajoutez votre formation",
+    "tip_skills": "Ajoutez vos compétences clés",
+    "tip_skills_more": "Ajoutez au moins 5 compétences",
+    "tip_links": "Ajoutez votre lien LinkedIn ou portfolio"
   }
 }

@@ -350,5 +350,31 @@
     "removeBodyEntries": "هل تريد إزالة «{title}» و{count, plural, zero {إدخالاته} one {إدخاله الوحيد} two {إدخاليه} few {إدخالاته الـ#} many {إدخالاته الـ#} other {إدخالاته الـ#}} من هذه السيرة الذاتية؟",
     "removeBody": "هل تريد إزالة «{title}» من هذه السيرة الذاتية؟",
     "renameHeading": "إعادة تسمية القسم"
+  },
+  "strength": {
+    "title": "قوة السيرة الذاتية",
+    "band_starter": "البداية",
+    "band_good": "بداية جيدة",
+    "band_strong": "قوية",
+    "band_complete": "مكتملة",
+    "note": "يقيس الاكتمال، لا جودة الكتابة.",
+    "next_steps": "الخطوات التالية",
+    "points": "+{points}",
+    "toggle_show": "عرض النصائح",
+    "toggle_hide": "إخفاء النصائح",
+    "complete_msg": "تتضمن سيرتك الذاتية كل ما يبحث عنه مسؤولو التوظيف.",
+    "tip_name": "أضف اسمك الكامل",
+    "tip_email": "أضف بريدك الإلكتروني",
+    "tip_phone": "أضف رقم هاتف",
+    "tip_location": "أضف مدينتك أو بلدك",
+    "tip_headline": "أضف عنوانًا (الوظيفة التي تريدها)",
+    "tip_summary": "اكتب ملخصًا مهنيًا قصيرًا",
+    "tip_summary_longer": "وسّع ملخصك إلى 2–4 جمل",
+    "tip_experience": "أضف خبرتك العملية",
+    "tip_experience_details": "صف ما حققته في وظيفة",
+    "tip_education": "أضف تعليمك",
+    "tip_skills": "أضف مهاراتك الأساسية",
+    "tip_skills_more": "أضف 5 مهارات على الأقل",
+    "tip_links": "أضف رابط LinkedIn أو معرض أعمالك"
   }
 }

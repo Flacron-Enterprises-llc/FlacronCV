@@ -23,5 +23,7 @@
   "backOnline": "De nouveau en ligne",
   "notFoundTitle": "Page introuvable",
   "notFoundBody": "Ce lien ne mène nulle part dans l’application. Il est peut-être ancien ou mal saisi.",
-  "notFoundHome": "Aller à l’accueil"
+  "notFoundHome": "Aller à l’accueil",
+  "crashTitle": "Un problème est survenu",
+  "crashBody": "Cet écran a rencontré un problème. Votre travail enregistré est en sécurité — réessayez et contactez le support si cela se reproduit."
 }
