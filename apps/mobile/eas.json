@@ -24,7 +24,8 @@
         "EXPO_PUBLIC_APP_URL": "https://flacroncv.com",
         "EXPO_PUBLIC_PAID_UPGRADES_ENABLED": "true",
         "EXPO_PUBLIC_CAREER_ENABLED": "true",
-        "EXPO_PUBLIC_CAREER_API_URL": "https://api.flacroncv.com"
+        "EXPO_PUBLIC_CAREER_API_URL": "https://api.flacroncv.com",
+        "EXPO_PUBLIC_APPLE_SIGN_IN_ENABLED": "true"
       }
     },
     "qa": {
@@ -57,7 +58,8 @@
         "EXPO_PUBLIC_FIREBASE_APP_ID": "1:897261654848",
         "EXPO_PUBLIC_APP_URL": "https://flacroncv.com",
         "EXPO_PUBLIC_CAREER_ENABLED": "true",
-        "EXPO_PUBLIC_CAREER_API_URL": "https://api.flacroncv.com"
+        "EXPO_PUBLIC_CAREER_API_URL": "https://api.flacroncv.com",
+        "EXPO_PUBLIC_APPLE_SIGN_IN_ENABLED": "true"
       }
     }
   }
