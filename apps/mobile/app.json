@@ -84,7 +84,10 @@
       ],
       "expo-asset"
     ],
-    "scheme": "flacroncv",
+    "scheme": [
+      "flacroncv",
+      "com.flacroncv.mobile"
+    ],
     "extra": {
       "eas": {
         "projectId": "22f570f5-66a6-4e24-a606-1f90e4a2109a"
