@@ -20,7 +20,7 @@
         "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "flacron-cv",
         "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "flacron-cv.firebasestorage.app",
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "897261654848",
-        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:897261654848",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:897261654848:web:a07271f0f233e8a86ce0a5",
         "EXPO_PUBLIC_APP_URL": "https://flacroncv.com",
         "EXPO_PUBLIC_PAID_UPGRADES_ENABLED": "true",
         "EXPO_PUBLIC_CAREER_ENABLED": "true",
@@ -40,7 +40,7 @@
         "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "flacron-cv",
         "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "flacron-cv.firebasestorage.app",
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "897261654848",
-        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:897261654848",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:897261654848:web:a07271f0f233e8a86ce0a5",
         "EXPO_PUBLIC_APP_URL": "https://flacroncv.com"
       }
     },
@@ -55,7 +55,7 @@
         "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "flacron-cv",
         "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "flacron-cv.firebasestorage.app",
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "897261654848",
-        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:897261654848",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:897261654848:web:a07271f0f233e8a86ce0a5",
         "EXPO_PUBLIC_APP_URL": "https://flacroncv.com",
         "EXPO_PUBLIC_CAREER_ENABLED": "true",
         "EXPO_PUBLIC_CAREER_API_URL": "https://api.flacroncv.com",
