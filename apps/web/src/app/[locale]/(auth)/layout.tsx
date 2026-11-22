@@ -16,26 +16,26 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     { icon: GraduationCap, title: t('panel_feature_grow_title'), desc: t('panel_feature_grow_desc') },
   ];
   return (
-    <div className="flex min-h-screen bg-white dark:bg-stone-950">
+    <div className="flex min-h-screen bg-white dark:bg-stone-950 lg:h-screen lg:overflow-hidden">
       {/* Left: navy brand panel (desktop) — the same navy and orange as the logo and the mobile app. */}
-      <aside className="relative hidden overflow-hidden bg-navy lg:flex lg:w-[46%] lg:flex-col">
+      <aside className="relative hidden overflow-hidden bg-navy lg:flex lg:h-screen lg:w-[46%] lg:flex-col">
         <div className="pointer-events-none absolute -right-32 -top-32 h-[28rem] w-[28rem] rounded-full bg-brand-500/15 blur-[110px]" />
         <div className="pointer-events-none absolute -bottom-40 -left-24 h-[26rem] w-[26rem] rounded-full bg-sky-400/10 blur-[110px]" />
         <PanelArcs className="pointer-events-none absolute right-0 top-0 h-80 w-80 rtl:left-0 rtl:right-auto rtl:-scale-x-100" />
         <PanelSwoosh className="pointer-events-none absolute inset-x-0 bottom-0 h-20 w-full xl:h-24" />
 
-        <div className="relative z-10 flex h-full flex-col px-12 pb-24 pt-10 xl:px-16">
+        <div className="relative z-10 flex h-full flex-col overflow-y-auto px-12 pb-24 pt-10 [scrollbar-width:none] xl:px-16 2xl:px-24 [&::-webkit-scrollbar]:hidden">
           <Link href="/" className="inline-flex w-fit items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
             <Logo variant="on-dark" className="h-11" priority />
           </Link>
 
-          <div className="my-auto max-w-lg py-10">
-            <h2 className="text-4xl font-black leading-tight tracking-tight text-white xl:text-[2.75rem]">
+          <div className="my-auto max-w-lg py-10 2xl:max-w-xl [@media(max-height:820px)]:py-6">
+            <h2 className="text-4xl font-black leading-tight tracking-tight text-white xl:text-[2.75rem] 2xl:text-5xl">
               {t('panel_title')}
             </h2>
             <p className="mt-4 text-lg leading-relaxed text-white/70">{t('panel_subtitle')}</p>
 
-            <CvIllustration className="mt-8 h-auto w-64 xl:w-72" blob="rgba(255,255,255,0.07)" glow={false} />
+            <CvIllustration className="mt-8 h-auto w-64 xl:w-72 2xl:w-80 [@media(max-height:860px)]:hidden" blob="rgba(255,255,255,0.07)" glow={false} />
 
             <ul className="mt-8 space-y-5">
               {features.map(({ icon: Icon, title, desc }) => (
@@ -69,7 +69,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           curves like the mobile app. */}
       <main
         id="main-content"
-        className="flex w-full flex-col overflow-y-auto lg:h-screen lg:w-[54%] lg:bg-stone-50 lg:dark:bg-stone-950"
+        className="relative flex w-full flex-col overflow-y-auto lg:h-screen lg:w-[54%] lg:bg-gradient-to-br lg:from-stone-50 lg:via-white lg:to-orange-50/60 lg:dark:from-stone-950 lg:dark:via-stone-950 lg:dark:to-stone-900"
       >
         <AuthTopWave className="block h-20 w-full shrink-0 lg:hidden" />
         <div className="m-auto w-full max-w-md px-5 pb-10 pt-2 lg:max-w-[30rem] lg:px-0 lg:py-12">
