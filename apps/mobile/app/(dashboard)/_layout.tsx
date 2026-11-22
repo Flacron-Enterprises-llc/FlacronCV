@@ -49,12 +49,12 @@ export default function DashboardLayout() {
           : {
               backgroundColor: palette.surface,
               borderTopColor: palette.border,
-              paddingTop: 6,
             },
+        // React Navigation sizes the bar for its default label; extra padding or a
+        // larger label pushes the text below the bar (clipped on Android).
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '700',
-          marginTop: 2,
+          fontSize: 10,
+          fontWeight: '600',
         },
       }}
     >
@@ -63,7 +63,7 @@ export default function DashboardLayout() {
         options={{
           title: t('dashboard'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={23} color={color} />
+            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -72,7 +72,7 @@ export default function DashboardLayout() {
         options={{
           title: t('cvs'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'document-text' : 'document-text-outline'} size={23} color={color} />
+            <Ionicons name={focused ? 'document-text' : 'document-text-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -81,7 +81,7 @@ export default function DashboardLayout() {
         options={{
           title: t('coverLetters'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'mail' : 'mail-outline'} size={23} color={color} />
+            <Ionicons name={focused ? 'mail' : 'mail-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -92,7 +92,7 @@ export default function DashboardLayout() {
           ...(CAREER_ENABLED ? { href: null } : {}),
           title: t('templates'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'layers' : 'layers-outline'} size={23} color={color} />
+            <Ionicons name={focused ? 'layers' : 'layers-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -103,7 +103,7 @@ export default function DashboardLayout() {
           ...(CAREER_ENABLED ? {} : { href: null }),
           title: t('career'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'compass' : 'compass-outline'} size={23} color={color} />
+            <Ionicons name={focused ? 'compass' : 'compass-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -112,7 +112,7 @@ export default function DashboardLayout() {
         options={{
           title: t('settings'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'settings' : 'settings-outline'} size={23} color={color} />
+            <Ionicons name={focused ? 'settings' : 'settings-outline'} size={22} color={color} />
           ),
         }}
       />
