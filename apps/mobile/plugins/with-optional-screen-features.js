@@ -4,7 +4,12 @@
 // The app still opens in portrait; it simply does not require the hardware.
 const { withAndroidManifest } = require('expo/config-plugins');
 
-const OPTIONAL_FEATURES = ['android.hardware.screen.portrait', 'android.hardware.screen.landscape'];
+const OPTIONAL_FEATURES = [
+  'android.hardware.screen.portrait',
+  'android.hardware.screen.landscape',
+  // expo-network adds ACCESS_WIFI_STATE, which Play reads as a Wi-Fi requirement; the app works on mobile data.
+  'android.hardware.wifi',
+];
 
 module.exports = function withOptionalScreenFeatures(config) {
   return withAndroidManifest(config, (cfg) => {
