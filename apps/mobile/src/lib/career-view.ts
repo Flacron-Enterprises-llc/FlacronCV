@@ -148,7 +148,9 @@ export function describeAccess(state: CareerAccessState): {
           : badgeKind === 'ending'
             ? t('career.access.badge.ending')
             : t('career.access.badge.active');
-      return { title: t('career.access.activeTitle', { plan: state.planName }), body: lines.join(' '), badge, badgeKind };
+      // “Career Pro” already says career: not “Career Career Pro”.
+      const title = /^career\b/i.test(state.planName) ? state.planName : t('career.access.activeTitle', { plan: state.planName });
+      return { title, body: lines.join(' '), badge, badgeKind };
     }
   }
 }

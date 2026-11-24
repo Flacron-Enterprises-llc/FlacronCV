@@ -415,6 +415,8 @@ export default function DashboardScreen() {
         )}
         <View style={{ height: 8 }} />
       </ScrollView>
+      {/* Scrolled content never shows behind the clock and battery. */}
+      <View pointerEvents="none" className="absolute inset-x-0 top-0 bg-navy" style={{ height: insets.top }} />
     </View>
   );
 }

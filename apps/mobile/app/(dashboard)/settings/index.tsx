@@ -534,6 +534,8 @@ export default function SettingsScreen() {
           </Text>
         </View>
       </ScrollView>
+      {/* Scrolled content never shows behind the clock and battery. */}
+      <View pointerEvents="none" className="absolute inset-x-0 top-0 bg-navy" style={{ height: insets.top }} />
 
       <Modal visible={languageOpen} onClose={() => setLanguageOpen(false)} title={t('language.title')}>
         {SUPPORTED_LOCALES.map((option) => {
