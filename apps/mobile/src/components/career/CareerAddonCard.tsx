@@ -1,3 +1,4 @@
+import { HIDE_PLAN_CATALOG } from '../../config/paid-upgrades';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -51,6 +52,7 @@ export function CareerAddonCard() {
         <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} style={RTL_FLIP} />
       </TouchableOpacity>
       {/* What each career plan includes: information only, no price unless switched on, never a way to buy. */}
+      {HIDE_PLAN_CATALOG ? null : (
       <TouchableOpacity
         onPress={() => router.push('/(dashboard)/career/plans')}
         className="bg-surface rounded-2xl border border-stone-100 p-4 mt-3 flex-row items-center min-h-[48px]"
@@ -63,6 +65,7 @@ export function CareerAddonCard() {
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.stone[300]} style={RTL_FLIP} />
       </TouchableOpacity>
+      )}
     </View>
   );
 }

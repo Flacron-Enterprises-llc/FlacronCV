@@ -25,5 +25,13 @@
   "notFoundBody": "Dieser Link führt in der App nirgendwohin. Er ist vielleicht veraltet oder falsch geschrieben.",
   "notFoundHome": "Zur Startseite",
   "crashTitle": "Etwas ist schiefgelaufen",
-  "crashBody": "Auf diesem Bildschirm ist ein Problem aufgetreten. Deine gespeicherte Arbeit ist sicher – versuche es erneut und wende dich an den Support, wenn es wieder passiert."
+  "crashBody": "Auf diesem Bildschirm ist ein Problem aufgetreten. Deine gespeicherte Arbeit ist sicher – versuche es erneut und wende dich an den Support, wenn es wieder passiert.",
+  "aiConsent": {
+    "title": "Inhalte mit OpenAI teilen?",
+    "body": "Die KI-Funktionen von FlacronCV nutzen OpenAI, einen externen KI-Anbieter (Server in den USA). Wenn du eine davon nutzt, werden die nötigen Inhalte an OpenAI gesendet, zum Beispiel Lebenslauf, Karriereprofil, Anschreiben, Stellenbeschreibungen, Interviewantworten, Coach-Nachrichten oder eine Aufnahme, die du transkribieren lässt. Ohne deine Zustimmung wird nichts gesendet. Ändern kannst du das unter Einstellungen > Deine Daten.",
+    "allow": "Zulassen",
+    "notNow": "Nicht jetzt",
+    "privacy": "Datenschutzerklärung",
+    "declined": "Nicht gesendet. Diese Funktion braucht deine Zustimmung, Inhalte mit OpenAI zu teilen. Du kannst sie unter Einstellungen > Deine Daten erteilen."
+  }
 }

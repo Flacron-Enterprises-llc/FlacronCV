@@ -1,5 +1,6 @@
 import { createApiClient, type ApiClient } from '../../../../packages/career-api-client/src/client';
 import { CAREER_API_URL } from '../config/career';
+import { AI_CONSENT_DECLINED, ensureAiConsent, isCareerAiRequest } from './ai-consent';
 import { getFirebaseAuth } from './firebase';
 import { secureStore } from './secure-store';
 
@@ -16,7 +17,13 @@ export const careerApi: ApiClient = createApiClient({
     if (current) return current.getIdToken();
     return secureStore.getAuthToken();
   },
-  fetch: (url, init) => fetch(url, init),
+  fetch: async (url, init) => {
+    // Refused locally, as an API answer the screens already know how to show: nothing is sent.
+    if (isCareerAiRequest(init.method, url) && !(await ensureAiConsent())) {
+      return new Response(JSON.stringify({ code: AI_CONSENT_DECLINED }), { status: 403 });
+    }
+    return fetch(url, init);
+  },
 });
 
 /** A fresh token for the career service's recent-sign-in check before erasure. */

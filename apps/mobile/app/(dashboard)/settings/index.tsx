@@ -21,6 +21,7 @@ import { JobApplication } from '../../../src/types/job.types';
 import { Locale } from '../../../src/types/enums';
 import { openLegalDocument } from '../../../src/lib/legal-acceptance';
 import { CAREER_ENABLED } from '../../../src/config/career';
+import { HIDE_PLAN_CATALOG } from '../../../src/config/paid-upgrades';
 import { Avatar } from '../../../src/components/ui/Avatar';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { Modal } from '../../../src/components/ui/Modal';
@@ -309,11 +310,9 @@ export default function SettingsScreen() {
           onPress: () => router.push('/(dashboard)/settings/billing'),
           badge: displayPlan ? planName(displayPlan, t).toLocaleUpperCase() : undefined,
         },
-        {
-          icon: 'pricetags-outline',
-          label: tPlans('title'),
-          onPress: () => router.push('/(dashboard)/settings/plans'),
-        },
+        ...(HIDE_PLAN_CATALOG
+          ? []
+          : [{ icon: 'pricetags-outline' as const, label: tPlans('title'), onPress: () => router.push('/(dashboard)/settings/plans') }]),
       ],
     },
     {

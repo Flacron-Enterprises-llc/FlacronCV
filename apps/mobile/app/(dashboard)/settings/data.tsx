@@ -1,12 +1,14 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CareerHeader } from '../../../src/components/career/CareerHeader';
 import { Button } from '../../../src/components/ui/Button';
 import { CAREER_ENABLED } from '../../../src/config/career';
 import { CareerErasureNeedsFreshSignIn, deleteAccountEverywhere } from '../../../src/lib/account-deletion';
+import { hasAiConsent, setAiConsent } from '../../../src/lib/ai-consent';
 import { api, apiClient } from '../../../src/lib/api';
+import { AppleConfirmationCancelled, revokeAppleAccess } from '../../../src/lib/apple-revoke';
 import { requestFailureMessage } from '../../../src/lib/api-errors';
 import { careerApi, freshIdToken } from '../../../src/lib/career-api';
 import { shareTextFile } from '../../../src/lib/career-files';
@@ -27,6 +29,14 @@ export default function AccountDataScreen() {
   const [exporting, setExporting] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [aiAllowed, setAiAllowed] = useState(false);
+  useEffect(() => {
+    void hasAiConsent().then(setAiAllowed);
+  }, []);
+  const onAiChange = (next: boolean) => {
+    setAiAllowed(next);
+    void setAiConsent(next);
+  };
   // The website localises the confirmation word (settings.account.deleteKeyword).
   const keyword = t('keyword');
   const confirmed = confirmText.trim() === keyword;
@@ -61,6 +71,8 @@ export default function AccountDataScreen() {
         onPress: async () => {
           setDeleting(true);
           try {
+            // Apple accounts: cancel Apple's access first, while the account still exists.
+            await revokeAppleAccess();
             await deleteAccountEverywhere({
               careerEnabled: CAREER_ENABLED,
               careerApi,
@@ -71,7 +83,9 @@ export default function AccountDataScreen() {
             router.replace('/(auth)/login');
             Alert.alert(tNow('settings.data.deletedTitle'), tNow('settings.data.deletedBody'));
           } catch (error) {
-            if (error instanceof CareerErasureNeedsFreshSignIn) {
+            if (error instanceof AppleConfirmationCancelled) {
+              Alert.alert(tNow('settings.data.notDeletedTitle'), tNow('settings.data.appleCancelled'));
+            } else if (error instanceof CareerErasureNeedsFreshSignIn) {
               Alert.alert(tNow('settings.data.signInAgainTitle'), tNow('settings.data.signInAgainBody'));
             } else {
               Alert.alert(tNow('settings.data.notDeletedTitle'), requestFailureMessage(error, tNow('settings.data.notDeletedError')));
@@ -99,6 +113,14 @@ export default function AccountDataScreen() {
                 {t('downloadButton')}
               </Button>
             </View>
+          </View>
+
+          <View className="bg-surface rounded-2xl border border-stone-100 p-5 mt-4">
+            <View className="flex-row items-center">
+              <Text className="flex-1 me-3 font-bold text-stone-900 text-base">{t('aiTitle')}</Text>
+              <Switch value={aiAllowed} onValueChange={onAiChange} accessibilityLabel={t('aiTitle')} trackColor={{ true: colors.brand[600] }} />
+            </View>
+            <Text className="text-stone-600 text-sm mt-1 leading-5">{t('aiBody')}</Text>
           </View>
 
           <View className="bg-surface rounded-2xl border border-red-100 p-5 mt-4">

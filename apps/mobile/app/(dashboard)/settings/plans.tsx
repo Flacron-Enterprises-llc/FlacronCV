@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Platform, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,7 +12,7 @@ import {
   type PlanCardAction,
 } from '../../../src/components/subscription/PlanCatalog';
 import { CAREER_ENABLED } from '../../../src/config/career';
-import { PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
+import { HIDE_PLAN_CATALOG, PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
 import { useCurrentUser } from '../../../src/hooks/useUser';
 import { requestFailureMessage } from '../../../src/lib/api-errors';
 import { billingOwner, billingStore, canPurchaseInApp } from '../../../src/lib/billing';
@@ -49,6 +49,10 @@ async function openNativeStoreSubscriptions() {
  * or by support sees who manages its plan instead of purchase buttons.
  */
 export default function PlansScreen() {
+  return HIDE_PLAN_CATALOG ? <Redirect href="/(dashboard)/settings/billing" /> : <PlansCatalogScreen />;
+}
+
+function PlansCatalogScreen() {
   const t = useT('plans');
   const ts = useT('settings');
   const tc = useT('common');

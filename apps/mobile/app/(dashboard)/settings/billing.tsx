@@ -9,7 +9,7 @@ import { Badge } from '../../../src/components/ui/Badge';
 import { Skeleton } from '../../../src/components/ui/Skeleton';
 import { CareerAddonCard } from '../../../src/components/career/CareerAddonCard';
 import { CAREER_ENABLED } from '../../../src/config/career';
-import { LEGACY_STRIPE_PORTAL_ENABLED, PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
+import { HIDE_PLAN_CATALOG, LEGACY_STRIPE_PORTAL_ENABLED, PAID_UPGRADES_ENABLED } from '../../../src/config/paid-upgrades';
 import { useCareerUsage } from '../../../src/hooks/useCareer';
 import { useInvoices } from '../../../src/hooks/useInvoices';
 import { useCreatePortalSession, useMarkUsageWarningsSeen, useV1Usage } from '../../../src/hooks/usePayment';
@@ -256,6 +256,7 @@ export default function BillingScreen() {
                 </>
               ) : null}
 
+              {HIDE_PLAN_CATALOG ? null : (
               <TouchableOpacity
                 onPress={() => router.push('/(dashboard)/settings/plans')}
                 className="mt-3 rounded-xl bg-brand-600 min-h-[48px] items-center justify-center px-4"
@@ -263,6 +264,7 @@ export default function BillingScreen() {
               >
                 <Text className="text-white font-bold">{PAID_UPGRADES_ENABLED && owner === 'none' ? t('seePlans') : t('comparePlans')}</Text>
               </TouchableOpacity>
+              )}
             </View>
 
             <AllowanceList rows={rows} title={isFree ? t('usageTitleFree') : t('usageTitle')} loading={v1Usage.isPending && !user.usage} />

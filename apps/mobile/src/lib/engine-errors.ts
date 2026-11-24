@@ -1,3 +1,4 @@
+import { AiConsentDeclinedError } from './ai-consent-rules';
 import axios from 'axios';
 import { aiCreditsExhaustedMessage } from '../config/paid-upgrades';
 import { isNetworkFailure, nestErrorCode, nestErrorMessage } from './api-errors';
@@ -11,6 +12,7 @@ export function engineFailureMessage(
   err: unknown,
   fallback = t('errors.engine.generic'),
 ): string {
+  if (err instanceof AiConsentDeclinedError) return t('common.aiConsent.declined');
   if (isNetworkFailure(err) || (axios.isAxiosError(err) && !err.response)) {
     return t('common.noConnection');
   }

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { t } from '../i18n';
+import { AiConsentDeclinedError } from './ai-consent-rules';
 
 /** Nest AllExceptionsFilter body: `{ success, statusCode, message, code? }`. */
 export function nestErrorMessage(err: unknown): string {
@@ -26,6 +27,7 @@ export function isNetworkFailure(err: unknown): boolean {
 
 /** Prefer server copy (abuse / limit); then network; else fallback. */
 export function requestFailureMessage(err: unknown, fallback: string): string {
+  if (err instanceof AiConsentDeclinedError) return t('common.aiConsent.declined');
   if (isNetworkFailure(err)) {
     return t('common.noConnection');
   }

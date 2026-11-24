@@ -200,6 +200,9 @@
     "signInAgainTitle": "Erneut anmelden",
     "signInAgainBody": "Melde dich zu deiner Sicherheit ab, wieder an und lösche dann dein Konto. Es wurde nichts gelöscht.",
     "notDeletedTitle": "Nicht gelöscht",
-    "notDeletedError": "Dein Konto wurde nicht gelöscht. Bitte erneut versuchen."
+    "notDeletedError": "Dein Konto wurde nicht gelöscht. Bitte erneut versuchen.",
+    "aiTitle": "KI-Funktionen (OpenAI)",
+    "aiBody": "Wenn aktiv, dürfen KI-Funktionen die verwendeten Inhalte an OpenAI (USA) senden. Schalte es aus, um das zu beenden; vor der nächsten KI-Anfrage wird erneut gefragt.",
+    "appleCancelled": "Die Apple-Bestätigung wurde abgebrochen, dein Konto wurde nicht gelöscht."
   }
 }

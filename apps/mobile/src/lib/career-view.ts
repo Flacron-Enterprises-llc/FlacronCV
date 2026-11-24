@@ -287,6 +287,7 @@ export const WHERE_LABEL: Record<CareerArea['where'], string> = {
 /** Messages for career API failures. Never claims a write succeeded. */
 export function careerErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError) {
+    if (error.code === 'ai_consent_declined') return t('common.aiConsent.declined');
     if (error.code === 'network_error') return t('career.errors.network');
     if (error.code === 'revision_conflict')
       return t('career.errors.revisionConflict');

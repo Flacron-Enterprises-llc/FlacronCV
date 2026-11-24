@@ -25,5 +25,13 @@
   "notFoundBody": "Este enlace no lleva a ninguna parte de la app. Puede que sea antiguo o tenga un error.",
   "notFoundHome": "Ir al inicio",
   "crashTitle": "Algo salió mal",
-  "crashBody": "Esta pantalla tuvo un problema. Tu trabajo guardado está a salvo: inténtalo de nuevo y, si se repite, contacta con soporte."
+  "crashBody": "Esta pantalla tuvo un problema. Tu trabajo guardado está a salvo: inténtalo de nuevo y, si se repite, contacta con soporte.",
+  "aiConsent": {
+    "title": "¿Compartir contenido con OpenAI?",
+    "body": "Las herramientas de IA de FlacronCV usan OpenAI, un proveedor externo de IA (servidores en Estados Unidos). Al usar una, se envía a OpenAI el contenido necesario: por ejemplo, tu CV, perfil profesional, cartas, descripciones de empleo, respuestas de entrevista, mensajes al coach o una grabación que pidas transcribir. No se envía nada hasta que lo permitas. Puedes cambiarlo en Ajustes > Tus datos.",
+    "allow": "Permitir",
+    "notNow": "Ahora no",
+    "privacy": "Política de privacidad",
+    "declined": "No enviado. Esta herramienta necesita tu permiso para compartir contenido con OpenAI. Puedes darlo en Ajustes > Tus datos."
+  }
 }

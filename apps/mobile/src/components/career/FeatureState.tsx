@@ -1,3 +1,4 @@
+import { HIDE_PLAN_CATALOG } from '../../config/paid-upgrades';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import React from 'react';
@@ -80,12 +81,14 @@ export function PlanCard({ title, body, children }: { title?: string; body?: str
   const t = useT('careerBusiness');
   const router = useRouter();
   return (
-    <StateCard icon="layers-outline" badge={t('nav.statePlan')} title={title ?? t('mobile.planTitle')} body={body ?? t('mobile.planBody')}>
+    <StateCard icon="layers-outline" badge={t('nav.statePlan')} title={title ?? t('mobile.planTitle')} body={body ?? (HIDE_PLAN_CATALOG ? t('mobile.lockedBody') : t('mobile.planBody'))}>
+      {HIDE_PLAN_CATALOG ? null : (
       <View className="mt-4 self-start">
         <Button variant="outline" size="sm" onPress={() => router.push('/(dashboard)/career/plans' as Href)} accessibilityRole="link">
           {t('mobile.comparePlans')}
         </Button>
       </View>
+      )}
       {children}
     </StateCard>
   );

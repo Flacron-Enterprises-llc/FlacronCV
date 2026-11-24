@@ -1,3 +1,4 @@
+import { HIDE_PLAN_CATALOG } from '../../config/paid-upgrades';
 import { Ionicons } from '@expo/vector-icons';
 import * as Crypto from 'expo-crypto';
 import { useRouter, type Href } from 'expo-router';
@@ -100,7 +101,7 @@ function DraftButtons({ job, types }: { job: JobApplication; types: ApplicationD
                 <Text className="text-warning text-sm leading-5" accessibilityRole="alert">
                   {t(`problem.${problem}`)}
                 </Text>
-                {problem === 'quota' || problem === 'upgrade' ? (
+                {!HIDE_PLAN_CATALOG && (problem === 'quota' || problem === 'upgrade') ? (
                   <Button variant="ghost" size="sm" className="self-start mt-1" onPress={() => { close(); router.push('/(dashboard)/career/plans' as Href); }}>
                     {t('see_plans')}
                   </Button>

@@ -200,6 +200,9 @@
     "signInAgainTitle": "Vuelve a iniciar sesión",
     "signInAgainBody": "Por tu seguridad, cierra sesión, vuelve a iniciarla y luego elimina tu cuenta. No se ha eliminado nada.",
     "notDeletedTitle": "No eliminada",
-    "notDeletedError": "Tu cuenta no se ha eliminado. Inténtalo de nuevo."
+    "notDeletedError": "Tu cuenta no se ha eliminado. Inténtalo de nuevo.",
+    "aiTitle": "Herramientas de IA (OpenAI)",
+    "aiBody": "Si está activado, las herramientas de IA pueden enviar a OpenAI (Estados Unidos) el contenido con el que las uses. Desactívalo para dejar de enviarlo; la app preguntará de nuevo antes de la próxima solicitud.",
+    "appleCancelled": "Se canceló la confirmación de Apple, así que tu cuenta no se eliminó."
   }
 }

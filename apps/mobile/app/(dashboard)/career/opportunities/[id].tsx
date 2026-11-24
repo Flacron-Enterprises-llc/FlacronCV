@@ -1,3 +1,4 @@
+import { HIDE_PLAN_CATALOG } from '../../../../src/config/paid-upgrades';
 import { Ionicons } from '@expo/vector-icons';
 import * as Crypto from 'expo-crypto';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
@@ -431,9 +432,11 @@ function CompareCard({ item }: { item: OpportunityDetail }) {
         <View className="bg-warning-bg rounded-xl p-3 mt-3" accessibilityLiveRegion="polite">
           <Text className="text-warning font-semibold text-sm">{to('compare_upgrade_title')}</Text>
           <Text className="text-warning text-sm mt-1 leading-5">{upgrade}</Text>
+          {HIDE_PLAN_CATALOG ? null : (
           <TouchableOpacity onPress={() => router.push('/(dashboard)/career/plans' as Href)} className="min-h-[44px] justify-center" accessibilityRole="link">
             <Text className="text-brand-600 font-semibold text-sm">{to('compare_upgrade_link')}</Text>
           </TouchableOpacity>
+          )}
         </View>
       ) : null}
 

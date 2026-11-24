@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { AiConsentDeclinedError, ensureAiConsent, isV1AiRequest } from './ai-consent';
 import { secureStore } from './secure-store';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
@@ -76,6 +77,7 @@ function processQueue(error: unknown, token: string | null) {
 // Request interceptor — attach Firebase ID token
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    if (isV1AiRequest(config.method, config.url) && !(await ensureAiConsent())) throw new AiConsentDeclinedError();
     const token = await secureStore.getAuthToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

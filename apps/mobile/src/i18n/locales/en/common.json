@@ -25,5 +25,13 @@
   "notFoundBody": "This link doesn’t lead anywhere in the app. It may be old or mistyped.",
   "notFoundHome": "Go to Home",
   "crashTitle": "Something went wrong",
-  "crashBody": "This screen ran into a problem. Your saved work is safe — try again, and if it keeps happening, contact support."
+  "crashBody": "This screen ran into a problem. Your saved work is safe — try again, and if it keeps happening, contact support.",
+  "aiConsent": {
+    "title": "Share content with OpenAI?",
+    "body": "FlacronCV's AI tools use OpenAI, a third-party AI provider (servers in the United States). When you use one, the content it needs is sent to OpenAI: for example your CV, career profile, cover letters, job descriptions, interview answers, coach messages, or a recording you ask to transcribe. Nothing is sent until you allow it. You can change this in Settings > Your data.",
+    "allow": "Allow",
+    "notNow": "Not now",
+    "privacy": "Privacy Policy",
+    "declined": "Not sent. This tool needs your permission to share content with OpenAI. You can allow it in Settings > Your data."
+  }
 }

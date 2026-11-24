@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, type Href } from 'expo-router';
+import { Redirect, useRouter, type Href } from 'expo-router';
 import React, { useState } from 'react';
 import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import type { CareerAccessView } from '../../../../../packages/career-api-client
 import type { PlanId } from '../../../../../packages/career-shared/src/catalog';
 import { CareerHeader, Pill } from '../../../src/components/career/CareerHeader';
 import { SHOW_CAREER_PRICES } from '../../../src/config/career';
+import { HIDE_PLAN_CATALOG } from '../../../src/config/paid-upgrades';
 import { useCareerAccess, useCareerSubscription } from '../../../src/hooks/useCareer';
 import {
   CAREER_PLAN_IDS,
@@ -36,6 +37,10 @@ import { colors } from '../../../src/theme/colors';
  * even then they are plain text with the exact catalog amounts.
  */
 export default function CareerPlansScreen() {
+  return HIDE_PLAN_CATALOG ? <Redirect href="/(dashboard)/settings/billing" /> : <CareerPlansComparison />;
+}
+
+function CareerPlansComparison() {
   const t = useT('careerHub.plans');
   const access = useCareerAccess();
   const subscription = useCareerSubscription();

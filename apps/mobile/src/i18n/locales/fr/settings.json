@@ -200,6 +200,9 @@
     "signInAgainTitle": "Reconnectez-vous",
     "signInAgainBody": "Pour votre sécurité, déconnectez-vous, reconnectez-vous puis supprimez votre compte. Rien n'a été supprimé.",
     "notDeletedTitle": "Non supprimé",
-    "notDeletedError": "Votre compte n'a pas été supprimé. Veuillez réessayer."
+    "notDeletedError": "Votre compte n'a pas été supprimé. Veuillez réessayer.",
+    "aiTitle": "Outils d’IA (OpenAI)",
+    "aiBody": "Si activé, les outils d’IA peuvent envoyer à OpenAI (États-Unis) le contenu utilisé. Désactivez pour arrêter l’envoi ; l’application redemandera avant la prochaine requête.",
+    "appleCancelled": "La confirmation Apple a été annulée, votre compte n’a pas été supprimé."
   }
 }

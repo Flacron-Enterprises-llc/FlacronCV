@@ -36,6 +36,13 @@ export const STORE_PRODUCTS = isStorePlatform(Platform.OS) ? storeProductMap(Pla
 export const PAID_UPGRADES_ENABLED: boolean = envOverride() !== false && anyStoreProduct(STORE_PRODUCTS);
 
 /**
+ * iPhone without App Store products: the app shows no plans, prices or
+ * "Coming soon" (App Store 2.1 completeness). The current plan and its
+ * allowances stay visible under Billing. Turns itself off once products exist.
+ */
+export const HIDE_PLAN_CATALOG: boolean = Platform.OS === 'ios' && !PAID_UPGRADES_ENABLED;
+
+/**
  * Legacy Stripe subscribers' "Manage billing" (Stripe customer portal in the
  * browser). Unchanged from before the five-plan catalog: on only when the
  * build sets EXPO_PUBLIC_PAID_UPGRADES_ENABLED=true (Android builds that used

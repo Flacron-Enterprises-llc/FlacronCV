@@ -1,3 +1,4 @@
+import { HIDE_PLAN_CATALOG } from '../../../src/config/paid-upgrades';
 import React, { useState } from 'react';
 import { Alert, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -119,7 +120,7 @@ function KeysSection({ status, canCreate }: { status: DeveloperStatus; canCreate
 
   return (
     <Section title={t('scope.apiHeading')} help={t('scope.developerHelp')}>
-      {canCreate ? null : (
+      {canCreate || HIDE_PLAN_CATALOG ? null : (
         <View className="mt-2 self-start">
           <Tag label={t('scope.comingSoon')} tone="muted" />
         </View>
@@ -208,7 +209,7 @@ function BrandSection({ status, canSave }: { status: DeveloperStatus; canSave: b
 
   return (
     <Section title={t('scope.brandHeading')}>
-      {canSave ? null : (
+      {canSave || HIDE_PLAN_CATALOG ? null : (
         <View className="mt-2 self-start">
           <Tag label={t('scope.comingSoon')} tone="muted" />
         </View>

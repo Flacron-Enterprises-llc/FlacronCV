@@ -1,3 +1,4 @@
+import { HIDE_PLAN_CATALOG } from '../../../src/config/paid-upgrades';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, type Href } from 'expo-router';
@@ -163,7 +164,7 @@ export default function CareerOverviewScreen() {
           />
         ) : null}
 
-        {CAREER_ENABLED ? <PlansLink onOpen={() => router.push('/(dashboard)/career/plans' as Href)} /> : null}
+        {CAREER_ENABLED && !HIDE_PLAN_CATALOG ? <PlansLink onOpen={() => router.push('/(dashboard)/career/plans' as Href)} /> : null}
 
       </ScrollView>
     </SafeAreaView>

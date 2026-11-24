@@ -200,6 +200,9 @@
     "signInAgainTitle": "Sign in again",
     "signInAgainBody": "For your security, sign out, sign in again and then delete your account. Nothing was deleted.",
     "notDeletedTitle": "Not deleted",
-    "notDeletedError": "Your account was not deleted. Please try again."
+    "notDeletedError": "Your account was not deleted. Please try again.",
+    "aiTitle": "AI tools (OpenAI)",
+    "aiBody": "When on, AI tools may send the content you use them with to OpenAI (United States) to create results. Turn it off to stop sending; the app asks again before the next AI request.",
+    "appleCancelled": "Apple confirmation was cancelled, so your account was not deleted."
   }
 }
