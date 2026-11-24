@@ -6,7 +6,7 @@ import React, { useRef, useState } from 'react';
 import { Share, Text, TextInput, View } from 'react-native';
 import { CAREER_ENABLED } from '../../config/career';
 import { useCareerAccess } from '../../hooks/useCareer';
-import { useT } from '../../i18n';
+import { t as tNow, useT } from '../../i18n';
 import { careerApi } from '../../lib/career-api';
 import { draftContextOf, draftKeyIsSpent, draftProblemOf, draftTypesFor, type ApplicationDraftType, type DraftProblem } from '../../lib/job-workspace';
 import { colors } from '../../theme/colors';
@@ -99,7 +99,7 @@ function DraftButtons({ job, types }: { job: JobApplication; types: ApplicationD
             {problem ? (
               <View className="bg-warning-bg rounded-xl p-3 mb-3" accessibilityLiveRegion="polite">
                 <Text className="text-warning text-sm leading-5" accessibilityRole="alert">
-                  {t(`problem.${problem}`)}
+                  {problem === 'ai_declined' ? tNow('common.aiConsent.declined') : t(`problem.${problem}`)}
                 </Text>
                 {!HIDE_PLAN_CATALOG && (problem === 'quota' || problem === 'upgrade') ? (
                   <Button variant="ghost" size="sm" className="self-start mt-1" onPress={() => { close(); router.push('/(dashboard)/career/plans' as Href); }}>

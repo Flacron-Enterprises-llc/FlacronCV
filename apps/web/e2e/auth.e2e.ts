@@ -37,7 +37,7 @@ test.describe('Auth flows', () => {
     // input, so the old count()/nth(1) branch was dead code guarding against a
     // field that does not exist.
     await passwordField(page).fill('Test1234!');
-    await page.getByRole('button', { name: /sign up|register|create account/i }).click();
+    await page.locator('form button[type="submit"]').click();
 
     await expect(page).toHaveURL(/\/en\/(verify-email|dashboard)/, { timeout: 10000 });
   });
@@ -68,8 +68,9 @@ test.describe('Auth flows', () => {
 
     // Should show a success toast or message
     await expect(
-      page.locator('[data-sonner-toast], [role="status"], .toast, [data-testid="success-toast"]').first()
-        .or(page.getByText(/sent|check your email/i).first()),
+      // Not [role="status"]: the offline notice is an always-present, empty status region.
+      page.locator('[data-sonner-toast], .toast, [data-testid="success-toast"]')
+        .or(page.getByText(/sent|check your email/i)).first(),
     ).toBeVisible({ timeout: 5000 });
   });
 

@@ -165,6 +165,7 @@ describe('notes after an action', () => {
     expect(recordErrorNote(err('validation_error', { field: 'audio', reason: 'too_long' }))).toBe('tooLarge');
     expect(recordErrorNote(err('validation_error', { field: 'audio', reason: 'unreadable' }))).toBe('unreadable');
     expect(recordErrorNote(err('quota_exhausted', {}, 402))).toBe('quota');
+    expect(recordErrorNote(new ApiError(403, 'ai_consent_declined', { code: 'ai_consent_declined' }))).toBe('aiDeclined');
     expect(recordErrorNote(new Error('offline'))).toBe('saveFailed');
     expect(voiceNote('saveFailed')).toEqual({ tone: 'warning', text: expect.stringMatching(/No time was used/) });
   });

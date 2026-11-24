@@ -43,10 +43,11 @@ describe('which requests need the AI permission', () => {
 
   it('covers every career AI call and nothing ordinary', () => {
     const base = 'https://api.example.test/api/career/v1';
-    for (const p of ['/imports', '/resumes/r1/generate', '/resumes/r1/tailor', '/writing', '/analyses', '/matches', '/interviews/text', '/interviews/text/s1/answers', '/interviews/text/s1/challenges', '/interviews/voice/s1/transcription', '/coaching', '/action-packs', '/action-packs/a1/retry', '/learning/skill-reports']) {
+    for (const p of ['/imports', '/resumes/r1/generate', '/resumes/r1/tailor', '/writing', '/interviews/text', '/interviews/voice/s1/recording', '/interviews/voice/s1/transcription', '/coaching', '/action-packs', '/action-packs/a1/retry', '/learning/skill-reports']) {
       expect([p, isCareerAiRequest('POST', base + p)]).toEqual([p, true]);
     }
-    for (const p of ['/facts', '/resumes', '/saved-searches', '/interviews/voice', '/interviews/voice/consent', '/account/delete', '/learning/skill-reports/r1/project-brief/evidence', '/session']) {
+    // Comparisons and interview feedback are rules on our own server: no AI provider.
+    for (const p of ['/analyses', '/matches', '/interviews/text/s1/answers', '/interviews/text/s1/challenges', '/facts', '/resumes', '/saved-searches', '/interviews/voice', '/interviews/voice/consent', '/account/delete', '/learning/skill-reports/r1/project-brief/evidence', '/session']) {
       expect([p, isCareerAiRequest('POST', base + p)]).toEqual([p, false]);
     }
     expect(isCareerAiRequest('GET', `${base}/coaching`)).toBe(false);

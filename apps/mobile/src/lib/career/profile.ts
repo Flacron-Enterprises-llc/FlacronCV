@@ -291,6 +291,9 @@ export function importFailure(error: unknown, allowance: Pick<ImportAllowance, '
     const resetsAt = typeof error.body.resetsAt === 'string' ? error.body.resetsAt : (allowance?.resetsAt ?? '');
     return { kind: 'limit', limit, resetsAt };
   }
+  if (error instanceof ApiError && error.code === 'ai_consent_declined') {
+    return { kind: 'failed', title: t('careerProfile.import.failedTitle'), body: t('common.aiConsent.declined') };
+  }
   if (error instanceof ApiError && error.code === 'network_error') {
     return { kind: 'failed', title: t('careerProfile.import.noConnectionTitle'), body: t('careerProfile.import.noConnectionBody') };
   }

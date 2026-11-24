@@ -280,7 +280,7 @@ export function ExperienceStep({ onValidChange }: ExperienceStepProps) {
               <Switch
                 value={field.value}
                 onValueChange={field.onChange}
-                trackColor={{ true: colors.brand[600] }}
+                trackColor={{ true: colors.brand[600], false: colors.stone[300] }}
               />
             </View>
           )}

@@ -54,6 +54,7 @@ describe('drafts', () => {
   });
 
   it('maps refusals to honest states and keeps the key after a lost response', () => {
+    expect(draftProblemOf(new ApiError(403, 'ai_consent_declined', {} as never))).toBe('ai_declined');
     expect(draftProblemOf(new ApiError(429, 'quota_exhausted', {} as never))).toBe('quota');
     expect(draftProblemOf(new ApiError(503, 'provider_unavailable', {} as never))).toBe('unavailable');
     expect(draftProblemOf(new ApiError(400, 'validation_error', { reason: 'missing_target' } as never))).toBe('missing_target');

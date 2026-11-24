@@ -118,7 +118,7 @@ export default function AccountDataScreen() {
           <View className="bg-surface rounded-2xl border border-stone-100 p-5 mt-4">
             <View className="flex-row items-center">
               <Text className="flex-1 me-3 font-bold text-stone-900 text-base">{t('aiTitle')}</Text>
-              <Switch value={aiAllowed} onValueChange={onAiChange} accessibilityLabel={t('aiTitle')} trackColor={{ true: colors.brand[600] }} />
+              <Switch value={aiAllowed} onValueChange={onAiChange} accessibilityLabel={t('aiTitle')} trackColor={{ true: colors.brand[600], false: colors.stone[300] }} />
             </View>
             <Text className="text-stone-600 text-sm mt-1 leading-5">{t('aiBody')}</Text>
           </View>

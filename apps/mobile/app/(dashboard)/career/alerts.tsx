@@ -278,7 +278,7 @@ function ToggleRow({ label, value, onChange, hint }: { label: string; value: boo
     <View className="mb-2">
       <View className="flex-row items-center justify-between min-h-[44px]">
         <Text className="text-stone-800 text-base flex-1 me-3">{label}</Text>
-        <Switch value={value} onValueChange={onChange} trackColor={{ true: colors.brand[600] }} accessibilityLabel={label} />
+        <Switch value={value} onValueChange={onChange} trackColor={{ true: colors.brand[600], false: colors.stone[300] }} accessibilityLabel={label} />
       </View>
       {hint ? <Text className="text-stone-400 text-xs">{hint}</Text> : null}
     </View>

@@ -59,7 +59,7 @@ export function ToggleField({ label, value, onChange, hint }: { label: string; v
     <View className="mb-3">
       <View className="flex-row items-center justify-between min-h-[44px]">
         <Text className="text-stone-800 text-sm flex-1 me-3">{label}</Text>
-        <Switch value={value} onValueChange={onChange} trackColor={{ true: colors.brand[600] }} accessibilityLabel={label} />
+        <Switch value={value} onValueChange={onChange} trackColor={{ true: colors.brand[600], false: colors.stone[300] }} accessibilityLabel={label} />
       </View>
       {hint ? <Text className="text-stone-400 text-xs leading-4">{hint}</Text> : null}
     </View>

@@ -71,7 +71,7 @@ export function followUpCalendarFile(
 // ---------------------------------------------------------------------------
 
 export type ApplicationDraftType = Extract<WritingType, 'referral_request' | 'thank_you'>;
-export type DraftProblem = 'quota' | 'upgrade' | 'unavailable' | 'unsupported' | 'missing' | 'missing_target' | 'failed';
+export type DraftProblem = 'quota' | 'upgrade' | 'unavailable' | 'unsupported' | 'missing' | 'missing_target' | 'ai_declined' | 'failed';
 
 const clip = (value: string | null | undefined, max: number): string | undefined => {
   const text = (value ?? '').trim();
@@ -111,6 +111,7 @@ export function draftTypesFor(job: Pick<JobApplication, 'status' | 'interviewDat
 /** Career API refusal → the honest state shown (nothing is claimed as sent or charged). */
 export function draftProblemOf(error: unknown): DraftProblem {
   if (!(error instanceof ApiError)) return 'failed';
+  if (error.code === 'ai_consent_declined') return 'ai_declined';
   if (error.code === 'quota_exhausted') return 'quota';
   if (error.code === 'plan_upgrade_required' || error.code === 'permission_denied') return 'upgrade';
   if (error.code === 'provider_unavailable') return 'unavailable';

@@ -143,6 +143,7 @@ describe('resume import', () => {
       resetsAt: allowance.resetsAt,
     });
     expect(importFailure(new Error('boom'), allowance).kind).toBe('failed');
+    expect(importFailure(new ApiError(403, 'ai_consent_declined', { code: 'ai_consent_declined' }), allowance)).toMatchObject({ body: expect.stringMatching(/permission/) });
     expect(missingSectionsLine(['education', 'skill'])).toBe('The resume had no Education, Skill. Nothing was added for them.');
     expect(missingSectionsLine([])).toBeNull();
   });

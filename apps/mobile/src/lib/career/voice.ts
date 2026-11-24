@@ -160,6 +160,7 @@ export type VoiceNote =
   | 'actionFailed'
   | 'startFailed'
   | 'saveFailed'
+  | 'aiDeclined'
   | 'unreadable'
   | 'tooLarge'
   | 'truncated'
@@ -180,6 +181,7 @@ const NOTE_KEY: Record<VoiceNote, string> = {
   actionFailed: 'careerInterviews.voice.actionFailed',
   startFailed: 'careerInterviews.voice.startFailed',
   saveFailed: 'careerInterviews.voice.saveFailedBody',
+  aiDeclined: 'common.aiConsent.declined',
   unreadable: 'careerInterviews.voice.audioUnreadable',
   tooLarge: 'careerInterviews.voice.audioTooLarge',
   truncated: 'careerInterviews.voice.truncated',
@@ -215,6 +217,7 @@ export function startErrorNote(error: unknown): VoiceNote {
 /** Uploading a take failed. The take stays on the device so it can be saved again. */
 export function recordErrorNote(error: unknown): VoiceNote {
   if (error instanceof ApiError) {
+    if (error.code === 'ai_consent_declined') return 'aiDeclined';
     if (error.code === 'quota_exhausted') return 'quota';
     if (error.code === 'plan_upgrade_required') return 'upgrade';
     if (error.code === 'feature_unavailable') return 'switchedOff';

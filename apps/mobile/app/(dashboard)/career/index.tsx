@@ -34,7 +34,7 @@ import {
   careerAreaGroups,
   type GroupedArea,
 } from '../../../src/lib/career-view';
-import { formatNumber, useT } from '../../../src/i18n';
+import { formatNumber, t as tNow, useT } from '../../../src/i18n';
 import { RTL_FLIP } from '../../../src/i18n/native';
 import { colors } from '../../../src/theme/colors';
 
@@ -212,6 +212,8 @@ function AreaGroup({ title, areas, enabled, onOpen }: { title: string; areas: Gr
 
 function AreaRow({ area, first, enabled, onOpen }: { area: GroupedArea; first: boolean; enabled: boolean; onOpen: (route: string) => void }) {
   const t = useT('career');
+  // No upgrade hint where the app shows no plans (iPhone).
+  const lockedText = HIDE_PLAN_CATALOG ? tNow('plans.allowanceTable.notInPlan') : t('groups.locked');
   const inApp = area.where === 'app' && area.route;
   const tappable = Boolean(inApp && enabled);
   const content = (
@@ -221,7 +223,7 @@ function AreaRow({ area, first, enabled, onOpen }: { area: GroupedArea; first: b
       </View>
       <View className="flex-1 me-2">
         <Text className={`font-semibold ${tappable ? 'text-stone-900' : 'text-stone-500'}`}>{area.title}</Text>
-        <Text className="text-stone-500 text-xs mt-0.5 leading-4" numberOfLines={2}>{area.locked ? t('groups.locked') : area.body}</Text>
+        <Text className="text-stone-500 text-xs mt-0.5 leading-4" numberOfLines={2}>{area.locked ? lockedText : area.body}</Text>
         {area.where !== 'app' ? (
           <View className="mt-1.5">
             <Pill label={WHERE_LABEL[area.where].toUpperCase()} tone={area.where === 'web' ? 'default' : 'warning'} />
@@ -242,7 +244,7 @@ function AreaRow({ area, first, enabled, onOpen }: { area: GroupedArea; first: b
         onPress={() => onOpen(area.route as string)}
         className={rowClass}
         accessibilityRole="button"
-        accessibilityHint={area.locked ? t('groups.locked') : undefined}
+        accessibilityHint={area.locked ? lockedText : undefined}
         activeOpacity={0.7}
       >
         {content}

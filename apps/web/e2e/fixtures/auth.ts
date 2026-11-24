@@ -1,6 +1,6 @@
 import { Page } from '@playwright/test';
 
-const API_BASE = 'http://localhost:4000/api/v1';
+const API_BASE = process.env.E2E_API_URL ?? 'http://localhost:4000/api/v1';
 
 const FAKE_USER = {
   uid: 'e2e-test-uid',

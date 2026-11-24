@@ -210,7 +210,7 @@ export default function CareerFactScreen() {
                     value={value === 'true'}
                     onValueChange={(on) => setField(field, on ? 'true' : '')}
                     accessibilityLabel={label}
-                    trackColor={{ true: colors.brand[600] }}
+                    trackColor={{ true: colors.brand[600], false: colors.stone[300] }}
                   />
                 </View>
               );

@@ -17,6 +17,7 @@ import axios from 'axios';
 import { useCVStore } from '../../../store/cv-store';
 import { useGenerateSummary } from '../../../hooks/useAI';
 import { useAuthStore } from '../../../store/auth-store';
+import { AiConsentDeclinedError } from '../../../lib/ai-consent-rules';
 import { canUseAI, planForDisplay } from '../../../lib/entitlements';
 import { alertIfUnverifiedEmail } from '../../../lib/email-verification';
 import {
@@ -118,6 +119,7 @@ function emptyGenerateReason(
 }
 
 function generateFailureMessage(err: unknown): string {
+  if (err instanceof AiConsentDeclinedError) return tNow('common.aiConsent.declined');
   if (axios.isAxiosError(err) && !err.response) {
     return tNow('common.noConnection');
   }

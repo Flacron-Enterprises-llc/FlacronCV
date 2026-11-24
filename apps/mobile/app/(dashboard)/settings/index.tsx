@@ -417,7 +417,7 @@ export default function SettingsScreen() {
             value={pushOn}
             disabled={pushBusy}
             onValueChange={(v) => void onTogglePush(v)}
-            trackColor={{ true: colors.brand[600] }}
+            trackColor={{ true: colors.brand[600], false: colors.stone[300] }}
             accessibilityLabel={t('notifications.title')}
           />
         </View>
@@ -444,7 +444,7 @@ export default function SettingsScreen() {
                 value={emailOn(key)}
                 disabled={!currentUser || emailPending[key] !== undefined}
                 onValueChange={(v) => void onToggleEmail(key, v)}
-                trackColor={{ true: colors.brand[600] }}
+                trackColor={{ true: colors.brand[600], false: colors.stone[300] }}
                 accessibilityLabel={emailCopy[key].label}
                 accessibilityHint={emailCopy[key].description}
               />

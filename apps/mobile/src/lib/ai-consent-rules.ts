@@ -20,10 +20,9 @@ const CAREER_AI_PATHS = [
   /\/imports$/,
   /\/resumes\/[^/]+\/(generate|tailor)$/,
   /\/writing$/,
-  /\/analyses$/,
-  /\/matches$/,
-  /\/interviews\/text(\/[^/]+\/(answers|challenges))?$/,
-  /\/interviews\/voice\/[^/]+\/transcription$/,
+  /\/interviews\/text$/,
+  // The server transcribes a take as it saves it.
+  /\/interviews\/voice\/[^/]+\/(recording|transcription)$/,
   /\/coaching$/,
   /\/action-packs(\/[^/]+\/retry)?$/,
   /\/learning\/skill-reports$/,
