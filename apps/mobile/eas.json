@@ -26,6 +26,7 @@
         "EXPO_PUBLIC_CAREER_ENABLED": "true",
         "EXPO_PUBLIC_CAREER_API_URL": "https://api.flacroncv.com",
         "EXPO_PUBLIC_APPLE_SIGN_IN_ENABLED": "true",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "897261654848-9rt087jqkgbil00599n9f173rmi1fa2s.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "897261654848-nf23jubbatav5qbbpmkfs5nefi7vklch.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "897261654848-es10qdh9a24r9th4rqd0o5q9gq577029.apps.googleusercontent.com"
       }
@@ -62,6 +63,7 @@
         "EXPO_PUBLIC_CAREER_ENABLED": "true",
         "EXPO_PUBLIC_CAREER_API_URL": "https://api.flacroncv.com",
         "EXPO_PUBLIC_APPLE_SIGN_IN_ENABLED": "true",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "897261654848-9rt087jqkgbil00599n9f173rmi1fa2s.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "897261654848-h7nd5cu6q70h5ihfbeupo57hhptfacoj.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "897261654848-es10qdh9a24r9th4rqd0o5q9gq577029.apps.googleusercontent.com"
       }

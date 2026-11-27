@@ -13,7 +13,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.flacroncv.mobile",
-      "buildNumber": "12",
+      "buildNumber": "13",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
@@ -86,7 +86,8 @@
     ],
     "scheme": [
       "flacroncv",
-      "com.flacroncv.mobile"
+      "com.flacroncv.mobile",
+      "com.googleusercontent.apps.897261654848-9rt087jqkgbil00599n9f173rmi1fa2s"
     ],
     "extra": {
       "eas": {
